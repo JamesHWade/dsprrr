@@ -14,3 +14,12 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 URL: https://github.com/JamesHWade/dsprrr
 BugReports: https://github.com/JamesHWade/dsprrr/issues
+Imports:
+    cli,
+    ellmer,
+    glue,
+    lifecycle,
+    rlang,
+    S7,
+    tibble,
+    withr
