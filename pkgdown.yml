@@ -1,0 +1,8 @@
+pandoc: 3.1.11
+pkgdown: 2.1.3
+pkgdown_sha: ~
+articles:
+  compilation-optimization: compilation-optimization.html
+  getting-started: getting-started.html
+  vitals-integration: vitals-integration.html
+last_built: 2025-09-22T01:50Z
