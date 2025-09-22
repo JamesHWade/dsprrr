@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__r-btw__btw_tool_search_packages",
+      "mcp__r-btw__btw_tool_search_package_info",
+      "mcp__r-btw__btw_tool_docs_package_help_topics",
+      "mcp__r-btw__btw_tool_docs_help_page",
+      "mcp__r-btw__btw_tool_session_check_package_installed",
+      "Bash(R:*)",
+      "Read(//Users/ua21849/Documents/ellmer/vignettes/**)",
+      "Read(//Users/ua21849/Documents/ellmer/R/**)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/ua21849/Documents/vitals/",
+      "/Users/ua21849/Documents/ellmer"
+    ]
+  }
+}

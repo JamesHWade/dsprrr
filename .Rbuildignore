@@ -10,3 +10,12 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^doc$
+^Meta$
+^vignettes/_vcr$
+^tests/testthat/_vcr$
+^CLAUDE\.md$
+^PLAN\.md$
+^VITALS_INTEGRATION\.md$
+^vitals$
+^dspy$
