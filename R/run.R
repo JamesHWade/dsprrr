@@ -161,85 +161,188 @@ run_batch <- function(module, inputs, n, .llm, .verbose, .parallel,
     )
   }
 
-  # Process function for single item
-  process_single <- function(input_set, idx) {
-    if (.progress && n > 1) {
-      cli::cli_progress_update()
-    }
-
-    # Build the prompt for this input
-    prompt <- build_prompt(module, input_set)
-
-    if (.verbose) {
-      cli::cli_h3("Prompt {idx}/{n}")
-      cli::cli_code(prompt)
-    }
-
-    # Track timing
-    start_time <- Sys.time()
-
-    # Make the LLM call
-    tryCatch({
-      response <- call_llm(
-        llm = .llm,
-        prompt = prompt,
-        output_type = module@signature@output_type,
-        instructions = module@signature@instructions,
-        verbose = .verbose
-      )
-
-      end_time <- Sys.time()
-      latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
-
-      # Return based on format
-      if (.return_format == "simple") {
-        response
-      } else {
-        list(
-          output = response,
-          chat = .llm,
-          metadata = list(
-            latency_ms = latency_ms,
-            prompt_length = nchar(prompt),
-            timestamp = Sys.time(),
-            batch_index = idx
-          )
-        )
-      }
-    }, error = function(e) {
-      cli::cli_warn("Failed to process item {idx}: {e$message}")
-      if (.return_format == "simple") {
-        NA
-      } else {
-        list(
-          output = NA,
-          chat = .llm,
-          metadata = list(
-            error = e$message,
-            batch_index = idx
-          )
-        )
-      }
-    })
-  }
 
   # Process in parallel or sequentially
-  if (.parallel && n > 1 && requireNamespace("future.apply", quietly = TRUE)) {
-    results <- future.apply::future_mapply(
-      process_single,
-      input_set = input_sets,
-      idx = seq_len(n),
-      SIMPLIFY = FALSE,
-      USE.NAMES = FALSE
+  if (.parallel && n > 1) {
+    # Set up mirai daemons if not already running
+    current_daemons <- mirai::daemons(NULL)
+    if (is.null(current_daemons) || current_daemons == 0) {
+      mirai::daemons(n = parallel::detectCores() - 1)
+    }
+    
+    # Use mirai_map for parallel processing
+    # Note: mirai_map returns immediately with promises
+    # We need to pass all required variables and functions to the mirai environment
+    mirai_tasks <- mirai::mirai_map(
+      .x = seq_len(n),
+      .f = function(i, input_sets, module, .llm, .verbose, .return_format,
+                    build_prompt, call_llm) {
+        input_set <- input_sets[[i]]
+        idx <- i
+        
+        # Build the prompt for this input
+        prompt <- build_prompt(module, input_set)
+        
+        if (.verbose) {
+          cli::cli_h3("Prompt {idx}/{n}")
+          cli::cli_code(prompt)
+        }
+        
+        # Track timing
+        start_time <- Sys.time()
+        
+        # Make the LLM call
+        tryCatch({
+          response <- call_llm(
+            llm = .llm,
+            prompt = prompt,
+            output_type = module@signature@output_type,
+            instructions = module@signature@instructions,
+            verbose = .verbose
+          )
+          
+          end_time <- Sys.time()
+          latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+          
+          # Return based on format
+          if (.return_format == "simple") {
+            response
+          } else {
+            list(
+              output = response,
+              chat = .llm,
+              metadata = list(
+                latency_ms = latency_ms,
+                prompt_length = nchar(prompt),
+                timestamp = Sys.time(),
+                batch_index = idx
+              )
+            )
+          }
+        }, error = function(e) {
+          # Return error info to be handled in main session
+          if (.return_format == "simple") {
+            structure(NA, error_message = paste0("Failed to process item ", idx, ": ", e$message))
+          } else {
+            list(
+              output = NA,
+              chat = .llm,
+              metadata = list(
+                error = e$message,
+                batch_index = idx
+              )
+            )
+          }
+        })
+      },
+      .args = list(
+        input_sets = input_sets,
+        module = module,
+        .llm = .llm,
+        .verbose = .verbose,
+        .return_format = .return_format,
+        build_prompt = build_prompt,
+        call_llm = call_llm
+      )
     )
+    
+    # Collect results and update progress
+    results <- vector("list", n)
+    completed <- 0
+    warnings_to_emit <- character(0)
+    
+    while (completed < n) {
+      for (i in seq_len(n)) {
+        if (is.null(results[[i]]) && !mirai::unresolved(mirai_tasks[[i]])) {
+          result <- mirai_tasks[[i]][["data"]]
+          
+          # Check for error messages that need to be warned about
+          if (.return_format == "simple" && is.na(result) && !is.null(attr(result, "error_message"))) {
+            warnings_to_emit <- c(warnings_to_emit, attr(result, "error_message"))
+            result <- NA  # Remove the attribute for the final result
+          }
+          
+          results[[i]] <- result
+          completed <- completed + 1
+          if (.progress && n > 1) {
+            cli::cli_progress_update()
+          }
+        }
+      }
+      Sys.sleep(0.01) # Small delay to avoid busy waiting
+    }
+    
+    # Emit any warnings collected from parallel workers
+    for (warning_msg in warnings_to_emit) {
+      cli::cli_warn(warning_msg)
+    }
   } else {
-    results <- mapply(
-      process_single,
-      input_set = input_sets,
-      idx = seq_len(n),
-      SIMPLIFY = FALSE,
-      USE.NAMES = FALSE
-    )
+    # Sequential processing
+    results <- vector("list", n)
+    for (i in seq_len(n)) {
+      input_set <- input_sets[[i]]
+      idx <- i
+      
+      # Build the prompt for this input
+      prompt <- build_prompt(module, input_set)
+      
+      if (.verbose) {
+        cli::cli_h3("Prompt {idx}/{n}")
+        cli::cli_code(prompt)
+      }
+      
+      # Track timing
+      start_time <- Sys.time()
+      
+      # Make the LLM call
+      results[[i]] <- tryCatch({
+        response <- call_llm(
+          llm = .llm,
+          prompt = prompt,
+          output_type = module@signature@output_type,
+          instructions = module@signature@instructions,
+          verbose = .verbose
+        )
+        
+        end_time <- Sys.time()
+        latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+        
+        # Return based on format
+        if (.return_format == "simple") {
+          response
+        } else {
+          list(
+            output = response,
+            chat = .llm,
+            metadata = list(
+              latency_ms = latency_ms,
+              prompt_length = nchar(prompt),
+              timestamp = Sys.time(),
+              batch_index = idx
+            )
+          )
+        }
+      }, error = function(e) {
+        cli::cli_warn("Failed to process item {idx}: {e$message}")
+        if (.return_format == "simple") {
+          NA
+        } else {
+          list(
+            output = NA,
+            chat = .llm,
+            metadata = list(
+              error = e$message,
+              batch_index = idx
+            )
+          )
+        }
+      })
+      
+      # Update progress for sequential processing
+      if (.progress && n > 1) {
+        cli::cli_progress_update()
+      }
+    }
   }
 
   if (.progress && n > 1) {

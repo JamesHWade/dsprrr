@@ -1,0 +1,76 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    status: 200
+    headers:
+      access-control-expose-headers: X-Request-ID
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9835b4729c84e450-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Mon, 22 Sep 2025 23:50:30 GMT
+      openai-organization: dow-analytical-science
+      openai-processing-ms: '387'
+      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=CTpHbclXOfZKf3OrMsO1yCsYQXW3pY_sYUMcrKXjE6s-1758585030-1.0.1.1-7woVaFLKS8RJsw9Vzj7Jmw1JsgI6VxNtJOrN6y5493L9y.JGa7aYRSLwdTGKmCumv_Q8aajRqSzClk_lSll1Kmgk8Ra7HAP8n223qlENIqI;
+        path=/; expires=Tue, 23-Sep-25 00:20:30 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Vk1R1ijxY6QrP2YaYXUp1zJY8NPygjZ5UFa9kSUZHSw-1758585030694-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '643'
+      x-openai-proxy-wasm: v0.1
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '10000000'
+      x-ratelimit-remaining-requests: '9999'
+      x-ratelimit-remaining-tokens: '9999981'
+      x-ratelimit-reset-requests: 6ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_01791fcebc0545b0bd34e4d7c0d18fda
+    body:
+      string: |
+        {
+          "id": "chatcmpl-CIkacz6CN9KStHtnxDzRsV63WpfTN",
+          "object": "chat.completion",
+          "created": 1758585030,
+          "model": "gpt-4o-mini-2024-07-18",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"wrapper\":\"Hello world\"}",
+                "refusal": null,
+                "annotations": []
+              },
+              "logprobs": null,
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 58,
+            "completion_tokens": 6,
+            "total_tokens": 64,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "service_tier": "default",
+          "system_fingerprint": "fp_51db84afab"
+        }
+  recorded_at: 2025-09-22 23:50:30
+recorded_with: VCR-vcr/2.0.0
