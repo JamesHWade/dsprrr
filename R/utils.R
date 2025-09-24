@@ -16,6 +16,7 @@ is_ellmer_type <- function(x) {
 #' if vignette code should be executed.
 #'
 #' @return Logical indicating whether to evaluate vignette code
+#' @export
 #' @keywords internal
 eval_vignette <- function() {
   name <- tools::file_path_sans_ext(knitr::current_input())

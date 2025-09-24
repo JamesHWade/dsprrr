@@ -30,8 +30,11 @@
 #'     )
 #'   )
 #'
-#' # Execute the module
+#' \dontrun{
+#' # Execute the module (requires an llm object)
+#' llm <- ellmer::chat_openai()
 #' result <- classifier |> run(text = "Great package!", .llm = llm)
+#' }
 module <- function(signature, type = "predict", template = "", demos = list(),
                    config = list(), ...) {
   # Validate signature

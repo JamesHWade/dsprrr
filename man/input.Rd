@@ -31,9 +31,9 @@ Supports ellmer types, string shortcuts, or S7 classes for backward compatibilit
 }
 \examples{
 # Using ellmer types (recommended for consistency with outputs)
-input("text", type_string())
-input("age", type_number())
-input("active", type_boolean())
+input("text", ellmer::type_string())
+input("age", ellmer::type_number())
+input("active", ellmer::type_boolean())
 
 # Using string shortcuts (simple and readable)
 input("text", "string")
@@ -45,7 +45,7 @@ input("name")
 input("name", description = "User's name")
 
 # With ellmer types for structured data
-input("tags", type_array(type_string()))
-input("status", type_enum(c("pending", "active", "done")))
+input("tags", ellmer::type_array(ellmer::type_string()))
+input("status", ellmer::type_enum(c("pending", "active", "done")))
 
 }

@@ -7,16 +7,16 @@
       "mcp__r-btw__btw_tool_docs_help_page",
       "mcp__r-btw__btw_tool_session_check_package_installed",
       "Bash(R:*)",
-      "Read(//Users/ua21849/Documents/ellmer/vignettes/**)",
-      "Read(//Users/ua21849/Documents/ellmer/R/**)",
+      "Read(../ellmer/vignettes/**)",
+      "Read(../ellmer/R/**)",
       "WebSearch",
       "WebFetch(domain:mirai.r-lib.org)"
     ],
     "deny": [],
     "ask": [],
     "additionalDirectories": [
-      "/Users/ua21849/Documents/vitals/",
-      "/Users/ua21849/Documents/ellmer"
+      "../vitals/",
+      "../ellmer/"
     ]
   }
 }

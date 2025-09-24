@@ -139,11 +139,11 @@ test_that("type_to_s7_class converts correctly", {
   expect_identical(s7_4, S7::class_logical)
 
   # Array -> list
-  s7_5 <- type_to_s7_class(ellmer::type_array(ellmer::type_string()))
+  s7_5 <- type_to_s7_class(ellmer::type_array(items = ellmer::type_string()))
   expect_identical(s7_5, S7::class_list)
 
   # Enum -> character
-  s7_6 <- type_to_s7_class(ellmer::type_enum(c("a", "b")))
+  s7_6 <- type_to_s7_class(ellmer::type_enum(values = c("a", "b")))
   expect_identical(s7_6, S7::class_character)
 
   # Object -> list

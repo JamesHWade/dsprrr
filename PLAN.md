@@ -89,7 +89,7 @@ advanced_classifier <- signature(
     input("text", description = "The text to classify.")
   ),
   output_type = ellmer::type_object(
-    sentiment = ellmer::type_enum(c("Positive", "Negative", "Neutral")),
+    sentiment = ellmer::type_enum(values = c("Positive", "Negative", "Neutral")),
     confidence = ellmer::type_number(minimum = 0, maximum = 1),
     reasoning = ellmer::type_string()
   ),
@@ -172,10 +172,18 @@ evaluation_results <- evaluate(
 
 **Milestone 3: Ecosystem & Ergonomics (Target: 7 Weeks)**
 
-  * [ ] Implement the `evaluate()` generic.
+  * [x] Implement the `evaluate()` generic.
   * [x] Develop robust error handling using `rlang` for both API failures and validation errors (partially complete).
   * [ ] Add convenience wrappers for common LLM providers (e.g., `lm_openai()`).
   * [ ] Build out a comprehensive documentation website using `pkgdown`.
+  * [x] Replace the placeholder scoring paths in `compile_module()`, `GridSearchTeleprompter`, and `evaluate_dsp()` with real calls into `run()` (supporting dependency injection for mock LLMs in tests and batching for speed).
+  * [x] Export vitals adapter helpers (`as_vitals_solver()`, `as_dsprrr_metric()`, etc.) with accompanying tests so the documented workflow is exercised end-to-end.
+
+**Milestone 3a: Prompting & Execution Polish (Parallel track, ~2 Weeks)**
+
+  * [x] Adjust prompt construction so signature instructions are injected exactly once (remove the current double prepend between `build_prompt()` and `call_llm()`).
+  * [x] Define a safe parallel execution strategy: either spin up a fresh `.llm` per worker in `run_batch()` or default `.parallel = FALSE` until a serialisable, thread-safe client abstraction is ready. Document the behaviour and add regression tests.
+  * [x] Extend structured/batch return objects with richer metadata hooks needed by vitals (e.g., solver logs) once the evaluation path is wired to `run()`.
 
 **Milestone 4: Future Vision & Extensibility**
 

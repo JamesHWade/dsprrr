@@ -1,3 +1,24 @@
+mock_llm <- structure(
+  list(
+    chat_structured = function(prompt, type, ...) {
+      if (inherits(type, "ellmer::TypeObject")) {
+        # Return minimal structured response
+        props <- names(type@properties)
+        stats::setNames(lapply(props, function(name) {
+          if (grepl("confidence", name)) {
+            0.5
+          } else {
+            "mock"
+          }
+        }), props)
+      } else {
+        "mock"
+      }
+    }
+  ),
+  class = "Chat"
+)
+
 test_that("compile_module validates inputs", {
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
@@ -62,7 +83,7 @@ test_that("compile_module works with different teleprompters", {
   )
 
   # This will use mock evaluation in the current implementation
-  compiled_grid <- compile_module(module, tp_grid, trainset)
+  compiled_grid <- compile_module(module, tp_grid, trainset, .llm = mock_llm)
   expect_true(compiled_grid@config$compiled)
   expect_equal(compiled_grid@config$teleprompter, "GridSearchTeleprompter")
   expect_true("best_variant" %in% names(compiled_grid@config))
@@ -144,6 +165,7 @@ test_that("evaluate_dsp evaluates modules", {
     module = module,
     dataset = dataset,
     metric = metric,
+    llm = mock_llm,
     verbose = FALSE
   )
 
@@ -155,11 +177,14 @@ test_that("evaluate_dsp evaluates modules", {
   expect_equal(length(results$scores), nrow(dataset))
 
   # Empty dataset
-  empty_results <- evaluate_dsp(
-    module = module,
-    dataset = data.frame(),
-    metric = metric,
-    verbose = FALSE
+  expect_warning(
+    empty_results <- evaluate_dsp(
+      module = module,
+      dataset = data.frame(),
+      metric = metric,
+      verbose = FALSE
+    ),
+    "Empty dataset provided"
   )
   expect_true(is.na(empty_results$mean_score))
   expect_equal(empty_results$n_evaluated, 0)
@@ -209,7 +234,7 @@ test_that("compile workflow with validation set", {
     verbose = FALSE
   )
 
-  compiled <- compile_module(module, tp, trainset, valset)
+  compiled <- compile_module(module, tp, trainset, valset, .llm = mock_llm)
   expect_true(compiled@config$compiled)
 
   # The validation set should have been used for evaluation
@@ -273,4 +298,39 @@ test_that("compile integration with module pipeline", {
   # Modify copy without affecting original
   copy_qa@config$test <- "modified"
   expect_null(compiled_qa@config$test)
+})
+
+test_that("evaluate generic executes modules", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+  module <- Predict(signature = sig, template = "{text}")
+
+  dataset <- data.frame(text = c("A", "B"), stringsAsFactors = FALSE)
+
+  eval_llm <- structure(
+    list(
+      chat_structured = function(prompt, ...) {
+        # Return the final line of the prompt (the input text)
+        lines <- strsplit(prompt, "\n")[[1]]
+        tail(lines, 1L)
+      }
+    ),
+    class = "Chat"
+  )
+
+  results <- evaluate(
+    module,
+    dataset,
+    metric = function(pred, row) identical(pred, row$text),
+    .llm = eval_llm,
+    .parallel = FALSE,
+    .progress = FALSE
+  )
+
+  expect_equal(results$mean_score, 1)
+  expect_equal(results$n_evaluated, 2)
+  expect_equal(unlist(results$predictions), dataset$text)
 })

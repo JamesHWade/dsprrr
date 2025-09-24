@@ -103,7 +103,7 @@ LabeledFewShot <- S7::new_class(
 
 #' Compile method for LabeledFewShot
 #' @noRd
-compile_labeled <- function(teleprompter, program, trainset, ...) {
+compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   # Validate inputs
   if (!inherits(program, "dsprrr::Predict")) {
     cli::cli_abort("LabeledFewShot currently only supports Predict modules")
@@ -205,7 +205,8 @@ GridSearchTeleprompter <- S7::new_class(
 
 #' Compile method for GridSearchTeleprompter
 #' @noRd
-compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL, ...) {
+compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
+                               .llm = NULL, ...) {
   if (!inherits(program, "dsprrr::Predict")) {
     cli::cli_abort("GridSearchTeleprompter currently only supports Predict modules")
   }
@@ -269,8 +270,15 @@ compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL, .
     }
 
     # Evaluate on validation set
-    score <- evaluate_module(test_program, valset, teleprompter@metric)
-    scores[i] <- score
+    eval_res <- evaluate(
+      test_program,
+      valset,
+      teleprompter@metric,
+      .llm = .llm,
+      .parallel = FALSE,
+      .progress = FALSE
+    )
+    scores[i] <- eval_res$mean_score
 
     if (teleprompter@verbose) {
       cli::cli_progress_update()
@@ -410,45 +418,7 @@ format_trainset_as_demos <- function(trainset, signature) {
 
 #' Evaluate a module on a dataset
 #' @noRd
-evaluate_module <- function(module, dataset, metric, llm = NULL) {
-  if (nrow(dataset) == 0) {
-    return(0)
-  }
-
-  scores <- numeric(nrow(dataset))
-
-  for (i in seq_len(nrow(dataset))) {
-    row <- dataset[i, , drop = FALSE]
-
-    # Extract inputs for the module
-    input_names <- vapply(module@signature@inputs, function(x) x$name, character(1))
-    inputs <- list()
-    for (name in input_names) {
-      if (name %in% names(row)) {
-        inputs[[name]] <- row[[name]]
-      }
-    }
-
-    # Run the module (this would need actual LLM in practice)
-    # For now, we'll simulate with a placeholder
-    # In real implementation, this would call run() with the actual LLM
-    tryCatch({
-      # This is a placeholder - in real use, you'd call:
-      # prediction <- do.call(run, c(list(module), inputs, list(.llm = llm)))
-
-      # For testing, return a mock prediction
-      prediction <- list(result = "mock_prediction")
-
-      # Get expected output
-      expected <- row  # The whole row serves as expected
-
-      # Calculate score
-      score <- metric(prediction, expected)
-      scores[i] <- if (is.logical(score)) as.numeric(score) else score
-    }, error = function(e) {
-      scores[i] <- 0
-    })
-  }
-
-  mean(scores, na.rm = TRUE)
+evaluate_module <- function(module, dataset, metric, .llm = NULL, ...) {
+  evaluate(module, dataset, metric, .llm = .llm, .parallel = FALSE,
+           .progress = FALSE, ...)
 }

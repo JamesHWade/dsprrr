@@ -45,7 +45,7 @@ test_that("build_prompt creates proper prompt", {
 
   prompt <- dsprrr:::build_prompt(pred, list(text = "Great product!"))
 
-  expect_true(grepl("Classify sentiment", prompt))
+  expect_false(grepl("Classify sentiment", prompt))
   expect_true(grepl("Text: Great product!", prompt))
 })
 
@@ -213,6 +213,8 @@ test_that("structured return format includes metadata", {
   expect_identical(result$chat, mock_llm)
   expect_true("latency_ms" %in% names(result$metadata))
   expect_true("prompt_length" %in% names(result$metadata))
+  expect_true("prompt" %in% names(result$metadata))
+  expect_equal(result$metadata$instructions, "Echo")
   expect_true("timestamp" %in% names(result$metadata))
   expect_s3_class(result, "dsprrr_result")
 })
@@ -321,4 +323,24 @@ test_that("batch processing handles errors gracefully", {
   expect_equal(results[[1]], "success")
   expect_true(is.na(results[[2]]))
   expect_equal(results[[3]], "success")
+})
+
+test_that("run warns when parallel execution with custom llm", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string()
+  )
+  module <- Predict(signature = sig, template = "{text}")
+
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, ...) "ok"),
+    class = "Chat"
+  )
+
+  expect_warning(
+    out <- run(module, text = c("a", "b"), .llm = mock_llm,
+               .parallel = TRUE, .progress = FALSE),
+    "Parallel execution requires a NULL"
+  )
+  expect_equal(length(out), 2)
 })

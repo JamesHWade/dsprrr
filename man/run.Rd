@@ -10,18 +10,18 @@ run(module, ...)
 \item{module}{A DSPrrr module (e.g., created with \code{module()})}
 
 \item{...}{Named arguments corresponding to the module's signature inputs.
-Can be single values or vectors for batch processing.}
-
+Can be single values or vectors for batch processing. Additional parameters:
+\describe{
 \item{.llm}{An ellmer chat object for LLM interaction (optional)}
-
 \item{.verbose}{Logical indicating whether to print debug information}
-
-\item{.parallel}{Logical indicating whether to process batch inputs in parallel (default TRUE)}
-
+\item{.parallel}{Logical indicating whether to process batch inputs in parallel (default FALSE).
+When \code{TRUE}, a fresh LLM client is created per worker unless a custom
+\code{.llm} is supplied (in which case the call falls back to sequential
+execution).}
 \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
-
 \item{.return_format}{Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
+}}
 }
 \value{
 For single inputs with .return_format="simple": The parsed output according to the module's signature.
@@ -37,11 +37,14 @@ For batch inputs: A list of results matching the input length
 Execute a module with the provided inputs to generate LLM output.
 This is the primary function for running modules created with \code{module()}.
 
-Supports both single inputs and batch processing. When batch processing,
-inputs are processed in parallel by default.
+Supports both single inputs and batch processing. Batch execution can be
+parallelised, but is conservative by default to avoid reusing LLM clients
+across workers.
 }
 \examples{
+\dontrun{
 # Single input
+llm <- ellmer::chat_openai()
 result <- signature("text -> sentiment") |>
   module(type = "predict") |>
   run(text = "I love this!", .llm = llm)
@@ -56,4 +59,5 @@ result <- signature("text -> sentiment") |>
   module(type = "predict") |>
   run(text = "Great!", .llm = llm, .return_format = "structured")
 # Access: result$output, result$chat, result$metadata
+}
 }

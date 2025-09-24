@@ -135,7 +135,7 @@ detailed_sig <- signature(
   ),
   output_type = type_object(
     sentiment = type_enum(
-      c('positive', 'negative', 'neutral'),
+      values = c('positive', 'negative', 'neutral'),
       description = "Overall sentiment of the document"
     )
   )

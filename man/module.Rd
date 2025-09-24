@@ -50,6 +50,9 @@ qa <- signature("context, question -> answer") |>
     )
   )
 
-# Execute the module
+\dontrun{
+# Execute the module (requires an llm object)
+llm <- ellmer::chat_openai()
 result <- classifier |> run(text = "Great package!", .llm = llm)
+}
 }

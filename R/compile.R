@@ -29,6 +29,7 @@ compile <- S7::new_generic("compile", c("teleprompter", "program"))
 #' @param teleprompter A Teleprompter object defining the optimization strategy
 #' @param trainset Training data as a data frame
 #' @param valset Optional validation set for evaluation
+#' @param .llm Optional ellmer chat object to reuse during compilation
 #' @param ... Additional arguments passed to the teleprompter
 #'
 #' @return An optimized module with updated demonstrations and/or instructions
@@ -64,7 +65,8 @@ compile <- S7::new_generic("compile", c("teleprompter", "program"))
 #' )
 #' optimized <- compile_module(classifier, tp, trainset)
 #' }
-compile_module <- function(program, teleprompter, trainset, valset = NULL, ...) {
+compile_module <- function(program, teleprompter, trainset, valset = NULL,
+                           .llm = NULL, ...) {
   # Validate inputs
   if (!inherits(teleprompter, "dsprrr::Teleprompter")) {
     cli::cli_abort(c(
@@ -99,7 +101,7 @@ compile_module <- function(program, teleprompter, trainset, valset = NULL, ...) 
   }
 
   # Dispatch to appropriate compile method
-  compile(teleprompter, program, trainset, valset = valset, ...)
+  compile(teleprompter, program, trainset, valset = valset, .llm = .llm, ...)
 }
 
 #' Create Training Data for DSPrrr
@@ -194,87 +196,24 @@ dsp_trainset <- function(..., .data = NULL) {
 #' print(results$mean_score)
 #' }
 evaluate_dsp <- function(module, dataset, metric, llm = NULL, verbose = TRUE) {
-  if (!is.data.frame(dataset)) {
-    cli::cli_abort("dataset must be a data frame")
-  }
-
-  if (!is.function(metric)) {
-    cli::cli_abort("metric must be a function")
-  }
-
-  n <- nrow(dataset)
-  if (n == 0) {
-    cli::cli_warn("Empty dataset provided")
-    return(list(
-      mean_score = NA_real_,
-      scores = numeric(0),
-      n_evaluated = 0,
-      n_errors = 0
-    ))
-  }
-
-  scores <- numeric(n)
-  errors <- character(n)
-
-  if (verbose) {
-    cli::cli_progress_bar("Evaluating", total = n)
-  }
-
-  for (i in seq_len(n)) {
-    row <- dataset[i, , drop = FALSE]
-
-    tryCatch({
-      # Extract inputs
-      input_names <- vapply(module@signature@inputs, function(x) x$name, character(1))
-      inputs <- list()
-      for (name in input_names) {
-        if (name %in% names(row)) {
-          inputs[[name]] <- row[[name]]
-        } else {
-          cli::cli_warn("Missing input '{name}' in row {i}")
-        }
-      }
-
-      # Run module (would need actual LLM connection)
-      # prediction <- do.call(run, c(list(module), inputs, list(.llm = llm)))
-      # For now, mock the prediction
-      prediction <- list(result = "mock")  # This would be replaced with actual run()
-
-      # Calculate score
-      score <- metric(prediction, row)
-      scores[i] <- if (is.logical(score)) as.numeric(score) else score
-
-    }, error = function(e) {
-      errors[i] <- e$message
-      scores[i] <- NA_real_
-    })
-
-    if (verbose) {
-      cli::cli_progress_update()
-    }
-  }
-
-  if (verbose) {
-    cli::cli_progress_done()
-
-    # Report results
-    n_success <- sum(!is.na(scores))
-    n_errors <- sum(is.na(scores))
-    mean_score <- mean(scores, na.rm = TRUE)
-
-    cli::cli_alert_success("Evaluated {n_success}/{n} examples")
-    if (n_errors > 0) {
-      cli::cli_alert_warning("{n_errors} examples failed")
-    }
-    cli::cli_alert_info("Mean score: {round(mean_score, 3)}")
-  }
-
-  list(
-    mean_score = mean(scores, na.rm = TRUE),
-    scores = scores,
-    errors = errors[errors != ""],
-    n_evaluated = sum(!is.na(scores)),
-    n_errors = sum(is.na(scores)),
-    dataset = dataset
+  results <- evaluate(
+    module,
+    dataset,
+    metric,
+    .llm = llm,
+    .parallel = FALSE,
+    .progress = verbose
   )
+
+  if (verbose) {
+    cli::cli_alert_success("Evaluated {results$n_evaluated}/{nrow(dataset)} examples")
+    if (results$n_errors > 0) {
+      cli::cli_alert_warning("{results$n_errors} examples failed")
+    }
+    if (!is.na(results$mean_score)) {
+      cli::cli_alert_info("Mean score: {round(results$mean_score, 3)}")
+    }
+  }
+
+  results
 }

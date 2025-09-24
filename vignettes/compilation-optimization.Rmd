@@ -347,8 +347,8 @@ email_classifier <- signature(
     input("email", description = "Customer email text")
   ),
   output_type = type_object(
-    category = type_enum(c("complaint", "inquiry", "feedback", "spam")),
-    priority = type_enum(c("urgent", "normal", "low")),
+    category = type_enum(values = c("complaint", "inquiry", "feedback", "spam")),
+    priority = type_enum(values = c("urgent", "normal", "low")),
     needs_response = type_boolean()
   ),
   instructions = "Classify customer emails by category and priority."
@@ -495,8 +495,6 @@ doc_analyzer <- signature(
   ),
   output_type = type_object(
     summary = type_string(
-      min_length = 50,
-      max_length = 200,
       description = "Concise summary of main points"
     ),
     topics = type_array(
@@ -504,7 +502,7 @@ doc_analyzer <- signature(
       description = "Key topics discussed (max 5)"
     ),
     sentiment = type_enum(
-      c("positive", "negative", "neutral", "mixed"),
+      values = c("positive", "negative", "neutral", "mixed"),
       description = "Overall document sentiment"
     ),
     key_facts = type_array(
@@ -512,7 +510,7 @@ doc_analyzer <- signature(
       description = "Important facts or claims"
     ),
     recommendation = type_enum(
-      c("approve", "review", "reject"),
+      values = c("approve", "review", "reject"),
       description = "Recommended action"
     )
   ),

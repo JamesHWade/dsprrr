@@ -9,17 +9,15 @@ run_dataset(module, ...)
 \arguments{
 \item{module}{A DSPrrr module (e.g., created with \code{module()})}
 
+\item{...}{Additional arguments including:
+\describe{
 \item{dataset}{A tibble or data frame with columns matching the module's inputs}
-
 \item{.llm}{An ellmer chat object for LLM interaction (optional)}
-
 \item{.verbose}{Logical indicating whether to print debug information}
-
 \item{.parallel}{Logical indicating whether to process in parallel (default TRUE)}
-
 \item{.progress}{Logical indicating whether to show progress bar (default TRUE)}
-
 \item{.return_format}{Character, either "simple" or "structured" (default "simple")}
+}}
 }
 \value{
 A tibble with the input columns plus a result column containing outputs
@@ -28,12 +26,15 @@ A tibble with the input columns plus a result column containing outputs
 Execute a module on a dataset (tibble/data.frame) with optimized batch processing.
 }
 \examples{
+\dontrun{
 # Process a dataset
 data <- tibble::tibble(
   text = c("I love this!", "This is bad", "Okay product")
 )
 
+llm <- ellmer::chat_openai()
 results <- signature("text -> sentiment") |>
   module(type = "predict") |>
   run_dataset(data, .llm = llm)
+}
 }

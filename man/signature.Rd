@@ -38,9 +38,9 @@ sig4 <- signature(
   inputs = list(
     input("text", description = "Text to analyze")
   ),
-  output_type = type_object(
-    sentiment = type_string(),
-    confidence = type_number()
+  output_type = ellmer::type_object(
+    sentiment = ellmer::type_string(),
+    confidence = ellmer::type_number()
   ),
   instructions = "Analyze the text"
 )

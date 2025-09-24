@@ -78,7 +78,7 @@ print_predict <- function(x, ...) {
 
   if (!is.null(x@config$compiled) && x@config$compiled) {
     cli::cli_h3("Compilation Status")
-    cli::cli_text("✓ Compiled with {x@config$teleprompter}")
+    cli::cli_text("{cli::symbol$tick} Compiled with {x@config$teleprompter}")
     if (!is.null(x@config$best_score)) {
       cli::cli_text("  Best score: {round(x@config$best_score, 3)}")
     }

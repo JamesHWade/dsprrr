@@ -20,7 +20,7 @@ sentiment_classifier <- Predict(
 # That's it! Compare with the old way:
 # OLD: Signature(
 #        inputs = list(input("text", S7::class_character)),
-#        output_type = type_enum(c("positive", "negative", "neutral"))
+#        output_type = type_enum(values = c("positive", "negative", "neutral"))
 #      )
 
 # 2. QUESTION ANSWERING - Multiple inputs are easy
@@ -45,7 +45,7 @@ analyzer <- Predict(
     output_type = type_object(
       summary = type_string(),
       keywords = type_array(type_string()),
-      sentiment = type_enum(c("positive", "negative", "neutral")),
+      sentiment = type_enum(values = c("positive", "negative", "neutral")),
       confidence = type_number()
     )
   )
@@ -84,7 +84,7 @@ cat('Signature(\n')
 cat('  inputs = list(\n')
 cat('    input("text", S7::class_character, "Text to analyze")\n')
 cat('  ),\n')
-cat('  output_type = type_enum(c("positive", "negative")),\n')
+cat('  output_type = type_enum(values = c("positive", "negative")),\n')
 cat('  instructions = "Classify sentiment"\n')
 cat(')\n\n')
 

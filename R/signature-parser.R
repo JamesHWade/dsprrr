@@ -310,7 +310,7 @@ parse_type_string <- function(type_str, field_name = NULL) {
 
     # Parse values (handle both quoted and unquoted)
     values <- parse_enum_values(values_str)
-    return(ellmer::type_enum(values))
+    return(ellmer::type_enum(values = values))
   }
 
   # Array types
@@ -353,7 +353,7 @@ parse_type_string <- function(type_str, field_name = NULL) {
     }
 
     inner_type <- parse_type_string(inner_type_str)
-    return(ellmer::type_array(inner_type))
+    return(ellmer::type_array(items = inner_type))
   }
 
   # Number with bounds
@@ -404,5 +404,3 @@ parse_enum_values <- function(values_str) {
   values <- strsplit(values_str, "\\s*,\\s*")[[1]]
   trimws(values)
 }
-
-

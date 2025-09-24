@@ -8,44 +8,15 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-# Conditionally evaluate based on API keys or vcr cassettes
-eval_vignette <- function() {
-  # Check if vcr cassettes exist
-  if (dir.exists("_vcr")) {
-    name <- tools::file_path_sans_ext(knitr::current_input())
-    cassettes <- dir("_vcr", pattern = paste0(name, "*"))
-    has_cassette <- length(cassettes) > 0
-  } else {
-    has_cassette <- FALSE
-  }
-
-  # Check if API keys are available
-  has_key <- any(
-    nzchar(Sys.getenv("OPENAI_API_KEY")),
-    nzchar(Sys.getenv("ANTHROPIC_API_KEY")),
-    nzchar(Sys.getenv("GOOGLE_GEMINI_API_KEY"))
-  )
-
-  # Don't evaluate on CRAN
-  not_cran <- !identical(Sys.getenv("NOT_CRAN"), "false")
-
-  # Suppress echo for cleaner vignettes
-  options(ellmer_echo = "none")
-
-  # Evaluate if we have keys/cassettes and not on CRAN
-  (has_key || has_cassette) && not_cran
-}
+library(dsprrr)
 
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE # Disable evaluation for now to debug
+  eval = eval_vignette()
 )
 
-# Setup vcr if available and evaluating
-if (requireNamespace("vcr", quietly = TRUE) && eval_vignette()) {
-  vcr::setup_knitr()
-}
+vcr::setup_knitr()
 ```
 
 ## Introduction
@@ -184,7 +155,7 @@ dsprrr uses a consistent type system based on ellmer for both inputs and outputs
 **For outputs**, you have:
 - String notation in signatures: `"-> answer: string"`, `"-> score: number[0,100]"`
 - Ellmer types for complex structures: `type_object(...)`, `type_array(...)`
-- Enums: `type_enum(c("a", "b", "c"))`
+- Enums: `type_enum(values = c("a", "b", "c"))`
 
 ```{r signature-basic}
 # DSPy-style string notation (recommended for simplicity)
@@ -252,7 +223,7 @@ result <- Signature(
     input("sentence", description = "Sentence to classify")
   ),
   output_type = type_object(
-    sentiment = type_enum(c("positive", "negative", "neutral")),
+    sentiment = type_enum(values = c("positive", "negative", "neutral")),
     confidence = type_number(),
     reasoning = type_string()
   ),
@@ -296,11 +267,13 @@ info <- Signature(
     entities = type_array(
       type_object(
         name = type_string(),
-        type = type_enum(c("person", "organization", "location", "product"))
+        type = type_enum(
+          values = c("person", "organization", "location", "product")
+        )
       )
     ),
     key_facts = type_array(type_string()),
-    summary = type_string(max_length = 100)
+    summary = type_string(description = "Brief summary")
   ),
   instructions = "Extract structured information from the article."
 ) |>
@@ -343,7 +316,7 @@ result <- Signature(
   ),
   output_type = type_object(
     answer = type_string(),
-    confidence = type_enum(c("high", "medium", "low")),
+    confidence = type_enum(values = c("high", "medium", "low")),
     sources_used = type_boolean()
   ),
   instructions = "Answer the question based on the provided context.
@@ -424,7 +397,7 @@ Chain multiple operations together:
 summarizer <- Signature(
   inputs = list(input("text")),
   output_type = type_object(
-    summary = type_string(max_length = 200),
+    summary = type_string(description = "Summary (approx. 200 words)"),
     key_points = type_array(type_string())
   ),
   instructions = "Summarize the text and extract key points."
@@ -502,7 +475,7 @@ inp5 <- input("active", "boolean")
 
 # Method 3: Ellmer types (for advanced constraints)
 inp6 <- input("tags", type_array(type_string()))
-inp7 <- input("status", type_enum(c("pending", "done")))
+inp7 <- input("status", type_enum(values = c("pending", "done")))
 
 # Method 4: Helper functions (typed convenience)
 inp8 <- input_string("description")
@@ -537,7 +510,7 @@ report_sig <- Signature(
       type_object(
         title = type_string(),
         content = type_string(),
-        priority = type_enum(c("high", "medium", "low"))
+        priority = type_enum(values = c("high", "medium", "low"))
       )
     ),
     approved = type_boolean()
@@ -573,36 +546,41 @@ result2 <- signature("text -> summary") |>
 
 Pipes really shine when building multi-step LLM workflows:
 
-```{r complex-workflows}
-# A complete analysis pipeline
-analyze_customer_feedback <- function(feedback, llm = NULL) {
-  feedback |>
-    # Step 1: Extract sentiment and key issues
-    (\(text) {
-      signature("feedback -> sentiment, issues: array(string)") |>
-        module(type = "predict") |>
-        run(feedback = text, .llm = llm)
-    })() |>
-    # Step 2: Generate response based on sentiment
-    (\(analysis) {
-      signature("sentiment, issues -> response") |>
-        module(
-          type = "predict",
-          template = "Sentiment: {sentiment}\nIssues: {issues}\n\nGenerate response:"
-        ) |>
-        run(
-          sentiment = analysis$sentiment,
-          issues = paste(analysis$issues, collapse = ", "),
-          .llm = llm
-        )
-    })()
+```{r complex-workflows, eval = eval_vignette()}
+# A complete analysis pipeline using pipes
+sentiment_extractor <- signature(
+  "feedback -> sentiment, issues: array(string)"
+) |>
+  module(type = "predict")
+
+response_generator <- signature("sentiment, issues -> response") |>
+  module(
+    type = "predict",
+    template = "Sentiment: {sentiment}\nIssues: {issues}\n\nGenerate response:"
+  )
+
+sentiment_step <- function(text, llm = NULL) {
+  result <- sentiment_extractor |>
+    run(
+      feedback = text,
+      .llm = llm,
+      .return_format = "structured"
+    )
+  result$output
 }
 
-# Use it
-response <- analyze_customer_feedback(
-  "The product quality is great but shipping was slow and packaging was damaged.",
-  llm = llm
-)
+response_step <- function(analysis, llm = NULL) {
+  response_generator |>
+    run(
+      sentiment = analysis$sentiment,
+      issues = paste(analysis$issues, collapse = ", "),
+      .llm = llm
+    )
+}
+
+"The product quality is great but shipping was slow and packaging was damaged." |>
+  sentiment_step(llm = llm) |>
+  response_step(llm = llm)
 ```
 
 ### Composable Module Patterns
@@ -612,14 +590,14 @@ Create libraries of reusable modules that work seamlessly with pipes:
 ```{r composable-modules}
 # Create a module library
 modules <- list(
-  summarize = signature("text -> summary: string[50, 200]") |>
-    module(type = "predict"),
+  summarize = signature("text -> summary: string") |>
+    module(type = "predict", template = "Summarize: {text}"),
   sentiment = signature(
     "text -> sentiment: enum('positive', 'negative', 'neutral')"
   ) |>
     module(type = "predict"),
   translate = signature("text, language -> translation") |>
-    module(type = "predict"),
+    module(type = "predict", template = "Translate to {language}: {text}"),
   extract_entities = signature("text -> entities: array(string)") |>
     module(type = "predict")
 )
@@ -702,7 +680,7 @@ analysis_module <- signature(
       description = "Main themes found in the document, max 5"
     ),
     sentiment = type_enum(
-      c('positive', 'negative', 'neutral', 'mixed'),
+      values = c('positive', 'negative', 'neutral', 'mixed'),
       description = "Overall sentiment of the document"
     ),
     key_quotes = type_array(
@@ -758,8 +736,10 @@ good_sig <- Signature(
     input("email", description = "Customer support email requiring response")
   ),
   output_type = type_object(
-    category = type_enum(c("complaint", "question", "feedback", "request")),
-    priority = type_enum(c("urgent", "normal", "low")),
+    category = type_enum(
+      values = c("complaint", "question", "feedback", "request")
+    ),
+    priority = type_enum(values = c("urgent", "normal", "low")),
     suggested_response = type_string()
   ),
   instructions = "Categorize the support email, assess priority based on

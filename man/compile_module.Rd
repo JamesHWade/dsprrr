@@ -4,7 +4,14 @@
 \alias{compile_module}
 \title{Compile a DSPrrr Program}
 \usage{
-compile_module(program, teleprompter, trainset, valset = NULL, ...)
+compile_module(
+  program,
+  teleprompter,
+  trainset,
+  valset = NULL,
+  .llm = NULL,
+  ...
+)
 }
 \arguments{
 \item{program}{A DSPrrr module to optimize (e.g., from \code{module()})}
@@ -14,6 +21,8 @@ compile_module(program, teleprompter, trainset, valset = NULL, ...)
 \item{trainset}{Training data as a data frame}
 
 \item{valset}{Optional validation set for evaluation}
+
+\item{.llm}{Optional ellmer chat object to reuse during compilation}
 
 \item{...}{Additional arguments passed to the teleprompter}
 }

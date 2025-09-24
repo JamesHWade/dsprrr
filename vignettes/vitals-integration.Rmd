@@ -82,33 +82,13 @@ sentiment_module <- signature(
 ) |>
   module(type = "predict")
 
-# Use as vitals solver with new structured return format
-as_vitals_solver <- function(module, llm = chat_openai()) {
-  function(inputs, ...) {
-    # The new run() handles batch processing automatically!
-    results <- run(
-      module,
-      text = inputs,
-      .llm = llm,
-      .return_format = "structured", # New feature!
-      .progress = FALSE
-    )
-
-    # Extract outputs and chats from structured results
-    list(
-      result = sapply(results, function(r) as.character(r$output$sentiment)),
-      solver_chat = lapply(results, `[[`, "chat")
-    )
-  }
-}
-
-# Create vitals task with dsprrr solver
+# Create vitals task with dsprrr's helper
 task <- Task$new(
   dataset = tibble(
     input = c("I love this!", "This is terrible"),
     target = c("positive", "negative")
   ),
-  solver = as_vitals_solver(sentiment_module),
+  solver = as_vitals_solver(sentiment_module, llm = chat_openai()),
   scorer = model_graded_qa()
 )
 
@@ -147,24 +127,8 @@ Convert vitals scorers to dsprrr metrics for use in optimization:
 
 ```{r}
 # Create a metric from vitals scorer
-as_dsprrr_metric <- function(vitals_scorer) {
-  function(predictions, targets, metadata = NULL) {
-    # Create samples in vitals format
-    samples <- tibble(
-      input = names(predictions),
-      target = targets,
-      result = as.character(predictions)
-    )
+# (vitals provides model-graded scorers returning "C"/"I" style outputs)
 
-    # Score using vitals
-    scores <- vitals_scorer(samples)
-
-    # Return accuracy (or other aggregate metric)
-    mean(scores$score == "C", na.rm = TRUE)
-  }
-}
-
-# Use in dsprrr optimization
 teleprompter <- GridSearchTeleprompter(
   variants = tibble(
     id = c("brief", "detailed"),
