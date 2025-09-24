@@ -16,7 +16,8 @@
     "ask": [],
     "additionalDirectories": [
       "../vitals/",
-      "../ellmer/"
+      "../ellmer/",
+      "/Users/james/Projects/dspy"
     ]
   }
 }

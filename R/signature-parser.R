@@ -26,6 +26,39 @@ parse_signature <- function(signature_str, instructions = "") {
   output_str <- trimws(parts[2])
   output_type <- parse_output(output_str)
 
+  # Generate default instructions if none provided (similar to DSPy)
+  if (nchar(instructions) == 0) {
+    # Get input field names
+    input_names <- if (length(inputs) > 0) {
+      paste0("`", vapply(inputs, function(x) x$name, character(1)), "`", collapse = ", ")
+    } else {
+      "no inputs"
+    }
+
+    # Get output field names from the output string
+    # For simple cases like "sentiment", use that
+    # For typed cases like "sentiment: string", extract the field name
+    # For multiple outputs like "sentiment, issues: array(string)", parse them
+    output_field_names <- if (grepl(",", output_str)) {
+      # Multiple outputs - extract field names
+      fields <- split_respecting_nesting(output_str, ",")
+      field_names <- character()
+      for (field in fields) {
+        # Extract name before colon if present
+        name <- trimws(gsub(":.*", "", field))
+        field_names <- c(field_names, name)
+      }
+      paste0("`", field_names, "`", collapse = ", ")
+    } else {
+      # Single output - extract name before colon if present
+      name <- trimws(gsub(":.*", "", output_str))
+      paste0("`", name, "`")
+    }
+
+    # Generate instructions similar to DSPy
+    instructions <- paste0("Given the fields ", input_names, ", produce the fields ", output_field_names, ".")
+  }
+
   # Create Signature
   Signature(
     inputs = inputs,
@@ -89,8 +122,38 @@ parse_inputs <- function(inputs_str) {
 #' Parse output specification from string
 #' @noRd
 parse_output <- function(output_str) {
-  # First check if this is a single output with a type specification
-  # Look for pattern: name: type where type might contain commas (e.g., enum)
+  # First, check if there are commas at depth 0 BEFORE any colons
+  # This indicates multiple outputs like "sentiment, issues: array(string)"
+  chars <- strsplit(output_str, "")[[1]]
+  depth <- 0
+  first_comma_pos <- -1
+  first_colon_pos <- -1
+
+  for (i in seq_along(chars)) {
+    if (chars[i] %in% c("[", "(")) depth <- depth + 1
+    if (chars[i] %in% c("]", ")")) depth <- depth - 1
+    if (chars[i] == "," && depth == 0 && first_comma_pos == -1) {
+      first_comma_pos <- i
+    }
+    if (chars[i] == ":" && depth == 0 && first_colon_pos == -1) {
+      first_colon_pos <- i
+    }
+  }
+
+  # If we have a comma before a colon (or no colon), it's likely multiple outputs
+  if (first_comma_pos > 0 && (first_colon_pos == -1 || first_comma_pos < first_colon_pos)) {
+    # Check if the comma is part of a type specification or truly separates fields
+    # Look at the string before the first comma
+    before_comma <- substr(output_str, 1, first_comma_pos - 1)
+
+    # If before_comma contains a colon, it might be a single complex output
+    # Otherwise, it's multiple outputs
+    if (!grepl(":", before_comma)) {
+      return(parse_multiple_outputs(output_str))
+    }
+  }
+
+  # Original logic for single output with type specification
   if (grepl(":", output_str)) {
     # Find the first colon not inside brackets/parens
     chars <- strsplit(output_str, "")[[1]]
@@ -133,7 +196,11 @@ parse_output <- function(output_str) {
       # Single output with type
       output_name <- trimws(substr(output_str, 1, colon_pos - 1))
       type_str <- trimws(substr(output_str, colon_pos + 1, nchar(output_str)))
-      return(parse_type_string(type_str, output_name))
+
+      # Wrap single outputs in an object type for proper field access
+      fields <- list()
+      fields[[output_name]] <- parse_type_string(type_str, output_name)
+      return(do.call(ellmer::type_object, fields))
     }
   }
 
@@ -149,8 +216,11 @@ parse_output <- function(output_str) {
   output_name <- trimws(output_str)
   type_str <- "string"  # Default type
 
-  # Parse the type string into ellmer type
-  parse_type_string(type_str, output_name)
+  # For single outputs, wrap in an object type to get proper field access
+  # This ensures we get back a named list/object instead of raw JSON string
+  fields <- list()
+  fields[[output_name]] <- parse_type_string(type_str, output_name)
+  do.call(ellmer::type_object, fields)
 }
 
 #' Parse multiple output fields

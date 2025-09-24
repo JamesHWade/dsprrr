@@ -153,7 +153,19 @@ run_predict <- function(
 
   # Return based on format
   if (.return_format == "simple") {
-    response
+    # For single-field outputs, extract just the field value for convenience
+    if (inherits(module@signature@output_type, "ellmer::TypeObject") &&
+        length(module@signature@output_type@properties) == 1) {
+      # Single field object - extract the value
+      field_name <- names(module@signature@output_type@properties)[1]
+      if (!is.null(response[[field_name]])) {
+        response[[field_name]]
+      } else {
+        response
+      }
+    } else {
+      response
+    }
   } else {
     structure(
       list(
@@ -240,7 +252,18 @@ run_batch <- function(
           latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
 
           if (.return_format == "simple") {
-            response
+            # For single-field outputs, extract just the field value
+            if (inherits(module@signature@output_type, "ellmer::TypeObject") &&
+                length(module@signature@output_type@properties) == 1) {
+              field_name <- names(module@signature@output_type@properties)[1]
+              if (!is.null(response[[field_name]])) {
+                response[[field_name]]
+              } else {
+                response
+              }
+            } else {
+              response
+            }
           } else {
             list(
               output = response,
@@ -336,7 +359,18 @@ run_batch <- function(
         latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
 
         if (.return_format == "simple") {
-          response
+          # For single-field outputs, extract just the field value
+          if (inherits(module@signature@output_type, "ellmer::TypeObject") &&
+              length(module@signature@output_type@properties) == 1) {
+            field_name <- names(module@signature@output_type@properties)[1]
+            if (!is.null(response[[field_name]])) {
+              response[[field_name]]
+            } else {
+              response
+            }
+          } else {
+            response
+          }
         } else {
             list(
               output = response,
@@ -513,10 +547,12 @@ call_llm <- function(
   # Make the API call through ellmer's chat_structured method
   tryCatch(
     {
+      # Note: echo="text" doesn't work with chat_structured for some providers
+      # So we disable echo for structured calls even in verbose mode
       result <- llm$chat_structured(
         full_prompt,
         type = output_type,
-        echo = if (verbose) "text" else "none"
+        echo = "none"
       )
 
       result

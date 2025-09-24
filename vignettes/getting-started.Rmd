@@ -752,7 +752,12 @@ good_sig <- Signature(
 
 Templates help maintain consistent prompt structure:
 
-```{r best-practices-templates}
+```{r best-practices-templates, eval = eval_vignette()}
+# Define a signature for analysis
+analysis_sig <- signature(
+  "data, analysis_type -> insights: array(string), summary: string"
+)
+
 analyzer <- module(
   analysis_sig,
   type = "predict",
@@ -774,7 +779,12 @@ Please provide a comprehensive analysis following the specified format.
 
 Examples significantly improve performance on complex tasks:
 
-```{r best-practices-demos}
+```{r best-practices-demos, eval = eval_vignette()}
+# Define the code analysis signature
+code_analysis_sig <- signature(
+  "code -> language: string, complexity: enum('simple', 'moderate', 'complex'), has_error: boolean"
+)
+
 # Create demonstrations from validated examples
 demos <- list(
   list(
@@ -806,7 +816,12 @@ code_analyzer <- module(
 
 Build reusable components:
 
-```{r best-practices-modular}
+```{r best-practices-modular, eval = eval_vignette()}
+# Define the required signatures
+sentiment_sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+entity_sig <- signature("text -> entities: array(string)")
+summary_sig <- signature("text -> summary: string[50, 200]")
+
 # Create reusable modules
 sentiment_module <- module(sentiment_sig, type = "predict")
 entity_module <- module(entity_sig, type = "predict")
@@ -826,10 +841,14 @@ analyze_feedback <- function(text, llm = NULL) {
 
 Use verbose mode to see generated prompts:
 
-```{r debugging}
+```{r debugging, eval = eval_vignette()}
+# Create a simple classifier for debugging
+sentiment_classifier <- signature("sentence -> sentiment") |>
+  module(type = "predict")
+
 # Enable verbose output to debug prompts
 result <- run(
-  classifier,
+  sentiment_classifier,
   sentence = "Debug this prompt",
   .llm = llm,
   .verbose = TRUE
