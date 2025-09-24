@@ -168,7 +168,7 @@
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
 <span>    sentiment <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'positive'</span>, <span class="st">'negative'</span>, <span class="st">'neutral'</span><span class="op">)</span>,</span>
+<span>      values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'positive'</span>, <span class="st">'negative'</span>, <span class="st">'neutral'</span><span class="op">)</span>,</span>
 <span>      description <span class="op">=</span> <span class="st">"Overall sentiment of the document"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
@@ -360,10 +360,10 @@
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidyverse/vitals" class="external-link">vitals</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Use dsprrr modules as vitals solvers</span></span>
-<span><span class="va">task</span> <span class="op">&lt;-</span> <span class="va">Task</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span><span class="va">task</span> <span class="op">&lt;-</span> <span class="va"><a href="https://vitals.tidyverse.org/reference/Task.html" class="external-link">Task</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">test_data</span>,</span>
 <span>  solver <span class="op">=</span> <span class="fu"><a href="reference/as_function.html">as_function</a></span><span class="op">(</span><span class="va">classifier</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span>,</span>
-<span>  scorer <span class="op">=</span> <span class="fu">model_graded_qa</span><span class="op">(</span><span class="op">)</span></span>
+<span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -415,7 +415,7 @@
 <h3 id="id_-milestone-3-ecosystem--ergonomics-planned">📋 Milestone 3: Ecosystem &amp; Ergonomics (Planned)<a class="anchor" aria-label="anchor" href="#id_-milestone-3-ecosystem--ergonomics-planned"></a>
 </h3>
 <ul class="task-list">
-<li><label><input type="checkbox"><code>evaluate()</code> generic for systematic testing</label></li>
+<li><label><input type="checkbox"><code><a href="reference/evaluate.html">evaluate()</a></code> generic for systematic testing</label></li>
 <li><label><input type="checkbox">Advanced error handling and debugging tools</label></li>
 <li><label><input type="checkbox">Provider-specific helpers (OpenAI, Anthropic, etc.)</label></li>
 <li><label><input type="checkbox">pkgdown documentation website</label></li>

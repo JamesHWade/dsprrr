@@ -180,7 +180,7 @@
 <code class="sourceCode R"><span><span class="va">VitalsOptimizer</span> <span class="op">&lt;-</span> <span class="fu">S7</span><span class="fu">::</span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"VitalsOptimizer"</span>,</span>
 <span>  parent <span class="op">=</span> <span class="va">Teleprompter</span>,</span>
 <span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    task <span class="op">=</span> <span class="fu">vitals</span><span class="fu">::</span><span class="va">Task</span>,</span>
+<span>    task <span class="op">=</span> <span class="fu">vitals</span><span class="fu">::</span><span class="va"><a href="https://vitals.tidyverse.org/reference/Task.html" class="external-link">Task</a></span>,</span>
 <span>    optimization_dataset <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/base_s3_classes.html" class="external-link">class_data.frame</a></span>,</span>
 <span>    n_iterations <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/base_classes.html" class="external-link">class_integer</a></span></span>
 <span>  <span class="op">)</span></span>
@@ -196,7 +196,7 @@
 <span></span>
 <span>    <span class="co"># Evaluate using vitals</span></span>
 <span>    <span class="va">task</span> <span class="op">&lt;-</span> <span class="va">teleprompter</span><span class="op">@</span><span class="va">task</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span><span class="op">)</span></span>
-<span>    <span class="va">task</span><span class="op">$</span><span class="va">solver</span> <span class="op">&lt;-</span> <span class="fu">as_vitals_solver</span><span class="op">(</span><span class="va">candidate</span><span class="op">)</span></span>
+<span>    <span class="va">task</span><span class="op">$</span><span class="va">solver</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/as_vitals_solver.html">as_vitals_solver</a></span><span class="op">(</span><span class="va">candidate</span><span class="op">)</span></span>
 <span>    <span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span>    <span class="va">score</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_metrics</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">accuracy</span></span>
@@ -211,7 +211,7 @@
 <ol start="2" style="list-style-type: decimal"><li><strong>vitals Task with dsprrr modules</strong></li>
 </ol><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Direct support for dsprrr modules as solvers</span></span>
-<span><span class="va">task</span> <span class="op">&lt;-</span> <span class="fu">vitals</span><span class="fu">::</span><span class="va">Task</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span><span class="va">task</span> <span class="op">&lt;-</span> <span class="fu">vitals</span><span class="fu">::</span><span class="va"><a href="https://vitals.tidyverse.org/reference/Task.html" class="external-link">Task</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">evaluation_data</span>,</span>
 <span>  solver <span class="op">=</span> <span class="fu">dsprrr_solver</span><span class="op">(</span><span class="va">my_predict_module</span><span class="op">)</span>,</span>
 <span>  scorer <span class="op">=</span> <span class="fu">model_graded_qa</span><span class="op">(</span><span class="op">)</span></span>
@@ -290,7 +290,7 @@
 <div class="section level3">
 <h3 id="immediate-actions-week-1-2">Immediate Actions (Week 1-2)<a class="anchor" aria-label="anchor" href="#immediate-actions-week-1-2"></a></h3>
 <ol style="list-style-type: decimal"><li>✅ Create this integration plan</li>
-<li>Create adapter functions in dsprrr: <code>as_vitals_solver()</code>, <code>from_vitals_metric()</code>
+<li>Create adapter functions in dsprrr: <code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code>, <code>from_vitals_metric()</code>
 </li>
 <li>Add vitals to dsprrr’s Suggests and create integration vignette</li>
 <li>Test basic interoperability with example workflows</li>

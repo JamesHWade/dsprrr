@@ -83,12 +83,60 @@ shortcut or NULL, this description will be passed to the ellmer type</p></dd>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Using ellmer types (recommended for consistency with outputs)</span></span></span>
-<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"text"</span>, <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in type_string():</span> could not find function "type_string"</span>
-<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"age"</span>, <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in type_number():</span> could not find function "type_number"</span>
-<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"active"</span>, <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in type_boolean():</span> could not find function "type_boolean"</span>
+<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"text"</span>, <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "text"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $type</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ellmer::TypeBasic&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ description: NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ required   : logi TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ type       : chr "string"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $class</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;S7_base_class&gt;: &lt;character&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $description</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dsprrr_input"</span>
+<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"age"</span>, <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "age"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $type</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ellmer::TypeBasic&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ description: NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ required   : logi TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ type       : chr "number"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $class</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;S7_base_class&gt;: &lt;double&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $description</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dsprrr_input"</span>
+<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"active"</span>, <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "active"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $type</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ellmer::TypeBasic&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ description: NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ required   : logi TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ type       : chr "boolean"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $class</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;S7_base_class&gt;: &lt;logical&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $description</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dsprrr_input"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using string shortcuts (simple and readable)</span></span></span>
 <span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"text"</span>, <span class="st">"string"</span><span class="op">)</span></span></span>
@@ -185,10 +233,45 @@ shortcut or NULL, this description will be passed to the ellmer type</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dsprrr_input"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With ellmer types for structured data</span></span></span>
-<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"tags"</span>, <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in type_array(type_string()):</span> could not find function "type_array"</span>
-<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"status"</span>, <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pending"</span>, <span class="st">"active"</span>, <span class="st">"done"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in type_enum(c("pending", "active", "done")):</span> could not find function "type_enum"</span>
+<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"tags"</span>, <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span><span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "tags"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $type</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ellmer::TypeArray&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ description: NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ required   : logi TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ items      : &lt;ellmer::TypeBasic&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  .. @ description: NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  .. @ required   : logi TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  .. @ type       : chr "string"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $class</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;S7_base_class&gt;: &lt;list&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $description</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dsprrr_input"</span>
+<span class="r-in"><span><span class="fu">input</span><span class="op">(</span><span class="st">"status"</span>, <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pending"</span>, <span class="st">"active"</span>, <span class="st">"done"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "status"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $type</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ellmer::TypeEnum&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ description: NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ required   : logi TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  @ values     : chr [1:3] "pending" "active" "done"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $class</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;S7_base_class&gt;: &lt;character&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $description</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "dsprrr_input"</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -373,8 +373,8 @@ optimizing your programs:</p>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"email"</span>, description <span class="op">=</span> <span class="st">"Customer email text"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    category <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"complaint"</span>, <span class="st">"inquiry"</span>, <span class="st">"feedback"</span>, <span class="st">"spam"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    priority <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"urgent"</span>, <span class="st">"normal"</span>, <span class="st">"low"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    category <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"complaint"</span>, <span class="st">"inquiry"</span>, <span class="st">"feedback"</span>, <span class="st">"spam"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    priority <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"urgent"</span>, <span class="st">"normal"</span>, <span class="st">"low"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    needs_response <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify customer emails by category and priority."</span></span>
@@ -520,8 +520,6 @@ performance:</p>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
 <span>    summary <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
-<span>      min_length <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>      max_length <span class="op">=</span> <span class="fl">200</span>,</span>
 <span>      description <span class="op">=</span> <span class="st">"Concise summary of main points"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    topics <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span></span>
@@ -529,7 +527,7 @@ performance:</p>
 <span>      description <span class="op">=</span> <span class="st">"Key topics discussed (max 5)"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    sentiment <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>, <span class="st">"mixed"</span><span class="op">)</span>,</span>
+<span>      values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>, <span class="st">"mixed"</span><span class="op">)</span>,</span>
 <span>      description <span class="op">=</span> <span class="st">"Overall document sentiment"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    key_facts <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span></span>
@@ -537,7 +535,7 @@ performance:</p>
 <span>      description <span class="op">=</span> <span class="st">"Important facts or claims"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    recommendation <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"approve"</span>, <span class="st">"review"</span>, <span class="st">"reject"</span><span class="op">)</span>,</span>
+<span>      values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"approve"</span>, <span class="st">"review"</span>, <span class="st">"reject"</span><span class="op">)</span>,</span>
 <span>      description <span class="op">=</span> <span class="st">"Recommended action"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>

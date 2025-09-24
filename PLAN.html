@@ -117,7 +117,7 @@
 <span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"text"</span>, description <span class="op">=</span> <span class="st">"The text to classify."</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    sentiment <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Positive"</span>, <span class="st">"Negative"</span>, <span class="st">"Neutral"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    sentiment <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Positive"</span>, <span class="st">"Negative"</span>, <span class="st">"Neutral"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    confidence <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span>minimum <span class="op">=</span> <span class="fl">0</span>, maximum <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
 <span>    reasoning <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
@@ -153,7 +153,7 @@
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 6. Future: Evaluate on held-out test set</span></span>
-<span><span class="va">evaluation_results</span> <span class="op">&lt;-</span> <span class="fu">evaluate</span><span class="op">(</span></span>
+<span><span class="va">evaluation_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  program <span class="op">=</span> <span class="va">compiled_classifier</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">sentiment_test_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span></span>
@@ -201,10 +201,16 @@
 <li>Full test coverage (160+ tests passing)</li>
 </ul></li>
 </ul><p><strong>Milestone 3: Ecosystem &amp; Ergonomics (Target: 7 Weeks)</strong></p>
-<ul class="task-list"><li><label><input type="checkbox">Implement the <code>evaluate()</code> generic.</label></li>
+<ul class="task-list"><li><label><input type="checkbox" checked>Implement the <code><a href="reference/evaluate.html">evaluate()</a></code> generic.</label></li>
 <li><label><input type="checkbox" checked>Develop robust error handling using <code>rlang</code> for both API failures and validation errors (partially complete).</label></li>
 <li><label><input type="checkbox">Add convenience wrappers for common LLM providers (e.g., <code>lm_openai()</code>).</label></li>
 <li><label><input type="checkbox">Build out a comprehensive documentation website using <code>pkgdown</code>.</label></li>
+<li><label><input type="checkbox" checked>Replace the placeholder scoring paths in <code><a href="reference/compile_module.html">compile_module()</a></code>, <code>GridSearchTeleprompter</code>, and <code><a href="reference/evaluate_dsp.html">evaluate_dsp()</a></code> with real calls into <code><a href="reference/run.html">run()</a></code> (supporting dependency injection for mock LLMs in tests and batching for speed).</label></li>
+<li><label><input type="checkbox" checked>Export vitals adapter helpers (<code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code>, <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>, etc.) with accompanying tests so the documented workflow is exercised end-to-end.</label></li>
+</ul><p><strong>Milestone 3a: Prompting &amp; Execution Polish (Parallel track, ~2 Weeks)</strong></p>
+<ul class="task-list"><li><label><input type="checkbox" checked>Adjust prompt construction so signature instructions are injected exactly once (remove the current double prepend between <code>build_prompt()</code> and <code>call_llm()</code>).</label></li>
+<li><label><input type="checkbox" checked>Define a safe parallel execution strategy: either spin up a fresh <code>.llm</code> per worker in <code>run_batch()</code> or default <code>.parallel = FALSE</code> until a serialisable, thread-safe client abstraction is ready. Document the behaviour and add regression tests.</label></li>
+<li><label><input type="checkbox" checked>Extend structured/batch return objects with richer metadata hooks needed by vitals (e.g., solver logs) once the evaluation path is wired to <code><a href="reference/run.html">run()</a></code>.</label></li>
 </ul><p><strong>Milestone 4: Future Vision &amp; Extensibility</strong></p>
 <ul class="task-list"><li><label><input type="checkbox"><strong>Advanced Teleprompters:</strong> Implement more sophisticated optimizers, such as one that bootstraps few-shot examples from the development set.</label></li>
 <li><label><input type="checkbox"><strong>New Module Types:</strong> Design <code>ChainOfThought</code> and <code>ReAct</code> modules to enable multi-step, tool-using programs.</label></li>

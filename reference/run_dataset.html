@@ -55,28 +55,27 @@
 <dd><p>A DSPrrr module (e.g., created with <code><a href="module.html">module()</a></code>)</p></dd>
 
 
-<dt id="arg-dataset">dataset<a class="anchor" aria-label="anchor" href="#arg-dataset"></a></dt>
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Additional arguments including:</p><dl><dt>dataset</dt>
 <dd><p>A tibble or data frame with columns matching the module's inputs</p></dd>
 
-
-<dt id="arg--llm">.llm<a class="anchor" aria-label="anchor" href="#arg--llm"></a></dt>
+<dt>.llm</dt>
 <dd><p>An ellmer chat object for LLM interaction (optional)</p></dd>
 
-
-<dt id="arg--verbose">.verbose<a class="anchor" aria-label="anchor" href="#arg--verbose"></a></dt>
+<dt>.verbose</dt>
 <dd><p>Logical indicating whether to print debug information</p></dd>
 
-
-<dt id="arg--parallel">.parallel<a class="anchor" aria-label="anchor" href="#arg--parallel"></a></dt>
+<dt>.parallel</dt>
 <dd><p>Logical indicating whether to process in parallel (default TRUE)</p></dd>
 
-
-<dt id="arg--progress">.progress<a class="anchor" aria-label="anchor" href="#arg--progress"></a></dt>
+<dt>.progress</dt>
 <dd><p>Logical indicating whether to show progress bar (default TRUE)</p></dd>
 
-
-<dt id="arg--return-format">.return_format<a class="anchor" aria-label="anchor" href="#arg--return-format"></a></dt>
+<dt>.return_format</dt>
 <dd><p>Character, either "simple" or "structured" (default "simple")</p></dd>
+
+
+</dl></dd>
 
 </dl></div>
     <div class="section level2">
@@ -86,15 +85,17 @@
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Process a dataset</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="co"># Process a dataset</span></span></span>
 <span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"This is bad"</span>, <span class="st">"Okay product"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">run_dataset</span><span class="op">(</span><span class="va">data</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'llm' not found</span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -217,7 +217,7 @@ string - Ellmer types: <code><a href="https://ellmer.tidyverse.org/reference/typ
 signatures: <code>"-&gt; answer: string"</code>,
 <code>"-&gt; score: number[0,100]"</code> - Ellmer types for complex
 structures: <code>type_object(...)</code>, <code>type_array(...)</code>
-- Enums: <code>type_enum(c("a", "b", "c"))</code></p>
+- Enums: <code>type_enum(values = c("a", "b", "c"))</code></p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># DSPy-style string notation (recommended for simplicity)</span></span>
 <span><span class="va">sentiment_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
@@ -288,7 +288,7 @@ and confidence score:</p>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"sentence"</span>, description <span class="op">=</span> <span class="st">"Sentence to classify"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    sentiment <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    sentiment <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    confidence <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>    reasoning <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
@@ -331,11 +331,13 @@ and confidence score:</p>
 <span>    entities <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span></span>
 <span>      <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
 <span>        name <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>        type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"person"</span>, <span class="st">"organization"</span>, <span class="st">"location"</span>, <span class="st">"product"</span><span class="op">)</span><span class="op">)</span></span>
+<span>        type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>          values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"person"</span>, <span class="st">"organization"</span>, <span class="st">"location"</span>, <span class="st">"product"</span><span class="op">)</span></span>
+<span>        <span class="op">)</span></span>
 <span>      <span class="op">)</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    key_facts <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    summary <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span>max_length <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
+<span>    summary <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span>description <span class="op">=</span> <span class="st">"Brief summary"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Extract structured information from the article."</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -377,7 +379,7 @@ and confidence score:</p>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
 <span>    answer <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    confidence <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"high"</span>, <span class="st">"medium"</span>, <span class="st">"low"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    confidence <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"high"</span>, <span class="st">"medium"</span>, <span class="st">"low"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    sources_used <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Answer the question based on the provided context.</span></span>
@@ -456,7 +458,7 @@ and confidence score:</p>
 <span><span class="va">summarizer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">Signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"text"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    summary <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span>max_length <span class="op">=</span> <span class="fl">200</span><span class="op">)</span>,</span>
+<span>    summary <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span>description <span class="op">=</span> <span class="st">"Summary (approx. 200 words)"</span><span class="op">)</span>,</span>
 <span>    key_points <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Summarize the text and extract key points."</span></span>
@@ -536,7 +538,7 @@ classes required!</p>
 <span></span>
 <span><span class="co"># Method 3: Ellmer types (for advanced constraints)</span></span>
 <span><span class="va">inp6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"tags"</span>, <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">inp7</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"status"</span>, <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pending"</span>, <span class="st">"done"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">inp7</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"status"</span>, <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pending"</span>, <span class="st">"done"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Method 4: Helper functions (typed convenience)</span></span>
 <span><span class="va">inp8</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/input_helpers.html">input_string</a></span><span class="op">(</span><span class="st">"description"</span><span class="op">)</span></span>
@@ -570,7 +572,7 @@ classes required!</p>
 <span>      <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
 <span>        title <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>        content <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>        priority <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"high"</span>, <span class="st">"medium"</span>, <span class="st">"low"</span><span class="op">)</span><span class="op">)</span></span>
+<span>        priority <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"high"</span>, <span class="st">"medium"</span>, <span class="st">"low"</span><span class="op">)</span><span class="op">)</span></span>
 <span>      <span class="op">)</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    approved <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -608,35 +610,40 @@ dsprrr—it fundamentally makes LLM programming feel like natural R:</p>
 </h3>
 <p>Pipes really shine when building multi-step LLM workflows:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># A complete analysis pipeline</span></span>
-<span><span class="va">analyze_customer_feedback</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">feedback</span>, <span class="va">llm</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">feedback</span> <span class="op">|&gt;</span></span>
-<span>    <span class="co"># Step 1: Extract sentiment and key issues</span></span>
-<span>    <span class="op">(</span>\<span class="op">(</span><span class="va">text</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"feedback -&gt; sentiment, issues: array(string)"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span>feedback <span class="op">=</span> <span class="va">text</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span>    <span class="op">}</span><span class="op">)</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="co"># Step 2: Generate response based on sentiment</span></span>
-<span>    <span class="op">(</span>\<span class="op">(</span><span class="va">analysis</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"sentiment, issues -&gt; response"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"predict"</span>,</span>
-<span>          template <span class="op">=</span> <span class="st">"Sentiment: {sentiment}\nIssues: {issues}\n\nGenerate response:"</span></span>
-<span>        <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>          sentiment <span class="op">=</span> <span class="va">analysis</span><span class="op">$</span><span class="va">sentiment</span>,</span>
-<span>          issues <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">issues</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>          .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span>        <span class="op">)</span></span>
-<span>    <span class="op">}</span><span class="op">)</span><span class="op">(</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># A complete analysis pipeline using pipes</span></span>
+<span><span class="va">sentiment_extractor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"feedback -&gt; sentiment, issues: array(string)"</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">response_generator</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"sentiment, issues -&gt; response"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<span>    type <span class="op">=</span> <span class="st">"predict"</span>,</span>
+<span>    template <span class="op">=</span> <span class="st">"Sentiment: {sentiment}\nIssues: {issues}\n\nGenerate response:"</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="va">sentiment_step</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">text</span>, <span class="va">llm</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="va">sentiment_extractor</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>      feedback <span class="op">=</span> <span class="va">text</span>,</span>
+<span>      .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>      .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="va">result</span><span class="op">$</span><span class="va">output</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="co"># Use it</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu">analyze_customer_feedback</span><span class="op">(</span></span>
-<span>  <span class="st">"The product quality is great but shipping was slow and packaging was damaged."</span>,</span>
-<span>  llm <span class="op">=</span> <span class="va">llm</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">response_step</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">analysis</span>, <span class="va">llm</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">response_generator</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>      sentiment <span class="op">=</span> <span class="va">analysis</span><span class="op">$</span><span class="va">sentiment</span>,</span>
+<span>      issues <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">issues</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
+<span>      .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>    <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="st">"The product quality is great but shipping was slow and packaging was damaged."</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">sentiment_step</span><span class="op">(</span>llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">response_step</span><span class="op">(</span>llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="composable-module-patterns">Composable Module Patterns<a class="anchor" aria-label="anchor" href="#composable-module-patterns"></a>
@@ -646,14 +653,14 @@ pipes:</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a module library</span></span>
 <span><span class="va">modules</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  summarize <span class="op">=</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; summary: string[50, 200]"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
+<span>  summarize <span class="op">=</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; summary: string"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Summarize: {text}"</span><span class="op">)</span>,</span>
 <span>  sentiment <span class="op">=</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>    <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
 <span>  translate <span class="op">=</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text, language -&gt; translation"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Translate to {language}: {text}"</span><span class="op">)</span>,</span>
 <span>  extract_entities <span class="op">=</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; entities: array(string)"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
@@ -738,7 +745,7 @@ and dict types:</p>
 <span>      description <span class="op">=</span> <span class="st">"Main themes found in the document, max 5"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    sentiment <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'positive'</span>, <span class="st">'negative'</span>, <span class="st">'neutral'</span>, <span class="st">'mixed'</span><span class="op">)</span>,</span>
+<span>      values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'positive'</span>, <span class="st">'negative'</span>, <span class="st">'neutral'</span>, <span class="st">'mixed'</span><span class="op">)</span>,</span>
 <span>      description <span class="op">=</span> <span class="st">"Overall sentiment of the document"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    key_quotes <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span></span>
@@ -794,8 +801,10 @@ and dict types:</p>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"email"</span>, description <span class="op">=</span> <span class="st">"Customer support email requiring response"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    category <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"complaint"</span>, <span class="st">"question"</span>, <span class="st">"feedback"</span>, <span class="st">"request"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    priority <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"urgent"</span>, <span class="st">"normal"</span>, <span class="st">"low"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    category <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>      values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"complaint"</span>, <span class="st">"question"</span>, <span class="st">"feedback"</span>, <span class="st">"request"</span><span class="op">)</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    priority <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"urgent"</span>, <span class="st">"normal"</span>, <span class="st">"low"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    suggested_response <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Categorize the support email, assess priority based on</span></span>
@@ -808,7 +817,12 @@ and dict types:</p>
 </h3>
 <p>Templates help maintain consistent prompt structure:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">analyzer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="co"># Define a signature for analysis</span></span>
+<span><span class="va">analysis_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"data, analysis_type -&gt; insights: array(string), summary: string"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">analyzer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
 <span>  <span class="va">analysis_sig</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"predict"</span>,</span>
 <span>  template <span class="op">=</span> <span class="st">"</span></span>
@@ -829,7 +843,12 @@ and dict types:</p>
 </h3>
 <p>Examples significantly improve performance on complex tasks:</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create demonstrations from validated examples</span></span>
+<code class="sourceCode R"><span><span class="co"># Define the code analysis signature</span></span>
+<span><span class="va">code_analysis_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"code -&gt; language: string, complexity: enum('simple', 'moderate', 'complex'), has_error: boolean"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create demonstrations from validated examples</span></span>
 <span><span class="va">demos</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>code <span class="op">=</span> <span class="st">"def add(a, b): return a + b"</span><span class="op">)</span>,</span>
@@ -860,7 +879,12 @@ and dict types:</p>
 </h3>
 <p>Build reusable components:</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create reusable modules</span></span>
+<code class="sourceCode R"><span><span class="co"># Define the required signatures</span></span>
+<span><span class="va">sentiment_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
+<span><span class="va">entity_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; entities: array(string)"</span><span class="op">)</span></span>
+<span><span class="va">summary_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; summary: string[50, 200]"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create reusable modules</span></span>
 <span><span class="va">sentiment_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sentiment_sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span><span class="va">entity_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">entity_sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span><span class="va">summary_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">summary_sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
@@ -880,9 +904,13 @@ and dict types:</p>
 </h2>
 <p>Use verbose mode to see generated prompts:</p>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Enable verbose output to debug prompts</span></span>
+<code class="sourceCode R"><span><span class="co"># Create a simple classifier for debugging</span></span>
+<span><span class="va">sentiment_classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"sentence -&gt; sentiment"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Enable verbose output to debug prompts</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">classifier</span>,</span>
+<span>  <span class="va">sentiment_classifier</span>,</span>
 <span>  sentence <span class="op">=</span> <span class="st">"Debug this prompt"</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
 <span>  .verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
