@@ -22,11 +22,11 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/dsprrr/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/dsprrr)
 <!-- badges: end -->
 
-`dsprrr` is an R implementation of [DSPy](https://github.com/stanfordnlp/dspy), providing a framework for building **principled, test-driven, and optimizable** applications using Large Language Models (LLMs). It moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved.
+`dsprrr` is a package for building **principled, test-driven, and optimizable** applications using Large Language Models in R. It moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. This is an R implementation of [DSPy](https://github.com/stanfordnlp/dspy) from Stanford NLP.
 
 ## Philosophy
 
-`dsprrr` brings the elegance of R's pipe operator (`|>`) to LLM programming. By designing composable, pipe-friendly APIs and integrating with the tidyverse ethos, `dsprrr` makes developing robust AI systems feel like a natural extension of R-based data analysis workflows. Build LLM pipelines the R way—with clear, readable, and chainable operations.
+Our philosophy is to provide "tools for thinking" about LLM applications, deeply integrating with the tidyverse ethos. By representing prompts, examples, and evaluation results as data frames, and by designing composable, pipe-friendly APIs, `dsprrr` makes the complex task of developing robust AI systems feel like a natural extension of an R-based data analysis workflow. We are not just wrapping an API; we are creating a framework for rigorous, empirical LLM development.
 
 ## Installation
 
@@ -77,7 +77,7 @@ result <- signature("text -> summary") |>
   module(type = "predict", template = "Summarize: {text}") |>
   run(text = "Long text...", .llm = llm)
 
-# Future: Chain operations for complex workflows
+# Chain operations for complex workflows (coming soon)
 # analysis <- text |>
 #   extract_key_points() |>
 #   summarize(max_words = 100) |>
@@ -119,10 +119,10 @@ print(qa_sig)
 ```
 
 ```{r signatures-advanced, eval=FALSE}
-# NEW: Multiple outputs support!
+# Multiple outputs support
 analysis_sig <- signature("text -> sentiment: string, confidence: float, keywords: list[string]")
 
-# NEW: Advanced type annotations
+# Advanced type annotations
 optional_sig <- signature("doc -> title: string, subtitle: Optional[string]")
 dict_sig <- signature("data -> metadata: dict[string, list[string]]")
 
@@ -139,7 +139,7 @@ complex_sig <- signature(
   instructions = "Analyze the data comprehensively"
 )
 
-# NEW: Field-level descriptions for better LLM guidance
+# Field-level descriptions for better LLM guidance
 detailed_sig <- signature(
   inputs = list(
     input("text",
@@ -381,7 +381,7 @@ task$eval()
 - [ ] Provider-specific helpers (OpenAI, Anthropic, etc.)
 - [ ] pkgdown documentation website
 
-### 🔮 Future Vision
+### 🔮 Roadmap
 - **Advanced Modules**: ChainOfThought, ReAct agents, multi-step reasoning
 - **Optimization**: MIPRO, BetterTogether, and other DSPy optimizers
 - **Deployment**: Integration with pins (caching) and vetiver (API deployment)
