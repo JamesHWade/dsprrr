@@ -212,10 +212,39 @@
 <li><label><input type="checkbox" checked>Define a safe parallel execution strategy: either spin up a fresh <code>.llm</code> per worker in <code>run_batch()</code> or default <code>.parallel = FALSE</code> until a serialisable, thread-safe client abstraction is ready. Document the behaviour and add regression tests.</label></li>
 <li><label><input type="checkbox" checked>Extend structured/batch return objects with richer metadata hooks needed by vitals (e.g., solver logs) once the evaluation path is wired to <code><a href="reference/run.html">run()</a></code>.</label></li>
 </ul><p><strong>Milestone 4: Future Vision &amp; Extensibility</strong></p>
-<ul class="task-list"><li><label><input type="checkbox"><strong>Advanced Teleprompters:</strong> Implement more sophisticated optimizers, such as one that bootstraps few-shot examples from the development set.</label></li>
-<li><label><input type="checkbox"><strong>New Module Types:</strong> Design <code>ChainOfThought</code> and <code>ReAct</code> modules to enable multi-step, tool-using programs.</label></li>
+<ul class="task-list"><li><label><input type="checkbox"><strong>Advanced Teleprompters:</strong> Follow the roadmap below to deliver GEPA, MIPRO/MIPROv2, and tool-aware optimizers that move beyond bootstrap few-shot strategies.</label></li>
+<li><label><input type="checkbox"><strong>New Module Types:</strong> Execute the module roadmap below to add <code>ChainOfThought</code>, <code>ReAct</code>, <code>ToolCall</code>, and routing/judge capabilities.</label></li>
 <li><label><input type="checkbox"><strong>Caching &amp; Deployment:</strong> Explore integration with <code>pins</code> for caching expensive <code><a href="reference/compile.html">compile()</a></code> results and <code>vetiver</code> for deploying final <code>dsprrr</code> programs as APIs.</label></li>
 </ul><hr></div>
+<div class="section level3">
+<h3 id="id_4a-teleprompter--module-implementation-guidance">4a. Teleprompter &amp; Module Implementation Guidance<a class="anchor" aria-label="anchor" href="#id_4a-teleprompter--module-implementation-guidance"></a></h3>
+<div class="section level4">
+<h4 id="teleprompter-roadmap">Teleprompter Roadmap<a class="anchor" aria-label="anchor" href="#teleprompter-roadmap"></a></h4>
+<ul><li>
+<strong>Stabilize the current stack (1 sprint):</strong> Document the intended contract of <code>GridSearchTeleprompter</code> and <code>LabeledFewShot</code>, adopt helper constructors (<code>teleprompter_grid_search()</code>, <code>teleprompter_fewshot()</code>), align argument names and defaults with DSPy, and backfill regression tests that assert identical behaviour against a frozen set of dev data.</li>
+<li>
+<strong>Ship GEPA parity (2 sprints):</strong> Implement <code>GepaTeleprompter</code> (<code>teleprompter_gepa()</code>) that mirrors DSPy GEPA behaviours—synthesizing rationales, pruning low-signal examples, and iteratively replaying the dev set until a stopping metric stabilizes. Expose hooks for caching generated trajectories and make the optimiser resumable for long runs.</li>
+<li>
+<strong>Add programmatic search teleprompters (2 sprints):</strong> Port MIPRO/MIPROv2-style optimisers as <code>MiproTeleprompter</code> (<code>teleprompter_mipro()</code>), treating prompt tokens as programmable parameters. Surface differentiable metric adapters so users can plug in logits from structured outputs, and provide safety rails (gradient clipping, cost caps) for hosted LLMs.</li>
+<li>
+<strong>Tool-aware teleprompters (1 sprint):</strong> Extend the teleprompter interface so optimisers can request tool schemas from modules (needed for ReAct) and score on multi-step traces. Start with <code>SelfCritiqueTeleprompter</code> (<code>teleprompter_self_critique()</code>) that captures critiques and revisions akin to DSPy COPRO.</li>
+<li>
+<strong>Operational readiness:</strong> Instrument every teleprompter with timing, token accounting, and audit logs, and provide a <code>teleprompter_profile()</code> helper to summarise runs for pkgdown documentation.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="module-roadmap">Module Roadmap<a class="anchor" aria-label="anchor" href="#module-roadmap"></a></h4>
+<ul><li>
+<strong>Predict family hardening:</strong> Finalise the <code>Predict</code>/<code>PredictModule</code> API (with constructor <code>module_predict()</code>) as the canonical base module, enforce signature compliance during composition, and add lightweight adapters for streaming outputs and function/tool calling payloads.</li>
+<li>
+<strong>Chain-of-thought modules (1 sprint):</strong> Introduce <code>ChainOfThoughtModule</code> (<code>module_chain_of_thought()</code>) that splits reasoning and final answer channels, with helper verbs for toggling structured rationales. Pair with default teleprompter settings that encourage rationale harvesting for GEPA.</li>
+<li>
+<strong>ReAct / Tool modules (2 sprints):</strong> Implement <code>ReactModule</code> (<code>module_react()</code>) that orchestrates action-observation loops, integrates with <code>ellmer</code> tool schemas, and surfaces trace objects that teleprompters can optimise. Provide <code>ToolCallModule</code> (<code>module_tool_call()</code>) for single-shot function calling scenarios where the API replies with JSON tool payloads.</li>
+<li>
+<strong>Routing &amp; judge modules (1 sprint):</strong> Prototype <code>RouterModule</code> (<code>module_router()</code>) for ensemble selection (metrics-guided dispatch) and <code>JudgeModule</code> (<code>module_judge()</code>) that evaluates outputs from other modules, enabling self-evaluation pipelines.</li>
+<li>
+<strong>Pipeline composition:</strong> Expose a high-level <code>ProgramModule</code> (<code>module_program()</code>) that chains heterogeneous modules, ensuring type-checking across module boundaries and compatibility with <code><a href="reference/compile.html">compile()</a></code> so GEPA and MIPRO can optimise entire workflows instead of single modules.</li>
+</ul><hr></div>
+</div>
 <div class="section level3">
 <h3 id="id_5-api-design-principles">5. API Design Principles<a class="anchor" aria-label="anchor" href="#id_5-api-design-principles"></a></h3>
 <ul><li>

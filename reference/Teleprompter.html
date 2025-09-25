@@ -53,8 +53,28 @@ demonstrations, or other parameters based on training data.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">Teleprompter</span><span class="op">(</span>metric <span class="op">=</span> <span class="cn">NULL</span>, metric_threshold <span class="op">=</span> <span class="cn">NULL</span>, max_errors <span class="op">=</span> <span class="fl">5L</span><span class="op">)</span></span></code></pre></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
-  </main></div>
+
+<dl><dt id="arg-metric">metric<a class="anchor" aria-label="anchor" href="#arg-metric"></a></dt>
+<dd><p>A metric function for evaluating predictions. If NULL,
+uses exact_match() by default.</p></dd>
+
+
+<dt id="arg-metric-threshold">metric_threshold<a class="anchor" aria-label="anchor" href="#arg-metric-threshold"></a></dt>
+<dd><p>Minimum score required to be considered successful.
+If NULL, uses the metric's default threshold.</p></dd>
+
+
+<dt id="arg-max-errors">max_errors<a class="anchor" aria-label="anchor" href="#arg-max-errors"></a></dt>
+<dd><p>Maximum number of errors allowed during optimization.
+Default is 5.</p></dd>
+
+</dl></div>
+
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

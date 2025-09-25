@@ -62,31 +62,14 @@ together with the predictions and metadata required for downstream analysis.</p>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments forwarded to <code><a href="run_dataset.html">run_dataset()</a></code>.</p></dd>
-
-
-<dt id="arg-dataset">dataset<a class="anchor" aria-label="anchor" href="#arg-dataset"></a></dt>
-<dd><p>A data frame or tibble containing columns that match the
-module's signature inputs plus any expected fields used by <code>metric</code>.</p></dd>
-
-
-<dt id="arg-metric">metric<a class="anchor" aria-label="anchor" href="#arg-metric"></a></dt>
-<dd><p>A function applied per example with signature
-<code>metric(prediction, expected_row)</code>. See <code><a href="metric_exact_match.html">metric_exact_match()</a></code> for the
-canonical shape.</p></dd>
-
-
-<dt id="arg--llm">.llm<a class="anchor" aria-label="anchor" href="#arg--llm"></a></dt>
-<dd><p>Optional ellmer chat object supplied to <code><a href="run.html">run()</a></code>.</p></dd>
-
-
-<dt id="arg--parallel">.parallel<a class="anchor" aria-label="anchor" href="#arg--parallel"></a></dt>
-<dd><p>Logical; whether to allow parallel execution. See the
-details section for important safety notes.</p></dd>
-
-
-<dt id="arg--progress">.progress<a class="anchor" aria-label="anchor" href="#arg--progress"></a></dt>
-<dd><p>Logical; whether to display progress while evaluating.</p></dd>
+<dd><p>Additional arguments including:</p><ul><li><p>dataset: A data frame or tibble containing columns that match the
+module's signature inputs plus any expected fields used by metric</p></li>
+<li><p>metric: A function applied per example with signature
+metric(prediction, expected_row)</p></li>
+<li><p>.llm: Optional ellmer chat object supplied to run()</p></li>
+<li><p>.parallel: Logical; whether to allow parallel execution</p></li>
+<li><p>.progress: Logical; whether to display progress while evaluating</p></li>
+</ul></dd>
 
 </dl></div>
     <div class="section level2">
