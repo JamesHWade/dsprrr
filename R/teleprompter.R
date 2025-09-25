@@ -5,6 +5,13 @@
 #' are responsible for optimizing modules by adjusting their prompts,
 #' demonstrations, or other parameters based on training data.
 #'
+#' @param metric A metric function for evaluating predictions. If NULL,
+#'   uses exact_match() by default.
+#' @param metric_threshold Minimum score required to be considered successful.
+#'   If NULL, uses the metric's default threshold.
+#' @param max_errors Maximum number of errors allowed during optimization.
+#'   Default is 5.
+#'
 #' @export
 Teleprompter <- S7::new_class(
   "Teleprompter",
@@ -62,6 +69,16 @@ compile_default <- function(teleprompter, program, trainset, ...) {
 #' A simple teleprompter that adds labeled examples from the training set
 #' as demonstrations to the module. This is the simplest form of few-shot
 #' learning.
+#'
+#' @param metric A metric function for evaluating predictions. If NULL,
+#'   uses exact_match() by default.
+#' @param metric_threshold Minimum score required to be considered successful.
+#'   If NULL, uses the metric's default threshold.
+#' @param max_errors Maximum number of errors allowed during optimization.
+#'   Default is 5.
+#' @param k Number of examples to include in few-shot prompts. Default is 4.
+#' @param sample Whether to randomly sample examples. Default is TRUE.
+#' @param seed Random seed for reproducibility. Default is 123.
 #'
 #' @export
 LabeledFewShot <- S7::new_class(
@@ -154,6 +171,20 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #' A teleprompter that performs grid search over different instruction
 #' and template variants to find the best performing configuration.
 #'
+#' @param metric A metric function for evaluating predictions. If NULL,
+#'   uses exact_match() by default.
+#' @param metric_threshold Minimum score required to be considered successful.
+#'   If NULL, uses the metric's default threshold.
+#' @param max_errors Maximum number of errors allowed during optimization.
+#'   Default is 5.
+#' @param variants A data frame containing variant configurations to test.
+#'   Must have an 'id' column. Other columns define parameter values.
+#'   Default is a tibble with one row containing NA values for instructions and template.
+#' @param k Number of examples to include in few-shot prompts. Default is 2.
+#' @param eval_sample_size Number of examples to use for evaluation during
+#'   grid search. Default is 50.
+#' @param verbose Whether to print progress messages. Default is TRUE.
+#'
 #' @export
 GridSearchTeleprompter <- S7::new_class(
   "GridSearchTeleprompter",
@@ -161,12 +192,15 @@ GridSearchTeleprompter <- S7::new_class(
   properties = list(
     variants = S7::new_property(
       S7::class_data.frame,
+      default = tibble::tibble(id = 1L, instructions = NA_character_, template = NA_character_),
       validator = function(value) {
         if (!is.data.frame(value)) {
-          return("variants must be a data frame")
+          return("variants must be a data frame or tibble")
         }
-        if (nrow(value) == 0) {
-          return("variants must have at least one row")
+        # Allow empty data frame for default, but require rows if provided
+        if (!identical(value, tibble::tibble(id = 1L, instructions = NA_character_, template = NA_character_)) &&
+            nrow(value) == 0) {
+          return("variants must have at least one row when provided")
         }
         # Check for required columns
         required_cols <- c("id")

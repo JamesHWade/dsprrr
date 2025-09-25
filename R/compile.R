@@ -10,8 +10,7 @@
 #'
 #' @param teleprompter A Teleprompter object
 #' @param program A module to optimize
-#' @param trainset Training data
-#' @param ... Additional arguments
+#' @param ... Additional arguments including trainset (training data)
 #'
 #' @return An optimized module
 #' @export

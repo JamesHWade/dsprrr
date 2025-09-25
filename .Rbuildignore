@@ -19,3 +19,6 @@
 ^VITALS_INTEGRATION\.md$
 ^vitals$
 ^dspy$
+^\.claude$
+^examples$
+^getting-started\.md$

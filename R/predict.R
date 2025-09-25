@@ -94,6 +94,7 @@ print_predict <- function(x, ...) {
 #' This is useful when you want to start optimization from scratch.
 #'
 #' @param module A Predict module
+#' @param ... Additional arguments (currently unused)
 #' @return A new module with reset state
 #' @export
 reset_copy <- S7::new_generic("reset_copy", "module")
@@ -117,6 +118,7 @@ reset_copy_predict <- function(module) {
 #' making modifications.
 #'
 #' @param module A Predict module
+#' @param ... Additional arguments (currently unused)
 #' @return A new module with copied state
 #' @export
 deepcopy <- S7::new_generic("deepcopy", "module")
@@ -175,7 +177,7 @@ is_compiled <- function(module) {
 #' This provides a more natural interface for module execution.
 #'
 #' @param module A DSPrrr module
-#' @param .llm Default LLM to use (optional)
+#' @param ... Additional arguments passed to the method
 #'
 #' @return A function that executes the module
 #' @export

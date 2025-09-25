@@ -6,16 +6,14 @@
 #' together with the predictions and metadata required for downstream analysis.
 #'
 #' @param module A DSPrrr module created with [module()].
-#' @param dataset A data frame or tibble containing columns that match the
-#'   module's signature inputs plus any expected fields used by `metric`.
-#' @param metric A function applied per example with signature
-#'   `metric(prediction, expected_row)`. See [metric_exact_match()] for the
-#'   canonical shape.
-#' @param .llm Optional ellmer chat object supplied to [run()].
-#' @param .parallel Logical; whether to allow parallel execution. See the
-#'   details section for important safety notes.
-#' @param .progress Logical; whether to display progress while evaluating.
-#' @param ... Additional arguments forwarded to [run_dataset()].
+#' @param ... Additional arguments including:
+#'   - dataset: A data frame or tibble containing columns that match the
+#'     module's signature inputs plus any expected fields used by metric
+#'   - metric: A function applied per example with signature
+#'     metric(prediction, expected_row)
+#'   - .llm: Optional ellmer chat object supplied to run()
+#'   - .parallel: Logical; whether to allow parallel execution
+#'   - .progress: Logical; whether to display progress while evaluating
 #'
 #' @return A list with elements
 #'   - `mean_score`: numeric mean over all successful metric evaluations.

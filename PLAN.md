@@ -187,9 +187,29 @@ evaluation_results <- evaluate(
 
 **Milestone 4: Future Vision & Extensibility**
 
-  * [ ] **Advanced Teleprompters:** Implement more sophisticated optimizers, such as one that bootstraps few-shot examples from the development set.
-  * [ ] **New Module Types:** Design `ChainOfThought` and `ReAct` modules to enable multi-step, tool-using programs.
+  * [ ] **Advanced Teleprompters:** Follow the roadmap below to deliver GEPA, MIPRO/MIPROv2, and tool-aware optimizers that move beyond bootstrap few-shot strategies.
+  * [ ] **New Module Types:** Execute the module roadmap below to add `ChainOfThought`, `ReAct`, `ToolCall`, and routing/judge capabilities.
   * [ ] **Caching & Deployment:** Explore integration with `pins` for caching expensive `compile()` results and `vetiver` for deploying final `dsprrr` programs as APIs.
+
+-----
+
+### 4a\. Teleprompter & Module Implementation Guidance
+
+#### Teleprompter Roadmap
+
+- **Stabilize the current stack (1 sprint):** Document the intended contract of `GridSearchTeleprompter` and `LabeledFewShot`, adopt helper constructors (`teleprompter_grid_search()`, `teleprompter_fewshot()`), align argument names and defaults with DSPy, and backfill regression tests that assert identical behaviour against a frozen set of dev data.
+- **Ship GEPA parity (2 sprints):** Implement `GepaTeleprompter` (`teleprompter_gepa()`) that mirrors DSPy GEPA behaviours—synthesizing rationales, pruning low-signal examples, and iteratively replaying the dev set until a stopping metric stabilizes. Expose hooks for caching generated trajectories and make the optimiser resumable for long runs.
+- **Add programmatic search teleprompters (2 sprints):** Port MIPRO/MIPROv2-style optimisers as `MiproTeleprompter` (`teleprompter_mipro()`), treating prompt tokens as programmable parameters. Surface differentiable metric adapters so users can plug in logits from structured outputs, and provide safety rails (gradient clipping, cost caps) for hosted LLMs.
+- **Tool-aware teleprompters (1 sprint):** Extend the teleprompter interface so optimisers can request tool schemas from modules (needed for ReAct) and score on multi-step traces. Start with `SelfCritiqueTeleprompter` (`teleprompter_self_critique()`) that captures critiques and revisions akin to DSPy COPRO.
+- **Operational readiness:** Instrument every teleprompter with timing, token accounting, and audit logs, and provide a `teleprompter_profile()` helper to summarise runs for pkgdown documentation.
+
+#### Module Roadmap
+
+- **Predict family hardening:** Finalise the `Predict`/`PredictModule` API (with constructor `module_predict()`) as the canonical base module, enforce signature compliance during composition, and add lightweight adapters for streaming outputs and function/tool calling payloads.
+- **Chain-of-thought modules (1 sprint):** Introduce `ChainOfThoughtModule` (`module_chain_of_thought()`) that splits reasoning and final answer channels, with helper verbs for toggling structured rationales. Pair with default teleprompter settings that encourage rationale harvesting for GEPA.
+- **ReAct / Tool modules (2 sprints):** Implement `ReactModule` (`module_react()`) that orchestrates action-observation loops, integrates with `ellmer` tool schemas, and surfaces trace objects that teleprompters can optimise. Provide `ToolCallModule` (`module_tool_call()`) for single-shot function calling scenarios where the API replies with JSON tool payloads.
+- **Routing & judge modules (1 sprint):** Prototype `RouterModule` (`module_router()`) for ensemble selection (metrics-guided dispatch) and `JudgeModule` (`module_judge()`) that evaluates outputs from other modules, enabling self-evaluation pipelines.
+- **Pipeline composition:** Expose a high-level `ProgramModule` (`module_program()`) that chains heterogeneous modules, ensuring type-checking across module boundaries and compatibility with `compile()` so GEPA and MIPRO can optimise entire workflows instead of single modules.
 
 -----
 

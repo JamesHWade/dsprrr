@@ -11,9 +11,7 @@ compile(teleprompter, program, ...)
 
 \item{program}{A module to optimize}
 
-\item{...}{Additional arguments}
-
-\item{trainset}{Training data}
+\item{...}{Additional arguments including trainset (training data)}
 }
 \value{
 An optimized module

@@ -16,44 +16,56 @@ test_that("parse_signature handles multiple inputs", {
 })
 
 test_that("parse_signature handles output type annotations", {
-  # Float type
+  # Float type - wrapped in TypeObject
   sig1 <- parse_signature("question -> answer: float")
-  expect_true(inherits(sig1@output_type, "ellmer::TypeBasic"))
+  expect_true(inherits(sig1@output_type, "ellmer::TypeObject"))
+  # Check the field type
+  expect_true(inherits(sig1@output_type@properties$answer, "ellmer::TypeBasic"))
 
-  # Enum type
+  # Enum type - wrapped in TypeObject
   sig2 <- parse_signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
-  expect_true(inherits(sig2@output_type, "ellmer::TypeEnum"))
+  expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
+  # Check the field type
+  expect_true(inherits(sig2@output_type@properties$sentiment, "ellmer::TypeEnum"))
 
-  # String with constraints
+  # String with constraints - wrapped in TypeObject
   sig3 <- parse_signature("text -> summary: string[50, 200]")
-  expect_true(inherits(sig3@output_type, "ellmer::TypeBasic"))
+  expect_true(inherits(sig3@output_type, "ellmer::TypeObject"))
+  # Check the field type
+  expect_true(inherits(sig3@output_type@properties$summary, "ellmer::TypeBasic"))
 })
 
 test_that("parse_signature handles Literal notation", {
   sig <- parse_signature("text -> label: Literal['a', 'b', 'c']")
-  expect_true(inherits(sig@output_type, "ellmer::TypeEnum"))
+  expect_true(inherits(sig@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig@output_type@properties$label, "ellmer::TypeEnum"))
 })
 
 test_that("parse_signature handles array types", {
-  # Array notation
+  # Array notation - wrapped in TypeObject
   sig1 <- parse_signature("text -> tags: array(string)")
-  expect_true(inherits(sig1@output_type, "ellmer::TypeArray"))
+  expect_true(inherits(sig1@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig1@output_type@properties$tags, "ellmer::TypeArray"))
 
-  # List notation
+  # List notation - wrapped in TypeObject
   sig2 <- parse_signature("text -> items: list[string]")
-  expect_true(inherits(sig2@output_type, "ellmer::TypeArray"))
+  expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig2@output_type@properties$items, "ellmer::TypeArray"))
 
-  # Bracket notation
+  # Bracket notation - wrapped in TypeObject
   sig3 <- parse_signature("text -> words: string[]")
-  expect_true(inherits(sig3@output_type, "ellmer::TypeArray"))
+  expect_true(inherits(sig3@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig3@output_type@properties$words, "ellmer::TypeArray"))
 })
 
 test_that("parse_signature handles numeric bounds", {
   sig1 <- parse_signature("essay -> score: number[0, 100]")
-  expect_true(inherits(sig1@output_type, "ellmer::TypeBasic"))
+  expect_true(inherits(sig1@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig1@output_type@properties$score, "ellmer::TypeBasic"))
 
   sig2 <- parse_signature("data -> probability: float(0, 1)")
-  expect_true(inherits(sig2@output_type, "ellmer::TypeBasic"))
+  expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig2@output_type@properties$probability, "ellmer::TypeBasic"))
 })
 
 test_that("parse_signature accepts instructions", {
@@ -71,7 +83,8 @@ test_that("signature() constructor handles string notation", {
 
   expect_s7_class(sig, Signature)
   expect_length(sig@inputs, 1)
-  expect_true(inherits(sig@output_type, "ellmer::TypeEnum"))
+  expect_true(inherits(sig@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig@output_type@properties$sentiment, "ellmer::TypeEnum"))
 })
 
 test_that("signature() constructor still handles explicit notation", {
@@ -127,11 +140,13 @@ test_that("complex signatures parse correctly", {
 
   # Classification with confidence
   sig2 <- signature("sentence -> sentiment: enum('positive', 'negative', 'neutral')")
-  expect_true(inherits(sig2@output_type, "ellmer::TypeEnum"))
+  expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig2@output_type@properties$sentiment, "ellmer::TypeEnum"))
 
   # Math problem
   sig3 <- signature("problem -> answer: float")
-  expect_true(inherits(sig3@output_type, "ellmer::TypeBasic"))
+  expect_true(inherits(sig3@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig3@output_type@properties$answer, "ellmer::TypeBasic"))
 })
 
 test_that("multiple output fields parse correctly", {
@@ -156,17 +171,19 @@ test_that("multiple output fields parse correctly", {
 })
 
 test_that("Optional and Union types parse correctly", {
-  # Optional type
+  # Optional type - wrapped in TypeObject
   sig1 <- parse_signature("text -> summary: Optional[string]")
-  expect_true(inherits(sig1@output_type, "ellmer::TypeBasic"))
-  # Note: We set required to FALSE for Optional types
-  expect_false(sig1@output_type@required)
+  expect_true(inherits(sig1@output_type, "ellmer::TypeObject"))
+  # The field should have required=FALSE
+  expect_true(inherits(sig1@output_type@properties$summary, "ellmer::TypeBasic"))
+  expect_false(sig1@output_type@properties$summary@required)
 
-  # Union type (simplified - uses first type)
+  # Union type (simplified - uses first type) - wrapped in TypeObject
   suppressWarnings({
     sig2 <- parse_signature("data -> result: Union[string, int]")
   })
-  expect_true(inherits(sig2@output_type, "ellmer::TypeBasic"))
+  expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig2@output_type@properties$result, "ellmer::TypeBasic"))
 })
 
 test_that("dict types parse correctly", {
@@ -180,9 +197,10 @@ test_that("dict types parse correctly", {
 })
 
 test_that("complex nested types parse correctly", {
-  # List of dicts
+  # List of dicts - wrapped in TypeObject
   sig1 <- parse_signature("text -> entities: list[dict[str, str]]")
-  expect_true(inherits(sig1@output_type, "ellmer::TypeArray"))
+  expect_true(inherits(sig1@output_type, "ellmer::TypeObject"))
+  expect_true(inherits(sig1@output_type@properties$entities, "ellmer::TypeArray"))
 
   # Nested structures in multiple outputs
   sig2 <- parse_signature("doc -> title: string, sections: list[string], metadata: dict[str, str]")

@@ -25,6 +25,17 @@ input_array(name, item_type = ellmer::type_string(), description = NULL, ...)
 
 input_object(name, ..., description = NULL)
 }
+\arguments{
+\item{name}{Name of the input field}
+
+\item{description}{Optional description of the input}
+
+\item{...}{Additional arguments passed to the type constructor}
+
+\item{values}{For input_enum, the allowed values}
+
+\item{item_type}{For input_array, the type of array items}
+}
 \description{
 Create typed input helpers for common cases
 }

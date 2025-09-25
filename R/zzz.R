@@ -7,7 +7,6 @@
   S7::method(print, Signature) <- print_signature
   S7::method(print, Predict) <- print_predict
   S7::method(evaluate, Predict) <- evaluate_predict
-  S7::method(evaluate, Predict) <- S7::method(evaluate, Predict)
 
   # Register compile methods
   S7::method(compile, list(LabeledFewShot, S7::class_any)) <- function(teleprompter, program, trainset, ...) {

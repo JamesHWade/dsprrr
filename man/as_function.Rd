@@ -9,7 +9,7 @@ as_function(module, ...)
 \arguments{
 \item{module}{A DSPrrr module}
 
-\item{.llm}{Default LLM to use (optional)}
+\item{...}{Additional arguments passed to the method}
 }
 \value{
 A function that executes the module

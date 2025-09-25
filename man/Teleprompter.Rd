@@ -6,6 +6,16 @@
 \usage{
 Teleprompter(metric = NULL, metric_threshold = NULL, max_errors = 5L)
 }
+\arguments{
+\item{metric}{A metric function for evaluating predictions. If NULL,
+uses exact_match() by default.}
+
+\item{metric_threshold}{Minimum score required to be considered successful.
+If NULL, uses the metric's default threshold.}
+
+\item{max_errors}{Maximum number of errors allowed during optimization.
+Default is 5.}
+}
 \description{
 Base S7 class for optimization strategies (teleprompters). Teleprompters
 are responsible for optimizing modules by adjusting their prompts,

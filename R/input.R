@@ -200,6 +200,11 @@ is_dsprrr_input <- function(x) {
 
 #' Create typed input helpers for common cases
 #' @name input_helpers
+#' @param name Name of the input field
+#' @param description Optional description of the input
+#' @param ... Additional arguments passed to the type constructor
+#' @param values For input_enum, the allowed values
+#' @param item_type For input_array, the type of array items
 #' @export
 input_string <- function(name, description = NULL, ...) {
   input(name, type = ellmer::type_string(description = description, ...), description = description)

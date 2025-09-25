@@ -8,6 +8,8 @@ reset_copy(module, ...)
 }
 \arguments{
 \item{module}{A Predict module}
+
+\item{...}{Additional arguments (currently unused)}
 }
 \value{
 A new module with reset state

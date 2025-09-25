@@ -13,6 +13,22 @@ LabeledFewShot(
   seed = 123L
 )
 }
+\arguments{
+\item{metric}{A metric function for evaluating predictions. If NULL,
+uses exact_match() by default.}
+
+\item{metric_threshold}{Minimum score required to be considered successful.
+If NULL, uses the metric's default threshold.}
+
+\item{max_errors}{Maximum number of errors allowed during optimization.
+Default is 5.}
+
+\item{k}{Number of examples to include in few-shot prompts. Default is 4.}
+
+\item{sample}{Whether to randomly sample examples. Default is TRUE.}
+
+\item{seed}{Random seed for reproducibility. Default is 123.}
+}
 \description{
 A simple teleprompter that adds labeled examples from the training set
 as demonstrations to the module. This is the simplest form of few-shot

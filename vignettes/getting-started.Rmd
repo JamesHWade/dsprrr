@@ -43,7 +43,7 @@ signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 Install dsprrr from GitHub:
 
-```{r installation}
+```{r installation, eval = FALSE}
 # install.packages("pak")
 pak::pak("jameshwade/dsprrr")
 ```

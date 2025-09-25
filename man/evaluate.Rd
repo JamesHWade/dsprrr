@@ -9,21 +9,16 @@ evaluate(module, ...)
 \arguments{
 \item{module}{A DSPrrr module created with \code{\link[=module]{module()}}.}
 
-\item{...}{Additional arguments forwarded to \code{\link[=run_dataset]{run_dataset()}}.}
-
-\item{dataset}{A data frame or tibble containing columns that match the
-module's signature inputs plus any expected fields used by \code{metric}.}
-
-\item{metric}{A function applied per example with signature
-\code{metric(prediction, expected_row)}. See \code{\link[=metric_exact_match]{metric_exact_match()}} for the
-canonical shape.}
-
-\item{.llm}{Optional ellmer chat object supplied to \code{\link[=run]{run()}}.}
-
-\item{.parallel}{Logical; whether to allow parallel execution. See the
-details section for important safety notes.}
-
-\item{.progress}{Logical; whether to display progress while evaluating.}
+\item{...}{Additional arguments including:
+\itemize{
+\item dataset: A data frame or tibble containing columns that match the
+module's signature inputs plus any expected fields used by metric
+\item metric: A function applied per example with signature
+metric(prediction, expected_row)
+\item .llm: Optional ellmer chat object supplied to run()
+\item .parallel: Logical; whether to allow parallel execution
+\item .progress: Logical; whether to display progress while evaluating
+}}
 }
 \value{
 A list with elements
