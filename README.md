@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# dsprrr
+# dsprrr <img src="man/figures/logo.png" align="right" width="160" alt="dsprrr hex sticker" />
 
 <!-- badges: start -->
 
@@ -42,6 +42,14 @@ pak::pak("JamesHWade/dsprrr")
 
 ``` r
 library(dsprrr)
+#> 
+#> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:methods':
+#> 
+#>     signature
+```
+
+``` r
 library(ellmer)
 
 # Configure your LLM
@@ -93,6 +101,29 @@ sig <- signature("text -> summary: string[50, 200]")
 # Step 2: Create how to do it (module)
 mod <- sig |> module(type = "predict", template = "Summarize: {text}")
 
+# Show the structure of the module
+print(mod)
+#> 
+#> ── Predict Module ──
+#> 
+#> ── Signature
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • text: Input: text
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Given the fields `text`, produce the fields `summary`.
+#> 
+#> ── Template
+#> Summarize: {text}
+```
+
+``` r
 # Step 3: Execute it (run)
 result <- mod |> run(text = "Your text here...", .llm = llm)
 ```
@@ -107,6 +138,23 @@ qa_sig <- signature("context, question -> answer")
 math_sig <- signature("problem -> solution: float")
 extract_sig <- signature("text -> entities: array(string)")
 
+# Show the structure
+print(qa_sig)
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • context: Input: context
+#> • question: Input: question
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Given the fields `context`, `question`, produce the fields `answer`.
+```
+
+``` r
 # NEW: Multiple outputs support!
 analysis_sig <- signature("text -> sentiment: string, confidence: float, keywords: list[string]")
 
@@ -119,10 +167,10 @@ complex_sig <- signature(
   inputs = list(
     input("data", description = "Raw data to analyze")
   ),
-  output_type = type_object(
-    summary = type_string(),
-    score = type_number(),
-    tags = type_array(type_string())
+  output_type = ellmer::type_object(
+    summary = ellmer::type_string(),
+    score = ellmer::type_number(),
+    tags = ellmer::type_array(ellmer::type_string())
   ),
   instructions = "Analyze the data comprehensively"
 )
@@ -400,6 +448,34 @@ practices.
 ``` r
 # View the vignette
 vignette("getting-started", package = "dsprrr")
+```
+
+## Development
+
+### Running Tests and Vignettes
+
+The package uses [vcr](https://docs.ropensci.org/vcr/) to cache API
+responses, allowing tests and vignettes to run without API keys:
+
+``` r
+# Run tests (uses cached responses)
+devtools::test()
+
+# Build vignettes (uses cached responses)
+devtools::build_vignettes()
+```
+
+### Recording New Cassettes
+
+Maintainers with API keys can update cached responses:
+
+``` bash
+# Set your API keys
+export OPENAI_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"
+
+# Record new cassettes
+Rscript inst/scripts/record-cassettes.R
 ```
 
 ## Contributing

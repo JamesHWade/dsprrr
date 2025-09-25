@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# dsprrr
+# dsprrr <img src="man/figures/logo.png" align="right" width="160" alt="dsprrr hex sticker" />
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
@@ -39,8 +39,11 @@ pak::pak("JamesHWade/dsprrr")
 
 ## Quick Start
 
-```{r quickstart, eval=FALSE}
+```{r quickstart-setup}
 library(dsprrr)
+```
+
+```{r quickstart-example, eval=FALSE}
 library(ellmer)
 
 # Configure your LLM
@@ -85,13 +88,18 @@ result <- signature("text -> summary") |>
 
 One way to do each thing - no confusion:
 
-```{r api-overview, eval=FALSE}
+```{r api-overview}
 # Step 1: Define what you want (signature)
 sig <- signature("text -> summary: string[50, 200]")
 
 # Step 2: Create how to do it (module)
 mod <- sig |> module(type = "predict", template = "Summarize: {text}")
 
+# Show the structure of the module
+print(mod)
+```
+
+```{r api-run, eval=FALSE}
 # Step 3: Execute it (run)
 result <- mod |> run(text = "Your text here...", .llm = llm)
 ```
@@ -100,12 +108,17 @@ result <- mod |> run(text = "Your text here...", .llm = llm)
 
 Define operations using string notation or explicit specifications:
 
-```{r signatures, eval=FALSE}
+```{r signatures}
 # String notation (recommended for most cases)
 qa_sig <- signature("context, question -> answer")
 math_sig <- signature("problem -> solution: float")
 extract_sig <- signature("text -> entities: array(string)")
 
+# Show the structure
+print(qa_sig)
+```
+
+```{r signatures-advanced, eval=FALSE}
 # NEW: Multiple outputs support!
 analysis_sig <- signature("text -> sentiment: string, confidence: float, keywords: list[string]")
 
@@ -118,10 +131,10 @@ complex_sig <- signature(
   inputs = list(
     input("data", description = "Raw data to analyze")
   ),
-  output_type = type_object(
-    summary = type_string(),
-    score = type_number(),
-    tags = type_array(type_string())
+  output_type = ellmer::type_object(
+    summary = ellmer::type_string(),
+    score = ellmer::type_number(),
+    tags = ellmer::type_array(ellmer::type_string())
   ),
   instructions = "Analyze the data comprehensively"
 )

@@ -2,3 +2,6 @@ url: ~
 template:
   bootstrap: 5
 
+logo:
+  file: man/figures/logo.png
+  alt: dsprrr hex sticker
