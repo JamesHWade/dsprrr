@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>What the Package Does (One Line, Title Case) • dsprrr</title>
+<title>Declarative Self-Improving Language Programs for R • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -15,9 +15,9 @@
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="What the Package Does (One Line, Title Case)">
-<meta name="description" content="What the package does (one paragraph).">
-<meta property="og:description" content="What the package does (one paragraph).">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Declarative Self-Improving Language Programs for R">
+<meta name="description" content="Build principled, test-driven, and optimizable applications using Large Language Models (LLMs) in R. Based on the DSPy framework from Stanford NLP, dsprrr moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. Features include declarative signatures, composable modules, automatic prompt optimization, and deep integration with the tidyverse ecosystem.">
+<meta property="og:description" content="Build principled, test-driven, and optimizable applications using Large Language Models (LLMs) in R. Based on the DSPy framework from Stanford NLP, dsprrr moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. Features include declarative signatures, composable modules, automatic prompt optimization, and deep integration with the tidyverse ecosystem.">
 <meta property="og:image" content="/logo.png">
 </head>
 <body>
@@ -66,11 +66,11 @@
 </div>
 <!-- badges: start -->
 
-<p><code>dsprrr</code> is an R implementation of <a href="https://github.com/stanfordnlp/dspy" class="external-link">DSPy</a>, providing a framework for building <strong>principled, test-driven, and optimizable</strong> applications using Large Language Models (LLMs). It moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved.</p>
+<p><code>dsprrr</code> is a package for building <strong>principled, test-driven, and optimizable</strong> applications using Large Language Models in R. It moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. This is an R implementation of <a href="https://github.com/stanfordnlp/dspy" class="external-link">DSPy</a> from Stanford NLP.</p>
 <div class="section level2">
 <h2 id="philosophy">Philosophy<a class="anchor" aria-label="anchor" href="#philosophy"></a>
 </h2>
-<p><code>dsprrr</code> brings the elegance of R’s pipe operator (<code>|&gt;</code>) to LLM programming. By designing composable, pipe-friendly APIs and integrating with the tidyverse ethos, <code>dsprrr</code> makes developing robust AI systems feel like a natural extension of R-based data analysis workflows. Build LLM pipelines the R way—with clear, readable, and chainable operations.</p>
+<p>Our philosophy is to provide “tools for thinking” about LLM applications, deeply integrating with the tidyverse ethos. By representing prompts, examples, and evaluation results as data frames, and by designing composable, pipe-friendly APIs, <code>dsprrr</code> makes the complex task of developing robust AI systems feel like a natural extension of an R-based data analysis workflow. We are not just wrapping an API; we are creating a framework for rigorous, empirical LLM development.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -124,7 +124,7 @@
 <span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Summarize: {text}"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Long text..."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Future: Chain operations for complex workflows</span></span>
+<span><span class="co"># Chain operations for complex workflows (coming soon)</span></span>
 <span><span class="co"># analysis &lt;- text |&gt;</span></span>
 <span><span class="co">#   extract_key_points() |&gt;</span></span>
 <span><span class="co">#   summarize(max_words = 100) |&gt;</span></span>
@@ -190,10 +190,10 @@
 <span><span class="co">#&gt; ── Instructions</span></span>
 <span><span class="co">#&gt; Given the fields `context`, `question`, produce the fields `answer`.</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># NEW: Multiple outputs support!</span></span>
+<code class="sourceCode R"><span><span class="co"># Multiple outputs support</span></span>
 <span><span class="va">analysis_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: string, confidence: float, keywords: list[string]"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># NEW: Advanced type annotations</span></span>
+<span><span class="co"># Advanced type annotations</span></span>
 <span><span class="va">optional_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"doc -&gt; title: string, subtitle: Optional[string]"</span><span class="op">)</span></span>
 <span><span class="va">dict_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"data -&gt; metadata: dict[string, list[string]]"</span><span class="op">)</span></span>
 <span></span>
@@ -210,7 +210,7 @@
 <span>  instructions <span class="op">=</span> <span class="st">"Analyze the data comprehensively"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># NEW: Field-level descriptions for better LLM guidance</span></span>
+<span><span class="co"># Field-level descriptions for better LLM guidance</span></span>
 <span><span class="va">detailed_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"text"</span>,</span>
@@ -472,7 +472,7 @@
 </ul>
 </div>
 <div class="section level3">
-<h3 id="id_-future-vision">🔮 Future Vision<a class="anchor" aria-label="anchor" href="#id_-future-vision"></a>
+<h3 id="id_-roadmap">🔮 Roadmap<a class="anchor" aria-label="anchor" href="#id_-roadmap"></a>
 </h3>
 <ul>
 <li>
