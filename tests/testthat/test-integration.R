@@ -12,8 +12,9 @@ test_that("basic LLM integration works", {
     instructions = "Echo the text back"
   )
 
-  pred <- Predict(
+  pred <- module(
     signature = sig,
+    type = "predict",
     template = "Please repeat: {text}"
   )
 
@@ -40,8 +41,9 @@ test_that("structured output works with real LLM", {
     instructions = "Analyze sentiment"
   )
 
-  pred <- Predict(
+  pred <- module(
     signature = sig,
+    type = "predict",
     template = "Text: {text}"
   )
 
@@ -68,8 +70,9 @@ test_that("batch processing works with real LLM", {
     instructions = "Classify as positive or negative"
   )
 
-  pred <- Predict(
+  pred <- module(
     signature = sig,
+    type = "predict",
     template = "Text: {text}\nSentiment:"
   )
 

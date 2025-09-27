@@ -1,221 +1,259 @@
-### 1\. Vision & Philosophy
+### 1. Vision & Philosophy
 
-`dsprrr` is a package for building **principled, test-driven, and optimizable** applications using Large Language Models in R. It moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. This is an implementation of DSPy in R.
+`dsprrr` helps R programmers build **principled, test-driven, optimisable** LLM systems. We want iterative LLM development to feel like a tidyverse project: data lives in tibbles, contracts are explicit, experiments are reproducible, and evaluation tooling (including `vitals`) plugs in without adapters.
 
-Our philosophy is to provide "tools for thinking" about LLM applications, deeply integrating with the tidyverse ethos. By representing prompts, examples, and evaluation results as data frames, and by designing composable, pipe-friendly APIs, `dsprrr` will make the complex task of developing robust AI systems feel like a natural extension of an R-based data analysis workflow. We are not just wrapping an API; we are creating a framework for rigorous, empirical LLM development.
+Guiding tenets:
+- **Typed boundaries.** Every module advertises a signature; inputs and outputs are validated before the model runs.
+- **Stateful, observable modules.** Prompt code, configuration, losses, and traces live together so optimisation has first-class data to work with.
+- **Data-first ergonomics.** Traces, metrics, and evaluation sets are tidy data frames that flow through `dplyr`, `ggplot2`, `targets`, `vitals`, and Quarto alike.
+- **Composable tooling.** Lean on ellmer for LLM clients/tools, r-lib for developer UX, tidymodels for tuning, and vitals for rigorous evaluation.
 
------
+---
 
-### 2\. Core Architecture (S7-based)
+### 2. Core Architecture
 
-The architecture is built on S7, chosen for its modern, robust object system that aligns with R's functional heritage and ensures seamless tidyverse integration. The design emphasizes composability and extensibility through a system of formal classes and generics.
+#### 2.1 Signatures (S7)
+- `Signature` remains an S7 class in `R/signature.R` describing `inputs`, `output_type`, and `instructions`.
+- `validate_io(signature, inputs, outputs)` enforces the contract at runtime (module `$forward()` and `run()` reuse it).
+- Pillar-friendly printing highlights argument names, expected types, and guidance for downstream tooling.
 
-**2.1. Core S7 Classes**
+#### 2.2 Modules (R6)
+- R6 base `Module` owns:
+  - `signature`: immutable reference to an S7 `Signature`.
+  - `config`: structured list capturing tunables, defaults, and optimisation metadata.
+  - `state`: reference list storing mutable artefacts (cached demos, fitted recipes, traces, vitals hooks).
+- Core methods:
+  - `$forward(batch, .llm = NULL, trace = TRUE, ...)`: run predictions, returning a tibble with `output`, `trace`, `metadata`, and the echoed inputs.
+  - `$optimize(devset, objective, control)`: tidy interface for tuning; delegates to tidymodels helpers.
+  - `$reset(hard = FALSE)`: clear mutable state/config to prepare for fresh optimisation.
+  - `$print()` / `$format()` / pillar methods: show signature, most recent config, trace summary, optimisation status.
+  - `$as_vitals_solver(...)`: thin wrapper for `as_vitals_solver()` so the vitals bridge is discoverable.
+- Subclasses: `PredictModule`, `ReactModule`, `ChainOfThoughtModule`, etc. Each subclass implements `private$build_prompt()`, `private$postprocess()`, and tool orchestration hooks.
 
-  * **`Signature`**: A declarative, immutable schema for an LLM operation.
+#### 2.3 Ellmer Tools
+- Tool definitions live in `R/tools-ellmer.R` and expose typed requests/responses.
+- Modules declare required tools via `self$config$tools`; traces capture tool usage (arguments, latency, tokens, outcome state).
 
-    ```r
-    Signature <- S7::new_class("Signature",
-      properties = list(
-        inputs = S7::class_list,   # A list of S7::property objects
-        output_type = S7::class_any, # An ellmer::type_* object
-        instructions = S7::class_character
-      ),
-      validator = function(self) {
-        # Validate that output_type is an ellmer type object
-        # Validate that inputs is a list of correctly formed properties
-      }
-    )
-    ```
+#### 2.4 Teleprompters & Optimisers
+- Teleprompters become light-weight strategy objects that call `$optimize()` with preferences/messages.
+- Existing grid-search logic migrates to tidymodels (see §5) but retains compatibility with vitals scorers via `as_dsprrr_metric()`.
 
-  * **`Predict`**: The foundational, stateless execution module. It pairs a `Signature` with a `glue` template.
+---
 
-    ```r
-    Predict <- S7::new_class("Predict",
-      properties = list(
-        signature = Signature,
-        template = S7::class_character
-      )
-    )
-    ```
+### 3. Module Lifecycle & Developer UX
 
-    **Design Note:** The `Predict` module itself is stateless. The `ellmer` chat object, which holds conversation history, is managed by the execution context (e.g., a `Compiler` or a user's script), not within the module. This promotes a more functional, predictable, and reusable design.
+1. **Define signature.** `sig <- signature("question -> answer: string", instructions = "Be concise.")`
+2. **Instantiate module.** `mod <- module(sig, type = "predict", template = "Q: {question}\nA:")` returns R6 PredictModule
+3. **Forward pass.** `run(mod, question = "…")` delegates to `mod$forward()` and returns results (simple or structured format)
+4. **Optimise.** `compile_module(mod, teleprompter, trainset)` optimizes and stores config in `mod$state` and `mod$config`
+5. **Evaluate.** `evaluate(mod, dataset, metric = function(...))` runs module and applies metrics per example
+6. **Interop.** `as_vitals_solver(mod)` generates a vitals solver function; `as_dsprrr_metric(vitals::scorer)` converts scorers
+7. **Persist.** Use `pins` and `MLflow` helpers to save signatures, configs, traces, and vitals run metadata.
 
-  * **`Teleprompter`**: An S7 base class for optimization strategies. Different compilation techniques are implemented as subclasses.
+Pipe ergonomics remain intact because the exported verbs (`run()`, `optimize_grid()`, `evaluate()`, `as_vitals_solver()`) accept the module as the first argument and return tidy outputs or the module itself for chaining.
 
-    ```r
-    Teleprompter <- S7::new_class("Teleprompter")
+---
 
-    GridSearchTeleprompter <- S7::new_class("GridSearchTeleprompter",
-      parent = Teleprompter,
-      properties = list(
-        variants = S7::class_data.frame, # A tibble defining the search space
-        k = S7::class_integer,           # Number of few-shot examples
-        metric = S7::class_function
-      )
-    )
-    ```
+### 4. tidyverse & r-lib Integration
 
-**2.2. Core S7 Generics**
+- **tibble/dplyr/tidyr/purrr**: All traces, tuning results, evaluation outputs, and vitals adapters return tibbles; `purrr` drives deterministic optimisation loops and batching.
+- **stringr/glue**: Prompt construction, logging, and diagnostics.
+- **cli/pillar**: Styled output for signatures, modules, optimisation progress, and vitals bridges (display solver status, scorer names).
+- **rlang**: Condition system, argument validation (`check_installed()`, classed errors), quasiquotation for templating.
+- **vctrs**: Stable column types for trace steps and configuration parameters to keep joins predictable.
+- **lifecycle**: Manage API evolution; mark deprecated S7 helpers once R6 rollout is complete.
+- **usethis/devtools/roxygen2/testthat/lintr/waldo**: Package scaffolding, docs, testing, linting, diffing.
 
-The package's primary verbs will be S7 generics, allowing users to extend the system with their own classes.
+---
 
-  * `forward(module, ...)`: Executes a module. It takes a module object and named arguments corresponding to the module's `Signature`.
-  * `compile(program, teleprompter, ...)`: Optimizes a program. It takes a module or pipeline, a `Teleprompter` object, a set of demos, and a development set.
-  * `evaluate(program, dataset, metric)`: Evaluates a program's performance on a test set.
+### 5. Tidymodels Strategy
 
------
+#### Phase 1 – Pragmatic Grid Search
+- Define tunables with `dials::parameters()` (`temperature()`, `top_p()`, `cot_depth()`, `values_set()` for tool choices).
+- Generate candidates via `grid_regular()` / `grid_random()`.
+- Resample with `rsample::vfold_cv()` or `bootstraps()` on developer datasets.
+- Score with `yardstick::metric_set()` (including metrics derived from vitals scorers via `as_dsprrr_metric()`).
+- Implement in `$optimize_grid(devset, metrics, control)`; expose `optimize_grid(mod, ...)` wrapper for piping.
+- Optional `finetune::tune_race_anova()` for adaptive pruning.
+  - **Tasks:**
+    - Create `R/optimize.R` with helpers `module_parameters()`, `module_grid()`, and `collect_trials()` that operate on R6 modules.
+    - Refactor `R/teleprompter.R` grid search logic to call the new helpers instead of hand-rolled loops.
+    - Update `tests/testthat/test-compile.R` to exercise tidy grid search with a deterministic mock LLM and verify tidy outputs.
+    - Add documentation chunks in `vignettes/optimisation.Rmd` showing `dials::parameters()` and `rsample::vfold_cv()` usage.
 
-### 3\. The End-to-End Workflow (User Experience)
+#### Phase 2 – Native tune/workflows
+- Define parsnip spec for `"dsprrr_module"` and custom engine.
+- Support `recipes::recipe()` preprocessing (retrieval features, prompt augmentation).
+- Provide `workflows::workflow()` helpers bundling recipe + module spec.
+- Expose `tune::tune_grid()` / `tune_bayes()` for Bayesian optimisation and `stacks::stacks()` for ensembling module variants.
+  - **Tasks:**
+    - Register the model via `parsnip::set_new_model()` in `R/optimize.R` and implement the corresponding `fit.model_spec()` method.
+    - Add a `prep_recipe()` helper that accepts a module signature and builds default recipes for text/token columns.
+    - Write integration tests in `tests/testthat/test-compile.R` (skipped on CRAN) that demonstrate a `workflow()` with a dummy recipe and confirm `tune::tune_grid()` runs end-to-end using the mock LLM.
+    - Expand `vignettes/optimisation.Rmd` with a section on workflows/tune/stacks, including guidance for vitals scorer interoperability.
 
-The S7 architecture results in an exceptionally clean and intuitive user workflow that is fully pipe-friendly.
+---
 
-**Example: A Simple Sentiment Classifier**
+### 6. vitals Integration
 
-```r
-library(dsprrr)
-library(tibble)
+Current state:
+- `as_vitals_solver()` wraps `run_dataset()` for Predict modules and is already exported with tests.
+- `as_dsprrr_metric()` converts vitals scorers to dsprrr-compatible metrics; README + vignette document the workflow.
+- `vitals-integration.Rmd` shows end-to-end optimisation + evaluation across both packages.
 
-# 1. Define the program's INPUT/OUTPUT schema using the clean API
-sentiment_classifier <- signature(
-  "text -> sentiment: enum('Positive', 'Negative', 'Neutral')",
-  instructions = "Classify the sentiment of the provided text."
-) |>
-  module(type = "predict", template = "Text: {text}\nSentiment:")
+Next steps with the R6 refactor:
+- Update `as_vitals_solver()` to accept R6 modules (call `$forward()` or `$run_dataset()` shim) while keeping the public API stable.
+- Teach modules to expose vitals metadata: standardise structured return fields (`result`, `.chat`, `.metadata`, `.trace`) so vitals Tasks can log solver runs without guesswork.
+- Ensure `run_dataset()` returns a tibble whose columns match vitals expectations (`result`, `.metadata`, `.chat`, trace summary columns) and is reused by both dsprrr and vitals bridges.
+- Add `$as_vitals_solver()` method on `Module` for discoverability, delegating to the existing helper.
+- Extend optimisation control to accept vitals scorers directly (e.g., `objective = vitals::scorer_modelgraded()`) by auto-wrapping with `as_dsprrr_metric()`.
+- Sync logging: expose a `vitals_log_format()` helper that collapses traces into vitals-friendly step logs (tool call, tokens, latency, outcome) for use in Inspect dashboards.
+- Refresh `VITALS_INTEGRATION.md` and vignette with R6 examples, including: module creation, `as_vitals_solver()` usage, running vitals Tasks, and feeding vitals scorers into `$optimize()`.
 
-# 2. For complex outputs, use explicit notation
-advanced_classifier <- signature(
-  inputs = list(
-    input("text", description = "The text to classify.")
-  ),
-  output_type = ellmer::type_object(
-    sentiment = ellmer::type_enum(values = c("Positive", "Negative", "Neutral")),
-    confidence = ellmer::type_number(minimum = 0, maximum = 1),
-    reasoning = ellmer::type_string()
-  ),
-  instructions = "Classify sentiment with confidence and reasoning."
-) |>
-  module(type = "predict")
+Longer-term opportunities:
+- Allow teleprompters to request evaluation via vitals Tasks (e.g., GEPA loop selecting the best config using vitals scorers and datasets).
+- Explore a `dsprrr.vitals` extension that bundles joint pipelines (`targets` template using vitals tasks plus dsprrr tuning).
+- Coordinate with vitals maintainers on shared trace schema or even shared S7 components if the overlap deepens.
 
-# 3. Execute immediately (current capability)
-result <- sentiment_classifier |>
-  run(text = "I love using well-designed R packages!", .llm = llm)
-# > list(sentiment = "Positive")
+---
 
-# 4. Future: Optimization with Teleprompters
-# Define the optimization strategy
-variants <- tibble(
-  id = c("terse", "roleplay"),
-  instructions_mod = c(
-    "Be brief and accurate.",
-    "You are a sentiment analysis expert. Provide one-word answers."
-  )
-)
+### 7. Orchestration, Artifacts, Observability
 
-teleprompter <- GridSearchTeleprompter(
-  variants = variants,
-  metric = metric_exact_match(field = "sentiment")
-)
+- **targets**: canonical orchestration layer. Pipelines load data, instantiate modules, run optimisation/evaluation, call vitals tasks, and render reports. Provide `_targets.R` templates with optional vitals steps.
+- **pins**: store signatures, configs, prompt templates, best traces, and vitals run summaries. Helpers: `pin_module_config()`, `pin_trace()`, `pin_vitals_log()`.
+- **MLflow (optional)**: log params, metrics, traces, vitals scores, and artifacts. Provide `use_mlflow()` helper to initialise runs.
+- **Quarto**: experiment reports summarising tuning grids, metrics, cost, and vitals comparisons. Provide `.qmd` templates fed by targets outputs.
 
-# 5. Future: Compile the program using a dev set
-compiled_classifier <- compile(
-  program = sentiment_classifier,
-  teleprompter = teleprompter,
-  dev_set = sentiment_dev_data # A tibble with 'text' and 'sentiment' columns
-)
+---
 
-# 6. Future: Evaluate on held-out test set
-evaluation_results <- evaluate(
-  program = compiled_classifier,
-  dataset = sentiment_test_data,
-  metric = metric_exact_match(field = "sentiment")
-)
+### 8. Package Layout
+
+```
+R/
+  signature.R          # S7 signatures + validation helpers
+  module-base.R        # R6 Module base class + utilities
+  module-predict.R     # PredictModule subclass
+  module-react.R       # Tool-aware module (future)
+  module-utils.R       # Prompt builders, post-processors, validation
+  tools-ellmer.R       # Typed tool definitions + adapters
+  optimize.R           # Tidymodels glue (grid, tune, finetune)
+  evaluate.R           # Evaluation generics returning tidy outputs
+  traces.R             # Trace tibble constructors + pillar printers
+  vitals.R             # as_vitals_solver(), as_dsprrr_metric(), log adapters
+  metrics-yardstick.R  # Yardstick metric registry + wrappers
+  orchestration.R      # targets/pins/MLflow helpers (incl. vitals logging)
+  printing.R           # cli/pillar formatting utilities
+  utils.R              # Shared rlang/stringr helpers
+inst/templates/
+  targets/_targets.R   # Experiment pipeline (with vitals optional steps)
+  quarto/report.qmd    # Experiment report template
+vignettes/
+  signatures.Rmd
+  modules.Rmd
+  optimisation.Rmd
+  vitals-integration.Rmd
+  orchestration.Rmd
 ```
 
------
+---
 
-### 4\. Implementation Roadmap
+### 9. Roadmap & Milestones
 
-**Milestone 1: S7 Foundation & Core Execution (✅ COMPLETED - December 2024)**
+#### Milestone A – Module Foundations ✅ COMPLETED
+- Implement R6 `Module` base + `PredictModule` subclass.
+- Update `module()` constructor to return R6 objects; retire S7 cloning helpers.
+- Rework `run()`/`run_dataset()`/`evaluate()` to delegate to `$forward()` and emit standard trace/vitals columns.
+- Add pillar/cli printing and ensure tests cover forward/evaluate paths.
+- Adapt `as_vitals_solver()` and `as_dsprrr_metric()` to the new module internals; expand tests to cover structured outputs and trace metadata.
+  - **Completed Implementation:**
+    - ✅ Created `R/module-base.R` with R6 `Module` base class including `$forward()`, `$reset()`, `$optimize()`, `$trace_summary()`, `$is_compiled()`, `$as_vitals_solver()`
+    - ✅ Created `R/module-predict.R` with `PredictModule` subclass, migrated template/demos logic from S7 Predict
+    - ✅ Updated `module()` factory to return R6 PredictModule instances
+    - ✅ Removed S7 Predict class and associated methods (`reset_copy`, `deepcopy`, `is_compiled` now R6 methods)
+    - ✅ Refactored `run()` to use standard S3 dispatch with `run.Module` method
+    - ✅ Updated `evaluate()` to work with R6 modules via standard S3 dispatch
+    - ✅ Modified vitals integration to check for Module class inheritance
+    - ✅ Implemented R6 print methods with cli formatting
+    - ✅ Cleaned up NAMESPACE - R6 classes marked as internal with `@noRd`
+    - ✅ Moved R6 from Suggests to Imports in DESCRIPTION
+    - ✅ Updated all tests to use R6 API (395 passing, 8 minor failures)
+    - ✅ Fixed documentation generation issues with R6 classes
 
-  * [x] Implement the `Signature` and `Predict` S7 classes with robust validators.
-  * [x] Implement the `run()` S7 generic (replacing `forward()`) and its method for the `Predict` class.
-  * [x] Establish the core `ellmer` integration for making API calls via `chat_structured()`.
-  * [x] Develop comprehensive `testthat` tests for all class properties and execution logic (185+ tests passing).
-  * [x] **Additional achievements:**
-    - Implemented DSPy-style string notation for signatures (e.g., `"text -> sentiment"`)
-    - Created unified `signature()` function supporting both string and explicit notation
-    - Added `module()` function as the primary interface for creating modules
-    - Established clean, consistent API with no confusing aliases
-    - Full integration with R's pipe operator (`|>`)
-    - Created comprehensive getting-started vignette
-    - Implemented flexible input type system with helpers
-    - **NEW:** Support for multiple output fields (`"question -> answer: string, confidence: float"`)
-    - **NEW:** Complex type parsing (Optional, Union, dict notation)
-    - **NEW:** Direct use of ellmer types with descriptions (no redundant field wrappers)
-    - **NEW:** Full DSPy compatibility for signature string notation
-    - **SIMPLIFIED:** Removed InputField/OutputField in favor of ellmer's built-in description parameter
+#### Milestone B – Tidymodels Integration (3 weeks)
+- Define tunable parameters with `dials` and implement grid/random search in `$optimize_grid()`.
+- Integrate `rsample` resampling and `yardstick` scoring; ensure vitals scorers can be wrapped automatically.
+- Surface `finetune` racing as an optional control method.
+- Document optimisation workflow + vitals scorer interoperability in vignette and Quarto template.
+  - **Tasks:**
+    - Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles.
+    - Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores.
+    - Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema.
+    - Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`.
+    - Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers.
+    - Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed.
 
-**Milestone 2: The Compilation Engine (✅ COMPLETED - September 2024)**
+#### Milestone C – Orchestration & Persistence (2 weeks)
+- Ship `pins` helpers for saving module configs/traces/vitals logs.
+- Provide targets template with both dsprrr tuning and vitals evaluation stages.
+- Optional MLflow logging layer with toggled dependency.
+- Add Quarto report template summarising tidymodels results and vitals scores.
+  - **Tasks:**
+    - Implement `pin_module_config()`, `pin_trace()`, and `pin_vitals_log()` in `R/orchestration.R`, leveraging standardised trace schemas.
+    - Add `_targets.R` template under `inst/templates/targets/` demonstrating a pipeline: load data → optimise module → evaluate via vitals → render Quarto report.
+    - Create Quarto template (`inst/templates/quarto/report.qmd`) and link it from documentation.
+    - Update pkgdown configuration (`_pkgdown.yml`) to reference new articles for orchestrations and vitals integration.
+    - Add integration tests (optionally skipped) validating that the pins helpers round-trip module configs and traces.
+    - Document orchestration workflow in `vignettes/orchestration.Rmd`, including vitals steps.
 
-  * [x] Implement the `Teleprompter` base class and the `GridSearchTeleprompter` subclass.
-  * [x] Implement the `compile()` S7 generic.
-  * [x] Create foundational metric helpers (e.g., `metric_exact_match`, `metric_f1`).
-  * [x] Write the introductory vignette (`vignettes/getting-started.Rmd`), demonstrating basic usage.
-  * [x] **Additional achievements:**
-    - Implemented `LabeledFewShot` teleprompter for bootstrap few-shot learning
-    - Created comprehensive metric system with custom metrics and threshold support
-    - Added module state management (`reset_copy`, `deepcopy`, `is_compiled`)
-    - Built evaluation framework with `evaluate_dsp()` function
-    - Created helper functions like `dsp_trainset()` for data preparation
-    - Full test coverage (160+ tests passing)
+#### Milestone D – Advanced Modules & Teleprompters (ongoing)
+- Implement Chain-of-Thought and tool-aware module subclasses.
+- Port GEPA-style teleprompter using R6 hooks and integrate vitals-based evaluation loops.
+- Add programmatic search teleprompters (MIPRO) once tool-aware traces are stable.
+- Introduce routing/judge modules with enforced signature/type checks.
+  - **Tasks:**
+    - Scaffold `R/module-chainofthought.R` and `R/module-react.R` with subclass implementations, reusing base hooks for prompt assembly and trace logging.
+    - Define a tool schema registry in `R/tools-ellmer.R` and extend traces to capture action/observation steps compatible with vitals logs.
+    - Implement `GepaTeleprompter` (and friends) in `R/teleprompter.R`, using vitals scorers for evaluation loops and storing intermediate rationales in module state.
+    - Add tests in `tests/testthat/test-teleprompter.R` covering GEPA/MIPRO behaviours with mocked outputs for deterministic assertions.
+    - Update `vignettes/modules.Rmd` and `vignettes/vitals-integration.Rmd` with examples of tool-aware modules and vitals evaluation.
+    - Evaluate need for additional helper generics (e.g., `module_trace()`), documenting decisions in `VITALS_INTEGRATION.md` and developer notes.
 
-**Milestone 3: Ecosystem & Ergonomics (Target: 7 Weeks)**
+---
 
-  * [x] Implement the `evaluate()` generic.
-  * [x] Develop robust error handling using `rlang` for both API failures and validation errors (partially complete).
-  * [ ] Add convenience wrappers for common LLM providers (e.g., `lm_openai()`).
-  * [ ] Build out a comprehensive documentation website using `pkgdown`.
-  * [x] Replace the placeholder scoring paths in `compile_module()`, `GridSearchTeleprompter`, and `evaluate_dsp()` with real calls into `run()` (supporting dependency injection for mock LLMs in tests and batching for speed).
-  * [x] Export vitals adapter helpers (`as_vitals_solver()`, `as_dsprrr_metric()`, etc.) with accompanying tests so the documented workflow is exercised end-to-end.
+### 10. Testing & Quality
 
-**Milestone 3a: Prompting & Execution Polish (Parallel track, ~2 Weeks)**
+- **Contract tests**: signatures reject bad inputs; modules validate arguments; trace tibbles have stable schemas consumed by vitals and tidymodels.
+- **Golden tests**: snapshot representative prompts, outputs, traces, and optimisation histories with tolerant matchers.
+- **Optimisation tests**: run grid search on mock LLM returning deterministic outputs to verify yardstick + vitals scorers integration.
+- **vitals smoke tests**: round-trip `as_vitals_solver()` through a vitals Task stub to ensure outputs/logging stay compatible.
+- **Performance smoke**: assert `$forward()` latency and cost stay within bounds on fixture data.
+- **Linting & style**: enforce tidyverse style (lintr, styler) and maintain high coverage via covr.
+- **CI pipelines**: run unit tests, optimisation smoke tests, vitals adapters, lint, and pkgdown builds on every PR.
 
-  * [x] Adjust prompt construction so signature instructions are injected exactly once (remove the current double prepend between `build_prompt()` and `call_llm()`).
-  * [x] Define a safe parallel execution strategy: either spin up a fresh `.llm` per worker in `run_batch()` or default `.parallel = FALSE` until a serialisable, thread-safe client abstraction is ready. Document the behaviour and add regression tests.
-  * [x] Extend structured/batch return objects with richer metadata hooks needed by vitals (e.g., solver logs) once the evaluation path is wired to `run()`.
+---
 
-**Milestone 4: Future Vision & Extensibility**
+### 11. Current Status & Next Steps
 
-  * [ ] **Advanced Teleprompters:** Follow the roadmap below to deliver GEPA, MIPRO/MIPROv2, and tool-aware optimizers that move beyond bootstrap few-shot strategies.
-  * [ ] **New Module Types:** Execute the module roadmap below to add `ChainOfThought`, `ReAct`, `ToolCall`, and routing/judge capabilities.
-  * [ ] **Caching & Deployment:** Explore integration with `pins` for caching expensive `compile()` results and `vetiver` for deploying final `dsprrr` programs as APIs.
+**Completed:**
+- ✅ Full R6 module architecture implemented and tested
+- ✅ Vitals integration maintained and functional
+- ✅ Documentation stable (no regeneration issues)
+- ✅ Test suite largely passing (395/403 tests)
 
------
+**Known Issues:**
+- Minor test failures (8) related to deepcopy state preservation
+- Some compile tests checking wrong property paths
 
-### 4a\. Teleprompter & Module Implementation Guidance
+**Ready for:**
+- Milestone B: Tidymodels Integration
+- Building more module types (ChainOfThought, React)
+- Enhanced optimization strategies
 
-#### Teleprompter Roadmap
+### 12. Open Questions & Follow-Ups
 
-- **Stabilize the current stack (1 sprint):** Document the intended contract of `GridSearchTeleprompter` and `LabeledFewShot`, adopt helper constructors (`teleprompter_grid_search()`, `teleprompter_fewshot()`), align argument names and defaults with DSPy, and backfill regression tests that assert identical behaviour against a frozen set of dev data.
-- **Ship GEPA parity (2 sprints):** Implement `GepaTeleprompter` (`teleprompter_gepa()`) that mirrors DSPy GEPA behaviours—synthesizing rationales, pruning low-signal examples, and iteratively replaying the dev set until a stopping metric stabilizes. Expose hooks for caching generated trajectories and make the optimiser resumable for long runs.
-- **Add programmatic search teleprompters (2 sprints):** Port MIPRO/MIPROv2-style optimisers as `MiproTeleprompter` (`teleprompter_mipro()`), treating prompt tokens as programmable parameters. Surface differentiable metric adapters so users can plug in logits from structured outputs, and provide safety rails (gradient clipping, cost caps) for hosted LLMs.
-- **Tool-aware teleprompters (1 sprint):** Extend the teleprompter interface so optimisers can request tool schemas from modules (needed for ReAct) and score on multi-step traces. Start with `SelfCritiqueTeleprompter` (`teleprompter_self_critique()`) that captures critiques and revisions akin to DSPy COPRO.
-- **Operational readiness:** Instrument every teleprompter with timing, token accounting, and audit logs, and provide a `teleprompter_profile()` helper to summarise runs for pkgdown documentation.
-
-#### Module Roadmap
-
-- **Predict family hardening:** Finalise the `Predict`/`PredictModule` API (with constructor `module_predict()`) as the canonical base module, enforce signature compliance during composition, and add lightweight adapters for streaming outputs and function/tool calling payloads.
-- **Chain-of-thought modules (1 sprint):** Introduce `ChainOfThoughtModule` (`module_chain_of_thought()`) that splits reasoning and final answer channels, with helper verbs for toggling structured rationales. Pair with default teleprompter settings that encourage rationale harvesting for GEPA.
-- **ReAct / Tool modules (2 sprints):** Implement `ReactModule` (`module_react()`) that orchestrates action-observation loops, integrates with `ellmer` tool schemas, and surfaces trace objects that teleprompters can optimise. Provide `ToolCallModule` (`module_tool_call()`) for single-shot function calling scenarios where the API replies with JSON tool payloads.
-- **Routing & judge modules (1 sprint):** Prototype `RouterModule` (`module_router()`) for ensemble selection (metrics-guided dispatch) and `JudgeModule` (`module_judge()`) that evaluates outputs from other modules, enabling self-evaluation pipelines.
-- **Pipeline composition:** Expose a high-level `ProgramModule` (`module_program()`) that chains heterogeneous modules, ensuring type-checking across module boundaries and compatibility with `compile()` so GEPA and MIPRO can optimise entire workflows instead of single modules.
-
------
-
-### 5\. API Design Principles
-
-  * **Pipe-Friendly:** The API surface will be designed with the `|>` operator as a primary consideration.
-  * **Type-Stable & Predictable:** Functions and generics will have reliable return types, making them easy to compose.
-  * **Informative Errors:** Error messages, powered by `rlang`, will be designed to guide the user toward a solution.
-  * **Extensible by Default:** The S7 generic-based architecture ensures that advanced users can easily create their own custom modules and teleprompters to extend the framework.
+- How opinionated should the `Module` base be about tool orchestration vs leaving it to subclasses?
+- What default metric set should we export (yardstick vs vitals scorers) and where do we draw the line between built-in vs user-defined options?
+- Which orchestration patterns should be first-class (single module vs multi-module programs) and how do we surface vitals Tasks within `targets` templates?
+- When do we turn on MLflow logging by default vs keeping it opt-in?
+- How do we balance rich trace logging with cost/log volume concerns, especially when vitals also records solver trajectories?
+- Do we evolve towards a shared trace schema/package with vitals or keep adapters in `dsprrr`?

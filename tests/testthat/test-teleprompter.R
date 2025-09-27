@@ -62,7 +62,7 @@ test_that("LabeledFewShot compile works", {
     output_type = ellmer::type_string(),
     instructions = "Classify text"
   )
-  module <- Predict(signature = sig)
+  mod <- module(signature = sig, type = "predict")
 
   # Create training data
   trainset <- data.frame(
@@ -73,16 +73,16 @@ test_that("LabeledFewShot compile works", {
 
   # Compile with LabeledFewShot
   tp <- LabeledFewShot(k = 2L, seed = 42L)
-  optimized <- compile(tp, module, trainset)
+  optimized <- compile(tp, mod, trainset)
 
-  expect_s3_class(optimized, "dsprrr::Predict")
-  expect_length(optimized@demos, 2)
-  expect_true(optimized@config$compiled)
-  expect_equal(optimized@config$teleprompter, "LabeledFewShot")
-  expect_equal(optimized@config$compilation_k, 2L)
+  expect_true(inherits(optimized, "Module"))
+  expect_length(optimized$demos, 2)
+  expect_true(optimized$config$compiled)
+  expect_equal(optimized$config$teleprompter, "LabeledFewShot")
+  expect_equal(optimized$config$compilation_k, 2L)
 
   # Check demos structure
-  demo1 <- optimized@demos[[1]]
+  demo1 <- optimized$demos[[1]]
   expect_true(is.list(demo1))
   expect_true("inputs" %in% names(demo1))
   expect_true("output" %in% names(demo1))
@@ -90,14 +90,14 @@ test_that("LabeledFewShot compile works", {
 
   # Empty trainset
   empty_trainset <- data.frame(text = character(), label = character())
-  optimized_empty <- compile(tp, module, empty_trainset)
-  expect_length(optimized_empty@demos, 0)
+  optimized_empty <- compile(tp, mod, empty_trainset)
+  expect_length(optimized_empty$demos, 0)
 
   # No sampling
   tp_no_sample <- LabeledFewShot(k = 2L, sample = FALSE)
-  optimized_no_sample <- compile(tp_no_sample, module, trainset)
-  expect_equal(optimized_no_sample@demos[[1]]$inputs$text, "hello")
-  expect_equal(optimized_no_sample@demos[[2]]$inputs$text, "world")
+  optimized_no_sample <- compile(tp_no_sample, mod, trainset)
+  expect_equal(optimized_no_sample$demos[[1]]$inputs$text, "hello")
+  expect_equal(optimized_no_sample$demos[[2]]$inputs$text, "world")
 })
 
 test_that("GridSearchTeleprompter can be created", {
@@ -164,39 +164,39 @@ test_that("Module state management methods work", {
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
-  module <- Predict(
+  module <- module(
     signature = sig,
     template = "{text}",
     demos = list(list(inputs = list(text = "demo"), output = "result")),
-    config = list(compiled = TRUE, teleprompter = "test")
+    config = list(compiled = TRUE, teleprompter = "test"),
+    type = "predict"
   )
+  # Manually set compiled state for testing
+  module$state$compiled <- TRUE
 
   # Test reset_copy
-  reset <- reset_copy(module)
-  expect_s3_class(reset, "dsprrr::Predict")
-  expect_length(reset@demos, 0)
-  expect_length(reset@config, 0)
-  expect_equal(reset@template, module@template)
-  expect_equal(reset@signature@instructions, module@signature@instructions)
+  reset <- module$reset_copy()
+  expect_true(inherits(reset, "Module"))
+  expect_length(reset$demos, 0)
+  expect_length(reset$config, 0)
+  expect_equal(reset$template, module$template)
+  expect_equal(reset$signature@instructions, module$signature@instructions)
 
   # Test deepcopy
-  copy <- deepcopy(module)
-  expect_s3_class(copy, "dsprrr::Predict")
-  expect_equal(copy@demos, module@demos)
-  expect_equal(copy@config, module@config)
-  expect_equal(copy@template, module@template)
+  copy <- module$deepcopy()
+  expect_true(inherits(copy, "Module"))
+  expect_equal(copy$demos, module$demos)
+  expect_equal(copy$config, module$config)
+  expect_equal(copy$template, module$template)
 
   # Verify deep copy is independent
-  copy@demos[[1]]$output <- "modified"
-  expect_equal(module@demos[[1]]$output, "result")  # Original unchanged
+  copy$demos[[1]]$output <- "modified"
+  expect_equal(module$demos[[1]]$output, "result")  # Original unchanged
 
   # Test is_compiled
-  expect_true(is_compiled(module))
-  expect_false(is_compiled(reset))
-  expect_true(is_compiled(copy))
-
-  # is_compiled with invalid input
-  expect_error(is_compiled("not a module"), "must be a Predict object")
+  expect_true(module$is_compiled())
+  expect_false(reset$is_compiled())
+  expect_true(copy$is_compiled())
 })
 
 test_that("compile generic dispatches correctly", {
@@ -205,26 +205,26 @@ test_that("compile generic dispatches correctly", {
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
-  module <- Predict(signature = sig)
+  mod <- module(signature = sig, type = "predict")
   trainset <- data.frame(x = "test", y = "result")
 
   # Base Teleprompter should error
   tp_base <- Teleprompter()
   expect_error(
-    compile(tp_base, module, trainset),
+    compile(tp_base, mod, trainset),
     "compile\\(\\) method not implemented"
   )
 
   # LabeledFewShot should work
   tp_labeled <- LabeledFewShot(k = 1L)
-  result <- compile(tp_labeled, module, trainset)
-  expect_s3_class(result, "dsprrr::Predict")
+  result <- compile(tp_labeled, mod, trainset)
+  expect_true(inherits(result, "Module"))
 
   # GridSearchTeleprompter requires metric
   variants <- data.frame(id = "v1", instructions = "test")
   tp_grid <- GridSearchTeleprompter(variants = variants)
   expect_error(
-    compile(tp_grid, module, trainset),
+    compile(tp_grid, mod, trainset),
     "requires a metric"
   )
 })

@@ -4,11 +4,11 @@
 \name{dsprrr-package}
 \alias{dsprrr}
 \alias{dsprrr-package}
-\title{dsprrr: What the Package Does (One Line, Title Case)}
+\title{dsprrr: Declarative Self-Improving Language Programs for R}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-What the package does (one paragraph).
+Build principled, test-driven, and optimizable applications using Large Language Models (LLMs) in R. Based on the DSPy framework from Stanford NLP, 'dsprrr' moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. Features include declarative signatures, composable modules, automatic prompt optimization, and deep integration with the tidyverse ecosystem.
 }
 \seealso{
 Useful links:

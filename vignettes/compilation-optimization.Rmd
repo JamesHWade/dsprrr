@@ -8,41 +8,15 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-# Conditionally evaluate based on API keys or vcr cassettes
-eval_vignette <- function() {
-  # Check if vcr cassettes exist
-  if (dir.exists("_vcr")) {
-    name <- tools::file_path_sans_ext(knitr::current_input())
-    cassettes <- dir("_vcr", pattern = paste0(name, "*"))
-    has_cassette <- length(cassettes) > 0
-  } else {
-    has_cassette <- FALSE
-  }
-
-  # Check if API keys are available
-  has_key <- any(
-    nzchar(Sys.getenv("OPENAI_API_KEY")),
-    nzchar(Sys.getenv("ANTHROPIC_API_KEY")),
-    nzchar(Sys.getenv("GOOGLE_GEMINI_API_KEY"))
-  )
-
-  # Don't evaluate on CRAN
-  not_cran <- !identical(Sys.getenv("NOT_CRAN"), "false")
-
-  # Evaluate if we have keys/cassettes and not on CRAN
-  (has_key || has_cassette) && not_cran
-}
+library(dsprrr)
 
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE  # Keep as FALSE for safety - vignettes contain LLM calls
+  eval = eval_vignette()
 )
 
-# Setup vcr if available and evaluating
-if (requireNamespace("vcr", quietly = TRUE) && eval_vignette()) {
-  vcr::setup_knitr()
-}
+vcr::setup_knitr()
 ```
 
 ## Introduction
@@ -64,7 +38,7 @@ library(ellmer)
 # Configure Claude (Anthropic's Sonnet model)
 llm <- chat_anthropic(
   api_key = Sys.getenv("ANTHROPIC_API_KEY"),
-  model = "claude-3-5-sonnet-20241022"  # Updated model name
+  model = "claude-3-5-sonnet-20241022"
 )
 ```
 
@@ -83,19 +57,19 @@ The simplest metric checks if outputs match exactly:
 metric <- metric_exact_match()
 
 # Test the metric
-metric("positive", "positive")  # TRUE
-metric("positive", "negative")  # FALSE
+metric("positive", "positive") # TRUE
+metric("positive", "negative") # FALSE
 
 # Case-insensitive matching
 metric_ignore_case <- metric_exact_match(ignore_case = TRUE)
-metric_ignore_case("Positive", "positive")  # TRUE
+metric_ignore_case("Positive", "positive") # TRUE
 
 # Extract specific field from structured output
 metric_field <- metric_exact_match(field = "sentiment")
 metric_field(
   list(sentiment = "positive", confidence = 0.9),
   list(sentiment = "positive", confidence = 0.8)
-)  # TRUE - only compares sentiment field
+) # TRUE - only compares sentiment field
 ```
 
 #### F1 Score
@@ -111,7 +85,7 @@ score <- metric_f1_basic(
   "The capital of France is Paris",
   "Paris is the capital city of France"
 )
-print(score)  # ~0.67 (good overlap but not perfect)
+print(score) # ~0.67 (good overlap but not perfect)
 
 # With field extraction
 metric_f1_field <- metric_f1(field = "answer")
@@ -128,20 +102,20 @@ Check if output contains specific patterns:
 ```{r metrics-contains}
 # Check for substring
 metric_has_positive <- metric_contains("positive", ignore_case = TRUE)
-metric_has_positive("The result is POSITIVE", NULL)  # TRUE
-metric_has_positive("The result is negative", NULL)  # FALSE
+metric_has_positive("The result is POSITIVE", NULL) # TRUE
+metric_has_positive("The result is negative", NULL) # FALSE
 
 # Regular expression patterns
 metric_has_number <- metric_contains("\\d+", fixed = FALSE)
-metric_has_number("The answer is 42", NULL)  # TRUE
-metric_has_number("No numbers here", NULL)   # FALSE
+metric_has_number("The answer is 42", NULL) # TRUE
+metric_has_number("No numbers here", NULL) # FALSE
 
 # Check specific field
 metric_field_contains <- metric_contains("urgent", field = "priority")
 metric_field_contains(
   list(priority = "urgent - needs immediate attention"),
   NULL
-)  # TRUE
+) # TRUE
 ```
 
 ### Custom Metrics
@@ -150,23 +124,31 @@ Create your own evaluation logic:
 
 ```{r metrics-custom}
 # Simple boolean metric
-length_check <- metric_custom(function(pred, exp) {
-  nchar(as.character(pred)) <= 100
-}, name = "length_limit")
+length_check <- metric_custom(
+  function(pred, exp) {
+    nchar(as.character(pred)) <= 100
+  },
+  name = "length_limit"
+)
 
 # Numeric scoring metric
-similarity_metric <- metric_custom(function(pred, exp) {
-  # Calculate some similarity score (0-1)
-  pred_lower <- tolower(as.character(pred))
-  exp_lower <- tolower(as.character(exp))
+similarity_metric <- metric_custom(
+  function(pred, exp) {
+    # Calculate some similarity score (0-1)
+    pred_lower <- tolower(as.character(pred))
+    exp_lower <- tolower(as.character(exp))
 
-  # Simple character overlap ratio
-  common <- nchar(pred_lower[pred_lower == exp_lower])
-  total <- max(nchar(pred_lower), nchar(exp_lower))
-  if (total == 0) return(1.0)
+    # Simple character overlap ratio
+    common <- nchar(pred_lower[pred_lower == exp_lower])
+    total <- max(nchar(pred_lower), nchar(exp_lower))
+    if (total == 0) {
+      return(1.0)
+    }
 
-  common / total
-}, name = "char_similarity")
+    common / total
+  },
+  name = "char_similarity"
+)
 
 # Use the custom metric
 score <- similarity_metric("Hello World", "hello world")
@@ -188,7 +170,7 @@ f1_threshold <- metric_threshold(
 passes <- f1_threshold(
   "The quick brown fox jumps",
   "The quick brown fox jumps over"
-)  # FALSE (F1 < 0.8)
+) # FALSE (F1 < 0.8)
 ```
 
 ### Multi-Field Metrics
@@ -204,7 +186,7 @@ metric_all <- metric_field_match(
 
 pred <- list(sentiment = "positive", confidence = "high", extra = "ignored")
 exp <- list(sentiment = "positive", confidence = "high", other = "data")
-metric_all(pred, exp)  # TRUE - both fields match
+metric_all(pred, exp) # TRUE - both fields match
 
 # Check if any field matches
 metric_any <- metric_field_match(
@@ -222,8 +204,11 @@ Teleprompters are optimization strategies that improve your LLM programs. dsprrr
 The simplest optimization strategy adds labeled examples from your training data as demonstrations:
 
 ```{r teleprompter-labeled}
+#| cassette: compilation-labeled-fewshot
 # Create a sentiment classifier
-classifier <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |>
+classifier <- signature(
+  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+) |>
   module(type = "predict", template = "Analyze sentiment: {text}\n\nSentiment:")
 
 # Prepare training data
@@ -231,22 +216,20 @@ trainset <- dsp_trainset(
   text = c(
     "This product is amazing! Best purchase ever!",
     "Terrible experience. Would not recommend.",
-    "It's okay, nothing special but works.",
-    "Absolutely love it! Exceeded expectations!",
-    "Complete waste of money. Very disappointed.",
-    "Average product, does what it says."
+    "It's okay, nothing special but works."
   ),
   sentiment = c(
-    "positive", "negative", "neutral",
-    "positive", "negative", "neutral"
+    "positive",
+    "negative",
+    "neutral"
   )
 )
 
 # Create LabeledFewShot teleprompter
 teleprompter <- LabeledFewShot(
-  k = 3,           # Use 3 examples as demonstrations
-  sample = TRUE,   # Randomly sample from trainset
-  seed = 42        # For reproducibility
+  k = 2L, # Use 2 examples as demonstrations
+  sample = TRUE, # Randomly sample from trainset
+  seed = 42L # For reproducibility
 )
 
 # Compile the module
@@ -257,13 +240,13 @@ optimized_classifier <- compile_module(
 )
 
 # The optimized module now includes demonstrations
-print(optimized_classifier@demos)  # Shows the 3 selected examples
+print(optimized_classifier$demos) # Shows the 2 selected examples
 
 # Use the optimized classifier
 result <- optimized_classifier |>
   run(text = "This is fantastic!", .llm = llm)
 
-print(result)  # "positive"
+print(result) # "positive"
 ```
 
 ### GridSearchTeleprompter
@@ -271,6 +254,7 @@ print(result)  # "positive"
 This teleprompter tests multiple instruction or template variants to find the best performing one:
 
 ```{r teleprompter-gridsearch}
+#| cassette: compilation-gridsearch
 # Create base QA module
 qa_module <- signature("context, question -> answer") |>
   module(type = "predict")
@@ -309,10 +293,10 @@ qa_trainset <- dsp_trainset(
 # Create GridSearchTeleprompter with evaluation metric
 grid_teleprompter <- GridSearchTeleprompter(
   variants = variants,
-  metric = metric_f1(field = "answer"),  # Evaluate using F1 score
-  k = 2,                                  # Include 2 few-shot examples
-  eval_sample_size = 50L,                 # Samples for evaluation
-  verbose = TRUE                          # Show progress
+  metric = metric_f1(field = "answer"), # Evaluate using F1 score
+  k = 2L, # Include 2 few-shot examples
+  eval_sample_size = 10L, # Smaller sample for faster execution
+  verbose = TRUE # Show progress
 )
 
 # Compile with grid search
@@ -323,9 +307,9 @@ optimized_qa <- compile_module(
 )
 
 # Check which variant performed best
-print(optimized_qa@config$best_variant)   # e.g., "analytical"
-print(optimized_qa@config$best_score)     # e.g., 0.85
-print(optimized_qa@config$all_scores)     # Scores for all variants
+print(optimized_qa$config$best_variant) # e.g., "analytical"
+print(optimized_qa$config$best_score) # e.g., 0.85
+print(optimized_qa$config$all_scores) # Scores for all variants
 
 # Use the optimized module
 answer <- optimized_qa |>
@@ -341,13 +325,16 @@ answer <- optimized_qa |>
 The `compile_module()` function is the main interface for optimizing your programs:
 
 ```{r compilation-process}
+#| cassette: compilation-email-classifier
 # Step 1: Create your base module
 email_classifier <- signature(
   inputs = list(
     input("email", description = "Customer email text")
   ),
   output_type = type_object(
-    category = type_enum(values = c("complaint", "inquiry", "feedback", "spam")),
+    category = type_enum(
+      values = c("complaint", "inquiry", "feedback", "spam")
+    ),
     priority = type_enum(values = c("urgent", "normal", "low")),
     needs_response = type_boolean()
   ),
@@ -361,24 +348,31 @@ email_trainset <- dsp_trainset(
     "Your product broke after 2 days! I want a refund immediately!",
     "Hi, I'm wondering if you ship to Canada?",
     "Just wanted to say your customer service is excellent.",
-    "CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!",
-    "The order hasn't arrived and it's been 3 weeks. Very frustrated.",
-    "Can you tell me more about your warranty policy?"
+    "CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!"
   ),
   category = c(
-    "complaint", "inquiry", "feedback", "spam", "complaint", "inquiry"
+    "complaint",
+    "inquiry",
+    "feedback",
+    "spam"
   ),
   priority = c(
-    "urgent", "normal", "low", "low", "urgent", "normal"
+    "urgent",
+    "normal",
+    "low",
+    "low"
   ),
   needs_response = c(
-    TRUE, TRUE, FALSE, FALSE, TRUE, TRUE
+    TRUE,
+    TRUE,
+    FALSE,
+    FALSE
   )
 )
 
 # Step 3: Choose optimization strategy
 # Option A: Simple few-shot learning
-simple_optimizer <- LabeledFewShot(k = 4)
+simple_optimizer <- LabeledFewShot(k = 3L)
 
 optimized_simple <- compile_module(
   program = email_classifier,
@@ -400,7 +394,7 @@ email_variants <- data.frame(
 grid_optimizer <- GridSearchTeleprompter(
   variants = email_variants,
   metric = metric_field_match(c("category", "priority")),
-  k = 3,
+  k = 2L,
   verbose = TRUE
 )
 
@@ -415,8 +409,8 @@ new_email <- "I've been waiting for 2 hours on hold! This is unacceptable!"
 result <- optimized_grid |>
   run(email = new_email, .llm = llm)
 
-print(result$category)       # "complaint"
-print(result$priority)       # "urgent"
+print(result$category) # "complaint"
+print(result$priority) # "urgent"
 print(result$needs_response) # TRUE
 ```
 
@@ -425,27 +419,28 @@ print(result$needs_response) # TRUE
 Once you've optimized your module, systematically evaluate its performance:
 
 ```{r evaluation}
+#| cassette: compilation-evaluation
 # Prepare test dataset (separate from training)
 test_emails <- dsp_trainset(
   email = c(
     "The package was damaged during shipping.",
     "Do you offer student discounts?",
-    "Your team went above and beyond. Thank you!",
-    "Win a FREE iPad! Click now!",
-    "Can I change my delivery address?",
-    "I'm allergic to the ingredients. Need to return."
+    "Your team went above and beyond. Thank you!"
   ),
   category = c(
-    "complaint", "inquiry", "feedback",
-    "spam", "inquiry", "complaint"
+    "complaint",
+    "inquiry",
+    "feedback"
   ),
   priority = c(
-    "normal", "low", "low",
-    "low", "normal", "urgent"
+    "normal",
+    "low",
+    "low"
   ),
   needs_response = c(
-    TRUE, TRUE, FALSE,
-    FALSE, TRUE, TRUE
+    TRUE,
+    TRUE,
+    FALSE
   )
 )
 
@@ -461,15 +456,15 @@ results <- evaluate_dsp(
 )
 
 # Examine results
-print(results$mean_score)      # e.g., 0.83 (5/6 correct)
-print(results$scores)           # Individual scores per example
-print(results$n_evaluated)      # 6
-print(results$n_errors)         # 0 (no runtime errors)
+print(results$mean_score) # e.g., 0.67 (2/3 correct)
+print(results$scores) # Individual scores per example
+print(results$n_evaluated) # 3
+print(results$n_errors) # 0 (no runtime errors)
 
 # Evaluate multiple aspects
 multi_metric <- metric_field_match(
   c("category", "priority", "needs_response"),
-  require_all = TRUE  # All fields must match
+  require_all = TRUE # All fields must match
 )
 
 full_results <- evaluate_dsp(
@@ -480,7 +475,7 @@ full_results <- evaluate_dsp(
   verbose = TRUE
 )
 
-print(full_results$mean_score)  # Lower, as all fields must match
+print(full_results$mean_score) # Lower, as all fields must match
 ```
 
 ## Part 5: Complete Workflow Example
@@ -488,6 +483,7 @@ print(full_results$mean_score)  # Lower, as all fields must match
 Let's build and optimize a complete document analysis system:
 
 ```{r complete-example}
+#| cassette: compilation-doc-analyzer
 # 1. Define the task with structured output
 doc_analyzer <- signature(
   inputs = list(
@@ -545,8 +541,18 @@ doc_trainset <- dsp_trainset(
   topics = list(
     c("revenue growth", "customer satisfaction", "market expansion"),
     c("project delays", "budget overrun", "staff turnover", "morale"),
-    c("policy proposal", "cost savings", "implementation", "stakeholder feedback"),
-    c("environmental impact", "emissions reduction", "sustainability", "compliance")
+    c(
+      "policy proposal",
+      "cost savings",
+      "implementation",
+      "stakeholder feedback"
+    ),
+    c(
+      "environmental impact",
+      "emissions reduction",
+      "sustainability",
+      "compliance"
+    )
   ),
   sentiment = c("positive", "negative", "mixed", "positive"),
   key_facts = list(
@@ -578,8 +584,8 @@ wrapped_metric <- metric_custom(composite_metric, name = "composite_score")
 # Strategy A: Few-shot with different k values
 results_by_k <- list()
 
-for (k in c(1, 2, 3, 4)) {
-  teleprompter <- LabeledFewShot(k = k, seed = 42)
+for (k in c(1L, 2L, 3L, 4L)) {
+  teleprompter <- LabeledFewShot(k = k, seed = 42L)
 
   optimized <- compile_module(
     program = doc_analyzer,
@@ -590,7 +596,7 @@ for (k in c(1, 2, 3, 4)) {
   # Evaluate on validation set
   eval_result <- evaluate_dsp(
     module = optimized,
-    dataset = doc_trainset,  # In practice, use separate validation set
+    dataset = doc_trainset, # In practice, use separate validation set
     metric = wrapped_metric,
     llm = llm,
     verbose = FALSE
@@ -599,22 +605,18 @@ for (k in c(1, 2, 3, 4)) {
   results_by_k[[paste0("k_", k)]] <- eval_result$mean_score
 }
 
-print(results_by_k)  # See which k works best
+print(results_by_k) # See which k works best
 
 # Strategy B: Grid search over different instruction styles
 instruction_variants <- data.frame(
-  id = c("executive", "technical", "balanced", "thorough"),
+  id = c("executive", "technical"),
   instructions_suffix = c(
     ". Focus on business impact and executive decision-making.",
-    ". Emphasize technical accuracy and detailed analysis.",
-    ". Balance brevity with completeness for general audience.",
-    ". Provide exhaustive analysis covering all aspects."
+    ". Emphasize technical accuracy and detailed analysis."
   ),
   template = c(
     "Executive Analysis Required:\n{document}\n\nProvide executive summary:",
-    "Technical Document Analysis:\n{document}\n\nTechnical assessment:",
-    "Document:\n{document}\n\nAnalysis:",
-    "Comprehensive Review of:\n{document}\n\nDetailed findings:"
+    "Technical Document Analysis:\n{document}\n\nTechnical assessment:"
   ),
   stringsAsFactors = FALSE
 )
@@ -622,8 +624,8 @@ instruction_variants <- data.frame(
 grid_optimizer <- GridSearchTeleprompter(
   variants = instruction_variants,
   metric = wrapped_metric,
-  k = 2,  # Also include 2 examples
-  eval_sample_size = 50L,
+  k = 2L, # Also include 2 examples
+  eval_sample_size = 10L,
   verbose = TRUE
 )
 
@@ -646,8 +648,8 @@ analysis <- best_analyzer |>
 
 print(analysis$summary)
 print(analysis$topics)
-print(analysis$sentiment)        # Likely "mixed"
-print(analysis$recommendation)   # Likely "review"
+print(analysis$sentiment) # Likely "mixed"
+print(analysis$recommendation) # Likely "review"
 ```
 
 ## Part 6: Advanced Patterns and Best Practices
@@ -656,7 +658,7 @@ print(analysis$recommendation)   # Likely "review"
 
 Don't optimize on your entire training set—use cross-validation:
 
-```{r cross-validation}
+```{r cross-validation, eval=FALSE}
 # Split data for proper evaluation
 split_data <- function(data, train_pct = 0.7) {
   n <- nrow(data)
@@ -700,7 +702,7 @@ print(paste("Validation score:", val_results$mean_score))
 
 Optimize in stages for complex tasks:
 
-```{r iterative-refinement}
+```{r iterative-refinement, eval=FALSE}
 # Stage 1: Optimize for accuracy
 stage1_module <- compile_module(
   program = doc_analyzer,
@@ -720,11 +722,11 @@ stage2_variants <- data.frame(
 )
 
 stage2_module <- compile_module(
-  program = stage1_module,  # Start from stage 1
+  program = stage1_module, # Start from stage 1
   teleprompter = GridSearchTeleprompter(
     variants = stage2_variants,
     metric = wrapped_metric,
-    k = 1  # Add one more example
+    k = 1 # Add one more example
   ),
   trainset = doc_trainset
 )
@@ -734,7 +736,7 @@ stage2_module <- compile_module(
 
 Combine multiple optimized modules:
 
-```{r ensemble}
+```{r ensemble, eval=FALSE}
 # Create multiple optimized versions
 modules <- list()
 
@@ -772,7 +774,9 @@ ensemble_analyze <- function(document, modules, llm) {
   sentiment <- names(sort(table(sentiment_votes), decreasing = TRUE))[1]
 
   recommendation_votes <- sapply(predictions, function(p) p$recommendation)
-  recommendation <- names(sort(table(recommendation_votes), decreasing = TRUE))[1]
+  recommendation <- names(sort(table(recommendation_votes), decreasing = TRUE))[
+    1
+  ]
 
   # Combine all facts
   all_facts <- unique(unlist(lapply(predictions, function(p) p$key_facts)))
@@ -790,7 +794,7 @@ ensemble_analyze <- function(document, modules, llm) {
 
 While dsprrr currently provides `LabeledFewShot` and `GridSearchTeleprompter`, you can extend the system:
 
-```{r custom-teleprompter}
+```{r custom-teleprompter, eval=FALSE}
 # Example: A teleprompter that selects diverse examples
 DiverseFewShot <- S7::new_class(
   "DiverseFewShot",
@@ -809,7 +813,7 @@ DiverseFewShot <- S7::new_class(
 
 ### Understanding Compilation Results
 
-```{r debugging-compilation}
+```{r debugging-compilation, eval=FALSE}
 # Inspect what the compiler did
 optimized <- compile_module(
   program = classifier,
@@ -818,65 +822,65 @@ optimized <- compile_module(
 )
 
 # Check compilation status
-is_compiled(optimized)  # TRUE
+is_compiled(optimized) # TRUE
 
 # View selected demonstrations
-print(optimized@demos)
+print(optimized$demos)
 
 # Check configuration
-print(optimized@config$teleprompter)  # "LabeledFewShot"
-print(optimized@config$compilation_k)  # 3
+print(optimized$config$teleprompter) # "LabeledFewShot"
+print(optimized$config$compilation_k) # 3
 
 # For GridSearch, see which variant won
-if (optimized@config$teleprompter == "GridSearchTeleprompter") {
-  print(optimized@config$best_variant)
-  print(optimized@config$all_scores)
+if (optimized$config$teleprompter == "GridSearchTeleprompter") {
+  print(optimized$config$best_variant)
+  print(optimized$config$all_scores)
 }
 ```
 
 ### Module State Management
 
-```{r state-management}
+```{r state-management, eval=FALSE}
 # Create fresh copy without compilation
 fresh_module <- reset_copy(optimized)
-is_compiled(fresh_module)  # FALSE
-length(fresh_module@demos)  # 0
+is_compiled(fresh_module) # FALSE
+length(fresh_module$demos) # 0
 
 # Create deep copy preserving everything
 backup_module <- deepcopy(optimized)
-is_compiled(backup_module)  # TRUE
-identical(backup_module@demos, optimized@demos)  # TRUE
+is_compiled(backup_module) # TRUE
+identical(backup_module$demos, optimized$demos) # TRUE
 
 # Modify copy without affecting original
-backup_module@config$custom <- "modified"
-is.null(optimized@config$custom)  # TRUE
+backup_module$config$custom <- "modified"
+is.null(optimized$config$custom) # TRUE
 ```
 
 ### Common Issues and Solutions
 
-```{r troubleshooting}
+```{r troubleshooting, eval=FALSE}
 # Issue 1: Metric returns unexpected values
 # Solution: Test your metric separately
 test_metric <- metric_exact_match(field = "category")
 test_metric(
   list(category = "spam", other = "data"),
   list(category = "spam", different = "fields")
-)  # Should be TRUE
+) # Should be TRUE
 
 # Issue 2: Grid search takes too long
 # Solution: Reduce eval_sample_size or number of variants
 fast_grid <- GridSearchTeleprompter(
-  variants = variants[1:2, ],  # Test fewer variants
+  variants = variants[1:2, ], # Test fewer variants
   metric = metric_exact_match(field = "sentiment"),
-  eval_sample_size = 10L,  # Smaller evaluation set
+  eval_sample_size = 10L, # Smaller evaluation set
   verbose = FALSE
 )
 
 # Issue 3: Demonstrations not improving performance
 # Solution: Ensure training data quality and diversity
 # Check your training data
-table(trainset$sentiment)  # Balanced classes?
-length(unique(trainset$text))  # All unique examples?
+table(trainset$sentiment) # Balanced classes?
+length(unique(trainset$text)) # All unique examples?
 ```
 
 ## Performance Tips
@@ -895,7 +899,7 @@ composite <- function(pred, exp) {
   accuracy <- metric_exact_match(field = "category")(pred, exp)
   quality <- metric_f1(field = "description")(pred, exp)
 
-  0.6 * accuracy + 0.4 * quality  # Weighted combination
+  0.6 * accuracy + 0.4 * quality # Weighted combination
 }
 ```
 
@@ -908,7 +912,13 @@ check_diversity <- function(trainset, field) {
   unique_ratio <- length(unique(values)) / length(values)
 
   if (unique_ratio < 0.8) {
-    warning("Low diversity in ", field, ": ", round(unique_ratio * 100), "% unique")
+    warning(
+      "Low diversity in ",
+      field,
+      ": ",
+      round(unique_ratio * 100),
+      "% unique"
+    )
   }
 
   table(values)
@@ -936,7 +946,7 @@ balance_trainset <- function(data, label_col, max_per_class = NULL) {
 
 ### 3. Efficient Grid Search
 
-```{r performance-grid}
+```{r performance-grid, eval=FALSE}
 # Start with coarse grid, then refine
 # Phase 1: Test major variants
 coarse_variants <- data.frame(
@@ -955,7 +965,7 @@ coarse_result <- compile_module(
   trainset = trainset
 )
 
-best_style <- coarse_result@config$best_variant
+best_style <- coarse_result$config$best_variant
 
 # Phase 2: Refine the winning approach
 if (best_style == "brief") {

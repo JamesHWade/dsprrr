@@ -10,7 +10,9 @@
       "Read(../ellmer/vignettes/**)",
       "Read(../ellmer/R/**)",
       "WebSearch",
-      "WebFetch(domain:mirai.r-lib.org)"
+      "WebFetch(domain:mirai.r-lib.org)",
+      "Bash(find:*)",
+      "Bash(Rscript:*)"
     ],
     "deny": [],
     "ask": [],

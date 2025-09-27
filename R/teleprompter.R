@@ -122,7 +122,7 @@ LabeledFewShot <- S7::new_class(
 #' @noRd
 compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   # Validate inputs
-  if (!inherits(program, "dsprrr::Predict")) {
+  if (!inherits(program, "Module")) {
     cli::cli_abort("LabeledFewShot currently only supports Predict modules")
   }
 
@@ -154,13 +154,14 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   }
 
   # Convert to demo format expected by the module
-  demos <- format_trainset_as_demos(demos_data, program@signature)
+  demos <- format_trainset_as_demos(demos_data, program$signature)
 
   # Update the module's demos
-  optimized@demos <- demos
-  optimized@config$compiled <- TRUE
-  optimized@config$teleprompter <- "LabeledFewShot"
-  optimized@config$compilation_k <- n_demos
+  optimized$demos <- demos
+  optimized$state$compiled <- TRUE
+  optimized$config$compiled <- TRUE
+  optimized$config$teleprompter <- "LabeledFewShot"
+  optimized$config$compilation_k <- n_demos
 
   optimized
 }
@@ -241,7 +242,7 @@ GridSearchTeleprompter <- S7::new_class(
 #' @noRd
 compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
                                .llm = NULL, ...) {
-  if (!inherits(program, "dsprrr::Predict")) {
+  if (!inherits(program, "Module")) {
     cli::cli_abort("GridSearchTeleprompter currently only supports Predict modules")
   }
 
@@ -269,7 +270,7 @@ compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
   if (n_demos > 0) {
     demo_indices <- sample(nrow(trainset_for_demos), n_demos)
     demos_data <- trainset_for_demos[demo_indices, , drop = FALSE]
-    demos <- format_trainset_as_demos(demos_data, program@signature)
+    demos <- format_trainset_as_demos(demos_data, program$signature)
   } else {
     demos <- list()
   }
@@ -287,20 +288,20 @@ compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
 
     # Create a modified program for this variant
     test_program <- copy_module(program)
-    test_program@demos <- demos
+    test_program$demos <- demos
 
     # Apply modifications from variant
     if ("instructions" %in% names(variant)) {
-      test_program@signature@instructions <- variant$instructions
+      test_program$signature@instructions <- variant$instructions
     }
     if ("instructions_suffix" %in% names(variant)) {
-      test_program@signature@instructions <- paste(
-        program@signature@instructions,
+      test_program$signature@instructions <- paste(
+        program$signature@instructions,
         variant$instructions_suffix
       )
     }
     if ("template" %in% names(variant)) {
-      test_program@template <- variant$template
+      test_program$template <- variant$template
     }
 
     # Evaluate on validation set
@@ -334,28 +335,29 @@ compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
 
   # Create optimized program with best variant
   optimized <- copy_module(program)
-  optimized@demos <- demos
+  optimized$demos <- demos
 
   # Apply best variant modifications
   if ("instructions" %in% names(best_variant)) {
-    optimized@signature@instructions <- best_variant$instructions
+    optimized$signature@instructions <- best_variant$instructions
   }
   if ("instructions_suffix" %in% names(best_variant)) {
-    optimized@signature@instructions <- paste(
-      program@signature@instructions,
+    optimized$signature@instructions <- paste(
+      program$signature@instructions,
       best_variant$instructions_suffix
     )
   }
   if ("template" %in% names(best_variant)) {
-    optimized@template <- best_variant$template
+    optimized$template <- best_variant$template
   }
 
   # Mark as compiled
-  optimized@config$compiled <- TRUE
-  optimized@config$teleprompter <- "GridSearchTeleprompter"
-  optimized@config$best_variant <- best_variant$id
-  optimized@config$best_score <- scores[best_idx]
-  optimized@config$all_scores <- stats::setNames(scores, variants$id)
+  optimized$state$compiled <- TRUE
+  optimized$config$compiled <- TRUE
+  optimized$config$teleprompter <- "GridSearchTeleprompter"
+  optimized$config$best_variant <- best_variant$id
+  optimized$config$best_score <- scores[best_idx]
+  optimized$config$all_scores <- stats::setNames(scores, variants$id)
 
   optimized
 }
@@ -365,17 +367,12 @@ compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
 #' Copy a module (deep copy)
 #' @noRd
 copy_module <- function(module) {
-  if (!inherits(module, "dsprrr::Predict")) {
-    cli::cli_abort("Can only copy Predict modules currently")
+  if (!inherits(module, "Module")) {
+    cli::cli_abort("Can only copy Module objects")
   }
 
-  # Create new module with copied properties
-  Predict(
-    signature = copy_signature(module@signature),
-    template = module@template,
-    demos = module@demos,  # Lists are copied by value in R
-    config = module@config  # Lists are copied by value in R
-  )
+  # Use the module's deepcopy method
+  module$deepcopy()
 }
 
 #' Copy a signature

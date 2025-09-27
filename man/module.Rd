@@ -27,7 +27,7 @@ module(
 \item{...}{Additional arguments for future module types}
 }
 \value{
-A module object that can be executed with \code{run()}
+A module object (R6) that can be executed with \code{run()}
 }
 \description{
 The primary function for creating executable LLM modules. Currently supports

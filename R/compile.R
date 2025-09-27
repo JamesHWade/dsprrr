@@ -91,10 +91,10 @@ compile_module <- function(program, teleprompter, trainset, valset = NULL,
   }
 
   # Check if program is already compiled and warn
-  if (!is.null(program@config$compiled) && program@config$compiled) {
+  if (inherits(program, "Module") && program$is_compiled()) {
     cli::cli_warn(c(
       "Program appears to be already compiled",
-      "i" = "Previous teleprompter: {program@config$teleprompter}",
+      "i" = "Previous teleprompter: {program$config$teleprompter}",
       "i" = "Recompiling with: {class(teleprompter)[1]}"
     ))
   }
@@ -194,12 +194,12 @@ dsp_trainset <- function(..., .data = NULL) {
 #'
 #' print(results$mean_score)
 #' }
-evaluate_dsp <- function(module, dataset, metric, llm = NULL, verbose = TRUE) {
+evaluate_dsp <- function(module, dataset, metric, .llm = NULL, verbose = TRUE) {
   results <- evaluate(
     module,
     dataset,
     metric,
-    .llm = llm,
+    .llm = .llm,
     .parallel = FALSE,
     .progress = verbose
   )

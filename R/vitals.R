@@ -19,8 +19,8 @@
 #' @export
 as_vitals_solver <- function(module, .llm = NULL, .parallel = FALSE,
                              .return_format = "structured", ...) {
-  if (!inherits(module, "dsprrr::Predict")) {
-    cli::cli_abort("as_vitals_solver() currently supports Predict modules")
+  if (!inherits(module, "Module")) {
+    cli::cli_abort("as_vitals_solver() requires an R6 Module object")
   }
 
   .return_format <- match.arg(.return_format, c("simple", "structured"))

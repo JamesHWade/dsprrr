@@ -361,31 +361,51 @@ task$eval()
 - **Testing**: 340+ passing tests with comprehensive coverage
 - **Documentation**: Getting-started vignette with practical examples
 
-### ✅ Milestone 2: Enhanced Integration (COMPLETED - Jan 2025)
-- [x] **Batch Processing**: Process multiple inputs with automatic parallelization
+### ✅ Milestone 2: Compilation Engine (COMPLETED - Dec 2024)
+- [x] `Teleprompter` base class and `GridSearchTeleprompter`
+- [x] `compile()` generic for automatic prompt optimization
+- [x] `LabeledFewShot` teleprompter for bootstrap few-shot learning
+- [x] Comprehensive metric system with custom metrics and thresholds
+- [x] Module state management (`reset_copy`, `deepcopy`, `is_compiled`)
+- [x] Evaluation framework with `evaluate()` generic
+- [x] Helper functions like `dsp_trainset()` for data preparation
+
+### ✅ Milestone 3: Enhanced Integration (COMPLETED - Jan 2025)
+- [x] **Batch Processing**: Process multiple inputs with parallelization support
 - [x] **Dataset Support**: Native `run_dataset()` for tibbles/data frames
 - [x] **Structured Returns**: Detailed metadata with every LLM call
 - [x] **vitals Integration**: Seamless interoperability with evaluation framework
-- [x] **Function Interface**: Convert modules to callable functions
-- [x] `Teleprompter` base class for optimization strategies
-- [x] `compile()` generic for automatic prompt optimization
-- [x] Bootstrap few-shot learning with `LabeledFewShot`
-- [x] Grid search optimization with `GridSearchTeleprompter`
-- [x] Comprehensive metric helpers
-- [x] Module state management (`reset_copy`, `deepcopy`, `is_compiled`)
-- [x] Evaluation framework with `evaluate_dsp()`
+- [x] **Function Interface**: Convert modules to callable functions with `as_function()`
+- [x] **Robust error handling**: Using `rlang` for informative errors
+- [x] **Safe parallel execution**: Fresh LLM clients per worker with fallback to sequential
+- [x] **Rich metadata**: Extended return objects with solver logs for vitals
 
-### 📋 Milestone 3: Ecosystem & Ergonomics (Planned)
-- [ ] `evaluate()` generic for systematic testing
-- [ ] Advanced error handling and debugging tools
-- [ ] Provider-specific helpers (OpenAI, Anthropic, etc.)
+### 📋 Milestone 4: Ecosystem & Polish (In Progress)
+- [ ] Provider-specific helpers (e.g., `lm_openai()`)
 - [ ] pkgdown documentation website
+- [ ] Helper constructors (`teleprompter_grid_search()`, `teleprompter_fewshot()`)
+- [ ] Align teleprompter defaults with DSPy
 
-### 🔮 Roadmap
-- **Advanced Modules**: ChainOfThought, ReAct agents, multi-step reasoning
-- **Optimization**: MIPRO, BetterTogether, and other DSPy optimizers
-- **Deployment**: Integration with pins (caching) and vetiver (API deployment)
-- **Extensions**: Custom modules and teleprompters via S7 inheritance
+### 🔮 Future Roadmap
+
+**Advanced Teleprompters:**
+- GEPA (Generate-Evaluate-Prune-Augment) for rationale synthesis
+- MIPRO/MIPROv2 for programmatic prompt optimization
+- Tool-aware optimizers for multi-step traces
+- Self-critique teleprompters (COPRO-style)
+
+**New Module Types:**
+- `ChainOfThought` for reasoning traces
+- `ReAct` for action-observation loops
+- `ToolCall` for function calling
+- `Router` for ensemble selection
+- `Judge` for self-evaluation pipelines
+
+**Production Features:**
+- Integration with `pins` for caching compiled models
+- Integration with `vetiver` for API deployment
+- Streaming outputs and async execution
+- Token accounting and cost tracking
 
 ## Getting Started
 

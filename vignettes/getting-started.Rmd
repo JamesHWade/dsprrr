@@ -93,13 +93,13 @@ result1 <- signature("text -> summary") |>
     .llm = llm
   )
 
-# Alternative: Direct constructor access (for advanced users)
-# Note: Constructors require structured arguments, not strings
+# Alternative: Using the Signature constructor directly
+# Note: This approach gives more control over structured types
 sig <- Signature(
   inputs = list(input("text")),
   output_type = ellmer::type_string()
 )
-result2 <- Predict(signature = sig, template = "Summarize: {text}") |>
+result2 <- module(signature = sig, type = "predict", template = "Summarize: {text}") |>
   run(
     text = "The tidyverse is a collection of R packages designed for data science. All packages share an underlying design philosophy, grammar, and data structures.",
     .llm = llm
@@ -122,7 +122,7 @@ sentiment_analysis <- signature("text -> sentiment") |>
 print(sentiment_analysis)
 
 # Consistent API: signature(), module(), run()
-# Or use constructors directly: Signature(), Predict(), run()
+# Or use constructors directly: Signature(), module(), run()
 
 # Future vision: Build complex pipelines naturally
 # analysis <- raw_data |>

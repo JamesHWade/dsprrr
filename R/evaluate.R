@@ -25,9 +25,11 @@
 #'   - `errors`: character vector with error messages, when any.
 #'   - `dataset`: input dataset augmented with prediction metadata.
 #' @export
-evaluate <- S7::new_generic("evaluate", "module")
+evaluate <- function(module, ...) {
+  UseMethod("evaluate")
+}
 
-#' Evaluate a Predict module
+#' Evaluate an R6 Module
 #'
 #' @details
 #' Parallel execution is conservative by default to avoid reusing non-
@@ -36,7 +38,7 @@ evaluate <- S7::new_generic("evaluate", "module")
 #' call falls back to sequential execution with a warning.
 #'
 #' @noRd
-evaluate_predict <- function(module, dataset, metric,
+evaluate.Module <- function(module, dataset, metric,
                              .llm = NULL, .parallel = FALSE,
                              .progress = TRUE, ...) {
   if (!is.data.frame(dataset)) {

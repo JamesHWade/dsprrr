@@ -4,7 +4,7 @@ test_that("as_vitals_solver returns vitals-compatible results", {
     output_type = ellmer::type_string(),
     instructions = "Repeat"
   )
-  module <- Predict(signature = sig, template = "{text}")
+  mod <- module(signature = sig, type = "predict", template = "{text}")
 
   mock_llm <- structure(
     list(
@@ -16,7 +16,7 @@ test_that("as_vitals_solver returns vitals-compatible results", {
     class = "Chat"
   )
 
-  solver <- as_vitals_solver(module, .llm = mock_llm)
+  solver <- as_vitals_solver(mod, .llm = mock_llm)
 
   inputs <- data.frame(text = c("foo", "bar"), stringsAsFactors = FALSE)
   result <- solver(inputs)
@@ -27,7 +27,7 @@ test_that("as_vitals_solver returns vitals-compatible results", {
   expect_equal(length(result$metadata), 2)
   expect_true(all(vapply(result$metadata, function(x) "prompt" %in% names(x), logical(1))))
 
-  simple_solver <- as_vitals_solver(module, .llm = mock_llm, .return_format = "simple")
+  simple_solver <- as_vitals_solver(mod, .llm = mock_llm, .return_format = "simple")
   simple_result <- simple_solver(inputs)
   expect_equal(simple_result$result, list("foo", "bar"))
   expect_equal(simple_result$solver_chat, list(NULL, NULL))

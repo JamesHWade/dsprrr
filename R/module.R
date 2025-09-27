@@ -11,7 +11,7 @@
 #' @param config Optional configuration list
 #' @param ... Additional arguments for future module types
 #'
-#' @return A module object that can be executed with `run()`
+#' @return A module object (R6) that can be executed with `run()`
 #' @export
 #' @examples
 #' # Create a simple prediction module
@@ -45,17 +45,17 @@ module <- function(signature, type = "predict", template = "", demos = list(),
   # Validate type
   type <- match.arg(type, c("predict"))  # Add more types here in the future
 
-  # Create the appropriate module based on type
+  # Create the appropriate R6 module based on type
   switch(type,
-    predict = Predict(
+    predict = PredictModule$new(
       signature = signature,
       template = template,
       demos = demos,
       config = config
     ),
     # Future module types can be added here
-    # chainofthought = ChainOfThought(...),
-    # react = ReAct(...),
+    # chainofthought = ChainOfThoughtModule$new(...),
+    # react = ReactModule$new(...),
     cli::cli_abort("Unknown module type: {type}")
   )
 }

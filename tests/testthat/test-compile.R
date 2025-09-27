@@ -25,25 +25,25 @@ test_that("compile_module validates inputs", {
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
-  module <- Predict(signature = sig)
+  mod <- module(signature = sig, type = "predict")
 
   # Invalid teleprompter
   expect_error(
-    compile_module(module, "not a teleprompter", data.frame()),
+    compile_module(mod, "not a teleprompter", data.frame()),
     "must be a Teleprompter object"
   )
 
   # Invalid trainset
   tp <- LabeledFewShot()
   expect_error(
-    compile_module(module, tp, "not a data frame"),
+    compile_module(mod, tp, "not a data frame"),
     "trainset must be a data frame"
   )
 
   # Valid inputs
   trainset <- data.frame(text = "test", label = "result")
-  result <- compile_module(module, tp, trainset)
-  expect_s3_class(result, "dsprrr::Predict")
+  result <- compile_module(mod, tp, trainset)
+  expect_true(inherits(result, "Module"))
 })
 
 test_that("compile_module works with different teleprompters", {
@@ -53,7 +53,7 @@ test_that("compile_module works with different teleprompters", {
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  module <- Predict(signature = sig, template = "Q: {question}\nA:")
+  mod <- module(signature = sig, type = "predict", template = "Q: {question}\nA:")
 
   # Create training data
   trainset <- data.frame(
@@ -64,10 +64,10 @@ test_that("compile_module works with different teleprompters", {
 
   # Test with LabeledFewShot
   tp_labeled <- LabeledFewShot(k = 2L)
-  compiled_labeled <- compile_module(module, tp_labeled, trainset)
-  expect_length(compiled_labeled@demos, 2)
-  expect_true(compiled_labeled@config$compiled)
-  expect_equal(compiled_labeled@config$teleprompter, "LabeledFewShot")
+  compiled_labeled <- compile_module(mod, tp_labeled, trainset)
+  expect_length(compiled_labeled$demos, 2)
+  expect_true(compiled_labeled$config$compiled)
+  expect_equal(compiled_labeled$config$teleprompter, "LabeledFewShot")
 
   # Test with GridSearchTeleprompter (mock evaluation)
   variants <- data.frame(
@@ -83,11 +83,11 @@ test_that("compile_module works with different teleprompters", {
   )
 
   # This will use mock evaluation in the current implementation
-  compiled_grid <- compile_module(module, tp_grid, trainset, .llm = mock_llm)
-  expect_true(compiled_grid@config$compiled)
-  expect_equal(compiled_grid@config$teleprompter, "GridSearchTeleprompter")
-  expect_true("best_variant" %in% names(compiled_grid@config))
-  expect_true("all_scores" %in% names(compiled_grid@config))
+  compiled_grid <- compile_module(mod, tp_grid, trainset, .llm = mock_llm)
+  expect_true(compiled_grid$config$compiled)
+  expect_equal(compiled_grid$config$teleprompter, "GridSearchTeleprompter")
+  expect_true("best_variant" %in% names(compiled_grid$config))
+  expect_true("all_scores" %in% names(compiled_grid$config))
 })
 
 test_that("compile_module warns on recompilation", {
@@ -96,16 +96,19 @@ test_that("compile_module warns on recompilation", {
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
-  module <- Predict(
+  mod <- module(
     signature = sig,
+    type = "predict",
     config = list(compiled = TRUE, teleprompter = "PreviousOptimizer")
   )
+  # Set compiled state for warning test
+  mod$state$compiled <- TRUE
 
   trainset <- data.frame(x = "test", y = "result")
   tp <- LabeledFewShot()
 
   expect_warning(
-    compile_module(module, tp, trainset),
+    compile_module(mod, tp, trainset),
     "already compiled"
   )
 })
@@ -151,7 +154,7 @@ test_that("evaluate_dsp evaluates modules", {
     output_type = ellmer::type_string(),
     instructions = "Classify"
   )
-  module <- Predict(signature = sig)
+  mod <- module(signature = sig, type = "predict")
 
   dataset <- data.frame(
     text = c("hello", "world"),
@@ -162,10 +165,10 @@ test_that("evaluate_dsp evaluates modules", {
 
   # Mock evaluation (actual would need LLM)
   results <- evaluate_dsp(
-    module = module,
+    module = mod,
     dataset = dataset,
     metric = metric,
-    llm = mock_llm,
+    .llm = mock_llm,
     verbose = FALSE
   )
 
@@ -179,7 +182,7 @@ test_that("evaluate_dsp evaluates modules", {
   # Empty dataset
   expect_warning(
     empty_results <- evaluate_dsp(
-      module = module,
+      module = mod,
       dataset = data.frame(),
       metric = metric,
       verbose = FALSE
@@ -191,11 +194,11 @@ test_that("evaluate_dsp evaluates modules", {
 
   # Invalid inputs
   expect_error(
-    evaluate_dsp(module, "not a df", metric),
+    evaluate_dsp(mod, "not a df", metric),
     "must be a data frame"
   )
   expect_error(
-    evaluate_dsp(module, dataset, "not a function"),
+    evaluate_dsp(mod, dataset, "not a function"),
     "must be a function"
   )
 })
@@ -206,7 +209,7 @@ test_that("compile workflow with validation set", {
     output_type = ellmer::type_string(),
     instructions = "Classify sentiment"
   )
-  module <- Predict(signature = sig)
+  mod <- module(signature = sig, type = "predict")
 
   trainset <- data.frame(
     text = c("love it", "hate it", "okay", "great", "terrible"),
@@ -234,8 +237,8 @@ test_that("compile workflow with validation set", {
     verbose = FALSE
   )
 
-  compiled <- compile_module(module, tp, trainset, valset, .llm = mock_llm)
-  expect_true(compiled@config$compiled)
+  compiled <- compile_module(mod, tp, trainset, valset, .llm = mock_llm)
+  expect_true(compiled$config$compiled)
 
   # The validation set should have been used for evaluation
   # (In real use, scores would differ based on actual LLM calls)
@@ -258,7 +261,7 @@ test_that("compile integration with module pipeline", {
   )
 
   # 2. Create module
-  qa_module <- Predict(
+  qa_mod <- module(
     signature = sig,
     template = "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
   )
@@ -280,24 +283,24 @@ test_that("compile integration with module pipeline", {
 
   # 4. Compile with LabeledFewShot
   tp <- LabeledFewShot(k = 2L)
-  compiled_qa <- compile_module(qa_module, tp, trainset)
+  compiled_qa <- compile_module(qa_mod, tp, trainset)
 
-  expect_s3_class(compiled_qa, "dsprrr::Predict")
-  expect_true(is_compiled(compiled_qa))
-  expect_length(compiled_qa@demos, 2)
+  expect_true(inherits(compiled_qa, "Module"))
+  expect_true(compiled_qa$is_compiled())
+  expect_length(compiled_qa$demos, 2)
 
   # 5. Test state management
-  reset_qa <- reset_copy(compiled_qa)
-  expect_false(is_compiled(reset_qa))
-  expect_length(reset_qa@demos, 0)
+  reset_qa <- compiled_qa$reset_copy()
+  expect_false(reset_qa$is_compiled())
+  expect_length(reset_qa$demos, 0)
 
-  copy_qa <- deepcopy(compiled_qa)
-  expect_true(is_compiled(copy_qa))
-  expect_equal(copy_qa@demos, compiled_qa@demos)
+  copy_qa <- compiled_qa$deepcopy()
+  expect_true(copy_qa$is_compiled())
+  expect_equal(copy_qa$demos, compiled_qa$demos)
 
   # Modify copy without affecting original
-  copy_qa@config$test <- "modified"
-  expect_null(compiled_qa@config$test)
+  copy_qa$config$test <- "modified"
+  expect_null(compiled_qa$config$test)
 })
 
 test_that("evaluate generic executes modules", {
@@ -306,7 +309,7 @@ test_that("evaluate generic executes modules", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  module <- Predict(signature = sig, template = "{text}")
+  mod <- module(signature = sig, type = "predict", template = "{text}")
 
   dataset <- data.frame(text = c("A", "B"), stringsAsFactors = FALSE)
 
@@ -322,7 +325,7 @@ test_that("evaluate generic executes modules", {
   )
 
   results <- evaluate(
-    module,
+    mod,
     dataset,
     metric = function(pred, row) identical(pred, row$text),
     .llm = eval_llm,

@@ -72,3 +72,4 @@ The package is in early development. The PLAN.md file contains the detailed road
 - Some imported packages (tibble, withr) are not yet used
 - Non-standard top-level files (CLAUDE.md, PLAN.md) should be added to .Rbuildignore for CRAN
 - Do not use `-old` or `-new` or `-improved` files names. You should replace outdated code instead of preserving the old stuff.
+- Do not use `devtools::build_vignettes()`. You should use build_rmd() instead.

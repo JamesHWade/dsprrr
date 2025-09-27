@@ -4,7 +4,7 @@
 \alias{evaluate_dsp}
 \title{Evaluate a Compiled Module}
 \usage{
-evaluate_dsp(module, dataset, metric, llm = NULL, verbose = TRUE)
+evaluate_dsp(module, dataset, metric, .llm = NULL, verbose = TRUE)
 }
 \arguments{
 \item{module}{A DSPrrr module (compiled or not)}
@@ -13,9 +13,9 @@ evaluate_dsp(module, dataset, metric, llm = NULL, verbose = TRUE)
 
 \item{metric}{A metric function from \verb{metric_*()} functions}
 
-\item{llm}{Optional LLM connection for running the module}
-
 \item{verbose}{Whether to show progress}
+
+\item{llm}{Optional LLM connection for running the module}
 }
 \value{
 A list with evaluation results including mean score and per-example scores
