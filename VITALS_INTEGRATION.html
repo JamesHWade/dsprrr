@@ -139,7 +139,7 @@
 <span><span class="co"># Adapter: vitals scorer → dsprrr metric</span></span>
 <span><span class="va">as_dsprrr_metric</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">vitals_scorer</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">predictions</span>, <span class="va">targets</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">samples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>    <span class="va">samples</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="op">(</span></span>
 <span>      input <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">predictions</span><span class="op">)</span>,</span>
 <span>      target <span class="op">=</span> <span class="va">targets</span>,</span>
 <span>      result <span class="op">=</span> <span class="va">predictions</span></span>
@@ -408,7 +408,7 @@
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># In compile() and evaluate() functions</span></span>
 <span><span class="fu"><a href="reference/compile.html">compile</a></span><span class="op">(</span><span class="va">module</span>, <span class="va">teleprompter</span>,</span>
-<span>        train_data <span class="op">=</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>text <span class="op">=</span> <span class="va">...</span>, target <span class="op">=</span> <span class="va">...</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Not just lists</span></span></code></pre></div>
+<span>        train_data <span class="op">=</span> <span class="fu">tibble</span><span class="op">(</span>text <span class="op">=</span> <span class="va">...</span>, target <span class="op">=</span> <span class="va">...</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Not just lists</span></span></code></pre></div>
 <p><strong>Rationale</strong>: Aligns with vitals’ dataset format, making data sharing seamless.</p>
 </li>
 <li>
@@ -424,7 +424,7 @@
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">predictions</span> <span class="op">==</span> <span class="va">targets</span><span class="op">)</span></span>
 <span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>    <span class="fu">tibble</span><span class="op">(</span></span>
 <span>      score <span class="op">=</span> <span class="va">predictions</span> <span class="op">==</span> <span class="va">targets</span>,</span>
 <span>      tokens <span class="op">=</span> <span class="fu">map_int</span><span class="op">(</span><span class="va">metadata</span><span class="op">$</span><span class="va">chats</span>, <span class="op">~</span> <span class="va">.x</span><span class="op">$</span><span class="va">token_count</span><span class="op">)</span>,</span>
 <span>      latency <span class="op">=</span> <span class="fu">map_dbl</span><span class="op">(</span><span class="va">metadata</span><span class="op">$</span><span class="va">chats</span>, <span class="op">~</span> <span class="va">.x</span><span class="op">$</span><span class="va">latency</span><span class="op">)</span></span>

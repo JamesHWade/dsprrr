@@ -94,7 +94,7 @@
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Configure your LLM</span></span>
-<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Clean, consistent API with pipes!</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -242,7 +242,7 @@
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Configure LLM</span></span>
-<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Simple pipeline with string notation</span></span>
 <span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -384,7 +384,7 @@
 <span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great!"</span>, <span class="st">"Terrible"</span>, <span class="st">"Okay"</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Process entire datasets with run_dataset()</span></span>
-<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="op">(</span></span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"Not good"</span>, <span class="st">"It's fine"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">results_df</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">data</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
@@ -412,7 +412,7 @@
 <span><span class="co"># Use dsprrr modules as vitals solvers</span></span>
 <span><span class="va">task</span> <span class="op">&lt;-</span> <span class="va"><a href="https://vitals.tidyverse.org/reference/Task.html" class="external-link">Task</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  solver <span class="op">=</span> <span class="fu"><a href="reference/as_function.html">as_function</a></span><span class="op">(</span><span class="va">classifier</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span>,</span>
+<span>  solver <span class="op">=</span> <span class="fu">as_function</span><span class="op">(</span><span class="va">classifier</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span>,</span>
 <span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
@@ -444,46 +444,48 @@
 </ul>
 </div>
 <div class="section level3">
-<h3 id="id_-milestone-2-enhanced-integration-completed---jan-2025">✅ Milestone 2: Enhanced Integration (COMPLETED - Jan 2025)<a class="anchor" aria-label="anchor" href="#id_-milestone-2-enhanced-integration-completed---jan-2025"></a>
+<h3 id="id_-milestone-2-compilation-engine-completed---dec-2024">✅ Milestone 2: Compilation Engine (COMPLETED - Dec 2024)<a class="anchor" aria-label="anchor" href="#id_-milestone-2-compilation-engine-completed---dec-2024"></a>
 </h3>
 <ul class="task-list">
-<li><label><input type="checkbox" checked><strong>Batch Processing</strong>: Process multiple inputs with automatic parallelization</label></li>
+<li><label><input type="checkbox" checked><code>Teleprompter</code> base class and <code>GridSearchTeleprompter</code></label></li>
+<li><label><input type="checkbox" checked><code><a href="reference/compile.html">compile()</a></code> generic for automatic prompt optimization</label></li>
+<li><label><input type="checkbox" checked><code>LabeledFewShot</code> teleprompter for bootstrap few-shot learning</label></li>
+<li><label><input type="checkbox" checked>Comprehensive metric system with custom metrics and thresholds</label></li>
+<li><label><input type="checkbox" checked>Module state management (<code>reset_copy</code>, <code>deepcopy</code>, <code>is_compiled</code>)</label></li>
+<li><label><input type="checkbox" checked>Evaluation framework with <code><a href="reference/evaluate.html">evaluate()</a></code> generic</label></li>
+<li><label><input type="checkbox" checked>Helper functions like <code><a href="reference/dsp_trainset.html">dsp_trainset()</a></code> for data preparation</label></li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="id_-milestone-3-enhanced-integration-completed---jan-2025">✅ Milestone 3: Enhanced Integration (COMPLETED - Jan 2025)<a class="anchor" aria-label="anchor" href="#id_-milestone-3-enhanced-integration-completed---jan-2025"></a>
+</h3>
+<ul class="task-list">
+<li><label><input type="checkbox" checked><strong>Batch Processing</strong>: Process multiple inputs with parallelization support</label></li>
 <li><label><input type="checkbox" checked><strong>Dataset Support</strong>: Native <code><a href="reference/run_dataset.html">run_dataset()</a></code> for tibbles/data frames</label></li>
 <li><label><input type="checkbox" checked><strong>Structured Returns</strong>: Detailed metadata with every LLM call</label></li>
 <li><label><input type="checkbox" checked><strong>vitals Integration</strong>: Seamless interoperability with evaluation framework</label></li>
-<li><label><input type="checkbox" checked><strong>Function Interface</strong>: Convert modules to callable functions</label></li>
-<li><label><input type="checkbox" checked><code>Teleprompter</code> base class for optimization strategies</label></li>
-<li><label><input type="checkbox" checked><code><a href="reference/compile.html">compile()</a></code> generic for automatic prompt optimization</label></li>
-<li><label><input type="checkbox" checked>Bootstrap few-shot learning with <code>LabeledFewShot</code></label></li>
-<li><label><input type="checkbox" checked>Grid search optimization with <code>GridSearchTeleprompter</code></label></li>
-<li><label><input type="checkbox" checked>Comprehensive metric helpers</label></li>
-<li><label><input type="checkbox" checked>Module state management (<code>reset_copy</code>, <code>deepcopy</code>, <code>is_compiled</code>)</label></li>
-<li><label><input type="checkbox" checked>Evaluation framework with <code><a href="reference/evaluate_dsp.html">evaluate_dsp()</a></code></label></li>
+<li><label><input type="checkbox" checked><strong>Function Interface</strong>: Convert modules to callable functions with <code>as_function()</code></label></li>
+<li><label><input type="checkbox" checked><strong>Robust error handling</strong>: Using <code>rlang</code> for informative errors</label></li>
+<li><label><input type="checkbox" checked><strong>Safe parallel execution</strong>: Fresh LLM clients per worker with fallback to sequential</label></li>
+<li><label><input type="checkbox" checked><strong>Rich metadata</strong>: Extended return objects with solver logs for vitals</label></li>
 </ul>
 </div>
 <div class="section level3">
-<h3 id="id_-milestone-3-ecosystem--ergonomics-planned">📋 Milestone 3: Ecosystem &amp; Ergonomics (Planned)<a class="anchor" aria-label="anchor" href="#id_-milestone-3-ecosystem--ergonomics-planned"></a>
+<h3 id="id_-milestone-4-ecosystem--polish-in-progress">📋 Milestone 4: Ecosystem &amp; Polish (In Progress)<a class="anchor" aria-label="anchor" href="#id_-milestone-4-ecosystem--polish-in-progress"></a>
 </h3>
 <ul class="task-list">
-<li><label><input type="checkbox"><code><a href="reference/evaluate.html">evaluate()</a></code> generic for systematic testing</label></li>
-<li><label><input type="checkbox">Advanced error handling and debugging tools</label></li>
-<li><label><input type="checkbox">Provider-specific helpers (OpenAI, Anthropic, etc.)</label></li>
+<li><label><input type="checkbox">Provider-specific helpers (e.g., <code>lm_openai()</code>)</label></li>
 <li><label><input type="checkbox">pkgdown documentation website</label></li>
+<li><label><input type="checkbox">Helper constructors (<code>teleprompter_grid_search()</code>, <code>teleprompter_fewshot()</code>)</label></li>
+<li><label><input type="checkbox">Align teleprompter defaults with DSPy</label></li>
 </ul>
 </div>
 <div class="section level3">
-<h3 id="id_-roadmap">🔮 Roadmap<a class="anchor" aria-label="anchor" href="#id_-roadmap"></a>
+<h3 id="id_-future-roadmap">🔮 Future Roadmap<a class="anchor" aria-label="anchor" href="#id_-future-roadmap"></a>
 </h3>
-<ul>
-<li>
-<strong>Advanced Modules</strong>: ChainOfThought, ReAct agents, multi-step reasoning</li>
-<li>
-<strong>Optimization</strong>: MIPRO, BetterTogether, and other DSPy optimizers</li>
-<li>
-<strong>Deployment</strong>: Integration with pins (caching) and vetiver (API deployment)</li>
-<li>
-<strong>Extensions</strong>: Custom modules and teleprompters via S7 inheritance</li>
-</ul>
+<p><strong>Advanced Teleprompters:</strong> - GEPA (Generate-Evaluate-Prune-Augment) for rationale synthesis - MIPRO/MIPROv2 for programmatic prompt optimization - Tool-aware optimizers for multi-step traces - Self-critique teleprompters (COPRO-style)</p>
+<p><strong>New Module Types:</strong> - <code>ChainOfThought</code> for reasoning traces - <code>ReAct</code> for action-observation loops - <code>ToolCall</code> for function calling - <code>Router</code> for ensemble selection - <code>Judge</code> for self-evaluation pipelines</p>
+<p><strong>Production Features:</strong> - Integration with <code>pins</code> for caching compiled models - Integration with <code>vetiver</code> for API deployment - Streaming outputs and async execution - Token accounting and cost tracking</p>
 </div>
 </div>
 <div class="section level2">

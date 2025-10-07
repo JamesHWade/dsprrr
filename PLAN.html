@@ -39,221 +39,316 @@
 
 <div class="section level3">
 <h3 id="id_1-vision--philosophy">1. Vision &amp; Philosophy<a class="anchor" aria-label="anchor" href="#id_1-vision--philosophy"></a></h3>
-<p><code>dsprrr</code> is a package for building <strong>principled, test-driven, and optimizable</strong> applications using Large Language Models in R. It moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. This is an implementation of DSPy in R.</p>
-<p>Our philosophy is to provide “tools for thinking” about LLM applications, deeply integrating with the tidyverse ethos. By representing prompts, examples, and evaluation results as data frames, and by designing composable, pipe-friendly APIs, <code>dsprrr</code> will make the complex task of developing robust AI systems feel like a natural extension of an R-based data analysis workflow. We are not just wrapping an API; we are creating a framework for rigorous, empirical LLM development.</p>
+<p><code>dsprrr</code> helps R programmers build <strong>principled, test-driven, optimisable</strong> LLM systems. We want iterative LLM development to feel like a tidyverse project: data lives in tibbles, contracts are explicit, experiments are reproducible, and evaluation tooling (including <code>vitals</code>) plugs in without adapters.</p>
+<p>Guiding tenets: - <strong>Typed boundaries.</strong> Every module advertises a signature; inputs and outputs are validated before the model runs. - <strong>Stateful, observable modules.</strong> Prompt code, configuration, losses, and traces live together so optimisation has first-class data to work with. - <strong>Data-first ergonomics.</strong> Traces, metrics, and evaluation sets are tidy data frames that flow through <code>dplyr</code>, <code>ggplot2</code>, <code>targets</code>, <code>vitals</code>, and Quarto alike. - <strong>Composable tooling.</strong> Lean on ellmer for LLM clients/tools, r-lib for developer UX, tidymodels for tuning, and vitals for rigorous evaluation.</p>
 <hr></div>
 <div class="section level3">
-<h3 id="id_2-core-architecture-s7-based">2. Core Architecture (S7-based)<a class="anchor" aria-label="anchor" href="#id_2-core-architecture-s7-based"></a></h3>
-<p>The architecture is built on S7, chosen for its modern, robust object system that aligns with R’s functional heritage and ensures seamless tidyverse integration. The design emphasizes composability and extensibility through a system of formal classes and generics.</p>
-<p><strong>2.1. Core S7 Classes</strong></p>
-<ul><li>
-<p><strong><code>Signature</code></strong>: A declarative, immutable schema for an LLM operation.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">Signature</span> <span class="op">&lt;-</span> <span class="fu">S7</span><span class="fu">::</span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"Signature"</span>,</span>
-<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    inputs <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/base_classes.html" class="external-link">class_list</a></span>,   <span class="co"># A list of S7::property objects</span></span>
-<span>    output_type <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/class_any.html" class="external-link">class_any</a></span>, <span class="co"># An ellmer::type_* object</span></span>
-<span>    instructions <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/base_classes.html" class="external-link">class_character</a></span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  validator <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">self</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="co"># Validate that output_type is an ellmer type object</span></span>
-<span>    <span class="co"># Validate that inputs is a list of correctly formed properties</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</li>
-<li>
-<p><strong><code>Predict</code></strong>: The foundational, stateless execution module. It pairs a <code>Signature</code> with a <code>glue</code> template.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">Predict</span> <span class="op">&lt;-</span> <span class="fu">S7</span><span class="fu">::</span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"Predict"</span>,</span>
-<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    signature <span class="op">=</span> <span class="va">Signature</span>,</span>
-<span>    template <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/base_classes.html" class="external-link">class_character</a></span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><strong>Design Note:</strong> The <code>Predict</code> module itself is stateless. The <code>ellmer</code> chat object, which holds conversation history, is managed by the execution context (e.g., a <code>Compiler</code> or a user’s script), not within the module. This promotes a more functional, predictable, and reusable design.</p>
-</li>
-<li>
-<p><strong><code>Teleprompter</code></strong>: An S7 base class for optimization strategies. Different compilation techniques are implemented as subclasses.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">Teleprompter</span> <span class="op">&lt;-</span> <span class="fu">S7</span><span class="fu">::</span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"Teleprompter"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">GridSearchTeleprompter</span> <span class="op">&lt;-</span> <span class="fu">S7</span><span class="fu">::</span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"GridSearchTeleprompter"</span>,</span>
-<span>  parent <span class="op">=</span> <span class="va">Teleprompter</span>,</span>
-<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    variants <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/base_s3_classes.html" class="external-link">class_data.frame</a></span>, <span class="co"># A tibble defining the search space</span></span>
-<span>    k <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/base_classes.html" class="external-link">class_integer</a></span>,           <span class="co"># Number of few-shot examples</span></span>
-<span>    metric <span class="op">=</span> <span class="fu">S7</span><span class="fu">::</span><span class="va"><a href="https://rconsortium.github.io/S7/reference/base_classes.html" class="external-link">class_function</a></span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</li>
-</ul><p><strong>2.2. Core S7 Generics</strong></p>
-<p>The package’s primary verbs will be S7 generics, allowing users to extend the system with their own classes.</p>
-<ul><li>
-<code>forward(module, ...)</code>: Executes a module. It takes a module object and named arguments corresponding to the module’s <code>Signature</code>.</li>
-<li>
-<code>compile(program, teleprompter, ...)</code>: Optimizes a program. It takes a module or pipeline, a <code>Teleprompter</code> object, a set of demos, and a development set.</li>
-<li>
-<code>evaluate(program, dataset, metric)</code>: Evaluates a program’s performance on a test set.</li>
-</ul><hr></div>
-<div class="section level3">
-<h3 id="id_3-the-end-to-end-workflow-user-experience">3. The End-to-End Workflow (User Experience)<a class="anchor" aria-label="anchor" href="#id_3-the-end-to-end-workflow-user-experience"></a></h3>
-<p>The S7 architecture results in an exceptionally clean and intuitive user workflow that is fully pipe-friendly.</p>
-<p><strong>Example: A Simple Sentiment Classifier</strong></p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 1. Define the program's INPUT/OUTPUT schema using the clean API</span></span>
-<span><span class="va">sentiment_classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  <span class="st">"text -&gt; sentiment: enum('Positive', 'Negative', 'Neutral')"</span>,</span>
-<span>  instructions <span class="op">=</span> <span class="st">"Classify the sentiment of the provided text."</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Text: {text}\nSentiment:"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 2. For complex outputs, use explicit notation</span></span>
-<span><span class="va">advanced_classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"text"</span>, description <span class="op">=</span> <span class="st">"The text to classify."</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  output_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    sentiment <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Positive"</span>, <span class="st">"Negative"</span>, <span class="st">"Neutral"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    confidence <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span>minimum <span class="op">=</span> <span class="fl">0</span>, maximum <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
-<span>    reasoning <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  instructions <span class="op">=</span> <span class="st">"Classify sentiment with confidence and reasoning."</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 3. Execute immediately (current capability)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">sentiment_classifier</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"I love using well-designed R packages!"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="co"># &gt; list(sentiment = "Positive")</span></span>
-<span></span>
-<span><span class="co"># 4. Future: Optimization with Teleprompters</span></span>
-<span><span class="co"># Define the optimization strategy</span></span>
-<span><span class="va">variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"terse"</span>, <span class="st">"roleplay"</span><span class="op">)</span>,</span>
-<span>  instructions_mod <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Be brief and accurate."</span>,</span>
-<span>    <span class="st">"You are a sentiment analysis expert. Provide one-word answers."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">teleprompter</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/GridSearchTeleprompter.html">GridSearchTeleprompter</a></span><span class="op">(</span></span>
-<span>  variants <span class="op">=</span> <span class="va">variants</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 5. Future: Compile the program using a dev set</span></span>
-<span><span class="va">compiled_classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="va">sentiment_classifier</span>,</span>
-<span>  teleprompter <span class="op">=</span> <span class="va">teleprompter</span>,</span>
-<span>  dev_set <span class="op">=</span> <span class="va">sentiment_dev_data</span> <span class="co"># A tibble with 'text' and 'sentiment' columns</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 6. Future: Evaluate on held-out test set</span></span>
-<span><span class="va">evaluation_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="va">compiled_classifier</span>,</span>
-<span>  dataset <span class="op">=</span> <span class="va">sentiment_test_data</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<hr></div>
-<div class="section level3">
-<h3 id="id_4-implementation-roadmap">4. Implementation Roadmap<a class="anchor" aria-label="anchor" href="#id_4-implementation-roadmap"></a></h3>
-<p><strong>Milestone 1: S7 Foundation &amp; Core Execution (✅ COMPLETED - December 2024)</strong></p>
-<ul class="task-list"><li><label><input type="checkbox" checked>Implement the <code>Signature</code> and <code>Predict</code> S7 classes with robust validators.</label></li>
-<li><label><input type="checkbox" checked>Implement the <code><a href="reference/run.html">run()</a></code> S7 generic (replacing <code>forward()</code>) and its method for the <code>Predict</code> class.</label></li>
-<li><label><input type="checkbox" checked>Establish the core <code>ellmer</code> integration for making API calls via <code>chat_structured()</code>.</label></li>
-<li><label><input type="checkbox" checked>Develop comprehensive <code>testthat</code> tests for all class properties and execution logic (185+ tests passing).</label></li>
-<li>
-<label><input type="checkbox" checked><strong>Additional achievements:</strong></label>
-<ul><li>Implemented DSPy-style string notation for signatures (e.g., <code>"text -&gt; sentiment"</code>)</li>
-<li>Created unified <code><a href="reference/signature.html">signature()</a></code> function supporting both string and explicit notation</li>
-<li>Added <code><a href="reference/module.html">module()</a></code> function as the primary interface for creating modules</li>
-<li>Established clean, consistent API with no confusing aliases</li>
-<li>Full integration with R’s pipe operator (<code>|&gt;</code>)</li>
-<li>Created comprehensive getting-started vignette</li>
-<li>Implemented flexible input type system with helpers</li>
-<li>
-<strong>NEW:</strong> Support for multiple output fields (<code>"question -&gt; answer: string, confidence: float"</code>)</li>
-<li>
-<strong>NEW:</strong> Complex type parsing (Optional, Union, dict notation)</li>
-<li>
-<strong>NEW:</strong> Direct use of ellmer types with descriptions (no redundant field wrappers)</li>
-<li>
-<strong>NEW:</strong> Full DSPy compatibility for signature string notation</li>
-<li>
-<strong>SIMPLIFIED:</strong> Removed InputField/OutputField in favor of ellmer’s built-in description parameter</li>
-</ul></li>
-</ul><p><strong>Milestone 2: The Compilation Engine (✅ COMPLETED - September 2024)</strong></p>
-<ul class="task-list"><li><label><input type="checkbox" checked>Implement the <code>Teleprompter</code> base class and the <code>GridSearchTeleprompter</code> subclass.</label></li>
-<li><label><input type="checkbox" checked>Implement the <code><a href="reference/compile.html">compile()</a></code> S7 generic.</label></li>
-<li><label><input type="checkbox" checked>Create foundational metric helpers (e.g., <code>metric_exact_match</code>, <code>metric_f1</code>).</label></li>
-<li><label><input type="checkbox" checked>Write the introductory vignette (<code>vignettes/getting-started.Rmd</code>), demonstrating basic usage.</label></li>
-<li>
-<label><input type="checkbox" checked><strong>Additional achievements:</strong></label>
-<ul><li>Implemented <code>LabeledFewShot</code> teleprompter for bootstrap few-shot learning</li>
-<li>Created comprehensive metric system with custom metrics and threshold support</li>
-<li>Added module state management (<code>reset_copy</code>, <code>deepcopy</code>, <code>is_compiled</code>)</li>
-<li>Built evaluation framework with <code><a href="reference/evaluate_dsp.html">evaluate_dsp()</a></code> function</li>
-<li>Created helper functions like <code><a href="reference/dsp_trainset.html">dsp_trainset()</a></code> for data preparation</li>
-<li>Full test coverage (160+ tests passing)</li>
-</ul></li>
-</ul><p><strong>Milestone 3: Ecosystem &amp; Ergonomics (Target: 7 Weeks)</strong></p>
-<ul class="task-list"><li><label><input type="checkbox" checked>Implement the <code><a href="reference/evaluate.html">evaluate()</a></code> generic.</label></li>
-<li><label><input type="checkbox" checked>Develop robust error handling using <code>rlang</code> for both API failures and validation errors (partially complete).</label></li>
-<li><label><input type="checkbox">Add convenience wrappers for common LLM providers (e.g., <code>lm_openai()</code>).</label></li>
-<li><label><input type="checkbox">Build out a comprehensive documentation website using <code>pkgdown</code>.</label></li>
-<li><label><input type="checkbox" checked>Replace the placeholder scoring paths in <code><a href="reference/compile_module.html">compile_module()</a></code>, <code>GridSearchTeleprompter</code>, and <code><a href="reference/evaluate_dsp.html">evaluate_dsp()</a></code> with real calls into <code><a href="reference/run.html">run()</a></code> (supporting dependency injection for mock LLMs in tests and batching for speed).</label></li>
-<li><label><input type="checkbox" checked>Export vitals adapter helpers (<code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code>, <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>, etc.) with accompanying tests so the documented workflow is exercised end-to-end.</label></li>
-</ul><p><strong>Milestone 3a: Prompting &amp; Execution Polish (Parallel track, ~2 Weeks)</strong></p>
-<ul class="task-list"><li><label><input type="checkbox" checked>Adjust prompt construction so signature instructions are injected exactly once (remove the current double prepend between <code>build_prompt()</code> and <code>call_llm()</code>).</label></li>
-<li><label><input type="checkbox" checked>Define a safe parallel execution strategy: either spin up a fresh <code>.llm</code> per worker in <code>run_batch()</code> or default <code>.parallel = FALSE</code> until a serialisable, thread-safe client abstraction is ready. Document the behaviour and add regression tests.</label></li>
-<li><label><input type="checkbox" checked>Extend structured/batch return objects with richer metadata hooks needed by vitals (e.g., solver logs) once the evaluation path is wired to <code><a href="reference/run.html">run()</a></code>.</label></li>
-</ul><p><strong>Milestone 4: Future Vision &amp; Extensibility</strong></p>
-<ul class="task-list"><li><label><input type="checkbox"><strong>Advanced Teleprompters:</strong> Follow the roadmap below to deliver GEPA, MIPRO/MIPROv2, and tool-aware optimizers that move beyond bootstrap few-shot strategies.</label></li>
-<li><label><input type="checkbox"><strong>New Module Types:</strong> Execute the module roadmap below to add <code>ChainOfThought</code>, <code>ReAct</code>, <code>ToolCall</code>, and routing/judge capabilities.</label></li>
-<li><label><input type="checkbox"><strong>Caching &amp; Deployment:</strong> Explore integration with <code>pins</code> for caching expensive <code><a href="reference/compile.html">compile()</a></code> results and <code>vetiver</code> for deploying final <code>dsprrr</code> programs as APIs.</label></li>
-</ul><hr></div>
-<div class="section level3">
-<h3 id="id_4a-teleprompter--module-implementation-guidance">4a. Teleprompter &amp; Module Implementation Guidance<a class="anchor" aria-label="anchor" href="#id_4a-teleprompter--module-implementation-guidance"></a></h3>
+<h3 id="id_2-core-architecture">2. Core Architecture<a class="anchor" aria-label="anchor" href="#id_2-core-architecture"></a></h3>
 <div class="section level4">
-<h4 id="teleprompter-roadmap">Teleprompter Roadmap<a class="anchor" aria-label="anchor" href="#teleprompter-roadmap"></a></h4>
+<h4 id="id_21-signatures-s7">2.1 Signatures (S7)<a class="anchor" aria-label="anchor" href="#id_21-signatures-s7"></a></h4>
 <ul><li>
-<strong>Stabilize the current stack (1 sprint):</strong> Document the intended contract of <code>GridSearchTeleprompter</code> and <code>LabeledFewShot</code>, adopt helper constructors (<code>teleprompter_grid_search()</code>, <code>teleprompter_fewshot()</code>), align argument names and defaults with DSPy, and backfill regression tests that assert identical behaviour against a frozen set of dev data.</li>
+<code>Signature</code> remains an S7 class in <code>R/signature.R</code> describing <code>inputs</code>, <code>output_type</code>, and <code>instructions</code>.</li>
 <li>
-<strong>Ship GEPA parity (2 sprints):</strong> Implement <code>GepaTeleprompter</code> (<code>teleprompter_gepa()</code>) that mirrors DSPy GEPA behaviours—synthesizing rationales, pruning low-signal examples, and iteratively replaying the dev set until a stopping metric stabilizes. Expose hooks for caching generated trajectories and make the optimiser resumable for long runs.</li>
-<li>
-<strong>Add programmatic search teleprompters (2 sprints):</strong> Port MIPRO/MIPROv2-style optimisers as <code>MiproTeleprompter</code> (<code>teleprompter_mipro()</code>), treating prompt tokens as programmable parameters. Surface differentiable metric adapters so users can plug in logits from structured outputs, and provide safety rails (gradient clipping, cost caps) for hosted LLMs.</li>
-<li>
-<strong>Tool-aware teleprompters (1 sprint):</strong> Extend the teleprompter interface so optimisers can request tool schemas from modules (needed for ReAct) and score on multi-step traces. Start with <code>SelfCritiqueTeleprompter</code> (<code>teleprompter_self_critique()</code>) that captures critiques and revisions akin to DSPy COPRO.</li>
-<li>
-<strong>Operational readiness:</strong> Instrument every teleprompter with timing, token accounting, and audit logs, and provide a <code>teleprompter_profile()</code> helper to summarise runs for pkgdown documentation.</li>
+<code>validate_io(signature, inputs, outputs)</code> enforces the contract at runtime (module <code>$forward()</code> and <code><a href="reference/run.html">run()</a></code> reuse it).</li>
+<li>Pillar-friendly printing highlights argument names, expected types, and guidance for downstream tooling.</li>
 </ul></div>
 <div class="section level4">
-<h4 id="module-roadmap">Module Roadmap<a class="anchor" aria-label="anchor" href="#module-roadmap"></a></h4>
+<h4 id="id_22-modules-r6">2.2 Modules (R6)<a class="anchor" aria-label="anchor" href="#id_22-modules-r6"></a></h4>
+<ul><li>R6 base <code>Module</code> owns:
 <ul><li>
-<strong>Predict family hardening:</strong> Finalise the <code>Predict</code>/<code>PredictModule</code> API (with constructor <code>module_predict()</code>) as the canonical base module, enforce signature compliance during composition, and add lightweight adapters for streaming outputs and function/tool calling payloads.</li>
+<code>signature</code>: immutable reference to an S7 <code>Signature</code>.</li>
 <li>
-<strong>Chain-of-thought modules (1 sprint):</strong> Introduce <code>ChainOfThoughtModule</code> (<code>module_chain_of_thought()</code>) that splits reasoning and final answer channels, with helper verbs for toggling structured rationales. Pair with default teleprompter settings that encourage rationale harvesting for GEPA.</li>
+<code>config</code>: structured list capturing tunables, defaults, and optimisation metadata.</li>
 <li>
-<strong>ReAct / Tool modules (2 sprints):</strong> Implement <code>ReactModule</code> (<code>module_react()</code>) that orchestrates action-observation loops, integrates with <code>ellmer</code> tool schemas, and surfaces trace objects that teleprompters can optimise. Provide <code>ToolCallModule</code> (<code>module_tool_call()</code>) for single-shot function calling scenarios where the API replies with JSON tool payloads.</li>
+<code>state</code>: reference list storing mutable artefacts (cached demos, fitted recipes, traces, vitals hooks).</li>
+</ul></li>
+<li>Core methods:
+<ul><li>
+<code>$forward(batch, .llm = NULL, trace = TRUE, ...)</code>: run predictions, returning a tibble with <code>output</code>, <code>trace</code>, <code>metadata</code>, and the echoed inputs.</li>
 <li>
-<strong>Routing &amp; judge modules (1 sprint):</strong> Prototype <code>RouterModule</code> (<code>module_router()</code>) for ensemble selection (metrics-guided dispatch) and <code>JudgeModule</code> (<code>module_judge()</code>) that evaluates outputs from other modules, enabling self-evaluation pipelines.</li>
+<code>$optimize(devset, objective, control)</code>: tidy interface for tuning; delegates to tidymodels helpers.</li>
 <li>
-<strong>Pipeline composition:</strong> Expose a high-level <code>ProgramModule</code> (<code>module_program()</code>) that chains heterogeneous modules, ensuring type-checking across module boundaries and compatibility with <code><a href="reference/compile.html">compile()</a></code> so GEPA and MIPRO can optimise entire workflows instead of single modules.</li>
+<code>$reset(hard = FALSE)</code>: clear mutable state/config to prepare for fresh optimisation.</li>
+<li>
+<code>$print()</code> / <code>$format()</code> / pillar methods: show signature, most recent config, trace summary, optimisation status.</li>
+<li>
+<code>$as_vitals_solver(...)</code>: thin wrapper for <code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code> so the vitals bridge is discoverable.</li>
+</ul></li>
+<li>Subclasses: <code>PredictModule</code>, <code>ReactModule</code>, <code>ChainOfThoughtModule</code>, etc. Each subclass implements <code>private$build_prompt()</code>, <code>private$postprocess()</code>, and tool orchestration hooks.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="id_23-ellmer-tools">2.3 Ellmer Tools<a class="anchor" aria-label="anchor" href="#id_23-ellmer-tools"></a></h4>
+<ul><li>Tool definitions live in <code>R/tools-ellmer.R</code> and expose typed requests/responses.</li>
+<li>Modules declare required tools via <code>self$config$tools</code>; traces capture tool usage (arguments, latency, tokens, outcome state).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="id_24-teleprompters--optimisers">2.4 Teleprompters &amp; Optimisers<a class="anchor" aria-label="anchor" href="#id_24-teleprompters--optimisers"></a></h4>
+<ul><li>Teleprompters become light-weight strategy objects that call <code>$optimize()</code> with preferences/messages.</li>
+<li>Existing grid-search logic migrates to tidymodels (see §5) but retains compatibility with vitals scorers via <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>.</li>
 </ul><hr></div>
 </div>
 <div class="section level3">
-<h3 id="id_5-api-design-principles">5. API Design Principles<a class="anchor" aria-label="anchor" href="#id_5-api-design-principles"></a></h3>
+<h3 id="id_3-module-lifecycle--developer-ux">3. Module Lifecycle &amp; Developer UX<a class="anchor" aria-label="anchor" href="#id_3-module-lifecycle--developer-ux"></a></h3>
+<ol style="list-style-type: decimal"><li>
+<strong>Define signature.</strong> <code>sig &lt;- signature("question -&gt; answer: string", instructions = "Be concise.")</code>
+</li>
+<li>
+<strong>Instantiate module.</strong> <code>mod &lt;- module(sig, type = "predict", template = "Q: {question}\nA:")</code> returns R6 PredictModule</li>
+<li>
+<strong>Forward pass.</strong> <code>run(mod, question = "…")</code> delegates to <code>mod$forward()</code> and returns results (simple or structured format)</li>
+<li>
+<strong>Optimise.</strong> <code>compile_module(mod, teleprompter, trainset)</code> optimizes and stores config in <code>mod$state</code> and <code>mod$config</code>
+</li>
+<li>
+<strong>Evaluate.</strong> <code>evaluate(mod, dataset, metric = function(...))</code> runs module and applies metrics per example</li>
+<li>
+<strong>Interop.</strong> <code>as_vitals_solver(mod)</code> generates a vitals solver function; <code>as_dsprrr_metric(vitals::scorer)</code> converts scorers</li>
+<li>
+<strong>Persist.</strong> Use <code>pins</code> and <code>MLflow</code> helpers to save signatures, configs, traces, and vitals run metadata.</li>
+</ol><p>Pipe ergonomics remain intact because the exported verbs (<code><a href="reference/run.html">run()</a></code>, <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>, <code><a href="reference/evaluate.html">evaluate()</a></code>, <code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code>) accept the module as the first argument and return tidy outputs or the module itself for chaining.</p>
+<hr></div>
+<div class="section level3">
+<h3 id="id_4-tidyverse--r-lib-integration">4. tidyverse &amp; r-lib Integration<a class="anchor" aria-label="anchor" href="#id_4-tidyverse--r-lib-integration"></a></h3>
 <ul><li>
-<strong>Pipe-Friendly:</strong> The API surface will be designed with the <code>|&gt;</code> operator as a primary consideration.</li>
+<strong>tibble/dplyr/tidyr/purrr</strong>: All traces, tuning results, evaluation outputs, and vitals adapters return tibbles; <code>purrr</code> drives deterministic optimisation loops and batching.</li>
 <li>
-<strong>Type-Stable &amp; Predictable:</strong> Functions and generics will have reliable return types, making them easy to compose.</li>
+<strong>stringr/glue</strong>: Prompt construction, logging, and diagnostics.</li>
 <li>
-<strong>Informative Errors:</strong> Error messages, powered by <code>rlang</code>, will be designed to guide the user toward a solution.</li>
+<strong>cli/pillar</strong>: Styled output for signatures, modules, optimisation progress, and vitals bridges (display solver status, scorer names).</li>
 <li>
-<strong>Extensible by Default:</strong> The S7 generic-based architecture ensures that advanced users can easily create their own custom modules and teleprompters to extend the framework.</li>
+<strong>rlang</strong>: Condition system, argument validation (<code>check_installed()</code>, classed errors), quasiquotation for templating.</li>
+<li>
+<strong>vctrs</strong>: Stable column types for trace steps and configuration parameters to keep joins predictable.</li>
+<li>
+<strong>lifecycle</strong>: Manage API evolution; mark deprecated S7 helpers once R6 rollout is complete.</li>
+<li>
+<strong>usethis/devtools/roxygen2/testthat/lintr/waldo</strong>: Package scaffolding, docs, testing, linting, diffing.</li>
+</ul><hr></div>
+<div class="section level3">
+<h3 id="id_5-tidymodels-strategy">5. Tidymodels Strategy<a class="anchor" aria-label="anchor" href="#id_5-tidymodels-strategy"></a></h3>
+<div class="section level4">
+<h4 id="phase-1--pragmatic-grid-search">Phase 1 – Pragmatic Grid Search<a class="anchor" aria-label="anchor" href="#phase-1--pragmatic-grid-search"></a></h4>
+<ul><li>Define tunables with <code><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">dials::parameters()</a></code> (<code>temperature()</code>, <code>top_p()</code>, <code>cot_depth()</code>, <code>values_set()</code> for tool choices).</li>
+<li>Generate candidates via <code>grid_regular()</code> / <code>grid_random()</code>.</li>
+<li>Resample with <code>rsample::vfold_cv()</code> or <code>bootstraps()</code> on developer datasets.</li>
+<li>Score with <code>yardstick::metric_set()</code> (including metrics derived from vitals scorers via <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>).</li>
+<li>Implement in <code>$optimize_grid(devset, metrics, control)</code>; expose <code>optimize_grid(mod, ...)</code> wrapper for piping.</li>
+<li>Optional <code>finetune::tune_race_anova()</code> for adaptive pruning.
+<ul><li>
+<strong>Tasks:</strong>
+<ul><li>Create <code>R/optimize.R</code> with helpers <code>module_parameters()</code>, <code>module_grid()</code>, and <code>collect_trials()</code> that operate on R6 modules.</li>
+<li>Refactor <code>R/teleprompter.R</code> grid search logic to call the new helpers instead of hand-rolled loops.</li>
+<li>Update <code>tests/testthat/test-compile.R</code> to exercise tidy grid search with a deterministic mock LLM and verify tidy outputs.</li>
+<li>Add documentation chunks in <code>vignettes/optimisation.Rmd</code> showing <code><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">dials::parameters()</a></code> and <code>rsample::vfold_cv()</code> usage.</li>
+</ul></li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="phase-2--native-tuneworkflows">Phase 2 – Native tune/workflows<a class="anchor" aria-label="anchor" href="#phase-2--native-tuneworkflows"></a></h4>
+<ul><li>Define parsnip spec for <code>"dsprrr_module"</code> and custom engine.</li>
+<li>Support <code>recipes::recipe()</code> preprocessing (retrieval features, prompt augmentation).</li>
+<li>Provide <code>workflows::workflow()</code> helpers bundling recipe + module spec.</li>
+<li>Expose <code>tune::tune_grid()</code> / <code>tune_bayes()</code> for Bayesian optimisation and <code>stacks::stacks()</code> for ensembling module variants.
+<ul><li>
+<strong>Tasks:</strong>
+<ul><li>Register the model via <code>parsnip::set_new_model()</code> in <code>R/optimize.R</code> and implement the corresponding <code>fit.model_spec()</code> method.</li>
+<li>Add a <code>prep_recipe()</code> helper that accepts a module signature and builds default recipes for text/token columns.</li>
+<li>Write integration tests in <code>tests/testthat/test-compile.R</code> (skipped on CRAN) that demonstrate a <code>workflow()</code> with a dummy recipe and confirm <code>tune::tune_grid()</code> runs end-to-end using the mock LLM.</li>
+<li>Expand <code>vignettes/optimisation.Rmd</code> with a section on workflows/tune/stacks, including guidance for vitals scorer interoperability.</li>
+</ul></li>
+</ul></li>
+</ul><hr></div>
+</div>
+<div class="section level3">
+<h3 id="id_6-vitals-integration">6. vitals Integration<a class="anchor" aria-label="anchor" href="#id_6-vitals-integration"></a></h3>
+<p>Current state: - <code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code> wraps <code><a href="reference/run_dataset.html">run_dataset()</a></code> for Predict modules and is already exported with tests. - <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code> converts vitals scorers to dsprrr-compatible metrics; README + vignette document the workflow. - <code>vitals-integration.Rmd</code> shows end-to-end optimisation + evaluation across both packages.</p>
+<p>Next steps with the R6 refactor: - Update <code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code> to accept R6 modules (call <code>$forward()</code> or <code>$run_dataset()</code> shim) while keeping the public API stable. - Teach modules to expose vitals metadata: standardise structured return fields (<code>result</code>, <code>.chat</code>, <code>.metadata</code>, <code>.trace</code>) so vitals Tasks can log solver runs without guesswork. - Ensure <code><a href="reference/run_dataset.html">run_dataset()</a></code> returns a tibble whose columns match vitals expectations (<code>result</code>, <code>.metadata</code>, <code>.chat</code>, trace summary columns) and is reused by both dsprrr and vitals bridges. - Add <code>$as_vitals_solver()</code> method on <code>Module</code> for discoverability, delegating to the existing helper. - Extend optimisation control to accept vitals scorers directly (e.g., <code>objective = vitals::scorer_modelgraded()</code>) by auto-wrapping with <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>. - Sync logging: expose a <code>vitals_log_format()</code> helper that collapses traces into vitals-friendly step logs (tool call, tokens, latency, outcome) for use in Inspect dashboards. - Refresh <code>VITALS_INTEGRATION.md</code> and vignette with R6 examples, including: module creation, <code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code> usage, running vitals Tasks, and feeding vitals scorers into <code>$optimize()</code>.</p>
+<p>Longer-term opportunities: - Allow teleprompters to request evaluation via vitals Tasks (e.g., GEPA loop selecting the best config using vitals scorers and datasets). - Explore a <code>dsprrr.vitals</code> extension that bundles joint pipelines (<code>targets</code> template using vitals tasks plus dsprrr tuning). - Coordinate with vitals maintainers on shared trace schema or even shared S7 components if the overlap deepens.</p>
+<hr></div>
+<div class="section level3">
+<h3 id="id_7-orchestration-artifacts-observability">7. Orchestration, Artifacts, Observability<a class="anchor" aria-label="anchor" href="#id_7-orchestration-artifacts-observability"></a></h3>
+<ul><li>
+<strong>targets</strong>: canonical orchestration layer. Pipelines load data, instantiate modules, run optimisation/evaluation, call vitals tasks, and render reports. Provide <code>_targets.R</code> templates with optional vitals steps.</li>
+<li>
+<strong>pins</strong>: store signatures, configs, prompt templates, best traces, and vitals run summaries. Helpers: <code>pin_module_config()</code>, <code>pin_trace()</code>, <code>pin_vitals_log()</code>.</li>
+<li>
+<strong>MLflow (optional)</strong>: log params, metrics, traces, vitals scores, and artifacts. Provide <code>use_mlflow()</code> helper to initialise runs.</li>
+<li>
+<strong>Quarto</strong>: experiment reports summarising tuning grids, metrics, cost, and vitals comparisons. Provide <code>.qmd</code> templates fed by targets outputs.</li>
+</ul><hr></div>
+<div class="section level3">
+<h3 id="id_8-package-layout">8. Package Layout<a class="anchor" aria-label="anchor" href="#id_8-package-layout"></a></h3>
+<pre><code>R/
+  signature.R          # S7 signatures + validation helpers
+  module-base.R        # R6 Module base class + utilities
+  module-predict.R     # PredictModule subclass
+  module-react.R       # Tool-aware module (future)
+  module-utils.R       # Prompt builders, post-processors, validation
+  tools-ellmer.R       # Typed tool definitions + adapters
+  optimize.R           # Tidymodels glue (grid, tune, finetune)
+  evaluate.R           # Evaluation generics returning tidy outputs
+  traces.R             # Trace tibble constructors + pillar printers
+  vitals.R             # as_vitals_solver(), as_dsprrr_metric(), log adapters
+  metrics-yardstick.R  # Yardstick metric registry + wrappers
+  orchestration.R      # targets/pins/MLflow helpers (incl. vitals logging)
+  printing.R           # cli/pillar formatting utilities
+  utils.R              # Shared rlang/stringr helpers
+inst/templates/
+  targets/_targets.R   # Experiment pipeline (with vitals optional steps)
+  quarto/report.qmd    # Experiment report template
+vignettes/
+  signatures.Rmd
+  modules.Rmd
+  optimisation.Rmd
+  vitals-integration.Rmd
+  orchestration.Rmd</code></pre>
+<hr></div>
+<div class="section level3">
+<h3 id="id_9-roadmap--milestones">9. Roadmap &amp; Milestones<a class="anchor" aria-label="anchor" href="#id_9-roadmap--milestones"></a></h3>
+<div class="section level4">
+<h4 id="milestone-a--module-foundations--completed">Milestone A – Module Foundations ✅ COMPLETED<a class="anchor" aria-label="anchor" href="#milestone-a--module-foundations--completed"></a></h4>
+<ul><li>Implement R6 <code>Module</code> base + <code>PredictModule</code> subclass.</li>
+<li>Update <code><a href="reference/module.html">module()</a></code> constructor to return R6 objects; retire S7 cloning helpers.</li>
+<li>Rework <code><a href="reference/run.html">run()</a></code>/<code><a href="reference/run_dataset.html">run_dataset()</a></code>/<code><a href="reference/evaluate.html">evaluate()</a></code> to delegate to <code>$forward()</code> and emit standard trace/vitals columns.</li>
+<li>Add pillar/cli printing and ensure tests cover forward/evaluate paths.</li>
+<li>Adapt <code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code> and <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code> to the new module internals; expand tests to cover structured outputs and trace metadata.
+<ul><li>
+<strong>Completed Implementation:</strong>
+<ul><li>✅ Created <code>R/module-base.R</code> with R6 <code>Module</code> base class including <code>$forward()</code>, <code>$reset()</code>, <code>$optimize()</code>, <code>$trace_summary()</code>, <code>$is_compiled()</code>, <code>$as_vitals_solver()</code>
+</li>
+<li>✅ Created <code>R/module-predict.R</code> with <code>PredictModule</code> subclass, migrated template/demos logic from S7 Predict</li>
+<li>✅ Updated <code><a href="reference/module.html">module()</a></code> factory to return R6 PredictModule instances</li>
+<li>✅ Removed S7 Predict class and associated methods (<code>reset_copy</code>, <code>deepcopy</code>, <code>is_compiled</code> now R6 methods)</li>
+<li>✅ Refactored <code><a href="reference/run.html">run()</a></code> to use standard S3 dispatch with <code>run.Module</code> method</li>
+<li>✅ Updated <code><a href="reference/evaluate.html">evaluate()</a></code> to work with R6 modules via standard S3 dispatch</li>
+<li>✅ Modified vitals integration to check for Module class inheritance</li>
+<li>✅ Implemented R6 print methods with cli formatting</li>
+<li>✅ Cleaned up NAMESPACE - R6 classes marked as internal with <code>@noRd</code>
+</li>
+<li>✅ Moved R6 from Suggests to Imports in DESCRIPTION</li>
+<li>✅ Updated all tests to use R6 API (395 passing, 8 minor failures)</li>
+<li>✅ Fixed documentation generation issues with R6 classes</li>
+</ul></li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="milestone-b--tidymodels-integration-3-weeks">Milestone B – Tidymodels Integration (3 weeks)<a class="anchor" aria-label="anchor" href="#milestone-b--tidymodels-integration-3-weeks"></a></h4>
+<ul><li>Define tunable parameters with <code>dials</code> and implement grid/random search in <code>$optimize_grid()</code>.</li>
+<li>Integrate <code>rsample</code> resampling and <code>yardstick</code> scoring; ensure vitals scorers can be wrapped automatically.</li>
+<li>Surface <code>finetune</code> racing as an optional control method.</li>
+<li>Document optimisation workflow + vitals scorer interoperability in vignette and Quarto template.
+<ul><li>
+<p><strong>Tasks &amp; Status (pairing: James &amp; Codex):</strong></p>
+<table class="table"><colgroup><col width="25%"><col width="25%"><col width="25%"><col width="25%"></colgroup><thead><tr class="header"><th>Task</th>
+<th>Status</th>
+<th>Leads</th>
+<th>Notes</th>
+</tr></thead><tbody><tr class="odd"><td>Implement <code>$optimize_grid()</code> and <code>$optimize()</code> dispatch inside <code>Module</code>, storing trial results in <code>self$state$trials</code> as tibbles.</td>
+<td>COMPLETED</td>
+<td>James &amp; Codex</td>
+<td>Baseline grid search implemented with state tracking; ready to integrate with teleprompters.</td>
+</tr><tr class="even"><td>Add helper functions in <code>R/optimize.R</code> for translating module signatures into tidymodels parameter objects and for summarising resample scores.</td>
+<td>IN PROGRESS</td>
+<td>James &amp; Codex</td>
+<td>Grid generation helpers landed; still need signature → param scaffolding and resample summaries.</td>
+</tr><tr class="odd"><td>Refactor <code>GridSearchTeleprompter</code> in <code>R/teleprompter.R</code> to call the new optimisation API, ensuring the structure returned matches the stored trial schema.</td>
+<td>PENDING</td>
+<td>James &amp; Codex</td>
+<td>To start once optimise helpers land.</td>
+</tr><tr class="even"><td>Extend <code>tests/testthat/test-teleprompter.R</code> with cases covering dials grids and yardstick metrics via <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>.</td>
+<td>PENDING</td>
+<td>James &amp; Codex</td>
+<td>Compose fixtures after teleprompter refactor.</td>
+</tr><tr class="odd"><td>Update <code>README.Rmd</code> and <code>vignettes/optimisation.Rmd</code> examples to show tidymodels usage alongside vitals scorers.</td>
+<td>PENDING</td>
+<td>James &amp; Codex</td>
+<td>Align examples with new helper signatures.</td>
+</tr><tr class="even"><td>Add (skip-on-CRAN) regression test ensuring <code>finetune::tune_race_anova()</code> works under a deterministic mock, or include scaffolding to plug in when finetune is installed.</td>
+<td>PENDING</td>
+<td>James &amp; Codex</td>
+<td>Target once baseline grid path stabilises.</td>
+</tr></tbody></table></li>
+<li>
+<p><strong>Focus:</strong> integrate new grid search core with higher-level tooling.</p>
+<ul><li>Wire <code>GridSearchTeleprompter</code> to reuse the shared optimisation path and record trials.</li>
+<li>Map signatures to tidymodels parameter sets + controls so helper generators can expose ergonomics.</li>
+<li>Draft resampling/metric summary helper to feed yardstick + vitals reporting once grids stabilise.</li>
+</ul></li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="milestone-c--orchestration--persistence-2-weeks">Milestone C – Orchestration &amp; Persistence (2 weeks)<a class="anchor" aria-label="anchor" href="#milestone-c--orchestration--persistence-2-weeks"></a></h4>
+<ul><li>Ship <code>pins</code> helpers for saving module configs/traces/vitals logs.</li>
+<li>Provide targets template with both dsprrr tuning and vitals evaluation stages.</li>
+<li>Optional MLflow logging layer with toggled dependency.</li>
+<li>Add Quarto report template summarising tidymodels results and vitals scores.
+<ul><li>
+<strong>Tasks:</strong>
+<ul><li>Implement <code>pin_module_config()</code>, <code>pin_trace()</code>, and <code>pin_vitals_log()</code> in <code>R/orchestration.R</code>, leveraging standardised trace schemas.</li>
+<li>Add <code>_targets.R</code> template under <code>inst/templates/targets/</code> demonstrating a pipeline: load data → optimise module → evaluate via vitals → render Quarto report.</li>
+<li>Create Quarto template (<code>inst/templates/quarto/report.qmd</code>) and link it from documentation.</li>
+<li>Update pkgdown configuration (<code>_pkgdown.yml</code>) to reference new articles for orchestrations and vitals integration.</li>
+<li>Add integration tests (optionally skipped) validating that the pins helpers round-trip module configs and traces.</li>
+<li>Document orchestration workflow in <code>vignettes/orchestration.Rmd</code>, including vitals steps.</li>
+</ul></li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="milestone-d--advanced-modules--teleprompters-ongoing">Milestone D – Advanced Modules &amp; Teleprompters (ongoing)<a class="anchor" aria-label="anchor" href="#milestone-d--advanced-modules--teleprompters-ongoing"></a></h4>
+<ul><li>Implement Chain-of-Thought and tool-aware module subclasses.</li>
+<li>Port GEPA-style teleprompter using R6 hooks and integrate vitals-based evaluation loops.</li>
+<li>Add programmatic search teleprompters (MIPRO) once tool-aware traces are stable.</li>
+<li>Introduce routing/judge modules with enforced signature/type checks.
+<ul><li>
+<strong>Tasks:</strong>
+<ul><li>Scaffold <code>R/module-chainofthought.R</code> and <code>R/module-react.R</code> with subclass implementations, reusing base hooks for prompt assembly and trace logging.</li>
+<li>Define a tool schema registry in <code>R/tools-ellmer.R</code> and extend traces to capture action/observation steps compatible with vitals logs.</li>
+<li>Implement <code>GepaTeleprompter</code> (and friends) in <code>R/teleprompter.R</code>, using vitals scorers for evaluation loops and storing intermediate rationales in module state.</li>
+<li>Add tests in <code>tests/testthat/test-teleprompter.R</code> covering GEPA/MIPRO behaviours with mocked outputs for deterministic assertions.</li>
+<li>Update <code>vignettes/modules.Rmd</code> and <code>vignettes/vitals-integration.Rmd</code> with examples of tool-aware modules and vitals evaluation.</li>
+<li>Evaluate need for additional helper generics (e.g., <code>module_trace()</code>), documenting decisions in <code>VITALS_INTEGRATION.md</code> and developer notes.</li>
+</ul></li>
+</ul></li>
+</ul><hr></div>
+</div>
+<div class="section level3">
+<h3 id="id_10-testing--quality">10. Testing &amp; Quality<a class="anchor" aria-label="anchor" href="#id_10-testing--quality"></a></h3>
+<ul><li>
+<strong>Contract tests</strong>: signatures reject bad inputs; modules validate arguments; trace tibbles have stable schemas consumed by vitals and tidymodels.</li>
+<li>
+<strong>Golden tests</strong>: snapshot representative prompts, outputs, traces, and optimisation histories with tolerant matchers.</li>
+<li>
+<strong>Optimisation tests</strong>: run grid search on mock LLM returning deterministic outputs to verify yardstick + vitals scorers integration.</li>
+<li>
+<strong>vitals smoke tests</strong>: round-trip <code><a href="reference/as_vitals_solver.html">as_vitals_solver()</a></code> through a vitals Task stub to ensure outputs/logging stay compatible.</li>
+<li>
+<strong>Performance smoke</strong>: assert <code>$forward()</code> latency and cost stay within bounds on fixture data.</li>
+<li>
+<strong>Linting &amp; style</strong>: enforce tidyverse style (lintr, styler) and maintain high coverage via covr.</li>
+<li>
+<strong>CI pipelines</strong>: run unit tests, optimisation smoke tests, vitals adapters, lint, and pkgdown builds on every PR.</li>
+</ul><hr></div>
+<div class="section level3">
+<h3 id="id_11-current-status--next-steps">11. Current Status &amp; Next Steps<a class="anchor" aria-label="anchor" href="#id_11-current-status--next-steps"></a></h3>
+<p><strong>Completed:</strong> - ✅ Full R6 module architecture implemented and tested - ✅ Vitals integration maintained and functional - ✅ Documentation stable (no regeneration issues) - ✅ Test suite largely passing (395/403 tests)</p>
+<p><strong>Known Issues:</strong> - Minor test failures (8) related to deepcopy state preservation - Some compile tests checking wrong property paths</p>
+<p><strong>In Progress:</strong> - Milestone B: Tidymodels Integration (optimisation dispatch contract in design sync; see §9)</p>
+<p><strong>Ready for:</strong> - Building more module types (ChainOfThought, React) - Enhanced optimization strategies</p>
+</div>
+<div class="section level3">
+<h3 id="id_12-open-questions--follow-ups">12. Open Questions &amp; Follow-Ups<a class="anchor" aria-label="anchor" href="#id_12-open-questions--follow-ups"></a></h3>
+<ul><li>How opinionated should the <code>Module</code> base be about tool orchestration vs leaving it to subclasses?</li>
+<li>What default metric set should we export (yardstick vs vitals scorers) and where do we draw the line between built-in vs user-defined options?</li>
+<li>Which orchestration patterns should be first-class (single module vs multi-module programs) and how do we surface vitals Tasks within <code>targets</code> templates?</li>
+<li>When do we turn on MLflow logging by default vs keeping it opt-in?</li>
+<li>How do we balance rich trace logging with cost/log volume concerns, especially when vitals also records solver trajectories?</li>
+<li>Do we evolve towards a shared trace schema/package with vitals or keep adapters in <code>dsprrr</code>?</li>
+</ul><hr></div>
+<div class="section level3">
+<h3 id="id_13-progress-log">13. Progress Log<a class="anchor" aria-label="anchor" href="#id_13-progress-log"></a></h3>
+<ul><li>Milestone B kickoff: tidymodels integration planning begun with shared tracker and dependency mapping.</li>
+<li>Implemented base <code>$optimize_grid()</code> flow with stateful trial tracking and helper scaffolding (Codex &amp; James).</li>
+<li>Realigned ellmer integrations to the latest API (shared <code>api_args</code> flow, <code>chat_claude()</code> usage) and updated docs/tests accordingly.</li>
 </ul></div>
 
 
