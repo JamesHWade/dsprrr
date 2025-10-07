@@ -8,7 +8,15 @@ as_dsprrr_metric(
   vitals_scorer,
   input_column = "input",
   target_column = "target",
-  result_column = "result"
+  result_column = "result",
+  truth = target_column,
+  estimate = ".prediction",
+  transform = NULL,
+  metric_name = NULL,
+  estimator = NULL,
+  metric_args = list(),
+  aggregate = c("mean", "median"),
+  type = c("auto", "vitals", "yardstick")
 )
 }
 \arguments{
@@ -22,14 +30,40 @@ If the column is absent in \code{expected_row}, \code{NA} is supplied.}
 the vitals sample tibble.}
 
 \item{result_column}{Name of the column that receives the model prediction.}
+
+\item{truth}{Column in the dataset representing the ground truth when
+wrapping yardstick metrics. Defaults to \code{target_column}.}
+
+\item{estimate}{Name of the column added to the dataset containing model
+predictions when wrapping yardstick metrics.}
+
+\item{transform}{Optional function applied to each prediction before passing it
+to yardstick metrics. Must return a scalar compatible with the truth column
+(e.g., a factor with matching levels).}
+
+\item{metric_name}{When wrapping a yardstick metric set, optionally select a
+specific metric by name from the results.}
+
+\item{estimator}{Optional estimator identifier used to filter yardstick
+results (for metrics that return multiple estimators).}
+
+\item{metric_args}{Named list of additional arguments supplied to the
+yardstick metric function via \code{rlang::exec()}.}
+
+\item{aggregate}{How to combine multiple yardstick scores into a single value
+for optimisation. Either \code{"mean"} (default) or \code{"median"}.}
+
+\item{type}{Force interpretation as a \code{"vitals"} scorer or \code{"yardstick"}
+metric. Defaults to \code{"auto"}, which chooses based on the object supplied.}
 }
 \value{
-A metric function with signature \verb{function(prediction, expected_row)}
-returning numeric values in \verb{[0, 1]} or \code{NA} when the scorer output cannot
-be interpreted.
+Either a per-example metric function (for vitals scorers) or a metric
+specification compatible with dsprrr optimisation helpers (for yardstick
+metrics).
 }
 \description{
-Converts a vitals scorer function into a per-example metric compatible with
-DSPrrr compilation and evaluation. The scorer is invoked on a single-row
-tibble constructed from the prediction and the expected row.
+Converts a vitals scorer or yardstick metric into a dsprrr-compatible
+specification. Vitals scorers are wrapped as per-example metric functions,
+while yardstick metrics return an aggregate specification that produces tidy
+summaries for optimisation workflows.
 }

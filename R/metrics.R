@@ -225,6 +225,56 @@ metric_custom <- function(fn, name = NULL) {
   }
 }
 
+# Metric specifications ---------------------------------------------------
+
+new_metric_spec <- function(per_example = NULL, aggregate = NULL, metadata = list()) {
+  structure(
+    list(
+      per_example = per_example,
+      aggregate = aggregate,
+      metadata = metadata
+    ),
+    class = "dsprrr_metric_spec"
+  )
+}
+
+is_metric_spec <- function(x) {
+  inherits(x, "dsprrr_metric_spec")
+}
+
+metric_spec_from_function <- function(fn) {
+  new_metric_spec(
+    per_example = fn,
+    aggregate = function(scores, predictions, dataset, metadata, errors, ...) {
+      list(
+        mean_score = if (length(scores)) mean(scores, na.rm = TRUE) else NA_real_,
+        scores = scores,
+        metrics = tibble::tibble(),
+        n_evaluated = sum(!is.na(scores)),
+        n_errors = sum(is.na(scores))
+      )
+    },
+    metadata = list(type = "per_example")
+  )
+}
+
+resolve_metric_spec <- function(metric) {
+  if (is_metric_spec(metric)) {
+    return(metric)
+  }
+
+  spec <- attr(metric, "dsprrr_metric_spec")
+  if (is_metric_spec(spec)) {
+    return(spec)
+  }
+
+  if (is.function(metric)) {
+    return(metric_spec_from_function(metric))
+  }
+
+  cli::cli_abort("metric must be a function, yardstick metric set, or dsprrr metric specification")
+}
+
 #' Create a Field Equality Metric
 #'
 #' @description

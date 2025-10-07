@@ -14,6 +14,9 @@
 #' @param grid Optional data frame/tibble of candidate configurations.
 #' @param parameters Optional named list or tidymodels parameter set used to
 #'   generate a grid when `grid` is not supplied.
+#' @param resamples Optional [`rsample::rset`] object providing resampling splits
+#'   for evaluation. When supplied, each candidate is assessed on every
+#'   resample and scores are aggregated across splits.
 #' @param objective Optimisation direction. `"maximize"` (default) selects the
 #'   highest metric value; `"minimize"` selects the lowest.
 #' @param .llm Optional ellmer chat object reused during optimisation.
@@ -34,6 +37,7 @@ optimize_grid <- function(module, ...) {
 optimize_grid.Module <- function(module,
                                  devset,
                                  metric = metric_exact_match(),
+                                 resamples = NULL,
                                  grid = NULL,
                                  parameters = NULL,
                                  objective = c("maximize", "minimize"),
@@ -45,6 +49,7 @@ optimize_grid.Module <- function(module,
   module$optimize_grid(
     devset = devset,
     metric = metric,
+    resamples = resamples,
     grid = grid,
     parameters = parameters,
     objective = objective,
@@ -203,6 +208,7 @@ module_parameter_set <- function(module,
 
   rlang::check_installed("dials", reason = "to build parameter sets")
 
+  registered_params <- module$state$parameter_info %||% list()
   param_values <- list()
 
   # Seed with config values
@@ -224,6 +230,18 @@ module_parameter_set <- function(module,
       if (!is.list(params)) next
       for (name in names(params)) {
         param_values[[name]] <- c(param_values[[name]], params[[name]])
+      }
+    }
+  }
+
+  if (length(registered_params) > 0) {
+    for (name in names(registered_params)) {
+      info <- registered_params[[name]]
+      if (!is.null(info$values)) {
+        param_values[[name]] <- c(param_values[[name]], info$values)
+      }
+      if (!is.null(info$range)) {
+        param_values[[name]] <- c(param_values[[name]], info$range)
       }
     }
   }
@@ -250,14 +268,62 @@ module_parameter_set <- function(module,
   }
 
   build_param <- function(name, values) {
+    info <- registered_params[[name]] %||% list()
     values <- values[!vapply(values, is.null, logical(1))]
     values <- unlist(values, recursive = TRUE, use.names = FALSE)
     values <- values[!is.na(values)]
     if (length(values) == 0) {
-      return(NULL)
+      if (!is.null(info$range) || !is.null(info$values)) {
+        values <- info$values %||% info$range
+      } else {
+        return(NULL)
+      }
     }
 
-    label <- setNames(paste("Module", name), name)
+    label <- info$label %||% setNames(paste("Module", name), name)
+
+    if (!is.null(info$type)) {
+      type <- tolower(info$type)
+      if (type %in% c("double", "numeric")) {
+        rng <- info$range %||% range(as.numeric(values), na.rm = TRUE)
+        return(dials::new_quant_param(
+          type = "double",
+          range = rng,
+          inclusive = info$inclusive %||% c(TRUE, TRUE),
+          trans = info$trans %||% NULL,
+          label = label
+        ))
+      }
+
+      if (type %in% c("integer", "count")) {
+        rng <- info$range %||% range(as.integer(values), na.rm = TRUE)
+        return(dials::new_quant_param(
+          type = "integer",
+          range = rng,
+          inclusive = info$inclusive %||% c(TRUE, TRUE),
+          trans = info$trans %||% NULL,
+          label = label
+        ))
+      }
+
+      if (type %in% c("logical", "boolean")) {
+        unique_vals <- sort(unique(as.logical(values)))
+        return(dials::new_qual_param(
+          type = "logical",
+          values = unique_vals,
+          label = label
+        ))
+      }
+
+      if (type %in% c("categorical", "qualitative", "character")) {
+        unique_vals <- sort(unique(as.character(values)))
+        return(dials::new_qual_param(
+          type = "character",
+          values = unique_vals,
+          label = label
+        ))
+      }
+    }
 
     if (all(values %in% c(TRUE, FALSE))) {
       unique_vals <- sort(unique(as.logical(values)))
@@ -305,6 +371,60 @@ module_parameter_set <- function(module,
   }
 
   do.call(dials::parameters, params)
+}
+
+#' Register module parameter metadata
+#'
+#' @description
+#' Store parameter metadata on a module so that `module_parameter_set()` can
+#' construct tidymodels parameter sets without relying solely on observed
+#' values. Each entry describes the parameter type plus either a range (for
+#' quantitative parameters) or explicit values (for qualitative parameters).
+#'
+#' @param module A DSPrrr module object.
+#' @param parameters Named list where each element is a list containing optional
+#'   fields: `type` (`"double"`, `"integer"`, `"categorical"`, `"logical"`),
+#'   `range` (numeric length-two vector), `values` (vector of allowed values),
+#'   `label` (human-readable description), `inclusive` (length-two logical
+#'   vector), and `trans` (tidymodels transformation object).
+#'
+#' @return The modified module (invisibly).
+#' @export
+module_register_parameters <- function(module, parameters) {
+  if (!inherits(module, "Module")) {
+    cli::cli_abort("module must be a DSPrrr Module object")
+  }
+
+  if (is.null(parameters)) {
+    module$state$parameter_info <- list()
+    return(invisible(module))
+  }
+
+  if (!is.list(parameters) || is.null(names(parameters)) || any(names(parameters) == "")) {
+    cli::cli_abort("parameters must be a named list of parameter definitions")
+  }
+
+  normalised <- vector("list", length(parameters))
+  names(normalised) <- names(parameters)
+
+  for (name in names(parameters)) {
+    entry <- parameters[[name]]
+    if (!is.list(entry)) {
+      cli::cli_abort("Each parameter definition must be a list of metadata")
+    }
+
+    entry$type <- entry$type %||% NULL
+    entry$range <- entry$range %||% NULL
+    entry$values <- entry$values %||% NULL
+    entry$label <- entry$label %||% NULL
+    entry$inclusive <- entry$inclusive %||% NULL
+    entry$trans <- entry$trans %||% NULL
+
+    normalised[[name]] <- entry
+  }
+
+  module$state$parameter_info <- normalised
+  invisible(module)
 }
 
 #' Summarise optimisation trials for a module
@@ -391,6 +511,8 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
 #'   * `n_evaluated`, `n_errors` - counts reported by the evaluation.
 #'   * `params` - list-column with the parameters evaluated in the trial.
 #'   * `scores` - list-column with the raw per-example scores (if available).
+#'   * `metrics` - list-column containing any aggregate metric tables recorded
+#'     during optimisation (e.g., yardstick summaries per resample).
 #' @export
 #' @examples
 #' \\dontrun{
@@ -413,7 +535,8 @@ module_metric_summary <- function(module) {
       n_evaluated = integer(0),
       n_errors = integer(0),
       params = list(),
-      scores = list()
+      scores = list(),
+      metrics = list()
     ))
   }
 
@@ -427,6 +550,7 @@ module_metric_summary <- function(module) {
     score_sd <- if (length(scores) > 1) stats::sd(scores, na.rm = TRUE) else NA_real_
     n_eval <- eval$n_evaluated %||% if (length(scores)) sum(!is.na(scores)) else NA_integer_
     n_err <- eval$n_errors %||% if (length(scores)) sum(is.na(scores)) else NA_integer_
+    metrics <- eval$metrics %||% tibble::tibble()
 
     rows[[i]] <- tibble::tibble(
       trial_id = trials$trial_id[[i]],
@@ -437,7 +561,8 @@ module_metric_summary <- function(module) {
       n_evaluated = n_eval,
       n_errors = n_err,
       params = list(trials$parameters[[i]]),
-      scores = list(scores)
+      scores = list(scores),
+      metrics = list(metrics)
     )
   }
 
@@ -449,4 +574,64 @@ module_metric_summary <- function(module) {
   }
 
   result
+}
+
+combine_resample_evaluations <- function(resample_results) {
+  if (length(resample_results) == 0) {
+    return(list(
+      mean_score = NA_real_,
+      scores = numeric(),
+      predictions = list(),
+      metadata = list(),
+      n_evaluated = 0L,
+      n_errors = 0L,
+      errors = character(),
+      dataset = tibble::tibble(),
+      metrics = tibble::tibble(),
+      metric_metadata = list(),
+      resamples = tibble::tibble()
+    ))
+  }
+
+  ids <- vapply(resample_results, `[[`, character(1), "id")
+  evals <- lapply(resample_results, `[[`, "evaluation")
+
+  mean_score <- mean(vapply(evals, `[[`, numeric(1), "mean_score"), na.rm = TRUE)
+  scores <- unlist(lapply(evals, `[[`, "scores"), recursive = FALSE, use.names = FALSE)
+  predictions <- unlist(lapply(evals, `[[`, "predictions"), recursive = FALSE)
+  metadata <- unlist(lapply(evals, `[[`, "metadata"), recursive = FALSE)
+  n_evaluated <- sum(vapply(evals, `[[`, integer(1), "n_evaluated"))
+  n_errors <- sum(vapply(evals, `[[`, integer(1), "n_errors"))
+  errors <- unlist(lapply(evals, `[[`, "errors"), use.names = FALSE)
+
+  metrics_tbl <- tibble::tibble(
+    resample_id = ids,
+    metrics = lapply(evals, function(x) x$metrics %||% tibble::tibble())
+  )
+
+  dataset_tbl <- tibble::tibble(
+    resample_id = ids,
+    dataset = lapply(evals, `[[`, "dataset")
+  )
+
+  resample_summary <- tibble::tibble(
+    resample_id = ids,
+    mean_score = vapply(evals, `[[`, numeric(1), "mean_score"),
+    n_evaluated = vapply(evals, `[[`, integer(1), "n_evaluated"),
+    n_errors = vapply(evals, `[[`, integer(1), "n_errors")
+  )
+
+  list(
+    mean_score = mean_score,
+    scores = scores,
+    predictions = predictions,
+    metadata = metadata,
+    n_evaluated = n_evaluated,
+    n_errors = n_errors,
+    errors = errors,
+    dataset = dataset_tbl,
+    metrics = metrics_tbl,
+    metric_metadata = evals[[1]]$metric_metadata %||% list(),
+    resamples = resample_summary
+  )
 }

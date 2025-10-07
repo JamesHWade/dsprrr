@@ -36,6 +36,8 @@ Module <- R6::R6Class(
         optimization_history = list(),
         trials = tibble::tibble(),
         last_grid = tibble::tibble(),
+        last_resamples = NULL,
+        parameter_info = list(),
         best_score = NULL,
         best_params = NULL,
         best_trial = NULL
@@ -124,6 +126,7 @@ Module <- R6::R6Class(
     #' @param ... Additional arguments forwarded to [evaluate()]
     optimize_grid = function(devset,
                              metric = metric_exact_match(),
+                             resamples = NULL,
                              grid = NULL,
                              parameters = NULL,
                              objective = c("maximize", "minimize"),
@@ -138,9 +141,7 @@ Module <- R6::R6Class(
         cli::cli_abort("devset must contain at least one row")
       }
 
-      if (!is.function(metric)) {
-        cli::cli_abort("metric must be a function; wrap yardstick metrics with as_dsprrr_metric()")
-      }
+      metric_spec <- resolve_metric_spec(metric)
 
       objective <- match.arg(objective)
       control <- merge_optimization_control(control)
@@ -149,6 +150,24 @@ Module <- R6::R6Class(
         grid = grid,
         control = control
       )
+
+      if (!is.null(resamples)) {
+        rlang::check_installed("rsample", reason = "to evaluate resamples")
+
+        if (!inherits(resamples, "rset")) {
+          cli::cli_abort("resamples must be an rsample::rset object")
+        }
+
+        resample_splits <- resamples$splits
+        resample_ids <- if ("id" %in% names(resamples)) {
+          as.character(resamples$id)
+        } else {
+          as.character(seq_len(nrow(resamples)))
+        }
+      } else {
+        resample_splits <- NULL
+        resample_ids <- NULL
+      }
 
       n_candidates <- nrow(candidate_grid)
       if (n_candidates == 0) {
@@ -184,20 +203,47 @@ Module <- R6::R6Class(
           candidate$apply_optimization_params(params)
         }
 
-        eval_result <- evaluate(
-          candidate,
-          dataset = devset,
-          metric = metric,
-          .llm = .llm,
-          .parallel = control$parallel,
-          .progress = control$evaluation_progress,
-          ...
-        )
+        if (is.null(resample_splits)) {
+          eval_result <- evaluate(
+            candidate,
+            dataset = devset,
+            metric = metric_spec,
+            .llm = .llm,
+            .parallel = control$parallel,
+            .progress = control$evaluation_progress,
+            ...
+          )
+        } else {
+          resample_results <- vector("list", length(resample_splits))
+
+          for (j in seq_along(resample_splits)) {
+            split <- resample_splits[[j]]
+            assessment <- rsample::assessment(split)
+
+            eval_split <- evaluate(
+              candidate,
+              dataset = assessment,
+              metric = metric_spec,
+              .llm = .llm,
+              .parallel = control$parallel,
+              .progress = control$evaluation_progress,
+              ...
+            )
+
+            resample_results[[j]] <- list(
+              id = resample_ids[[j]],
+              evaluation = eval_split
+            )
+          }
+
+          eval_result <- combine_resample_evaluations(resample_results)
+          eval_result$resample_evaluations <- resample_results
+        }
 
         evaluations[[i]] <- eval_result
         scores[i] <- eval_result$mean_score
-        n_evaluated[i] <- eval_result$n_evaluated
-        n_errors[i] <- eval_result$n_errors
+        n_evaluated[i] <- eval_result$n_evaluated %||% nrow(devset)
+        n_errors[i] <- eval_result$n_errors %||% 0L
         timestamps[i] <- Sys.time()
 
         if (!is.na(scores[i])) {
@@ -240,6 +286,7 @@ Module <- R6::R6Class(
       self$state$trials <- trials_tbl
       self$state$optimization_history <- append(self$state$optimization_history, list(trials_tbl))
       self$state$last_grid <- candidate_grid
+      self$state$last_resamples <- resamples
 
       if (!is.na(best_idx)) {
         best_params <- parameters_col[[best_idx]]
@@ -270,6 +317,8 @@ Module <- R6::R6Class(
         optimization_history = list(),
         trials = tibble::tibble(),
         last_grid = tibble::tibble(),
+        last_resamples = NULL,
+        parameter_info = list(),
         best_score = NULL,
         best_params = NULL,
         best_trial = NULL
