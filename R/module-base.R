@@ -180,6 +180,9 @@ Module <- R6::R6Class(
 
         candidate <- self$clone(deep = TRUE)
         candidate$config <- utils::modifyList(candidate$config, params, keep.null = TRUE)
+        if (is.function(candidate$apply_optimization_params)) {
+          candidate$apply_optimization_params(params)
+        }
 
         eval_result <- evaluate(
           candidate,
@@ -245,6 +248,9 @@ Module <- R6::R6Class(
         self$state$best_params <- best_params
         self$state$best_trial <- best_idx
         self$state$compiled <- TRUE
+        if (is.function(self$apply_optimization_params)) {
+          self$apply_optimization_params(best_params)
+        }
       } else {
         cli::cli_warn("No valid scores produced during optimisation; configuration left unchanged")
       }
@@ -476,6 +482,10 @@ Module <- R6::R6Class(
     }
   )
 )
+
+Module$set("public", "apply_optimization_params", function(params) {
+  invisible(self)
+})
 
 #' Null-coalescing operator
 #' @keywords internal

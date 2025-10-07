@@ -157,6 +157,76 @@ test_that("GridSearchTeleprompter validates variants", {
   )
 })
 
+test_that("GridSearchTeleprompter delegates to optimize_grid", {
+  MockVariantModule <- R6::R6Class(
+    "MockVariantModule",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      initialize = function(signature, template = "", demos = list(), config = list()) {
+        super$initialize(signature, template = template, demos = demos, config = config)
+        self$config$prompt_style <- self$config$prompt_style %||% "baseline"
+      },
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        style <- self$config$prompt_style %||% "baseline"
+        prediction <- if (style == "energetic") "energetic" else "baseline"
+        tibble::tibble(
+          output = list(prediction),
+          chat = list(NULL),
+          metadata = list(list())
+        )
+      },
+      apply_optimization_params = function(params) {
+        super$apply_optimization_params(params)
+        if (!is.null(params$prompt_style) && !is.na(params$prompt_style)) {
+          self$config$prompt_style <- params$prompt_style
+        }
+        invisible(self)
+      }
+    )
+  )
+
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify style"
+  )
+
+  mod <- MockVariantModule$new(signature = sig, template = "Text: {text}")
+
+  trainset <- tibble::tibble(
+    text = c("a", "b", "c", "d"),
+    label = rep("energetic", 4)
+  )
+
+  variants <- tibble::tibble(
+    id = c("baseline", "energetic"),
+    prompt_style = c("baseline", "energetic"),
+    instructions = sig@instructions
+  )
+
+  metric <- function(prediction, expected_row) {
+    as.numeric(prediction == expected_row$label)
+  }
+
+  tp <- GridSearchTeleprompter(
+    variants = variants,
+    metric = metric,
+    k = 0L,
+    eval_sample_size = 2L,
+    verbose = FALSE
+  )
+
+  optimized <- compile(tp, mod, trainset)
+
+  expect_s3_class(optimized, "dsprrr::Module")
+  expect_equal(optimized$config$teleprompter, "GridSearchTeleprompter")
+  expect_equal(optimized$config$best_variant, "energetic")
+  expect_equal(optimized$config$prompt_style, "energetic")
+  expect_true(optimized$config$best_score > 0)
+  expect_equal(nrow(optimized$state$trials), 2)
+  expect_equal(optimized$state$best_params$prompt_style, "energetic")
+})
+
 test_that("Module state management methods work", {
   # Create a compiled module with demos
   sig <- Signature(
@@ -245,7 +315,7 @@ test_that("format_trainset_as_demos handles various formats", {
     context = c("c1", "c2"),
     answer = c("a1", "a2")
   )
-  demos <- format_trainset_as_demos(trainset, sig)
+  demos <- dsprrr:::format_trainset_as_demos(trainset, sig)
   expect_length(demos, 2)
   expect_equal(demos[[1]]$inputs$text, "q1")
   expect_equal(demos[[1]]$inputs$context, "c1")
@@ -256,7 +326,7 @@ test_that("format_trainset_as_demos handles various formats", {
     text = c("q1", "q2"),
     output = c("a1", "a2")
   )
-  demos_missing <- format_trainset_as_demos(trainset_missing, sig)
+  demos_missing <- dsprrr:::format_trainset_as_demos(trainset_missing, sig)
   expect_equal(demos_missing[[1]]$inputs$text, "q1")
   expect_null(demos_missing[[1]]$inputs$context)
 
@@ -268,7 +338,7 @@ test_that("format_trainset_as_demos handles various formats", {
     other = c("o1")
   )
   expect_warning(
-    demos_multi <- format_trainset_as_demos(trainset_multi, sig),
+    demos_multi <- dsprrr:::format_trainset_as_demos(trainset_multi, sig),
     "Multiple potential output columns"
   )
   expect_equal(demos_multi[[1]]$output, "p1")

@@ -275,89 +275,50 @@ compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
     demos <- list()
   }
 
-  # Evaluate each variant
-  variants <- teleprompter@variants
-  scores <- numeric(nrow(variants))
+  variants <- tibble::as_tibble(teleprompter@variants)
+  variants$id <- as.character(variants$id)
 
-  if (teleprompter@verbose) {
-    cli::cli_progress_bar("Testing variants", total = nrow(variants))
-  }
-
-  for (i in seq_len(nrow(variants))) {
-    variant <- variants[i, , drop = FALSE]
-
-    # Create a modified program for this variant
-    test_program <- copy_module(program)
-    test_program$demos <- demos
-
-    # Apply modifications from variant
-    if ("instructions" %in% names(variant)) {
-      test_program$signature@instructions <- variant$instructions
-    }
-    if ("instructions_suffix" %in% names(variant)) {
-      test_program$signature@instructions <- paste(
-        program$signature@instructions,
-        variant$instructions_suffix
-      )
-    }
-    if ("template" %in% names(variant)) {
-      test_program$template <- variant$template
-    }
-
-    # Evaluate on validation set
-    eval_res <- evaluate(
-      test_program,
-      valset,
-      teleprompter@metric,
-      .llm = .llm,
-      .parallel = FALSE,
-      .progress = FALSE
+  base_instructions <- program$signature@instructions
+  if ("instructions_suffix" %in% names(variants)) {
+    variants$instructions <- ifelse(
+      !is.na(variants$instructions_suffix),
+      paste(base_instructions, variants$instructions_suffix),
+      variants$instructions
     )
-    scores[i] <- eval_res$mean_score
-
-    if (teleprompter@verbose) {
-      cli::cli_progress_update()
-      cli::cli_alert_info("Variant {variant$id}: score = {round(score, 3)}")
-    }
+    variants$instructions_suffix <- NULL
   }
 
-  if (teleprompter@verbose) {
-    cli::cli_progress_done()
+  # Ensure instructions column defaults to base instructions when missing/NA
+  if (!"instructions" %in% names(variants)) {
+    variants$instructions <- base_instructions
+  } else {
+    variants$instructions[is.na(variants$instructions)] <- base_instructions
   }
 
-  # Select best variant
-  best_idx <- which.max(scores)
-  best_variant <- variants[best_idx, , drop = FALSE]
-
-  if (teleprompter@verbose) {
-    cli::cli_alert_success("Best variant: {best_variant$id} (score: {round(scores[best_idx], 3)})")
-  }
-
-  # Create optimized program with best variant
   optimized <- copy_module(program)
   optimized$demos <- demos
 
-  # Apply best variant modifications
-  if ("instructions" %in% names(best_variant)) {
-    optimized$signature@instructions <- best_variant$instructions
-  }
-  if ("instructions_suffix" %in% names(best_variant)) {
-    optimized$signature@instructions <- paste(
-      program$signature@instructions,
-      best_variant$instructions_suffix
+  optimized$optimize_grid(
+    devset = valset,
+    metric = teleprompter@metric,
+    grid = variants,
+    .llm = .llm,
+    control = list(
+      progress = teleprompter@verbose,
+      evaluation_progress = FALSE,
+      parallel = FALSE
     )
-  }
-  if ("template" %in% names(best_variant)) {
-    optimized$template <- best_variant$template
-  }
+  )
 
-  # Mark as compiled
-  optimized$state$compiled <- TRUE
   optimized$config$compiled <- TRUE
   optimized$config$teleprompter <- "GridSearchTeleprompter"
-  optimized$config$best_variant <- best_variant$id
-  optimized$config$best_score <- scores[best_idx]
-  optimized$config$all_scores <- stats::setNames(scores, variants$id)
+  optimized$config$best_variant <- optimized$state$best_params$id %||% NA_character_
+  optimized$config$best_score <- optimized$state$best_score
+  optimized$config$all_variants <- variants
+  optimized$config$all_scores <- stats::setNames(
+    optimized$state$trials$score,
+    vapply(optimized$state$trials$parameters, function(param) param$id %||% NA_character_, character(1))
+  )
 
   optimized
 }

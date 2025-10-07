@@ -189,16 +189,16 @@ vignettes/
     | Task | Status | Leads | Notes |
     | --- | --- | --- | --- |
     | Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles. | COMPLETED | James & Codex | Baseline grid search implemented with state tracking; ready to integrate with teleprompters. |
-    | Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores. | IN PROGRESS | James & Codex | Grid generation helpers landed; still need signature → param scaffolding and resample summaries. |
+    | Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores. | COMPLETED | James & Codex | Helpers implemented (`merge_optimization_control()`, `prepare_candidate_grid()`, `generate_grid_from_parameters()`); signature-to-parameters mapping queued for next pass. |
     | Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema. | PENDING | James & Codex | To start once optimise helpers land. |
     | Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`. | PENDING | James & Codex | Compose fixtures after teleprompter refactor. |
     | Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers. | PENDING | James & Codex | Align examples with new helper signatures. |
     | Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed. | PENDING | James & Codex | Target once baseline grid path stabilises. |
 
-  - **Focus:** integrate new grid search core with higher-level tooling.
-    - Wire `GridSearchTeleprompter` to reuse the shared optimisation path and record trials.
-    - Map signatures to tidymodels parameter sets + controls so helper generators can expose ergonomics.
-    - Draft resampling/metric summary helper to feed yardstick + vitals reporting once grids stabilise.
+  - **Focus:** wire the new grid core into the surrounding ecosystem.
+    - Refactor `GridSearchTeleprompter` to call `optimize_grid()` and persist trial metadata.
+    - Introduce signature → parameter mapping helpers so tidymodels sets can be derived automatically.
+    - Capture resampling/metric summaries for yardstick + vitals reporting.
 
 #### Milestone C – Orchestration & Persistence (2 weeks)
 - Ship `pins` helpers for saving module configs/traces/vitals logs.
@@ -253,7 +253,7 @@ vignettes/
 - Some compile tests checking wrong property paths
 
 **In Progress:**
-- Milestone B: Tidymodels Integration (optimisation dispatch contract in design sync; see §9)
+- Milestone B: Tidymodels Integration (grid helpers landed; teleprompter wiring + resample summaries next)
 
 **Ready for:**
 - Building more module types (ChainOfThought, React)

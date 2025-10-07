@@ -232,6 +232,28 @@ PredictModule <- R6::R6Class(
       new_module$state <- lapply(self$state, function(x) x)
 
       new_module
+    },
+
+    #' @description
+    #' Apply optimisation parameters (instructions/template) to the module
+    apply_optimization_params = function(params) {
+      if (!is.null(params$id)) {
+        self$config$current_variant <- params$id
+      }
+
+      if (!is.null(params$instructions) && !is.na(params$instructions)) {
+        self$signature@instructions <- params$instructions
+      }
+
+      if (!is.null(params$template) && !is.na(params$template)) {
+        self$template <- params$template
+      }
+
+      if (!is.null(params$prompt_style) && !is.na(params$prompt_style)) {
+        self$config$prompt_style <- params$prompt_style
+      }
+
+      invisible(self)
     }
   ),
 
