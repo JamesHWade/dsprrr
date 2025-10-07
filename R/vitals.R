@@ -127,7 +127,7 @@ as_dsprrr_metric <- function(vitals_scorer,
     estimate_sym <- rlang::sym(estimate)
     transform_fn <- transform %||% base::identity
 
-    aggregate_fn <- function(predictions, dataset, metadata, ...) {
+    aggregate_fn <- function(scores, predictions, dataset, metadata, errors, ...) {
       if (!length(predictions)) {
         return(list(
           mean_score = NA_real_,
@@ -138,23 +138,42 @@ as_dsprrr_metric <- function(vitals_scorer,
         ))
       }
 
-      template <- transform_fn(predictions[[1]])
-      pred_vec <- vapply(
-        predictions,
-        function(x) {
-          value <- transform_fn(x)
-          if (length(value) != length(template)) {
-            cli::cli_abort("transform must return a consistent length for yardstick metrics")
-          }
-          value
-        },
-        template
-      )
+      # Extract single predictions from list wrappers if needed
+      # (predictions from forward() come as list(value))
+      unwrapped_preds <- lapply(predictions, function(p) {
+        if (is.list(p) && length(p) == 1 && !is.data.frame(p)) {
+          p[[1]]
+        } else {
+          p
+        }
+      })
+
+      # Apply transform to each prediction
+      transformed_preds <- lapply(unwrapped_preds, transform_fn)
+
+      # Check that all transforms return consistent length
+      lengths <- vapply(transformed_preds, length, integer(1))
+      if (length(unique(lengths)) > 1) {
+        cli::cli_abort("transform must return a consistent length for yardstick metrics")
+      }
+
+      # For single values, extract them preserving type
+      if (all(lengths == 1)) {
+        pred_vec <- unlist(transformed_preds, recursive = FALSE, use.names = FALSE)
+      } else {
+        # For multi-value predictions, we'd need different handling
+        pred_vec <- transformed_preds
+      }
 
       data <- dataset
       data[[estimate]] <- pred_vec
 
-      results <- rlang::exec(metric_fn, data, truth = !!truth_sym, estimate = !!estimate_sym, !!!metric_args)
+      # Build the arguments list with the truth and estimate symbols
+      args <- c(
+        list(data = data, truth = truth_sym, estimate = estimate_sym),
+        metric_args
+      )
+      results <- rlang::exec(metric_fn, !!!args)
 
       if (!is.null(metric_name)) {
         results <- results[results$.metric == metric_name, , drop = FALSE]
@@ -163,21 +182,29 @@ as_dsprrr_metric <- function(vitals_scorer,
         results <- results[results$.estimator == estimator, , drop = FALSE]
       }
 
-      score_vals <- results$.estimate
-      mean_score <- if (!length(score_vals)) {
-        NA_real_
-      } else if (aggregate == "mean") {
-        mean(score_vals, na.rm = TRUE)
+      # Yardstick metrics compute aggregate scores, not per-example scores
+      # For the optimization to work, we need per-example scores
+      # We'll compute binary correctness for each example
+      truth_col <- rlang::as_string(truth_sym)
+      if (truth_col %in% names(data)) {
+        per_example_scores <- as.numeric(data[[truth_col]] == data[[estimate]])
       } else {
-        stats::median(score_vals, na.rm = TRUE)
+        per_example_scores <- numeric(nrow(dataset))
+      }
+
+      # The aggregate metric value from yardstick
+      aggregate_score <- if (nrow(results) > 0 && ".estimate" %in% names(results)) {
+        results$.estimate[1]
+      } else {
+        NA_real_
       }
 
       list(
-        mean_score = mean_score,
-        scores = score_vals,
+        mean_score = aggregate_score,
+        scores = per_example_scores,
         metrics = results,
         n_evaluated = nrow(dataset),
-        n_errors = sum(is.na(score_vals)),
+        n_errors = sum(is.na(per_example_scores)),
         metadata = list(type = "yardstick", truth = rlang::as_string(truth_sym), estimate = estimate)
       )
     }

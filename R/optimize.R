@@ -14,7 +14,7 @@
 #' @param grid Optional data frame/tibble of candidate configurations.
 #' @param parameters Optional named list or tidymodels parameter set used to
 #'   generate a grid when `grid` is not supplied.
-#' @param resamples Optional [`rsample::rset`] object providing resampling splits
+#' @param resamples Optional `rset` object from the rsample package providing resampling splits
 #'   for evaluation. When supplied, each candidate is assessed on every
 #'   resample and scores are aggregated across splits.
 #' @param objective Optimisation direction. `"maximize"` (default) selects the

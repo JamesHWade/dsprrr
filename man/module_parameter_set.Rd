@@ -27,9 +27,9 @@ Returns an empty parameter set when no tunables are discovered.
 \description{
 Construct a \code{dials::parameters()} set from the information available on a
 module. Numeric parameters (e.g., \code{temperature}, \code{top_p}) derive their ranges
-from observed optimisation trials (if present), registered metadata (via
-\code{\link[=module_register_parameters]{module_register_parameters()}}), or fall back to sensible defaults.
-Qualitative parameters (e.g., \code{prompt_style}) are converted to value sets.
+from observed optimisation trials (if present) or fall back to sensible
+defaults. Qualitative parameters (e.g., \code{prompt_style}) are converted to
+value sets.
 }
 \examples{
 \dontrun{

@@ -20,17 +20,7 @@ The modified module (invisibly).
 }
 \description{
 Store parameter metadata on a module so that \code{module_parameter_set()} can
-construct tidymodels parameter sets without relying solely on observed values.
-Each entry describes the parameter type plus either a range (for quantitative
-parameters) or explicit values (for qualitative parameters).
-}
-\examples{
-\dontrun{
-mod <- signature("text -> sentiment") |> module(type = "predict")
-module_register_parameters(mod, list(
-  temperature = list(type = "double", range = c(0, 1)),
-  prompt_style = list(type = "categorical", values = c("baseline", "energetic"))
-))
-module_parameter_set(mod)
-}
+construct tidymodels parameter sets without relying solely on observed
+values. Each entry describes the parameter type plus either a range (for
+quantitative parameters) or explicit values (for qualitative parameters).
 }

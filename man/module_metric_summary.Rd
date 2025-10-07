@@ -34,6 +34,8 @@ evaluation scores.
 \item \code{n_evaluated}, \code{n_errors} - counts reported by the evaluation.
 \item \code{params} - list-column with the parameters evaluated in the trial.
 \item \code{scores} - list-column with the raw per-example scores (if available).
+\item \code{metrics} - list-column containing any aggregate metric tables recorded
+during optimisation (e.g., yardstick summaries per resample).
 \item \code{yardstick} - list-column containing yardstick metric results when
 requested.
 }

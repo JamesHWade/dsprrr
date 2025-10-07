@@ -37,9 +37,9 @@ wrapping yardstick metrics. Defaults to \code{target_column}.}
 \item{estimate}{Name of the column added to the dataset containing model
 predictions when wrapping yardstick metrics.}
 
-\item{transform}{Optional function applied to each prediction before passing it
-to yardstick metrics. Must return a scalar compatible with the truth column
-(e.g., a factor with matching levels).}
+\item{transform}{Optional function applied to each prediction before passing
+it to yardstick metrics. Must return a scalar compatible with the truth
+column (e.g., a factor with matching levels).}
 
 \item{metric_name}{When wrapping a yardstick metric set, optionally select a
 specific metric by name from the results.}
