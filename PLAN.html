@@ -252,27 +252,27 @@ vignettes/
 <td>James &amp; Codex</td>
 <td>Helpers implemented (<code><a href="reference/merge_optimization_control.html">merge_optimization_control()</a></code>, <code><a href="reference/prepare_candidate_grid.html">prepare_candidate_grid()</a></code>, <code><a href="reference/generate_grid_from_parameters.html">generate_grid_from_parameters()</a></code>); signature-to-parameters mapping queued for next pass.</td>
 </tr><tr class="odd"><td>Refactor <code>GridSearchTeleprompter</code> in <code>R/teleprompter.R</code> to call the new optimisation API, ensuring the structure returned matches the stored trial schema.</td>
-<td>PENDING</td>
+<td>COMPLETED</td>
 <td>James &amp; Codex</td>
-<td>To start once optimise helpers land.</td>
+<td>Delegates to <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>, records trials/best variant metadata on the module.</td>
 </tr><tr class="even"><td>Extend <code>tests/testthat/test-teleprompter.R</code> with cases covering dials grids and yardstick metrics via <code><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>.</td>
-<td>PENDING</td>
+<td>COMPLETED</td>
 <td>James &amp; Codex</td>
-<td>Compose fixtures after teleprompter refactor.</td>
+<td>Added deterministic spec verifying delegation and module state updates.</td>
 </tr><tr class="odd"><td>Update <code>README.Rmd</code> and <code>vignettes/optimisation.Rmd</code> examples to show tidymodels usage alongside vitals scorers.</td>
-<td>PENDING</td>
-<td>James &amp; Codex</td>
-<td>Align examples with new helper signatures.</td>
+<td>IN PROGRESS</td>
+<td>Docs</td>
+<td>Optimisation vignette partially updated; remaining examples follow new helpers.</td>
 </tr><tr class="even"><td>Add (skip-on-CRAN) regression test ensuring <code>finetune::tune_race_anova()</code> works under a deterministic mock, or include scaffolding to plug in when finetune is installed.</td>
 <td>PENDING</td>
 <td>James &amp; Codex</td>
 <td>Target once baseline grid path stabilises.</td>
 </tr></tbody></table></li>
 <li>
-<p><strong>Focus:</strong> wire the new grid core into the surrounding ecosystem.</p>
-<ul><li>Refactor <code>GridSearchTeleprompter</code> to call <code><a href="reference/optimize_grid.html">optimize_grid()</a></code> and persist trial metadata.</li>
-<li>Introduce signature → parameter mapping helpers so tidymodels sets can be derived automatically.</li>
+<p><strong>Focus:</strong> finish the tidymodels bridge and supporting summaries.</p>
+<ul><li>Introduce signature → parameter mapping helpers so tidymodels sets can be derived automatically.</li>
 <li>Capture resampling/metric summaries for yardstick + vitals reporting.</li>
+<li>Refresh docs (README/vignette) to reflect the end-to-end optimise grid workflow.</li>
 </ul></li>
 </ul></li>
 </ul></div>
@@ -349,6 +349,8 @@ vignettes/
 <ul><li>Milestone B kickoff: tidymodels integration planning begun with shared tracker and dependency mapping.</li>
 <li>Implemented base <code>$optimize_grid()</code> flow with stateful trial tracking and helper scaffolding (Codex &amp; James).</li>
 <li>Realigned ellmer integrations to the latest API (shared <code>api_args</code> flow, <code>chat_claude()</code> usage) and updated docs/tests accordingly.</li>
+<li>GridSearch teleprompter now delegates to <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>; module state stores trials/best variant and tests cover the new path.</li>
+<li>Added <code><a href="reference/module_parameter_set.html">module_parameter_set()</a></code>/<code><a href="reference/module_trials_summary.html">module_trials_summary()</a></code> helpers to bridge tidymodels parameter sets and optimisation summaries (tests cover both).</li>
 </ul></div>
 
 
