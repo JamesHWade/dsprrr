@@ -234,6 +234,21 @@ module_parameter_set <- function(module,
     param_values <- param_values[setdiff(names(param_values), exclude)]
   }
 
+  known_defaults <- list(
+    temperature = c(0, 1),
+    top_p = c(0, 1),
+    frequency_penalty = c(-2, 2),
+    presence_penalty = c(-2, 2),
+    max_output_tokens = c(32, 4096)
+  )
+
+  for (name in names(known_defaults)) {
+    should_include <- (is.null(include) || name %in% include) && !(name %in% exclude)
+    if (should_include && !name %in% names(param_values)) {
+      param_values[[name]] <- known_defaults[[name]]
+    }
+  }
+
   build_param <- function(name, values) {
     values <- values[!vapply(values, is.null, logical(1))]
     values <- unlist(values, recursive = TRUE, use.names = FALSE)
@@ -357,4 +372,81 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
     best_params = list(best_params),
     trials = list(trials)
   )
+}
+
+#' Summarise optimisation metrics per trial
+#'
+#' @description
+#' Flatten the optimisation trials recorded on a module into a tidy data frame
+#' containing per-trial metric summaries. Useful for producing tables or
+#' visualisations comparing trial performance.
+#'
+#' @param module A DSPrrr module optimised with [optimize_grid()].
+#'
+#' @return A tibble with one row per trial containing columns:
+#'   * `trial_id` - trial identifier.
+#'   * `score` - overall score recorded for the trial.
+#'   * `mean_score`, `median_score`, `std_dev` - summary statistics across the
+#'     evaluation scores.
+#'   * `n_evaluated`, `n_errors` - counts reported by the evaluation.
+#'   * `params` - list-column with the parameters evaluated in the trial.
+#'   * `scores` - list-column with the raw per-example scores (if available).
+#' @export
+#' @examples
+#' \\dontrun{
+#' trial_metrics <- module_metric_summary(my_module)
+#' }
+module_metric_summary <- function(module) {
+  if (!inherits(module, "Module")) {
+    cli::cli_abort("module must be a DSPrrr Module object")
+  }
+
+  trials <- module$state$trials
+
+  if (!is.data.frame(trials) || nrow(trials) == 0) {
+    return(tibble::tibble(
+      trial_id = integer(0),
+      score = numeric(0),
+      mean_score = numeric(0),
+      median_score = numeric(0),
+      std_dev = numeric(0),
+      n_evaluated = integer(0),
+      n_errors = integer(0),
+      params = list(),
+      scores = list()
+    ))
+  }
+
+  rows <- vector("list", nrow(trials))
+
+  for (i in seq_len(nrow(trials))) {
+    eval <- trials$evaluation[[i]]
+    scores <- eval$scores %||% numeric()
+    score_mean <- eval$mean_score %||% if (length(scores)) mean(scores, na.rm = TRUE) else trials$score[[i]]
+    score_median <- if (length(scores)) stats::median(scores, na.rm = TRUE) else NA_real_
+    score_sd <- if (length(scores) > 1) stats::sd(scores, na.rm = TRUE) else NA_real_
+    n_eval <- eval$n_evaluated %||% if (length(scores)) sum(!is.na(scores)) else NA_integer_
+    n_err <- eval$n_errors %||% if (length(scores)) sum(is.na(scores)) else NA_integer_
+
+    rows[[i]] <- tibble::tibble(
+      trial_id = trials$trial_id[[i]],
+      score = trials$score[[i]],
+      mean_score = score_mean,
+      median_score = score_median,
+      std_dev = score_sd,
+      n_evaluated = n_eval,
+      n_errors = n_err,
+      params = list(trials$parameters[[i]]),
+      scores = list(scores)
+    )
+  }
+
+  result <- rows[[1]]
+  if (length(rows) > 1) {
+    for (i in 2:length(rows)) {
+      result <- tibble::add_row(result, !!!rows[[i]])
+    }
+  }
+
+  result
 }

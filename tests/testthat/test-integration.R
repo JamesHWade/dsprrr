@@ -132,10 +132,14 @@ test_that("optimize_grid integrates with real LLM", {
 
   skip_if_not_installed("dials")
   param_set <- module_parameter_set(mod)
-  expect_true("prompt_style" %in% param_set$id)
+  expect_true(all(c("prompt_style", "temperature") %in% param_set$id))
 
   summary <- module_trials_summary(mod)
   expect_equal(summary$n_trials, 2)
   expect_equal(summary$best_trial, mod$state$best_trial)
   expect_equal(summary$best_params[[1]]$prompt_style, mod$config$prompt_style)
+
+  metrics <- module_metric_summary(mod)
+  expect_equal(nrow(metrics), 2)
+  expect_equal(metrics$params[[mod$state$best_trial]]$prompt_style, mod$config$prompt_style)
 })

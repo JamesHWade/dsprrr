@@ -72,15 +72,20 @@ test_that("optimize_grid updates module configuration with best parameters", {
   expect_equal(mod$state$best_trial, 2)
 
   skip_if_not_installed("dials")
-  param_set <- dsprrr:::module_parameter_set(mod)
+  param_set <- module_parameter_set(mod)
   expect_s3_class(param_set, "parameters")
-  expect_true("bias" %in% param_set$id)
+  expect_true(all(c("bias", "temperature") %in% param_set$id))
 
-  trial_summary <- dsprrr:::module_trials_summary(mod)
+  trial_summary <- module_trials_summary(mod)
   expect_equal(trial_summary$n_trials, 2)
   expect_equal(trial_summary$best_trial, 2)
   expect_equal(trial_summary$best_params[[1]]$bias, 1)
   expect_true(is.data.frame(trial_summary$trials[[1]]))
+
+  metrics <- module_metric_summary(mod)
+  expect_equal(nrow(metrics), 2)
+  expect_equal(metrics$trial_id, c(1, 2))
+  expect_equal(metrics$params[[2]]$bias, 1)
 })
 
 test_that("optimize_grid accepts explicit grid data frames", {
@@ -161,11 +166,16 @@ test_that("optimize_grid accepts explicit grid data frames", {
   expect_equal(mod$state$best_score, 1)
 
   skip_if_not_installed("dials")
-  param_set <- dsprrr:::module_parameter_set(mod)
-  expect_true(all(c("multiplier", "suffix") %in% param_set$id))
+  param_set <- module_parameter_set(mod)
+  expect_true(all(c("multiplier", "suffix", "temperature") %in% param_set$id))
 
-  trial_summary <- dsprrr:::module_trials_summary(mod)
+  trial_summary <- module_trials_summary(mod)
   expect_equal(trial_summary$n_trials, 2)
   expect_equal(trial_summary$best_trial, 1)
   expect_equal(trial_summary$best_params[[1]]$suffix, "")
+
+  metrics <- module_metric_summary(mod)
+  expect_equal(nrow(metrics), 2)
+  expect_equal(metrics$trial_id[[1]], 1)
+  expect_equal(metrics$params[[1]]$suffix, "")
 })
