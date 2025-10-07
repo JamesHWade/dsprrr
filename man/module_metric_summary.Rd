@@ -4,10 +4,25 @@
 \alias{module_metric_summary}
 \title{Summarise optimisation metrics per trial}
 \usage{
-module_metric_summary(module)
+module_metric_summary(
+  module,
+  metrics = NULL,
+  truth = NULL,
+  estimate = NULL,
+  ...
+)
 }
 \arguments{
 \item{module}{A DSPrrr module optimised with \code{\link[=optimize_grid]{optimize_grid()}}.}
+
+\item{metrics}{Optional yardstick metric (or metric set) to compute for each
+trial.}
+
+\item{truth}{Column name (string) containing the ground-truth labels when
+computing yardstick metrics.}
+
+\item{estimate}{Column name (string) containing the model predictions when
+computing yardstick metrics.}
 }
 \value{
 A tibble with one row per trial containing columns:
@@ -19,15 +34,25 @@ evaluation scores.
 \item \code{n_evaluated}, \code{n_errors} - counts reported by the evaluation.
 \item \code{params} - list-column with the parameters evaluated in the trial.
 \item \code{scores} - list-column with the raw per-example scores (if available).
+\item \code{yardstick} - list-column containing yardstick metric results when
+requested.
 }
 }
 \description{
 Flatten the optimisation trials recorded on a module into a tidy data frame
 containing per-trial metric summaries. Useful for producing tables or
-visualisations comparing trial performance.
+visualisations comparing trial performance. When yardstick metrics are
+supplied, the function also computes those metrics for each trial using the
+stored evaluation datasets.
 }
 \examples{
 \\dontrun{
 trial_metrics <- module_metric_summary(my_module)
+yardstick_metrics <- module_metric_summary(
+  my_module,
+  metrics = yardstick::metric_set(yardstick::accuracy),
+  truth = target,
+  estimate = result
+)
 }
 }
