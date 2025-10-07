@@ -47,7 +47,7 @@ library(dsprrr)
 library(ellmer)
 
 # Configure your LLM
-llm <- chat_openai(model = "gpt-4o-mini")
+llm <- chat_openai(model = "gpt-5-mini")
 
 # Clean, consistent API with pipes!
 result <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |>
@@ -171,7 +171,7 @@ library(dsprrr)
 library(ellmer)
 
 # Configure LLM
-llm <- chat_openai(model = "gpt-4o-mini")
+llm <- chat_openai(model = "gpt-5-mini")
 
 # Simple pipeline with string notation
 answer <- signature("context, question -> answer") |>

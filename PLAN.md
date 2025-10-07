@@ -184,13 +184,21 @@ vignettes/
 - Integrate `rsample` resampling and `yardstick` scoring; ensure vitals scorers can be wrapped automatically.
 - Surface `finetune` racing as an optional control method.
 - Document optimisation workflow + vitals scorer interoperability in vignette and Quarto template.
-  - **Tasks:**
-    - Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles.
-    - Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores.
-    - Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema.
-    - Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`.
-    - Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers.
-    - Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed.
+  - **Tasks & Status (pairing: James & Codex):**
+
+    | Task | Status | Leads | Notes |
+    | --- | --- | --- | --- |
+    | Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles. | COMPLETED | James & Codex | Baseline grid search implemented with state tracking; ready to integrate with teleprompters. |
+    | Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores. | IN PROGRESS | James & Codex | Grid generation helpers landed; still need signature → param scaffolding and resample summaries. |
+    | Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema. | PENDING | James & Codex | To start once optimise helpers land. |
+    | Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`. | PENDING | James & Codex | Compose fixtures after teleprompter refactor. |
+    | Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers. | PENDING | James & Codex | Align examples with new helper signatures. |
+    | Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed. | PENDING | James & Codex | Target once baseline grid path stabilises. |
+
+  - **Focus:** integrate new grid search core with higher-level tooling.
+    - Wire `GridSearchTeleprompter` to reuse the shared optimisation path and record trials.
+    - Map signatures to tidymodels parameter sets + controls so helper generators can expose ergonomics.
+    - Draft resampling/metric summary helper to feed yardstick + vitals reporting once grids stabilise.
 
 #### Milestone C – Orchestration & Persistence (2 weeks)
 - Ship `pins` helpers for saving module configs/traces/vitals logs.
@@ -244,8 +252,10 @@ vignettes/
 - Minor test failures (8) related to deepcopy state preservation
 - Some compile tests checking wrong property paths
 
+**In Progress:**
+- Milestone B: Tidymodels Integration (optimisation dispatch contract in design sync; see §9)
+
 **Ready for:**
-- Milestone B: Tidymodels Integration
 - Building more module types (ChainOfThought, React)
 - Enhanced optimization strategies
 
@@ -257,3 +267,11 @@ vignettes/
 - When do we turn on MLflow logging by default vs keeping it opt-in?
 - How do we balance rich trace logging with cost/log volume concerns, especially when vitals also records solver trajectories?
 - Do we evolve towards a shared trace schema/package with vitals or keep adapters in `dsprrr`?
+
+---
+
+### 13. Progress Log
+
+- Milestone B kickoff: tidymodels integration planning begun with shared tracker and dependency mapping.
+- Implemented base `$optimize_grid()` flow with stateful trial tracking and helper scaffolding (Codex & James).
+- Realigned ellmer integrations to the latest API (shared `api_args` flow, `chat_claude()` usage) and updated docs/tests accordingly.

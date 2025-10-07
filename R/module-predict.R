@@ -174,6 +174,11 @@ PredictModule <- R6::R6Class(
       if (trace_summary$n_traces > 0) {
         cli::cli_h3("Traces")
         cli::cli_text("  {trace_summary$n_traces} trace(s) recorded")
+        cli::cli_text("  Total tokens: {trace_summary$total_tokens} (in: {trace_summary$total_input_tokens}, out: {trace_summary$total_output_tokens})")
+        if (!is.na(trace_summary$total_cost) && trace_summary$total_cost > 0) {
+          cli::cli_text("  Total cost: ${format(trace_summary$total_cost, digits = 4)}")
+        }
+        cli::cli_text("  Total latency: {round(trace_summary$total_latency_ms / 1000, 2)}s")
       }
 
       invisible(self)
@@ -335,20 +340,55 @@ PredictModule <- R6::R6Class(
     get_default_llm = function() {
       # Check for configured provider
       provider <- self$config$provider %||% Sys.getenv("DSPRRR_PROVIDER", "openai")
+      provider <- switch(provider,
+        anthropic = "claude",
+        provider
+      )
 
-      # Create appropriate client
+      build_api_args <- function() {
+        args <- self$config$api_args
+        if (is.null(args)) {
+          args <- list()
+        }
+
+        append_arg <- function(name, value, allow_zero = TRUE) {
+          if (is.null(value)) {
+            return()
+          }
+          if (!allow_zero && identical(value, 0)) {
+            return()
+          }
+          if (is.null(args[[name]])) {
+            args[[name]] <<- value
+          }
+        }
+
+        append_arg("temperature", self$config$temperature, allow_zero = FALSE)
+        append_arg("top_p", self$config$top_p)
+        append_arg("frequency_penalty", self$config$frequency_penalty)
+        append_arg("presence_penalty", self$config$presence_penalty)
+        append_arg("max_output_tokens", self$config$max_output_tokens)
+
+        args
+      }
+
       llm <- switch(provider,
         openai = ellmer::chat_openai(
-          model = self$config$model %||% "gpt-4o-mini",
-          temperature = self$config$temperature %||% 0.7
+          model = self$config$model %||% "gpt-5-mini",
+          api_args = build_api_args()
         ),
-        anthropic = ellmer::chat_anthropic(
-          model = self$config$model %||% "claude-3-haiku-20240307",
-          temperature = self$config$temperature %||% 0.7
+        claude = ellmer::chat_claude(
+          model = self$config$model %||% "claude-3-5-sonnet-latest",
+          max_tokens = self$config$max_tokens %||% 4096,
+          api_args = build_api_args()
+        ),
+        gemini = ellmer::chat_gemini(
+          model = self$config$model %||% "gemini-1.5-pro-latest",
+          api_args = build_api_args()
         ),
         ollama = ellmer::chat_ollama(
           model = self$config$model %||% "llama3.2:3b",
-          temperature = self$config$temperature %||% 0.7
+          api_args = build_api_args()
         ),
         cli::cli_abort("Unknown provider: {provider}")
       )

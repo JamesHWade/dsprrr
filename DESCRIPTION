@@ -13,6 +13,7 @@ Description: Build principled, test-driven, and optimizable applications
     optimization, and deep integration with the tidyverse ecosystem.
 License: MIT + file LICENSE
 Suggests:
+    dials,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),

@@ -55,7 +55,7 @@ library(dsprrr)
 library(ellmer) # For LLM providers
 
 # Configure your LLM provider
-llm <- chat_anthropic(
+llm <- chat_claude(
   api_key = Sys.getenv("ANTHROPIC_API_KEY"),
   model = "claude-sonnet-4-20250514"
 )

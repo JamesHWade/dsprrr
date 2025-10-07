@@ -89,7 +89,7 @@ test_that("PredictModule accepts config list", {
   config <- list(
     temperature = 0.5,
     max_tokens = 100,
-    model = "gpt-4o-mini"
+    model = "gpt-5-mini"
   )
 
   pred <- module(
@@ -100,7 +100,7 @@ test_that("PredictModule accepts config list", {
 
   expect_equal(pred$config$temperature, 0.5)
   expect_equal(pred$config$max_tokens, 100)
-  expect_equal(pred$config$model, "gpt-4o-mini")
+  expect_equal(pred$config$model, "gpt-5-mini")
 })
 
 test_that("PredictModule print method works", {

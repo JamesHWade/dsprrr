@@ -33,7 +33,12 @@ Module <- R6::R6Class(
         traces = list(),
         cache = list(),
         compiled = FALSE,
-        optimization_history = list()
+        optimization_history = list(),
+        trials = tibble::tibble(),
+        last_grid = tibble::tibble(),
+        best_score = NULL,
+        best_params = NULL,
+        best_trial = NULL
       )
     },
 
@@ -87,8 +92,163 @@ Module <- R6::R6Class(
     #' @param objective Metric or metric set
     #' @param control Optimization control parameters
     #' @return Updated module (self)
-    optimize = function(devset, objective, control = list()) {
-      cli::cli_inform("Base optimize() - subclasses should override")
+    optimize = function(devset,
+                        metric = metric_exact_match(),
+                        grid = NULL,
+                        parameters = NULL,
+                        objective = c("maximize", "minimize"),
+                        .llm = NULL,
+                        control = list(),
+                        ...) {
+      self$optimize_grid(
+        devset = devset,
+        metric = metric,
+        grid = grid,
+        parameters = parameters,
+        objective = objective,
+        .llm = .llm,
+        control = control,
+        ...
+      )
+    },
+
+    #' @description
+    #' Run grid search optimisation for the module
+    #' @param devset Development dataset as data frame
+    #' @param metric Metric function applied per example
+    #' @param grid Candidate configurations as data frame (optional)
+    #' @param parameters Parameter definitions (named list or dials param set)
+    #' @param objective Optimisation direction ("maximize" or "minimize")
+    #' @param .llm Optional ellmer chat object reused during optimisation
+    #' @param control List of control options (progress, grid_type, etc.)
+    #' @param ... Additional arguments forwarded to [evaluate()]
+    optimize_grid = function(devset,
+                             metric = metric_exact_match(),
+                             grid = NULL,
+                             parameters = NULL,
+                             objective = c("maximize", "minimize"),
+                             .llm = NULL,
+                             control = list(),
+                             ...) {
+      if (!is.data.frame(devset)) {
+        cli::cli_abort("devset must be a data frame or tibble")
+      }
+
+      if (nrow(devset) == 0) {
+        cli::cli_abort("devset must contain at least one row")
+      }
+
+      if (!is.function(metric)) {
+        cli::cli_abort("metric must be a function; wrap yardstick metrics with as_dsprrr_metric()")
+      }
+
+      objective <- match.arg(objective)
+      control <- merge_optimization_control(control)
+      candidate_grid <- prepare_candidate_grid(
+        parameters = parameters,
+        grid = grid,
+        control = control
+      )
+
+      n_candidates <- nrow(candidate_grid)
+      if (n_candidates == 0) {
+        cli::cli_abort("The optimisation grid is empty; provide parameters or a non-empty grid")
+      }
+
+      progress_id <- NULL
+      if (isTRUE(control$progress) && n_candidates > 1) {
+        progress_id <- cli::cli_progress_bar(
+          format = "Optimizing {cli::pb_current}/{cli::pb_total} | Score: {msg_score}",
+          total = n_candidates
+        )
+      }
+
+      trial_ids <- seq_len(n_candidates)
+      scores <- rep(NA_real_, n_candidates)
+      n_evaluated <- integer(n_candidates)
+      n_errors <- integer(n_candidates)
+      parameters_col <- vector("list", n_candidates)
+      evaluations <- vector("list", n_candidates)
+      timestamps <- rep(as.POSIXct(NA_real_, origin = "1970-01-01"), n_candidates)
+
+      best_idx <- NA_integer_
+      best_score <- if (objective == "maximize") -Inf else Inf
+
+      for (i in seq_len(n_candidates)) {
+        params <- as.list(candidate_grid[i, , drop = FALSE])
+        parameters_col[[i]] <- params
+
+        candidate <- self$clone(deep = TRUE)
+        candidate$config <- utils::modifyList(candidate$config, params, keep.null = TRUE)
+
+        eval_result <- evaluate(
+          candidate,
+          dataset = devset,
+          metric = metric,
+          .llm = .llm,
+          .parallel = control$parallel,
+          .progress = control$evaluation_progress,
+          ...
+        )
+
+        evaluations[[i]] <- eval_result
+        scores[i] <- eval_result$mean_score
+        n_evaluated[i] <- eval_result$n_evaluated
+        n_errors[i] <- eval_result$n_errors
+        timestamps[i] <- Sys.time()
+
+        if (!is.na(scores[i])) {
+          if (is.na(best_idx)) {
+            best_idx <- i
+            best_score <- scores[i]
+          } else if (objective == "maximize" && scores[i] > best_score) {
+            best_idx <- i
+            best_score <- scores[i]
+          } else if (objective == "minimize" && scores[i] < best_score) {
+            best_idx <- i
+            best_score <- scores[i]
+          }
+        }
+
+        if (!is.null(progress_id)) {
+          score_display <- if (is.na(scores[i])) "NA" else format(round(scores[i], 4), nsmall = 4)
+          cli::cli_progress_update(
+            id = progress_id,
+            set = i,
+            msg_score = score_display
+          )
+        }
+      }
+
+      if (!is.null(progress_id)) {
+        cli::cli_progress_done(id = progress_id)
+      }
+
+      trials_tbl <- tibble::tibble(
+        trial_id = trial_ids,
+        parameters = parameters_col,
+        score = scores,
+        n_evaluated = n_evaluated,
+        n_errors = n_errors,
+        evaluation = evaluations,
+        timestamp = timestamps
+      )
+
+      self$state$trials <- trials_tbl
+      self$state$optimization_history <- append(self$state$optimization_history, list(trials_tbl))
+      self$state$last_grid <- candidate_grid
+
+      if (!is.na(best_idx)) {
+        best_params <- parameters_col[[best_idx]]
+        self$config <- utils::modifyList(self$config, best_params, keep.null = TRUE)
+        self$state$best_score <- scores[best_idx]
+        self$state$best_params <- best_params
+        self$state$best_trial <- best_idx
+        self$state$compiled <- TRUE
+      } else {
+        cli::cli_warn("No valid scores produced during optimisation; configuration left unchanged")
+      }
+
       invisible(self)
     },
 
@@ -101,7 +261,12 @@ Module <- R6::R6Class(
         traces = list(),
         cache = list(),
         compiled = FALSE,
-        optimization_history = list()
+        optimization_history = list(),
+        trials = tibble::tibble(),
+        last_grid = tibble::tibble(),
+        best_score = NULL,
+        best_params = NULL,
+        best_trial = NULL
       )
 
       if (hard) {
@@ -278,6 +443,9 @@ Module <- R6::R6Class(
         cli::cli_text("{cli::symbol$tick} Compiled")
         if (!is.null(self$state$best_score)) {
           cli::cli_text("  Best score: {round(self$state$best_score, 3)}")
+        }
+        if (!is.null(self$state$trials) && nrow(self$state$trials) > 0) {
+          cli::cli_text("  Trials evaluated: {nrow(self$state$trials)}")
         }
       }
 

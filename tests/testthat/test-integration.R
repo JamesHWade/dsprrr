@@ -18,12 +18,11 @@ test_that("basic LLM integration works", {
     template = "Please repeat: {text}"
   )
 
-  vcr::use_cassette("integration-basic", {
-    llm <- ellmer::chat_openai(model = "gpt-4o-mini")
-    result <- run(pred, text = "Hello world", .llm = llm)
-    expect_type(result, "character")
-    expect_true(grepl("Hello", result, ignore.case = TRUE))
-  })
+  vcr::local_cassette("integration-basic")
+  llm <- ellmer::chat_openai(model = "gpt-5-mini")
+  result <- run(pred, text = "Hello world", .llm = llm)
+  expect_type(result, "character")
+  expect_true(grepl("Hello", result, ignore.case = TRUE))
 })
 
 test_that("structured output works with real LLM", {
@@ -47,15 +46,14 @@ test_that("structured output works with real LLM", {
     template = "Text: {text}"
   )
 
-  vcr::use_cassette("integration-structured", {
-    llm <- ellmer::chat_openai(model = "gpt-4o-mini")
-    result <- run(pred, text = "I love this package!", .llm = llm)
+  vcr::local_cassette("integration-structured")
+  llm <- ellmer::chat_openai(model = "gpt-5-mini")
+  result <- run(pred, text = "I love this package!", .llm = llm)
 
-    expect_type(result, "list")
-    expect_named(result, c("sentiment", "confidence"))
-    expect_true(result$sentiment %in% c("positive", "negative", "neutral"))
-    expect_true(result$confidence >= 0 && result$confidence <= 1)
-  })
+  expect_type(result, "list")
+  expect_named(result, c("sentiment", "confidence"))
+  expect_true(result$sentiment %in% c("positive", "negative", "neutral"))
+  expect_true(result$confidence >= 0 && result$confidence <= 1)
 })
 
 test_that("batch processing works with real LLM", {
@@ -76,16 +74,59 @@ test_that("batch processing works with real LLM", {
     template = "Text: {text}\nSentiment:"
   )
 
-  vcr::use_cassette("integration-batch", {
-    llm <- ellmer::chat_openai(model = "gpt-4o-mini")
-    results <- run(pred,
-                  text = c("Great!", "Terrible!"),
-                  .llm = llm,
-                  .progress = FALSE)
+  vcr::local_cassette("integration-batch")
+  llm <- ellmer::chat_openai(model = "gpt-5-mini")
+  results <- run(pred,
+                text = c("Great!", "Terrible!"),
+                .llm = llm,
+                .progress = FALSE)
 
-    expect_length(results, 2)
-    expect_type(results, "list")
-    # Results should be character or NA (if API call failed)
-    expect_true(all(sapply(results, function(x) is.character(x) || is.na(x))))
-  })
+  expect_length(results, 2)
+  expect_type(results, "list")
+  # Results should be character or NA (if API call failed)
+  expect_true(all(sapply(results, function(x) is.character(x) || is.na(x))))
+})
+
+test_that("optimize_grid integrates with real LLM", {
+  skip_if_not_installed("vcr")
+  cassette_name <- "integration-optimize-grid"
+  cassette_path <- file.path("_vcr", paste0(cassette_name, ".yml"))
+  skip_if_not(use_real_api() || file.exists(cassette_path))
+
+  sig <- Signature(
+    inputs = list(
+      input(name = "text", class = S7::class_character)
+    ),
+    output_type = ellmer::type_string(),
+    instructions = "Return the sentiment label as a single word."
+  )
+
+  mod <- module(
+    signature = sig,
+    type = "predict",
+    template = "Sentence: {text}\nLabel:"
+  )
+
+  devset <- tibble::tibble(
+    text = "Absolutely wonderful experience.",
+    target = "positive"
+  )
+
+  metric <- function(prediction, expected_row) {
+    as.numeric(tolower(prediction) == tolower(expected_row$target))
+  }
+
+  vcr::local_cassette(cassette_name)
+  optimize_grid(
+    mod,
+    devset = devset,
+    metric = metric,
+    parameters = list(prompt_style = c("baseline", "energetic")),
+    control = list(progress = FALSE, parallel = FALSE)
+  )
+
+  expect_true(mod$is_compiled())
+  expect_equal(nrow(mod$state$trials), 2)
+  expect_false(all(is.na(mod$state$trials$score)))
+  expect_true(is.numeric(mod$state$best_score) || is.logical(mod$state$best_score))
 })

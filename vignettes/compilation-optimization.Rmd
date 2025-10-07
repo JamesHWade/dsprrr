@@ -36,11 +36,58 @@ library(dsprrr)
 library(ellmer)
 
 # Configure Claude (Anthropic's Sonnet model)
-llm <- chat_anthropic(
+llm <- chat_claude(
   api_key = Sys.getenv("ANTHROPIC_API_KEY"),
   model = "claude-3-5-sonnet-20241022"
 )
 ```
+
+## Quick tour: optimizing a module with `optimize_grid()`
+
+The new `optimize_grid()` helper lets you tune a module directly without
+going through a teleprompter first. It evaluates a grid of configuration
+values (defined either as a simple named list or via tidymodels `dials`
+parameters) and records the results in `module$state$trials`.
+
+```{r optimize-grid-quick, eval = eval_vignette()}
+sig_quick <- signature("review -> sentiment: string",
+  instructions = "Respond with the sentiment label only."
+)
+
+sentiment_module <- module(
+  signature = sig_quick,
+  type = "predict",
+  template = "Review: {review}\nSentiment:"
+)
+
+dev_reviews <- tibble::tibble(
+  review = "I absolutely loved this!",
+  target = "positive"
+)
+
+exact_sentiment <- function(prediction, expected_row) {
+  as.numeric(tolower(prediction) == tolower(expected_row$target))
+}
+
+vcr::use_cassette("compilation-optimize-grid", {
+ optimize_grid(
+   sentiment_module,
+   devset = dev_reviews,
+   metric = exact_sentiment,
+    parameters = list(prompt_style = c("baseline", "energetic")),
+    control = list(progress = FALSE)
+  )
+})
+
+sentiment_module$state$trials[, c("trial_id", "score", "n_evaluated")]
+sentiment_module$state$best_score
+```
+
+If you do have tidymodels installed, you can also describe the search space
+with `dials`, build a grid (regular or random), and pass it to
+`optimize_grid()`. The helper automatically captures the candidate
+grid, scores, and metadata so teleprompters and downstream reports can reuse
+the trial data.
 
 ## Part 1: Understanding Metrics
 
