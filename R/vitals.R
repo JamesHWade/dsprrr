@@ -59,9 +59,10 @@ as_vitals_solver <- function(module, .llm = NULL, .parallel = FALSE,
 #' Adapt a vitals scorer for use as a dsprrr metric
 #'
 #' @description
-#' Converts a vitals scorer function into a per-example metric compatible with
-#' DSPrrr compilation and evaluation. The scorer is invoked on a single-row
-#' tibble constructed from the prediction and the expected row.
+#' Converts a vitals scorer or yardstick metric into a dsprrr-compatible
+#' specification. Vitals scorers are wrapped as per-example metric functions,
+#' while yardstick metrics return an aggregate specification that produces tidy
+#' summaries for optimisation workflows.
 #'
 #' @param vitals_scorer A function that accepts a tibble/data frame and returns
 #'   a tibble with a `score` column (following vitals conventions).
@@ -71,19 +72,128 @@ as_vitals_solver <- function(module, .llm = NULL, .parallel = FALSE,
 #'   the vitals sample tibble.
 #' @param result_column Name of the column that receives the model prediction.
 #'
-#' @return A metric function with signature `function(prediction, expected_row)`
-#'   returning numeric values in `[0, 1]` or `NA` when the scorer output cannot
-#'   be interpreted.
+#' @param truth Column in the dataset representing the ground truth when
+#'   wrapping yardstick metrics. Defaults to `target_column`.
+#' @param estimate Name of the column added to the dataset containing model
+#'   predictions when wrapping yardstick metrics.
+#' @param transform Optional function applied to each prediction before passing
+#'   it to yardstick metrics. Must return a scalar compatible with the truth
+#'   column (e.g., a factor with matching levels).
+#' @param metric_name When wrapping a yardstick metric set, optionally select a
+#'   specific metric by name from the results.
+#' @param estimator Optional estimator identifier used to filter yardstick
+#'   results (for metrics that return multiple estimators).
+#' @param metric_args Named list of additional arguments supplied to the
+#'   yardstick metric function via `rlang::exec()`.
+#' @param aggregate How to combine multiple yardstick scores into a single value
+#'   for optimisation. Either `"mean"` (default) or `"median"`.
+#' @param type Force interpretation as a `"vitals"` scorer or `"yardstick"`
+#'   metric. Defaults to `"auto"`, which chooses based on the object supplied.
+#'
+#' @return Either a per-example metric function (for vitals scorers) or a metric
+#'   specification compatible with dsprrr optimisation helpers (for yardstick
+#'   metrics).
 #' @export
 as_dsprrr_metric <- function(vitals_scorer,
                              input_column = "input",
                              target_column = "target",
-                             result_column = "result") {
+                             result_column = "result",
+                             truth = target_column,
+                             estimate = ".prediction",
+                             transform = NULL,
+                             metric_name = NULL,
+                             estimator = NULL,
+                             metric_args = list(),
+                             aggregate = c("mean", "median"),
+                             type = c("auto", "vitals", "yardstick")) {
+  aggregate <- match.arg(aggregate)
+  type <- match.arg(type)
+
+  if (identical(type, "auto")) {
+    is_yardstick <- inherits(vitals_scorer, "metric_set") || inherits(vitals_scorer, "yardstick_metric")
+    type <- if (is_yardstick) "yardstick" else "vitals"
+  }
+
+  if (identical(type, "yardstick")) {
+    rlang::check_installed("yardstick", reason = "to wrap yardstick metrics")
+
+    metric_fn <- if (inherits(vitals_scorer, "metric_set")) {
+      vitals_scorer
+    } else {
+      yardstick::metric_set(vitals_scorer)
+    }
+
+    truth_sym <- rlang::ensym(truth)
+    estimate_sym <- rlang::sym(estimate)
+    transform_fn <- transform %||% base::identity
+
+    aggregate_fn <- function(predictions, dataset, metadata, ...) {
+      if (!length(predictions)) {
+        return(list(
+          mean_score = NA_real_,
+          scores = numeric(),
+          metrics = tibble::tibble(),
+          n_evaluated = 0L,
+          n_errors = 0L
+        ))
+      }
+
+      template <- transform_fn(predictions[[1]])
+      pred_vec <- vapply(
+        predictions,
+        function(x) {
+          value <- transform_fn(x)
+          if (length(value) != length(template)) {
+            cli::cli_abort("transform must return a consistent length for yardstick metrics")
+          }
+          value
+        },
+        template
+      )
+
+      data <- dataset
+      data[[estimate]] <- pred_vec
+
+      results <- rlang::exec(metric_fn, data, truth = !!truth_sym, estimate = !!estimate_sym, !!!metric_args)
+
+      if (!is.null(metric_name)) {
+        results <- results[results$.metric == metric_name, , drop = FALSE]
+      }
+      if (!is.null(estimator) && ".estimator" %in% names(results)) {
+        results <- results[results$.estimator == estimator, , drop = FALSE]
+      }
+
+      score_vals <- results$.estimate
+      mean_score <- if (!length(score_vals)) {
+        NA_real_
+      } else if (aggregate == "mean") {
+        mean(score_vals, na.rm = TRUE)
+      } else {
+        stats::median(score_vals, na.rm = TRUE)
+      }
+
+      list(
+        mean_score = mean_score,
+        scores = score_vals,
+        metrics = results,
+        n_evaluated = nrow(dataset),
+        n_errors = sum(is.na(score_vals)),
+        metadata = list(type = "yardstick", truth = rlang::as_string(truth_sym), estimate = estimate)
+      )
+    }
+
+    return(new_metric_spec(
+      per_example = NULL,
+      aggregate = aggregate_fn,
+      metadata = list(type = "yardstick", truth = rlang::as_string(truth_sym), estimate = estimate, metric = metric_name)
+    ))
+  }
+
   if (!is.function(vitals_scorer)) {
     cli::cli_abort("vitals_scorer must be a function")
   }
 
-  function(prediction, expected_row) {
+  metric_fn <- function(prediction, expected_row) {
     sample <- tibble::tibble(
       !!input_column := list(if (input_column %in% names(expected_row)) expected_row[[input_column]] else NA),
       !!target_column := list(if (target_column %in% names(expected_row)) expected_row[[target_column]] else NA),
@@ -124,4 +234,8 @@ as_dsprrr_metric <- function(vitals_scorer,
     cli::cli_warn("Unrecognised vitals score value ({score_val}); returning NA")
     NA_real_
   }
+
+  spec <- metric_spec_from_function(metric_fn)
+  attr(metric_fn, "dsprrr_metric_spec") <- spec
+  metric_fn
 }

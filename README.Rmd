@@ -303,6 +303,56 @@ results <- evaluate_dsp(
 print(results$mean_score)
 ```
 
+### Tidymodels Grid Search & Resampling
+
+`dsprrr` now ships helpers for building tidymodels-friendly parameter sets and
+for scoring modules with yardstick metrics over rsample resamples. Describe your
+search space once with `module_register_parameters()`, convert yardstick metrics
+with `as_dsprrr_metric()`, and let `optimize_grid()` take care of the rest:
+
+```{r tidymodels-optimization, eval=FALSE}
+library(dials)
+library(rsample)
+library(yardstick)
+
+reviews <- tibble::tibble(
+  text = c("Loved it", "Awful", "Pretty good", "Fantastic"),
+  target = factor(c("positive", "negative", "positive", "positive"),
+    levels = c("negative", "positive"))
+)
+
+classifier <- signature("text -> sentiment") |>
+  module(type = "predict", template = "Review: {text}\nSentiment:")
+
+module_register_parameters(classifier, list(
+  temperature = list(type = "double", range = c(0, 1)),
+  prompt_style = list(type = "categorical", values = c("baseline", "energetic"))
+))
+
+param_set <- module_parameter_set(classifier)
+resamples <- vfold_cv(reviews, v = 3)
+
+metric <- as_dsprrr_metric(
+  metric_set(accuracy),
+  truth = "target",
+  estimate = "prediction",
+  transform = function(pred) factor(pred, levels = levels(reviews$target)),
+  type = "yardstick"
+)
+
+optimize_grid(
+  classifier,
+  devset = reviews,
+  resamples = resamples,
+  metric = metric,
+  parameters = param_set,
+  control = list(grid_levels = 3, progress = FALSE)
+)
+
+module_trials_summary(classifier)
+module_metric_summary(classifier)
+```
+
 ## Key Features (NEW in v0.1.0)
 
 ### Batch Processing & Dataset Support

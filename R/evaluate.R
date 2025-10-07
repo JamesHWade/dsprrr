@@ -44,9 +44,8 @@ evaluate.Module <- function(module, dataset, metric,
   if (!is.data.frame(dataset)) {
     cli::cli_abort("dataset must be a data frame or tibble")
   }
-  if (!is.function(metric)) {
-    cli::cli_abort("metric must be a function")
-  }
+
+  metric_spec <- resolve_metric_spec(metric)
 
   if (nrow(dataset) == 0) {
     cli::cli_warn("Empty dataset provided")
@@ -83,43 +82,63 @@ evaluate.Module <- function(module, dataset, metric,
   predictions <- evaluated$result
   metadata <- if (".metadata" %in% names(evaluated)) evaluated$.metadata else replicate(nrow(evaluated), list(), simplify = FALSE)
 
-  scores <- numeric(nrow(evaluated))
-  errors <- character(nrow(evaluated))
+  per_example_fn <- metric_spec$per_example
+  scores <- numeric()
+  errors <- character()
 
-  for (i in seq_len(nrow(evaluated))) {
-    expected_row <- dataset[i, , drop = FALSE]
-    prediction <- predictions[[i]]
+  if (!is.null(per_example_fn)) {
+    scores <- numeric(nrow(evaluated))
+    errors <- character(nrow(evaluated))
 
-    scores[i] <- tryCatch({
-      score <- metric(prediction, expected_row)
-      if (is.logical(score)) {
-        as.numeric(score)
-      } else if (is.numeric(score)) {
-        score
-      } else {
-        cli::cli_abort(c(
-          "Metric must return logical or numeric values",
-          "i" = "Got {.cls {class(score)[1]}}"
-        ))
-      }
-    }, error = function(e) {
-      errors[i] <- e$message
-      NA_real_
-    })
+    for (i in seq_len(nrow(evaluated))) {
+      expected_row <- dataset[i, , drop = FALSE]
+      prediction <- predictions[[i]]
+
+      scores[i] <- tryCatch({
+        score <- per_example_fn(prediction, expected_row)
+        if (is.logical(score)) {
+          as.numeric(score)
+        } else if (is.numeric(score)) {
+          score
+        } else {
+          cli::cli_abort(c(
+            "Metric must return logical or numeric values",
+            "i" = "Got {.cls {class(score)[1]}}"
+          ))
+        }
+      }, error = function(e) {
+        errors[i] <- e$message
+        NA_real_
+      })
+    }
   }
 
-  mean_score <- mean(scores, na.rm = TRUE)
-  n_evaluated <- sum(!is.na(scores))
-  n_errors <- sum(is.na(scores))
+  aggregate_result <- metric_spec$aggregate(
+    scores = scores,
+    predictions = predictions,
+    dataset = dataset,
+    metadata = metadata,
+    errors = errors
+  )
+
+  mean_score <- aggregate_result$mean_score %||% if (length(scores)) mean(scores, na.rm = TRUE) else NA_real_
+  final_scores <- aggregate_result$scores %||% scores
+  n_evaluated <- aggregate_result$n_evaluated %||% if (length(scores)) sum(!is.na(scores)) else nrow(dataset)
+  n_errors <- aggregate_result$n_errors %||% if (length(scores)) sum(is.na(scores)) else 0L
+  metrics_tbl <- aggregate_result$metrics %||% tibble::tibble()
+  metric_metadata <- aggregate_result$metadata %||% metric_spec$metadata %||% list()
+  combined_errors <- aggregate_result$errors %||% errors[errors != ""]
 
   list(
     mean_score = mean_score,
-    scores = scores,
+    scores = final_scores,
     predictions = predictions,
     metadata = metadata,
     n_evaluated = n_evaluated,
     n_errors = n_errors,
-    errors = errors[errors != ""],
-    dataset = evaluated
+    errors = combined_errors,
+    dataset = evaluated,
+    metrics = metrics_tbl,
+    metric_metadata = metric_metadata
   )
 }

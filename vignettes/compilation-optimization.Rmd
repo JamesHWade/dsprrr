@@ -89,6 +89,57 @@ with `dials`, build a grid (regular or random), and pass it to
 grid, scores, and metadata so teleprompters and downstream reports can reuse
 the trial data.
 
+### Registering parameter metadata
+
+The `module_register_parameters()` helper lets you describe tunable fields once
+and reuse the metadata whenever a parameter set is needed. This is especially
+useful when you have not yet collected optimisation trials:
+
+```{r parameter-registration, eval = FALSE}
+library(dials)
+
+module_register_parameters(sentiment_module, list(
+  temperature = list(type = "double", range = c(0, 1)),
+  prompt_style = list(type = "categorical", values = c("baseline", "energetic"))
+))
+
+module_parameter_set(sentiment_module)
+```
+
+### Yardstick metrics & rsample resampling
+
+`as_dsprrr_metric()` now understands yardstick metric sets and will return a
+metric specification that produces tidy summaries. Combine this with
+`rsample::vfold_cv()` (or any other `rset`) to evaluate each configuration on
+multiple folds:
+
+```{r yardstick-resampling, eval = FALSE}
+library(rsample)
+library(yardstick)
+
+folds <- vfold_cv(dev_reviews, v = 3)
+
+metric <- as_dsprrr_metric(
+  metric_set(accuracy),
+  truth = "target",
+  estimate = "prediction",
+  transform = function(pred) factor(pred, levels = levels(dev_reviews$target)),
+  type = "yardstick"
+)
+
+optimize_grid(
+  sentiment_module,
+  devset = dev_reviews,
+  resamples = folds,
+  metric = metric,
+  parameters = list(temperature = c(0, 0.5, 1)),
+  control = list(progress = FALSE)
+)
+
+module_trials_summary(sentiment_module)
+module_metric_summary(sentiment_module)
+```
+
 ## Part 1: Understanding Metrics
 
 Metrics are functions that evaluate how well your LLM's output matches expected results. dsprrr provides several built-in metrics and allows you to create custom ones.
