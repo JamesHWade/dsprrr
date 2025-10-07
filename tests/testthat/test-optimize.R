@@ -70,6 +70,17 @@ test_that("optimize_grid updates module configuration with best parameters", {
   expect_equal(mod$state$best_score, 1)
   expect_equal(nrow(mod$state$trials), 2)
   expect_equal(mod$state$best_trial, 2)
+
+  skip_if_not_installed("dials")
+  param_set <- dsprrr:::module_parameter_set(mod)
+  expect_s3_class(param_set, "parameters")
+  expect_true("bias" %in% param_set$id)
+
+  trial_summary <- dsprrr:::module_trials_summary(mod)
+  expect_equal(trial_summary$n_trials, 2)
+  expect_equal(trial_summary$best_trial, 2)
+  expect_equal(trial_summary$best_params[[1]]$bias, 1)
+  expect_true(is.data.frame(trial_summary$trials[[1]]))
 })
 
 test_that("optimize_grid accepts explicit grid data frames", {
@@ -148,4 +159,13 @@ test_that("optimize_grid accepts explicit grid data frames", {
   expect_equal(mod$config$suffix, "")
   expect_equal(mod$state$best_trial, 1)
   expect_equal(mod$state$best_score, 1)
+
+  skip_if_not_installed("dials")
+  param_set <- dsprrr:::module_parameter_set(mod)
+  expect_true(all(c("multiplier", "suffix") %in% param_set$id))
+
+  trial_summary <- dsprrr:::module_trials_summary(mod)
+  expect_equal(trial_summary$n_trials, 2)
+  expect_equal(trial_summary$best_trial, 1)
+  expect_equal(trial_summary$best_params[[1]]$suffix, "")
 })

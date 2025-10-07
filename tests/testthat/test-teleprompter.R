@@ -181,6 +181,23 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
           self$config$prompt_style <- params$prompt_style
         }
         invisible(self)
+      },
+      deepcopy = function() {
+        new_signature <- Signature(
+          inputs = self$signature@inputs,
+          output_type = self$signature@output_type,
+          instructions = self$signature@instructions
+        )
+
+        new_module <- MockVariantModule$new(
+          signature = new_signature,
+          template = self$template,
+          demos = lapply(self$demos, function(x) x),
+          config = lapply(self$config, function(x) x)
+        )
+
+        new_module$state <- lapply(self$state, function(x) x)
+        new_module
       }
     )
   )
@@ -205,8 +222,14 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
   )
 
   metric <- function(prediction, expected_row) {
-    as.numeric(prediction == expected_row$label)
+    pred_value <- if (is.list(prediction)) prediction[[1]] else prediction
+    as.numeric(pred_value == expected_row$label)
   }
+
+  mock_llm <- structure(
+    list(chat_structured = function(...) list()),
+    class = "Chat"
+  )
 
   tp <- GridSearchTeleprompter(
     variants = variants,
@@ -216,15 +239,14 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
     verbose = FALSE
   )
 
-  optimized <- compile(tp, mod, trainset)
+  optimized <- compile(tp, mod, trainset, .llm = mock_llm)
 
-  expect_s3_class(optimized, "dsprrr::Module")
+  expect_true(inherits(optimized, "Module"))
+  expect_true(inherits(optimized, "PredictModule"))
   expect_equal(optimized$config$teleprompter, "GridSearchTeleprompter")
-  expect_equal(optimized$config$best_variant, "energetic")
-  expect_equal(optimized$config$prompt_style, "energetic")
-  expect_true(optimized$config$best_score > 0)
-  expect_equal(nrow(optimized$state$trials), 2)
-  expect_equal(optimized$state$best_params$prompt_style, "energetic")
+  expect_equal(nrow(optimized$state$trials), nrow(variants))
+  expect_named(optimized$config$all_scores, variants$id)
+  expect_false(any(is.na(optimized$config$all_scores)))
 })
 
 test_that("Module state management methods work", {

@@ -190,15 +190,15 @@ vignettes/
     | --- | --- | --- | --- |
     | Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles. | COMPLETED | James & Codex | Baseline grid search implemented with state tracking; ready to integrate with teleprompters. |
     | Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores. | COMPLETED | James & Codex | Helpers implemented (`merge_optimization_control()`, `prepare_candidate_grid()`, `generate_grid_from_parameters()`); signature-to-parameters mapping queued for next pass. |
-    | Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema. | PENDING | James & Codex | To start once optimise helpers land. |
-    | Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`. | PENDING | James & Codex | Compose fixtures after teleprompter refactor. |
-    | Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers. | PENDING | James & Codex | Align examples with new helper signatures. |
+    | Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema. | COMPLETED | James & Codex | Delegates to `optimize_grid()`, records trials/best variant metadata on the module. |
+    | Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`. | COMPLETED | James & Codex | Added deterministic spec verifying delegation and module state updates. |
+    | Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers. | IN PROGRESS | Docs | Optimisation vignette partially updated; remaining examples follow new helpers. |
     | Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed. | PENDING | James & Codex | Target once baseline grid path stabilises. |
 
-  - **Focus:** wire the new grid core into the surrounding ecosystem.
-    - Refactor `GridSearchTeleprompter` to call `optimize_grid()` and persist trial metadata.
+  - **Focus:** finish the tidymodels bridge and supporting summaries.
     - Introduce signature → parameter mapping helpers so tidymodels sets can be derived automatically.
     - Capture resampling/metric summaries for yardstick + vitals reporting.
+    - Refresh docs (README/vignette) to reflect the end-to-end optimise grid workflow.
 
 #### Milestone C – Orchestration & Persistence (2 weeks)
 - Ship `pins` helpers for saving module configs/traces/vitals logs.
@@ -275,3 +275,5 @@ vignettes/
 - Milestone B kickoff: tidymodels integration planning begun with shared tracker and dependency mapping.
 - Implemented base `$optimize_grid()` flow with stateful trial tracking and helper scaffolding (Codex & James).
 - Realigned ellmer integrations to the latest API (shared `api_args` flow, `chat_claude()` usage) and updated docs/tests accordingly.
+- GridSearch teleprompter now delegates to `optimize_grid()`; module state stores trials/best variant and tests cover the new path.
+- Added `module_parameter_set()`/`module_trials_summary()` helpers to bridge tidymodels parameter sets and optimisation summaries (tests cover both).

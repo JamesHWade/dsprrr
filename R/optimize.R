@@ -164,3 +164,197 @@ expand_grid_from_list <- function(parameters) {
 is_dials_parameters <- function(x) {
   inherits(x, "param_set") || inherits(x, "parameters")
 }
+
+#' Suggest tidymodels parameters for a module
+#'
+#' @description
+#' Construct a `dials::parameters()` set from the information available on a
+#' module. Numeric parameters (e.g., `temperature`, `top_p`) derive their ranges
+#' from observed optimisation trials (if present) or fall back to sensible
+#' defaults. Qualitative parameters (e.g., `prompt_style`) are converted to
+#' value sets.
+#'
+#' @param module A DSPrrr module (created with [module()]).
+#' @param include Optional character vector restricting which parameters are
+#'   returned. Defaults to all parameters discovered in the module configuration
+#'   and optimisation trials.
+#' @param exclude Character vector of parameter names to ignore. Defaults to
+#'   internal bookkeeping fields such as `id` and `instructions`.
+#'
+#' @return A [`dials::parameters`] object describing the candidate tunables.
+#'   Returns an empty parameter set when no tunables are discovered.
+#' @export
+#' @examples
+#' \dontrun{
+#' sig <- signature("text -> sentiment")
+#' mod <- module(sig, type = "predict", config = list(temperature = 0.2))
+#' optimize_grid(mod,
+#'   devset = tibble::tibble(text = "sample", target = "positive"),
+#'   parameters = list(temperature = c(0.1, 0.5))
+#' )
+#' module_parameter_set(mod)
+#' }
+module_parameter_set <- function(module,
+                                 include = NULL,
+                                 exclude = c("id", "instructions", "instructions_suffix")) {
+  if (!inherits(module, "Module")) {
+    cli::cli_abort("module must be a DSPrrr Module object")
+  }
+
+  rlang::check_installed("dials", reason = "to build parameter sets")
+
+  param_values <- list()
+
+  # Seed with config values
+  config_values <- module$config
+  if (length(config_values) > 0) {
+    for (name in names(config_values)) {
+      value <- config_values[[name]]
+      if (is.atomic(value) && length(value) == 1) {
+        param_values[[name]] <- c(param_values[[name]], value)
+      }
+    }
+  }
+
+  # Incorporate optimisation trials if available
+  trials <- module$state$trials
+  if (is.data.frame(trials) && nrow(trials) > 0) {
+    trial_params <- trials$parameters
+    for (params in trial_params) {
+      if (!is.list(params)) next
+      for (name in names(params)) {
+        param_values[[name]] <- c(param_values[[name]], params[[name]])
+      }
+    }
+  }
+
+  if (!is.null(include)) {
+    param_values <- param_values[intersect(names(param_values), include)]
+  } else {
+    param_values <- param_values[setdiff(names(param_values), exclude)]
+  }
+
+  build_param <- function(name, values) {
+    values <- values[!vapply(values, is.null, logical(1))]
+    values <- unlist(values, recursive = TRUE, use.names = FALSE)
+    values <- values[!is.na(values)]
+    if (length(values) == 0) {
+      return(NULL)
+    }
+
+    label <- setNames(paste("Module", name), name)
+
+    if (all(values %in% c(TRUE, FALSE))) {
+      unique_vals <- sort(unique(as.logical(values)))
+      return(dials::new_qual_param(
+        type = "logical",
+        values = unique_vals,
+        label = label
+      ))
+    }
+
+    if (is.numeric(values)) {
+      rng <- range(values, na.rm = TRUE)
+      if (rng[1] == rng[2]) {
+        rng <- rng + c(-0.1, 0.1)
+      }
+      return(dials::new_quant_param(
+        type = "double",
+        range = rng,
+        inclusive = c(TRUE, TRUE),
+        label = label
+      ))
+    }
+
+    if (is.character(values)) {
+      unique_vals <- sort(unique(values))
+      return(dials::new_qual_param(
+        type = "character",
+        values = unique_vals,
+        label = label
+      ))
+    }
+
+    NULL
+  }
+
+  params <- vector("list", length(param_values))
+  param_names <- names(param_values)
+  for (i in seq_along(param_values)) {
+    params[[i]] <- build_param(param_names[[i]], param_values[[i]])
+  }
+  params <- params[!vapply(params, is.null, logical(1))]
+
+  if (length(params) == 0) {
+    return(dials::parameters())
+  }
+
+  do.call(dials::parameters, params)
+}
+
+#' Summarise optimisation trials for a module
+#'
+#' @description
+#' Provide a tidy summary of the optimisation trials recorded on a module.
+#' Useful for reporting best scores, average performance, and highlighting the
+#' winning parameter combination.
+#'
+#' @param module A DSPrrr module that has been optimised with [optimize_grid()].
+#' @param objective Optimisation direction; `"maximize"` (default) selects the
+#'   highest score, `"minimize"` selects the lowest.
+#'
+#' @return A tibble with one row containing:
+#'   * `n_trials`: number of trials evaluated.
+#'   * `best_trial`: identifier of the best-performing trial.
+#'   * `best_score`: best score achieved.
+#'   * `mean_score`: mean across all scores.
+#'   * `std_error`: standard error of the scores.
+#'   * `best_params`: list-column containing the best parameter set.
+#'   * `trials`: list-column containing the full trials tibble.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' summary <- module_trials_summary(my_module)
+#' summary$best_params
+#' }
+module_trials_summary <- function(module, objective = c("maximize", "minimize")) {
+  if (!inherits(module, "Module")) {
+    cli::cli_abort("module must be a DSPrrr Module object")
+  }
+
+  objective <- match.arg(objective)
+  trials <- module$state$trials
+
+  if (!is.data.frame(trials) || nrow(trials) == 0) {
+    return(tibble::tibble(
+      n_trials = 0L,
+      best_trial = NA_integer_,
+      best_score = NA_real_,
+      mean_score = NA_real_,
+      std_error = NA_real_,
+      best_params = list(NULL),
+      trials = list(tibble::tibble())
+    ))
+  }
+
+  scores <- trials$score
+  best_idx <- if (objective == "maximize") which.max(scores) else which.min(scores)
+  best_score <- scores[best_idx]
+  best_trial <- trials$trial_id[best_idx]
+  best_params <- trials$parameters[[best_idx]]
+
+  mean_score <- mean(scores, na.rm = TRUE)
+  sd_score <- stats::sd(scores, na.rm = TRUE)
+  std_error <- if (is.na(sd_score)) NA_real_ else sd_score / sqrt(length(scores))
+
+  tibble::tibble(
+    n_trials = nrow(trials),
+    best_trial = best_trial,
+    best_score = best_score,
+    mean_score = mean_score,
+    std_error = std_error,
+    best_params = list(best_params),
+    trials = list(trials)
+  )
+}
