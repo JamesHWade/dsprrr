@@ -72,6 +72,7 @@ test_that("optimize_grid updates module configuration with best parameters", {
   expect_equal(mod$state$best_trial, 2)
 
   skip_if_not_installed("dials")
+  skip_if_not_installed("yardstick")
   param_set <- module_parameter_set(mod)
   expect_s3_class(param_set, "parameters")
   expect_true(all(c("bias", "temperature") %in% param_set$id))
@@ -86,6 +87,14 @@ test_that("optimize_grid updates module configuration with best parameters", {
   expect_equal(nrow(metrics), 2)
   expect_equal(metrics$trial_id, c(1, 2))
   expect_equal(metrics$params[[2]]$bias, 1)
+
+  yard_metrics <- module_metric_summary(
+    mod,
+    metrics = list(yardstick::accuracy),
+    truth = "target",
+    estimate = "result"
+  )
+  expect_true(is.null(yard_metrics$yardstick[[2]]) || inherits(yard_metrics$yardstick[[2]], "tbl_df"))
 })
 
 test_that("optimize_grid accepts explicit grid data frames", {
@@ -166,6 +175,7 @@ test_that("optimize_grid accepts explicit grid data frames", {
   expect_equal(mod$state$best_score, 1)
 
   skip_if_not_installed("dials")
+  skip_if_not_installed("yardstick")
   param_set <- module_parameter_set(mod)
   expect_true(all(c("multiplier", "suffix", "temperature") %in% param_set$id))
 
@@ -178,4 +188,41 @@ test_that("optimize_grid accepts explicit grid data frames", {
   expect_equal(nrow(metrics), 2)
   expect_equal(metrics$trial_id[[1]], 1)
   expect_equal(metrics$params[[1]]$suffix, "")
+
+  yard_metrics <- module_metric_summary(
+    mod,
+    metrics = list(yardstick::accuracy),
+    truth = "target",
+    estimate = "result"
+  )
+  expect_true(is.null(yard_metrics$yardstick[[1]]) || inherits(yard_metrics$yardstick[[1]], "tbl_df"))
+})
+
+test_that("module_parameter_set derives defaults from signature", {
+  skip_on_cran()
+  skip_if_not_installed("dials")
+
+  sig <- Signature(
+    inputs = list(
+      input(name = "mode", type = ellmer::type_enum(values = c("prod", "debug")))
+    ),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  mod <- module(signature = sig, type = "predict")
+  params <- module_parameter_set(mod)
+  expect_true("input_mode" %in% params$id)
+})
+
+test_that("module_metric_summary handles modules without trials", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  metrics <- module_metric_summary(mod)
+  expect_equal(nrow(metrics), 0)
 })

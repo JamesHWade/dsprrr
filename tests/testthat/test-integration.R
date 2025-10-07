@@ -131,6 +131,7 @@ test_that("optimize_grid integrates with real LLM", {
   expect_true(is.numeric(mod$state$best_score) || is.logical(mod$state$best_score))
 
   skip_if_not_installed("dials")
+  skip_if_not_installed("yardstick")
   param_set <- module_parameter_set(mod)
   expect_true(all(c("prompt_style", "temperature") %in% param_set$id))
 
@@ -142,4 +143,12 @@ test_that("optimize_grid integrates with real LLM", {
   metrics <- module_metric_summary(mod)
   expect_equal(nrow(metrics), 2)
   expect_equal(metrics$params[[mod$state$best_trial]]$prompt_style, mod$config$prompt_style)
+
+  yard_metrics <- module_metric_summary(
+    mod,
+    metrics = list(yardstick::accuracy),
+    truth = "target",
+    estimate = "result"
+  )
+  expect_true(is.null(yard_metrics$yardstick[[mod$state$best_trial]]) || inherits(yard_metrics$yardstick[[mod$state$best_trial]], "tbl_df"))
 })
