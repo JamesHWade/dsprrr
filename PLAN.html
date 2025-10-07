@@ -248,9 +248,9 @@ vignettes/
 <td>James &amp; Codex</td>
 <td>Baseline grid search implemented with state tracking; ready to integrate with teleprompters.</td>
 </tr><tr class="even"><td>Add helper functions in <code>R/optimize.R</code> for translating module signatures into tidymodels parameter objects and for summarising resample scores.</td>
-<td>IN PROGRESS</td>
+<td>COMPLETED</td>
 <td>James &amp; Codex</td>
-<td>Grid generation helpers landed; still need signature → param scaffolding and resample summaries.</td>
+<td>Helpers implemented (<code><a href="reference/merge_optimization_control.html">merge_optimization_control()</a></code>, <code><a href="reference/prepare_candidate_grid.html">prepare_candidate_grid()</a></code>, <code><a href="reference/generate_grid_from_parameters.html">generate_grid_from_parameters()</a></code>); signature-to-parameters mapping queued for next pass.</td>
 </tr><tr class="odd"><td>Refactor <code>GridSearchTeleprompter</code> in <code>R/teleprompter.R</code> to call the new optimisation API, ensuring the structure returned matches the stored trial schema.</td>
 <td>PENDING</td>
 <td>James &amp; Codex</td>
@@ -269,10 +269,10 @@ vignettes/
 <td>Target once baseline grid path stabilises.</td>
 </tr></tbody></table></li>
 <li>
-<p><strong>Focus:</strong> integrate new grid search core with higher-level tooling.</p>
-<ul><li>Wire <code>GridSearchTeleprompter</code> to reuse the shared optimisation path and record trials.</li>
-<li>Map signatures to tidymodels parameter sets + controls so helper generators can expose ergonomics.</li>
-<li>Draft resampling/metric summary helper to feed yardstick + vitals reporting once grids stabilise.</li>
+<p><strong>Focus:</strong> wire the new grid core into the surrounding ecosystem.</p>
+<ul><li>Refactor <code>GridSearchTeleprompter</code> to call <code><a href="reference/optimize_grid.html">optimize_grid()</a></code> and persist trial metadata.</li>
+<li>Introduce signature → parameter mapping helpers so tidymodels sets can be derived automatically.</li>
+<li>Capture resampling/metric summaries for yardstick + vitals reporting.</li>
 </ul></li>
 </ul></li>
 </ul></div>
@@ -332,7 +332,7 @@ vignettes/
 <h3 id="id_11-current-status--next-steps">11. Current Status &amp; Next Steps<a class="anchor" aria-label="anchor" href="#id_11-current-status--next-steps"></a></h3>
 <p><strong>Completed:</strong> - ✅ Full R6 module architecture implemented and tested - ✅ Vitals integration maintained and functional - ✅ Documentation stable (no regeneration issues) - ✅ Test suite largely passing (395/403 tests)</p>
 <p><strong>Known Issues:</strong> - Minor test failures (8) related to deepcopy state preservation - Some compile tests checking wrong property paths</p>
-<p><strong>In Progress:</strong> - Milestone B: Tidymodels Integration (optimisation dispatch contract in design sync; see §9)</p>
+<p><strong>In Progress:</strong> - Milestone B: Tidymodels Integration (grid helpers landed; teleprompter wiring + resample summaries next)</p>
 <p><strong>Ready for:</strong> - Building more module types (ChainOfThought, React) - Enhanced optimization strategies</p>
 </div>
 <div class="section level3">
