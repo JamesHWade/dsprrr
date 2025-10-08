@@ -660,6 +660,10 @@ module_metric_summary <- function(module,
         levels_union <- unique(c(na.omit(truth_vec), na.omit(est_vec)))
         if (length(levels_union) == 0) {
           cli::cli_warn("Unable to determine class levels for trial {trials$trial_id[[i]]}; skipping yardstick metrics.")
+        } else if (length(levels_union) == 1) {
+          # Skip yardstick metrics for single-class cases (common with small datasets)
+          # This is expected and not an error
+          yardstick_results <- NULL
         } else {
           data[[truth_col]] <- factor(truth_vec, levels = levels_union)
           data[[estimate_col]] <- factor(est_vec, levels = levels_union)

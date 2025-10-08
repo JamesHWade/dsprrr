@@ -168,12 +168,53 @@ as_dsprrr_metric <- function(vitals_scorer,
       data <- dataset
       data[[estimate]] <- pred_vec
 
+      # Validate data before calling yardstick
+      truth_col <- rlang::as_string(truth_sym)
+      if (!truth_col %in% names(data)) {
+        cli::cli_warn("Truth column '{truth_col}' not found in dataset for yardstick metric")
+        return(list(
+          mean_score = NA_real_,
+          scores = rep(NA_real_, nrow(dataset)),
+          metrics = tibble::tibble(),
+          n_evaluated = nrow(dataset),
+          n_errors = nrow(dataset),
+          metadata = list(type = "yardstick", truth = truth_col, estimate = estimate, error = "truth column not found")
+        ))
+      }
+
+      if (nrow(data) == 0) {
+        cli::cli_warn("Empty dataset provided to yardstick metric")
+        return(list(
+          mean_score = NA_real_,
+          scores = numeric(),
+          metrics = tibble::tibble(),
+          n_evaluated = 0L,
+          n_errors = 0L,
+          metadata = list(type = "yardstick", truth = truth_col, estimate = estimate, error = "empty dataset")
+        ))
+      }
+
       # Build the arguments list with the truth and estimate symbols
       args <- c(
         list(data = data, truth = truth_sym, estimate = estimate_sym),
         metric_args
       )
-      results <- rlang::exec(metric_fn, !!!args)
+
+      # Call yardstick metric with detailed error handling
+      results <- tryCatch(
+        rlang::exec(metric_fn, !!!args),
+        error = function(e) {
+          # Provide diagnostic information
+          cli::cli_warn(c(
+            "Failed to compute yardstick metric",
+            "i" = "Data has {nrow(data)} rows",
+            "i" = "Truth column: {rlang::as_string(truth_sym)}",
+            "i" = "Estimate column: {estimate}",
+            "x" = "Error: {e$message}"
+          ))
+          tibble::tibble()
+        }
+      )
 
       if (!is.null(metric_name)) {
         results <- results[results$.metric == metric_name, , drop = FALSE]
