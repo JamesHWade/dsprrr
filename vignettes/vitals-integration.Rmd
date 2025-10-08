@@ -67,6 +67,11 @@ library(tibble)
 
 Together, they offer a complete workflow: **Design → Build → Optimize → Evaluate**.
 
+**Note:** This vignette shows advanced vitals integration. For getting started with evaluation, see:
+
+- [Evaluation and Metrics](evaluation-metrics.html) - Core evaluation concepts and metrics
+- [Automatic Prompt Optimization](compilation-optimization.html) - Using evaluation for optimization
+
 ## Converting dsprrr Modules to vitals Solvers
 
 The new API features in dsprrr make integration with vitals seamless. Here's how to use a dsprrr module as a vitals solver:

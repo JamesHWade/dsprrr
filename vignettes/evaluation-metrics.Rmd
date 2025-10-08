@@ -1,0 +1,801 @@
+---
+title: "Evaluation and Metrics in dsprrr"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Evaluation and Metrics in dsprrr}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+library(dsprrr)
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = eval_vignette()
+)
+
+vcr::setup_knitr()
+```
+
+## Introduction
+
+Before you can systematically improve your LLM programs, you need to **evaluate them**. As the DSPy philosophy teaches: *"it's unproductive to launch optimization runs using a poorly designed program or a bad metric."*
+
+This vignette teaches you how to:
+
+1. **Define metrics** that measure what matters for your task
+2. **Evaluate modules** systematically on test datasets
+3. **Use tidymodels integration** for advanced evaluation workflows
+4. **Interpret results** to guide optimization
+
+Think of evaluation as the foundation of the iterative development cycle:
+
+```
+Define Task → Build Module → Evaluate → Optimize → Repeat
+                                ↑
+                        You are here!
+```
+
+After mastering evaluation, you'll be ready to move on to [Automatic Prompt Optimization](compilation-optimization.html).
+
+## Setup
+
+```{r setup}
+library(dsprrr)
+library(ellmer)
+
+# Configure your LLM (we'll use Claude as an example)
+llm <- chat_claude(
+  api_key = Sys.getenv("ANTHROPIC_API_KEY"),
+  model = "claude-3-5-sonnet-20241022"
+)
+```
+
+## Understanding Metrics
+
+Metrics are functions that evaluate how well your LLM's output matches expected results. A good metric should:
+
+- **Capture what matters** for your specific task
+- **Return numeric scores** (0-1 range is conventional)
+- **Handle edge cases** gracefully (missing fields, malformed outputs)
+- **Be fast to compute** (you'll run it thousands of times)
+
+dsprrr provides several built-in metrics and makes it easy to create custom ones.
+
+### Built-in Metrics
+
+#### Exact Match
+
+The simplest metric checks if outputs match exactly:
+
+```{r metrics-exact}
+# Basic exact match
+metric <- metric_exact_match()
+
+# Test the metric
+metric("positive", "positive") # 1 (TRUE converted to numeric)
+metric("positive", "negative") # 0 (FALSE converted to numeric)
+
+# Case-insensitive matching
+metric_ignore_case <- metric_exact_match(ignore_case = TRUE)
+metric_ignore_case("Positive", "positive") # 1
+
+# Extract specific field from structured output
+metric_field <- metric_exact_match(field = "sentiment")
+metric_field(
+  list(sentiment = "positive", confidence = 0.9),
+  list(sentiment = "positive", confidence = 0.8)
+) # 1 - only compares sentiment field
+```
+
+**When to use exact match:**
+- Classification tasks with discrete categories
+- Tasks where partial credit doesn't make sense
+- Quick sanity checks during development
+
+#### F1 Score
+
+For text generation tasks, F1 score measures token overlap:
+
+```{r metrics-f1}
+# Token-based F1 score
+metric_f1_basic <- metric_f1()
+
+# Calculate F1 between predictions and expected text
+score <- metric_f1_basic(
+  "The capital of France is Paris",
+  "Paris is the capital city of France"
+)
+print(score) # ~0.67 (good overlap but not perfect)
+
+# With field extraction
+metric_f1_field <- metric_f1(field = "answer")
+score <- metric_f1_field(
+  list(answer = "The Eiffel Tower", confidence = "high"),
+  list(answer = "Eiffel Tower in Paris", other = "data")
+)
+```
+
+**When to use F1:**
+- Open-ended text generation
+- Summarization tasks
+- Question answering where multiple phrasings are correct
+
+#### Contains Metric
+
+Check if output contains specific patterns:
+
+```{r metrics-contains}
+# Check for substring
+metric_has_positive <- metric_contains("positive", ignore_case = TRUE)
+metric_has_positive("The result is POSITIVE", NULL) # 1
+metric_has_positive("The result is negative", NULL) # 0
+
+# Regular expression patterns
+metric_has_number <- metric_contains("\\d+", fixed = FALSE)
+metric_has_number("The answer is 42", NULL) # 1
+metric_has_number("No numbers here", NULL) # 0
+
+# Check specific field
+metric_field_contains <- metric_contains("urgent", field = "priority")
+metric_field_contains(
+  list(priority = "urgent - needs immediate attention"),
+  NULL
+) # 1
+```
+
+**When to use contains:**
+- Checking for required keywords or phrases
+- Validating that certain information appears in output
+- Format validation (e.g., presence of citations, references)
+
+### Custom Metrics
+
+Create your own evaluation logic:
+
+```{r metrics-custom}
+# Simple boolean metric
+length_check <- metric_custom(
+  function(pred, exp) {
+    nchar(as.character(pred)) <= 100
+  },
+  name = "length_limit"
+)
+
+# Numeric scoring metric
+similarity_metric <- metric_custom(
+  function(pred, exp) {
+    # Calculate some similarity score (0-1)
+    pred_lower <- tolower(as.character(pred))
+    exp_lower <- tolower(as.character(exp))
+
+    # Simple character overlap ratio
+    common <- sum(utf8ToInt(pred_lower) %in% utf8ToInt(exp_lower))
+    total <- max(nchar(pred_lower), nchar(exp_lower))
+    if (total == 0) return(1.0)
+
+    common / total
+  },
+  name = "char_similarity"
+)
+
+# Use the custom metric
+score <- similarity_metric("Hello World", "hello world")
+```
+
+**Pattern: Composite Metrics**
+
+Combine multiple metrics with weights:
+
+```{r metrics-composite}
+# Create a weighted composite metric
+composite_metric <- function(pred, exp) {
+  scores <- c(
+    # 30% weight on summary quality
+    summary = metric_f1(field = "summary")(pred, exp),
+    # 30% weight on correct sentiment
+    sentiment = metric_exact_match(field = "sentiment")(pred, exp),
+    # 40% weight on correct recommendation
+    recommendation = metric_exact_match(field = "recommendation")(pred, exp)
+  )
+
+  # Weighted average
+  weights <- c(summary = 0.3, sentiment = 0.3, recommendation = 0.4)
+  sum(scores * weights)
+}
+
+wrapped_metric <- metric_custom(composite_metric, name = "composite_score")
+```
+
+### Threshold Metrics
+
+Convert numeric metrics to boolean pass/fail:
+
+```{r metrics-threshold}
+# F1 score must be at least 0.8 to pass
+f1_threshold <- metric_threshold(
+  metric_f1(),
+  threshold = 0.8,
+  comparison = ">="
+)
+
+# Returns TRUE/FALSE instead of numeric score
+passes <- f1_threshold(
+  "The quick brown fox jumps",
+  "The quick brown fox jumps over"
+) # FALSE (F1 < 0.8)
+```
+
+### Multi-Field Metrics
+
+Evaluate multiple fields simultaneously:
+
+```{r metrics-multifield}
+# Check if all specified fields match
+metric_all <- metric_field_match(
+  c("sentiment", "confidence"),
+  require_all = TRUE
+)
+
+pred <- list(sentiment = "positive", confidence = "high", extra = "ignored")
+exp <- list(sentiment = "positive", confidence = "high", other = "data")
+metric_all(pred, exp) # 1 - both fields match
+
+# Check if any field matches
+metric_any <- metric_field_match(
+  c("answer", "alternate_answer"),
+  require_all = FALSE
+)
+```
+
+## Evaluating Modules
+
+Once you have a metric, use `evaluate_dsp()` to systematically test your module:
+
+```{r evaluation-basic}
+#| cassette: evaluation-sentiment-classifier
+
+# Create a sentiment classifier
+classifier <- signature(
+  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+) |>
+  module(type = "predict", template = "Analyze sentiment: {text}\n\nSentiment:")
+
+# Prepare test dataset (separate from training!)
+test_data <- dsp_trainset(
+  text = c(
+    "This product is amazing! Best purchase ever!",
+    "Terrible experience. Would not recommend.",
+    "It's okay, nothing special but works."
+  ),
+  sentiment = c(
+    "positive",
+    "negative",
+    "neutral"
+  )
+)
+
+# Evaluate with a specific metric
+results <- evaluate_dsp(
+  module = classifier,
+  dataset = test_data,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = llm,
+  verbose = TRUE
+)
+
+# Examine results
+print(results$mean_score)   # e.g., 0.67 (2/3 correct)
+print(results$scores)        # Individual scores per example
+print(results$n_evaluated)   # 3
+print(results$n_errors)      # 0 (no runtime errors)
+```
+
+### Understanding Evaluation Results
+
+The `evaluate_dsp()` function returns a rich results object:
+
+```{r evaluation-results, eval = FALSE}
+str(results)
+# List of 8
+#  $ mean_score  : num 0.67     # Average score across examples
+#  $ scores      : num [1:3]    # Per-example scores
+#  $ predictions : list [1:3]   # Model outputs
+#  $ metadata    : list [1:3]   # LLM metadata (tokens, cost, etc.)
+#  $ n_evaluated : int 3        # Number of successful evaluations
+#  $ n_errors    : int 0        # Number of failures
+#  $ errors      : chr [1:0]    # Error messages (if any)
+#  $ dataset     : tibble [3×2] # Input dataset with results
+```
+
+**Key fields:**
+- `mean_score`: Use this for comparing modules or variants
+- `scores`: Inspect to find problematic examples
+- `predictions`: Debug what the model actually produced
+- `metadata`: Track token usage and cost
+- `errors`: Diagnose runtime issues
+
+### Multi-Aspect Evaluation
+
+Evaluate multiple aspects of your module's output:
+
+```{r evaluation-multiaspect}
+#| cassette: evaluation-document-analyzer
+
+# Define a complex task
+doc_analyzer <- signature(
+  inputs = list(
+    input("document", description = "Document text to analyze")
+  ),
+  output_type = type_object(
+    summary = type_string(description = "Concise summary"),
+    sentiment = type_enum(values = c("positive", "negative", "neutral", "mixed")),
+    recommendation = type_enum(values = c("approve", "review", "reject"))
+  ),
+  instructions = "Analyze documents for key information and provide recommendations."
+) |>
+  module(type = "predict")
+
+# Test data
+test_docs <- dsp_trainset(
+  document = c(
+    "Our Q3 revenue increased by 25% YoY, driven by strong product sales.",
+    "Project delays have caused budget overruns of 40%. Team morale is low."
+  ),
+  sentiment = c("positive", "negative"),
+  recommendation = c("approve", "reject")
+)
+
+# Evaluate each aspect separately
+sentiment_results <- evaluate_dsp(
+  module = doc_analyzer,
+  dataset = test_docs,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = llm,
+  verbose = FALSE
+)
+
+recommendation_results <- evaluate_dsp(
+  module = doc_analyzer,
+  dataset = test_docs,
+  metric = metric_exact_match(field = "recommendation"),
+  .llm = llm,
+  verbose = FALSE
+)
+
+# Or use a composite metric for overall quality
+multi_metric <- metric_field_match(
+  c("sentiment", "recommendation"),
+  require_all = TRUE  # All fields must match
+)
+
+full_results <- evaluate_dsp(
+  module = doc_analyzer,
+  dataset = test_docs,
+  metric = multi_metric,
+  .llm = llm,
+  verbose = TRUE
+)
+
+print(full_results$mean_score)  # Stricter: both fields must match
+```
+
+## Tidymodels Integration
+
+dsprrr integrates deeply with the tidymodels ecosystem, allowing you to use familiar tools for evaluation.
+
+### Using Yardstick Metrics
+
+Convert yardstick metrics to dsprrr metrics with `as_dsprrr_metric()`:
+
+```{r yardstick-basics}
+#| cassette: evaluation-yardstick
+library(yardstick)
+
+# Prepare data with factor levels for yardstick
+test_reviews <- tibble::tibble(
+  text = c("Loved it", "Awful", "Pretty good", "Fantastic"),
+  target = factor(
+    c("positive", "negative", "positive", "positive"),
+    levels = c("negative", "positive")
+  )
+)
+
+# Create classifier
+classifier <- signature("text -> sentiment") |>
+  module(type = "predict", template = "Review: {text}\nSentiment:")
+
+# Convert yardstick metric to dsprrr
+metric <- as_dsprrr_metric(
+  metric_set(accuracy),
+  truth = "target",
+  estimate = "prediction",
+  # Transform ensures prediction matches factor levels
+  transform = function(pred) {
+    factor(pred, levels = c("negative", "positive"))
+  },
+  type = "yardstick"
+)
+
+# Evaluate using yardstick
+results <- evaluate_dsp(
+  module = classifier,
+  dataset = test_reviews,
+  metric = metric,
+  .llm = llm
+)
+
+print(results$mean_score)
+print(results$metrics)  # Yardstick tibble with .metric, .estimator, .estimate
+```
+
+### Using Multiple Yardstick Metrics
+
+You can evaluate with multiple yardstick metrics at once:
+
+```{r yardstick-multiple, eval = FALSE}
+# Multi-metric evaluation
+multi_metric <- as_dsprrr_metric(
+  metric_set(accuracy, precision, recall, f_meas),
+  truth = "target",
+  estimate = "prediction",
+  transform = function(pred) factor(pred, levels = levels(test_reviews$target))
+)
+
+results <- evaluate_dsp(
+  module = classifier,
+  dataset = test_reviews,
+  metric = multi_metric,
+  .llm = llm
+)
+
+# Access all metric results
+print(results$metrics)
+# A tibble: 4 × 3
+#   .metric   .estimator .estimate
+#   <chr>     <chr>          <dbl>
+# 1 accuracy  binary         0.75
+# 2 precision binary         0.80
+# 3 recall    binary         0.75
+# 4 f_meas    binary         0.77
+```
+
+### Cross-Validation with rsample
+
+For robust evaluation, use rsample's resampling:
+
+```{r rsample-cv, eval = FALSE}
+library(rsample)
+
+# Create cross-validation folds
+folds <- vfold_cv(test_reviews, v = 3)
+
+# The evaluate function works with single datasets
+# For cross-validation, you'd typically use this in optimization
+# (covered in the compilation-optimization vignette)
+
+# But you can manually evaluate on each fold:
+fold_results <- lapply(folds$splits, function(split) {
+  assess_data <- assessment(split)
+
+  evaluate_dsp(
+    module = classifier,
+    dataset = assess_data,
+    metric = metric,
+    .llm = llm,
+    verbose = FALSE
+  )
+})
+
+# Aggregate results
+mean_cv_score <- mean(sapply(fold_results, function(r) r$mean_score))
+print(paste("Cross-validated score:", mean_cv_score))
+```
+
+## Best Practices for Evaluation
+
+### 1. Always Use Separate Test Data
+
+```{r best-practice-split, eval = FALSE}
+# Split your data properly
+split_data <- function(data, train_pct = 0.7) {
+  n <- nrow(data)
+  train_idx <- sample(n, size = floor(n * train_pct))
+
+  list(
+    train = data[train_idx, ],
+    test = data[-train_idx, ]
+  )
+}
+
+# Split before any development
+splits <- split_data(my_full_dataset)
+
+# Use train for optimization (compilation)
+# Use test for final evaluation
+```
+
+**Why:** Evaluating on training data gives overly optimistic results. Always hold out a test set.
+
+### 2. Choose the Right Metric
+
+```{r best-practice-metric}
+# For classification: exact match
+classification_metric <- metric_exact_match(field = "label")
+
+# For generation: F1 or custom similarity
+generation_metric <- metric_f1(field = "text")
+
+# For complex tasks: composite metrics
+composite <- function(pred, exp) {
+  accuracy <- metric_exact_match(field = "category")(pred, exp)
+  quality <- metric_f1(field = "description")(pred, exp)
+
+  0.6 * accuracy + 0.4 * quality  # Weighted combination
+}
+```
+
+**Why:** Different tasks need different metrics. Classification needs exact match; generation needs partial credit.
+
+### 3. Check Metric Distribution
+
+```{r best-practice-distribution, eval = FALSE}
+# Evaluate and inspect score distribution
+results <- evaluate_dsp(
+  module = my_module,
+  dataset = test_data,
+  metric = my_metric,
+  .llm = llm
+)
+
+# Check distribution
+hist(results$scores)
+summary(results$scores)
+
+# Identify problematic examples
+low_scoring <- which(results$scores < 0.5)
+test_data[low_scoring, ]
+results$predictions[low_scoring]
+```
+
+**Why:** A high mean score might hide systematic failures on certain types of examples.
+
+### 4. Validate Metric Quality
+
+Before using a metric, test it manually:
+
+```{r best-practice-validate}
+# Test your metric with known examples
+test_metric <- metric_exact_match(field = "category")
+
+# Should return 1
+test_metric(
+  list(category = "spam", other = "data"),
+  list(category = "spam", different = "fields")
+)
+
+# Should return 0
+test_metric(
+  list(category = "spam"),
+  list(category = "ham")
+)
+
+# Edge case: missing field
+test_metric(
+  list(other = "data"),
+  list(category = "spam")
+)  # Should handle gracefully
+```
+
+**Why:** Metric bugs waste time and lead to poor optimization results.
+
+### 5. Ensure Dataset Diversity
+
+```{r best-practice-diversity}
+# Check diversity in your evaluation set
+check_diversity <- function(dataset, field) {
+  values <- dataset[[field]]
+  unique_ratio <- length(unique(values)) / length(values)
+
+  if (unique_ratio < 0.8) {
+    warning(
+      "Low diversity in ", field, ": ",
+      round(unique_ratio * 100), "% unique"
+    )
+  }
+
+  table(values)
+}
+
+check_diversity(test_data, "sentiment")
+
+# Balance classes if needed
+balance_dataset <- function(data, label_col, max_per_class = NULL) {
+  labels <- unique(data[[label_col]])
+
+  balanced <- lapply(labels, function(l) {
+    subset_data <- data[data[[label_col]] == l, ]
+
+    if (!is.null(max_per_class) && nrow(subset_data) > max_per_class) {
+      subset_data[sample(nrow(subset_data), max_per_class), ]
+    } else {
+      subset_data
+    }
+  })
+
+  do.call(rbind, balanced)
+}
+```
+
+**Why:** Imbalanced or homogeneous test sets don't reflect real-world performance.
+
+## Common Patterns
+
+### Pattern 1: A/B Testing Modules
+
+```{r pattern-ab-testing}
+#| cassette: evaluation-ab-test
+
+# Create two module variants
+module_a <- signature("text -> summary: string") |>
+  module(type = "predict", template = "Summarize concisely: {text}")
+
+module_b <- signature("text -> summary: string") |>
+  module(type = "predict", template = "Provide a detailed summary: {text}")
+
+# Evaluate both on same data
+test_summaries <- dsp_trainset(
+  text = c(
+    "Long article text here...",
+    "Another article..."
+  ),
+  summary = c(
+    "Expected summary 1",
+    "Expected summary 2"
+  )
+)
+
+results_a <- evaluate_dsp(module_a, test_summaries, metric_f1(field = "summary"), llm)
+results_b <- evaluate_dsp(module_b, test_summaries, metric_f1(field = "summary"), llm)
+
+# Compare
+cat("Module A:", results_a$mean_score, "\n")
+cat("Module B:", results_b$mean_score, "\n")
+```
+
+### Pattern 2: Progressive Evaluation
+
+```{r pattern-progressive, eval = FALSE}
+# Start small, then scale up
+small_test <- test_data[1:10, ]
+medium_test <- test_data[1:50, ]
+full_test <- test_data
+
+# Quick check with small set
+quick_results <- evaluate_dsp(module, small_test, metric, llm)
+
+if (quick_results$mean_score > 0.5) {
+  # Looks promising, evaluate on more data
+  medium_results <- evaluate_dsp(module, medium_test, metric, llm)
+
+  if (medium_results$mean_score > 0.5) {
+    # Final comprehensive evaluation
+    final_results <- evaluate_dsp(module, full_test, metric, llm)
+  }
+}
+```
+
+### Pattern 3: Debugging with Detailed Inspection
+
+```{r pattern-debugging, eval = FALSE}
+# Evaluate with full details
+results <- evaluate_dsp(
+  module = classifier,
+  dataset = test_data,
+  metric = my_metric,
+  .llm = llm,
+  verbose = TRUE
+)
+
+# Find failures
+failures <- results$scores == 0
+failure_indices <- which(failures)
+
+# Inspect each failure
+for (i in failure_indices) {
+  cat("\n=== Example", i, "===\n")
+  cat("Input:", test_data$text[i], "\n")
+  cat("Expected:", test_data$sentiment[i], "\n")
+  cat("Predicted:", results$predictions[[i]], "\n")
+  cat("Metadata:", str(results$metadata[[i]]), "\n")
+}
+```
+
+## Troubleshooting
+
+### Issue: Metric Returns Unexpected Values
+
+```{r troubleshoot-metric, eval = FALSE}
+# Test your metric in isolation
+test_metric <- metric_exact_match(field = "category")
+
+# Try with explicit examples
+result <- test_metric(
+  list(category = "spam", other = "data"),
+  list(category = "spam", different = "fields")
+)
+print(result)  # Should be 1
+
+# Check that it handles edge cases
+result <- test_metric(
+  list(wrong_field = "value"),
+  list(category = "spam")
+)
+print(result)  # Should be 0 or NA, not crash
+```
+
+### Issue: Evaluation Takes Too Long
+
+```{r troubleshoot-slow, eval = FALSE}
+# Use a smaller sample for development
+dev_sample <- test_data[sample(nrow(test_data), 20), ]
+
+results <- evaluate_dsp(
+  module = classifier,
+  dataset = dev_sample,  # Smaller sample
+  metric = metric,
+  .llm = llm,
+  verbose = FALSE  # Turn off progress to save time
+)
+```
+
+### Issue: High Variance in Scores
+
+```{r troubleshoot-variance, eval = FALSE}
+# Run evaluation multiple times to check consistency
+runs <- replicate(3, {
+  evaluate_dsp(classifier, test_data, metric, llm)$mean_score
+}, simplify = TRUE)
+
+print(runs)
+sd(runs)  # High SD indicates instability
+
+# Consider:
+# 1. Setting temperature = 0 for deterministic outputs
+# 2. Using more examples
+# 3. Simplifying your metric
+```
+
+## Next Steps
+
+Now that you can evaluate your LLM programs systematically, you're ready to **optimize them**.
+
+The [Automatic Prompt Optimization](compilation-optimization.html) vignette shows you how to:
+
+- Use **teleprompters** to systematically improve your modules
+- Run **grid search** over different configurations
+- Leverage **tidymodels** for sophisticated optimization workflows
+- Apply **cross-validation** for robust optimization
+
+Remember: Good evaluation is the foundation of good optimization. Time spent crafting the right metric pays dividends throughout your development cycle.
+
+## Summary
+
+**Key Takeaways:**
+
+1. **Metrics define success** - Choose metrics that capture what matters for your task
+2. **Evaluate systematically** - Use `evaluate_dsp()` for consistent testing
+3. **Use separate test data** - Never evaluate on training data
+4. **Leverage tidymodels** - yardstick and rsample integrate seamlessly
+5. **Inspect failures** - Low scores are learning opportunities
+
+**Common Metrics:**
+- `metric_exact_match()` - Classification tasks
+- `metric_f1()` - Text generation with partial credit
+- `metric_contains()` - Checking for required content
+- `metric_custom()` - Your own logic
+- `as_dsprrr_metric()` - Wrap yardstick metrics
+
+**Next:** [Automatic Prompt Optimization](compilation-optimization.html)

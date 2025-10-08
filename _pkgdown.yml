@@ -5,3 +5,69 @@ template:
 logo:
   file: man/figures/logo.png
   alt: dsprrr hex sticker
+
+articles:
+- title: Getting Started
+  navbar: ~
+  contents:
+  - getting-started
+
+- title: Core Workflow
+  navbar: Core Workflow
+  contents:
+  - evaluation-metrics
+  - compilation-optimization
+  - vitals-integration
+
+reference:
+- title: Signatures
+  contents:
+  - signature
+  - input
+  - has_concept:: "signature"
+
+- title: Modules
+  contents:
+  - module
+  - run
+  - run_dataset
+  - has_concept:: "module"
+
+- title: Optimization
+  contents:
+  - compile
+  - compile_module
+  - optimize_grid
+  - module_register_parameters
+  - module_parameter_set
+  - module_trials_summary
+  - module_metric_summary
+  - has_concept:: "optimization"
+
+- title: Teleprompters
+  contents:
+  - LabeledFewShot
+  - GridSearchTeleprompter
+  - has_concept:: "teleprompter"
+
+- title: Metrics
+  contents:
+  - metric_exact_match
+  - metric_f1
+  - metric_contains
+  - metric_custom
+  - metric_threshold
+  - metric_field_match
+  - evaluate
+  - evaluate_dsp
+  - has_concept:: "metrics"
+
+- title: vitals Integration
+  contents:
+  - as_vitals_solver
+  - as_dsprrr_metric
+  - has_concept:: "vitals"
+
+- title: Data
+  contents:
+  - dsp_trainset

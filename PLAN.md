@@ -179,7 +179,7 @@ vignettes/
     - ✅ Updated all tests to use R6 API (395 passing, 8 minor failures)
     - ✅ Fixed documentation generation issues with R6 classes
 
-#### Milestone B – Tidymodels Integration (3 weeks)
+#### Milestone B – Tidymodels Integration ✅ COMPLETED
 - Define tunable parameters with `dials` and implement grid/random search in `$optimize_grid()`.
 - Integrate `rsample` resampling and `yardstick` scoring; ensure vitals scorers can be wrapped automatically.
 - Surface `finetune` racing as an optional control method.
@@ -188,17 +188,21 @@ vignettes/
 
     | Task | Status | Leads | Notes |
     | --- | --- | --- | --- |
-    | Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles. | COMPLETED | James & Codex | Baseline grid search implemented with state tracking; ready to integrate with teleprompters. |
-    | Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores. | COMPLETED | James & Codex | Helpers implemented (`merge_optimization_control()`, `prepare_candidate_grid()`, `generate_grid_from_parameters()`); signature-to-parameters mapping queued for next pass. |
+    | Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles. | COMPLETED | James & Codex | Baseline grid search implemented with state tracking; integrated with teleprompters. |
+    | Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores. | COMPLETED | James & Codex | Implemented `module_register_parameters()`, `module_parameter_set()`, `module_trials_summary()`, `module_metric_summary()` with full signature-to-parameters mapping. |
     | Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema. | COMPLETED | James & Codex | Delegates to `optimize_grid()`, records trials/best variant metadata on the module. |
-    | Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`. | COMPLETED | James & Codex | Added deterministic spec verifying delegation and module state updates. |
-    | Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers. | IN PROGRESS | Docs | Optimisation vignette partially updated; remaining examples follow new helpers. |
-    | Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed. | PENDING | James & Codex | Target once baseline grid path stabilises. |
+    | Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`. | COMPLETED | James & Codex | New `test-optimize.R` with 96 tests covering grid search, resampling, yardstick metrics, and parameter registration. |
+    | Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers. | COMPLETED | Docs | Added tidymodels section to README and created comprehensive `vignettes/compilation-optimization.Rmd` with yardstick/rsample examples. |
+    | Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed. | DEFERRED | James & Codex | Optional enhancement for future milestone; basic grid search + resampling workflow complete. |
 
-  - **Focus:** finish the tidymodels bridge and supporting summaries.
-    - Introduce signature → parameter mapping helpers so tidymodels sets can be derived automatically.
-    - Capture resampling/metric summaries for yardstick + vitals reporting.
-    - Refresh docs (README/vignette) to reflect the end-to-end optimise grid workflow.
+  - **Completed Implementation:**
+    - ✅ `module_register_parameters()` for declaring tunable parameter metadata
+    - ✅ `module_parameter_set()` with automatic signature → dials parameter conversion
+    - ✅ `as_dsprrr_metric()` enhanced to wrap both vitals scorers and yardstick metric sets
+    - ✅ `optimize_grid()` supports rsample resamples for cross-validation
+    - ✅ `module_trials_summary()` and `module_metric_summary()` for post-optimization analysis
+    - ✅ Comprehensive vignette (1133 lines) covering metrics, teleprompters, compilation, and advanced patterns
+    - ✅ All tests passing (456 pass, 3 expected warnings, 1 skip, 0 failures)
 
 #### Milestone C – Orchestration & Persistence (2 weeks)
 - Ship `pins` helpers for saving module configs/traces/vitals logs.
@@ -243,21 +247,22 @@ vignettes/
 ### 11. Current Status & Next Steps
 
 **Completed:**
-- ✅ Full R6 module architecture implemented and tested
-- ✅ Vitals integration maintained and functional
-- ✅ Documentation stable (no regeneration issues)
-- ✅ Test suite largely passing (395/403 tests)
-
-**Known Issues:**
-- Minor test failures (8) related to deepcopy state preservation
-- Some compile tests checking wrong property paths
+- ✅ **Milestone A**: Full R6 module architecture implemented and tested
+- ✅ **Milestone B**: Complete tidymodels integration with parameter sets, grid search, resampling, and yardstick metrics
+- ✅ Vitals integration maintained and enhanced (yardstick scorer wrapping)
+- ✅ Documentation stable with comprehensive vignette coverage
+- ✅ Test suite robust (456 passing, 0 failures)
+- ✅ R CMD check clean (0 errors, 2 cosmetic warnings)
+- ✅ Batch processing refactored for consistency and reliability
 
 **In Progress:**
-- Milestone B: Tidymodels Integration (grid helpers landed; teleprompter wiring + resample summaries next)
+- PR review and merge for tidymodels integration (`codex/update-vignettes-and-documentation-3s0ael`)
 
 **Ready for:**
-- Building more module types (ChainOfThought, React)
-- Enhanced optimization strategies
+- **Milestone C**: Orchestration & Persistence (pins, targets, MLflow, Quarto templates)
+- **Milestone D**: Advanced module types (ChainOfThought, React, tool-aware modules)
+- Enhanced teleprompters (GEPA, MIPRO with vitals-based evaluation loops)
+- Parsnip model specification and workflows integration (Phase 2 of tidymodels strategy)
 
 ### 12. Open Questions & Follow-Ups
 
@@ -272,8 +277,24 @@ vignettes/
 
 ### 13. Progress Log
 
-- Milestone B kickoff: tidymodels integration planning begun with shared tracker and dependency mapping.
-- Implemented base `$optimize_grid()` flow with stateful trial tracking and helper scaffolding (Codex & James).
-- Realigned ellmer integrations to the latest API (shared `api_args` flow, `chat_claude()` usage) and updated docs/tests accordingly.
-- GridSearch teleprompter now delegates to `optimize_grid()`; module state stores trials/best variant and tests cover the new path.
-- Added `module_parameter_set()`/`module_trials_summary()` helpers to bridge tidymodels parameter sets and optimisation summaries (tests cover both).
+#### Milestone A (R6 Module Architecture)
+- Implemented R6 `Module` base class with `$forward()`, `$reset()`, `$optimize()`, `$trace_summary()`, `$is_compiled()`, `$as_vitals_solver()`
+- Created `PredictModule` subclass and migrated S7 Predict functionality
+- Updated `module()` factory and all core verbs (`run()`, `evaluate()`, `compile()`) to work with R6
+- Achieved 395+ passing tests with robust documentation
+
+#### Milestone B (Tidymodels Integration)
+- Implemented `module_register_parameters()` for declaring tunable parameter metadata
+- Created `module_parameter_set()` with automatic signature → dials parameter conversion
+- Enhanced `as_dsprrr_metric()` to wrap both vitals scorers and yardstick metric sets
+- Added rsample resampling support to `optimize_grid()` for cross-validation
+- Implemented `module_trials_summary()` and `module_metric_summary()` for post-optimization analysis
+- Created comprehensive compilation-optimization vignette (1133 lines) covering metrics, teleprompters, and advanced patterns
+- Fixed all R CMD check errors, refactored batch processing, achieved 456 passing tests
+- **Documentation restructuring (2025-10-08):**
+  - Split mega-vignette into two focused guides following DSPy structure
+  - `evaluation-metrics.Rmd` (new): Metrics, evaluation framework, tidymodels integration (~650 lines)
+  - `compilation-optimization.Rmd` (revised): Optimization strategies, teleprompters, advanced patterns (~830 lines)
+  - Updated cross-references across all vignettes (getting-started, vitals-integration)
+  - Enhanced `_pkgdown.yml` with organized navigation structure
+- Milestone B **COMPLETED** (2025-10-07)

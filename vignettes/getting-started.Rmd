@@ -28,7 +28,8 @@ Instead of wrestling with prompt engineering, dsprrr lets you:
 - **Declare** what you want your LLM to do using expressive DSPy-style signatures
 - **Execute** your AI logic through modular `Predict` components
 - **Compose** multiple modules into sophisticated pipelines
-- **Optimize** your programs systematically (coming soon!)
+- **Evaluate** your programs systematically - see [Evaluation and Metrics](evaluation-metrics.html)
+- **Optimize** your programs automatically - see [Automatic Prompt Optimization](compilation-optimization.html)
 
 ### Expressive DSPy-Style Syntax
 
@@ -859,13 +860,32 @@ result <- run(
 
 ## Next Steps
 
-While this vignette covers the foundational features currently available in dsprrr, the package roadmap includes exciting upcoming features:
+Now that you understand the basics, dive deeper into the core workflows:
 
-1. **Optimization**: Automatic prompt optimization using techniques like bootstrap few-shot learning
-2. **Advanced Modules**: ChainOfThought, ReAct agents, and other reasoning strategies
-3. **Evaluation Framework**: Built-in metrics and evaluation pipelines
-4. **Caching and Persistence**: Automatic caching of LLM calls and results
-5. **Multi-model Support**: Easy switching between different LLM providers
+### Learn the Complete Development Cycle
+
+1. **[Evaluation and Metrics](evaluation-metrics.html)** - Learn how to systematically evaluate your LLM programs
+   - Define metrics that measure what matters
+   - Run evaluations on test datasets
+   - Use tidymodels integration (yardstick, rsample)
+
+2. **[Automatic Prompt Optimization](compilation-optimization.html)** - Optimize your programs systematically
+   - Use `optimize_grid()` for direct grid search
+   - Apply teleprompters (LabeledFewShot, GridSearchTeleprompter)
+   - Leverage tidymodels for cross-validation
+
+3. **[Integration with vitals](vitals-integration.html)** - Advanced evaluation workflows
+   - Convert modules to vitals solvers
+   - Use vitals scorers in optimization
+   - Complete end-to-end workflows
+
+### Upcoming Features
+
+The package roadmap includes:
+
+- **Advanced Modules**: ChainOfThought, ReAct agents, and other reasoning strategies
+- **Caching and Persistence**: Automatic caching of LLM calls and results
+- **Multi-model Support**: Easy switching between different LLM providers
 
 ## Learn More
 
