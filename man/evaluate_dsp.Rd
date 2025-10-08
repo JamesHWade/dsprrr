@@ -13,9 +13,9 @@ evaluate_dsp(module, dataset, metric, .llm = NULL, verbose = TRUE)
 
 \item{metric}{A metric function from \verb{metric_*()} functions}
 
-\item{verbose}{Whether to show progress}
+\item{.llm}{Optional ellmer chat object to use for LLM interactions}
 
-\item{llm}{Optional LLM connection for running the module}
+\item{verbose}{Whether to show progress}
 }
 \value{
 A list with evaluation results including mean score and per-example scores
@@ -30,7 +30,7 @@ results <- evaluate_dsp(
   module = optimized_classifier,
   dataset = test_data,
   metric = metric_exact_match(field = "sentiment"),
-  llm = llm_connection
+  .llm = llm_connection
 )
 
 print(results$mean_score)

@@ -400,15 +400,13 @@ call_llm <- function(
 #' Execute a module on a dataset (tibble/data.frame) with optimized batch processing.
 #'
 #' @param module A DSPrrr module (e.g., created with `module()`)
-#' @param ... Additional arguments including:
-#'   \describe{
-#'     \item{dataset}{A tibble or data frame with columns matching the module's inputs}
-#'     \item{.llm}{An ellmer chat object for LLM interaction (optional)}
-#'     \item{.verbose}{Logical indicating whether to print debug information}
-#'     \item{.parallel}{Logical indicating whether to process in parallel (default TRUE)}
-#'     \item{.progress}{Logical indicating whether to show progress bar (default TRUE)}
-#'     \item{.return_format}{Character, either "simple" or "structured" (default "simple")}
-#'   }
+#' @param dataset A tibble or data frame with columns matching the module's inputs
+#' @param .llm An ellmer chat object for LLM interaction (optional)
+#' @param .verbose Logical indicating whether to print debug information
+#' @param .parallel Logical indicating whether to process in parallel (default FALSE)
+#' @param .progress Logical indicating whether to show progress bar (default TRUE)
+#' @param .return_format Character, either "simple" or "structured" (default "simple")
+#' @param ... Additional arguments passed to methods
 #'
 #' @return A tibble with the input columns plus a result column containing outputs
 #' @export
@@ -428,8 +426,8 @@ run_dataset <- function(module, ...) {
   UseMethod("run_dataset")
 }
 
-#' Run dataset method for R6 Module classes
-#' @noRd
+#' @rdname run_dataset
+#' @export
 run_dataset.Module <- function(
   module,
   dataset,

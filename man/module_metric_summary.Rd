@@ -23,6 +23,8 @@ computing yardstick metrics.}
 
 \item{estimate}{Column name (string) containing the model predictions when
 computing yardstick metrics.}
+
+\item{...}{Additional arguments passed to yardstick metrics.}
 }
 \value{
 A tibble with one row per trial containing columns:
@@ -48,7 +50,7 @@ supplied, the function also computes those metrics for each trial using the
 stored evaluation datasets.
 }
 \examples{
-\\dontrun{
+\dontrun{
 trial_metrics <- module_metric_summary(my_module)
 yardstick_metrics <- module_metric_summary(
   my_module,

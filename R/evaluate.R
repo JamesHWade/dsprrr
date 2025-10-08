@@ -29,15 +29,7 @@ evaluate <- function(module, ...) {
   UseMethod("evaluate")
 }
 
-#' Evaluate an R6 Module
-#'
-#' @details
-#' Parallel execution is conservative by default to avoid reusing non-
-#' serialisable LLM client objects across workers. When `.parallel = TRUE`, a
-#' fresh client is created per worker only if `.llm` is `NULL`; otherwise the
-#' call falls back to sequential execution with a warning.
-#'
-#' @noRd
+#' @export
 evaluate.Module <- function(module, dataset, metric,
                              .llm = NULL, .parallel = FALSE,
                              .progress = TRUE, ...) {

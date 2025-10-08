@@ -34,7 +34,6 @@ Imports:
     glue,
     jsonlite,
     lifecycle,
-    mirai,
     R6,
     rlang,
     S7,

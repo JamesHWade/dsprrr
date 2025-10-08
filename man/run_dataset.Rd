@@ -2,22 +2,37 @@
 % Please edit documentation in R/run.R
 \name{run_dataset}
 \alias{run_dataset}
+\alias{run_dataset.Module}
 \title{Execute Module on Dataset}
 \usage{
 run_dataset(module, ...)
+
+\method{run_dataset}{Module}(
+  module,
+  dataset,
+  .llm = NULL,
+  .verbose = FALSE,
+  .parallel = FALSE,
+  .progress = TRUE,
+  .return_format = "simple"
+)
 }
 \arguments{
 \item{module}{A DSPrrr module (e.g., created with \code{module()})}
 
-\item{...}{Additional arguments including:
-\describe{
+\item{...}{Additional arguments passed to methods}
+
 \item{dataset}{A tibble or data frame with columns matching the module's inputs}
+
 \item{.llm}{An ellmer chat object for LLM interaction (optional)}
+
 \item{.verbose}{Logical indicating whether to print debug information}
-\item{.parallel}{Logical indicating whether to process in parallel (default TRUE)}
+
+\item{.parallel}{Logical indicating whether to process in parallel (default FALSE)}
+
 \item{.progress}{Logical indicating whether to show progress bar (default TRUE)}
+
 \item{.return_format}{Character, either "simple" or "structured" (default "simple")}
-}}
 }
 \value{
 A tibble with the input columns plus a result column containing outputs

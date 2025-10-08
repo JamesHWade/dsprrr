@@ -2,9 +2,23 @@
 % Please edit documentation in R/optimize.R
 \name{optimize_grid}
 \alias{optimize_grid}
+\alias{optimize_grid.Module}
 \title{Grid Search Optimisation}
 \usage{
 optimize_grid(module, ...)
+
+\method{optimize_grid}{Module}(
+  module,
+  devset,
+  metric = metric_exact_match(),
+  resamples = NULL,
+  grid = NULL,
+  parameters = NULL,
+  objective = c("maximize", "minimize"),
+  .llm = NULL,
+  control = list(),
+  ...
+)
 }
 \arguments{
 \item{module}{A DSPrrr module (created via \code{\link[=module]{module()}}).}
@@ -18,14 +32,14 @@ signature plus any fields consumed by the metric.}
 \code{\link[=metric_exact_match]{metric_exact_match()}}. Use \code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}} to adapt yardstick/vitals
 metrics.}
 
+\item{resamples}{Optional \code{rset} object from the rsample package providing resampling splits
+for evaluation. When supplied, each candidate is assessed on every
+resample and scores are aggregated across splits.}
+
 \item{grid}{Optional data frame/tibble of candidate configurations.}
 
 \item{parameters}{Optional named list or tidymodels parameter set used to
 generate a grid when \code{grid} is not supplied.}
-
-\item{resamples}{Optional \code{rset} object from the rsample package providing resampling splits
-for evaluation. When supplied, each candidate is assessed on every
-resample and scores are aggregated across splits.}
 
 \item{objective}{Optimisation direction. \code{"maximize"} (default) selects the
 highest metric value; \code{"minimize"} selects the lowest.}

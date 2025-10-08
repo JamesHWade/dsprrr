@@ -6,6 +6,14 @@
 #' can be expanded into a grid (named lists or tidymodels parameter sets).
 #'
 #' @param module A DSPrrr module (created via [module()]).
+#' @param ... Additional arguments passed to methods.
+#'
+#' @return The optimised module (modified in place, invisibly).
+#' @export
+optimize_grid <- function(module, ...) {
+  UseMethod("optimize_grid")
+}
+
 #' @param devset Development dataset containing columns required by the module's
 #'   signature plus any fields consumed by the metric.
 #' @param metric Metric function applied per example. Defaults to
@@ -26,13 +34,7 @@
 #'   `grid_levels` (integer, for regular grids), and `grid_size` (integer, for
 #'   random grids).
 #' @param ... Additional arguments forwarded to [evaluate()].
-#'
-#' @return The optimised module (modified in place, invisibly).
-#' @export
-optimize_grid <- function(module, ...) {
-  UseMethod("optimize_grid")
-}
-
+#' @rdname optimize_grid
 #' @export
 optimize_grid.Module <- function(module,
                                  devset,
@@ -550,6 +552,7 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
 #'   computing yardstick metrics.
 #' @param estimate Column name (string) containing the model predictions when
 #'   computing yardstick metrics.
+#' @param ... Additional arguments passed to yardstick metrics.
 #'
 #' @return A tibble with one row per trial containing columns:
 #'   * `trial_id` - trial identifier.
@@ -565,7 +568,7 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
 #'     requested.
 #' @export
 #' @examples
-#' \\dontrun{
+#' \dontrun{
 #' trial_metrics <- module_metric_summary(my_module)
 #' yardstick_metrics <- module_metric_summary(
 #'   my_module,
