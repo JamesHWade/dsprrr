@@ -14,7 +14,8 @@ run_dataset(module, ...)
   .verbose = FALSE,
   .parallel = FALSE,
   .progress = TRUE,
-  .return_format = "simple"
+  .return_format = "simple",
+  ...
 )
 }
 \arguments{

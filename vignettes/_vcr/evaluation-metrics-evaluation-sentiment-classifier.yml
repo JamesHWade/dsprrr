@@ -1,0 +1,125 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: This
+        product is amazing! Best purchase ever!\n\nSentiment:"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:49:36 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '40000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:49:36Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:49:36Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:49:36Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '48000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:49:36Z'
+      request-id: req_011CTvdKCwU6P9pPLyC1SgXv
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '763'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98921bc1461a6-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01NDbzx3WyZgjAQbqPmLbd97","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01CDGmSHae1og53pgP1xsy7r","name":"_structured_tool_call","input":{"data":{"sentiment":"positive"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":468,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:49:36
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: This
+        product is amazing! Best purchase ever!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: Terrible experience.
+        Would not recommend.\n\nSentiment:"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:49:37 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '40000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:49:37Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:49:37Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:49:38Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '48000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:49:37Z'
+      request-id: req_011CTvdKHYnjxzEGiJ3owdHX
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '749'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b989285ac961a6-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01Lapxe7m7GwG567C3Sz3htR","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_013ag6d4SwrDbKh3Cm5zcM6p","name":"_structured_tool_call","input":{"data":{"sentiment":"negative"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":507,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:49:37
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: This
+        product is amazing! Best purchase ever!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: Terrible experience.
+        Would not recommend.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: It''s okay,
+        nothing special but works.\n\nSentiment:"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:49:38 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:49:38Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:49:38Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:49:39Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:49:38Z'
+      request-id: req_011CTvdKMebUycvhLSY55bs4
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '773'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9892e682d61a6-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01X2t6ejbMheBNRySpJ22M7g","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01BMT7KpJEwpD5QB4yieNuPm","name":"_structured_tool_call","input":{"data":{"sentiment":"neutral"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":547,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:49:38
+recorded_with: VCR-vcr/2.0.0

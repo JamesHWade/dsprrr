@@ -1,0 +1,270 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: This
+        product is amazing! Best purchase ever!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: Terrible experience.
+        Would not recommend.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: It''s okay,
+        nothing special but works.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Loved it\nSentiment:"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":""}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:49:50 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:49:50Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:49:50Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:49:50Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:49:50Z'
+      request-id: req_011CTvdLDeAhDMNsb5tXMWSF
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '792'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b989778f4761a6-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01VbJbJgFg3er6QXTa8HkFjP","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_015eEtB7UfmC56Vmn8ti5CBX","name":"_structured_tool_call","input":{"data":{"sentiment":"positive"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":855,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:49:50
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: This
+        product is amazing! Best purchase ever!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: Terrible experience.
+        Would not recommend.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: It''s okay,
+        nothing special but works.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Loved it\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Awful\nSentiment:"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":""}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:49:51 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:49:52Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:49:52Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:49:52Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:49:52Z'
+      request-id: req_011CTvdLJA2dkgmBSjc3oqUD
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1475'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9897d7cc361a6-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_011hpxRmmnmxGHuG6ad9Xki9","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_014H8te9zmVZ5k3hjExDLSWF","name":"_structured_tool_call","input":{"data":{"sentiment":"negative"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":886,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:49:51
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: This
+        product is amazing! Best purchase ever!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: Terrible experience.
+        Would not recommend.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: It''s okay,
+        nothing special but works.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Loved it\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Awful\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Pretty good\nSentiment:"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":""}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:49:52 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:49:53Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:49:53Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:49:53Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:49:53Z'
+      request-id: req_011CTvdLQntC7fscdwzXTHwY
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '815'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98987ce4761a6-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_014YazqS4BHKC3PNDmnge73e","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01NFB7kZCSgJXDaMh7Jb38KG","name":"_structured_tool_call","input":{"data":{"sentiment":"positive"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":917,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:49:52
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: This
+        product is amazing! Best purchase ever!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: Terrible experience.
+        Would not recommend.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nAnalyze sentiment: It''s okay,
+        nothing special but works.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\n# Document text to analyze\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Loved it\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Awful\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Pretty good\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nReview: Fantastic\nSentiment:"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":""}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:49:53 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:49:55Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:49:54Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:49:54Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:49:54Z'
+      request-id: req_011CTvdLV47jgUG26UWYG6dj
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '889'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9898e0c5961a6-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01WEJZFwY8k4uHGXcveBPrC2","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01EYQnBbjKZyHnM2DUSqcdDL","name":"_structured_tool_call","input":{"data":{"sentiment":"positive"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":948,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:49:53
+recorded_with: VCR-vcr/2.0.0

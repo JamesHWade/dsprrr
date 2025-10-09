@@ -180,12 +180,13 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #'   Default is 5.
 #' @param variants A data frame containing variant configurations to test.
 #'   Must have an 'id' column. Other columns define parameter values.
-#'   Default is a tibble with one row containing NA values for instructions and template.
+#'   If not provided, uses a single variant with default values.
 #' @param k Number of examples to include in few-shot prompts. Default is 2.
 #' @param eval_sample_size Number of examples to use for evaluation during
 #'   grid search. Default is 50.
 #' @param verbose Whether to print progress messages. Default is TRUE.
 #'
+#' @usage NULL
 #' @export
 GridSearchTeleprompter <- S7::new_class(
   "GridSearchTeleprompter",
@@ -193,20 +194,18 @@ GridSearchTeleprompter <- S7::new_class(
   properties = list(
     variants = S7::new_property(
       S7::class_data.frame,
-      default = tibble::tibble(id = 1L, instructions = NA_character_, template = NA_character_),
+      default = data.frame(),
       validator = function(value) {
         if (!is.data.frame(value)) {
           return("variants must be a data frame or tibble")
         }
-        # Allow empty data frame for default, but require rows if provided
-        if (!identical(value, tibble::tibble(id = 1L, instructions = NA_character_, template = NA_character_)) &&
-            nrow(value) == 0) {
-          return("variants must have at least one row when provided")
-        }
-        # Check for required columns
-        required_cols <- c("id")
-        if (!all(required_cols %in% names(value))) {
-          return("variants must have an 'id' column")
+        # Allow empty data frame (will use default in compile)
+        if (nrow(value) > 0) {
+          # Check for required columns when provided
+          required_cols <- c("id")
+          if (!all(required_cols %in% names(value))) {
+            return("variants must have an 'id' column when provided")
+          }
         }
         NULL
       }
@@ -240,10 +239,18 @@ GridSearchTeleprompter <- S7::new_class(
 
 #' Compile method for GridSearchTeleprompter
 #' @noRd
-compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
-                               .llm = NULL, ...) {
+compile_gridsearch <- function(
+  teleprompter,
+  program,
+  trainset,
+  valset = NULL,
+  .llm = NULL,
+  ...
+) {
   if (!inherits(program, "Module")) {
-    cli::cli_abort("GridSearchTeleprompter currently only supports Predict modules")
+    cli::cli_abort(
+      "GridSearchTeleprompter currently only supports Predict modules"
+    )
   }
 
   if (!is.data.frame(trainset)) {
@@ -275,7 +282,21 @@ compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
     demos <- list()
   }
 
-  variants <- tibble::as_tibble(teleprompter@variants)
+  # Use default variants if not provided or if it's the S7 uninitialized value
+  variants_raw <- teleprompter@variants
+  if (
+    is.null(variants_raw) ||
+      nrow(variants_raw) == 0 ||
+      identical(variants_raw, data.frame())
+  ) {
+    variants <- tibble::tibble(
+      id = 1L,
+      instructions = NA_character_,
+      template = NA_character_
+    )
+  } else {
+    variants <- tibble::as_tibble(variants_raw)
+  }
   variants$id <- as.character(variants$id)
 
   base_instructions <- program$signature@instructions
@@ -312,12 +333,17 @@ compile_gridsearch <- function(teleprompter, program, trainset, valset = NULL,
 
   optimized$config$compiled <- TRUE
   optimized$config$teleprompter <- "GridSearchTeleprompter"
-  optimized$config$best_variant <- optimized$state$best_params$id %||% NA_character_
+  optimized$config$best_variant <- optimized$state$best_params$id %||%
+    NA_character_
   optimized$config$best_score <- optimized$state$best_score
   optimized$config$all_variants <- variants
   optimized$config$all_scores <- stats::setNames(
     optimized$state$trials$score,
-    vapply(optimized$state$trials$parameters, function(param) param$id %||% NA_character_, character(1))
+    vapply(
+      optimized$state$trials$parameters,
+      function(param) param$id %||% NA_character_,
+      character(1)
+    )
   )
 
   optimized
@@ -340,8 +366,8 @@ copy_module <- function(module) {
 #' @noRd
 copy_signature <- function(sig) {
   Signature(
-    inputs = sig@inputs,  # Lists are copied by value
-    output_type = sig@output_type,  # These are typically immutable
+    inputs = sig@inputs, # Lists are copied by value
+    output_type = sig@output_type, # These are typically immutable
     instructions = sig@instructions
   )
 }
@@ -357,7 +383,14 @@ format_trainset_as_demos <- function(trainset, signature) {
   # Determine output column name
   # Try common names first
   output_col <- NULL
-  possible_output_names <- c("output", "label", "answer", "response", "result", "y")
+  possible_output_names <- c(
+    "output",
+    "label",
+    "answer",
+    "response",
+    "result",
+    "y"
+  )
   for (col in possible_output_names) {
     if (col %in% names(trainset)) {
       output_col <- col
@@ -411,6 +444,13 @@ format_trainset_as_demos <- function(trainset, signature) {
 #' Evaluate a module on a dataset
 #' @noRd
 evaluate_module <- function(module, dataset, metric, .llm = NULL, ...) {
-  evaluate(module, dataset, metric, .llm = .llm, .parallel = FALSE,
-           .progress = FALSE, ...)
+  evaluate(
+    module,
+    dataset,
+    metric,
+    .llm = .llm,
+    .parallel = FALSE,
+    .progress = FALSE,
+    ...
+  )
 }

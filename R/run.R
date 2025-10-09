@@ -435,7 +435,8 @@ run_dataset.Module <- function(
   .verbose = FALSE,
   .parallel = FALSE,
   .progress = TRUE,
-  .return_format = "simple"
+  .return_format = "simple",
+  ...
 ) {
   # Validate dataset
   if (!is.data.frame(dataset)) {

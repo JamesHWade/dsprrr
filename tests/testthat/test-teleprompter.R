@@ -143,11 +143,10 @@ test_that("GridSearchTeleprompter validates variants", {
     "must have an 'id' column"
   )
 
-  # Empty variants
+  # Empty variants are now allowed (will use default in compile)
   empty_variants <- data.frame(id = character())
-  expect_error(
-    GridSearchTeleprompter(variants = empty_variants),
-    "at least one row"
+  expect_no_error(
+    GridSearchTeleprompter(variants = empty_variants)
   )
 
   # Not a data frame

@@ -1,0 +1,848 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:12 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '40000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:11Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:12Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:12Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '48000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:11Z'
+      request-id: req_011CTvdMnyuEi28DHM9ew9GL
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1520'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b989fd0d5cdad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01WB23ce9sr9UL7tuhuHsEYt","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_0131yHfZWj4T7xQBWiHhc6az","name":"_structured_tool_call","input":{"data":{"summary":"Strong
+        Q3 performance with 25% YoY revenue growth, record-high 92% customer satisfaction,
+        and planned expansion into three new markets.","sentiment":"positive","recommendation":"approve"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":705,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":91,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:12
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Project delays have caused budget overruns of 40%. Team
+        morale is low.\n     Three key engineers resigned last month. Urgent intervention
+        needed."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:13 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:13Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:14Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:13Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:13Z'
+      request-id: req_011CTvdMvBF2tGrZuj4FdWyU
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1407'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a079ec2dad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01RQKunXVygKLJhBeqmY5DBk","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_014iztcgwpiYM2txQhT6dZeC","name":"_structured_tool_call","input":{"data":{"summary":"Critical
+        project issues including 40% budget overruns, low team morale, and loss of
+        three key engineers","sentiment":"negative","recommendation":"review"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":825,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":83,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:13
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Project delays have caused budget overruns of 40%. Team
+        morale is low.\n     Three key engineers resigned last month. Urgent intervention
+        needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:15 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:15Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:15Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:15Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:15Z'
+      request-id: req_011CTvdN2sKt1CD4TJYVPb5d
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1392'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a115bcadad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01UnhPpkRiJW9rPH45iWMUKg","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01XszMPZDwxkyGUfvrnaYNZS","name":"_structured_tool_call","input":{"data":{"summary":"Policy
+        proposal shows $2M cost savings potential but faces implementation challenges.
+        Mixed stakeholder feedback received, with further consultation needed.","sentiment":"mixed","recommendation":"review"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":954,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":84,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:15
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Project delays have caused budget overruns of 40%. Team
+        morale is low.\n     Three key engineers resigned last month. Urgent intervention
+        needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:17 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:17Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:17Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:16Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:17Z'
+      request-id: req_011CTvdN9fc126wqCea5Vevw
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1511'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a1b4a02dad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01PdTss9Wn5UyCL241qRMpyc","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_017V6gb2FEUHPVZBASvxAyn6","name":"_structured_tool_call","input":{"data":{"summary":"Q3
+        shows 25% YoY revenue growth, record 92% customer satisfaction, and planned
+        expansion into three new markets","sentiment":"positive","recommendation":"approve"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1142,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":87,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:17
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Project delays have caused budget overruns of 40%. Team
+        morale is low.\n     Three key engineers resigned last month. Urgent intervention
+        needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Project delays have caused budget overruns
+        of 40%. Team morale is low.\n     Three key engineers resigned last month.
+        Urgent intervention needed."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:18 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:19Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:19Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:18Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:19Z'
+      request-id: req_011CTvdNGvRG1h5GQqPgMs37
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1701'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a25ca67dad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01SiWHs2Gm8s2VDjiKraJpnK","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01VwVKafALFDfHSYQrZ2JEET","name":"_structured_tool_call","input":{"data":{"summary":"Project
+        is facing severe challenges with 40% budget overruns, low team morale, and
+        loss of key personnel. Three engineers have resigned and immediate action
+        is required.","sentiment":"negative","recommendation":"reject"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1315,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":94,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:18
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Project delays have caused budget overruns of 40%. Team
+        morale is low.\n     Three key engineers resigned last month. Urgent intervention
+        needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Project delays have caused budget overruns
+        of 40%. Team morale is low.\n     Three key engineers resigned last month.
+        Urgent intervention needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: The new policy proposal includes both
+        benefits and drawbacks.\n     Cost savings of $2M are projected, but implementation
+        challenges exist.\n     Stakeholder feedback has been mixed, requiring further
+        consultation."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:20 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:21Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:21Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:20Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:21Z'
+      request-id: req_011CTvdNR5oUGmtjvVtc4Axa
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1628'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a31ce4bdad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01DTKPdUNtPgjpU5sxgnmmqK","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01PUFK6KMX2XvMMQKuMTacxm","name":"_structured_tool_call","input":{"data":{"summary":"Policy
+        proposal shows mixed results with $2M projected savings but faces implementation
+        challenges and divided stakeholder feedback, requiring additional consultation","sentiment":"mixed","recommendation":"review"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1497,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":84,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:20
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Project delays have caused budget overruns of 40%. Team
+        morale is low.\n     Three key engineers resigned last month. Urgent intervention
+        needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Project delays have caused budget overruns
+        of 40%. Team morale is low.\n     Three key engineers resigned last month.
+        Urgent intervention needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: The new policy proposal includes both
+        benefits and drawbacks.\n     Cost savings of $2M are projected, but implementation
+        challenges exist.\n     Stakeholder feedback has been mixed, requiring further
+        consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low.\n     Three
+        key engineers resigned last month. Urgent intervention needed.\nOutput: negative\n\nExample
+        3:\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:22 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '38000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:24Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:23Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:22Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '46000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:23Z'
+      request-id: req_011CTvdNYy4oCuazUSiQXcF5
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1495'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a3d4985dad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01JxVpgJjzfVY3ndgaBVKBYV","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01B9TaD7eRPowSphQQS8qxtC","name":"_structured_tool_call","input":{"data":{"summary":"Strong
+        Q3 performance with 25% revenue growth, record high customer satisfaction
+        at 92%, and planned expansion into three new markets.","sentiment":"positive","recommendation":"approve"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1729,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":87,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:22
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Project delays have caused budget overruns of 40%. Team
+        morale is low.\n     Three key engineers resigned last month. Urgent intervention
+        needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Project delays have caused budget overruns
+        of 40%. Team morale is low.\n     Three key engineers resigned last month.
+        Urgent intervention needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: The new policy proposal includes both
+        benefits and drawbacks.\n     Cost savings of $2M are projected, but implementation
+        challenges exist.\n     Stakeholder feedback has been mixed, requiring further
+        consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low.\n     Three
+        key engineers resigned last month. Urgent intervention needed.\nOutput: negative\n\nExample
+        3:\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low.\n     Three
+        key engineers resigned last month. Urgent intervention needed.\nOutput: negative\n\nExample
+        3:\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Project delays have caused budget overruns
+        of 40%. Team morale is low.\n     Three key engineers resigned last month.
+        Urgent intervention needed."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:24 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '38000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:27Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:25Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:24Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '46000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:25Z'
+      request-id: req_011CTvdNgSHHec8UTQbxfjjK
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1695'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a482b91dad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01RZhr8WgFYfzsbzDizaBHSv","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_018KvP2veXcSHKcmVNZT49ob","name":"_structured_tool_call","input":{"data":{"summary":"Severe
+        project issues with 40% budget overruns, low team morale, and loss of key
+        personnel. Critical situation requiring immediate action.","sentiment":"negative","recommendation":"reject"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1946,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":89,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:24
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven by strong
+        product sales.\n     Customer satisfaction scores reached an all-time high
+        of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: Project delays have caused budget overruns of 40%. Team
+        morale is low.\n     Three key engineers resigned last month. Urgent intervention
+        needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\n\n# Document text
+        to analyze\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Project delays have caused budget overruns
+        of 40%. Team morale is low.\n     Three key engineers resigned last month.
+        Urgent intervention needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        The new policy proposal includes both benefits and drawbacks.\n     Cost savings
+        of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: The new policy proposal includes both
+        benefits and drawbacks.\n     Cost savings of $2M are projected, but implementation
+        challenges exist.\n     Stakeholder feedback has been mixed, requiring further
+        consultation."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low.\n     Three
+        key engineers resigned last month. Urgent intervention needed.\nOutput: negative\n\nExample
+        3:\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Our Q3 revenue increased by 25% YoY, driven
+        by strong product sales.\n     Customer satisfaction scores reached an all-time
+        high of 92%.\n     We''re expanding into three new markets next quarter."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low.\n     Three
+        key engineers resigned last month. Urgent intervention needed.\nOutput: negative\n\nExample
+        3:\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: Project delays have caused budget overruns
+        of 40%. Team morale is low.\n     Three key engineers resigned last month.
+        Urgent intervention needed."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Analyze documents
+        for key information and provide recommendations.\n\nExample 1:\ndocument:
+        Our Q3 revenue increased by 25% YoY, driven by strong product sales.\n     Customer
+        satisfaction scores reached an all-time high of 92%.\n     We''re expanding
+        into three new markets next quarter.\nOutput: positive\n\nExample 2:\ndocument:
+        Project delays have caused budget overruns of 40%. Team morale is low.\n     Three
+        key engineers resigned last month. Urgent intervention needed.\nOutput: negative\n\nExample
+        3:\ndocument: The new policy proposal includes both benefits and drawbacks.\n     Cost
+        savings of $2M are projected, but implementation challenges exist.\n     Stakeholder
+        feedback has been mixed, requiring further consultation.\nOutput: mixed\n\n\n#
+        Document text to analyze\ndocument: The new policy proposal includes both
+        benefits and drawbacks.\n     Cost savings of $2M are projected, but implementation
+        challenges exist.\n     Stakeholder feedback has been mixed, requiring further
+        consultation."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":"Concise
+        summary of main points"},"sentiment":{"type":"string","description":"Overall
+        document sentiment","enum":["positive","negative","neutral","mixed"]},"recommendation":{"type":"string","description":"Recommended
+        action","enum":["approve","review","reject"]}},"required":["summary","sentiment","recommendation"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:26 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '40000'
+      anthropic-ratelimit-input-tokens-remaining: '37000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:30Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:26Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:26Z'
+      anthropic-ratelimit-tokens-limit: '48000'
+      anthropic-ratelimit-tokens-remaining: '45000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:26Z'
+      request-id: req_011CTvdNpcAEeHDUY7zBzhWC
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1684'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a542929dad8-ORD
+    body:
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01SqdBr4kKgmJqNafNx97JgT","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01GpDmVjxiQhJkPfBtP8Eotf","name":"_structured_tool_call","input":{"data":{"summary":"Policy
+        proposal has projected cost savings of $2M but faces implementation challenges
+        and mixed stakeholder feedback requiring more consultation","sentiment":"mixed","recommendation":"review"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":2172,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":82,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:26
+recorded_with: VCR-vcr/2.0.0

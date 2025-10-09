@@ -1,0 +1,154 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+    body:
+      string: '{"messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]}],"model":"gpt-5-mini","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":""}},"required":["sentiment"],"additionalProperties":false},"strict":true}}}'
+  response:
+    status: 200
+    headers:
+      access-control-expose-headers: X-Request-ID
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 98b98e697c67a679-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Wed, 08 Oct 2025 23:53:15 GMT
+      openai-organization: dow-analytical-science
+      openai-processing-ms: '2734'
+      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=l6_dgK8L_UJxTE30xtlRWLj.g9nCThNbgRQu4msUe_g-1759967595-1.0.1.1-1HaqRLzkIxDoIFC.ZR5l.ouxm4FmLYb6GMZVvK7A_ipVORqf5QwnYzvaHmh6zkPOnkeKkEMjpWvPpKsRQS5hLDzjbEp8kUGHcYSomcFVtRY;
+        path=/; expires=Thu, 09-Oct-25 00:23:15 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=5sjpj4uuqen9PtNvcrTNiGyYo8FobxUzHXu.TfYl.78-1759967595711-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '3174'
+      x-openai-proxy-wasm: v0.1
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '10000000'
+      x-ratelimit-remaining-requests: '9999'
+      x-ratelimit-remaining-tokens: '9999977'
+      x-ratelimit-reset-requests: 6ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_2fa0f028e6314f6aaf252b76c9716626
+    body:
+      string: |
+        {
+          "id": "chatcmpl-COYG1iocFHroPqxgxDGjgLWieRPRh",
+          "object": "chat.completion",
+          "created": 1759967593,
+          "model": "gpt-5-mini-2025-08-07",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"sentiment\":\"positive\"}",
+                "refusal": null,
+                "annotations": []
+              },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 56,
+            "completion_tokens": 147,
+            "total_tokens": 203,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 128,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "service_tier": "default",
+          "system_fingerprint": null
+        }
+  recorded_at: 2025-10-08 23:53:15
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+    body:
+      string: '{"messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]}],"model":"gpt-5-mini","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":""}},"required":["sentiment"],"additionalProperties":false},"strict":true}}}'
+  response:
+    status: 200
+    headers:
+      access-control-expose-headers: X-Request-ID
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 98b98e829fc6a679-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Wed, 08 Oct 2025 23:53:18 GMT
+      openai-organization: dow-analytical-science
+      openai-processing-ms: '2329'
+      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=WbjpBLd16JGhz9pparDZZ79zmoZ7qjBC7J800Su2otQ-1759967598-1.0.1.1-mLgpVbgvGglIYFp_UOmCa5TweoMOijQsxERLVwi_Vn.EJDC.pqdB2qut9Q3gveMHst01mjjfpTEU3ZlzSJHyAxaxNwQ1umfKOMwd8oA1n1c;
+        path=/; expires=Thu, 09-Oct-25 00:23:18 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Tc8E.yN2A_kg2Ev2ZH_R95bts6WDgPqctg25J5OZkd4-1759967598377-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2373'
+      x-openai-proxy-wasm: v0.1
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '10000000'
+      x-ratelimit-remaining-requests: '9999'
+      x-ratelimit-remaining-tokens: '9999977'
+      x-ratelimit-reset-requests: 6ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_4e9ab8f44ad344e694b76b960498bfd8
+    body:
+      string: |
+        {
+          "id": "chatcmpl-COYG4G0nmqLBBD0tNND59UJnVwsCp",
+          "object": "chat.completion",
+          "created": 1759967596,
+          "model": "gpt-5-mini-2025-08-07",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"sentiment\":\"positive\"}",
+                "refusal": null,
+                "annotations": []
+              },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 56,
+            "completion_tokens": 83,
+            "total_tokens": 139,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 64,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "service_tier": "default",
+          "system_fingerprint": null
+        }
+  recorded_at: 2025-10-08 23:53:18
+recorded_with: VCR-vcr/2.0.0

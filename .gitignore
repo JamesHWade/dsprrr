@@ -14,7 +14,3 @@ vignettes/*.html
 vignettes/*.R
 /doc/
 /Meta/
-
-# vcr cassettes (contain API responses)
-vignettes/_vcr/*.yml
-tests/testthat/_vcr/*.yml

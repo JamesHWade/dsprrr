@@ -1,0 +1,40 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:36 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:36Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:36Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:35Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:36Z'
+      request-id: req_011CTvdPXS5LYbS4DQLTVDj5
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '1951'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a8fee72ddf4-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01QwHywnUbrMJGhb6s3vrHNN","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01SZAipJvg2fWF9T3wmbkair","name":"_structured_tool_call","input":{"data":{"sentiment":"positive"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":460,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:36
+recorded_with: VCR-vcr/2.0.0

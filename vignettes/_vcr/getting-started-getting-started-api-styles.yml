@@ -1,0 +1,93 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `summary`.\n\nSummarize: The tidyverse is a collection
+        of R packages designed for data science. All packages share an underlying
+        design philosophy, grammar, and data structures."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"summary":{"type":"string","description":""}},"required":["summary"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:38 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:38Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:39Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:37Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:38Z'
+      request-id: req_011CTvdPgmQH2k7WAzZv1iLG
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '2247'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98a9d8ff6ddf4-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01R8w6dis9Bod5HFDD76Bxg1","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01C4siGtHhpP49S2ak2TSoQA","name":"_structured_tool_call","input":{"data":{"summary":"The
+        tidyverse is a collection of R packages for data science that share a common
+        design philosophy, grammar, and data structures."}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":504,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":62,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:38
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `summary`.\n\nSummarize: The tidyverse is a collection
+        of R packages designed for data science. All packages share an underlying
+        design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Summarize: The
+        tidyverse is a collection of R packages designed for data science. All packages
+        share an underlying design philosophy, grammar, and data structures."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"string","description":""}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Wed, 08 Oct 2025 23:50:41 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:40Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:41Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:40Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:40Z'
+      request-id: req_011CTvdPs8VUJRHze6KnzSJE
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '2233'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b98aaca971ddf4-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01SupWSTsPVvFYgZLD8QkB4L","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01XqdJm1ZVfgUs6TzQv9YQfk","name":"_structured_tool_call","input":{"data":"The
+        tidyverse is a unified collection of R packages for data science with shared
+        design principles."}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":517,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2025-10-08 23:50:41
+recorded_with: VCR-vcr/2.0.0

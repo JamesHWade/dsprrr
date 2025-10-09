@@ -3,18 +3,6 @@
 \name{GridSearchTeleprompter}
 \alias{GridSearchTeleprompter}
 \title{GridSearchTeleprompter}
-\usage{
-GridSearchTeleprompter(
-  metric = NULL,
-  metric_threshold = NULL,
-  max_errors = 5L,
-  variants = structure(list(id = 1L, instructions = NA_character_, template =
-    NA_character_), class = c("tbl_df", "tbl", "data.frame"), row.names = c(NA, -1L)),
-  k = 2L,
-  eval_sample_size = 50L,
-  verbose = TRUE
-)
-}
 \arguments{
 \item{metric}{A metric function for evaluating predictions. If NULL,
 uses exact_match() by default.}
@@ -27,7 +15,7 @@ Default is 5.}
 
 \item{variants}{A data frame containing variant configurations to test.
 Must have an 'id' column. Other columns define parameter values.
-Default is a tibble with one row containing NA values for instructions and template.}
+If not provided, uses a single variant with default values.}
 
 \item{k}{Number of examples to include in few-shot prompts. Default is 2.}
 
