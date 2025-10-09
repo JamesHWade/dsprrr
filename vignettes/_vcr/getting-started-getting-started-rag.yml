@@ -1,0 +1,158 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `summary`.\n\nSummarize: The tidyverse is a collection
+        of R packages designed for data science. All packages share an underlying
+        design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Summarize: The
+        tidyverse is a collection of R packages designed for data science. All packages
+        share an underlying design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nInput:\ntext: I love this consistent
+        API!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This package makes LLM programming so much easier!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: I love this approach!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This is confusing.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `sentence`, produce the fields `sentiment`.\n\nAnalyze: The product works
+        okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        and provide confidence with reasoning.\n\nAnalyze this sentence: The product
+        works okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `article`, produce the fields `title`, `summary`.\n\nInput:\narticle: Your
+        article text here..."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Extract structured
+        information from the article.\n\nInput:\narticle: Apple Inc. announced its
+        latest iPhone 15 today in Cupertino.\n         CEO Tim Cook highlighted the
+        new camera system and A17 chip.\n         The device will be available starting
+        September 22nd for $799."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `context`, `question`, produce the fields `answer`.\n\nContext: The R language
+        was created by Ross Ihaka and Robert Gentleman\n           at the University
+        of Auckland, New Zealand. The project was\n           conceived in 1992, with
+        an initial version released in 1995.\n\nQuestion: Who created the R language?"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Thu, 09 Oct 2025 00:57:44 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-09T00:57:44Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-09T00:57:45Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-09T00:57:43Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-09T00:57:44Z'
+      request-id: req_011CTviWSK2cHWgjek7FkBWC
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '2720'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9ece61913251b-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01NGo6QNQL8UbHKSgr5TNLJz","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_018njkuhZ3TU52Teh8X9CppK","name":"_structured_tool_call","input":{"data":{"answer":"Ross
+        Ihaka and Robert Gentleman created the R language at the University of Auckland,
+        New Zealand."}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":945,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":57,"service_tier":"standard"}}'
+  recorded_at: 2025-10-09 00:57:44
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `summary`.\n\nSummarize: The tidyverse is a collection
+        of R packages designed for data science. All packages share an underlying
+        design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Summarize: The
+        tidyverse is a collection of R packages designed for data science. All packages
+        share an underlying design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nInput:\ntext: I love this consistent
+        API!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This package makes LLM programming so much easier!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: I love this approach!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This is confusing.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `sentence`, produce the fields `sentiment`.\n\nAnalyze: The product works
+        okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        and provide confidence with reasoning.\n\nAnalyze this sentence: The product
+        works okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `article`, produce the fields `title`, `summary`.\n\nInput:\narticle: Your
+        article text here..."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Extract structured
+        information from the article.\n\nInput:\narticle: Apple Inc. announced its
+        latest iPhone 15 today in Cupertino.\n         CEO Tim Cook highlighted the
+        new camera system and A17 chip.\n         The device will be available starting
+        September 22nd for $799."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `context`, `question`, produce the fields `answer`.\n\nContext: The R language
+        was created by Ross Ihaka and Robert Gentleman\n           at the University
+        of Auckland, New Zealand. The project was\n           conceived in 1992, with
+        an initial version released in 1995.\n\nQuestion: Who created the R language?"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Answer the question
+        based on the provided context.\n                 Indicate if you used the
+        context in your answer.\n\nContext: The R language was created by Ross Ihaka
+        and Robert Gentleman\n           at the University of Auckland, New Zealand.
+        The project was\n           conceived in 1992, with an initial version released
+        in 1995.\n\nQuestion: Who created the R language?\n\nAnswer:"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""},"confidence":{"type":"string","description":"","enum":["high","medium","low"]},"sources_used":{"type":"boolean","description":""}},"required":["answer","confidence","sources_used"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Thu, 09 Oct 2025 00:57:47 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-09T00:57:47Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-09T00:57:47Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-09T00:57:46Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-09T00:57:47Z'
+      request-id: req_011CTviWezXCP3gU6HhVvH8v
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '2349'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9ecf859ec251b-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01SQSRKd3vrRr1yAqTYLV8hM","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01CgEpfkcVRHX17SNr1qycZJ","name":"_structured_tool_call","input":{"data":{"answer":"Ross
+        Ihaka and Robert Gentleman created the R language at the University of Auckland,
+        New Zealand.","confidence":"high","sources_used":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1089,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":77,"service_tier":"standard"}}'
+  recorded_at: 2025-10-09 00:57:47
+recorded_with: VCR-vcr/2.0.0

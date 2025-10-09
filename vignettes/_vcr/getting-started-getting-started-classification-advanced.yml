@@ -1,0 +1,123 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `summary`.\n\nSummarize: The tidyverse is a collection
+        of R packages designed for data science. All packages share an underlying
+        design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Summarize: The
+        tidyverse is a collection of R packages designed for data science. All packages
+        share an underlying design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nInput:\ntext: I love this consistent
+        API!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This package makes LLM programming so much easier!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: I love this approach!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This is confusing.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `sentence`, produce the fields `sentiment`.\n\nAnalyze: The product works
+        okay, but the support is terrible."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Thu, 09 Oct 2025 00:57:30 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-09T00:57:30Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-09T00:57:30Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-09T00:57:29Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-09T00:57:30Z'
+      request-id: req_011CTviVR27Hmwy2mMaHBiiy
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '2343'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9ec8f6b86251b-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01WmK5UxLhQjLGfpBafRDWbZ","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01YVtKEujdMUgTCZ1TVJu3za","name":"_structured_tool_call","input":{"data":{"sentiment":"negative"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":729,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-09 00:57:30
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `summary`.\n\nSummarize: The tidyverse is a collection
+        of R packages designed for data science. All packages share an underlying
+        design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Summarize: The
+        tidyverse is a collection of R packages designed for data science. All packages
+        share an underlying design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nInput:\ntext: I love this consistent
+        API!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This package makes LLM programming so much easier!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: I love this approach!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This is confusing.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `sentence`, produce the fields `sentiment`.\n\nAnalyze: The product works
+        okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        and provide confidence with reasoning.\n\nAnalyze this sentence: The product
+        works okay, but the support is terrible."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":"","enum":["positive","negative","neutral"]},"confidence":{"type":"number","description":""},"reasoning":{"type":"string","description":""}},"required":["sentiment","confidence","reasoning"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Thu, 09 Oct 2025 00:57:34 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-09T00:57:33Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-09T00:57:35Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-09T00:57:32Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-09T00:57:33Z'
+      request-id: req_011CTviVbuTEJNgvY2peW55C
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '3859'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9ec9f5fab251b-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01Coj2ccDnZhhb2bE8aYXq26","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01RRwKCB5JSixaKJYynYNKGF","name":"_structured_tool_call","input":{"data":{"sentiment":"negative","confidence":0.75,"reasoning":"While
+        the sentence contains mixed sentiments (''works okay'' is neutral/mildly positive),
+        the overall tone is negative due to the strong negative descriptor ''terrible''
+        applied to support, and the contrasting structure ''but'' emphasizes the negative
+        aspect over the neutral assessment of the product itself."}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":800,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":119,"service_tier":"standard"}}'
+  recorded_at: 2025-10-09 00:57:34
+recorded_with: VCR-vcr/2.0.0

@@ -7,47 +7,46 @@ http_interactions:
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: Hi, I''m wondering if you ship
-        to Canada?"}]}],"model":"gpt-4.1","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}}}'
+        feedback\n\n\nInput:\nemail: Hi, I''m wondering if you ship to Canada?"}]}],"model":"gpt-5-mini","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}}}'
   response:
     status: 200
     headers:
       access-control-expose-headers: X-Request-ID
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9856ff9f7d3ac714-ORD
+      cf-ray: 98b9f9a3be8d6179-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sat, 27 Sep 2025 00:48:59 GMT
-      openai-organization: dow-analytical-science
-      openai-processing-ms: '404'
-      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      date: Thu, 09 Oct 2025 01:06:29 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '5184'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=W0fBdKnJjDSSFZnAYlAdD1ETt2h0c7vqFPe4RrNrjj8-1758934139-1.0.1.1-ChhaewCjCjAn4hGpkGORIb0_Xj5xQVxNNGlfdN6poxQ52H6wA.2iTFJ5sQhR2hJ_xxQClYUuD.uggmO0aXSsKrc4wT0ePYyCqGgdanlZxwk;
-        path=/; expires=Sat, 27-Sep-25 01:18:59 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=eRrchJjUGUGVBslb4jRnr.W3WJB4Ju4RwUKxP15.FXs-1759971989-1.0.1.1-d0ZIqItnk49.xXEebdzFzjNv_6ogkM1IPTFGiECF0VL_q6JGvR1FvXqpxWE6H6Yy1W2GhigJt6zojWCd7mNWFzY0kCQzlbUBk6gIr_qkuQA;
+        path=/; expires=Thu, 09-Oct-25 01:36:29 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=OSooibqsMZWe3VX2vgXNg0m0AfvVpppc7d06xEsjyHc-1758934139935-0.0.1.1-604800000;
+      - _cfuvid=q8CVVaTewE92V8O_bJUXj7.8blygza.eP_XNbUInflo-1759971989198-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '633'
+      x-envoy-upstream-service-time: '5205'
       x-openai-proxy-wasm: v0.1
-      x-ratelimit-limit-requests: '10000'
-      x-ratelimit-limit-tokens: '2000000'
-      x-ratelimit-remaining-requests: '9999'
-      x-ratelimit-remaining-tokens: '1999914'
-      x-ratelimit-reset-requests: 6ms
-      x-ratelimit-reset-tokens: 2ms
-      x-request-id: req_f5689c9e976f43af846e45f0d6dc4aff
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '499918'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 9ms
+      x-request-id: req_61b8509c94cb4ab18d4d5d1f1b55935c
     body:
       string: |
         {
-          "id": "chatcmpl-CKDPPPfwQZE0NtNpyBc0mbvpY8Clg",
+          "id": "chatcmpl-COZOqxIMSumKVsxGIdQ7YQvv5nXlw",
           "object": "chat.completion",
-          "created": 1758934139,
-          "model": "gpt-4.1-2025-04-14",
+          "created": 1759971984,
+          "model": "gpt-5-mini-2025-08-07",
           "choices": [
             {
               "index": 0,
@@ -57,29 +56,28 @@ http_interactions:
                 "refusal": null,
                 "annotations": []
               },
-              "logprobs": null,
               "finish_reason": "stop"
             }
           ],
           "usage": {
-            "prompt_tokens": 155,
-            "completion_tokens": 15,
-            "total_tokens": 170,
+            "prompt_tokens": 147,
+            "completion_tokens": 156,
+            "total_tokens": 303,
             "prompt_tokens_details": {
               "cached_tokens": 0,
               "audio_tokens": 0
             },
             "completion_tokens_details": {
-              "reasoning_tokens": 0,
+              "reasoning_tokens": 128,
               "audio_tokens": 0,
               "accepted_prediction_tokens": 0,
               "rejected_prediction_tokens": 0
             }
           },
           "service_tier": "default",
-          "system_fingerprint": "fp_62bb2e3c55"
+          "system_fingerprint": null
         }
-  recorded_at: 2025-09-27 00:48:59
+  recorded_at: 2025-10-09 01:06:29
 - request:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
@@ -88,47 +86,47 @@ http_interactions:
         customer emails by category and priority. . Consider customer satisfaction
         and relationship.\n\nExample 1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited
         time offer!!!\nOutput: spam\n\nExample 2:\nemail: Just wanted to say your
-        customer service is excellent.\nOutput: feedback\n\n\n# Customer email text\nemail:
-        Hi, I''m wondering if you ship to Canada?"}]}],"model":"gpt-4.1","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}}}'
+        customer service is excellent.\nOutput: feedback\n\n\nInput:\nemail: Hi, I''m
+        wondering if you ship to Canada?"}]}],"model":"gpt-5-mini","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}}}'
   response:
     status: 200
     headers:
       access-control-expose-headers: X-Request-ID
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9856ffa79b4cc714-ORD
+      cf-ray: 98b9f9c60e856179-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sat, 27 Sep 2025 00:49:00 GMT
-      openai-organization: dow-analytical-science
-      openai-processing-ms: '634'
-      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      date: Thu, 09 Oct 2025 01:06:32 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '3201'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=KQdD._xCTQl71.I_Q3cvLuCYLLCJ__WdfrqZSz7qspU-1758934140-1.0.1.1-olk.AkqYUDjcDjMpR42z.3CBkAgQJSs8h3S53fJwjeGAY6vkQs0ECwvOwrO7FsEDcC6cwsq7UBdHhrnXnjptsMJluiC7nj4Z9oQRVlGmy2Y;
-        path=/; expires=Sat, 27-Sep-25 01:19:00 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=cOPVr6p0.chy2uMGJxgLmOy2mvr3dUT9m2BSx_53qbI-1759971992-1.0.1.1-fi9s.0QjYN6iXF93wvMkmVp7bxPqrqvQcc1_t3qQ6NK3QlCQFvn3GRjHZjBhYC.ru8oAyyieQj4ZOO3Oq2xJjmg8ZaZI4qcv0dNc8TRmoUI;
+        path=/; expires=Thu, 09-Oct-25 01:36:32 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=V4xIFIjxcj171fTL2dwQCKUBHGHCnbM_Xn_WWmnHlPw-1758934140806-0.0.1.1-604800000;
+      - _cfuvid=qT8_gJ4KEGIGiwTxP2SzC.DMa6oExOcVUMadOoo9skU-1759971992712-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '655'
+      x-envoy-upstream-service-time: '3221'
       x-openai-proxy-wasm: v0.1
-      x-ratelimit-limit-requests: '10000'
-      x-ratelimit-limit-tokens: '2000000'
-      x-ratelimit-remaining-requests: '9999'
-      x-ratelimit-remaining-tokens: '1999911'
-      x-ratelimit-reset-requests: 6ms
-      x-ratelimit-reset-tokens: 2ms
-      x-request-id: req_1aeac5aa0f03407995035c88dc0da19b
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '499914'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 10ms
+      x-request-id: req_dbcafc96803848a2b294c690009d4976
     body:
       string: |
         {
-          "id": "chatcmpl-CKDPQTyPOoC10pqjnkXJRSAYpLEk8",
+          "id": "chatcmpl-COZOvpfaVeY4FbFQdi42YRhcAxZVm",
           "object": "chat.completion",
-          "created": 1758934140,
-          "model": "gpt-4.1-2025-04-14",
+          "created": 1759971989,
+          "model": "gpt-5-mini-2025-08-07",
           "choices": [
             {
               "index": 0,
@@ -138,29 +136,28 @@ http_interactions:
                 "refusal": null,
                 "annotations": []
               },
-              "logprobs": null,
               "finish_reason": "stop"
             }
           ],
           "usage": {
-            "prompt_tokens": 156,
-            "completion_tokens": 15,
-            "total_tokens": 171,
+            "prompt_tokens": 148,
+            "completion_tokens": 92,
+            "total_tokens": 240,
             "prompt_tokens_details": {
               "cached_tokens": 0,
               "audio_tokens": 0
             },
             "completion_tokens_details": {
-              "reasoning_tokens": 0,
+              "reasoning_tokens": 64,
               "audio_tokens": 0,
               "accepted_prediction_tokens": 0,
               "rejected_prediction_tokens": 0
             }
           },
           "service_tier": "default",
-          "system_fingerprint": "fp_daf5fcc80a"
+          "system_fingerprint": null
         }
-  recorded_at: 2025-09-27 00:49:00
+  recorded_at: 2025-10-09 01:06:32
 - request:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
@@ -169,47 +166,47 @@ http_interactions:
         customer emails by category and priority. . Analyze linguistic patterns and
         intent markers.\n\nExample 1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited
         time offer!!!\nOutput: spam\n\nExample 2:\nemail: Just wanted to say your
-        customer service is excellent.\nOutput: feedback\n\n\n# Customer email text\nemail:
-        Hi, I''m wondering if you ship to Canada?"}]}],"model":"gpt-4.1","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}}}'
+        customer service is excellent.\nOutput: feedback\n\n\nInput:\nemail: Hi, I''m
+        wondering if you ship to Canada?"}]}],"model":"gpt-5-mini","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}}}'
   response:
     status: 200
     headers:
       access-control-expose-headers: X-Request-ID
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9856ffacfa15c714-ORD
+      cf-ray: 98b9f9dbcb026179-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sat, 27 Sep 2025 00:49:01 GMT
-      openai-organization: dow-analytical-science
-      openai-processing-ms: '534'
-      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      date: Thu, 09 Oct 2025 01:06:38 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '5494'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=bTwKhMYCeT3XoVB9zTeO78poiEZTla6HaVpsv3CxnXw-1758934141-1.0.1.1-R_gpqBCy7Ty.WIYmtZusbH8psJrWLUJ5985ivL7T6fOl8txd4gvo4yYyfc8aHe8JIhMlhhuM_bpS2fg5ea0_d7tVLJmEtHO9PtmYuU0d0ew;
-        path=/; expires=Sat, 27-Sep-25 01:19:01 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=wCpgGXvWIWUxGieaiut2L9MtjIf4npRDJVq7gMbmyhY-1759971998-1.0.1.1-YGewtgrp5Tw5cD16ZQ9ZbzQ7gylxPsiRh.DA_vcnzXwtH2_fPwkjdzccqlk4ZnJcNBCRNAEeO1dAvy2_hWofNivZuFTLWonU22uoO4FPUo4;
+        path=/; expires=Thu, 09-Oct-25 01:36:38 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=HT18pkg_CJLIh0BSKoHZGipMBcKTgeHGY5h.5_ZRoIQ-1758934141595-0.0.1.1-604800000;
+      - _cfuvid=3zB7EqnAhz2mDcbEIQ2V4HSrfhTqut3op31GWA2vSZg-1759971998466-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '556'
+      x-envoy-upstream-service-time: '5513'
       x-openai-proxy-wasm: v0.1
-      x-ratelimit-limit-requests: '10000'
-      x-ratelimit-limit-tokens: '2000000'
-      x-ratelimit-remaining-requests: '9999'
-      x-ratelimit-remaining-tokens: '1999911'
-      x-ratelimit-reset-requests: 6ms
-      x-ratelimit-reset-tokens: 2ms
-      x-request-id: req_b71928a085564cc5a6e04ef44f85040b
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '499915'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 10ms
+      x-request-id: req_aa4138748ea2450f8a0c152729be0a48
     body:
       string: |
         {
-          "id": "chatcmpl-CKDPRzbRp3FIg19WkQlfVMzGYj4GO",
+          "id": "chatcmpl-COZOzt7CWkNLWkp8dUhaF2DYdV6As",
           "object": "chat.completion",
-          "created": 1758934141,
-          "model": "gpt-4.1-2025-04-14",
+          "created": 1759971993,
+          "model": "gpt-5-mini-2025-08-07",
           "choices": [
             {
               "index": 0,
@@ -219,29 +216,28 @@ http_interactions:
                 "refusal": null,
                 "annotations": []
               },
-              "logprobs": null,
               "finish_reason": "stop"
             }
           ],
           "usage": {
-            "prompt_tokens": 157,
-            "completion_tokens": 15,
-            "total_tokens": 172,
+            "prompt_tokens": 149,
+            "completion_tokens": 220,
+            "total_tokens": 369,
             "prompt_tokens_details": {
               "cached_tokens": 0,
               "audio_tokens": 0
             },
             "completion_tokens_details": {
-              "reasoning_tokens": 0,
+              "reasoning_tokens": 192,
               "audio_tokens": 0,
               "accepted_prediction_tokens": 0,
               "rejected_prediction_tokens": 0
             }
           },
           "service_tier": "default",
-          "system_fingerprint": "fp_3502f4eb73"
+          "system_fingerprint": null
         }
-  recorded_at: 2025-09-27 00:49:01
+  recorded_at: 2025-10-09 01:06:38
 - request:
     method: POST
     uri: https://api.anthropic.com/v1/messages
@@ -256,44 +252,43 @@ http_interactions:
         1:\ncontext: Python was created by Guido van Rossum and first released in
         1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
         JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
-        How long did it take to create JavaScript?\nOutput: 10 days\n\n\n# Input:
-        context\ncontext: Ruby was created by Yukihiro Matsumoto in 1995.\n# Input:
-        question\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
         data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify customer
         emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: I''ve been waiting for 2 hours
-        on hold! This is unacceptable!"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
+        is unacceptable!"}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
         structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
   response:
     status: 200
     headers:
-      date: Sat, 27 Sep 2025 00:49:02 GMT
+      date: Thu, 09 Oct 2025 01:06:39 GMT
       content-type: application/json
       content-encoding: gzip
       anthropic-ratelimit-input-tokens-limit: '40000'
-      anthropic-ratelimit-input-tokens-remaining: '40000'
-      anthropic-ratelimit-input-tokens-reset: '2025-09-27T00:49:03Z'
+      anthropic-ratelimit-input-tokens-remaining: '39000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-09T01:06:39Z'
       anthropic-ratelimit-output-tokens-limit: '8000'
       anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2025-09-27T00:49:03Z'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-09T01:06:39Z'
       anthropic-ratelimit-requests-limit: '50'
       anthropic-ratelimit-requests-remaining: '49'
-      anthropic-ratelimit-requests-reset: '2025-09-27T00:49:02Z'
+      anthropic-ratelimit-requests-reset: '2025-10-09T01:06:39Z'
       anthropic-ratelimit-tokens-limit: '48000'
-      anthropic-ratelimit-tokens-remaining: '48000'
-      anthropic-ratelimit-tokens-reset: '2025-09-27T00:49:03Z'
-      request-id: req_011CTXz96GxXZLX5Yd6ZvFsa
+      anthropic-ratelimit-tokens-remaining: '47000'
+      anthropic-ratelimit-tokens-reset: '2025-10-09T01:06:39Z'
+      request-id: req_011CTvjBzRQTvfMUsiamD7gx
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      x-envoy-upstream-service-time: '1101'
+      x-envoy-upstream-service-time: '850'
       via: 1.1 google
       cf-cache-status: DYNAMIC
       x-robots-tag: none
       server: cloudflare
-      cf-ray: 9856ffb1e863cc3a-ORD
+      cf-ray: 98b9f9ffaefae7fa-ORD
     body:
-      string: '{"id":"msg_014Kyk7Jc2awrf9itKLZhr8z","type":"message","role":"assistant","model":"claude-3-5-sonnet-20241022","content":[{"type":"tool_use","id":"toolu_01QN8Rv2WXNjNQth5eh55ttk","name":"_structured_tool_call","input":{"data":{"category":"complaint","priority":"urgent","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":814,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
-  recorded_at: 2025-09-27 00:49:02
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01HNzZTK5BzhE4zXiWFe9QMa","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_0169RM5ncuB5fzKnBdAkKgcy","name":"_structured_tool_call","input":{"data":{"category":"complaint","priority":"urgent","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":805,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2025-10-09 01:06:39
 recorded_with: VCR-vcr/2.0.0

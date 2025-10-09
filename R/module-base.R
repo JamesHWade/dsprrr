@@ -260,11 +260,10 @@ Module <- R6::R6Class(
         }
 
         if (!is.null(progress_id)) {
-          score_display <- if (is.na(scores[i])) "NA" else format(round(scores[i], 4), nsmall = 4)
+          msg_score <- if (is.na(scores[i])) "NA" else format(round(scores[i], 4), nsmall = 4)
           cli::cli_progress_update(
             id = progress_id,
-            set = i,
-            msg_score = score_display
+            set = i
           )
         }
       }

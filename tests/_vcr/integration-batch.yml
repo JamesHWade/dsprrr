@@ -8,39 +8,39 @@ http_interactions:
       access-control-expose-headers: X-Request-ID
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 983e4a9e7cb01855-ORD
+      cf-ray: 98b9f7ea8afbe27b-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Wed, 24 Sep 2025 00:51:07 GMT
-      openai-organization: dow-analytical-science
-      openai-processing-ms: '417'
-      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      date: Thu, 09 Oct 2025 01:05:17 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '4009'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=JkzUWmmSg2X07HzSv8xoM.hqDlzAjV7Wo9To6eoy8Lo-1758675067-1.0.1.1-S.cGLVa65y7r27rCwKQkplVRqEmTAil9dhAQBkqW6Ot0w4SPGVEDH6wNEt8iKz.QM7JmqR4h_xNgFgFXP3M6cast8sBGDy.WKTrQNUrbpc0;
-        path=/; expires=Wed, 24-Sep-25 01:21:07 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=76vz0noxHE_Z5OgP4smsnCM2hXKf2Wv9NPalxKzEHbA-1759971917-1.0.1.1-be3wq3dv_RbAYJth0xfIdmmA4uw8r6qt9S8ntoRezRnUw4ub4HeWzLjCCjSmgozEPuRffK57BUDg2sN3nccpw3Esfyb_BI8z3pWrI9l4cmA;
+        path=/; expires=Thu, 09-Oct-25 01:35:17 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=zTRHAQsu7SWlLIA1BjFdIay7zI1xR9YOwuH2FfdFwQI-1758675067159-0.0.1.1-604800000;
+      - _cfuvid=8MFRcEeR1moYl4ENWhgdRf2Fx6CQzW08abkkkJJBLl4-1759971917491-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '456'
+      x-envoy-upstream-service-time: '4045'
       x-openai-proxy-wasm: v0.1
-      x-ratelimit-limit-requests: '10000'
-      x-ratelimit-limit-tokens: '10000000'
-      x-ratelimit-remaining-requests: '9999'
-      x-ratelimit-remaining-tokens: '9999983'
-      x-ratelimit-reset-requests: 6ms
-      x-ratelimit-reset-tokens: 0s
-      x-request-id: req_b358739ccc61438782dee32e4b1feadd
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '499983'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 2ms
+      x-request-id: req_80b5d5d5e2d64685bf9fe5c45afb31e1
     body:
       string: |
         {
-          "id": "chatcmpl-CJ80o10zYAgzGemHAYEPsNpKuFk1t",
+          "id": "chatcmpl-COZNhuDRaNCKRqNjmBtu5vZrgkoO4",
           "object": "chat.completion",
-          "created": 1758675066,
-          "model": "gpt-4o-mini-2024-07-18",
+          "created": 1759971913,
+          "model": "gpt-5-mini-2025-08-07",
           "choices": [
             {
               "index": 0,
@@ -50,14 +50,13 @@ http_interactions:
                 "refusal": null,
                 "annotations": []
               },
-              "logprobs": null,
               "finish_reason": "stop"
             }
           ],
           "usage": {
-            "prompt_tokens": 57,
-            "completion_tokens": 5,
-            "total_tokens": 62,
+            "prompt_tokens": 52,
+            "completion_tokens": 18,
+            "total_tokens": 70,
             "prompt_tokens_details": {
               "cached_tokens": 0,
               "audio_tokens": 0
@@ -70,9 +69,9 @@ http_interactions:
             }
           },
           "service_tier": "default",
-          "system_fingerprint": "fp_560af6e559"
+          "system_fingerprint": null
         }
-  recorded_at: 2025-09-24 00:51:07
+  recorded_at: 2025-10-09 01:05:17
 - request:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
@@ -82,39 +81,39 @@ http_interactions:
       access-control-expose-headers: X-Request-ID
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 983e4aa34c381855-ORD
+      cf-ray: 98b9f804fc82e27b-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Wed, 24 Sep 2025 00:51:07 GMT
-      openai-organization: dow-analytical-science
-      openai-processing-ms: '377'
-      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      date: Thu, 09 Oct 2025 01:05:20 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2447'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=xZBmfpHDutTM63W4k0yl54u6qQoCnXG16tBptQNNv7U-1758675067-1.0.1.1-fBgaYFu8.EqcHuUX2C_PDekGx0MIdeSFa.kMavzV7Uzf.cFaPWmRYh2zGs90Nfqx6hrvDkPVPOVjWCF1XzGiFEVXF7O6rnRcMBjxCePiGcA;
-        path=/; expires=Wed, 24-Sep-25 01:21:07 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=cJMRZQsU0eiILXQ.Bib0VrVc0Nv6mRze3CqQJy_fv5s-1759971920-1.0.1.1-Y6rr.5QF.YMDKiNpI9VUjMZBvXkBsyQIgg7tebRKobYza1RqNEJ6w0_PvwzhIJz0OS9Thg4G4ZvVMuKUqeJ0dKaseuEpt.9o4GlMdy.e.XU;
+        path=/; expires=Thu, 09-Oct-25 01:35:20 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=NryfeYpshDK0XbJUSFSHJX75mlkH3yJqwr_8uuWLQ8w-1758675067873-0.0.1.1-604800000;
+      - _cfuvid=CHt3ux0on3ESI6revxaz42UU09xT3oE2gfR7xObeGFw-1759971920106-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '401'
+      x-envoy-upstream-service-time: '2466'
       x-openai-proxy-wasm: v0.1
-      x-ratelimit-limit-requests: '10000'
-      x-ratelimit-limit-tokens: '10000000'
-      x-ratelimit-remaining-requests: '9999'
-      x-ratelimit-remaining-tokens: '9999962'
-      x-ratelimit-reset-requests: 6ms
-      x-ratelimit-reset-tokens: 0s
-      x-request-id: req_0e48cacc7802402cabc5d782c3abc2c5
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '499962'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 4ms
+      x-request-id: req_96f2674e8af74b86a1ceb2c5de41abf8
     body:
       string: |
         {
-          "id": "chatcmpl-CJ80p29nENW3in3cF0ECFHVulJLpQ",
+          "id": "chatcmpl-COZNl3HYQ0xIk6jVnj7Hw2qL2CQUO",
           "object": "chat.completion",
-          "created": 1758675067,
-          "model": "gpt-4o-mini-2024-07-18",
+          "created": 1759971917,
+          "model": "gpt-5-mini-2025-08-07",
           "choices": [
             {
               "index": 0,
@@ -124,27 +123,26 @@ http_interactions:
                 "refusal": null,
                 "annotations": []
               },
-              "logprobs": null,
               "finish_reason": "stop"
             }
           ],
           "usage": {
-            "prompt_tokens": 88,
-            "completion_tokens": 5,
-            "total_tokens": 93,
+            "prompt_tokens": 85,
+            "completion_tokens": 82,
+            "total_tokens": 167,
             "prompt_tokens_details": {
               "cached_tokens": 0,
               "audio_tokens": 0
             },
             "completion_tokens_details": {
-              "reasoning_tokens": 0,
+              "reasoning_tokens": 64,
               "audio_tokens": 0,
               "accepted_prediction_tokens": 0,
               "rejected_prediction_tokens": 0
             }
           },
           "service_tier": "default",
-          "system_fingerprint": "fp_560af6e559"
+          "system_fingerprint": null
         }
-  recorded_at: 2025-09-24 00:51:07
+  recorded_at: 2025-10-09 01:05:20
 recorded_with: VCR-vcr/2.0.0

@@ -12,31 +12,31 @@ http_interactions:
   response:
     status: 200
     headers:
-      date: Wed, 08 Oct 2025 23:50:10 GMT
+      date: Thu, 09 Oct 2025 01:06:09 GMT
       content-type: application/json
       content-encoding: gzip
       anthropic-ratelimit-input-tokens-limit: '40000'
       anthropic-ratelimit-input-tokens-remaining: '40000'
-      anthropic-ratelimit-input-tokens-reset: '2025-10-08T23:50:10Z'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-09T01:06:09Z'
       anthropic-ratelimit-output-tokens-limit: '8000'
       anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2025-10-08T23:50:10Z'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-09T01:06:09Z'
       anthropic-ratelimit-requests-limit: '50'
       anthropic-ratelimit-requests-remaining: '49'
-      anthropic-ratelimit-requests-reset: '2025-10-08T23:50:10Z'
+      anthropic-ratelimit-requests-reset: '2025-10-09T01:06:09Z'
       anthropic-ratelimit-tokens-limit: '48000'
       anthropic-ratelimit-tokens-remaining: '48000'
-      anthropic-ratelimit-tokens-reset: '2025-10-08T23:50:10Z'
-      request-id: req_011CTvdMiHNsLMHXGiXLJQDt
+      anthropic-ratelimit-tokens-reset: '2025-10-09T01:06:09Z'
+      request-id: req_011CTvj9mduBNvBBKPsmjnwK
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      x-envoy-upstream-service-time: '818'
+      x-envoy-upstream-service-time: '801'
       via: 1.1 google
       cf-cache-status: DYNAMIC
       x-robots-tag: none
       server: cloudflare
-      cf-ray: 98b989f6286ddad8-ORD
+      cf-ray: 98b9f9437945e7fa-ORD
     body:
-      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01APqgDASDgosRtknx8yS7we","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_014YX5xEu2hjk9cWHAguvm5U","name":"_structured_tool_call","input":{"data":{"sentiment":"positive"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":505,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
-  recorded_at: 2025-10-08 23:50:10
+      string: '{"model":"claude-3-5-sonnet-20241022","id":"msg_01GLJA26C89pxsaLydCN4C12","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_018uLbzYt6uu9caV8qAt25E4","name":"_structured_tool_call","input":{"data":{"sentiment":"positive"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":505,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
+  recorded_at: 2025-10-09 01:06:09
 recorded_with: VCR-vcr/2.0.0

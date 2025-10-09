@@ -1,0 +1,142 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `summary`.\n\nSummarize: The tidyverse is a collection
+        of R packages designed for data science. All packages share an underlying
+        design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Summarize: The
+        tidyverse is a collection of R packages designed for data science. All packages
+        share an underlying design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nInput:\ntext: I love this consistent
+        API!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This package makes LLM programming so much easier!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: I love this approach!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This is confusing.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `sentence`, produce the fields `sentiment`.\n\nAnalyze: The product works
+        okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        and provide confidence with reasoning.\n\nAnalyze this sentence: The product
+        works okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `article`, produce the fields `title`, `summary`.\n\nInput:\narticle: Your
+        article text here..."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"title":{"type":"string","description":""},"summary":{"type":"string","description":""}},"required":["title","summary"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Thu, 09 Oct 2025 00:57:37 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-09T00:57:37Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-09T00:57:37Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-09T00:57:36Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-09T00:57:37Z'
+      request-id: req_011CTviVuDW5Wz5nG3141wfa
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '2283'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9ecb89e74251b-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_011gFH6KBeJPUhAAEUV1QdRM","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01RNdB4H1E4PtonTNUqoT5uF","name":"_structured_tool_call","input":{"data":{"title":"<UNKNOWN>","summary":"<UNKNOWN>"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":807,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":53,"service_tier":"standard"}}'
+  recorded_at: 2025-10-09 00:57:37
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nAnalyze: This package
+        is amazing!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `summary`.\n\nSummarize: The tidyverse is a collection
+        of R packages designed for data science. All packages share an underlying
+        design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Summarize: The
+        tidyverse is a collection of R packages designed for data science. All packages
+        share an underlying design philosophy, grammar, and data structures."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `text`, produce the fields `sentiment`.\n\nInput:\ntext: I love this consistent
+        API!"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This package makes LLM programming so much easier!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: I love this approach!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        of the given text.\n\nText: This is confusing.\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `sentence`, produce the fields `sentiment`.\n\nAnalyze: The product works
+        okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Classify the sentiment
+        and provide confidence with reasoning.\n\nAnalyze this sentence: The product
+        works okay, but the support is terrible."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Given the fields
+        `article`, produce the fields `title`, `summary`.\n\nInput:\narticle: Your
+        article text here..."}]},{"role":"assistant","content":[{"type":"text","text":"<structured
+        data/>"}]},{"role":"user","content":[{"type":"text","text":"Extract structured
+        information from the article.\n\nInput:\narticle: Apple Inc. announced its
+        latest iPhone 15 today in Cupertino.\n         CEO Tim Cook highlighted the
+        new camera system and A17 chip.\n         The device will be available starting
+        September 22nd for $799."}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"title":{"type":"string","description":""},"entities":{"type":"array","description":"","items":{"type":"object","description":"","properties":{"name":{"type":"string","description":""},"type":{"type":"string","description":"","enum":["person","organization","location","product"]}},"required":["name","type"],"additionalProperties":false}},"key_facts":{"type":"array","description":"","items":{"type":"string","description":""}},"summary":{"type":"string","description":"Brief
+        summary"}},"required":["title","entities","key_facts","summary"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Thu, 09 Oct 2025 00:57:41 GMT
+      content-type: application/json
+      content-encoding: gzip
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2025-10-09T00:57:39Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2025-10-09T00:57:43Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2025-10-09T00:57:38Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2025-10-09T00:57:39Z'
+      request-id: req_011CTviW5tCbSQv46BLzoQkA
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      x-envoy-upstream-service-time: '4548'
+      via: 1.1 google
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      server: cloudflare
+      cf-ray: 98b9ecc82d1d251b-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01FbtkZpDc5KeNdtpSKJi9iQ","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01XecLSPsq8ZrXGQMecTXHcA","name":"_structured_tool_call","input":{"data":{"title":"Apple
+        Announces iPhone 15 with New Camera System and A17 Chip","entities":[{"name":"Apple
+        Inc.","type":"organization"},{"name":"iPhone 15","type":"product"},{"name":"Cupertino","type":"location"},{"name":"Tim
+        Cook","type":"person"},{"name":"A17 chip","type":"product"}],"key_facts":["Apple
+        Inc. announced the iPhone 15","CEO Tim Cook highlighted new camera system
+        and A17 chip","Device available starting September 22nd","Price is $799","Announcement
+        made in Cupertino"],"summary":"Apple Inc. unveiled the iPhone 15 in Cupertino,
+        with CEO Tim Cook showcasing the new camera system and A17 chip. The device
+        launches September 22nd at $799."}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1010,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":265,"service_tier":"standard"}}'
+  recorded_at: 2025-10-09 00:57:41
+recorded_with: VCR-vcr/2.0.0
