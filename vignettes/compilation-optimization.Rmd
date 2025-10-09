@@ -16,6 +16,13 @@ knitr::opts_chunk$set(
   eval = eval_vignette()
 )
 
+# Configure vcr for vignettes
+vcr::vcr_configure(
+  dir = "_vcr",
+  filter_request_headers = c("Authorization", "x-api-key"),
+  match_requests_on = c("method", "uri")
+)
+
 vcr::setup_knitr()
 ```
 

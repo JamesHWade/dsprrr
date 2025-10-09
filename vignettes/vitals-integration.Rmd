@@ -8,46 +8,22 @@ vignette: >
 ---
 
 ```{r, include = TRUE}
-# Conditionally evaluate based on API keys or vcr cassettes
-eval_vignette <- function() {
-  # Check if vcr cassettes exist
-  if (dir.exists("_vcr")) {
-    name <- tools::file_path_sans_ext(knitr::current_input())
-    cassettes <- dir("_vcr", pattern = paste0(name, "*"))
-    has_cassette <- length(cassettes) > 0
-  } else {
-    has_cassette <- FALSE
-  }
-
-  # Check if API keys are available
-  has_key <- any(
-    nzchar(Sys.getenv("OPENAI_API_KEY")),
-    nzchar(Sys.getenv("ANTHROPIC_API_KEY")),
-    nzchar(Sys.getenv("GOOGLE_GEMINI_API_KEY"))
-  )
-
-  # Also check if vitals is installed
-  has_vitals <- requireNamespace("vitals", quietly = TRUE)
-
-  # Don't evaluate on CRAN
-  not_cran <- !identical(Sys.getenv("NOT_CRAN"), "false")
-
-  # Evaluate if we have keys/cassettes, vitals is installed, and not on CRAN
-  (has_key || has_cassette) && has_vitals && not_cran
-}
+library(dsprrr)
 
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE # Keep as FALSE for safety - vignettes contain LLM calls
+  eval = eval_vignette()
 )
 
-# Setup vcr if available and evaluating
-if (requireNamespace("vcr", quietly = TRUE) && eval_vignette()) {
-  vcr::setup_knitr()
-}
+# Configure vcr for vignettes
+vcr::vcr_configure(
+  dir = "_vcr",
+  filter_request_headers = c("Authorization", "x-api-key"),
+  match_requests_on = c("method", "uri")
+)
 
-cli::cli_inform("Eval vignettes: {eval_vignette()}")
+vcr::setup_knitr()
 ```
 
 ```{r setup}
