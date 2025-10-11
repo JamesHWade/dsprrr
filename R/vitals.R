@@ -2,9 +2,10 @@
 #'
 #' @description
 #' Creates a function compatible with vitals Tasks that executes a DSPrrr
-#' module against batches of inputs. The solver forwards arguments to
-#' [run_dataset()] and returns vitals-friendly objects containing results,
-#' chat logs, and metadata.
+#' module against batches of inputs. The solver automatically converts vitals'
+#' vector input (from `dataset$input`) to a properly-named data frame matching
+#' the module's signature, forwards it to [run_dataset()], and returns
+#' vitals-friendly objects containing results, chat logs, and metadata.
 #'
 #' @param module A DSPrrr module (e.g., created via [module()]).
 #' @param .llm Optional ellmer chat object. When `NULL`, each invocation will
@@ -14,8 +15,9 @@
 #' @param .return_format One of `"structured"` (default) or `"simple"`.
 #' @param ... Additional arguments forwarded to [run_dataset()].
 #'
-#' @return A function accepting a data frame of inputs and returning a list with
-#'   components `result`, `solver_chat`, and `metadata`.
+#' @return A function accepting either a vector (from vitals `dataset$input`) or
+#'   a data frame of inputs, and returning a list with components `result`,
+#'   `solver_chat`, and `metadata`.
 #' @export
 as_vitals_solver <- function(module, .llm = NULL, .parallel = FALSE,
                              .return_format = "structured", ...) {
@@ -26,8 +28,17 @@ as_vitals_solver <- function(module, .llm = NULL, .parallel = FALSE,
   .return_format <- match.arg(.return_format, c("simple", "structured"))
 
   function(inputs, ...) {
+    # vitals passes a vector from dataset$input, but we need a data frame
+    # with the correct column name matching the module's signature
     if (!is.data.frame(inputs)) {
-      inputs <- as.data.frame(inputs)
+      # Get the first input name from the module signature
+      if (length(module$signature@inputs) > 0) {
+        input_name <- module$signature@inputs[[1]]$name
+        inputs <- stats::setNames(data.frame(inputs, stringsAsFactors = FALSE), input_name)
+      } else {
+        # Fallback: create generic column name
+        inputs <- data.frame(input = inputs, stringsAsFactors = FALSE)
+      }
     }
 
     results <- run_dataset(

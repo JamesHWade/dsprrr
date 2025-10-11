@@ -26,12 +26,14 @@ to avoid sharing LLM state across workers.}
 \item{...}{Additional arguments forwarded to \code{\link[=run_dataset]{run_dataset()}}.}
 }
 \value{
-A function accepting a data frame of inputs and returning a list with
-components \code{result}, \code{solver_chat}, and \code{metadata}.
+A function accepting either a vector (from vitals \code{dataset$input}) or
+a data frame of inputs, and returning a list with components \code{result},
+\code{solver_chat}, and \code{metadata}.
 }
 \description{
 Creates a function compatible with vitals Tasks that executes a DSPrrr
-module against batches of inputs. The solver forwards arguments to
-\code{\link[=run_dataset]{run_dataset()}} and returns vitals-friendly objects containing results,
-chat logs, and metadata.
+module against batches of inputs. The solver automatically converts vitals'
+vector input (from \code{dataset$input}) to a properly-named data frame matching
+the module's signature, forwards it to \code{\link[=run_dataset]{run_dataset()}}, and returns
+vitals-friendly objects containing results, chat logs, and metadata.
 }

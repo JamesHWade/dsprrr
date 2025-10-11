@@ -52,29 +52,33 @@ Together, they offer a complete workflow: **Design → Build → Optimize → Ev
 
 The new API features in dsprrr make integration with vitals seamless. Here's how to use a dsprrr module as a vitals solver:
 
-### Method 1: Direct Integration (with new API)
+### Method 1: Direct Integration with as_vitals_solver()
 
-Thanks to the batch processing support and structured returns, dsprrr modules can now work directly with vitals:
+Thanks to `as_vitals_solver()`, dsprrr modules work seamlessly with vitals. The function automatically handles vitals' calling convention (which passes a vector from `dataset$input`) by converting it to the correct format for your module:
 
-```{r}
+```{r vitals-solver}
+#| cassette: true
 # Create a dsprrr module
 sentiment_module <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
   module(type = "predict")
 
-# Create vitals task with dsprrr's helper
+# Convert to vitals solver - it automatically maps dataset$input to "text"
 task <- Task$new(
   dataset = tibble(
     input = c("I love this!", "This is terrible"),
     target = c("positive", "negative")
   ),
-  solver = as_vitals_solver(sentiment_module, llm = chat_openai()),
+  solver = as_vitals_solver(sentiment_module, .llm = chat_openai()),
   scorer = model_graded_qa()
 )
 
-# Evaluate
-task$eval()
+# Run the solver
+task$solve()
+
+# View results
+task$get_samples()
 ```
 
 ### Method 2: Using run_dataset() (New Feature)
@@ -126,28 +130,19 @@ teleprompter <- GridSearchTeleprompter(
 
 Here's an end-to-end example showing the full integration:
 
-```{r}
+```{r, eval=FALSE}
+# Note: This example demonstrates the workflow but requires more complex setup
+# For a working example, see Method 1 above
+
 # 1. Design with dsprrr
 qa_module <- signature(
-  inputs = list(
-    input("context", description = "Background information"),
-    input("question", description = "Question to answer")
-  ),
-  output_type = ellmer::type_object(
-    answer = ellmer::type_string(),
-    confidence = ellmer::type_number(minimum = 0, maximum = 1)
-  ),
-  instructions = "Answer the question based on the context"
+  "question -> answer"
 ) |>
   module(type = "predict")
 
-# 2. Prepare dataset
+# 2. Prepare dataset with vitals-compatible structure
 qa_dataset <- tibble(
-  context = c(
-    "The sky is blue due to Rayleigh scattering",
-    "Water freezes at 0°C or 32°F"
-  ),
-  question = c(
+  input = c(
     "Why is the sky blue?",
     "At what temperature does water freeze?"
   ),
@@ -157,42 +152,30 @@ qa_dataset <- tibble(
   )
 )
 
-# 3. Optimize with dsprrr (using vitals metrics)
+# 3. Optimize with dsprrr
 optimized_module <- compile(
   qa_module,
-  teleprompter = LabeledFewShot(k = 2),
+  teleprompter = LabeledFewShot(k = 2L),
   trainset = qa_dataset
 )
 
 # 4. Evaluate with vitals
 eval_task <- Task$new(
   dataset = qa_dataset,
-  solver = function(inputs, ...) {
-    results <- run_dataset(
-      optimized_module,
-      tibble(
-        context = inputs,
-        question = inputs # Extract from combined input
-      ),
-      .return_format = "structured"
-    )
-
-    list(
-      result = sapply(results$result, function(r) r$answer),
-      solver_chat = results$.chat
-    )
-  },
+  solver = as_vitals_solver(optimized_module, .llm = chat_openai()),
   scorer = detect_match()
 )
 
-eval_task$eval()
+eval_task$solve()
+eval_task$get_samples()
 ```
 
 ## Module as Function
 
 The new `as_function()` feature makes modules even more natural to use:
 
-```{r}
+```{r, eval=FALSE}
+# Note: as_function() is planned for future release
 # Convert module to function
 classify <- as_function(sentiment_module, .llm = chat_openai())
 
@@ -212,8 +195,8 @@ dataset |>
 
 The new batch processing features provide significant performance benefits:
 
-```{r}
-# Process 100 items in parallel (new feature!)
+```{r, eval=FALSE}
+# Process 100 items in parallel (future feature!)
 large_dataset <- tibble(
   text = sample_texts[1:100]
 )
@@ -223,8 +206,8 @@ results <- sentiment_module |>
   run_dataset(
     large_dataset,
     .llm = chat_openai(),
-    .parallel = TRUE, # Default
-    .progress = TRUE # Default
+    .parallel = TRUE,
+    .progress = TRUE
   )
 ```
 

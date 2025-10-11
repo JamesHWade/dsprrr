@@ -1,0 +1,298 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    status: 200
+    headers:
+      access-control-expose-headers: X-Request-ID
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 98bd6a4289a3873b-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Thu, 09 Oct 2025 11:07:34 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '446'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=TQnfQhHU1CBBVC54FbsC_XShC2W85AKLg.dJEw1bqeI-1760008054-1.0.1.1-dBu4csjK1PPJI9aLsRCRoY3WiYztv_fZGSWOjKbooxTlYo7l2NvNRcp0u.OnY9kf01pZu7Sb5XHmbONXgeX3HBJflfuEl8i.ofV3sPZ.eSk;
+        path=/; expires=Thu, 09-Oct-25 11:37:34 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=YPqWS66IT.NHNylsAFAVBsBzec.OQxasNSMIvMDMd7w-1760008054689-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '468'
+      x-openai-proxy-wasm: v0.1
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29977'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 46ms
+      x-request-id: req_b43b522536e844abb0e29ed1055925cb
+    body:
+      string: |
+        {
+          "id": "chatcmpl-COimcoCrZymHMLeFpSSHtZCeOdHnP",
+          "object": "chat.completion",
+          "created": 1760008054,
+          "model": "gpt-4.1-2025-04-14",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"sentiment\":\"positive\"}",
+                "refusal": null,
+                "annotations": []
+              },
+              "logprobs": null,
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 72,
+            "completion_tokens": 6,
+            "total_tokens": 78,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "service_tier": "default",
+          "system_fingerprint": "fp_e24a1fec47"
+        }
+  recorded_at: 2025-10-09 11:07:34
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    status: 200
+    headers:
+      access-control-expose-headers: X-Request-ID
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 98bd6a472bf6873b-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Thu, 09 Oct 2025 11:07:36 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '902'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=onDvMSvx3rR.VyTGU3yxOie0TbfE3PCB4Sx_QToPOxc-1760008056-1.0.1.1-XYfI8ky9qSHVLNlGj3w6ZJxa_eRtwrUom9M5vR3CyLPL9LKfPBl6FdBrWapI41obA2F5903DJWm9ynSSD7DOXKxH9MYvxW7Ufy5bbOPnUmo;
+        path=/; expires=Thu, 09-Oct-25 11:37:36 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=IecJYBTHnHr8rjlhqNCceKW_1w__fJtkowPk6jWUJN8-1760008056419-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1062'
+      x-openai-proxy-wasm: v0.1
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29949'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 102ms
+      x-request-id: req_1ea027d593ec44be93edc8ca8d5171b4
+    body:
+      string: |
+        {
+          "id": "chatcmpl-COimdcr1idUnLmhX93nvDURcJHalD",
+          "object": "chat.completion",
+          "created": 1760008055,
+          "model": "gpt-4.1-2025-04-14",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "{\"sentiment\":\"negative\"}",
+                "refusal": null,
+                "annotations": []
+              },
+              "logprobs": null,
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 108,
+            "completion_tokens": 6,
+            "total_tokens": 114,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "service_tier": "default",
+          "system_fingerprint": "fp_e24a1fec47"
+        }
+  recorded_at: 2025-10-09 11:07:36
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    status: 200
+    headers:
+      access-control-expose-headers: X-Request-ID
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 98bd6a5249b0873b-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Thu, 09 Oct 2025 11:07:38 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1380'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=dcG0JSSspqs5LHGCf0ne2a2H7DVU5XhGBddnW4KsJZI-1760008058-1.0.1.1-CNUuquwfnv8fg5xMA4W3GgMV_hPOo6WF7XOHovaqecyIZvqky40g3Q7c4qFZZIJuvn_xSrta1B.8dsxe2A8J9fadwAmD06fPBnnQkhk7LJ4;
+        path=/; expires=Thu, 09-Oct-25 11:37:38 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=SwqH46kgzoLRHdzkwC1z8wl2W2lsgt2w_09gX1oqe1o-1760008058860-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1579'
+      x-openai-proxy-wasm: v0.1
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29853'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 294ms
+      x-request-id: req_86488174012b45e0b10914d45af26f33
+    body:
+      string: |
+        {
+          "id": "chatcmpl-COimfzTrjy0TDOqZQSDJB5bCqheDv",
+          "object": "chat.completion",
+          "created": 1760008057,
+          "model": "gpt-4.1-2025-04-14",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "The task is to identify the sentiment in the phrase \"I love this!\" and the criterion is \"positive\". The submission provided is list(sentiment = \"positive\"), which correctly identifies the sentiment as positive. This matches the criterion and accurately reflects the sentiment in the given text.\n\nGRADE: C",
+                "refusal": null,
+                "annotations": []
+              },
+              "logprobs": null,
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 142,
+            "completion_tokens": 58,
+            "total_tokens": 200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "service_tier": "default",
+          "system_fingerprint": "fp_564354cebb"
+        }
+  recorded_at: 2025-10-09 11:07:38
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    status: 200
+    headers:
+      access-control-expose-headers: X-Request-ID
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 98bd6a602956873b-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Thu, 09 Oct 2025 11:07:40 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '857'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=POMaXZU76Gu7swBagQwVcczgzC70BLnMb8AjhGoNejk-1760008060-1.0.1.1-adeRrAdWRbccTK71cXkiw_2RErziadpohyxvdJpFGroiZBc4HN92HUfqzFkDhuq3S22CnSf3FxGHDRWSxs_odsxHTr0yamcpQtqjl5JpB_Q;
+        path=/; expires=Thu, 09-Oct-25 11:37:40 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=96THcUUm7mC8NLMPB5vIfkcSk79XbXSy4BXrCrHasTc-1760008060189-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '949'
+      x-openai-proxy-wasm: v0.1
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29852'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 296ms
+      x-request-id: req_60a163891bec402694173a1e4c15db4e
+    body:
+      string: |
+        {
+          "id": "chatcmpl-COimhe4BJw9jV3yowVdCozTsec9rO",
+          "object": "chat.completion",
+          "created": 1760008059,
+          "model": "gpt-4.1-2025-04-14",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "The submission is list(sentiment = \"negative\"), which correctly identifies the sentiment of the task (\"This is terrible\") as negative. The criterion is \"negative,\" and the submission matches this requirement.\n\nGRADE: C",
+                "refusal": null,
+                "annotations": []
+              },
+              "logprobs": null,
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 142,
+            "completion_tokens": 42,
+            "total_tokens": 184,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "service_tier": "default",
+          "system_fingerprint": "fp_422e2d36a8"
+        }
+  recorded_at: 2025-10-09 11:07:40
+recorded_with: VCR-vcr/2.0.0

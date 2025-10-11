@@ -435,8 +435,17 @@ Module <- R6::R6Class(
       module <- self
 
       function(inputs, ...) {
+        # vitals passes a vector from dataset$input, but we need a data frame
+        # with the correct column name matching the module's signature
         if (!is.data.frame(inputs)) {
-          inputs <- as.data.frame(inputs)
+          # Get the first input name from the module signature
+          if (length(module$signature@inputs) > 0) {
+            input_name <- module$signature@inputs[[1]]$name
+            inputs <- stats::setNames(data.frame(inputs, stringsAsFactors = FALSE), input_name)
+          } else {
+            # Fallback: create generic column name
+            inputs <- data.frame(input = inputs, stringsAsFactors = FALSE)
+          }
         }
 
         # This will use the full run_dataset logic once migrated
