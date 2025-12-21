@@ -12,13 +12,6 @@ Description: Build principled, test-driven, and optimizable applications
     declarative signatures, composable modules, automatic prompt
     optimization, and deep integration with the tidyverse ecosystem.
 License: MIT + file LICENSE
-Suggests:
-    dials,
-    knitr,
-    rmarkdown,
-    testthat (>= 3.0.0),
-    vcr (>= 2.0.0),
-    vitals
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
@@ -37,3 +30,15 @@ Imports:
     rlang,
     S7,
     tibble
+Suggests:
+    dials,
+    knitr,
+    pins,
+    quarto,
+    rmarkdown,
+    targets,
+    tarchetypes,
+    testthat (>= 3.0.0),
+    vcr (>= 2.0.0),
+    vitals,
+    yardstick

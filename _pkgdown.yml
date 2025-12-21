@@ -5,3 +5,65 @@ template:
 logo:
   file: man/figures/logo.png
   alt: dsprrr hex sticker
+
+articles:
+  - title: Getting Started
+    navbar: ~
+    contents:
+    - getting-started
+
+  - title: Core Workflows
+    desc: Learn how to build and optimize LLM applications
+    contents:
+    - compilation-optimization
+    - vitals-integration
+
+  - title: Production
+    desc: Deploy and orchestrate LLM workflows
+    contents:
+    - orchestration
+
+reference:
+  - title: Core Functions
+    desc: Main functions for building LLM applications
+    contents:
+    - signature
+    - module
+    - run
+    - run_dataset
+    - evaluate
+
+  - title: Optimization
+    desc: Functions for optimizing module performance
+    contents:
+    - optimize_grid
+    - compile
+    - compile_module
+
+  - title: Metrics
+    desc: Evaluation metrics
+    contents:
+    - starts_with("metric_")
+
+  - title: Orchestration
+    desc: Production workflow helpers
+    contents:
+    - pin_module_config
+    - restore_module_config
+    - pin_trace
+    - pin_vitals_log
+    - use_dsprrr_template
+    - validate_workflow
+
+  - title: Traces
+    desc: Execution trace utilities
+    contents:
+    - export_traces
+    - summarize_traces
+    - clear_traces
+
+  - title: Vitals Integration
+    desc: Integration with vitals package
+    contents:
+    - as_vitals_solver
+    - as_dsprrr_metric

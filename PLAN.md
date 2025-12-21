@@ -208,18 +208,24 @@ vignettes/
     | `module_metric_summary()` helper | ✅ COMPLETED | Per-trial yardstick metrics |
     | Signature → parameter mapping | ✅ COMPLETED | Extracts enum types from signature inputs |
 
-#### Milestone C – Orchestration & Persistence (2 weeks)
+#### Milestone C – Orchestration & Persistence ✅ COMPLETED
 - Ship `pins` helpers for saving module configs/traces/vitals logs.
 - Provide targets template with both dsprrr tuning and vitals evaluation stages.
 - Optional MLflow logging layer with toggled dependency.
 - Add Quarto report template summarising tidymodels results and vitals scores.
-  - **Tasks:**
-    - Implement `pin_module_config()`, `pin_trace()`, and `pin_vitals_log()` in `R/orchestration.R`, leveraging standardised trace schemas.
-    - Add `_targets.R` template under `inst/templates/targets/` demonstrating a pipeline: load data → optimise module → evaluate via vitals → render Quarto report.
-    - Create Quarto template (`inst/templates/quarto/report.qmd`) and link it from documentation.
-    - Update pkgdown configuration (`_pkgdown.yml`) to reference new articles for orchestrations and vitals integration.
-    - Add integration tests (optionally skipped) validating that the pins helpers round-trip module configs and traces.
-    - Document orchestration workflow in `vignettes/orchestration.Rmd`, including vitals steps.
+  - **Tasks & Status:**
+
+    | Task | Status | Notes |
+    | --- | --- | --- |
+    | Implement `pin_module_config()`, `pin_trace()`, `pin_vitals_log()` | ✅ COMPLETED | Full R/orchestration.R with restore helpers |
+    | Add `_targets.R` template | ✅ COMPLETED | inst/templates/targets/_targets.R with complete pipeline |
+    | Create Quarto report template | ✅ COMPLETED | inst/templates/quarto/report.qmd with visualizations |
+    | Update pkgdown configuration | ✅ COMPLETED | Articles and reference sections configured |
+    | Add integration tests for pins helpers | ✅ COMPLETED | Round-trip tests, skipped when pins not installed |
+    | Document in vignettes/orchestration.Rmd | ✅ COMPLETED | Comprehensive vignette with examples |
+    | `use_dsprrr_template()` helper | ✅ COMPLETED | Copy templates to user projects |
+    | `restore_module_config()` helper | ✅ COMPLETED | Reconstruct modules from pinned configs |
+    | `validate_workflow()` helper | ✅ COMPLETED | Pre-flight checks for production workflows |
 
 #### Milestone D – Advanced Modules & Teleprompters (ongoing)
 - Implement Chain-of-Thought and tool-aware module subclasses.
@@ -281,18 +287,17 @@ vignettes/
 **Completed:**
 - ✅ Milestone A: Full R6 module architecture with quality improvements
 - ✅ Milestone B: Tidymodels integration with dials, yardstick, finetune compatibility
+- ✅ Milestone C: Orchestration & persistence with pins, targets, Quarto templates
 - ✅ Vitals integration maintained and functional
-- ✅ Documentation stable (optimization vignette updated with tidymodels helpers)
-- ✅ Test suite comprehensive (run, vitals, utils, integration coverage)
+- ✅ Documentation stable (4 vignettes: getting-started, compilation-optimization, vitals-integration, orchestration)
+- ✅ Test suite comprehensive (run, vitals, utils, integration, orchestration coverage)
 - ✅ Code quality: eliminated duplication, fixed memory leak, improved batch processing
 
-**In Progress:**
-- Milestone C: Orchestration helpers (pins, targets templates)
-
 **Ready for:**
-- Building more module types (ChainOfThought, React, CodeAct)
-- Advanced optimizers (MIPROv2, SIMBA, GEPA)
-- Shinychat integration for chat UIs
+- Milestone D: Building more module types (ChainOfThought, React, CodeAct)
+- Milestone D: Advanced optimizers (MIPROv2, SIMBA, GEPA)
+- Milestone E: Shinychat integration for chat UIs
+- Milestone E: MLflow native observability
 
 ### 11.1 Ecosystem Dependencies
 
@@ -332,7 +337,22 @@ vignettes/
 
 ### 13. Progress Log
 
-**Dec 2024 (continued):**
+**Dec 2025 (Milestone C):**
+- Completed Milestone C - Orchestration & Persistence:
+  - Created `R/orchestration.R` with pins helpers:
+    - `pin_module_config()` / `restore_module_config()` for saving/loading modules
+    - `pin_trace()` for persisting execution traces
+    - `pin_vitals_log()` for evaluation results
+    - `validate_workflow()` for pre-flight checks
+    - `use_dsprrr_template()` for copying templates
+  - Created `inst/templates/targets/_targets.R` with complete pipeline template
+  - Created `inst/templates/quarto/report.qmd` with visualization report
+  - Created `vignettes/orchestration.Rmd` with comprehensive documentation
+  - Updated `_pkgdown.yml` with articles and reference sections
+  - Added 25 tests for orchestration helpers (skipped when pins not installed)
+  - Updated DESCRIPTION with pins, targets, tarchetypes, quarto in Suggests
+
+**Dec 2025 (continued):**
 - Completed Milestone B - Tidymodels Integration:
   - Updated optimization vignette with comprehensive tidymodels helper documentation
   - Added sections for `module_parameter_set()`, `module_trials_summary()`, `module_metric_summary()`
@@ -341,7 +361,7 @@ vignettes/
   - Verified signature → parameter mapping with `signature_parameter_defaults()`
   - All tidymodels helpers tested with dials grid functions (regular, random, latin_hypercube)
 
-**Dec 2024:**
+**Dec 2025:**
 - Completed major Milestone A quality improvements:
   - Refactored `run_batch()` eliminating ~200 lines of duplicated code
   - Extracted reusable helpers: `process_batch_item()`, `extract_simple_output()`, `create_error_result()`

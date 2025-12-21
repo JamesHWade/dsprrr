@@ -2,7 +2,8 @@
 
 test_that("basic LLM integration works", {
   skip_if_not_installed("vcr")
-  skip_if_not(use_real_api() || file.exists(file.path("_vcr", "integration-basic.yml")))
+  cassette_file <- testthat::test_path("_vcr", "integration-basic.yml")
+  skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   sig <- Signature(
     inputs = list(
@@ -27,7 +28,8 @@ test_that("basic LLM integration works", {
 
 test_that("structured output works with real LLM", {
   skip_if_not_installed("vcr")
-  skip_if_not(use_real_api() || file.exists(file.path("_vcr", "integration-structured.yml")))
+  cassette_file <- testthat::test_path("_vcr", "integration-structured.yml")
+  skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   sig <- Signature(
     inputs = list(
@@ -58,7 +60,8 @@ test_that("structured output works with real LLM", {
 
 test_that("batch processing works with real LLM", {
   skip_if_not_installed("vcr")
-  skip_if_not(use_real_api() || file.exists(file.path("_vcr", "integration-batch.yml")))
+  cassette_file <- testthat::test_path("_vcr", "integration-batch.yml")
+  skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   sig <- Signature(
     inputs = list(
@@ -90,8 +93,8 @@ test_that("batch processing works with real LLM", {
 test_that("optimize_grid integrates with real LLM", {
   skip_if_not_installed("vcr")
   cassette_name <- "integration-optimize-grid"
-  cassette_path <- file.path("_vcr", paste0(cassette_name, ".yml"))
-  skip_if_not(use_real_api() || file.exists(cassette_path))
+  cassette_path <- testthat::test_path("_vcr", paste0(cassette_name, ".yml"))
+  skip_if_not(file.exists(cassette_path), "VCR cassette not recorded")
 
   sig <- Signature(
     inputs = list(

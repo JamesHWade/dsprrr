@@ -177,7 +177,7 @@ dsp_trainset <- function(..., .data = NULL) {
 #' @param module A DSPrrr module (compiled or not)
 #' @param dataset Test dataset as a data frame
 #' @param metric A metric function from `metric_*()` functions
-#' @param llm Optional LLM connection for running the module
+#' @param .llm Optional LLM connection for running the module
 #' @param verbose Whether to show progress
 #'
 #' @return A list with evaluation results including mean score and per-example scores

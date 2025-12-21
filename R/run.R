@@ -285,14 +285,6 @@ run_batch <- function(
   parallel_mode <- .parallel && n > 1
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
 
-  if (.progress && n > 1) {
-    cli::cli_progress_bar(
-      format = "Processing {cli::pb_current}/{cli::pb_total} | {cli::pb_percent} | ETA: {cli::pb_eta}",
-      total = n,
-      clear = FALSE
-    )
-  }
-
   if (parallel_mode) {
     results <- run_batch_parallel(
       module, input_sets, n, .llm, .verbose, .return_format, .progress
@@ -301,10 +293,6 @@ run_batch <- function(
     results <- run_batch_sequential(
       module, input_sets, n, .llm, .verbose, .return_format, .progress
     )
-  }
-
-  if (.progress && n > 1) {
-    cli::cli_progress_done()
   }
 
   if (.return_format == "structured") {
@@ -319,6 +307,16 @@ run_batch <- function(
 run_batch_sequential <- function(module, input_sets, n, .llm, .verbose, .return_format, .progress) {
   shared_llm <- .llm %||% get_default_llm(module$config)
   results <- vector("list", n)
+
+  # Create progress bar if requested
+  progress_id <- NULL
+  if (.progress && n > 1) {
+    progress_id <- cli::cli_progress_bar(
+      format = "Processing {cli::pb_current}/{cli::pb_total} | {cli::pb_percent} | ETA: {cli::pb_eta}",
+      total = n,
+      clear = FALSE
+    )
+  }
 
   for (i in seq_len(n)) {
     prompt <- build_prompt(module, input_sets[[i]])
@@ -347,9 +345,13 @@ run_batch_sequential <- function(module, input_sets, n, .llm, .verbose, .return_
       }
     )
 
-    if (.progress && n > 1) {
-      cli::cli_progress_update()
+    if (!is.null(progress_id)) {
+      cli::cli_progress_update(id = progress_id)
     }
+  }
+
+  if (!is.null(progress_id)) {
+    cli::cli_progress_done(id = progress_id)
   }
 
   results

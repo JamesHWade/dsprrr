@@ -12,7 +12,11 @@
       "WebSearch",
       "WebFetch(domain:mirai.r-lib.org)",
       "Bash(find:*)",
-      "Bash(Rscript:*)"
+      "Bash(Rscript:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:dspy.ai)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": [],

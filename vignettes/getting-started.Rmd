@@ -7,15 +7,17 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-library(dsprrr)
-
+```{r}
+#| include: false
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = eval_vignette()
+  eval = dsprrr:::eval_vignette()
 )
-
+# Ensure no cassettes are left over from previous vignettes
+if (!is.null(vcr::current_cassette())) {
+  try(vcr::eject_cassette(), silent = TRUE)
+}
 vcr::setup_knitr()
 ```
 
@@ -66,7 +68,7 @@ llm <- chat_claude(
 Here's the simplest way to get started with dsprrr using R's pipe operator:
 
 ```{r quickstart}
-#| cassette: getting-started-quickstart
+#| cassette: true
 # The R way: Build and execute with pipes!
 result <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')"
@@ -84,7 +86,7 @@ That's it! No complex setup, just simple and expressive code that flows naturall
 dsprrr provides both user-friendly functions and direct constructor access:
 
 ```{r api-styles}
-#| cassette: getting-started-api-styles
+#| cassette: true
 # Recommended approach: Using the main API functions
 result1 <- signature("text -> summary") |>
   module(type = "predict", template = "Summarize: {text}") |>
@@ -113,7 +115,7 @@ result2 <- module(signature = sig, type = "predict", template = "Summarize: {tex
 The combination of pipes and consistent naming makes dsprrr feel truly native to R:
 
 ```{r why-consistency}
-#| cassette: getting-started-why-consistency
+#| cassette: true
 # Clear, readable, and predictable
 sentiment_analysis <- signature("text -> sentiment") |>
   module(type = "predict") |>
@@ -546,7 +548,7 @@ result2 <- signature("text -> summary") |>
 
 Pipes really shine when building multi-step LLM workflows:
 
-```{r complex-workflows, eval = eval_vignette()}
+```{r complex-workflows, eval = FALSE}
 # A complete analysis pipeline using pipes
 sentiment_extractor <- signature(
   "feedback -> sentiment, issues: array(string)"
@@ -752,7 +754,7 @@ good_sig <- Signature(
 
 Templates help maintain consistent prompt structure:
 
-```{r best-practices-templates, eval = eval_vignette()}
+```{r best-practices-templates, eval = FALSE}
 # Define a signature for analysis
 analysis_sig <- signature(
   "data, analysis_type -> insights: array(string), summary: string"
@@ -779,7 +781,7 @@ Please provide a comprehensive analysis following the specified format.
 
 Examples significantly improve performance on complex tasks:
 
-```{r best-practices-demos, eval = eval_vignette()}
+```{r best-practices-demos, eval = FALSE}
 # Define the code analysis signature
 code_analysis_sig <- signature(
   "code -> language: string, complexity: enum('simple', 'moderate', 'complex'), has_error: boolean"
@@ -816,7 +818,7 @@ code_analyzer <- module(
 
 Build reusable components:
 
-```{r best-practices-modular, eval = eval_vignette()}
+```{r best-practices-modular, eval = FALSE}
 # Define the required signatures
 sentiment_sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 entity_sig <- signature("text -> entities: array(string)")
@@ -841,7 +843,7 @@ analyze_feedback <- function(text, llm = NULL) {
 
 Use verbose mode to see generated prompts:
 
-```{r debugging, eval = eval_vignette()}
+```{r debugging, eval = FALSE}
 # Create a simple classifier for debugging
 sentiment_classifier <- signature("sentence -> sentiment") |>
   module(type = "predict")

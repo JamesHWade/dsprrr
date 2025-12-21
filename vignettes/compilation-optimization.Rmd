@@ -7,15 +7,17 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-library(dsprrr)
-
+```{r}
+#| include: false
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = eval_vignette()
+  eval = dsprrr:::eval_vignette()
 )
-
+# Ensure no cassettes are left over from previous vignettes
+if (!is.null(vcr::current_cassette())) {
+  try(vcr::eject_cassette(), silent = TRUE)
+}
 vcr::setup_knitr()
 ```
 
@@ -38,7 +40,7 @@ library(ellmer)
 # Configure Claude (Anthropic's Sonnet model)
 llm <- chat_claude(
   api_key = Sys.getenv("ANTHROPIC_API_KEY"),
-  model = "claude-3-5-sonnet-20241022"
+  model = "claude-sonnet-4-20250514"
 )
 ```
 
@@ -49,7 +51,7 @@ going through a teleprompter first. It evaluates a grid of configuration
 values (defined either as a simple named list or via tidymodels `dials`
 parameters) and records the results in `module$state$trials`.
 
-```{r optimize-grid-quick, eval = eval_vignette()}
+```{r optimize-grid-quick}
 sig_quick <- signature("review -> sentiment: string",
   instructions = "Respond with the sentiment label only."
 )
@@ -69,15 +71,14 @@ exact_sentiment <- function(prediction, expected_row) {
   as.numeric(tolower(prediction) == tolower(expected_row$target))
 }
 
-vcr::use_cassette("compilation-optimize-grid", {
- optimize_grid(
-   sentiment_module,
-   devset = dev_reviews,
-   metric = exact_sentiment,
-    parameters = list(prompt_style = c("baseline", "energetic")),
-    control = list(progress = FALSE)
-  )
-})
+optimize_grid(
+  sentiment_module,
+  devset = dev_reviews,
+  metric = exact_sentiment,
+  parameters = list(prompt_style = c("baseline", "energetic")),
+  .llm = llm,
+  control = list(progress = FALSE)
+)
 
 sentiment_module$state$trials[, c("trial_id", "score", "n_evaluated")]
 sentiment_module$state$best_score
@@ -411,7 +412,7 @@ Teleprompters are optimization strategies that improve your LLM programs. dsprrr
 The simplest optimization strategy adds labeled examples from your training data as demonstrations:
 
 ```{r teleprompter-labeled}
-#| cassette: compilation-labeled-fewshot
+#| cassette: true
 # Create a sentiment classifier
 classifier <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')"
@@ -461,7 +462,7 @@ print(result) # "positive"
 This teleprompter tests multiple instruction or template variants to find the best performing one:
 
 ```{r teleprompter-gridsearch}
-#| cassette: compilation-gridsearch
+#| cassette: true
 # Create base QA module
 qa_module <- signature("context, question -> answer") |>
   module(type = "predict")
@@ -532,7 +533,7 @@ answer <- optimized_qa |>
 The `compile_module()` function is the main interface for optimizing your programs:
 
 ```{r compilation-process}
-#| cassette: compilation-email-classifier
+#| cassette: true
 # Step 1: Create your base module
 email_classifier <- signature(
   inputs = list(
@@ -626,7 +627,7 @@ print(result$needs_response) # TRUE
 Once you've optimized your module, systematically evaluate its performance:
 
 ```{r evaluation}
-#| cassette: compilation-evaluation
+#| cassette: true
 # Prepare test dataset (separate from training)
 test_emails <- dsp_trainset(
   email = c(
@@ -658,7 +659,7 @@ results <- evaluate_dsp(
   module = optimized_grid,
   dataset = test_emails,
   metric = category_metric,
-  llm = llm,
+  .llm = llm,
   verbose = TRUE
 )
 
@@ -678,7 +679,7 @@ full_results <- evaluate_dsp(
   module = optimized_grid,
   dataset = test_emails,
   metric = multi_metric,
-  llm = llm,
+  .llm = llm,
   verbose = TRUE
 )
 
@@ -690,7 +691,7 @@ print(full_results$mean_score) # Lower, as all fields must match
 Let's build and optimize a complete document analysis system:
 
 ```{r complete-example}
-#| cassette: compilation-doc-analyzer
+#| cassette: true
 # 1. Define the task with structured output
 doc_analyzer <- signature(
   inputs = list(
@@ -805,7 +806,7 @@ for (k in c(1L, 2L, 3L, 4L)) {
     module = optimized,
     dataset = doc_trainset, # In practice, use separate validation set
     metric = wrapped_metric,
-    llm = llm,
+    .llm = llm,
     verbose = FALSE
   )
 
@@ -899,7 +900,7 @@ val_results <- evaluate_dsp(
   module = optimized_module,
   dataset = splits$val,
   metric = wrapped_metric,
-  llm = llm
+  .llm = llm
 )
 
 print(paste("Validation score:", val_results$mean_score))

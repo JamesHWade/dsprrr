@@ -12,7 +12,6 @@
 ^pkgdown$
 ^doc$
 ^Meta$
-^vignettes/_vcr$
 ^tests/testthat/_vcr$
 ^CLAUDE\.md$
 ^PLAN\.md$
