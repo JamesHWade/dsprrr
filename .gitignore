@@ -7,7 +7,6 @@
 .quarto
 docs
 .env
-.Renviron
 
 # Vignettes
 inst/doc
