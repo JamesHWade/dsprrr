@@ -176,29 +176,38 @@ vignettes/
     - ✅ Implemented R6 print methods with cli formatting
     - ✅ Cleaned up NAMESPACE - R6 classes marked as internal with `@noRd`
     - ✅ Moved R6 from Suggests to Imports in DESCRIPTION
-    - ✅ Updated all tests to use R6 API (395 passing, 8 minor failures)
+    - ✅ Updated all tests to use R6 API
     - ✅ Fixed documentation generation issues with R6 classes
+  - **Quality Improvements (Dec 2024):**
+    - ✅ Refactored `run_batch()` to eliminate ~200 lines of code duplication
+    - ✅ Extracted `process_batch_item()`, `extract_simple_output()`, `create_error_result()` helpers
+    - ✅ Split into `run_batch_sequential()` and `run_batch_parallel()` for clarity
+    - ✅ Added comprehensive parallel execution tests
+    - ✅ Expanded `test-vitals.R` from 59 → 340 lines
+    - ✅ Expanded `test-utils.R` from 20 → 227 lines
+    - ✅ Fixed memory leak: chat object storage now optional via `config$store_chat_in_traces`
+    - ✅ Improved `Module$run()` with proper batch processing and warning for parallel misuse
 
-#### Milestone B – Tidymodels Integration (3 weeks)
+#### Milestone B – Tidymodels Integration ✅ MOSTLY COMPLETE
 - Define tunable parameters with `dials` and implement grid/random search in `$optimize_grid()`.
 - Integrate `rsample` resampling and `yardstick` scoring; ensure vitals scorers can be wrapped automatically.
 - Surface `finetune` racing as an optional control method.
 - Document optimisation workflow + vitals scorer interoperability in vignette and Quarto template.
-  - **Tasks & Status (pairing: James & Codex):**
+  - **Tasks & Status:**
 
-    | Task | Status | Leads | Notes |
-    | --- | --- | --- | --- |
-    | Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles. | COMPLETED | James & Codex | Baseline grid search implemented with state tracking; ready to integrate with teleprompters. |
-    | Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores. | COMPLETED | James & Codex | Helpers implemented (`merge_optimization_control()`, `prepare_candidate_grid()`, `generate_grid_from_parameters()`); signature-to-parameters mapping queued for next pass. |
-    | Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema. | COMPLETED | James & Codex | Delegates to `optimize_grid()`, records trials/best variant metadata on the module. |
-    | Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via `as_dsprrr_metric()`. | COMPLETED | James & Codex | Added deterministic spec verifying delegation and module state updates. |
-    | Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers. | IN PROGRESS | Docs | Optimisation vignette partially updated; remaining examples follow new helpers. |
-    | Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed. | PENDING | James & Codex | Target once baseline grid path stabilises. |
+    | Task | Status | Notes |
+    | --- | --- | --- |
+    | Implement `$optimize_grid()` and `$optimize()` dispatch | ✅ COMPLETED | Baseline grid search with state tracking |
+    | Helper functions in `R/optimize.R` | ✅ COMPLETED | `merge_optimization_control()`, `prepare_candidate_grid()`, etc. |
+    | Refactor `GridSearchTeleprompter` | ✅ COMPLETED | Delegates to `optimize_grid()`, records trials/best variant |
+    | Tests for dials grids + yardstick metrics | ✅ COMPLETED | Deterministic specs for delegation and state |
+    | Update docs (README/vignettes) | 🔄 IN PROGRESS | Optimisation vignette partially updated |
+    | `finetune::tune_race_anova()` regression test | ⏳ PENDING | Target when baseline stabilises |
 
-  - **Focus:** finish the tidymodels bridge and supporting summaries.
-    - Introduce signature → parameter mapping helpers so tidymodels sets can be derived automatically.
-    - Capture resampling/metric summaries for yardstick + vitals reporting.
-    - Refresh docs (README/vignette) to reflect the end-to-end optimise grid workflow.
+  - **Remaining work:**
+    - Finish documentation updates for optimization workflow
+    - Add signature → parameter mapping helpers for automatic tidymodels integration
+    - Capture resampling/metric summaries for yardstick + vitals reporting
 
 #### Milestone C – Orchestration & Persistence (2 weeks)
 - Ship `pins` helpers for saving module configs/traces/vitals logs.
@@ -215,16 +224,44 @@ vignettes/
 
 #### Milestone D – Advanced Modules & Teleprompters (ongoing)
 - Implement Chain-of-Thought and tool-aware module subclasses.
-- Port GEPA-style teleprompter using R6 hooks and integrate vitals-based evaluation loops.
-- Add programmatic search teleprompters (MIPRO) once tool-aware traces are stable.
+- Port DSPy 3.0 optimizers (MIPROv2, SIMBA, GEPA) as teleprompters.
+- Add programmatic search teleprompters once tool-aware traces are stable.
 - Introduce routing/judge modules with enforced signature/type checks.
   - **Tasks:**
     - Scaffold `R/module-chainofthought.R` and `R/module-react.R` with subclass implementations, reusing base hooks for prompt assembly and trace logging.
     - Define a tool schema registry in `R/tools-ellmer.R` and extend traces to capture action/observation steps compatible with vitals logs.
-    - Implement `GepaTeleprompter` (and friends) in `R/teleprompter.R`, using vitals scorers for evaluation loops and storing intermediate rationales in module state.
-    - Add tests in `tests/testthat/test-teleprompter.R` covering GEPA/MIPRO behaviours with mocked outputs for deterministic assertions.
+    - Implement advanced teleprompters in `R/teleprompter.R`:
+      - `MIPROv2Teleprompter`: bootstrapping + grounded proposal stages (based on DSPy 3.0)
+      - `SIMBATeleprompter`: learns from custom feedback for agentic/long-horizon tasks
+      - `GEPATeleprompter`: Genetic-Pareto optimizer with NL reflection for shorter, better prompts
+    - Add tests in `tests/testthat/test-teleprompter.R` covering advanced optimizer behaviours with mocked outputs.
     - Update `vignettes/modules.Rmd` and `vignettes/vitals-integration.Rmd` with examples of tool-aware modules and vitals evaluation.
-    - Evaluate need for additional helper generics (e.g., `module_trace()`), documenting decisions in `VITALS_INTEGRATION.md` and developer notes.
+
+#### Milestone E – Ecosystem Integration (NEW)
+- Integrate with ellmer 0.3.0+ features (simplified chat API, enhanced tool specs).
+- Add shinychat support for building chat UIs with dsprrr modules.
+- Native observability integration with MLflow tracing.
+  - **Tasks:**
+    - Update ellmer integration to use new `chat()` function and tool enhancements from 0.3.0+
+    - Create `as_shinychat_solver()` helper for integrating modules with shinychat apps
+    - Add `R/shinychat.R` with UI helpers for module-powered chatbots
+    - Implement `use_mlflow()` helper for native observability (tracing, optimizer tracking)
+    - Add querychat integration example showing data Q&A with dsprrr modules
+    - Update vignettes with shinychat and MLflow examples
+
+#### Milestone F – DSPy 3.0 Feature Parity
+- Bring dsprrr up to date with DSPy 3.0 capabilities.
+  - **New Modules:**
+    - `CodeActModule`: code execution with tool-aware agent loops
+    - `RefineModule`: iterative refinement with feedback
+    - Improved ReAct with better action/observation handling
+  - **New Features:**
+    - PEP 604-style union types in signatures (e.g., `string | null`)
+    - Token streaming support via ellmer async
+    - `dsprrr.syncify()` for running optimizers on async programs
+  - **Optimizers:**
+    - GRPO: reinforcement learning training of compound AI systems
+    - Bayesian optimization via `tune::tune_bayes()`
 
 ---
 
@@ -243,21 +280,45 @@ vignettes/
 ### 11. Current Status & Next Steps
 
 **Completed:**
-- ✅ Full R6 module architecture implemented and tested
+- ✅ Milestone A: Full R6 module architecture with quality improvements
 - ✅ Vitals integration maintained and functional
 - ✅ Documentation stable (no regeneration issues)
-- ✅ Test suite largely passing (395/403 tests)
-
-**Known Issues:**
-- Minor test failures (8) related to deepcopy state preservation
-- Some compile tests checking wrong property paths
+- ✅ Test suite comprehensive (run, vitals, utils coverage expanded significantly)
+- ✅ Code quality: eliminated duplication, fixed memory leak, improved batch processing
 
 **In Progress:**
-- Milestone B: Tidymodels Integration (grid helpers landed; teleprompter wiring + resample summaries next)
+- Milestone B: Documentation updates for optimization workflow
+- Milestone C: Orchestration helpers (pins, targets templates)
 
 **Ready for:**
-- Building more module types (ChainOfThought, React)
-- Enhanced optimization strategies
+- Building more module types (ChainOfThought, React, CodeAct)
+- Advanced optimizers (MIPROv2, SIMBA, GEPA)
+- Shinychat integration for chat UIs
+
+### 11.1 Ecosystem Dependencies
+
+| Package | Min Version | Status | Integration Notes |
+| --- | --- | --- | --- |
+| **ellmer** | 0.3.0+ | ✅ Active | New `chat()` API, enhanced tools; update integration |
+| **vitals** | 0.1.0+ | ✅ Active | Task framework with datasets/solvers/scorers |
+| **shinychat** | 0.3.0+ | ⏳ Planned | Chat UI for module-powered chatbots |
+| **querychat** | latest | ⏳ Planned | Data Q&A integration |
+| **tidymodels** | current | ✅ Active | dials, rsample, yardstick, finetune |
+| **mlflow** | optional | ⏳ Planned | Native observability |
+
+**Recent Ecosystem Updates to Track:**
+- ellmer 0.3.0 (Jul 2025): Simplified `chat()` function, enhanced tool specs, quality-of-life improvements
+- ellmer 0.2.0 (May 2025): Tool calling improvements, async support (Garrick Aden-Buie joined team)
+- vitals 0.1.0 (Jun 2025): Task framework port of Python Inspect, Inspect log viewer
+- shinychat 0.3.0 (Nov 2025): Streaming markdown, custom content types, ellmer 0.3.0+ integration
+
+**DSPy 3.0 Features to Port:**
+- MIPROv2: Bootstrapping + grounded proposal with automatic hyperparameter selection
+- SIMBA: Custom feedback learning for agentic tasks
+- GEPA: Genetic-Pareto optimizer with NL reflection
+- CodeAct: Code execution in agent loops
+- Refine: Iterative refinement module
+- PEP 604 union types in signatures
 
 ### 12. Open Questions & Follow-Ups
 
@@ -272,8 +333,35 @@ vignettes/
 
 ### 13. Progress Log
 
+**Dec 2024:**
+- Completed major Milestone A quality improvements:
+  - Refactored `run_batch()` eliminating ~200 lines of duplicated code
+  - Extracted reusable helpers: `process_batch_item()`, `extract_simple_output()`, `create_error_result()`
+  - Split parallel/sequential execution into separate functions for clarity
+  - Fixed memory leak by making chat object storage optional (`config$store_chat_in_traces`)
+  - Expanded test coverage: test-vitals.R (59→340 lines), test-utils.R (20→227 lines)
+  - Added comprehensive parallel execution tests
+  - Improved `Module$run()` with proper batch processing
+- Updated CLAUDE.md with comprehensive codebase documentation
+- Reviewed DSPy 3.0 features for future integration (MIPROv2, SIMBA, GEPA, CodeAct)
+- Researched ecosystem updates: ellmer 0.3.0, vitals 0.1.0, shinychat 0.3.0
+
+**Previous:**
 - Milestone B kickoff: tidymodels integration planning begun with shared tracker and dependency mapping.
-- Implemented base `$optimize_grid()` flow with stateful trial tracking and helper scaffolding (Codex & James).
+- Implemented base `$optimize_grid()` flow with stateful trial tracking and helper scaffolding.
 - Realigned ellmer integrations to the latest API (shared `api_args` flow, `chat_claude()` usage) and updated docs/tests accordingly.
 - GridSearch teleprompter now delegates to `optimize_grid()`; module state stores trials/best variant and tests cover the new path.
-- Added `module_parameter_set()`/`module_trials_summary()` helpers to bridge tidymodels parameter sets and optimisation summaries (tests cover both).
+- Added `module_parameter_set()`/`module_trials_summary()` helpers to bridge tidymodels parameter sets and optimisation summaries.
+
+---
+
+### 14. References
+
+- [DSPy Framework](https://dspy.ai/) - The framework for programming language models
+- [DSPy GitHub](https://github.com/stanfordnlp/dspy) - Source code and releases
+- [DSPy Optimizers](https://dspy.ai/learn/optimization/optimizers/) - MIPROv2, SIMBA, GEPA documentation
+- [ellmer Package](https://ellmer.tidyverse.org/) - Chat with LLMs in R
+- [ellmer 0.3.0 Release](https://tidyverse.org/blog/2025/07/ellmer-0-3-0/) - Latest features
+- [vitals Package](https://vitals.tidyverse.org/) - LLM evaluation framework
+- [vitals Introduction](https://tidyverse.org/blog/2025/06/vitals-0-1-0/) - Toolkit overview
+- [shinychat Package](https://posit-dev.github.io/shinychat/) - Chat UI for Shiny
