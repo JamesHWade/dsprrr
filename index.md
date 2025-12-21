@@ -1,0 +1,519 @@
+# dsprrr
+
+`dsprrr` is a package for building **principled, test-driven, and
+optimizable** applications using Large Language Models in R. It moves
+beyond simple prompt engineering to a structured programming model where
+LLM workflows are treated as programs that can be systematically
+improved. This is an R implementation of
+[DSPy](https://github.com/stanfordnlp/dspy) from Stanford NLP.
+
+## Philosophy
+
+Our philosophy is to provide “tools for thinking” about LLM
+applications, deeply integrating with the tidyverse ethos. By
+representing prompts, examples, and evaluation results as data frames,
+and by designing composable, pipe-friendly APIs, `dsprrr` makes the
+complex task of developing robust AI systems feel like a natural
+extension of an R-based data analysis workflow. We are not just wrapping
+an API; we are creating a framework for rigorous, empirical LLM
+development.
+
+## Installation
+
+You can install the development version of dsprrr from GitHub:
+
+``` r
+# install.packages("pak")
+pak::pak("JamesHWade/dsprrr")
+```
+
+## Quick Start
+
+``` r
+library(dsprrr)
+#> 
+#> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:methods':
+#> 
+#>     signature
+```
+
+``` r
+library(ellmer)
+
+# Configure your LLM
+llm <- chat_openai(model = "gpt-5-mini")
+
+# Clean, consistent API with pipes!
+result <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |>
+  module(type = "predict", template = "Analyze: {text}") |>
+  run(text = "This package makes LLM programming so intuitive!", .llm = llm)
+
+print(result)  # "positive"
+```
+
+## Core Concepts
+
+### 1. Pipe-Friendly Design
+
+dsprrr embraces R’s pipe operator (`|>`) for building LLM workflows:
+
+``` r
+# Build modules with pipes - one consistent way!
+classifier <- signature("text -> sentiment") |>
+  module(type = "predict", template = "Text: {text}\nSentiment:")
+
+# Execute with pipes
+result <- classifier |>
+  run(text = "I love how this integrates with R!", .llm = llm)
+
+# Or do it all in one pipeline
+result <- signature("text -> summary") |>
+  module(type = "predict", template = "Summarize: {text}") |>
+  run(text = "Long text...", .llm = llm)
+
+# Chain operations for complex workflows (coming soon)
+# analysis <- text |>
+#   extract_key_points() |>
+#   summarize(max_words = 100) |>
+#   translate(to = "Spanish")
+```
+
+### 2. Clear and Consistent API
+
+One way to do each thing - no confusion:
+
+``` r
+# Step 1: Define what you want (signature)
+sig <- signature("text -> summary: string[50, 200]")
+
+# Step 2: Create how to do it (module)
+mod <- sig |> module(type = "predict", template = "Summarize: {text}")
+
+# Show the structure of the module
+print(mod)
+#> 
+#> ── Predict Module ──
+#> 
+#> ── Signature
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • text: Input: text
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Given the fields `text`, produce the fields `summary`.
+#> 
+#> ── Template
+#> Summarize: {text}
+```
+
+``` r
+# Step 3: Execute it (run)
+result <- mod |> run(text = "Your text here...", .llm = llm)
+```
+
+### 3. Flexible Signature Creation
+
+Define operations using string notation or explicit specifications:
+
+``` r
+# String notation (recommended for most cases)
+qa_sig <- signature("context, question -> answer")
+math_sig <- signature("problem -> solution: float")
+extract_sig <- signature("text -> entities: array(string)")
+
+# Show the structure
+print(qa_sig)
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • context: Input: context
+#> • question: Input: question
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Given the fields `context`, `question`, produce the fields `answer`.
+```
+
+``` r
+# Multiple outputs support
+analysis_sig <- signature("text -> sentiment: string, confidence: float, keywords: list[string]")
+
+# Advanced type annotations
+optional_sig <- signature("doc -> title: string, subtitle: Optional[string]")
+dict_sig <- signature("data -> metadata: dict[string, list[string]]")
+
+# Explicit notation for complex structures
+complex_sig <- signature(
+  inputs = list(
+    input("data", description = "Raw data to analyze")
+  ),
+  output_type = ellmer::type_object(
+    summary = ellmer::type_string(),
+    score = ellmer::type_number(),
+    tags = ellmer::type_array(ellmer::type_string())
+  ),
+  instructions = "Analyze the data comprehensively"
+)
+
+# Field-level descriptions for better LLM guidance
+detailed_sig <- signature(
+  inputs = list(
+    input("text",
+          type_string(description = "Document to analyze for sentiment"))
+  ),
+  output_type = type_object(
+    sentiment = type_enum(
+      values = c('positive', 'negative', 'neutral'),
+      description = "Overall sentiment of the document"
+    )
+  )
+)
+
+# Or simpler for basic types - pass description directly to input()
+simple_sig <- signature(
+  inputs = list(
+    input("text", "string", description = "Text to analyze"),
+    input("max_length", "integer", description = "Maximum output length")
+  )
+)
+```
+
+## Complete Example: Building a Question-Answer System
+
+Here’s how to build a QA system using the clean, consistent dsprrr API:
+
+``` r
+library(dsprrr)
+library(ellmer)
+
+# Configure LLM
+llm <- chat_openai(model = "gpt-5-mini")
+
+# Simple pipeline with string notation
+answer <- signature("context, question -> answer") |>
+  module(type = "predict",
+         template = "Context: {context}\n\nQuestion: {question}") |>
+  run(
+    context = "The tidyverse is a collection of R packages for data science.",
+    question = "What is the tidyverse?",
+    .llm = llm
+  )
+
+# With structured output and demonstrations
+qa_module <- signature(
+  inputs = list(
+    input("context", description = "Background information"),
+    input("question", description = "Question to answer")
+  ),
+  output_type = type_object(
+    answer = type_string(),
+    confidence = type_number()
+  ),
+  instructions = "Answer based on context. Include confidence score."
+) |>
+  module(
+    type = "predict",
+    demos = list(
+      list(
+        inputs = list(
+          context = "R is a programming language for statistical computing.",
+          question = "What is R used for?"
+        ),
+        output = list(
+          answer = "Statistical computing",
+          confidence = 0.95
+        )
+      )
+    )
+  )
+
+# Execute with pipes
+result <- qa_module |>
+  run(
+    context = "dsprrr brings DSPy to R with clean, consistent APIs.",
+    question = "What does dsprrr do?",
+    .llm = llm
+  )
+```
+
+## Automatic Prompt Optimization (NEW!)
+
+Optimize your LLM programs automatically with dsprrr’s compilation
+framework:
+
+``` r
+# Create a sentiment classifier
+classifier <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |>
+  module(type = "predict", template = "Text: {text}\nSentiment:")
+
+# Prepare training data
+trainset <- dsp_trainset(
+  text = c("I love this product!", "Terrible experience", "It's okay I guess"),
+  sentiment = c("positive", "negative", "neutral")
+)
+
+# Method 1: Simple few-shot optimization with LabeledFewShot
+optimized <- compile_module(
+  program = classifier,
+  teleprompter = LabeledFewShot(k = 2),  # Use 2 examples
+  trainset = trainset
+)
+
+# The optimized module now includes demonstrations!
+result <- optimized |> run(text = "Amazing service!", .llm = llm)
+
+# Method 2: Grid search over instruction variants
+variants <- data.frame(
+  id = c("terse", "detailed", "analytical"),
+  instructions_suffix = c(
+    ". Be concise.",
+    ". Provide detailed reasoning.",
+    ". Analyze sentiment analytically."
+  )
+)
+
+optimized_grid <- compile_module(
+  program = classifier,
+  teleprompter = GridSearchTeleprompter(
+    variants = variants,
+    metric = metric_exact_match(field = "sentiment"),
+    k = 2
+  ),
+  trainset = trainset
+)
+
+# Check optimization results
+print(optimized_grid@config$best_variant)  # Which variant performed best
+print(optimized_grid@config$all_scores)     # Scores for all variants
+```
+
+### Metrics for Evaluation
+
+dsprrr provides flexible metrics for evaluating and optimizing your
+programs:
+
+``` r
+# Exact match for classification
+metric <- metric_exact_match(field = "sentiment")
+
+# F1 score for text generation
+metric <- metric_f1(field = "answer")
+
+# Custom metrics
+length_metric <- metric_custom(function(pred, exp) {
+  nchar(pred$summary) <= 100  # Ensure summaries are concise
+}, name = "length_check")
+
+# Threshold-based metrics
+f1_threshold <- metric_threshold(
+  metric_f1(field = "answer"),
+  threshold = 0.8,
+  comparison = ">="
+)
+
+# Evaluate your module
+results <- evaluate_dsp(
+  module = optimized,
+  dataset = test_data,
+  metric = metric_exact_match(field = "sentiment"),
+  llm = llm
+)
+print(results$mean_score)
+```
+
+## Key Features (NEW in v0.1.0)
+
+### Batch Processing & Dataset Support
+
+Process multiple inputs efficiently with automatic parallelization:
+
+``` r
+# Process multiple inputs at once
+results <- classifier |>
+  run(text = c("Great!", "Terrible", "Okay"), .llm = llm)
+
+# Process entire datasets with run_dataset()
+data <- tibble(
+  text = c("I love this!", "Not good", "It's fine")
+)
+results_df <- classifier |> run_dataset(data, .llm = llm)
+```
+
+### Structured Returns
+
+Get detailed metadata with every call:
+
+``` r
+result <- classifier |>
+  run(text = "Amazing!", .llm = llm, .return_format = "structured")
+
+# Access components
+result$output      # The actual result
+result$chat        # The LLM chat object
+result$metadata    # Timing, tokens, etc.
+```
+
+### vitals Integration
+
+Seamless interoperability with the vitals evaluation framework:
+
+``` r
+library(vitals)
+
+# Use dsprrr modules as vitals solvers
+task <- Task$new(
+  dataset = test_data,
+  solver = as_function(classifier, .llm = llm),
+  scorer = model_graded_qa()
+)
+task$eval()
+```
+
+## Roadmap
+
+`dsprrr` is under active development. Current implementation status:
+
+### ✅ Milestone 1: Core Foundation (COMPLETED - Dec 2024)
+
+- **S7 Architecture**: Robust `Signature` and `Predict` classes with
+  validators
+- **Clean API**: Consistent [`signature()`](reference/signature.md),
+  [`module()`](reference/module.md), [`run()`](reference/run.md)
+  functions
+- **DSPy Notation**: String signatures like
+  `"text -> sentiment: enum('pos', 'neg')"`
+- **Type System**: Flexible input types with ellmer integration
+- **Pipe-Friendly**: Full support for R’s `|>` operator
+- **Testing**: 340+ passing tests with comprehensive coverage
+- **Documentation**: Getting-started vignette with practical examples
+
+### ✅ Milestone 2: Compilation Engine (COMPLETED - Dec 2024)
+
+`Teleprompter` base class and `GridSearchTeleprompter`
+
+[`compile()`](reference/compile.md) generic for automatic prompt
+optimization
+
+`LabeledFewShot` teleprompter for bootstrap few-shot learning
+
+Comprehensive metric system with custom metrics and thresholds
+
+Module state management (`reset_copy`, `deepcopy`, `is_compiled`)
+
+Evaluation framework with [`evaluate()`](reference/evaluate.md) generic
+
+Helper functions like [`dsp_trainset()`](reference/dsp_trainset.md) for
+data preparation
+
+### ✅ Milestone 3: Enhanced Integration (COMPLETED - Jan 2025)
+
+**Batch Processing**: Process multiple inputs with parallelization
+support
+
+**Dataset Support**: Native [`run_dataset()`](reference/run_dataset.md)
+for tibbles/data frames
+
+**Structured Returns**: Detailed metadata with every LLM call
+
+**vitals Integration**: Seamless interoperability with evaluation
+framework
+
+**Function Interface**: Convert modules to callable functions with
+`as_function()`
+
+**Robust error handling**: Using `rlang` for informative errors
+
+**Safe parallel execution**: Fresh LLM clients per worker with fallback
+to sequential
+
+**Rich metadata**: Extended return objects with solver logs for vitals
+
+### 📋 Milestone 4: Ecosystem & Polish (In Progress)
+
+Provider-specific helpers (e.g., `lm_openai()`)
+
+pkgdown documentation website
+
+Helper constructors (`teleprompter_grid_search()`,
+`teleprompter_fewshot()`)
+
+Align teleprompter defaults with DSPy
+
+### 🔮 Future Roadmap
+
+**Advanced Teleprompters:** - GEPA (Generate-Evaluate-Prune-Augment) for
+rationale synthesis - MIPRO/MIPROv2 for programmatic prompt
+optimization - Tool-aware optimizers for multi-step traces -
+Self-critique teleprompters (COPRO-style)
+
+**New Module Types:** - `ChainOfThought` for reasoning traces - `ReAct`
+for action-observation loops - `ToolCall` for function calling -
+`Router` for ensemble selection - `Judge` for self-evaluation pipelines
+
+**Production Features:** - Integration with `pins` for caching compiled
+models - Integration with `vetiver` for API deployment - Streaming
+outputs and async execution - Token accounting and cost tracking
+
+## Getting Started
+
+Check out our comprehensive [Getting Started
+vignette](vignettes/getting-started.Rmd) for detailed examples and best
+practices.
+
+``` r
+# View the vignette
+vignette("getting-started", package = "dsprrr")
+```
+
+## Development
+
+### Running Tests and Vignettes
+
+The package uses [vcr](https://docs.ropensci.org/vcr/) to cache API
+responses, allowing tests and vignettes to run without API keys:
+
+``` r
+# Run tests (uses cached responses)
+devtools::test()
+
+# Build vignettes (uses cached responses)
+devtools::build_vignettes()
+```
+
+### Recording New Cassettes
+
+Maintainers with API keys can update cached responses:
+
+``` bash
+# Set your API keys
+export OPENAI_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"
+
+# Record new cassettes
+Rscript inst/scripts/record-cassettes.R
+```
+
+## Contributing
+
+We welcome contributions! Please see our [contribution
+guidelines](CONTRIBUTING.md) for details.
+
+## License
+
+MIT © James Wade
+
+## Acknowledgments
+
+This package is inspired by [DSPy](https://github.com/stanfordnlp/dspy)
+from Stanford NLP. Special thanks to the R Consortium Object-Oriented
+Programming Working Group for the S7 system that powers this
+implementation.

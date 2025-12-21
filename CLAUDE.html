@@ -42,82 +42,251 @@
 <div class="section level2">
 <h2 id="project-overview">Project Overview<a class="anchor" aria-label="anchor" href="#project-overview"></a></h2>
 <p><code>dsprrr</code> is an R package for building principled, test-driven, and optimizable applications using Large Language Models. It implements the DSP (Declarative Self-improving Language Programs) framework in R, providing a structured programming model where LLM workflows are treated as programs that can be systematically improved.</p>
-<p>The package is built on S7 (R’s modern object system) and follows tidyverse design principles. It represents prompts, examples, and evaluation results as data frames with composable, pipe-friendly APIs.</p>
+<p>The package uses: - <strong>S7</strong> for immutable <code>Signature</code> objects defining inputs/outputs - <strong>R6</strong> for stateful <code>Module</code> objects with mutable configuration and traces - <strong>ellmer</strong> for LLM API calls with structured output support - <strong>tidyverse conventions</strong> for data manipulation (tibbles, pipes, tidy data)</p>
 </div>
 <div class="section level2">
 <h2 id="development-commands">Development Commands<a class="anchor" aria-label="anchor" href="#development-commands"></a></h2>
 <div class="section level3">
 <h3 id="package-development">Package Development<a class="anchor" aria-label="anchor" href="#package-development"></a></h3>
-<ul><li>Build and check: <code>devtools::check()</code>
-</li>
-<li>Run tests: <code>devtools::test()</code>
-</li>
-<li>Run specific test file: <code>testthat::test_file("tests/testthat/test-&lt;name&gt;.R")</code>
-</li>
-<li>Build documentation: <code>devtools::document()</code>
-</li>
-<li>Build README: <code>devtools::build_readme()</code> (edits should be made to README.Rmd)</li>
-<li>Install package locally: <code>devtools::install()</code>
-</li>
-<li>Load for development: <code>devtools::load_all()</code>
-</li>
-</ul></div>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">load_all</span><span class="op">(</span><span class="op">)</span>           <span class="co"># Load package for development</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">test</span><span class="op">(</span><span class="op">)</span>               <span class="co"># Run all tests</span></span>
+<span><span class="fu">testthat</span><span class="fu">::</span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_file.html" class="external-link">test_file</a></span><span class="op">(</span><span class="st">"tests/testthat/test-&lt;name&gt;.R"</span><span class="op">)</span>  <span class="co"># Run specific test</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">document</span><span class="op">(</span><span class="op">)</span>           <span class="co"># Rebuild documentation</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">check</span><span class="op">(</span><span class="op">)</span>              <span class="co"># Full R CMD check</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install</span><span class="op">(</span><span class="op">)</span>            <span class="co"># Install package locally</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="building-readme-and-vignettes">Building README and Vignettes<a class="anchor" aria-label="anchor" href="#building-readme-and-vignettes"></a></h3>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">build_readme</span><span class="op">(</span><span class="op">)</span>       <span class="co"># Rebuild README.md from README.Rmd</span></span>
+<span><span class="co"># For vignettes, use build_rmd() - DO NOT use devtools::build_vignettes()</span></span></code></pre></div>
+</div>
 <div class="section level3">
 <h3 id="continuous-integration">Continuous Integration<a class="anchor" aria-label="anchor" href="#continuous-integration"></a></h3>
-<p>The package uses GitHub Actions for CI/CD with: - R CMD check across multiple R versions and OS platforms - Test coverage reporting to Codecov - Automated checks trigger on push to main/master and pull requests</p>
+<p>GitHub Actions runs R CMD check across multiple R versions and OS platforms, with test coverage reporting to Codecov.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="core-architecture">Core Architecture<a class="anchor" aria-label="anchor" href="#core-architecture"></a></h2>
 <div class="section level3">
-<h3 id="s7-classes-planned-implementation">S7 Classes (planned implementation)<a class="anchor" aria-label="anchor" href="#s7-classes-planned-implementation"></a></h3>
-<ul><li>
-<strong><code>Signature</code></strong>: Declarative schema for LLM operations with inputs, output_type, and instructions</li>
-<li>
-<strong><code>Predict</code></strong>: Stateless execution module pairing a Signature with a glue template</li>
-<li>
-<strong><code>Teleprompter</code></strong>: Base class for optimization strategies (e.g., GridSearchTeleprompter)</li>
+<h3 id="package-layout">Package Layout<a class="anchor" aria-label="anchor" href="#package-layout"></a></h3>
+<pre><code><span><span class="va">R</span><span class="op">/</span></span>
+<span>  <span class="va">signature.R</span>           <span class="co"># S7 Signature class + string parsing</span></span>
+<span>  <span class="va">signature</span><span class="op">-</span><span class="va">parser.R</span>    <span class="co"># DSPy-style string notation parser</span></span>
+<span>  <span class="va">input.R</span>               <span class="co"># input() helper for signature definitions</span></span>
+<span>  <span class="va">module</span><span class="op">-</span><span class="va">base.R</span>         <span class="co"># R6 Module base class (forward, optimize, traces)</span></span>
+<span>  <span class="va">module</span><span class="op">-</span><span class="va">predict.R</span>      <span class="co"># PredictModule subclass for text generation</span></span>
+<span>  <span class="va">module.R</span>              <span class="co"># module() factory function</span></span>
+<span>  <span class="va">run.R</span>                 <span class="co"># run() and run_dataset() generics</span></span>
+<span>  <span class="va">evaluate.R</span>            <span class="co"># evaluate() generic for metric computation</span></span>
+<span>  <span class="va">optimize.R</span>            <span class="co"># optimize_grid() and tidymodels helpers</span></span>
+<span>  <span class="va">teleprompter.R</span>        <span class="co"># S7 Teleprompter classes (LabeledFewShot, GridSearch)</span></span>
+<span>  <span class="va">compile.R</span>             <span class="co"># compile() generic for teleprompter-based optimization</span></span>
+<span>  <span class="va">metrics.R</span>             <span class="co"># Built-in metrics (exact_match, etc.)</span></span>
+<span>  <span class="va">vitals.R</span>              <span class="co"># as_vitals_solver(), as_dsprrr_metric() bridges</span></span>
+<span>  <span class="va">traces.R</span>              <span class="co"># Trace tibble constructors</span></span>
+<span>  <span class="va">utils.R</span>               <span class="co"># Shared utilities</span></span></code></pre>
+</div>
+<div class="section level3">
+<h3 id="key-classes">Key Classes<a class="anchor" aria-label="anchor" href="#key-classes"></a></h3>
+<p><strong>Signature (S7)</strong> - Declarative schema for LLM operations: - <code>inputs</code>: List of <code><a href="reference/input.html">input()</a></code> specifications - <code>output_type</code>: ellmer type object (e.g., <code>type_string()</code>, <code>type_enum()</code>) - <code>instructions</code>: System prompt text</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># String notation (DSPy-style)</span></span>
+<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer: string"</span><span class="op">)</span></span>
+<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span>, instructions <span class="op">=</span> <span class="st">"Be concise"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Explicit notation</span></span>
+<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"text"</span>, description <span class="op">=</span> <span class="st">"Text to analyze"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  output_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="st">"Analyze sentiment"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><strong>Module (R6)</strong> - Stateful execution unit: - <code>signature</code>: Immutable S7 Signature reference - <code>config</code>: Mutable configuration (temperature, template, etc.) - <code>state</code>: Mutable runtime state (traces, trials, compilation status) - <code>forward()</code>: Execute on batch input, return tibble with output/metadata - <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>: Run grid search over parameter configurations - <code>is_compiled()</code>: Check if module has been optimized</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+<p><strong>PredictModule (R6)</strong> - Subclass for text generation: - <code>template</code>: glue template for prompt construction - <code>demos</code>: List of few-shot examples - <code>apply_optimization_params()</code>: Hook for updating state after optimization</p>
+</div>
+<div class="section level3">
+<h3 id="core-generics">Core Generics<a class="anchor" aria-label="anchor" href="#core-generics"></a></h3>
+<table class="table"><colgroup><col width="52%"><col width="47%"></colgroup><thead><tr class="header"><th>Function</th>
+<th>Purpose</th>
+</tr></thead><tbody><tr class="odd"><td><code>run(module, ...)</code></td>
+<td>Execute module with named inputs</td>
+</tr><tr class="even"><td><code>run_dataset(module, dataset, ...)</code></td>
+<td>Batch execute on data frame</td>
+</tr><tr class="odd"><td><code>evaluate(module, dataset, metric)</code></td>
+<td>Compute metrics on dataset</td>
+</tr><tr class="even"><td><code>optimize_grid(module, devset, metric)</code></td>
+<td>Grid search optimization</td>
+</tr><tr class="odd"><td><code>compile(teleprompter, module, trainset)</code></td>
+<td>Teleprompter-based optimization</td>
+</tr></tbody></table></div>
+<div class="section level3">
+<h3 id="teleprompters-s7">Teleprompters (S7)<a class="anchor" aria-label="anchor" href="#teleprompters-s7"></a></h3>
+<p>Optimization strategies that compile modules: - <code>LabeledFewShot</code>: Add k examples from training set as demonstrations - <code>GridSearchTeleprompter</code>: Search over instruction/template variants</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span>, metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="vitals-integration">Vitals Integration<a class="anchor" aria-label="anchor" href="#vitals-integration"></a></h3>
+<p>Bridge to the <code>vitals</code> package for evaluation: - <code>as_vitals_solver(module)</code>: Convert module to vitals-compatible solver - <code>as_dsprrr_metric(vitals_scorer)</code>: Adapt vitals scorer for dsprrr metrics</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="key-patterns">Key Patterns<a class="anchor" aria-label="anchor" href="#key-patterns"></a></h2>
+<div class="section level3">
+<h3 id="creating-and-running-modules">Creating and Running Modules<a class="anchor" aria-label="anchor" href="#creating-and-running-modules"></a></h3>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 1. Define signature</span></span>
+<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. Create module</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 3. Run with LLM</span></span>
+<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, text <span class="op">=</span> <span class="st">"I love this!"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 4. Batch processing</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great!"</span>, <span class="st">"Terrible!"</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="optimization-workflow">Optimization Workflow<a class="anchor" aria-label="anchor" href="#optimization-workflow"></a></h3>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Grid search with custom parameters</span></span>
+<span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
+<span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>prompt_style <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"concise"</span>, <span class="st">"detailed"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  objective <span class="op">=</span> <span class="st">"maximize"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check optimization results</span></span>
+<span><span class="fu"><a href="reference/module_trials_summary.html">module_trials_summary</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/module_metric_summary.html">module_metric_summary</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="evaluation">Evaluation<a class="anchor" aria-label="anchor" href="#evaluation"></a></h3>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">eval_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">test_data</span>, metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># Returns: mean_score, scores, predictions, metadata, n_evaluated, n_errors</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="testing-patterns">Testing Patterns<a class="anchor" aria-label="anchor" href="#testing-patterns"></a></h2>
+<div class="section level3">
+<h3 id="test-structure">Test Structure<a class="anchor" aria-label="anchor" href="#test-structure"></a></h3>
+<ul><li>Unit tests in <code>tests/testthat/test-*.R</code>
+</li>
+<li>VCR cassettes for HTTP recording in <code>tests/_vcr/</code>
+</li>
+<li>Integration tests often skip on CRAN (<code>skip_on_cran()</code>)</li>
 </ul></div>
 <div class="section level3">
-<h3 id="core-generics-planned">Core Generics (planned)<a class="anchor" aria-label="anchor" href="#core-generics-planned"></a></h3>
-<ul><li>
-<code>forward()</code>: Executes a module with named arguments</li>
-<li>
-<code><a href="reference/compile.html">compile()</a></code>: Optimizes a program using a Teleprompter</li>
-<li>
-<code><a href="reference/evaluate.html">evaluate()</a></code>: Evaluates program performance on test sets</li>
-</ul></div>
-<div class="section level3">
-<h3 id="dependencies">Dependencies<a class="anchor" aria-label="anchor" href="#dependencies"></a></h3>
-<p>Core packages imported: - <code>cli</code>: Console output and messaging - <code>glue</code>: String interpolation for templates - <code>lifecycle</code>: Manage function lifecycle - <code>rlang</code>: Advanced R programming and error handling - <code>withr</code>: Temporary state changes</p>
-<p>The package will integrate with <code>ellmer</code> for LLM API calls and follow tidyverse design patterns for data manipulation.</p>
+<h3 id="key-test-conventions">Key Test Conventions<a class="anchor" aria-label="anchor" href="#key-test-conventions"></a></h3>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Mock LLM for deterministic testing</span></span>
+<span><span class="va">mock_llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  chat_structured <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>answer <span class="op">=</span> <span class="st">"mocked response"</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Test module behavior</span></span>
+<span><span class="fu">test_that</span><span class="op">(</span><span class="st">"module returns expected output"</span>, <span class="op">{</span></span>
+<span>  <span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span><span class="op">)</span></span>
+<span>  <span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="va">mod</span><span class="op">$</span><span class="fu">forward</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>q <span class="op">=</span> <span class="st">"test"</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">mock_llm</span><span class="op">)</span></span>
+<span>  <span class="fu">expect_s3_class</span><span class="op">(</span><span class="va">result</span>, <span class="st">"tbl_df"</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
 <h2 id="implementation-status">Implementation Status<a class="anchor" aria-label="anchor" href="#implementation-status"></a></h2>
-<p>The package is in early development. The PLAN.md file contains the detailed roadmap with 4 milestones: 1. ✅ S7 Foundation &amp; Core Execution (COMPLETED) - Implemented <code>Signature</code> and <code>Predict</code> S7 classes with validators - Implemented <code>forward()</code> S7 generic and method for Predict class - Integrated with ellmer for LLM API calls - Created comprehensive test suite 2. The Compilation Engine (5 weeks) - NOT STARTED 3. Ecosystem &amp; Ergonomics (7 weeks) - NOT STARTED 4. Future Vision &amp; Extensibility - NOT STARTED</p>
 <div class="section level3">
-<h3 id="completed-components">Completed Components<a class="anchor" aria-label="anchor" href="#completed-components"></a></h3>
-<ul><li>
-<code><a href="reference/input.html">input()</a></code>: Helper function to create input specifications</li>
-<li>
-<code>Signature</code>: S7 class for declarative LLM operation schemas</li>
-<li>
-<code>Predict</code>: S7 class for stateless execution modules</li>
-<li>
-<code>forward()</code>: Generic for executing modules with structured output</li>
-<li>Integration with ellmer’s <code>chat_structured()</code> for type-safe LLM calls</li>
-<li>Test suite with 54 passing tests</li>
+<h3 id="completed-milestone-a">Completed (Milestone A)<a class="anchor" aria-label="anchor" href="#completed-milestone-a"></a></h3>
+<ul><li>R6 Module base class with <code>forward()</code>, <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>, <code>reset()</code>, trace methods</li>
+<li>PredictModule subclass with template and demo support</li>
+<li>S7 Signature with DSPy-style string parsing</li>
+<li>ellmer integration via <code>chat_structured()</code>
+</li>
+<li>vitals bridges (<code>as_vitals_solver</code>, <code>as_dsprrr_metric</code>)</li>
+<li>Grid search optimization with tidymodels parameter support</li>
+<li>LabeledFewShot and GridSearchTeleprompter</li>
 </ul></div>
 <div class="section level3">
-<h3 id="known-issues">Known Issues<a class="anchor" aria-label="anchor" href="#known-issues"></a></h3>
-<ul><li>Documentation warnings need to be addressed for CRAN submission</li>
-<li>Some imported packages (tibble, withr) are not yet used</li>
-<li>Non-standard top-level files (CLAUDE.md, PLAN.md) should be added to .Rbuildignore for CRAN</li>
-<li>Do not use <code>-old</code> or <code>-new</code> or <code>-improved</code> files names. You should replace outdated code instead of preserving the old stuff.</li>
-<li>Do not use <code>devtools::build_vignettes()</code>. You should use build_rmd() instead.</li>
+<h3 id="in-progress-milestone-b">In Progress (Milestone B)<a class="anchor" aria-label="anchor" href="#in-progress-milestone-b"></a></h3>
+<ul><li>Tidymodels integration refinement</li>
+<li>
+<code><a href="reference/module_parameter_set.html">module_parameter_set()</a></code> and <code><a href="reference/module_metric_summary.html">module_metric_summary()</a></code> helpers</li>
+<li>Documentation updates for optimization workflow</li>
+</ul></div>
+<div class="section level3">
+<h3 id="planned">Planned<a class="anchor" aria-label="anchor" href="#planned"></a></h3>
+<ul><li>Chain-of-Thought and tool-aware module subclasses</li>
+<li>Advanced teleprompters (MIPRO, GEPA)</li>
+<li>Orchestration helpers (pins, targets templates)</li>
 </ul></div>
 </div>
+<div class="section level2">
+<h2 id="coding-conventions">Coding Conventions<a class="anchor" aria-label="anchor" href="#coding-conventions"></a></h2>
+<div class="section level3">
+<h3 id="general">General<a class="anchor" aria-label="anchor" href="#general"></a></h3>
+<ul><li>Use tidyverse style (snake_case, pipe-friendly APIs)</li>
+<li>Prefer editing existing files over creating new ones</li>
+<li>Avoid <code>-old</code>, <code>-new</code>, <code>-improved</code> file name suffixes</li>
+<li>Keep changes focused; avoid over-engineering</li>
+</ul></div>
+<div class="section level3">
+<h3 id="r6-classes">R6 Classes<a class="anchor" aria-label="anchor" href="#r6-classes"></a></h3>
+<ul><li>Mark internal classes with <code>@keywords internal</code> and <code>@noRd</code>
+</li>
+<li>Use <code>public</code> for user-facing methods, <code>private</code> for implementation details</li>
+<li>Clone with <code>$clone(deep = TRUE)</code> for stateful copies</li>
+</ul></div>
+<div class="section level3">
+<h3 id="s7-classes">S7 Classes<a class="anchor" aria-label="anchor" href="#s7-classes"></a></h3>
+<ul><li>Export S7 classes that users should construct directly</li>
+<li>Use <code>@export</code> for constructors, <code>@noRd</code> for internal methods</li>
+</ul></div>
+<div class="section level3">
+<h3 id="error-handling">Error Handling<a class="anchor" aria-label="anchor" href="#error-handling"></a></h3>
+<ul><li>Use <code><a href="https://cli.r-lib.org/reference/cli_abort.html" class="external-link">cli::cli_abort()</a></code> for user-facing errors</li>
+<li>Use <code><a href="https://cli.r-lib.org/reference/cli_abort.html" class="external-link">cli::cli_warn()</a></code> for warnings</li>
+<li>Validate inputs early with clear error messages</li>
+</ul></div>
+<div class="section level3">
+<h3 id="dependencies">Dependencies<a class="anchor" aria-label="anchor" href="#dependencies"></a></h3>
+<p>Required (Imports): - <code>cli</code>, <code>ellmer</code>, <code>glue</code>, <code>jsonlite</code>, <code>lifecycle</code>, <code>mirai</code>, <code>R6</code>, <code>rlang</code>, <code>S7</code>, <code>tibble</code></p>
+<p>Suggested: - <code>dials</code>, <code>knitr</code>, <code>rmarkdown</code>, <code>testthat</code>, <code>vcr</code>, <code>vitals</code></p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="known-issues">Known Issues<a class="anchor" aria-label="anchor" href="#known-issues"></a></h2>
+<ul><li>Some test files have <code>-improved</code> suffix that should be renamed</li>
+<li>Documentation warnings may appear for R6 classes (expected)</li>
+<li>Minor test failures related to deepcopy state preservation</li>
+<li>CLAUDE.md and PLAN.md should be in .Rbuildignore for CRAN</li>
+</ul></div>
+<div class="section level2">
+<h2 id="file-references">File References<a class="anchor" aria-label="anchor" href="#file-references"></a></h2>
+<ul><li>
+<strong>PLAN.md</strong>: Detailed roadmap with milestones and task tracking</li>
+<li>
+<strong>VITALS_INTEGRATION.md</strong>: Documentation for vitals package integration</li>
+<li>
+<strong>vignettes/</strong>: User-facing tutorials
+<ul><li>
+<code>getting-started.Rmd</code>: Introduction and basic usage</li>
+<li>
+<code>compilation-optimization.Rmd</code>: Optimization workflow</li>
+<li>
+<code>vitals-integration.Rmd</code>: Vitals bridge usage</li>
+</ul></li>
+</ul></div>
 </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -129,7 +298,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>

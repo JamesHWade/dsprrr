@@ -1,0 +1,268 @@
+# Integration with vitals
+
+``` r
+# Conditionally evaluate based on API keys or vcr cassettes
+eval_vignette <- function() {
+  # Check if vcr cassettes exist
+  if (dir.exists("_vcr")) {
+    name <- tools::file_path_sans_ext(knitr::current_input())
+    cassettes <- dir("_vcr", pattern = paste0(name, "*"))
+    has_cassette <- length(cassettes) > 0
+  } else {
+    has_cassette <- FALSE
+  }
+
+  # Check if API keys are available
+  has_key <- any(
+    nzchar(Sys.getenv("OPENAI_API_KEY")),
+    nzchar(Sys.getenv("ANTHROPIC_API_KEY")),
+    nzchar(Sys.getenv("GOOGLE_GEMINI_API_KEY"))
+  )
+
+  # Also check if vitals is installed
+  has_vitals <- requireNamespace("vitals", quietly = TRUE)
+
+  # Don't evaluate on CRAN
+  not_cran <- !identical(Sys.getenv("NOT_CRAN"), "false")
+
+  # Evaluate if we have keys/cassettes, vitals is installed, and not on CRAN
+  (has_key || has_cassette) && has_vitals && not_cran
+}
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE # Keep as FALSE for safety - vignettes contain LLM calls
+)
+
+# Setup vcr if available and evaluating
+if (requireNamespace("vcr", quietly = TRUE) && eval_vignette()) {
+  vcr::setup_knitr()
+}
+
+cli::cli_inform("Eval vignettes: {eval_vignette()}")
+```
+
+    ## Eval vignettes: FALSE
+
+``` r
+library(dsprrr)
+library(vitals)
+library(ellmer)
+library(tibble)
+```
+
+## Overview
+
+`dsprrr` and `vitals` form a complementary ecosystem for LLM application
+development in R:
+
+- **dsprrr**: Focuses on building and optimizing LLM programs
+- **vitals**: Focuses on evaluating LLM applications
+- **ellmer**: Provides the common foundation for LLM API interactions
+
+Together, they offer a complete workflow: **Design → Build → Optimize →
+Evaluate**.
+
+## Converting dsprrr Modules to vitals Solvers
+
+The new API features in dsprrr make integration with vitals seamless.
+Here’s how to use a dsprrr module as a vitals solver:
+
+### Method 1: Direct Integration (with new API)
+
+Thanks to the batch processing support and structured returns, dsprrr
+modules can now work directly with vitals:
+
+``` r
+# Create a dsprrr module
+sentiment_module <- signature(
+  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+) |>
+  module(type = "predict")
+
+# Create vitals task with dsprrr's helper
+task <- Task$new(
+  dataset = tibble(
+    input = c("I love this!", "This is terrible"),
+    target = c("positive", "negative")
+  ),
+  solver = as_vitals_solver(sentiment_module, llm = chat_openai()),
+  scorer = model_graded_qa()
+)
+
+# Evaluate
+task$eval()
+```
+
+### Method 2: Using run_dataset() (New Feature)
+
+The new [`run_dataset()`](../reference/run_dataset.md) method makes it
+even easier to process tibbles:
+
+``` r
+# Process a dataset directly
+dataset <- tibble(
+  text = c("Great product!", "Waste of money", "It's okay"),
+  expected = c("positive", "negative", "neutral")
+)
+
+# Use the new run_dataset() method
+results <- sentiment_module |>
+  run_dataset(dataset, .llm = chat_openai())
+
+# results now has all original columns plus 'result' column
+print(results)
+#> # A tibble: 3 × 3
+#>   text            expected result
+#>   <chr>           <chr>    <list>
+#> 1 Great product!  positive <list [1]>
+#> 2 Waste of money  negative <list [1]>
+#> 3 It's okay       neutral  <list [1]>
+```
+
+## Using vitals Scorers in dsprrr Optimization
+
+Convert vitals scorers to dsprrr metrics for use in optimization:
+
+``` r
+# Create a metric from vitals scorer
+# (vitals provides model-graded scorers returning "C"/"I" style outputs)
+
+teleprompter <- GridSearchTeleprompter(
+  variants = tibble(
+    id = c("brief", "detailed"),
+    instructions_mod = c(
+      "Be concise",
+      "Provide detailed analysis"
+    )
+  ),
+  metric = as_dsprrr_metric(model_graded_qa())
+)
+```
+
+## Complete Workflow Example
+
+Here’s an end-to-end example showing the full integration:
+
+``` r
+# 1. Design with dsprrr
+qa_module <- signature(
+  inputs = list(
+    input("context", description = "Background information"),
+    input("question", description = "Question to answer")
+  ),
+  output_type = ellmer::type_object(
+    answer = ellmer::type_string(),
+    confidence = ellmer::type_number(minimum = 0, maximum = 1)
+  ),
+  instructions = "Answer the question based on the context"
+) |>
+  module(type = "predict")
+
+# 2. Prepare dataset
+qa_dataset <- tibble(
+  context = c(
+    "The sky is blue due to Rayleigh scattering",
+    "Water freezes at 0°C or 32°F"
+  ),
+  question = c(
+    "Why is the sky blue?",
+    "At what temperature does water freeze?"
+  ),
+  target = c(
+    "Due to Rayleigh scattering",
+    "0°C or 32°F"
+  )
+)
+
+# 3. Optimize with dsprrr (using vitals metrics)
+optimized_module <- compile(
+  qa_module,
+  teleprompter = LabeledFewShot(k = 2),
+  trainset = qa_dataset
+)
+
+# 4. Evaluate with vitals
+eval_task <- Task$new(
+  dataset = qa_dataset,
+  solver = function(inputs, ...) {
+    results <- run_dataset(
+      optimized_module,
+      tibble(
+        context = inputs,
+        question = inputs # Extract from combined input
+      ),
+      .return_format = "structured"
+    )
+
+    list(
+      result = sapply(results$result, function(r) r$answer),
+      solver_chat = results$.chat
+    )
+  },
+  scorer = detect_match()
+)
+
+eval_task$eval()
+```
+
+## Module as Function
+
+The new `as_function()` feature makes modules even more natural to use:
+
+``` r
+# Convert module to function
+classify <- as_function(sentiment_module, .llm = chat_openai())
+
+# Use like any R function
+result <- classify(text = "Amazing!")
+print(result$sentiment)
+#> [1] "positive"
+
+# Works great in pipelines
+dataset |>
+  mutate(
+    sentiment = map_chr(text, ~ classify(text = .x)$sentiment)
+  )
+```
+
+## Performance Considerations
+
+The new batch processing features provide significant performance
+benefits:
+
+``` r
+# Process 100 items in parallel (new feature!)
+large_dataset <- tibble(
+  text = sample_texts[1:100]
+)
+
+# Automatic parallel processing with progress bar
+results <- sentiment_module |>
+  run_dataset(
+    large_dataset,
+    .llm = chat_openai(),
+    .parallel = TRUE, # Default
+    .progress = TRUE # Default
+  )
+```
+
+## Summary
+
+The integration between dsprrr and vitals is now seamless thanks to:
+
+1.  **Batch processing** in [`run()`](../reference/run.md) - handles
+    vectors automatically
+2.  **Structured returns** - includes metadata needed for evaluation
+3.  **Dataset support** - [`run_dataset()`](../reference/run_dataset.md)
+    works directly with tibbles
+4.  **Function interface** - modules can be called like functions
+
+These features make it easy to: - Use dsprrr modules as vitals solvers
+without adapters - Share datasets between packages - Combine
+optimization (dsprrr) with evaluation (vitals) - Build complete LLM
+application workflows in R
+
+The packages are stronger together while remaining independently
+valuable!
