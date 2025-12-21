@@ -188,7 +188,7 @@ vignettes/
     - ✅ Fixed memory leak: chat object storage now optional via `config$store_chat_in_traces`
     - ✅ Improved `Module$run()` with proper batch processing and warning for parallel misuse
 
-#### Milestone B – Tidymodels Integration ✅ MOSTLY COMPLETE
+#### Milestone B – Tidymodels Integration ✅ COMPLETED
 - Define tunable parameters with `dials` and implement grid/random search in `$optimize_grid()`.
 - Integrate `rsample` resampling and `yardstick` scoring; ensure vitals scorers can be wrapped automatically.
 - Surface `finetune` racing as an optional control method.
@@ -201,13 +201,12 @@ vignettes/
     | Helper functions in `R/optimize.R` | ✅ COMPLETED | `merge_optimization_control()`, `prepare_candidate_grid()`, etc. |
     | Refactor `GridSearchTeleprompter` | ✅ COMPLETED | Delegates to `optimize_grid()`, records trials/best variant |
     | Tests for dials grids + yardstick metrics | ✅ COMPLETED | Deterministic specs for delegation and state |
-    | Update docs (README/vignettes) | 🔄 IN PROGRESS | Optimisation vignette partially updated |
-    | `finetune::tune_race_anova()` regression test | ⏳ PENDING | Target when baseline stabilises |
-
-  - **Remaining work:**
-    - Finish documentation updates for optimization workflow
-    - Add signature → parameter mapping helpers for automatic tidymodels integration
-    - Capture resampling/metric summaries for yardstick + vitals reporting
+    | Update docs (README/vignettes) | ✅ COMPLETED | Vignette updated with tidymodels helpers |
+    | `finetune::tune_race_anova()` regression test | ✅ COMPLETED | Integration tests in test-integration.R |
+    | `module_parameter_set()` helper | ✅ COMPLETED | Derives dials parameters from module |
+    | `module_trials_summary()` helper | ✅ COMPLETED | Tidy summary of optimization trials |
+    | `module_metric_summary()` helper | ✅ COMPLETED | Per-trial yardstick metrics |
+    | Signature → parameter mapping | ✅ COMPLETED | Extracts enum types from signature inputs |
 
 #### Milestone C – Orchestration & Persistence (2 weeks)
 - Ship `pins` helpers for saving module configs/traces/vitals logs.
@@ -281,13 +280,13 @@ vignettes/
 
 **Completed:**
 - ✅ Milestone A: Full R6 module architecture with quality improvements
+- ✅ Milestone B: Tidymodels integration with dials, yardstick, finetune compatibility
 - ✅ Vitals integration maintained and functional
-- ✅ Documentation stable (no regeneration issues)
-- ✅ Test suite comprehensive (run, vitals, utils coverage expanded significantly)
+- ✅ Documentation stable (optimization vignette updated with tidymodels helpers)
+- ✅ Test suite comprehensive (run, vitals, utils, integration coverage)
 - ✅ Code quality: eliminated duplication, fixed memory leak, improved batch processing
 
 **In Progress:**
-- Milestone B: Documentation updates for optimization workflow
 - Milestone C: Orchestration helpers (pins, targets templates)
 
 **Ready for:**
@@ -332,6 +331,15 @@ vignettes/
 ---
 
 ### 13. Progress Log
+
+**Dec 2024 (continued):**
+- Completed Milestone B - Tidymodels Integration:
+  - Updated optimization vignette with comprehensive tidymodels helper documentation
+  - Added sections for `module_parameter_set()`, `module_trials_summary()`, `module_metric_summary()`
+  - Added complete tidymodels workflow example in vignette
+  - Added finetune::tune_race_anova() integration tests in test-integration.R
+  - Verified signature → parameter mapping with `signature_parameter_defaults()`
+  - All tidymodels helpers tested with dials grid functions (regular, random, latin_hypercube)
 
 **Dec 2024:**
 - Completed major Milestone A quality improvements:
