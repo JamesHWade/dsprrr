@@ -22,3 +22,5 @@
 ^\.claude$
 ^examples$
 ^getting-started\.md$
+^\.Rprofile$
+^\.Renviron\.example$
