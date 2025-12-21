@@ -119,7 +119,11 @@ PredictModule <- R6::R6Class(
           list()
         })
 
-        self$state$traces <- append(self$state$traces, list(list(
+        # Build trace entry - optionally include full chat object
+        # Default is FALSE to avoid memory leaks in long-running processes
+        store_chat <- isTRUE(self$config$store_chat_in_traces)
+
+        trace_entry <- list(
           timestamp = end_time,
           inputs = inputs,
           prompt = prompt,
@@ -128,9 +132,14 @@ PredictModule <- R6::R6Class(
           tokens = token_info,
           cost = cost,
           model = metadata$model,
-          turns = turns,  # Full ellmer turn history
-          chat = llm  # Store the chat object itself for full access
-        )))
+          turns = turns  # Full ellmer turn history
+        )
+
+        if (store_chat) {
+          trace_entry$chat <- llm
+        }
+
+        self$state$traces <- append(self$state$traces, list(trace_entry))
       }
 
       # Return tibble format for consistency

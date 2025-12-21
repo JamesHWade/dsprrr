@@ -54,14 +54,20 @@ Module <- R6::R6Class(
     },
 
     #' @description
-    #' Run the module with inputs (delegates to forward)
+    #' Run the module with inputs
+    #'
+    #' This method provides a convenient interface for executing modules directly.
+    #' For batch processing with parallel execution support, use the `run()` generic
+    #' function instead: `run(module, ...)`.
+    #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
-    #' @param .verbose Logical for debug output
-    #' @param .parallel Logical for parallel batch processing
-    #' @param .progress Logical for progress bar
+    #' @param .verbose Logical for debug output (currently unused, for API consistency)
+    #' @param .parallel Logical for parallel batch processing (requires using run() generic)
+    #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
-    #' @return Module outputs
+    #' @return Module outputs. For .return_format="simple", returns the output value directly.
+    #'   For "structured", returns a tibble with output, chat, and metadata columns.
     run = function(..., .llm = NULL, .verbose = FALSE, .parallel = FALSE,
                    .progress = TRUE, .return_format = "simple") {
       inputs <- list(...)
@@ -76,13 +82,66 @@ Module <- R6::R6Class(
         }
       }
 
-      # Delegate to forward for now - full batch logic will be migrated later
+      # Check for batch inputs - warn if parallel requested but using $run()
+      input_lengths <- vapply(inputs, length, integer(1))
+      is_batch <- any(input_lengths > 1)
+
+      if (is_batch && .parallel) {
+        cli::cli_warn(c(
+          "Parallel batch processing requires using the {.fn run} generic function",
+          "i" = "Use {.code run(module, ...)} instead of {.code module$run(...)}"
+        ))
+      }
+
+      # Handle batch inputs by iterating over forward()
+      if (is_batch) {
+        max_length <- max(input_lengths)
+
+        # Validate all inputs have compatible lengths
+        invalid_lengths <- input_lengths[input_lengths != 1 & input_lengths != max_length]
+        if (length(invalid_lengths) > 0) {
+          cli::cli_abort("All inputs must have the same length or length 1 for batch processing")
+        }
+
+        # Expand scalar inputs
+        inputs <- lapply(inputs, function(x) {
+          if (length(x) == 1) rep(x, max_length) else x
+        })
+
+        # Process each item
+        results <- vector("list", max_length)
+        for (i in seq_len(max_length)) {
+          input_set <- lapply(inputs, `[[`, i)
+          result <- self$forward(input_set, .llm = .llm, trace = TRUE)
+
+          if (.return_format == "simple") {
+            results[[i]] <- result$output[[1]]
+          } else {
+            results[[i]] <- list(
+              output = result$output[[1]],
+              chat = result$chat[[1]],
+              metadata = result$metadata[[1]]
+            )
+          }
+        }
+
+        return(results)
+      }
+
+      # Single input processing
       result <- self$forward(inputs, .llm = .llm, trace = TRUE)
 
       if (.return_format == "simple") {
         return(result$output[[1]])
       } else {
-        return(result)
+        return(structure(
+          list(
+            output = result$output[[1]],
+            chat = result$chat[[1]],
+            metadata = result$metadata[[1]]
+          ),
+          class = "dsprrr_result"
+        ))
       }
     },
 
