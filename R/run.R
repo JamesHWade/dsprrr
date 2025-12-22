@@ -305,7 +305,7 @@ run_batch <- function(
 #' Run batch processing sequentially
 #' @noRd
 run_batch_sequential <- function(module, input_sets, n, .llm, .verbose, .return_format, .progress) {
-  shared_llm <- .llm %||% get_default_llm(module$config)
+  shared_llm <- .llm %||% module$chat %||% get_default_llm(module)
   results <- vector("list", n)
 
   # Create progress bar if requested
@@ -360,10 +360,14 @@ run_batch_sequential <- function(module, input_sets, n, .llm, .verbose, .return_
 #' Run batch processing in parallel using mirai
 #' @noRd
 run_batch_parallel <- function(module, input_sets, n, .llm, .verbose, .return_format, .progress) {
-  llm_factory <- if (is.null(.llm)) {
-    function() get_default_llm(module$config)
-  } else {
+  llm_factory <- if (!is.null(.llm)) {
     function() .llm
+  } else if (!is.null(module$chat)) {
+    # Use the module's stored Chat - note: each worker gets the same reference
+    # For true parallel isolation, users should not provide a Chat
+    function() module$chat
+  } else {
+    function() get_default_llm(module)
   }
 
   # Ensure mirai daemons are running
@@ -552,16 +556,25 @@ format_output <- function(output) {
 
 #' Get default LLM configuration
 #'
+#' Checks module's stored Chat, then config$llm, then auto-detects from
+#' environment variables using get_default_chat().
+#'
+#' @param module The module to get an LLM for
+#' @return An ellmer Chat object
 #' @noRd
-get_default_llm <- function(config) {
-  # Check for LLM in config
-  if (!is.null(config$llm)) {
-    return(config$llm)
+get_default_llm <- function(module) {
+  # Check for Chat stored on module
+  if (!is.null(module$chat)) {
+    return(module$chat)
   }
 
-  # Otherwise create a default ellmer chat object
-  # This will use ellmer's default configuration
-  ellmer::chat_openai(model = "gpt-5-mini")
+  # Check for LLM in config (legacy support)
+  if (!is.null(module$config$llm)) {
+    return(module$config$llm)
+  }
+
+  # Use the new auto-detection from chat-default.R
+  get_default_chat(create = TRUE)
 }
 
 #' Call the LLM with structured output
@@ -637,8 +650,14 @@ run_dataset <- function(module, ...) {
   UseMethod("run_dataset")
 }
 
-#' Run dataset method for R6 Module classes
-#' @noRd
+#' @rdname run_dataset
+#' @param dataset A data frame or tibble containing input columns
+#' @param .llm Optional ellmer Chat object for LLM calls
+#' @param .verbose Logical whether to print verbose output
+#' @param .parallel Logical whether to enable parallel processing
+#' @param .progress Logical whether to show progress bar
+#' @param .return_format Character either "simple" or "structured"
+#' @export
 run_dataset.Module <- function(
   module,
   dataset,
@@ -646,7 +665,8 @@ run_dataset.Module <- function(
   .verbose = FALSE,
   .parallel = FALSE,
   .progress = TRUE,
-  .return_format = "simple"
+  .return_format = "simple",
+  ...
 ) {
   # Validate dataset
   if (!is.data.frame(dataset)) {

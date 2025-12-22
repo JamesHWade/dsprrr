@@ -144,14 +144,28 @@ test_that("format_output handles different output types", {
 })
 
 test_that("get_default_llm returns ellmer chat object", {
-  # Test with no config
-  llm <- dsprrr:::get_default_llm(list())
+  # Create a mock module
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string()
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Test with module that has no stored chat - should auto-detect
+  llm <- dsprrr:::get_default_llm(mod)
   expect_true(inherits(llm, "Chat"))
 
-  # Test with config containing llm
+  # Test with module that has chat stored
   mock_llm <- list(chat = function(...) "test")
   class(mock_llm) <- "Chat"
-  llm <- dsprrr:::get_default_llm(list(llm = mock_llm))
+  mod$chat <- mock_llm
+  llm <- dsprrr:::get_default_llm(mod)
+  expect_identical(llm, mock_llm)
+
+  # Test with module that has llm in config (legacy)
+  mod$chat <- NULL
+  mod$config$llm <- mock_llm
+  llm <- dsprrr:::get_default_llm(mod)
   expect_identical(llm, mock_llm)
 })
 

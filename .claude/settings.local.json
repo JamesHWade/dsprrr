@@ -16,7 +16,8 @@
       "Bash(grep:*)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:dspy.ai)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "mcp__r-btw__btw_tool_docs_available_vignettes"
     ],
     "deny": [],
     "ask": [],

@@ -31,14 +31,18 @@ Imports:
     S7,
     tibble
 Suggests:
+    coro,
     dials,
     knitr,
     pins,
+    promises,
     quarto,
     rmarkdown,
+    rsample,
     targets,
     tarchetypes,
     testthat (>= 3.0.0),
     vcr (>= 2.0.0),
     vitals,
+    withr,
     yardstick

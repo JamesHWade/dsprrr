@@ -1,4 +1,4 @@
-url: ~
+url: https://jameshwade.github.io/dsprrr/
 template:
   bootstrap: 5
 
@@ -31,7 +31,45 @@ reference:
     - module
     - run
     - run_dataset
+    - predict.Module
     - evaluate
+    - evaluate_dsp
+
+  - title: Chat-Centric API
+    desc: ellmer-style pipe-friendly functions
+    contents:
+    - dsp
+    - as_module
+    - last_trace
+
+  - title: Default Chat Management
+    desc: Automatic LLM client configuration
+    contents:
+    - default-chat
+    - get_default_chat
+    - set_default_chat
+    - clear_default_chat
+
+  - title: Async and Streaming
+    desc: Asynchronous and streaming operations
+    contents:
+    - async
+    - run_async
+    - stream_async
+
+  - title: Signatures and Inputs
+    desc: Define module interfaces
+    contents:
+    - input
+    - starts_with("input_")
+    - dsp_trainset
+
+  - title: Teleprompters
+    desc: Optimization strategies
+    contents:
+    - Teleprompter
+    - LabeledFewShot
+    - GridSearchTeleprompter
 
   - title: Optimization
     desc: Functions for optimizing module performance
@@ -39,6 +77,9 @@ reference:
     - optimize_grid
     - compile
     - compile_module
+    - module_parameter_set
+    - module_trials_summary
+    - module_metric_summary
 
   - title: Metrics
     desc: Evaluation metrics
@@ -48,6 +89,7 @@ reference:
   - title: Orchestration
     desc: Production workflow helpers
     contents:
+    - orchestration
     - pin_module_config
     - restore_module_config
     - pin_trace
@@ -67,3 +109,9 @@ reference:
     contents:
     - as_vitals_solver
     - as_dsprrr_metric
+
+  - title: Utilities
+    desc: Helper functions
+    contents:
+    - eval_vignette
+    - has_ellmer_credentials

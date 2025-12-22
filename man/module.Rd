@@ -7,16 +7,28 @@
 module(
   signature,
   type = "predict",
+  tools = NULL,
+  max_iterations = 10L,
   template = "",
   demos = list(),
   config = list(),
+  chat = NULL,
   ...
 )
 }
 \arguments{
 \item{signature}{A Signature object defining the module's interface}
 
-\item{type}{Character string specifying the module type (currently only "predict")}
+\item{type}{Character string specifying the module type:
+\itemize{
+\item \code{"predict"} (default): Standard prediction module
+\item \code{"react"}: ReAct-style module with tool support
+}}
+
+\item{tools}{Optional list of ellmer ToolDef objects for react modules.
+If provided with \code{type = "predict"}, automatically upgrades to react.}
+
+\item{max_iterations}{Maximum ReAct iterations (default: 10, only for react)}
 
 \item{template}{Optional glue template for prompt generation}
 
@@ -24,14 +36,18 @@ module(
 
 \item{config}{Optional configuration list}
 
+\item{chat}{Optional ellmer Chat object for LLM operations. If provided, the
+module will use this Chat for all predictions unless overridden with \code{.llm}.}
+
 \item{...}{Additional arguments for future module types}
 }
 \value{
 A module object (R6) that can be executed with \code{run()}
 }
 \description{
-The primary function for creating executable LLM modules. Currently supports
-"predict" type modules with planned support for additional types.
+The primary function for creating executable LLM modules. Supports
+"predict" for standard structured prediction and "react" for ReAct-style
+tool-using modules.
 }
 \examples{
 # Create a simple prediction module
@@ -54,5 +70,19 @@ qa <- signature("context, question -> answer") |>
 # Execute the module (requires an llm object)
 llm <- ellmer::chat_openai()
 result <- classifier |> run(text = "Great package!", .llm = llm)
+
+# Or create module with Chat attached
+classifier <- signature("text -> sentiment") |>
+  module(type = "predict", chat = chat_openai())
+result <- classifier |> run(text = "Great package!")  # No .llm needed
+
+# Create a ReAct module with tools
+search_tool <- ellmer::tool(
+  search_fn,
+  description = "Search for information",
+  arguments = list(query = ellmer::type_string())
+)
+agent <- signature("question -> answer") |>
+  module(type = "react", tools = list(search_tool), chat = chat_openai())
 }
 }
