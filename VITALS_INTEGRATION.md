@@ -234,7 +234,7 @@ task <- vitals::Task$new(
 
 1.  ✅ Create this integration plan
 2.  Create adapter functions in dsprrr:
-    [`as_vitals_solver()`](reference/as_vitals_solver.md),
+    [`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md),
     `from_vitals_metric()`
 3.  Add vitals to dsprrr’s Suggests and create integration vignette
 4.  Test basic interoperability with example workflows
@@ -284,7 +284,8 @@ simplify integration:
 
 ### Critical Changes (High Impact, Low Effort)
 
-1.  **Batch Processing Support in [`run()`](reference/run.md)**
+1.  **Batch Processing Support in
+    [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)**
 
     ``` r
     # Current: Single input only
@@ -430,7 +431,8 @@ simplify integration:
 
 ### Naming and Convention Alignment
 
-9.  **Consider Alternative to [`run()`](reference/run.md)**
+9.  **Consider Alternative to
+    [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)**
 
     ``` r
     # Options:
@@ -501,8 +503,9 @@ complete workflow from initial prototype through production deployment.
 Since dsprrr is pre-release, we have a unique opportunity to design for
 integration from the start. The most impactful changes are:
 
-1.  **Batch processing in [`run()`](reference/run.md)** - Eliminates the
-    single biggest integration friction
+1.  **Batch processing in
+    [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)** -
+    Eliminates the single biggest integration friction
 2.  **Structured return format** - Enables seamless data flow between
     packages
 3.  **Module-as-function interface** - Makes composition natural and

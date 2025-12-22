@@ -22,7 +22,8 @@ module_metric_summary(
 
 - module:
 
-  A DSPrrr module optimised with [`optimize_grid()`](optimize_grid.md).
+  A DSPrrr module optimised with
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md).
 
 - metrics:
 
@@ -37,6 +38,10 @@ module_metric_summary(
 
   Column name (string) containing the model predictions when computing
   yardstick metrics.
+
+- ...:
+
+  Additional arguments passed to yardstick metrics.
 
 ## Value
 
@@ -59,3 +64,15 @@ A tibble with one row per trial containing columns:
   requested.
 
 ## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+trial_metrics <- module_metric_summary(my_module)
+yardstick_metrics <- module_metric_summary(
+  my_module,
+  metrics = yardstick::metric_set(yardstick::accuracy),
+  truth = target,
+  estimate = result
+)
+} # }
+```

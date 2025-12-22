@@ -1,51 +1,6 @@
 # Integration with vitals
 
 ``` r
-# Conditionally evaluate based on API keys or vcr cassettes
-eval_vignette <- function() {
-  # Check if vcr cassettes exist
-  if (dir.exists("_vcr")) {
-    name <- tools::file_path_sans_ext(knitr::current_input())
-    cassettes <- dir("_vcr", pattern = paste0(name, "*"))
-    has_cassette <- length(cassettes) > 0
-  } else {
-    has_cassette <- FALSE
-  }
-
-  # Check if API keys are available
-  has_key <- any(
-    nzchar(Sys.getenv("OPENAI_API_KEY")),
-    nzchar(Sys.getenv("ANTHROPIC_API_KEY")),
-    nzchar(Sys.getenv("GOOGLE_GEMINI_API_KEY"))
-  )
-
-  # Also check if vitals is installed
-  has_vitals <- requireNamespace("vitals", quietly = TRUE)
-
-  # Don't evaluate on CRAN
-  not_cran <- !identical(Sys.getenv("NOT_CRAN"), "false")
-
-  # Evaluate if we have keys/cassettes, vitals is installed, and not on CRAN
-  (has_key || has_cassette) && has_vitals && not_cran
-}
-
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE # Keep as FALSE for safety - vignettes contain LLM calls
-)
-
-# Setup vcr if available and evaluating
-if (requireNamespace("vcr", quietly = TRUE) && eval_vignette()) {
-  vcr::setup_knitr()
-}
-
-cli::cli_inform("Eval vignettes: {eval_vignette()}")
-```
-
-    ## Eval vignettes: FALSE
-
-``` r
 library(dsprrr)
 library(vitals)
 library(ellmer)
@@ -75,9 +30,9 @@ Thanks to the batch processing support and structured returns, dsprrr
 modules can now work directly with vitals:
 
 ``` r
-# Create a dsprrr module
+# Create a dsprrr module (using 'input' to match vitals conventions)
 sentiment_module <- signature(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+  "input -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
   module(type = "predict")
 
@@ -97,8 +52,9 @@ task$eval()
 
 ### Method 2: Using run_dataset() (New Feature)
 
-The new [`run_dataset()`](../reference/run_dataset.md) method makes it
-even easier to process tibbles:
+The new
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+method makes it even easier to process tibbles:
 
 ``` r
 # Process a dataset directly
@@ -252,10 +208,12 @@ results <- sentiment_module |>
 
 The integration between dsprrr and vitals is now seamless thanks to:
 
-1.  **Batch processing** in [`run()`](../reference/run.md) - handles
-    vectors automatically
+1.  **Batch processing** in
+    [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) -
+    handles vectors automatically
 2.  **Structured returns** - includes metadata needed for evaluation
-3.  **Dataset support** - [`run_dataset()`](../reference/run_dataset.md)
+3.  **Dataset support** -
+    [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
     works directly with tibbles
 4.  **Function interface** - modules can be called like functions
 

@@ -18,7 +18,7 @@
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Declarative Self-Improving Language Programs for R">
 <meta name="description" content="Build principled, test-driven, and optimizable applications using Large Language Models (LLMs) in R. Based on the DSPy framework from Stanford NLP, dsprrr moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. Features include declarative signatures, composable modules, automatic prompt optimization, and deep integration with the tidyverse ecosystem.">
 <meta property="og:description" content="Build principled, test-driven, and optimizable applications using Large Language Models (LLMs) in R. Based on the DSPy framework from Stanford NLP, dsprrr moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. Features include declarative signatures, composable modules, automatic prompt optimization, and deep integration with the tidyverse ecosystem.">
-<meta property="og:image" content="/logo.png">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -41,9 +41,9 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/compilation-optimization.html">Automatic Prompt Optimization with dsprrr</a></li>
-    <li><a class="dropdown-item" href="articles/getting-started.html">Getting Started with dsprrr</a></li>
-    <li><a class="dropdown-item" href="articles/vitals-integration.html">Integration with vitals</a></li>
+<li><a class="dropdown-item" href="articles/getting-started.html">Getting Started with dsprrr</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="articles/index.html">More articles...</a></li>
   </ul>
 </li>
       </ul>
@@ -66,87 +66,127 @@
 </div>
 <!-- badges: start -->
 
-<p><code>dsprrr</code> is a package for building <strong>principled, test-driven, and optimizable</strong> applications using Large Language Models in R. It moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. This is an R implementation of <a href="https://github.com/stanfordnlp/dspy" class="external-link">DSPy</a> from Stanford NLP.</p>
+<p><strong>dsprrr</strong> brings the power of <a href="https://github.com/stanfordnlp/dspy" class="external-link">DSPy</a> to R, providing a framework for building <strong>principled, test-driven, and optimizable</strong> LLM applications. If you know <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a>, you already know dsprrr — it extends ellmer’s patterns with signatures, optimization, and tracing.</p>
 <div class="section level2">
-<h2 id="philosophy">Philosophy<a class="anchor" aria-label="anchor" href="#philosophy"></a>
+<h2 id="the-idea-from-prompts-to-programs">The Idea: From Prompts to Programs<a class="anchor" aria-label="anchor" href="#the-idea-from-prompts-to-programs"></a>
 </h2>
-<p>Our philosophy is to provide “tools for thinking” about LLM applications, deeply integrating with the tidyverse ethos. By representing prompts, examples, and evaluation results as data frames, and by designing composable, pipe-friendly APIs, <code>dsprrr</code> makes the complex task of developing robust AI systems feel like a natural extension of an R-based data analysis workflow. We are not just wrapping an API; we are creating a framework for rigorous, empirical LLM development.</p>
+<p>Instead of wrestling with prompt strings, dsprrr lets you:</p>
+<ul>
+<li>
+<strong>Declare</strong> what you want using expressive signatures</li>
+<li>
+<strong>Compose</strong> modules into complex pipelines</li>
+<li>
+<strong>Optimize</strong> prompts automatically using your data</li>
+<li>
+<strong>Trace</strong> every LLM call for debugging and analysis</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of dsprrr from GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/dsprrr"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="quick-start">Quick Start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+<h2 id="quick-start-three-ways-to-use-dsprrr">Quick Start: Three Ways to Use dsprrr<a class="anchor" aria-label="anchor" href="#quick-start-three-ways-to-use-dsprrr"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="section level3">
+<h3 id="id_1-chat-first-ellmer-users-start-here">1. Chat-First (ellmer users start here)<a class="anchor" aria-label="anchor" href="#id_1-chat-first-ellmer-users-start-here"></a>
+</h3>
+<p>If you’re coming from ellmer, <code><a href="reference/dsp.html">dsp()</a></code> feels familiar — it’s like <code>chat$chat_structured()</code> but with signatures:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(dsprrr)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">library</span>(ellmer)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Create a Chat as usual</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co"># Use dsp() for structured LLM calls with signatures</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>chat <span class="sc">|&gt;</span> <span class="fu">dsp</span>(<span class="st">"question -&gt; answer"</span>, <span class="at">question =</span> <span class="st">"What is 2+2?"</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; "4"</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co"># Signatures define both input AND output structure</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>chat <span class="sc">|&gt;</span> <span class="fu">dsp</span>(</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="at">text =</span> <span class="st">"I love this package!"</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt; "positive"</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co"># Even simpler — auto-detect Chat from API keys</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="fu">dsp</span>(<span class="st">"question -&gt; answer"</span>, <span class="at">question =</span> <span class="st">"What is the capital of France?</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="st">#&gt; "</span>Paris<span class="st">"</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="id_2-module-based-for-reusable-components">2. Module-Based (for reusable components)<a class="anchor" aria-label="anchor" href="#id_2-module-based-for-reusable-components"></a>
+</h3>
+<p>When you need to reuse a configuration or optimize it later:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Convert Chat to a reusable module</span></span>
+<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu">chat_openai</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Use it multiple times</span></span>
+<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Great product!"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; "positive"</span></span>
+<span></span>
+<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Terrible experience"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; "negative"</span></span>
+<span></span>
+<span><span class="co"># Batch processing</span></span>
+<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Love it!"</span>, <span class="st">"Hate it!"</span>, <span class="st">"It's okay"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; c("positive", "negative", "neutral")</span></span>
+<span></span>
+<span><span class="co"># tidymodels-style interface</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">classifier</span>, new_data <span class="op">=</span> <span class="fu">tibble</span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Amazing!"</span>, <span class="st">"Awful"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="id_3-full-dspy-style-for-optimization-workflows">3. Full DSPy-Style (for optimization workflows)<a class="anchor" aria-label="anchor" href="#id_3-full-dspy-style-for-optimization-workflows"></a>
+</h3>
+<p>For systematic prompt optimization:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Define signature and module</span></span>
+<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Prepare training data</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span></span>
+<span>  context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"R is a language for statistics."</span>, <span class="st">"Python is versatile."</span><span class="op">)</span>,</span>
+<span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"What is R for?"</span>, <span class="st">"Describe Python."</span><span class="op">)</span>,</span>
+<span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Statistics"</span>, <span class="st">"Versatile programming"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Optimize with few-shot examples</span></span>
+<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
+<span>  program <span class="op">=</span> <span class="va">mod</span>,</span>
+<span>  teleprompter <span class="op">=</span> <span class="fu"><a href="reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span>
+<span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run optimized module</span></span>
+<span><span class="va">optimized</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  context <span class="op">=</span> <span class="st">"dsprrr brings DSPy to R."</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What does dsprrr do?"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="key-features">Key Features<a class="anchor" aria-label="anchor" href="#key-features"></a>
+</h2>
+<div class="section level3">
+<h3 id="signatures-declarative-llm-interfaces">Signatures: Declarative LLM Interfaces<a class="anchor" aria-label="anchor" href="#signatures-declarative-llm-interfaces"></a>
+</h3>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
 <span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     signature</span></span></code></pre></div>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt;     signature</span></span>
 <span></span>
-<span><span class="co"># Configure your LLM</span></span>
-<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Clean, consistent API with pipes!</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Analyze: {text}"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"This package makes LLM programming so intuitive!"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span>  <span class="co"># "positive"</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="core-concepts">Core Concepts<a class="anchor" aria-label="anchor" href="#core-concepts"></a>
-</h2>
-<div class="section level3">
-<h3 id="id_1-pipe-friendly-design">1. Pipe-Friendly Design<a class="anchor" aria-label="anchor" href="#id_1-pipe-friendly-design"></a>
-</h3>
-<p>dsprrr embraces R’s pipe operator (<code>|&gt;</code>) for building LLM workflows:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Build modules with pipes - one consistent way!</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Text: {text}\nSentiment:"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Execute with pipes</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"I love how this integrates with R!"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Or do it all in one pipeline</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; summary"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Summarize: {text}"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Long text..."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Chain operations for complex workflows (coming soon)</span></span>
-<span><span class="co"># analysis &lt;- text |&gt;</span></span>
-<span><span class="co">#   extract_key_points() |&gt;</span></span>
-<span><span class="co">#   summarize(max_words = 100) |&gt;</span></span>
-<span><span class="co">#   translate(to = "Spanish")</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="id_2-clear-and-consistent-api">2. Clear and Consistent API<a class="anchor" aria-label="anchor" href="#id_2-clear-and-consistent-api"></a>
-</h3>
-<p>One way to do each thing - no confusion:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Step 1: Define what you want (signature)</span></span>
-<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; summary: string[50, 200]"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Step 2: Create how to do it (module)</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="va">sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Summarize: {text}"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Show the structure of the module</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Predict Module ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Signature</span></span>
+<span><span class="co"># String notation — concise and expressive</span></span>
+<span><span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Signature ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -157,26 +197,8 @@
 <span><span class="co">#&gt; Type: &lt;ellmer::TypeObject&gt;</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Instructions</span></span>
-<span><span class="co">#&gt; Given the fields `text`, produce the fields `summary`.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Template</span></span>
-<span><span class="co">#&gt; Summarize: {text}</span></span></code></pre></div>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Step 3: Execute it (run)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">mod</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Your text here..."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="id_3-flexible-signature-creation">3. Flexible Signature Creation<a class="anchor" aria-label="anchor" href="#id_3-flexible-signature-creation"></a>
-</h3>
-<p>Define operations using string notation or explicit specifications:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># String notation (recommended for most cases)</span></span>
-<span><span class="va">qa_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span></span>
-<span><span class="va">math_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"problem -&gt; solution: float"</span><span class="op">)</span></span>
-<span><span class="va">extract_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; entities: array(string)"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Show the structure</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">qa_sig</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Given the fields `text`, produce the fields `sentiment`.</span></span>
+<span><span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer: string"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Signature ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -188,354 +210,306 @@
 <span><span class="co">#&gt; Type: &lt;ellmer::TypeObject&gt;</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Instructions</span></span>
-<span><span class="co">#&gt; Given the fields `context`, `question`, produce the fields `answer`.</span></span></code></pre></div>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Multiple outputs support</span></span>
-<span><span class="va">analysis_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: string, confidence: float, keywords: list[string]"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Given the fields `context`, `question`, produce the fields `answer`.</span></span>
+<span><span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"review -&gt; rating: enum('1', '2', '3', '4', '5')"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Signature ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Inputs</span></span>
+<span><span class="co">#&gt; • review: Input: review</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Output</span></span>
+<span><span class="co">#&gt; Type: &lt;ellmer::TypeObject&gt;</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Instructions</span></span>
+<span><span class="co">#&gt; Given the fields `review`, produce the fields `rating`.</span></span>
 <span></span>
-<span><span class="co"># Advanced type annotations</span></span>
-<span><span class="va">optional_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"doc -&gt; title: string, subtitle: Optional[string]"</span><span class="op">)</span></span>
-<span><span class="va">dict_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"data -&gt; metadata: dict[string, list[string]]"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Explicit notation for complex structures</span></span>
-<span><span class="va">complex_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"data"</span>, description <span class="op">=</span> <span class="st">"Raw data to analyze"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  output_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    summary <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    score <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    tags <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span><span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  instructions <span class="op">=</span> <span class="st">"Analyze the data comprehensively"</span></span>
+<span><span class="co"># With instructions</span></span>
+<span><span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span> <span class="st">"text -&gt; summary"</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="st">"Be concise. Maximum 50 words."</span></span>
 <span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Field-level descriptions for better LLM guidance</span></span>
-<span><span class="va">detailed_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"text"</span>,</span>
-<span>          <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span>description <span class="op">=</span> <span class="st">"Document to analyze for sentiment"</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    sentiment <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
-<span>      values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'positive'</span>, <span class="st">'negative'</span>, <span class="st">'neutral'</span><span class="op">)</span>,</span>
-<span>      description <span class="op">=</span> <span class="st">"Overall sentiment of the document"</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Or simpler for basic types - pass description directly to input()</span></span>
-<span><span class="va">simple_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"text"</span>, <span class="st">"string"</span>, description <span class="op">=</span> <span class="st">"Text to analyze"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"max_length"</span>, <span class="st">"integer"</span>, description <span class="op">=</span> <span class="st">"Maximum output length"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Signature ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Inputs</span></span>
+<span><span class="co">#&gt; • text: Input: text</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Output</span></span>
+<span><span class="co">#&gt; Type: &lt;ellmer::TypeObject&gt;</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Instructions</span></span>
+<span><span class="co">#&gt; Be concise. Maximum 50 words.</span></span></code></pre></div>
 </div>
-</div>
-<div class="section level2">
-<h2 id="complete-example-building-a-question-answer-system">Complete Example: Building a Question-Answer System<a class="anchor" aria-label="anchor" href="#complete-example-building-a-question-answer-system"></a>
-</h2>
-<p>Here’s how to build a QA system using the clean, consistent dsprrr API:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Configure LLM</span></span>
-<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Simple pipeline with string notation</span></span>
-<span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>,</span>
-<span>         template <span class="op">=</span> <span class="st">"Context: {context}\n\nQuestion: {question}"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    context <span class="op">=</span> <span class="st">"The tidyverse is a collection of R packages for data science."</span>,</span>
-<span>    question <span class="op">=</span> <span class="st">"What is the tidyverse?"</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span><span class="co"># With structured output and demonstrations</span></span>
-<span><span class="va">qa_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"context"</span>, description <span class="op">=</span> <span class="st">"Background information"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="reference/input.html">input</a></span><span class="op">(</span><span class="st">"question"</span>, description <span class="op">=</span> <span class="st">"Question to answer"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    answer <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    confidence <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  instructions <span class="op">=</span> <span class="st">"Answer based on context. Include confidence score."</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span></span>
-<span>    type <span class="op">=</span> <span class="st">"predict"</span>,</span>
-<span>    demos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>        inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          context <span class="op">=</span> <span class="st">"R is a programming language for statistical computing."</span>,</span>
-<span>          question <span class="op">=</span> <span class="st">"What is R used for?"</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          answer <span class="op">=</span> <span class="st">"Statistical computing"</span>,</span>
-<span>          confidence <span class="op">=</span> <span class="fl">0.95</span></span>
-<span>        <span class="op">)</span></span>
-<span>      <span class="op">)</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Execute with pipes</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">qa_module</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    context <span class="op">=</span> <span class="st">"dsprrr brings DSPy to R with clean, consistent APIs."</span>,</span>
-<span>    question <span class="op">=</span> <span class="st">"What does dsprrr do?"</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="automatic-prompt-optimization-new">Automatic Prompt Optimization (NEW!)<a class="anchor" aria-label="anchor" href="#automatic-prompt-optimization-new"></a>
-</h2>
-<p>Optimize your LLM programs automatically with dsprrr’s compilation framework:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a sentiment classifier</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Text: {text}\nSentiment:"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Prepare training data</span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
-<span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this product!"</span>, <span class="st">"Terrible experience"</span>, <span class="st">"It's okay I guess"</span><span class="op">)</span>,</span>
-<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Method 1: Simple few-shot optimization with LabeledFewShot</span></span>
-<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="va">classifier</span>,</span>
-<span>  teleprompter <span class="op">=</span> <span class="fu"><a href="reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,  <span class="co"># Use 2 examples</span></span>
-<span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># The optimized module now includes demonstrations!</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">optimized</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Amazing service!"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Method 2: Grid search over instruction variants</span></span>
-<span><span class="va">variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"terse"</span>, <span class="st">"detailed"</span>, <span class="st">"analytical"</span><span class="op">)</span>,</span>
-<span>  instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">". Be concise."</span>,</span>
-<span>    <span class="st">". Provide detailed reasoning."</span>,</span>
-<span>    <span class="st">". Analyze sentiment analytically."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">optimized_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="va">classifier</span>,</span>
-<span>  teleprompter <span class="op">=</span> <span class="fu"><a href="reference/GridSearchTeleprompter.html">GridSearchTeleprompter</a></span><span class="op">(</span></span>
-<span>    variants <span class="op">=</span> <span class="va">variants</span>,</span>
-<span>    metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>    k <span class="op">=</span> <span class="fl">2</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Check optimization results</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">optimized_grid</span><span class="op">@</span><span class="va">config</span><span class="op">$</span><span class="va">best_variant</span><span class="op">)</span>  <span class="co"># Which variant performed best</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">optimized_grid</span><span class="op">@</span><span class="va">config</span><span class="op">$</span><span class="va">all_scores</span><span class="op">)</span>     <span class="co"># Scores for all variants</span></span></code></pre></div>
 <div class="section level3">
-<h3 id="metrics-for-evaluation">Metrics for Evaluation<a class="anchor" aria-label="anchor" href="#metrics-for-evaluation"></a>
+<h3 id="tool-support-with-reactmodule">Tool Support with ReactModule<a class="anchor" aria-label="anchor" href="#tool-support-with-reactmodule"></a>
 </h3>
-<p>dsprrr provides flexible metrics for evaluating and optimizing your programs:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Exact match for classification</span></span>
-<span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create tools using ellmer</span></span>
+<span><span class="va">search_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu">search_api</span><span class="op">(</span><span class="va">query</span><span class="op">)</span>,</span>
+<span>  name <span class="op">=</span> <span class="st">"search"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Search for information"</span>,</span>
+<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># F1 score for text generation</span></span>
-<span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/metric_f1.html">metric_f1</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
+<span><span class="co"># Create a ReAct-style module with tools</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"react"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search_tool</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># The module automatically uses tools as needed</span></span>
+<span><span class="va">agent</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>question <span class="op">=</span> <span class="st">"What's the weather in NYC?"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="streaming-support">Streaming Support<a class="anchor" aria-label="anchor" href="#streaming-support"></a>
+</h3>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"topic -&gt; story"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Stream with callback</span></span>
+<span><span class="va">mod</span><span class="op">$</span><span class="fu">stream</span><span class="op">(</span>topic <span class="op">=</span> <span class="st">"a robot learning to paint"</span>, callback <span class="op">=</span> <span class="va">cat</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or get a generator for manual consumption</span></span>
+<span><span class="va">gen</span> <span class="op">&lt;-</span> <span class="va">mod</span><span class="op">$</span><span class="fu">stream</span><span class="op">(</span>topic <span class="op">=</span> <span class="st">"space exploration"</span><span class="op">)</span></span>
+<span><span class="fu">coro</span><span class="fu">::</span><span class="fu"><a href="https://coro.r-lib.org/reference/collect.html" class="external-link">loop</a></span><span class="op">(</span><span class="kw">for</span> <span class="op">(</span><span class="va">chunk</span> <span class="kw">in</span> <span class="va">gen</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="async-operations">Async Operations<a class="anchor" aria-label="anchor" href="#async-operations"></a>
+</h3>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Run multiple modules in parallel</span></span>
+<span><span class="va">promises</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="reference/run_async.html">run_async</a></span><span class="op">(</span><span class="va">mod1</span>, question <span class="op">=</span> <span class="st">"Q1"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="reference/run_async.html">run_async</a></span><span class="op">(</span><span class="va">mod2</span>, question <span class="op">=</span> <span class="st">"Q2"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="reference/run_async.html">run_async</a></span><span class="op">(</span><span class="va">mod3</span>, question <span class="op">=</span> <span class="st">"Q3"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Wait for all results</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">promises</span><span class="fu">::</span><span class="fu"><a href="https://rstudio.github.io/promises/reference/promise_all.html" class="external-link">promise_all</a></span><span class="op">(</span>.list <span class="op">=</span> <span class="va">promises</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="automatic-optimization">Automatic Optimization<a class="anchor" aria-label="anchor" href="#automatic-optimization"></a>
+</h3>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Grid search over configurations</span></span>
+<span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
+<span>  devset <span class="op">=</span> <span class="va">training_data</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span>
+<span>    prompt_style <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"concise"</span>, <span class="st">"detailed"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check results</span></span>
+<span><span class="fu"><a href="reference/module_trials_summary.html">module_trials_summary</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/module_metric_summary.html">module_metric_summary</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="comprehensive-metrics">Comprehensive Metrics<a class="anchor" aria-label="anchor" href="#comprehensive-metrics"></a>
+</h3>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Built-in metrics</span></span>
+<span><span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/metric_f1.html">metric_f1</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"summary"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"positive"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Custom metrics</span></span>
-<span><span class="va">length_metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/metric_custom.html">metric_custom</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">pred</span>, <span class="va">exp</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">pred</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span> <span class="op">&lt;=</span> <span class="fl">100</span>  <span class="co"># Ensure summaries are concise</span></span>
-<span><span class="op">}</span>, name <span class="op">=</span> <span class="st">"length_check"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/metric_custom.html">metric_custom</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">pred</span>, <span class="va">exp</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">pred</span><span class="op">)</span> <span class="op">&lt;=</span> <span class="fl">100</span>  <span class="co"># Conciseness check</span></span>
+<span><span class="op">}</span>, name <span class="op">=</span> <span class="st">"length_limit"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Threshold-based metrics</span></span>
-<span><span class="va">f1_threshold</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="reference/metric_f1.html">metric_f1</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>  threshold <span class="op">=</span> <span class="fl">0.8</span>,</span>
-<span>  comparison <span class="op">=</span> <span class="st">"&gt;="</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Evaluate your module</span></span>
-<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate_dsp.html">evaluate_dsp</a></span><span class="op">(</span></span>
-<span>  module <span class="op">=</span> <span class="va">optimized</span>,</span>
-<span>  dataset <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>  llm <span class="op">=</span> <span class="va">llm</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Threshold wrappers</span></span>
+<span><span class="fu"><a href="reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span><span class="fu"><a href="reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="deep-ellmer-integration">Deep ellmer Integration<a class="anchor" aria-label="anchor" href="#deep-ellmer-integration"></a>
+</h3>
+<p>dsprrr is designed to work seamlessly with ellmer:</p>
+<table class="table">
+<colgroup>
+<col width="34%">
+<col width="27%">
+<col width="38%">
+</colgroup>
+<thead><tr class="header">
+<th>ellmer</th>
+<th>dsprrr</th>
+<th>Relationship</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>
+<code>Chat</code> (R6)</td>
+<td>
+<code>Module</code> (R6)</td>
+<td>Module wraps Chat</td>
+</tr>
+<tr class="even">
+<td>
+<code>type_*()</code> (S7)</td>
+<td>
+<code>Signature</code> (S7)</td>
+<td>Signature contains types</td>
+</tr>
+<tr class="odd">
+<td><code>chat$chat_structured()</code></td>
+<td><code>chat \|&gt; dsp(sig)</code></td>
+<td>Same pattern, richer schema</td>
+</tr>
+<tr class="even">
+<td><code>ToolDef</code></td>
+<td>ReactModule tools</td>
+<td>Direct compatibility</td>
+</tr>
+<tr class="odd">
+<td><code>content_image_*()</code></td>
+<td>Multimodal inputs</td>
+<td>Works directly</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div class="section level2">
-<h2 id="key-features-new-in-v010">Key Features (NEW in v0.1.0)<a class="anchor" aria-label="anchor" href="#key-features-new-in-v010"></a>
+<h2 id="production-features">Production Features<a class="anchor" aria-label="anchor" href="#production-features"></a>
 </h2>
 <div class="section level3">
-<h3 id="batch-processing--dataset-support">Batch Processing &amp; Dataset Support<a class="anchor" aria-label="anchor" href="#batch-processing--dataset-support"></a>
+<h3 id="tracing-and-debugging">Tracing and Debugging<a class="anchor" aria-label="anchor" href="#tracing-and-debugging"></a>
 </h3>
-<p>Process multiple inputs efficiently with automatic parallelization:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Process multiple inputs at once</span></span>
-<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great!"</span>, <span class="st">"Terrible"</span>, <span class="st">"Okay"</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Every call is traced</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">mod</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Hello"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Process entire datasets with run_dataset()</span></span>
-<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="op">(</span></span>
-<span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"Not good"</span>, <span class="st">"It's fine"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">results_df</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">data</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Access traces</span></span>
+<span><span class="va">mod</span><span class="op">$</span><span class="fu">trace_summary</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">mod</span>, format <span class="op">=</span> <span class="st">"tibble"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Get the last trace</span></span>
+<span><span class="fu"><a href="reference/last_trace.html">last_trace</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="structured-returns">Structured Returns<a class="anchor" aria-label="anchor" href="#structured-returns"></a>
+<h3 id="module-persistence">Module Persistence<a class="anchor" aria-label="anchor" href="#module-persistence"></a>
 </h3>
-<p>Get detailed metadata with every call:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Amazing!"</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .return_format <span class="op">=</span> <span class="st">"structured"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Save optimized module configuration</span></span>
+<span><span class="fu"><a href="reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">board</span>, <span class="st">"my-classifier"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Access components</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">output</span>      <span class="co"># The actual result</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">chat</span>        <span class="co"># The LLM chat object</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span>    <span class="co"># Timing, tokens, etc.</span></span></code></pre></div>
+<span><span class="co"># Restore later</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"my-classifier"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="vitals-integration">vitals Integration<a class="anchor" aria-label="anchor" href="#vitals-integration"></a>
 </h3>
-<p>Seamless interoperability with the vitals evaluation framework:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidyverse/vitals" class="external-link">vitals</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Use dsprrr modules as vitals solvers</span></span>
-<span><span class="va">task</span> <span class="op">&lt;-</span> <span class="va"><a href="https://vitals.tidyverse.org/reference/Task.html" class="external-link">Task</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
-<span>  dataset <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  solver <span class="op">=</span> <span class="fu">as_function</span><span class="op">(</span><span class="va">classifier</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span>,</span>
-<span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">solver</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/as_vitals_solver.html">as_vitals_solver</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or adapt vitals scorers for dsprrr</span></span>
+<span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/as_dsprrr_metric.html">as_dsprrr_metric</a></span><span class="op">(</span><span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
+</div>
+<div class="section level2">
+<h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a>
+</h2>
+<div class="sourceCode" id="cb14"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>┌─────────────────────────────────────────────────────────────┐</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>│                        User API                             │</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>│  <span class="fu">dsp</span>() ──► <span class="fu">as_module</span>() ──► <span class="fu">module</span>() ──► <span class="fu">run</span>()<span class="sc">/</span><span class="fu">predict</span>()    │</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>└─────────────────────────────────────────────────────────────┘</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                              │</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>┌─────────────────────────────────────────────────────────────┐</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>│                      Module Layer                           │</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>│  PredictModule ◄── <span class="fu">ReactModule</span> (tools)                     │</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>│       │                                                     │</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>│       └── <span class="fu">Signature</span> (S7) <span class="sc">+</span> <span class="fu">Chat</span> (R6) <span class="sc">+</span> State               │</span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>└─────────────────────────────────────────────────────────────┘</span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>                              │</span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>┌─────────────────────────────────────────────────────────────┐</span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>│                    Optimization Layer                       │</span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a>│  Teleprompters<span class="sc">:</span> LabeledFewShot, GridSearchTeleprompter     │</span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>│  Metrics<span class="sc">:</span> exact_match, f1, contains, custom                │</span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a>└─────────────────────────────────────────────────────────────┘</span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a>                              │</span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a>┌─────────────────────────────────────────────────────────────┐</span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a>│                      ellmer Layer                           │</span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a>│  <span class="fu">chat_openai</span>(), <span class="fu">chat_claude</span>(), <span class="fu">chat_google_gemini</span>()        │</span>
+<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a>│  <span class="fu">type_string</span>(), <span class="fu">type_enum</span>(), <span class="fu">type_object</span>()                 │</span>
+<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a>└─────────────────────────────────────────────────────────────┘</span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="roadmap">Roadmap<a class="anchor" aria-label="anchor" href="#roadmap"></a>
 </h2>
-<p><code>dsprrr</code> is under active development. Current implementation status:</p>
 <div class="section level3">
-<h3 id="id_-milestone-1-core-foundation-completed---dec-2024">✅ Milestone 1: Core Foundation (COMPLETED - Dec 2024)<a class="anchor" aria-label="anchor" href="#id_-milestone-1-core-foundation-completed---dec-2024"></a>
+<h3 id="completed">Completed<a class="anchor" aria-label="anchor" href="#completed"></a>
 </h3>
 <ul>
 <li>
-<strong>S7 Architecture</strong>: Robust <code>Signature</code> and <code>Predict</code> classes with validators</li>
+<strong>Core Framework</strong>: Signatures, Modules, run/predict</li>
 <li>
-<strong>Clean API</strong>: Consistent <code><a href="reference/signature.html">signature()</a></code>, <code><a href="reference/module.html">module()</a></code>, <code><a href="reference/run.html">run()</a></code> functions</li>
+<strong>Chat-Centric API</strong>: <code><a href="reference/dsp.html">dsp()</a></code>, <code><a href="reference/as_module.html">as_module()</a></code>, default Chat</li>
 <li>
-<strong>DSPy Notation</strong>: String signatures like <code>"text -&gt; sentiment: enum('pos', 'neg')"</code>
+<strong>Optimization</strong>: Teleprompters, grid search, metrics</li>
+<li>
+<strong>Tool Support</strong>: ReactModule with ellmer tools</li>
+<li>
+<strong>Streaming &amp; Async</strong>: <code>stream()</code>, <code><a href="reference/run_async.html">run_async()</a></code>, <code><a href="reference/stream_async.html">stream_async()</a></code>
 </li>
 <li>
-<strong>Type System</strong>: Flexible input types with ellmer integration</li>
+<strong>ellmer Integration</strong>: Full compatibility with Chat, types, tools</li>
 <li>
-<strong>Pipe-Friendly</strong>: Full support for R’s <code>|&gt;</code> operator</li>
-<li>
-<strong>Testing</strong>: 340+ passing tests with comprehensive coverage</li>
-<li>
-<strong>Documentation</strong>: Getting-started vignette with practical examples</li>
+<strong>vitals Integration</strong>: Bidirectional solver/metric adapters</li>
 </ul>
 </div>
 <div class="section level3">
-<h3 id="id_-milestone-2-compilation-engine-completed---dec-2024">✅ Milestone 2: Compilation Engine (COMPLETED - Dec 2024)<a class="anchor" aria-label="anchor" href="#id_-milestone-2-compilation-engine-completed---dec-2024"></a>
+<h3 id="in-progress">In Progress<a class="anchor" aria-label="anchor" href="#in-progress"></a>
 </h3>
-<ul class="task-list">
-<li><label><input type="checkbox" checked><code>Teleprompter</code> base class and <code>GridSearchTeleprompter</code></label></li>
-<li><label><input type="checkbox" checked><code><a href="reference/compile.html">compile()</a></code> generic for automatic prompt optimization</label></li>
-<li><label><input type="checkbox" checked><code>LabeledFewShot</code> teleprompter for bootstrap few-shot learning</label></li>
-<li><label><input type="checkbox" checked>Comprehensive metric system with custom metrics and thresholds</label></li>
-<li><label><input type="checkbox" checked>Module state management (<code>reset_copy</code>, <code>deepcopy</code>, <code>is_compiled</code>)</label></li>
-<li><label><input type="checkbox" checked>Evaluation framework with <code><a href="reference/evaluate.html">evaluate()</a></code> generic</label></li>
-<li><label><input type="checkbox" checked>Helper functions like <code><a href="reference/dsp_trainset.html">dsp_trainset()</a></code> for data preparation</label></li>
+<ul>
+<li>Chain-of-Thought module type</li>
+<li>Advanced teleprompters (MIPRO, GEPA)</li>
+<li>Cost tracking and token budgets</li>
 </ul>
 </div>
 <div class="section level3">
-<h3 id="id_-milestone-3-enhanced-integration-completed---jan-2025">✅ Milestone 3: Enhanced Integration (COMPLETED - Jan 2025)<a class="anchor" aria-label="anchor" href="#id_-milestone-3-enhanced-integration-completed---jan-2025"></a>
+<h3 id="future">Future<a class="anchor" aria-label="anchor" href="#future"></a>
 </h3>
-<ul class="task-list">
-<li><label><input type="checkbox" checked><strong>Batch Processing</strong>: Process multiple inputs with parallelization support</label></li>
-<li><label><input type="checkbox" checked><strong>Dataset Support</strong>: Native <code><a href="reference/run_dataset.html">run_dataset()</a></code> for tibbles/data frames</label></li>
-<li><label><input type="checkbox" checked><strong>Structured Returns</strong>: Detailed metadata with every LLM call</label></li>
-<li><label><input type="checkbox" checked><strong>vitals Integration</strong>: Seamless interoperability with evaluation framework</label></li>
-<li><label><input type="checkbox" checked><strong>Function Interface</strong>: Convert modules to callable functions with <code>as_function()</code></label></li>
-<li><label><input type="checkbox" checked><strong>Robust error handling</strong>: Using <code>rlang</code> for informative errors</label></li>
-<li><label><input type="checkbox" checked><strong>Safe parallel execution</strong>: Fresh LLM clients per worker with fallback to sequential</label></li>
-<li><label><input type="checkbox" checked><strong>Rich metadata</strong>: Extended return objects with solver logs for vitals</label></li>
+<ul>
+<li>Multi-agent orchestration</li>
+<li>Caching with pins</li>
+<li>API deployment with vetiver</li>
 </ul>
-</div>
-<div class="section level3">
-<h3 id="id_-milestone-4-ecosystem--polish-in-progress">📋 Milestone 4: Ecosystem &amp; Polish (In Progress)<a class="anchor" aria-label="anchor" href="#id_-milestone-4-ecosystem--polish-in-progress"></a>
-</h3>
-<ul class="task-list">
-<li><label><input type="checkbox">Provider-specific helpers (e.g., <code>lm_openai()</code>)</label></li>
-<li><label><input type="checkbox">pkgdown documentation website</label></li>
-<li><label><input type="checkbox">Helper constructors (<code>teleprompter_grid_search()</code>, <code>teleprompter_fewshot()</code>)</label></li>
-<li><label><input type="checkbox">Align teleprompter defaults with DSPy</label></li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="id_-future-roadmap">🔮 Future Roadmap<a class="anchor" aria-label="anchor" href="#id_-future-roadmap"></a>
-</h3>
-<p><strong>Advanced Teleprompters:</strong> - GEPA (Generate-Evaluate-Prune-Augment) for rationale synthesis - MIPRO/MIPROv2 for programmatic prompt optimization - Tool-aware optimizers for multi-step traces - Self-critique teleprompters (COPRO-style)</p>
-<p><strong>New Module Types:</strong> - <code>ChainOfThought</code> for reasoning traces - <code>ReAct</code> for action-observation loops - <code>ToolCall</code> for function calling - <code>Router</code> for ensemble selection - <code>Judge</code> for self-evaluation pipelines</p>
-<p><strong>Production Features:</strong> - Integration with <code>pins</code> for caching compiled models - Integration with <code>vetiver</code> for API deployment - Streaming outputs and async execution - Token accounting and cost tracking</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="getting-started">Getting Started<a class="anchor" aria-label="anchor" href="#getting-started"></a>
+<h2 id="getting-help">Getting Help<a class="anchor" aria-label="anchor" href="#getting-help"></a>
 </h2>
-<p>Check out our comprehensive <a href="vignettes/getting-started.Rmd">Getting Started vignette</a> for detailed examples and best practices.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># View the vignette</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"getting-started"</span>, package <span class="op">=</span> <span class="st">"dsprrr"</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="development">Development<a class="anchor" aria-label="anchor" href="#development"></a>
-</h2>
-<div class="section level3">
-<h3 id="running-tests-and-vignettes">Running Tests and Vignettes<a class="anchor" aria-label="anchor" href="#running-tests-and-vignettes"></a>
-</h3>
-<p>The package uses <a href="https://docs.ropensci.org/vcr/" class="external-link">vcr</a> to cache API responses, allowing tests and vignettes to run without API keys:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Run tests (uses cached responses)</span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">test</span><span class="op">(</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># View the getting started guide</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"getting-started"</span>, package <span class="op">=</span> <span class="st">"dsprrr"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Build vignettes (uses cached responses)</span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">build_vignettes</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="recording-new-cassettes">Recording New Cassettes<a class="anchor" aria-label="anchor" href="#recording-new-cassettes"></a>
-</h3>
-<p>Maintainers with API keys can update cached responses:</p>
-<div class="sourceCode" id="cb17"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># Set your API keys</span></span>
-<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="bu">export</span> <span class="va">OPENAI_API_KEY</span><span class="op">=</span><span class="st">"your-key"</span></span>
-<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a><span class="bu">export</span> <span class="va">ANTHROPIC_API_KEY</span><span class="op">=</span><span class="st">"your-key"</span></span>
-<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a></span>
-<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a><span class="co"># Record new cassettes</span></span>
-<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="ex">Rscript</span> inst/scripts/record-cassettes.R</span></code></pre></div>
-</div>
+<span><span class="co"># Optimization workflows</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"compilation-optimization"</span>, package <span class="op">=</span> <span class="st">"dsprrr"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Production patterns</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"orchestration"</span>, package <span class="op">=</span> <span class="st">"dsprrr"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="contributing">Contributing<a class="anchor" aria-label="anchor" href="#contributing"></a>
 </h2>
-<p>We welcome contributions! Please see our <a href="CONTRIBUTING.html">contribution guidelines</a> for details.</p>
+<p>We welcome contributions! Please see our <a href="CONTRIBUTING.html">contribution guidelines</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
-<p>MIT © James Wade</p>
+<p>MIT</p>
 </div>
 <div class="section level2">
 <h2 id="acknowledgments">Acknowledgments<a class="anchor" aria-label="anchor" href="#acknowledgments"></a>
 </h2>
-<p>This package is inspired by <a href="https://github.com/stanfordnlp/dspy" class="external-link">DSPy</a> from Stanford NLP. Special thanks to the R Consortium Object-Oriented Programming Working Group for the S7 system that powers this implementation.</p>
+<p>Inspired by <a href="https://github.com/stanfordnlp/dspy" class="external-link">DSPy</a> from Stanford NLP. Built on <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> and <a href="https://rconsortium.github.io/S7/" class="external-link">S7</a>.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

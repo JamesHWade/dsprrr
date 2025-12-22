@@ -15,7 +15,7 @@ module_trials_summary(module, objective = c("maximize", "minimize"))
 - module:
 
   A DSPrrr module that has been optimised with
-  [`optimize_grid()`](optimize_grid.md).
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md).
 
 - objective:
 

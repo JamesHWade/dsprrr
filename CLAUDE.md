@@ -66,9 +66,10 @@ platforms, with test coverage reporting to Codecov.
 ### Key Classes
 
 **Signature (S7)** - Declarative schema for LLM operations: - `inputs`:
-List of [`input()`](reference/input.md) specifications - `output_type`:
-ellmer type object (e.g., `type_string()`, `type_enum()`) -
-`instructions`: System prompt text
+List of
+[`input()`](https://jameshwade.github.io/dsprrr/reference/input.md)
+specifications - `output_type`: ellmer type object (e.g.,
+`type_string()`, `type_enum()`) - `instructions`: System prompt text
 
 ``` r
 # String notation (DSPy-style)
@@ -87,7 +88,8 @@ sig <- signature(
 Signature reference - `config`: Mutable configuration (temperature,
 template, etc.) - `state`: Mutable runtime state (traces, trials,
 compilation status) - `forward()`: Execute on batch input, return tibble
-with output/metadata - [`optimize_grid()`](reference/optimize_grid.md):
+with output/metadata -
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md):
 Run grid search over parameter configurations - `is_compiled()`: Check
 if module has been optimized
 
@@ -198,33 +200,88 @@ test_that("module returns expected output", {
 })
 ```
 
+### VCR Cassettes (HTTP Recording)
+
+Integration tests use [vcr](https://docs.ropensci.org/vcr/) to record
+and replay HTTP interactions with LLM APIs. This allows tests to run
+without API keys and ensures reproducible results.
+
+**Cassette locations:** - `tests/_vcr/` - Test cassettes (OpenAI) -
+`vignettes/_vcr/` - Vignette cassettes (Anthropic Claude)
+
+**Recording cassettes:**
+
+``` bash
+# Use the helper script (requires API keys set)
+Rscript inst/scripts/record-cassettes.R
+```
+
+Or interactively:
+
+``` r
+source("inst/scripts/record-cassettes.R")
+main()  # Run recording
+```
+
+**When to re-record:** - After changing API request format (prompt
+templates, output types) - After upgrading ellmer (may change request
+structure) - When cassettes become stale (API response format changes)
+
+**VCR in tests:**
+
+``` r
+test_that("integration test with cassette", {
+  skip_if_not_installed("vcr")
+  cassette_file <- testthat::test_path("_vcr", "my-test.yml")
+  skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
+
+  vcr::local_cassette("my-test")
+  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
+  # ... test code
+})
+```
+
+**VCR in vignettes:** Vignettes use
+[`vcr::setup_knitr()`](https://docs.ropensci.org/vcr/reference/setup_knitr.html)
+which automatically names cassettes based on chunk labels. Set
+`eval = FALSE` for chunks that don’t need recording.
+
 ## Implementation Status
 
-### Completed (Milestone A)
+### Completed (Milestone A & B)
 
 - R6 Module base class with `forward()`,
-  [`optimize_grid()`](reference/optimize_grid.md), `reset()`, trace
-  methods
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
+  `reset()`, trace methods
 - PredictModule subclass with template and demo support
+- ReactModule subclass with tool support (ReAct-style agents)
 - S7 Signature with DSPy-style string parsing
 - ellmer integration via `chat_structured()`
+- Chat-centric API:
+  [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md),
+  [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md),
+  default Chat management
+- Streaming support: `mod$stream()` with callbacks or generators
+- Async support:
+  [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
+  [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
+  with promises
 - vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)
 - Grid search optimization with tidymodels parameter support
 - LabeledFewShot and GridSearchTeleprompter
-
-### In Progress (Milestone B)
-
-- Tidymodels integration refinement
-- [`module_parameter_set()`](reference/module_parameter_set.md) and
-  [`module_metric_summary()`](reference/module_metric_summary.md)
+- [`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md)
+  and
+  [`module_metric_summary()`](https://jameshwade.github.io/dsprrr/reference/module_metric_summary.md)
   helpers
-- Documentation updates for optimization workflow
+- Module persistence:
+  [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),
+  [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
 
 ### Planned
 
-- Chain-of-Thought and tool-aware module subclasses
+- Chain-of-Thought module type
 - Advanced teleprompters (MIPRO, GEPA)
-- Orchestration helpers (pins, targets templates)
+- Cost tracking and token budgets
 
 ## Coding Conventions
 
@@ -276,7 +333,10 @@ Suggested: - `dials`, `knitr`, `rmarkdown`, `testthat`, `vcr`, `vitals`
 - **PLAN.md**: Detailed roadmap with milestones and task tracking
 - **VITALS_INTEGRATION.md**: Documentation for vitals package
   integration
+- **inst/scripts/record-cassettes.R**: Helper script for re-recording
+  VCR cassettes
 - **vignettes/**: User-facing tutorials
   - `getting-started.Rmd`: Introduction and basic usage
   - `compilation-optimization.Rmd`: Optimization workflow
   - `vitals-integration.Rmd`: Vitals bridge usage
+  - `orchestration.Rmd`: Production workflow patterns

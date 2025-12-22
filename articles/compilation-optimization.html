@@ -38,9 +38,9 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/compilation-optimization.html">Automatic Prompt Optimization with dsprrr</a></li>
-    <li><a class="dropdown-item" href="../articles/getting-started.html">Getting Started with dsprrr</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Integration with vitals</a></li>
+<li><a class="dropdown-item" href="../articles/getting-started.html">Getting Started with dsprrr</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
       </ul>
@@ -93,7 +93,7 @@ testing of optimized programs</p>
 <span><span class="co"># Configure Claude (Anthropic's Sonnet model)</span></span>
 <span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_claude</a></span><span class="op">(</span></span>
 <span>  api_key <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"ANTHROPIC_API_KEY"</span><span class="op">)</span>,</span>
-<span>  model <span class="op">=</span> <span class="st">"claude-3-5-sonnet-20241022"</span></span>
+<span>  model <span class="op">=</span> <span class="st">"claude-sonnet-4-20250514"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -125,15 +125,14 @@ tidymodels <code>dials</code> parameters) and records the results in
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">tolower</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">)</span> <span class="op">==</span> <span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">tolower</a></span><span class="op">(</span><span class="va">expected_row</span><span class="op">$</span><span class="va">target</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="fu">vcr</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/vcr/reference/use_cassette.html" class="external-link">use_cassette</a></span><span class="op">(</span><span class="st">"compilation-optimize-grid"</span>, <span class="op">{</span></span>
-<span> <span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
-<span>   <span class="va">sentiment_module</span>,</span>
-<span>   devset <span class="op">=</span> <span class="va">dev_reviews</span>,</span>
-<span>   metric <span class="op">=</span> <span class="va">exact_sentiment</span>,</span>
-<span>    parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>prompt_style <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"baseline"</span>, <span class="st">"energetic"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>progress <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
+<span>  <span class="va">sentiment_module</span>,</span>
+<span>  devset <span class="op">=</span> <span class="va">dev_reviews</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">exact_sentiment</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>prompt_style <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"baseline"</span>, <span class="st">"energetic"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>progress <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">sentiment_module</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">trials</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trial_id"</span>, <span class="st">"score"</span>, <span class="st">"n_evaluated"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">sentiment_module</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_score</span></span></code></pre></div>
@@ -142,6 +141,164 @@ space with <code>dials</code>, build a grid (regular or random), and
 pass it to <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>. The helper automatically
 captures the candidate grid, scores, and metadata so teleprompters and
 downstream reports can reuse the trial data.</p>
+</div>
+<div class="section level2">
+<h2 id="tidymodels-integration-helpers">Tidymodels Integration Helpers<a class="anchor" aria-label="anchor" href="#tidymodels-integration-helpers"></a>
+</h2>
+<p>dsprrr provides three key helpers for integrating with the tidymodels
+ecosystem:</p>
+<div class="section level3">
+<h3 id="module_parameter_set-derive-dials-parameters">
+<code>module_parameter_set()</code>: Derive dials parameters<a class="anchor" aria-label="anchor" href="#module_parameter_set-derive-dials-parameters"></a>
+</h3>
+<p>After running <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>, you can extract a
+<code><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">dials::parameters()</a></code> set from the module. This is useful for
+further tuning or for generating additional grid configurations:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dials.tidymodels.org" class="external-link">dials</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># After optimization, extract discovered parameters</span></span>
+<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameter_set.html">module_parameter_set</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">param_set</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Use the parameter set to generate a more refined grid</span></span>
+<span><span class="va">refined_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dials.tidymodels.org/reference/grid_regular.html" class="external-link">grid_regular</a></span><span class="op">(</span><span class="va">param_set</span>, levels <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or generate a random grid for broader exploration</span></span>
+<span><span class="va">random_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dials.tidymodels.org/reference/grid_regular.html" class="external-link">grid_random</a></span><span class="op">(</span><span class="va">param_set</span>, size <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></code></pre></div>
+<p>The function automatically discovers parameters from: - Module
+configuration (e.g., <code>temperature</code>, <code>top_p</code>) -
+Previous optimization trials - Signature enum types (prefixed with
+<code>input_</code>) - Known LLM parameter defaults</p>
+<p>You can filter which parameters are included:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Only include specific parameters</span></span>
+<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameter_set.html">module_parameter_set</a></span><span class="op">(</span></span>
+<span>  <span class="va">sentiment_module</span>,</span>
+<span>  include <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"temperature"</span>, <span class="st">"prompt_style"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Exclude certain parameters</span></span>
+<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameter_set.html">module_parameter_set</a></span><span class="op">(</span></span>
+<span>  <span class="va">sentiment_module</span>,</span>
+<span>  exclude <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"instructions"</span>, <span class="st">"max_output_tokens"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="module_trials_summary-optimization-overview">
+<code>module_trials_summary()</code>: Optimization overview<a class="anchor" aria-label="anchor" href="#module_trials_summary-optimization-overview"></a>
+</h3>
+<p>Get a tidy summary of all optimization trials:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_trials_summary.html">module_trials_summary</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Returns a tibble with:</span></span>
+<span><span class="co"># - n_trials: number of trials evaluated</span></span>
+<span><span class="co"># - best_trial: identifier of the best-performing trial</span></span>
+<span><span class="co"># - best_score: best score achieved</span></span>
+<span><span class="co"># - mean_score: mean across all scores</span></span>
+<span><span class="co"># - std_error: standard error of the scores</span></span>
+<span><span class="co"># - best_params: list-column containing the best parameter set</span></span>
+<span><span class="co"># - trials: list-column containing the full trials tibble</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary</span><span class="op">$</span><span class="va">n_trials</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary</span><span class="op">$</span><span class="va">best_score</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary</span><span class="op">$</span><span class="va">best_params</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>  <span class="co"># Best parameter combination</span></span>
+<span></span>
+<span><span class="co"># Access the full trials data for detailed analysis</span></span>
+<span><span class="va">trials_df</span> <span class="op">&lt;-</span> <span class="va">summary</span><span class="op">$</span><span class="va">trials</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="module_metric_summary-per-trial-metrics-with-yardstick">
+<code>module_metric_summary()</code>: Per-trial metrics with
+yardstick<a class="anchor" aria-label="anchor" href="#module_metric_summary-per-trial-metrics-with-yardstick"></a>
+</h3>
+<p>For more detailed per-trial analysis, including integration with
+yardstick metrics:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Basic summary without yardstick</span></span>
+<span><span class="va">metrics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metric_summary.html">module_metric_summary</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Returns a tibble with one row per trial:</span></span>
+<span><span class="co"># - trial_id, score: trial identifier and overall score</span></span>
+<span><span class="co"># - mean_score, median_score, std_dev: summary statistics</span></span>
+<span><span class="co"># - n_evaluated, n_errors: counts from evaluation</span></span>
+<span><span class="co"># - params: list-column with parameters used</span></span>
+<span><span class="co"># - scores: list-column with raw per-example scores</span></span>
+<span><span class="co"># - yardstick: list-column for yardstick results (if computed)</span></span>
+<span></span>
+<span><span class="co"># With yardstick metrics for classification tasks</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/yardstick" class="external-link">yardstick</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">yardstick_metrics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metric_summary.html">module_metric_summary</a></span><span class="op">(</span></span>
+<span></span>
+<span>  <span class="va">sentiment_module</span>,</span>
+<span>  metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">accuracy</span>, <span class="va">precision</span>, <span class="va">recall</span><span class="op">)</span>,</span>
+<span>  truth <span class="op">=</span> <span class="st">"target"</span>,</span>
+<span>  estimate <span class="op">=</span> <span class="st">"result"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Access yardstick results for each trial</span></span>
+<span><span class="va">yardstick_metrics</span><span class="op">$</span><span class="va">yardstick</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>  <span class="co"># Metrics for trial 1</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="complete-tidymodels-workflow-example">Complete tidymodels workflow example<a class="anchor" aria-label="anchor" href="#complete-tidymodels-workflow-example"></a>
+</h3>
+<p>Here’s a comprehensive example showing how these helpers work
+together:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dials.tidymodels.org" class="external-link">dials</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/yardstick" class="external-link">yardstick</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 1. Create and optimize module</span></span>
+<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; label: enum('spam', 'ham')"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Initial optimization with coarse grid</span></span>
+<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  devset <span class="op">=</span> <span class="va">training_data</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span>
+<span>    prompt_style <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"concise"</span>, <span class="st">"detailed"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. Review optimization results</span></span>
+<span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_trials_summary.html">module_trials_summary</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Best score:"</span>, <span class="va">summary</span><span class="op">$</span><span class="va">best_score</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Best params:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">summary</span><span class="op">$</span><span class="va">best_params</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>    <span class="va">summary</span><span class="op">$</span><span class="va">best_params</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, sep <span class="op">=</span> <span class="st">"="</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 3. Compute detailed metrics</span></span>
+<span><span class="va">detailed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metric_summary.html">module_metric_summary</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">accuracy</span>, <span class="va">f_meas</span><span class="op">)</span>,</span>
+<span>  truth <span class="op">=</span> <span class="st">"label"</span>,</span>
+<span>  estimate <span class="op">=</span> <span class="st">"result"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 4. Visualize trial performance</span></span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">detailed</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">trial_id</span>, y <span class="op">=</span> <span class="va">score</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span> <span class="fu">geom_col</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Score by Trial"</span>, x <span class="op">=</span> <span class="st">"Trial"</span>, y <span class="op">=</span> <span class="st">"Score"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 5. Extract parameters for further tuning</span></span>
+<span><span class="va">params</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameter_set.html">module_parameter_set</a></span><span class="op">(</span><span class="va">mod</span>, include <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"temperature"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Generate a finer grid around the best temperature</span></span>
+<span><span class="va">fine_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dials.tidymodels.org/reference/grid_regular.html" class="external-link">grid_regular</a></span><span class="op">(</span><span class="va">params</span>, levels <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Continue optimization with refined grid</span></span>
+<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  devset <span class="op">=</span> <span class="va">training_data</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  grid <span class="op">=</span> <span class="va">fine_grid</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="part-1-understanding-metrics">Part 1: Understanding Metrics<a class="anchor" aria-label="anchor" href="#part-1-understanding-metrics"></a>
@@ -156,7 +313,7 @@ allows you to create custom ones.</p>
 <h4 id="exact-match">Exact Match<a class="anchor" aria-label="anchor" href="#exact-match"></a>
 </h4>
 <p>The simplest metric checks if outputs match exactly:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Basic exact match</span></span>
 <span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -179,7 +336,7 @@ allows you to create custom ones.</p>
 <h4 id="f1-score">F1 Score<a class="anchor" aria-label="anchor" href="#f1-score"></a>
 </h4>
 <p>For text generation tasks, F1 score measures token overlap:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Token-based F1 score</span></span>
 <span><span class="va">metric_f1_basic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -201,7 +358,7 @@ allows you to create custom ones.</p>
 <h4 id="contains-metric">Contains Metric<a class="anchor" aria-label="anchor" href="#contains-metric"></a>
 </h4>
 <p>Check if output contains specific patterns:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check for substring</span></span>
 <span><span class="va">metric_has_positive</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"positive"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu">metric_has_positive</span><span class="op">(</span><span class="st">"The result is POSITIVE"</span>, <span class="cn">NULL</span><span class="op">)</span> <span class="co"># TRUE</span></span>
@@ -224,7 +381,7 @@ allows you to create custom ones.</p>
 <h3 id="custom-metrics">Custom Metrics<a class="anchor" aria-label="anchor" href="#custom-metrics"></a>
 </h3>
 <p>Create your own evaluation logic:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simple boolean metric</span></span>
 <span><span class="va">length_check</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_custom.html">metric_custom</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">pred</span>, <span class="va">exp</span><span class="op">)</span> <span class="op">{</span></span>
@@ -259,7 +416,7 @@ allows you to create custom ones.</p>
 <h3 id="threshold-metrics">Threshold Metrics<a class="anchor" aria-label="anchor" href="#threshold-metrics"></a>
 </h3>
 <p>Convert numeric metrics to boolean pass/fail:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># F1 score must be at least 0.8 to pass</span></span>
 <span><span class="va">f1_threshold</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -277,7 +434,7 @@ allows you to create custom ones.</p>
 <h3 id="multi-field-metrics">Multi-Field Metrics<a class="anchor" aria-label="anchor" href="#multi-field-metrics"></a>
 </h3>
 <p>Evaluate multiple fields simultaneously:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check if all specified fields match</span></span>
 <span><span class="va">metric_all</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_field_match.html">metric_field_match</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sentiment"</span>, <span class="st">"confidence"</span><span class="op">)</span>,</span>
@@ -305,7 +462,7 @@ programs. dsprrr currently provides two main teleprompters:</p>
 </h3>
 <p>The simplest optimization strategy adds labeled examples from your
 training data as demonstrations:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a sentiment classifier</span></span>
 <span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span></span>
@@ -354,7 +511,7 @@ training data as demonstrations:</p>
 </h3>
 <p>This teleprompter tests multiple instruction or template variants to
 find the best performing one:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create base QA module</span></span>
 <span><span class="va">qa_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
@@ -425,7 +582,7 @@ find the best performing one:</p>
 </h2>
 <p>The <code><a href="../reference/compile_module.html">compile_module()</a></code> function is the main interface for
 optimizing your programs:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Step 1: Create your base module</span></span>
 <span><span class="va">email_classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -518,7 +675,7 @@ optimizing your programs:</p>
 </h2>
 <p>Once you’ve optimized your module, systematically evaluate its
 performance:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Prepare test dataset (separate from training)</span></span>
 <span><span class="va">test_emails</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
 <span>  email <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
@@ -550,7 +707,7 @@ performance:</p>
 <span>  module <span class="op">=</span> <span class="va">optimized_grid</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">test_emails</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">category_metric</span>,</span>
-<span>  llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -570,7 +727,7 @@ performance:</p>
 <span>  module <span class="op">=</span> <span class="va">optimized_grid</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">test_emails</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">multi_metric</span>,</span>
-<span>  llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -580,7 +737,7 @@ performance:</p>
 <h2 id="part-5-complete-workflow-example">Part 5: Complete Workflow Example<a class="anchor" aria-label="anchor" href="#part-5-complete-workflow-example"></a>
 </h2>
 <p>Let’s build and optimize a complete document analysis system:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># 1. Define the task with structured output</span></span>
 <span><span class="va">doc_analyzer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -695,7 +852,7 @@ performance:</p>
 <span>    module <span class="op">=</span> <span class="va">optimized</span>,</span>
 <span>    dataset <span class="op">=</span> <span class="va">doc_trainset</span>, <span class="co"># In practice, use separate validation set</span></span>
 <span>    metric <span class="op">=</span> <span class="va">wrapped_metric</span>,</span>
-<span>    llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span>,</span>
 <span>    verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
@@ -755,7 +912,7 @@ performance:</p>
 <h3 id="pattern-1-cross-validation-for-robust-optimization">Pattern 1: Cross-Validation for Robust Optimization<a class="anchor" aria-label="anchor" href="#pattern-1-cross-validation-for-robust-optimization"></a>
 </h3>
 <p>Don’t optimize on your entire training set—use cross-validation:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Split data for proper evaluation</span></span>
 <span><span class="va">split_data</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span>, <span class="va">train_pct</span> <span class="op">=</span> <span class="fl">0.7</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span>
@@ -789,7 +946,7 @@ performance:</p>
 <span>  module <span class="op">=</span> <span class="va">optimized_module</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">splits</span><span class="op">$</span><span class="va">val</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">wrapped_metric</span>,</span>
-<span>  llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Validation score:"</span>, <span class="va">val_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -798,7 +955,7 @@ performance:</p>
 <h3 id="pattern-2-iterative-refinement">Pattern 2: Iterative Refinement<a class="anchor" aria-label="anchor" href="#pattern-2-iterative-refinement"></a>
 </h3>
 <p>Optimize in stages for complex tasks:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Stage 1: Optimize for accuracy</span></span>
 <span><span class="va">stage1_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
 <span>  program <span class="op">=</span> <span class="va">doc_analyzer</span>,</span>
@@ -831,7 +988,7 @@ performance:</p>
 <h3 id="pattern-3-ensemble-methods">Pattern 3: Ensemble Methods<a class="anchor" aria-label="anchor" href="#pattern-3-ensemble-methods"></a>
 </h3>
 <p>Combine multiple optimized modules:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create multiple optimized versions</span></span>
 <span><span class="va">modules</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -889,7 +1046,7 @@ performance:</p>
 </h3>
 <p>While dsprrr currently provides <code>LabeledFewShot</code> and
 <code>GridSearchTeleprompter</code>, you can extend the system:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example: A teleprompter that selects diverse examples</span></span>
 <span><span class="va">DiverseFewShot</span> <span class="op">&lt;-</span> <span class="fu">S7</span><span class="fu">::</span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span></span>
 <span>  <span class="st">"DiverseFewShot"</span>,</span>
@@ -910,7 +1067,7 @@ performance:</p>
 <div class="section level3">
 <h3 id="understanding-compilation-results">Understanding Compilation Results<a class="anchor" aria-label="anchor" href="#understanding-compilation-results"></a>
 </h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Inspect what the compiler did</span></span>
 <span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
 <span>  program <span class="op">=</span> <span class="va">classifier</span>,</span>
@@ -937,7 +1094,7 @@ performance:</p>
 <div class="section level3">
 <h3 id="module-state-management">Module State Management<a class="anchor" aria-label="anchor" href="#module-state-management"></a>
 </h3>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create fresh copy without compilation</span></span>
 <span><span class="va">fresh_module</span> <span class="op">&lt;-</span> <span class="fu">reset_copy</span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span></span>
 <span><span class="fu">is_compiled</span><span class="op">(</span><span class="va">fresh_module</span><span class="op">)</span> <span class="co"># FALSE</span></span>
@@ -955,7 +1112,7 @@ performance:</p>
 <div class="section level3">
 <h3 id="common-issues-and-solutions">Common Issues and Solutions<a class="anchor" aria-label="anchor" href="#common-issues-and-solutions"></a>
 </h3>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Issue 1: Metric returns unexpected values</span></span>
 <span><span class="co"># Solution: Test your metric separately</span></span>
 <span><span class="va">test_metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"category"</span><span class="op">)</span></span>
@@ -986,7 +1143,7 @@ performance:</p>
 <div class="section level3">
 <h3 id="choose-the-right-metric">1. Choose the Right Metric<a class="anchor" aria-label="anchor" href="#choose-the-right-metric"></a>
 </h3>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># For classification: exact match</span></span>
 <span><span class="va">classification_metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"label"</span><span class="op">)</span></span>
 <span></span>
@@ -1004,7 +1161,7 @@ performance:</p>
 <div class="section level3">
 <h3 id="optimize-training-data">2. Optimize Training Data<a class="anchor" aria-label="anchor" href="#optimize-training-data"></a>
 </h3>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Ensure diversity in training examples</span></span>
 <span><span class="va">check_diversity</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">trainset</span>, <span class="va">field</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">values</span> <span class="op">&lt;-</span> <span class="va">trainset</span><span class="op">[[</span><span class="va">field</span><span class="op">]</span><span class="op">]</span></span>
@@ -1045,7 +1202,7 @@ performance:</p>
 <div class="section level3">
 <h3 id="efficient-grid-search">3. Efficient Grid Search<a class="anchor" aria-label="anchor" href="#efficient-grid-search"></a>
 </h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Start with coarse grid, then refine</span></span>
 <span><span class="co"># Phase 1: Test major variants</span></span>
 <span><span class="va">coarse_variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>

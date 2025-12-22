@@ -2,8 +2,9 @@
 
 Creates a function compatible with vitals Tasks that executes a DSPrrr
 module against batches of inputs. The solver forwards arguments to
-[`run_dataset()`](run_dataset.md) and returns vitals-friendly objects
-containing results, chat logs, and metadata.
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+and returns vitals-friendly objects containing results, chat logs, and
+metadata.
 
 ## Usage
 
@@ -21,7 +22,8 @@ as_vitals_solver(
 
 - module:
 
-  A DSPrrr module (e.g., created via [`module()`](module.md)).
+  A DSPrrr module (e.g., created via
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)).
 
 - .llm:
 
@@ -30,8 +32,9 @@ as_vitals_solver(
 
 - .parallel:
 
-  Logical; forwarded to [`run_dataset()`](run_dataset.md). Defaults to
-  `FALSE` to avoid sharing LLM state across workers.
+  Logical; forwarded to
+  [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md).
+  Defaults to `FALSE` to avoid sharing LLM state across workers.
 
 - .return_format:
 
@@ -39,7 +42,8 @@ as_vitals_solver(
 
 - ...:
 
-  Additional arguments forwarded to [`run_dataset()`](run_dataset.md).
+  Additional arguments forwarded to
+  [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md).
 
 ## Value
 

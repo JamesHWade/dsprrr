@@ -21,17 +21,18 @@ library(ellmer)
 # Configure Claude (Anthropic's Sonnet model)
 llm <- chat_claude(
   api_key = Sys.getenv("ANTHROPIC_API_KEY"),
-  model = "claude-3-5-sonnet-20241022"
+  model = "claude-sonnet-4-20250514"
 )
 ```
 
 ## Quick tour: optimizing a module with `optimize_grid()`
 
-The new [`optimize_grid()`](../reference/optimize_grid.md) helper lets
-you tune a module directly without going through a teleprompter first.
-It evaluates a grid of configuration values (defined either as a simple
-named list or via tidymodels `dials` parameters) and records the results
-in `module$state$trials`.
+The new
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+helper lets you tune a module directly without going through a
+teleprompter first. It evaluates a grid of configuration values (defined
+either as a simple named list or via tidymodels `dials` parameters) and
+records the results in `module$state$trials`.
 
 ``` r
 sig_quick <- signature("review -> sentiment: string",
@@ -53,15 +54,14 @@ exact_sentiment <- function(prediction, expected_row) {
   as.numeric(tolower(prediction) == tolower(expected_row$target))
 }
 
-vcr::use_cassette("compilation-optimize-grid", {
- optimize_grid(
-   sentiment_module,
-   devset = dev_reviews,
-   metric = exact_sentiment,
-    parameters = list(prompt_style = c("baseline", "energetic")),
-    control = list(progress = FALSE)
-  )
-})
+optimize_grid(
+  sentiment_module,
+  devset = dev_reviews,
+  metric = exact_sentiment,
+  parameters = list(prompt_style = c("baseline", "energetic")),
+  .llm = llm,
+  control = list(progress = FALSE)
+)
 
 sentiment_module$state$trials[, c("trial_id", "score", "n_evaluated")]
 sentiment_module$state$best_score
@@ -69,9 +69,173 @@ sentiment_module$state$best_score
 
 If you do have tidymodels installed, you can also describe the search
 space with `dials`, build a grid (regular or random), and pass it to
-[`optimize_grid()`](../reference/optimize_grid.md). The helper
-automatically captures the candidate grid, scores, and metadata so
-teleprompters and downstream reports can reuse the trial data.
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md).
+The helper automatically captures the candidate grid, scores, and
+metadata so teleprompters and downstream reports can reuse the trial
+data.
+
+## Tidymodels Integration Helpers
+
+dsprrr provides three key helpers for integrating with the tidymodels
+ecosystem:
+
+### `module_parameter_set()`: Derive dials parameters
+
+After running
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
+you can extract a
+[`dials::parameters()`](https://dials.tidymodels.org/reference/parameters.html)
+set from the module. This is useful for further tuning or for generating
+additional grid configurations:
+
+``` r
+library(dials)
+
+# After optimization, extract discovered parameters
+param_set <- module_parameter_set(sentiment_module)
+print(param_set)
+
+# Use the parameter set to generate a more refined grid
+refined_grid <- grid_regular(param_set, levels = 5)
+
+# Or generate a random grid for broader exploration
+random_grid <- grid_random(param_set, size = 20)
+```
+
+The function automatically discovers parameters from: - Module
+configuration (e.g., `temperature`, `top_p`) - Previous optimization
+trials - Signature enum types (prefixed with `input_`) - Known LLM
+parameter defaults
+
+You can filter which parameters are included:
+
+``` r
+# Only include specific parameters
+param_set <- module_parameter_set(
+  sentiment_module,
+  include = c("temperature", "prompt_style")
+)
+
+# Exclude certain parameters
+param_set <- module_parameter_set(
+  sentiment_module,
+  exclude = c("id", "instructions", "max_output_tokens")
+)
+```
+
+### `module_trials_summary()`: Optimization overview
+
+Get a tidy summary of all optimization trials:
+
+``` r
+summary <- module_trials_summary(sentiment_module)
+
+# Returns a tibble with:
+# - n_trials: number of trials evaluated
+# - best_trial: identifier of the best-performing trial
+# - best_score: best score achieved
+# - mean_score: mean across all scores
+# - std_error: standard error of the scores
+# - best_params: list-column containing the best parameter set
+# - trials: list-column containing the full trials tibble
+
+print(summary$n_trials)
+print(summary$best_score)
+print(summary$best_params[[1]])  # Best parameter combination
+
+# Access the full trials data for detailed analysis
+trials_df <- summary$trials[[1]]
+```
+
+### `module_metric_summary()`: Per-trial metrics with yardstick
+
+For more detailed per-trial analysis, including integration with
+yardstick metrics:
+
+``` r
+# Basic summary without yardstick
+metrics <- module_metric_summary(sentiment_module)
+
+# Returns a tibble with one row per trial:
+# - trial_id, score: trial identifier and overall score
+# - mean_score, median_score, std_dev: summary statistics
+# - n_evaluated, n_errors: counts from evaluation
+# - params: list-column with parameters used
+# - scores: list-column with raw per-example scores
+# - yardstick: list-column for yardstick results (if computed)
+
+# With yardstick metrics for classification tasks
+library(yardstick)
+
+yardstick_metrics <- module_metric_summary(
+
+  sentiment_module,
+  metrics = metric_set(accuracy, precision, recall),
+  truth = "target",
+  estimate = "result"
+)
+
+# Access yardstick results for each trial
+yardstick_metrics$yardstick[[1]]  # Metrics for trial 1
+```
+
+### Complete tidymodels workflow example
+
+Here’s a comprehensive example showing how these helpers work together:
+
+``` r
+library(dials)
+library(yardstick)
+library(ggplot2)
+
+# 1. Create and optimize module
+sig <- signature("text -> label: enum('spam', 'ham')")
+mod <- module(sig, type = "predict")
+
+# Initial optimization with coarse grid
+optimize_grid(
+  mod,
+  devset = training_data,
+  metric = metric_exact_match(),
+  parameters = list(
+    temperature = c(0.1, 0.5, 1.0),
+    prompt_style = c("concise", "detailed")
+  )
+)
+
+# 2. Review optimization results
+summary <- module_trials_summary(mod)
+cat("Best score:", summary$best_score, "\n")
+cat("Best params:", paste(names(summary$best_params[[1]]),
+    summary$best_params[[1]], sep = "=", collapse = ", "), "\n")
+
+# 3. Compute detailed metrics
+detailed <- module_metric_summary(
+  mod,
+  metrics = metric_set(accuracy, f_meas),
+  truth = "label",
+  estimate = "result"
+)
+
+# 4. Visualize trial performance
+ggplot(detailed, aes(x = trial_id, y = score)) +
+ geom_col() +
+  labs(title = "Score by Trial", x = "Trial", y = "Score")
+
+# 5. Extract parameters for further tuning
+params <- module_parameter_set(mod, include = c("temperature"))
+
+# Generate a finer grid around the best temperature
+fine_grid <- grid_regular(params, levels = 10)
+
+# Continue optimization with refined grid
+optimize_grid(
+  mod,
+  devset = training_data,
+  metric = metric_exact_match(),
+  grid = fine_grid
+)
+```
 
 ## Part 1: Understanding Metrics
 
@@ -356,8 +520,9 @@ answer <- optimized_qa |>
 
 ## Part 3: The Compilation Process
 
-The [`compile_module()`](../reference/compile_module.md) function is the
-main interface for optimizing your programs:
+The
+[`compile_module()`](https://jameshwade.github.io/dsprrr/reference/compile_module.md)
+function is the main interface for optimizing your programs:
 
 ``` r
 # Step 1: Create your base module
@@ -485,7 +650,7 @@ results <- evaluate_dsp(
   module = optimized_grid,
   dataset = test_emails,
   metric = category_metric,
-  llm = llm,
+  .llm = llm,
   verbose = TRUE
 )
 
@@ -505,7 +670,7 @@ full_results <- evaluate_dsp(
   module = optimized_grid,
   dataset = test_emails,
   metric = multi_metric,
-  llm = llm,
+  .llm = llm,
   verbose = TRUE
 )
 
@@ -631,7 +796,7 @@ for (k in c(1L, 2L, 3L, 4L)) {
     module = optimized,
     dataset = doc_trainset, # In practice, use separate validation set
     metric = wrapped_metric,
-    llm = llm,
+    .llm = llm,
     verbose = FALSE
   )
 
@@ -725,7 +890,7 @@ val_results <- evaluate_dsp(
   module = optimized_module,
   dataset = splits$val,
   metric = wrapped_metric,
-  llm = llm
+  .llm = llm
 )
 
 print(paste("Validation score:", val_results$mean_score))

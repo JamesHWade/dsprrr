@@ -1,8 +1,8 @@
 # Create an LLM Module
 
-The primary function for creating executable LLM modules. Currently
-supports "predict" type modules with planned support for additional
-types.
+The primary function for creating executable LLM modules. Supports
+"predict" for standard structured prediction and "react" for ReAct-style
+tool-using modules.
 
 ## Usage
 
@@ -10,9 +10,12 @@ types.
 module(
   signature,
   type = "predict",
+  tools = NULL,
+  max_iterations = 10L,
   template = "",
   demos = list(),
   config = list(),
+  chat = NULL,
   ...
 )
 ```
@@ -25,7 +28,20 @@ module(
 
 - type:
 
-  Character string specifying the module type (currently only "predict")
+  Character string specifying the module type:
+
+  - `"predict"` (default): Standard prediction module
+
+  - `"react"`: ReAct-style module with tool support
+
+- tools:
+
+  Optional list of ellmer ToolDef objects for react modules. If provided
+  with `type = "predict"`, automatically upgrades to react.
+
+- max_iterations:
+
+  Maximum ReAct iterations (default: 10, only for react)
 
 - template:
 
@@ -39,13 +55,20 @@ module(
 
   Optional configuration list
 
+- chat:
+
+  Optional ellmer Chat object for LLM operations. If provided, the
+  module will use this Chat for all predictions unless overridden with
+  `.llm`.
+
 - ...:
 
   Additional arguments for future module types
 
 ## Value
 
-A module object (R6) that can be executed with [`run()`](run.md)
+A module object (R6) that can be executed with
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
 
 ## Examples
 
@@ -70,5 +93,19 @@ if (FALSE) { # \dontrun{
 # Execute the module (requires an llm object)
 llm <- ellmer::chat_openai()
 result <- classifier |> run(text = "Great package!", .llm = llm)
+
+# Or create module with Chat attached
+classifier <- signature("text -> sentiment") |>
+  module(type = "predict", chat = chat_openai())
+result <- classifier |> run(text = "Great package!")  # No .llm needed
+
+# Create a ReAct module with tools
+search_tool <- ellmer::tool(
+  search_fn,
+  description = "Search for information",
+  arguments = list(query = ellmer::type_string())
+)
+agent <- signature("question -> answer") |>
+  module(type = "react", tools = list(search_tool), chat = chat_openai())
 } # }
 ```

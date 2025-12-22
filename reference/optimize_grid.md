@@ -9,17 +9,32 @@ parameter sets).
 
 ``` r
 optimize_grid(module, ...)
+
+# S3 method for class 'Module'
+optimize_grid(
+  module,
+  devset,
+  metric = metric_exact_match(),
+  grid = NULL,
+  parameters = NULL,
+  objective = c("maximize", "minimize"),
+  .llm = NULL,
+  control = list(),
+  ...
+)
 ```
 
 ## Arguments
 
 - module:
 
-  A DSPrrr module (created via [`module()`](module.md)).
+  A DSPrrr module (created via
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)).
 
 - ...:
 
-  Additional arguments forwarded to [`evaluate()`](evaluate.md).
+  Additional arguments forwarded to
+  [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md).
 
 - devset:
 
@@ -29,9 +44,10 @@ optimize_grid(module, ...)
 - metric:
 
   Metric function applied per example. Defaults to
-  [`metric_exact_match()`](metric_exact_match.md). Use
-  [`as_dsprrr_metric()`](as_dsprrr_metric.md) to adapt yardstick/vitals
-  metrics.
+  [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md).
+  Use
+  [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
+  to adapt yardstick/vitals metrics.
 
 - grid:
 
@@ -55,9 +71,10 @@ optimize_grid(module, ...)
 
   Named list of control options. Recognised entries: `progress`
   (logical), `parallel` (logical forwarded to
-  [`evaluate()`](evaluate.md)), `evaluation_progress` (logical),
-  `grid_type` (`"regular"` or `"random"`), `grid_levels` (integer, for
-  regular grids), and `grid_size` (integer, for random grids).
+  [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)),
+  `evaluation_progress` (logical), `grid_type` (`"regular"` or
+  `"random"`), `grid_levels` (integer, for regular grids), and
+  `grid_size` (integer, for random grids).
 
 ## Value
 

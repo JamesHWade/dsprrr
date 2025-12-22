@@ -20,7 +20,8 @@ compile_module(
 
 - program:
 
-  A DSPrrr module to optimize (e.g., from [`module()`](module.md))
+  A DSPrrr module to optimize (e.g., from
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md))
 
 - teleprompter:
 

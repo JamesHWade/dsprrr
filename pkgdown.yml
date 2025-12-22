@@ -4,5 +4,9 @@ pkgdown_sha: ~
 articles:
   compilation-optimization: compilation-optimization.html
   getting-started: getting-started.html
+  orchestration: orchestration.html
   vitals-integration: vitals-integration.html
-last_built: 2025-12-21T14:58Z
+last_built: 2025-12-22T13:14Z
+urls:
+  reference: https://jameshwade.github.io/dsprrr/reference
+  article: https://jameshwade.github.io/dsprrr/articles

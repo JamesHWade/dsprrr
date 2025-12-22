@@ -2,7 +2,7 @@
 
 Execute a module with the provided inputs to generate LLM output. This
 is the primary function for running modules created with
-[`module()`](module.md).
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
 
 Supports both single inputs and batch processing. Batch execution can be
 parallelised, but is conservative by default to avoid reusing LLM
@@ -18,7 +18,8 @@ run(module, ...)
 
 - module:
 
-  A DSPrrr module (e.g., created with [`module()`](module.md))
+  A DSPrrr module (e.g., created with
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md))
 
 - ...:
 

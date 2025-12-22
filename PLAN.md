@@ -27,7 +27,8 @@ vitals for rigorous evaluation.
 - `Signature` remains an S7 class in `R/signature.R` describing
   `inputs`, `output_type`, and `instructions`.
 - `validate_io(signature, inputs, outputs)` enforces the contract at
-  runtime (module `$forward()` and [`run()`](reference/run.md) reuse
+  runtime (module `$forward()` and
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) reuse
   it).
 - Pillar-friendly printing highlights argument names, expected types,
   and guidance for downstream tooling.
@@ -51,8 +52,8 @@ vitals for rigorous evaluation.
   - `$print()` / `$format()` / pillar methods: show signature, most
     recent config, trace summary, optimisation status.
   - `$as_vitals_solver(...)`: thin wrapper for
-    [`as_vitals_solver()`](reference/as_vitals_solver.md) so the vitals
-    bridge is discoverable.
+    [`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
+    so the vitals bridge is discoverable.
 - Subclasses: `PredictModule`, `ReactModule`, `ChainOfThoughtModule`,
   etc. Each subclass implements `private$build_prompt()`,
   `private$postprocess()`, and tool orchestration hooks.
@@ -70,7 +71,7 @@ vitals for rigorous evaluation.
   `$optimize()` with preferences/messages.
 - Existing grid-search logic migrates to tidymodels (see §5) but retains
   compatibility with vitals scorers via
-  [`as_dsprrr_metric()`](reference/as_dsprrr_metric.md).
+  [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md).
 
 ------------------------------------------------------------------------
 
@@ -93,12 +94,12 @@ vitals for rigorous evaluation.
     configs, traces, and vitals run metadata.
 
 Pipe ergonomics remain intact because the exported verbs
-([`run()`](reference/run.md),
-[`optimize_grid()`](reference/optimize_grid.md),
-[`evaluate()`](reference/evaluate.md),
-[`as_vitals_solver()`](reference/as_vitals_solver.md)) accept the module
-as the first argument and return tidy outputs or the module itself for
-chaining.
+([`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
+[`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md))
+accept the module as the first argument and return tidy outputs or the
+module itself for chaining.
 
 ------------------------------------------------------------------------
 
@@ -130,11 +131,13 @@ chaining.
   (`temperature()`, `top_p()`, `cot_depth()`, `values_set()` for tool
   choices).
 - Generate candidates via `grid_regular()` / `grid_random()`.
-- Resample with `rsample::vfold_cv()` or `bootstraps()` on developer
-  datasets.
-- Score with `yardstick::metric_set()` (including metrics derived from
-  vitals scorers via
-  [`as_dsprrr_metric()`](reference/as_dsprrr_metric.md)).
+- Resample with
+  [`rsample::vfold_cv()`](https://rsample.tidymodels.org/reference/vfold_cv.html)
+  or `bootstraps()` on developer datasets.
+- Score with
+  [`yardstick::metric_set()`](https://yardstick.tidymodels.org/reference/metric_set.html)
+  (including metrics derived from vitals scorers via
+  [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)).
 - Implement in `$optimize_grid(devset, metrics, control)`; expose
   `optimize_grid(mod, ...)` wrapper for piping.
 - Optional `finetune::tune_race_anova()` for adaptive pruning.
@@ -148,7 +151,9 @@ chaining.
       search with a deterministic mock LLM and verify tidy outputs.
     - Add documentation chunks in `vignettes/optimisation.Rmd` showing
       [`dials::parameters()`](https://dials.tidymodels.org/reference/parameters.html)
-      and `rsample::vfold_cv()` usage.
+      and
+      [`rsample::vfold_cv()`](https://rsample.tidymodels.org/reference/vfold_cv.html)
+      usage.
 
 #### Phase 2 – Native tune/workflows
 
@@ -176,34 +181,39 @@ chaining.
 
 ### 6. vitals Integration
 
-Current state: - [`as_vitals_solver()`](reference/as_vitals_solver.md)
-wraps [`run_dataset()`](reference/run_dataset.md) for Predict modules
-and is already exported with tests. -
-[`as_dsprrr_metric()`](reference/as_dsprrr_metric.md) converts vitals
-scorers to dsprrr-compatible metrics; README + vignette document the
-workflow. - `vitals-integration.Rmd` shows end-to-end optimisation +
-evaluation across both packages.
+Current state: -
+[`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
+wraps
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+for Predict modules and is already exported with tests. -
+[`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
+converts vitals scorers to dsprrr-compatible metrics; README + vignette
+document the workflow. - `vitals-integration.Rmd` shows end-to-end
+optimisation + evaluation across both packages.
 
 Next steps with the R6 refactor: - Update
-[`as_vitals_solver()`](reference/as_vitals_solver.md) to accept R6
-modules (call `$forward()` or `$run_dataset()` shim) while keeping the
-public API stable. - Teach modules to expose vitals metadata:
-standardise structured return fields (`result`, `.chat`, `.metadata`,
-`.trace`) so vitals Tasks can log solver runs without guesswork. -
-Ensure [`run_dataset()`](reference/run_dataset.md) returns a tibble
-whose columns match vitals expectations (`result`, `.metadata`, `.chat`,
-trace summary columns) and is reused by both dsprrr and vitals
-bridges. - Add `$as_vitals_solver()` method on `Module` for
-discoverability, delegating to the existing helper. - Extend
-optimisation control to accept vitals scorers directly (e.g.,
+[`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
+to accept R6 modules (call `$forward()` or `$run_dataset()` shim) while
+keeping the public API stable. - Teach modules to expose vitals
+metadata: standardise structured return fields (`result`, `.chat`,
+`.metadata`, `.trace`) so vitals Tasks can log solver runs without
+guesswork. - Ensure
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+returns a tibble whose columns match vitals expectations (`result`,
+`.metadata`, `.chat`, trace summary columns) and is reused by both
+dsprrr and vitals bridges. - Add `$as_vitals_solver()` method on
+`Module` for discoverability, delegating to the existing helper. -
+Extend optimisation control to accept vitals scorers directly (e.g.,
 `objective = vitals::scorer_modelgraded()`) by auto-wrapping with
-[`as_dsprrr_metric()`](reference/as_dsprrr_metric.md). - Sync logging:
-expose a `vitals_log_format()` helper that collapses traces into
-vitals-friendly step logs (tool call, tokens, latency, outcome) for use
-in Inspect dashboards. - Refresh `VITALS_INTEGRATION.md` and vignette
-with R6 examples, including: module creation,
-[`as_vitals_solver()`](reference/as_vitals_solver.md) usage, running
-vitals Tasks, and feeding vitals scorers into `$optimize()`.
+[`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md). -
+Sync logging: expose a `vitals_log_format()` helper that collapses
+traces into vitals-friendly step logs (tool call, tokens, latency,
+outcome) for use in Inspect dashboards. - Refresh
+`VITALS_INTEGRATION.md` and vignette with R6 examples, including: module
+creation,
+[`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
+usage, running vitals Tasks, and feeding vitals scorers into
+`$optimize()`.
 
 Longer-term opportunities: - Allow teleprompters to request evaluation
 via vitals Tasks (e.g., GEPA loop selecting the best config using vitals
@@ -221,8 +231,10 @@ schema or even shared S7 components if the overlap deepens.
   and render reports. Provide `_targets.R` templates with optional
   vitals steps.
 - **pins**: store signatures, configs, prompt templates, best traces,
-  and vitals run summaries. Helpers: `pin_module_config()`,
-  `pin_trace()`, `pin_vitals_log()`.
+  and vitals run summaries. Helpers:
+  [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),
+  [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md),
+  [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md).
 - **MLflow (optional)**: log params, metrics, traces, vitals scores, and
   artifacts. Provide `use_mlflow()` helper to initialise runs.
 - **Quarto**: experiment reports summarising tuning grids, metrics,
@@ -265,40 +277,60 @@ schema or even shared S7 components if the overlap deepens.
 #### Milestone A – Module Foundations ✅ COMPLETED
 
 - Implement R6 `Module` base + `PredictModule` subclass.
-- Update [`module()`](reference/module.md) constructor to return R6
-  objects; retire S7 cloning helpers.
+- Update
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  constructor to return R6 objects; retire S7 cloning helpers.
 - Rework
-  [`run()`](reference/run.md)/[`run_dataset()`](reference/run_dataset.md)/[`evaluate()`](reference/evaluate.md)
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)/[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)/[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
   to delegate to `$forward()` and emit standard trace/vitals columns.
 - Add pillar/cli printing and ensure tests cover forward/evaluate paths.
-- Adapt [`as_vitals_solver()`](reference/as_vitals_solver.md) and
-  [`as_dsprrr_metric()`](reference/as_dsprrr_metric.md) to the new
-  module internals; expand tests to cover structured outputs and trace
-  metadata.
+- Adapt
+  [`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
+  and
+  [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
+  to the new module internals; expand tests to cover structured outputs
+  and trace metadata.
   - **Completed Implementation:**
     - ✅ Created `R/module-base.R` with R6 `Module` base class including
       `$forward()`, `$reset()`, `$optimize()`, `$trace_summary()`,
       `$is_compiled()`, `$as_vitals_solver()`
     - ✅ Created `R/module-predict.R` with `PredictModule` subclass,
       migrated template/demos logic from S7 Predict
-    - ✅ Updated [`module()`](reference/module.md) factory to return R6
-      PredictModule instances
+    - ✅ Updated
+      [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+      factory to return R6 PredictModule instances
     - ✅ Removed S7 Predict class and associated methods (`reset_copy`,
       `deepcopy`, `is_compiled` now R6 methods)
-    - ✅ Refactored [`run()`](reference/run.md) to use standard S3
-      dispatch with `run.Module` method
-    - ✅ Updated [`evaluate()`](reference/evaluate.md) to work with R6
-      modules via standard S3 dispatch
+    - ✅ Refactored
+      [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) to
+      use standard S3 dispatch with `run.Module` method
+    - ✅ Updated
+      [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+      to work with R6 modules via standard S3 dispatch
     - ✅ Modified vitals integration to check for Module class
       inheritance
     - ✅ Implemented R6 print methods with cli formatting
     - ✅ Cleaned up NAMESPACE - R6 classes marked as internal with
       `@noRd`
     - ✅ Moved R6 from Suggests to Imports in DESCRIPTION
-    - ✅ Updated all tests to use R6 API (395 passing, 8 minor failures)
+    - ✅ Updated all tests to use R6 API
     - ✅ Fixed documentation generation issues with R6 classes
+  - **Quality Improvements (Dec 2024):**
+    - ✅ Refactored `run_batch()` to eliminate ~200 lines of code
+      duplication
+    - ✅ Extracted `process_batch_item()`, `extract_simple_output()`,
+      `create_error_result()` helpers
+    - ✅ Split into `run_batch_sequential()` and `run_batch_parallel()`
+      for clarity
+    - ✅ Added comprehensive parallel execution tests
+    - ✅ Expanded `test-vitals.R` from 59 → 340 lines
+    - ✅ Expanded `test-utils.R` from 20 → 227 lines
+    - ✅ Fixed memory leak: chat object storage now optional via
+      `config$store_chat_in_traces`
+    - ✅ Improved `Module$run()` with proper batch processing and
+      warning for parallel misuse
 
-#### Milestone B – Tidymodels Integration (3 weeks)
+#### Milestone B – Tidymodels Integration ✅ COMPLETED
 
 - Define tunable parameters with `dials` and implement grid/random
   search in `$optimize_grid()`.
@@ -307,27 +339,22 @@ schema or even shared S7 components if the overlap deepens.
 - Surface `finetune` racing as an optional control method.
 - Document optimisation workflow + vitals scorer interoperability in
   vignette and Quarto template.
-  - **Tasks & Status (pairing: James & Codex):**
+  - **Tasks & Status:**
 
-    | Task                                                                                                                                                                      | Status      | Leads         | Notes                                                                                                                                                                                                                                                                                                      |
-    |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-    | Implement `$optimize_grid()` and `$optimize()` dispatch inside `Module`, storing trial results in `self$state$trials` as tibbles.                                         | COMPLETED   | James & Codex | Baseline grid search implemented with state tracking; ready to integrate with teleprompters.                                                                                                                                                                                                               |
-    | Add helper functions in `R/optimize.R` for translating module signatures into tidymodels parameter objects and for summarising resample scores.                           | COMPLETED   | James & Codex | Helpers implemented ([`merge_optimization_control()`](reference/merge_optimization_control.md), [`prepare_candidate_grid()`](reference/prepare_candidate_grid.md), [`generate_grid_from_parameters()`](reference/generate_grid_from_parameters.md)); signature-to-parameters mapping queued for next pass. |
-    | Refactor `GridSearchTeleprompter` in `R/teleprompter.R` to call the new optimisation API, ensuring the structure returned matches the stored trial schema.                | COMPLETED   | James & Codex | Delegates to [`optimize_grid()`](reference/optimize_grid.md), records trials/best variant metadata on the module.                                                                                                                                                                                          |
-    | Extend `tests/testthat/test-teleprompter.R` with cases covering dials grids and yardstick metrics via [`as_dsprrr_metric()`](reference/as_dsprrr_metric.md).              | COMPLETED   | James & Codex | Added deterministic spec verifying delegation and module state updates.                                                                                                                                                                                                                                    |
-    | Update `README.Rmd` and `vignettes/optimisation.Rmd` examples to show tidymodels usage alongside vitals scorers.                                                          | IN PROGRESS | Docs          | Optimisation vignette partially updated; remaining examples follow new helpers.                                                                                                                                                                                                                            |
-    | Add (skip-on-CRAN) regression test ensuring `finetune::tune_race_anova()` works under a deterministic mock, or include scaffolding to plug in when finetune is installed. | PENDING     | James & Codex | Target once baseline grid path stabilises.                                                                                                                                                                                                                                                                 |
+    | Task                                                                                                       | Status       | Notes                                                                                                                                                                                                                      |
+    |------------------------------------------------------------------------------------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | Implement `$optimize_grid()` and `$optimize()` dispatch                                                    | ✅ COMPLETED | Baseline grid search with state tracking                                                                                                                                                                                   |
+    | Helper functions in `R/optimize.R`                                                                         | ✅ COMPLETED | [`merge_optimization_control()`](https://jameshwade.github.io/dsprrr/reference/merge_optimization_control.md), [`prepare_candidate_grid()`](https://jameshwade.github.io/dsprrr/reference/prepare_candidate_grid.md), etc. |
+    | Refactor `GridSearchTeleprompter`                                                                          | ✅ COMPLETED | Delegates to [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md), records trials/best variant                                                                                              |
+    | Tests for dials grids + yardstick metrics                                                                  | ✅ COMPLETED | Deterministic specs for delegation and state                                                                                                                                                                               |
+    | Update docs (README/vignettes)                                                                             | ✅ COMPLETED | Vignette updated with tidymodels helpers                                                                                                                                                                                   |
+    | `finetune::tune_race_anova()` regression test                                                              | ✅ COMPLETED | Integration tests in test-integration.R                                                                                                                                                                                    |
+    | [`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md) helper   | ✅ COMPLETED | Derives dials parameters from module                                                                                                                                                                                       |
+    | [`module_trials_summary()`](https://jameshwade.github.io/dsprrr/reference/module_trials_summary.md) helper | ✅ COMPLETED | Tidy summary of optimization trials                                                                                                                                                                                        |
+    | [`module_metric_summary()`](https://jameshwade.github.io/dsprrr/reference/module_metric_summary.md) helper | ✅ COMPLETED | Per-trial yardstick metrics                                                                                                                                                                                                |
+    | Signature → parameter mapping                                                                              | ✅ COMPLETED | Extracts enum types from signature inputs                                                                                                                                                                                  |
 
-  - **Focus:** finish the tidymodels bridge and supporting summaries.
-
-    - Introduce signature → parameter mapping helpers so tidymodels sets
-      can be derived automatically.
-    - Capture resampling/metric summaries for yardstick + vitals
-      reporting.
-    - Refresh docs (README/vignette) to reflect the end-to-end optimise
-      grid workflow.
-
-#### Milestone C – Orchestration & Persistence (2 weeks)
+#### Milestone C – Orchestration & Persistence ✅ COMPLETED
 
 - Ship `pins` helpers for saving module configs/traces/vitals logs.
 - Provide targets template with both dsprrr tuning and vitals evaluation
@@ -335,29 +362,26 @@ schema or even shared S7 components if the overlap deepens.
 - Optional MLflow logging layer with toggled dependency.
 - Add Quarto report template summarising tidymodels results and vitals
   scores.
-  - **Tasks:**
-    - Implement `pin_module_config()`, `pin_trace()`, and
-      `pin_vitals_log()` in `R/orchestration.R`, leveraging standardised
-      trace schemas.
-    - Add `_targets.R` template under `inst/templates/targets/`
-      demonstrating a pipeline: load data → optimise module → evaluate
-      via vitals → render Quarto report.
-    - Create Quarto template (`inst/templates/quarto/report.qmd`) and
-      link it from documentation.
-    - Update pkgdown configuration (`_pkgdown.yml`) to reference new
-      articles for orchestrations and vitals integration.
-    - Add integration tests (optionally skipped) validating that the
-      pins helpers round-trip module configs and traces.
-    - Document orchestration workflow in `vignettes/orchestration.Rmd`,
-      including vitals steps.
+  - **Tasks & Status:**
+
+    | Task                                                                                                                                                                                                                                                                      | Status       | Notes                                                     |
+    |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------|-----------------------------------------------------------|
+    | Implement [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md), [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md), [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md) | ✅ COMPLETED | Full R/orchestration.R with restore helpers               |
+    | Add `_targets.R` template                                                                                                                                                                                                                                                 | ✅ COMPLETED | inst/templates/targets/\_targets.R with complete pipeline |
+    | Create Quarto report template                                                                                                                                                                                                                                             | ✅ COMPLETED | inst/templates/quarto/report.qmd with visualizations      |
+    | Update pkgdown configuration                                                                                                                                                                                                                                              | ✅ COMPLETED | Articles and reference sections configured                |
+    | Add integration tests for pins helpers                                                                                                                                                                                                                                    | ✅ COMPLETED | Round-trip tests, skipped when pins not installed         |
+    | Document in vignettes/orchestration.Rmd                                                                                                                                                                                                                                   | ✅ COMPLETED | Comprehensive vignette with examples                      |
+    | [`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md) helper                                                                                                                                                                    | ✅ COMPLETED | Copy templates to user projects                           |
+    | [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md) helper                                                                                                                                                                | ✅ COMPLETED | Reconstruct modules from pinned configs                   |
+    | [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md) helper                                                                                                                                                                        | ✅ COMPLETED | Pre-flight checks for production workflows                |
 
 #### Milestone D – Advanced Modules & Teleprompters (ongoing)
 
 - Implement Chain-of-Thought and tool-aware module subclasses.
-- Port GEPA-style teleprompter using R6 hooks and integrate vitals-based
-  evaluation loops.
-- Add programmatic search teleprompters (MIPRO) once tool-aware traces
-  are stable.
+- Port DSPy 3.0 optimizers (MIPROv2, SIMBA, GEPA) as teleprompters.
+- Add programmatic search teleprompters once tool-aware traces are
+  stable.
 - Introduce routing/judge modules with enforced signature/type checks.
   - **Tasks:**
     - Scaffold `R/module-chainofthought.R` and `R/module-react.R` with
@@ -366,18 +390,51 @@ schema or even shared S7 components if the overlap deepens.
     - Define a tool schema registry in `R/tools-ellmer.R` and extend
       traces to capture action/observation steps compatible with vitals
       logs.
-    - Implement `GepaTeleprompter` (and friends) in `R/teleprompter.R`,
-      using vitals scorers for evaluation loops and storing intermediate
-      rationales in module state.
+    - Implement advanced teleprompters in `R/teleprompter.R`:
+      - `MIPROv2Teleprompter`: bootstrapping + grounded proposal stages
+        (based on DSPy 3.0)
+      - `SIMBATeleprompter`: learns from custom feedback for
+        agentic/long-horizon tasks
+      - `GEPATeleprompter`: Genetic-Pareto optimizer with NL reflection
+        for shorter, better prompts
     - Add tests in `tests/testthat/test-teleprompter.R` covering
-      GEPA/MIPRO behaviours with mocked outputs for deterministic
-      assertions.
+      advanced optimizer behaviours with mocked outputs.
     - Update `vignettes/modules.Rmd` and
       `vignettes/vitals-integration.Rmd` with examples of tool-aware
       modules and vitals evaluation.
-    - Evaluate need for additional helper generics (e.g.,
-      `module_trace()`), documenting decisions in
-      `VITALS_INTEGRATION.md` and developer notes.
+
+#### Milestone E – Ecosystem Integration (NEW)
+
+- Integrate with ellmer 0.3.0+ features (simplified chat API, enhanced
+  tool specs).
+- Add shinychat support for building chat UIs with dsprrr modules.
+- Native observability integration with MLflow tracing.
+  - **Tasks:**
+    - Update ellmer integration to use new `chat()` function and tool
+      enhancements from 0.3.0+
+    - Create `as_shinychat_solver()` helper for integrating modules with
+      shinychat apps
+    - Add `R/shinychat.R` with UI helpers for module-powered chatbots
+    - Implement `use_mlflow()` helper for native observability (tracing,
+      optimizer tracking)
+    - Add querychat integration example showing data Q&A with dsprrr
+      modules
+    - Update vignettes with shinychat and MLflow examples
+
+#### Milestone F – DSPy 3.0 Feature Parity
+
+- Bring dsprrr up to date with DSPy 3.0 capabilities.
+  - **New Modules:**
+    - `CodeActModule`: code execution with tool-aware agent loops
+    - `RefineModule`: iterative refinement with feedback
+    - Improved ReAct with better action/observation handling
+  - **New Features:**
+    - PEP 604-style union types in signatures (e.g., `string | null`)
+    - Token streaming support via ellmer async
+    - `dsprrr.syncify()` for running optimizers on async programs
+  - **Optimizers:**
+    - GRPO: reinforcement learning training of compound AI systems
+    - Bayesian optimization via `tune::tune_bayes()`
 
 ------------------------------------------------------------------------
 
@@ -392,8 +449,8 @@ schema or even shared S7 components if the overlap deepens.
   deterministic outputs to verify yardstick + vitals scorers
   integration.
 - **vitals smoke tests**: round-trip
-  [`as_vitals_solver()`](reference/as_vitals_solver.md) through a vitals
-  Task stub to ensure outputs/logging stay compatible.
+  [`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
+  through a vitals Task stub to ensure outputs/logging stay compatible.
 - **Performance smoke**: assert `$forward()` latency and cost stay
   within bounds on fixture data.
 - **Linting & style**: enforce tidyverse style (lintr, styler) and
@@ -405,19 +462,45 @@ schema or even shared S7 components if the overlap deepens.
 
 ### 11. Current Status & Next Steps
 
-**Completed:** - ✅ Full R6 module architecture implemented and tested -
-✅ Vitals integration maintained and functional - ✅ Documentation
-stable (no regeneration issues) - ✅ Test suite largely passing (395/403
-tests)
+**Completed:** - ✅ Milestone A: Full R6 module architecture with
+quality improvements - ✅ Milestone B: Tidymodels integration with
+dials, yardstick, finetune compatibility - ✅ Milestone C: Orchestration
+& persistence with pins, targets, Quarto templates - ✅ Vitals
+integration maintained and functional - ✅ Documentation stable (4
+vignettes: getting-started, compilation-optimization,
+vitals-integration, orchestration) - ✅ Test suite comprehensive (run,
+vitals, utils, integration, orchestration coverage) - ✅ Code quality:
+eliminated duplication, fixed memory leak, improved batch processing
 
-**Known Issues:** - Minor test failures (8) related to deepcopy state
-preservation - Some compile tests checking wrong property paths
+**Ready for:** - Milestone D: Building more module types
+(ChainOfThought, React, CodeAct) - Milestone D: Advanced optimizers
+(MIPROv2, SIMBA, GEPA) - Milestone E: Shinychat integration for chat
+UIs - Milestone E: MLflow native observability
 
-**In Progress:** - Milestone B: Tidymodels Integration (grid helpers
-landed; teleprompter wiring + resample summaries next)
+### 11.1 Ecosystem Dependencies
 
-**Ready for:** - Building more module types (ChainOfThought, React) -
-Enhanced optimization strategies
+| Package        | Min Version | Status     | Integration Notes                                    |
+|----------------|-------------|------------|------------------------------------------------------|
+| **ellmer**     | 0.3.0+      | ✅ Active  | New `chat()` API, enhanced tools; update integration |
+| **vitals**     | 0.1.0+      | ✅ Active  | Task framework with datasets/solvers/scorers         |
+| **shinychat**  | 0.3.0+      | ⏳ Planned | Chat UI for module-powered chatbots                  |
+| **querychat**  | latest      | ⏳ Planned | Data Q&A integration                                 |
+| **tidymodels** | current     | ✅ Active  | dials, rsample, yardstick, finetune                  |
+| **mlflow**     | optional    | ⏳ Planned | Native observability                                 |
+
+**Recent Ecosystem Updates to Track:** - ellmer 0.3.0 (Jul 2025):
+Simplified `chat()` function, enhanced tool specs, quality-of-life
+improvements - ellmer 0.2.0 (May 2025): Tool calling improvements, async
+support (Garrick Aden-Buie joined team) - vitals 0.1.0 (Jun 2025): Task
+framework port of Python Inspect, Inspect log viewer - shinychat 0.3.0
+(Nov 2025): Streaming markdown, custom content types, ellmer 0.3.0+
+integration
+
+**DSPy 3.0 Features to Port:** - MIPROv2: Bootstrapping + grounded
+proposal with automatic hyperparameter selection - SIMBA: Custom
+feedback learning for agentic tasks - GEPA: Genetic-Pareto optimizer
+with NL reflection - CodeAct: Code execution in agent loops - Refine:
+Iterative refinement module - PEP 604 union types in signatures
 
 ### 12. Open Questions & Follow-Ups
 
@@ -439,16 +522,83 @@ Enhanced optimization strategies
 
 ### 13. Progress Log
 
-- Milestone B kickoff: tidymodels integration planning begun with shared
-  tracker and dependency mapping.
-- Implemented base `$optimize_grid()` flow with stateful trial tracking
-  and helper scaffolding (Codex & James).
-- Realigned ellmer integrations to the latest API (shared `api_args`
-  flow, `chat_claude()` usage) and updated docs/tests accordingly.
-- GridSearch teleprompter now delegates to
-  [`optimize_grid()`](reference/optimize_grid.md); module state stores
-  trials/best variant and tests cover the new path.
-- Added
-  [`module_parameter_set()`](reference/module_parameter_set.md)/[`module_trials_summary()`](reference/module_trials_summary.md)
-  helpers to bridge tidymodels parameter sets and optimisation summaries
-  (tests cover both).
+**Dec 2025 (Milestone C):** - Completed Milestone C - Orchestration &
+Persistence: - Created `R/orchestration.R` with pins helpers: -
+[`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
+/
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
+for saving/loading modules -
+[`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md)
+for persisting execution traces -
+[`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md)
+for evaluation results -
+[`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
+for pre-flight checks -
+[`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md)
+for copying templates - Created `inst/templates/targets/_targets.R` with
+complete pipeline template - Created `inst/templates/quarto/report.qmd`
+with visualization report - Created `vignettes/orchestration.Rmd` with
+comprehensive documentation - Updated `_pkgdown.yml` with articles and
+reference sections - Added 25 tests for orchestration helpers (skipped
+when pins not installed) - Updated DESCRIPTION with pins, targets,
+tarchetypes, quarto in Suggests
+
+**Dec 2025 (continued):** - Completed Milestone B - Tidymodels
+Integration: - Updated optimization vignette with comprehensive
+tidymodels helper documentation - Added sections for
+[`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md),
+[`module_trials_summary()`](https://jameshwade.github.io/dsprrr/reference/module_trials_summary.md),
+[`module_metric_summary()`](https://jameshwade.github.io/dsprrr/reference/module_metric_summary.md) -
+Added complete tidymodels workflow example in vignette - Added
+finetune::tune_race_anova() integration tests in test-integration.R -
+Verified signature → parameter mapping with
+`signature_parameter_defaults()` - All tidymodels helpers tested with
+dials grid functions (regular, random, latin_hypercube)
+
+**Dec 2025:** - Completed major Milestone A quality improvements: -
+Refactored `run_batch()` eliminating ~200 lines of duplicated code -
+Extracted reusable helpers: `process_batch_item()`,
+`extract_simple_output()`, `create_error_result()` - Split
+parallel/sequential execution into separate functions for clarity -
+Fixed memory leak by making chat object storage optional
+(`config$store_chat_in_traces`) - Expanded test coverage: test-vitals.R
+(59→340 lines), test-utils.R (20→227 lines) - Added comprehensive
+parallel execution tests - Improved `Module$run()` with proper batch
+processing - Updated CLAUDE.md with comprehensive codebase
+documentation - Reviewed DSPy 3.0 features for future integration
+(MIPROv2, SIMBA, GEPA, CodeAct) - Researched ecosystem updates: ellmer
+0.3.0, vitals 0.1.0, shinychat 0.3.0
+
+**Previous:** - Milestone B kickoff: tidymodels integration planning
+begun with shared tracker and dependency mapping. - Implemented base
+`$optimize_grid()` flow with stateful trial tracking and helper
+scaffolding. - Realigned ellmer integrations to the latest API (shared
+`api_args` flow, `chat_claude()` usage) and updated docs/tests
+accordingly. - GridSearch teleprompter now delegates to
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md);
+module state stores trials/best variant and tests cover the new path. -
+Added
+[`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md)/[`module_trials_summary()`](https://jameshwade.github.io/dsprrr/reference/module_trials_summary.md)
+helpers to bridge tidymodels parameter sets and optimisation summaries.
+
+------------------------------------------------------------------------
+
+### 14. References
+
+- [DSPy Framework](https://dspy.ai/) - The framework for programming
+  language models
+- [DSPy GitHub](https://github.com/stanfordnlp/dspy) - Source code and
+  releases
+- [DSPy Optimizers](https://dspy.ai/learn/optimization/optimizers/) -
+  MIPROv2, SIMBA, GEPA documentation
+- [ellmer Package](https://ellmer.tidyverse.org/) - Chat with LLMs in R
+- [ellmer 0.3.0
+  Release](https://tidyverse.org/blog/2025/07/ellmer-0-3-0/) - Latest
+  features
+- [vitals Package](https://vitals.tidyverse.org/) - LLM evaluation
+  framework
+- [vitals
+  Introduction](https://tidyverse.org/blog/2025/06/vitals-0-1-0/) -
+  Toolkit overview
+- [shinychat Package](https://posit-dev.github.io/shinychat/) - Chat UI
+  for Shiny

@@ -15,7 +15,8 @@ evaluate(module, ...)
 
 - module:
 
-  A DSPrrr module created with [`module()`](module.md).
+  A DSPrrr module created with
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
 
 - ...:
 
@@ -43,7 +44,8 @@ A list with elements
 
 - `predictions`: list of model outputs.
 
-- `metadata`: list of metadata captured from [`run()`](run.md).
+- `metadata`: list of metadata captured from
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md).
 
 - `n_evaluated`: number of successful evaluations.
 

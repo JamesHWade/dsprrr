@@ -22,13 +22,13 @@ evaluate_dsp(module, dataset, metric, .llm = NULL, verbose = TRUE)
 
   A metric function from `metric_*()` functions
 
+- .llm:
+
+  Optional LLM connection for running the module
+
 - verbose:
 
   Whether to show progress
-
-- llm:
-
-  Optional LLM connection for running the module
 
 ## Value
 
