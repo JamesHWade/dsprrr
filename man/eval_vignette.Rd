@@ -11,6 +11,7 @@ Logical indicating whether to evaluate vignette code
 }
 \description{
 Checks for vcr cassettes or API credentials to determine
-if vignette code should be executed.
+if vignette code should be executed. Always returns FALSE during
+R CMD check to avoid cassette mismatch errors.
 }
 \keyword{internal}

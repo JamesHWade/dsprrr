@@ -1,7 +1,117 @@
-url: ~
+url: https://jameshwade.github.io/dsprrr/
 template:
   bootstrap: 5
 
 logo:
   file: man/figures/logo.png
   alt: dsprrr hex sticker
+
+articles:
+  - title: Getting Started
+    navbar: ~
+    contents:
+    - getting-started
+
+  - title: Core Workflows
+    desc: Learn how to build and optimize LLM applications
+    contents:
+    - compilation-optimization
+    - vitals-integration
+
+  - title: Production
+    desc: Deploy and orchestrate LLM workflows
+    contents:
+    - orchestration
+
+reference:
+  - title: Core Functions
+    desc: Main functions for building LLM applications
+    contents:
+    - signature
+    - module
+    - run
+    - run_dataset
+    - predict.Module
+    - evaluate
+    - evaluate_dsp
+
+  - title: Chat-Centric API
+    desc: ellmer-style pipe-friendly functions
+    contents:
+    - dsp
+    - as_module
+    - last_trace
+
+  - title: Default Chat Management
+    desc: Automatic LLM client configuration
+    contents:
+    - default-chat
+    - get_default_chat
+    - set_default_chat
+    - clear_default_chat
+
+  - title: Async and Streaming
+    desc: Asynchronous and streaming operations
+    contents:
+    - async
+    - run_async
+    - stream_async
+
+  - title: Signatures and Inputs
+    desc: Define module interfaces
+    contents:
+    - input
+    - starts_with("input_")
+    - dsp_trainset
+
+  - title: Teleprompters
+    desc: Optimization strategies
+    contents:
+    - Teleprompter
+    - LabeledFewShot
+    - GridSearchTeleprompter
+
+  - title: Optimization
+    desc: Functions for optimizing module performance
+    contents:
+    - optimize_grid
+    - compile
+    - compile_module
+    - module_parameter_set
+    - module_trials_summary
+    - module_metric_summary
+
+  - title: Metrics
+    desc: Evaluation metrics
+    contents:
+    - starts_with("metric_")
+
+  - title: Orchestration
+    desc: Production workflow helpers
+    contents:
+    - orchestration
+    - pin_module_config
+    - restore_module_config
+    - pin_trace
+    - pin_vitals_log
+    - use_dsprrr_template
+    - validate_workflow
+
+  - title: Traces
+    desc: Execution trace utilities
+    contents:
+    - export_traces
+    - summarize_traces
+    - clear_traces
+
+  - title: Vitals Integration
+    desc: Integration with vitals package
+    contents:
+    - as_vitals_solver
+    - as_dsprrr_metric
+
+  - title: Utilities
+    desc: Helper functions
+    contents:
+    - eval_vignette
+    - has_ellmer_credentials

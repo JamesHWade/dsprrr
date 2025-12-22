@@ -169,6 +169,107 @@ run.PredictModule <- function(
   }
 }
 
+#' Process a single batch item
+#'
+#' Core processing logic shared by both parallel and sequential execution.
+#'
+#' @param input_set Named list of inputs for this item
+#' @param module The module to execute
+#' @param llm The LLM client to use
+#' @param index The batch index (for metadata)
+#' @param .verbose Whether to print debug output
+#' @param .return_format "simple" or "structured"
+#' @return Processed result (simple value or structured list)
+#' @noRd
+process_batch_item <- function(input_set, module, llm, index, .verbose, .return_format) {
+
+  prompt <- build_prompt(module, input_set)
+
+  if (.verbose) {
+    cli::cli_h3("Prompt {index}")
+    cli::cli_code(prompt)
+  }
+
+  start_time <- Sys.time()
+
+  response <- call_llm(
+    llm = llm,
+    prompt = prompt,
+    output_type = module$signature@output_type,
+    instructions = module$signature@instructions,
+    verbose = .verbose
+  )
+
+  end_time <- Sys.time()
+  latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+
+  if (.return_format == "simple") {
+    extract_simple_output(response, module$signature@output_type)
+  } else {
+    list(
+      output = response,
+      chat = llm,
+      metadata = list(
+        latency_ms = latency_ms,
+        prompt_length = nchar(prompt),
+        prompt = prompt,
+        instructions = module$signature@instructions,
+        timestamp = end_time,
+        batch_index = index
+      )
+    )
+  }
+}
+
+#' Extract simple output from LLM response
+#'
+#' For single-field outputs, extract just the field value.
+#'
+#' @param response The LLM response
+#' @param output_type The signature output type
+#' @return Extracted value or full response
+#' @noRd
+extract_simple_output <- function(response, output_type) {
+  if (inherits(output_type, "ellmer::TypeObject") &&
+      length(output_type@properties) == 1) {
+    field_name <- names(output_type@properties)[1]
+    if (!is.null(response[[field_name]])) {
+      return(response[[field_name]])
+    }
+  }
+  response
+}
+
+#' Create error result for batch processing
+#'
+#' @param error The error object
+#' @param index The batch index
+#' @param prompt The prompt that failed (for structured format)
+#' @param instructions The instructions (for structured format)
+#' @param llm The LLM client (for structured format, can be NULL)
+#' @param .return_format "simple" or "structured"
+#' @return Error result in appropriate format
+#' @noRd
+create_error_result <- function(error, index, prompt, instructions, llm, .return_format) {
+  if (.return_format == "simple") {
+    structure(
+      NA,
+      error_message = paste0("Failed to process item ", index, ": ", error$message)
+    )
+  } else {
+    list(
+      output = NA,
+      chat = llm,
+      metadata = list(
+        error = error$message,
+        batch_index = index,
+        instructions = instructions,
+        prompt = prompt
+      )
+    )
+  }
+}
+
 #' Process batch inputs
 #' @noRd
 run_batch <- function(
@@ -182,263 +283,16 @@ run_batch <- function(
   .return_format
 ) {
   parallel_mode <- .parallel && n > 1
-
-  if (parallel_mode) {
-    llm_factory <- if (is.null(.llm)) {
-      function() get_default_llm(module$config)
-    } else {
-      function() .llm
-    }
-  } else {
-    shared_llm <- if (is.null(.llm)) get_default_llm(module$config) else .llm
-  }
-
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
 
-  if (.progress && n > 1) {
-    cli::cli_progress_bar(
-      format = "Processing {cli::pb_current}/{cli::pb_total} | {cli::pb_percent} | ETA: {cli::pb_eta}",
-      total = n,
-      clear = FALSE
-    )
-  }
-
   if (parallel_mode) {
-    current_daemons <- mirai::daemons(NULL)
-    if (is.null(current_daemons) || current_daemons == 0) {
-      mirai::daemons(n = max(1L, parallel::detectCores() - 1L))
-    }
-
-    mirai_tasks <- mirai::mirai_map(
-      .x = seq_len(n),
-      .f = function(
-        i,
-        input_sets,
-        module,
-        .verbose,
-        .return_format,
-        build_prompt,
-        call_llm,
-        llm_factory
-      ) {
-        input_set <- input_sets[[i]]
-        prompt <- build_prompt(module, input_set)
-        worker_llm <- llm_factory()
-
-        if (.verbose) {
-          cli::cli_h3("Prompt {i}/{length(input_sets)}")
-          cli::cli_code(prompt)
-        }
-
-        start_time <- Sys.time()
-
-        tryCatch(
-          {
-            response <- call_llm(
-              llm = worker_llm,
-              prompt = prompt,
-              output_type = module$signature@output_type,
-              instructions = module$signature@instructions,
-              verbose = .verbose
-            )
-
-            end_time <- Sys.time()
-            latency_ms <- as.numeric(difftime(
-              end_time,
-              start_time,
-              units = "secs"
-            )) *
-              1000
-
-            if (.return_format == "simple") {
-              # For single-field outputs, extract just the field value
-              if (
-                inherits(module$signature@output_type, "ellmer::TypeObject") &&
-                  length(module$signature@output_type@properties) == 1
-              ) {
-                field_name <- names(module$signature@output_type@properties)[1]
-                if (!is.null(response[[field_name]])) {
-                  response[[field_name]]
-                } else {
-                  response
-                }
-              } else {
-                response
-              }
-            } else {
-              list(
-                output = response,
-                chat = NULL,
-                metadata = list(
-                  latency_ms = latency_ms,
-                  prompt_length = nchar(prompt),
-                  prompt = prompt,
-                  instructions = module$signature@instructions,
-                  timestamp = Sys.time(),
-                  batch_index = i
-                )
-              )
-            }
-          },
-          error = function(e) {
-            if (.return_format == "simple") {
-              structure(
-                NA,
-                error_message = paste0(
-                  "Failed to process item ",
-                  i,
-                  ": ",
-                  e$message
-                )
-              )
-            } else {
-              list(
-                output = NA,
-                chat = NULL,
-                metadata = list(
-                  error = e$message,
-                  batch_index = i,
-                  instructions = module$signature@instructions,
-                  prompt = prompt
-                )
-              )
-            }
-          }
-        )
-      },
-      .args = list(
-        input_sets = input_sets,
-        module = module,
-        .verbose = .verbose,
-        .return_format = .return_format,
-        build_prompt = build_prompt,
-        call_llm = call_llm,
-        llm_factory = llm_factory
-      )
+    results <- run_batch_parallel(
+      module, input_sets, n, .llm, .verbose, .return_format, .progress
     )
-
-    results <- vector("list", n)
-    completed <- 0
-    warnings_to_emit <- character(0)
-
-    while (completed < n) {
-      for (i in seq_len(n)) {
-        if (is.null(results[[i]]) && !mirai::unresolved(mirai_tasks[[i]])) {
-          result <- mirai_tasks[[i]][["data"]]
-
-          if (
-            .return_format == "simple" &&
-              is.na(result) &&
-              !is.null(attr(result, "error_message"))
-          ) {
-            warnings_to_emit <- c(
-              warnings_to_emit,
-              attr(result, "error_message")
-            )
-            result <- NA
-          }
-
-          results[[i]] <- result
-          completed <- completed + 1
-          if (.progress && n > 1) {
-            cli::cli_progress_update()
-          }
-        }
-      }
-      Sys.sleep(0.01)
-    }
-
-    for (warning_msg in warnings_to_emit) {
-      cli::cli_warn(warning_msg)
-    }
   } else {
-    results <- vector("list", n)
-    for (i in seq_len(n)) {
-      input_set <- input_sets[[i]]
-      prompt <- build_prompt(module, input_set)
-
-      if (.verbose) {
-        cli::cli_h3("Prompt {i}/{n}")
-        cli::cli_code(prompt)
-      }
-
-      start_time <- Sys.time()
-
-      results[[i]] <- tryCatch(
-        {
-          response <- call_llm(
-            llm = shared_llm,
-            prompt = prompt,
-            output_type = module$signature@output_type,
-            instructions = module$signature@instructions,
-            verbose = .verbose
-          )
-
-          end_time <- Sys.time()
-          latency_ms <- as.numeric(difftime(
-            end_time,
-            start_time,
-            units = "secs"
-          )) *
-            1000
-
-          if (.return_format == "simple") {
-            # For single-field outputs, extract just the field value
-            if (
-              inherits(module$signature@output_type, "ellmer::TypeObject") &&
-                length(module$signature@output_type@properties) == 1
-            ) {
-              field_name <- names(module$signature@output_type@properties)[1]
-              if (!is.null(response[[field_name]])) {
-                response[[field_name]]
-              } else {
-                response
-              }
-            } else {
-              response
-            }
-          } else {
-            list(
-              output = response,
-              chat = shared_llm,
-              metadata = list(
-                latency_ms = latency_ms,
-                prompt_length = nchar(prompt),
-                prompt = prompt,
-                instructions = module$signature@instructions,
-                timestamp = Sys.time(),
-                batch_index = i
-              )
-            )
-          }
-        },
-        error = function(e) {
-          cli::cli_warn("Failed to process item {i}: {e$message}")
-          if (.return_format == "simple") {
-            NA
-          } else {
-            list(
-              output = NA,
-              chat = shared_llm,
-              metadata = list(
-                error = e$message,
-                batch_index = i,
-                instructions = module$signature@instructions,
-                prompt = prompt
-              )
-            )
-          }
-        }
-      )
-
-      if (.progress && n > 1) {
-        cli::cli_progress_update()
-      }
-    }
-  }
-
-  if (.progress && n > 1) {
-    cli::cli_progress_done()
+    results <- run_batch_sequential(
+      module, input_sets, n, .llm, .verbose, .return_format, .progress
+    )
   }
 
   if (.return_format == "structured") {
@@ -446,6 +300,165 @@ run_batch <- function(
   } else {
     results
   }
+}
+
+#' Run batch processing sequentially
+#' @noRd
+run_batch_sequential <- function(module, input_sets, n, .llm, .verbose, .return_format, .progress) {
+  shared_llm <- .llm %||% module$chat %||% get_default_llm(module)
+  results <- vector("list", n)
+
+  # Create progress bar if requested
+  progress_id <- NULL
+  if (.progress && n > 1) {
+    progress_id <- cli::cli_progress_bar(
+      format = "Processing {cli::pb_current}/{cli::pb_total} | {cli::pb_percent} | ETA: {cli::pb_eta}",
+      total = n,
+      clear = FALSE
+    )
+  }
+
+  for (i in seq_len(n)) {
+    prompt <- build_prompt(module, input_sets[[i]])
+
+    results[[i]] <- tryCatch(
+      {
+        process_batch_item(
+          input_set = input_sets[[i]],
+          module = module,
+          llm = shared_llm,
+          index = i,
+          .verbose = .verbose,
+          .return_format = .return_format
+        )
+      },
+      error = function(e) {
+        cli::cli_warn("Failed to process item {i}: {e$message}")
+        create_error_result(
+          error = e,
+          index = i,
+          prompt = prompt,
+          instructions = module$signature@instructions,
+          llm = shared_llm,
+          .return_format = .return_format
+        )
+      }
+    )
+
+    if (!is.null(progress_id)) {
+      cli::cli_progress_update(id = progress_id)
+    }
+  }
+
+  if (!is.null(progress_id)) {
+    cli::cli_progress_done(id = progress_id)
+  }
+
+  results
+}
+
+#' Run batch processing in parallel using mirai
+#' @noRd
+run_batch_parallel <- function(module, input_sets, n, .llm, .verbose, .return_format, .progress) {
+  llm_factory <- if (!is.null(.llm)) {
+    function() .llm
+  } else if (!is.null(module$chat)) {
+    # Use the module's stored Chat - note: each worker gets the same reference
+    # For true parallel isolation, users should not provide a Chat
+    function() module$chat
+  } else {
+    function() get_default_llm(module)
+  }
+
+  # Ensure mirai daemons are running
+  current_daemons <- mirai::daemons(NULL)
+  if (is.null(current_daemons) || current_daemons == 0) {
+    mirai::daemons(n = max(1L, parallel::detectCores() - 1L))
+  }
+
+  # Launch parallel tasks
+  mirai_tasks <- mirai::mirai_map(
+    .x = seq_len(n),
+    .f = function(i, input_sets, module, .verbose, .return_format,
+                  process_batch_item_fn, extract_simple_output_fn,
+                  build_prompt_fn, call_llm_fn, llm_factory,
+                  create_error_result_fn) {
+      input_set <- input_sets[[i]]
+      prompt <- build_prompt_fn(module, input_set)
+      worker_llm <- llm_factory()
+
+      tryCatch(
+        {
+          process_batch_item_fn(
+            input_set = input_set,
+            module = module,
+            llm = worker_llm,
+            index = i,
+            .verbose = .verbose,
+            .return_format = .return_format
+          )
+        },
+        error = function(e) {
+          create_error_result_fn(
+            error = e,
+            index = i,
+            prompt = prompt,
+            instructions = module$signature@instructions,
+            llm = NULL,  # Can't serialize LLM in parallel mode
+            .return_format = .return_format
+          )
+        }
+      )
+    },
+    .args = list(
+      input_sets = input_sets,
+      module = module,
+      .verbose = .verbose,
+      .return_format = .return_format,
+      process_batch_item_fn = process_batch_item,
+      extract_simple_output_fn = extract_simple_output,
+      build_prompt_fn = build_prompt,
+      call_llm_fn = call_llm,
+      llm_factory = llm_factory,
+      create_error_result_fn = create_error_result
+    )
+  )
+
+  # Collect results
+  results <- vector("list", n)
+  completed <- 0
+  warnings_to_emit <- character(0)
+
+  while (completed < n) {
+    for (i in seq_len(n)) {
+      if (is.null(results[[i]]) && !mirai::unresolved(mirai_tasks[[i]])) {
+        result <- mirai_tasks[[i]][["data"]]
+
+        # Handle errors from parallel execution
+        if (.return_format == "simple" &&
+            length(result) == 1 && is.na(result) &&
+            !is.null(attr(result, "error_message"))) {
+          warnings_to_emit <- c(warnings_to_emit, attr(result, "error_message"))
+          result <- NA
+        }
+
+        results[[i]] <- result
+        completed <- completed + 1
+
+        if (.progress && n > 1) {
+          cli::cli_progress_update()
+        }
+      }
+    }
+    Sys.sleep(0.01)
+  }
+
+  # Emit accumulated warnings
+  for (warning_msg in warnings_to_emit) {
+    cli::cli_warn(warning_msg)
+  }
+
+  results
 }
 #' Build a prompt from a module and inputs
 #'
@@ -543,16 +556,25 @@ format_output <- function(output) {
 
 #' Get default LLM configuration
 #'
+#' Checks module's stored Chat, then config$llm, then auto-detects from
+#' environment variables using get_default_chat().
+#'
+#' @param module The module to get an LLM for
+#' @return An ellmer Chat object
 #' @noRd
-get_default_llm <- function(config) {
-  # Check for LLM in config
-  if (!is.null(config$llm)) {
-    return(config$llm)
+get_default_llm <- function(module) {
+  # Check for Chat stored on module
+  if (!is.null(module$chat)) {
+    return(module$chat)
   }
 
-  # Otherwise create a default ellmer chat object
-  # This will use ellmer's default configuration
-  ellmer::chat_openai(model = "gpt-5-mini")
+  # Check for LLM in config (legacy support)
+  if (!is.null(module$config$llm)) {
+    return(module$config$llm)
+  }
+
+  # Use the new auto-detection from chat-default.R
+  get_default_chat(create = TRUE)
 }
 
 #' Call the LLM with structured output
@@ -628,8 +650,14 @@ run_dataset <- function(module, ...) {
   UseMethod("run_dataset")
 }
 
-#' Run dataset method for R6 Module classes
-#' @noRd
+#' @rdname run_dataset
+#' @param dataset A data frame or tibble containing input columns
+#' @param .llm Optional ellmer Chat object for LLM calls
+#' @param .verbose Logical whether to print verbose output
+#' @param .parallel Logical whether to enable parallel processing
+#' @param .progress Logical whether to show progress bar
+#' @param .return_format Character either "simple" or "structured"
+#' @export
 run_dataset.Module <- function(
   module,
   dataset,
@@ -637,7 +665,8 @@ run_dataset.Module <- function(
   .verbose = FALSE,
   .parallel = FALSE,
   .progress = TRUE,
-  .return_format = "simple"
+  .return_format = "simple",
+  ...
 ) {
   # Validate dataset
   if (!is.data.frame(dataset)) {

@@ -37,6 +37,7 @@ evaluate <- function(module, ...) {
 #' fresh client is created per worker only if `.llm` is `NULL`; otherwise the
 #' call falls back to sequential execution with a warning.
 #'
+#' @exportS3Method
 #' @noRd
 evaluate.Module <- function(module, dataset, metric,
                              .llm = NULL, .parallel = FALSE,

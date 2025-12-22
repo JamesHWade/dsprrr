@@ -1,3 +1,5 @@
+# --- is_ellmer_type tests ---
+
 test_that("is_ellmer_type identifies ellmer types correctly", {
   # Test with actual ellmer types
   expect_true(is_ellmer_type(ellmer::type_string()))
@@ -17,4 +19,208 @@ test_that("is_ellmer_type identifies ellmer types correctly", {
   expect_false(is_ellmer_type(list()))
   expect_false(is_ellmer_type(NULL))
   expect_false(is_ellmer_type(data.frame()))
+})
+
+test_that("is_ellmer_type handles edge cases", {
+  # Objects with similar class names but not from ellmer
+  fake_type <- structure(list(), class = "Type")
+  expect_false(is_ellmer_type(fake_type))
+
+  # Nested types
+  nested_type <- ellmer::type_object(
+    items = ellmer::type_array(items = ellmer::type_string())
+  )
+  expect_true(is_ellmer_type(nested_type))
+
+  # Multiple inheritance - should still work
+  expect_true(is_ellmer_type(ellmer::type_string()))
+})
+
+# --- has_ellmer_credentials tests ---
+
+test_that("has_ellmer_credentials detects API keys", {
+  # Save original values
+  orig_openai <- Sys.getenv("OPENAI_API_KEY")
+  orig_anthropic <- Sys.getenv("ANTHROPIC_API_KEY")
+  orig_google <- Sys.getenv("GOOGLE_GEMINI_API_KEY")
+
+  # Clear all keys
+  withr::local_envvar(
+    OPENAI_API_KEY = "",
+    ANTHROPIC_API_KEY = "",
+    GOOGLE_GEMINI_API_KEY = ""
+  )
+
+  expect_false(dsprrr:::has_ellmer_credentials())
+
+  # Test with OpenAI key only
+  withr::local_envvar(OPENAI_API_KEY = "test-key")
+  expect_true(dsprrr:::has_ellmer_credentials())
+})
+
+test_that("has_ellmer_credentials detects Anthropic key", {
+  withr::local_envvar(
+    OPENAI_API_KEY = "",
+    ANTHROPIC_API_KEY = "test-anthropic-key",
+    GOOGLE_GEMINI_API_KEY = ""
+  )
+
+  expect_true(dsprrr:::has_ellmer_credentials())
+})
+
+test_that("has_ellmer_credentials detects Google key", {
+  withr::local_envvar(
+    OPENAI_API_KEY = "",
+    ANTHROPIC_API_KEY = "",
+    GOOGLE_GEMINI_API_KEY = "test-google-key"
+  )
+
+  expect_true(dsprrr:::has_ellmer_credentials())
+})
+
+test_that("has_ellmer_credentials detects multiple keys", {
+  withr::local_envvar(
+    OPENAI_API_KEY = "key1",
+    ANTHROPIC_API_KEY = "key2",
+    GOOGLE_GEMINI_API_KEY = ""
+  )
+
+  expect_true(dsprrr:::has_ellmer_credentials())
+})
+
+# --- null coalescing operator tests ---
+
+test_that("null coalescing operator works correctly", {
+  `%||%` <- dsprrr:::`%||%`
+
+  # NULL case
+  expect_equal(NULL %||% "default", "default")
+
+  # Non-NULL case
+  expect_equal("value" %||% "default", "value")
+
+  # Nested case
+  expect_equal(NULL %||% NULL %||% "final", "final")
+
+  # With various types
+
+  expect_equal(0 %||% 1, 0)  # 0 is not NULL
+  expect_equal(FALSE %||% TRUE, FALSE)  # FALSE is not NULL
+  expect_equal("" %||% "default", "")  # Empty string is not NULL
+  expect_equal(NA %||% "default", NA)  # NA is not NULL
+  expect_equal(list() %||% list(a = 1), list())  # Empty list is not NULL
+})
+
+# --- Helper function tests from run.R ---
+
+test_that("format_output handles various types", {
+  # Simple string
+  expect_equal(dsprrr:::format_output("hello"), "hello")
+
+  # Number
+  expect_equal(dsprrr:::format_output(42), "42")
+
+  # List gets converted to JSON
+  result <- dsprrr:::format_output(list(a = 1, b = "test"))
+  expect_true(is.character(result))
+  expect_true(grepl("a", result))
+  expect_true(grepl("test", result))
+
+  # Logical
+  expect_equal(dsprrr:::format_output(TRUE), "TRUE")
+})
+
+test_that("format_inputs creates proper format", {
+  sig_inputs <- list(
+    input(name = "text", class = S7::class_character, description = "Input text"),
+    input(name = "count", class = S7::class_integer, description = "A count")
+  )
+
+  inputs <- list(text = "hello", count = 5)
+
+  result <- dsprrr:::format_inputs(inputs, sig_inputs)
+
+  expect_true(grepl("Input text", result))
+  expect_true(grepl("text: hello", result))
+  expect_true(grepl("A count", result))
+  expect_true(grepl("count: 5", result))
+})
+
+test_that("format_inputs handles empty inputs", {
+  result <- dsprrr:::format_inputs(list(), list())
+  expect_equal(result, "")
+})
+
+test_that("format_inputs handles inputs without descriptions", {
+  sig_inputs <- list(
+    input(name = "text", class = S7::class_character)
+  )
+
+  inputs <- list(text = "hello")
+
+  result <- dsprrr:::format_inputs(inputs, sig_inputs)
+
+  expect_true(grepl("text: hello", result))
+  expect_false(grepl("#", result))  # No description comment
+})
+
+# --- Optimization helpers tests ---
+
+test_that("merge_optimization_control sets defaults", {
+  result <- dsprrr:::merge_optimization_control(NULL)
+
+  expect_true("progress" %in% names(result))
+  expect_true("parallel" %in% names(result))
+  expect_true("grid_type" %in% names(result))
+  expect_true("grid_levels" %in% names(result))
+
+  expect_false(result$parallel)
+  expect_equal(result$grid_type, "regular")
+  expect_equal(result$grid_levels, 3L)
+})
+
+test_that("merge_optimization_control respects user overrides", {
+  result <- dsprrr:::merge_optimization_control(list(
+    parallel = TRUE,
+    grid_levels = 5L
+  ))
+
+  expect_true(result$parallel)
+  expect_equal(result$grid_levels, 5L)
+})
+
+test_that("merge_optimization_control handles grid_type validation", {
+  result <- dsprrr:::merge_optimization_control(list(grid_type = "RANDOM"))
+  expect_equal(result$grid_type, "random")
+
+  result2 <- dsprrr:::merge_optimization_control(list(grid_type = "Regular"))
+  expect_equal(result2$grid_type, "regular")
+})
+
+test_that("expand_grid_from_list creates correct grid", {
+  params <- list(
+    a = c(1, 2),
+    b = c("x", "y", "z")
+  )
+
+  result <- dsprrr:::expand_grid_from_list(params)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 6)  # 2 * 3
+  expect_true("a" %in% names(result))
+  expect_true("b" %in% names(result))
+})
+
+test_that("expand_grid_from_list rejects empty parameters", {
+  expect_error(
+    dsprrr:::expand_grid_from_list(list()),
+    "at least one element"
+  )
+})
+
+test_that("expand_grid_from_list rejects unnamed parameters", {
+  expect_error(
+    dsprrr:::expand_grid_from_list(list(c(1, 2), c(3, 4))),
+    "must be named"
+  )
 })

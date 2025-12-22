@@ -7,47 +7,16 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = TRUE}
-# Conditionally evaluate based on API keys or vcr cassettes
-eval_vignette <- function() {
-  # Check if vcr cassettes exist
-  if (dir.exists("_vcr")) {
-    name <- tools::file_path_sans_ext(knitr::current_input())
-    cassettes <- dir("_vcr", pattern = paste0(name, "*"))
-    has_cassette <- length(cassettes) > 0
-  } else {
-    has_cassette <- FALSE
-  }
-
-  # Check if API keys are available
-  has_key <- any(
-    nzchar(Sys.getenv("OPENAI_API_KEY")),
-    nzchar(Sys.getenv("ANTHROPIC_API_KEY")),
-    nzchar(Sys.getenv("GOOGLE_GEMINI_API_KEY"))
-  )
-
-  # Also check if vitals is installed
-  has_vitals <- requireNamespace("vitals", quietly = TRUE)
-
-  # Don't evaluate on CRAN
-  not_cran <- !identical(Sys.getenv("NOT_CRAN"), "false")
-
-  # Evaluate if we have keys/cassettes, vitals is installed, and not on CRAN
-  (has_key || has_cassette) && has_vitals && not_cran
-}
-
+```{r}
+#| include: false
+# This vignette shows API integration patterns but doesn't evaluate
+# because it requires vitals, API keys, and complex setup.
+# When VCR cassettes are recorded, evaluation can be enabled.
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE # Keep as FALSE for safety - vignettes contain LLM calls
+  eval = FALSE
 )
-
-# Setup vcr if available and evaluating
-if (requireNamespace("vcr", quietly = TRUE) && eval_vignette()) {
-  vcr::setup_knitr()
-}
-
-cli::cli_inform("Eval vignettes: {eval_vignette()}")
 ```
 
 ```{r setup}
@@ -76,9 +45,9 @@ The new API features in dsprrr make integration with vitals seamless. Here's how
 Thanks to the batch processing support and structured returns, dsprrr modules can now work directly with vitals:
 
 ```{r}
-# Create a dsprrr module
+# Create a dsprrr module (using 'input' to match vitals conventions)
 sentiment_module <- signature(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+  "input -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
   module(type = "predict")
 

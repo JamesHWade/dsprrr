@@ -30,6 +30,7 @@ optimize_grid <- function(module, ...) {
   UseMethod("optimize_grid")
 }
 
+#' @rdname optimize_grid
 #' @export
 optimize_grid.Module <- function(module,
                                  devset,
@@ -289,7 +290,7 @@ module_parameter_set <- function(module,
       return(NULL)
     }
 
-    label <- setNames(paste("Module", name), name)
+    label <- stats::setNames(paste("Module", name), name)
 
     if (all(values %in% c(TRUE, FALSE))) {
       unique_vals <- sort(unique(as.logical(values)))
@@ -422,7 +423,8 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
 #'   computing yardstick metrics.
 #' @param estimate Column name (string) containing the model predictions when
 #'   computing yardstick metrics.
-#' 
+#' @param ... Additional arguments passed to yardstick metrics.
+#'
 #' @return A tibble with one row per trial containing columns:
 #'   * `trial_id` - trial identifier.
 #'   * `score` - overall score recorded for the trial.
@@ -435,7 +437,7 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
 #'     requested.
 #' @export
 #' @examples
-#' \\dontrun{
+#' \dontrun{
 #' trial_metrics <- module_metric_summary(my_module)
 #' yardstick_metrics <- module_metric_summary(
 #'   my_module,
@@ -525,7 +527,7 @@ module_metric_summary <- function(module,
       } else {
         truth_vec <- coerce_col(data[[truth_col]])
         est_vec <- coerce_col(data[[estimate_col]])
-        levels_union <- unique(c(na.omit(truth_vec), na.omit(est_vec)))
+        levels_union <- unique(c(stats::na.omit(truth_vec), stats::na.omit(est_vec)))
         if (length(levels_union) == 0) {
           cli::cli_warn("Unable to determine class levels for trial {trials$trial_id[[i]]}; skipping yardstick metrics.")
         } else {

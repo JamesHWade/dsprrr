@@ -2,9 +2,22 @@
 % Please edit documentation in R/optimize.R
 \name{optimize_grid}
 \alias{optimize_grid}
+\alias{optimize_grid.Module}
 \title{Grid Search Optimisation}
 \usage{
 optimize_grid(module, ...)
+
+\method{optimize_grid}{Module}(
+  module,
+  devset,
+  metric = metric_exact_match(),
+  grid = NULL,
+  parameters = NULL,
+  objective = c("maximize", "minimize"),
+  .llm = NULL,
+  control = list(),
+  ...
+)
 }
 \arguments{
 \item{module}{A DSPrrr module (created via \code{\link[=module]{module()}}).}

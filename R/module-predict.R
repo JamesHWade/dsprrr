@@ -22,8 +22,9 @@ PredictModule <- R6::R6Class(
     #' @param template Optional glue template string
     #' @param demos Optional list of demonstrations
     #' @param config Optional configuration list
-    initialize = function(signature, template = "", demos = list(), config = list()) {
-      super$initialize(signature, config)
+    #' @param chat Optional ellmer Chat object
+    initialize = function(signature, template = "", demos = list(), config = list(), chat = NULL) {
+      super$initialize(signature, config, chat)
 
       if (!is.character(template) || length(template) != 1) {
         cli::cli_abort("template must be a single character string")
@@ -55,19 +56,20 @@ PredictModule <- R6::R6Class(
       # Build prompt
       prompt <- private$build_prompt(inputs)
 
-      # Get LLM client
-      llm <- .llm %||% private$get_default_llm()
+      # Get LLM client: prefer passed .llm, then stored chat, then auto-detect
+      llm <- .llm %||% self$chat %||% private$get_default_llm()
 
       # Record start time
       start_time <- Sys.time()
 
-      # Make LLM call
+      # Make LLM call (pass inputs for multimodal support)
       result <- tryCatch({
         private$call_llm(
           llm = llm,
           prompt = prompt,
           output_type = self$signature@output_type,
-          instructions = self$signature@instructions
+          instructions = self$signature@instructions,
+          inputs = inputs
         )
       }, error = function(e) {
         cli::cli_abort("LLM call failed: {e$message}", parent = e)
@@ -77,60 +79,70 @@ PredictModule <- R6::R6Class(
       end_time <- Sys.time()
       latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
 
-      # Extract token usage from ellmer
-      token_info <- tryCatch({
-        tokens_df <- llm$get_tokens()
-        list(
-          input_tokens = sum(tokens_df$tokens[tokens_df$role == "user"], na.rm = TRUE),
-          output_tokens = sum(tokens_df$tokens[tokens_df$role == "assistant"], na.rm = TRUE),
-          total_tokens = sum(tokens_df$tokens, na.rm = TRUE)
-        )
-      }, error = function(e) {
-        list(input_tokens = NA, output_tokens = NA, total_tokens = NA)
-      })
-
-      # Get cost if available
-      cost <- tryCatch({
-        llm$get_cost()
-      }, error = function(e) {
-        NA_real_
-      })
-
-      # Create metadata
-      metadata <- list(
-        latency_ms = latency_ms,
-        prompt_length = nchar(prompt),
-        prompt = prompt,
-        instructions = self$signature@instructions,
-        timestamp = end_time,
-        input_tokens = token_info$input_tokens,
-        output_tokens = token_info$output_tokens,
-        total_tokens = token_info$total_tokens,
-        cost = cost,
-        model = tryCatch(llm$get_model(), error = function(e) NA_character_)
+      # Get the last assistant turn - it has tokens, cost, duration built in
+      assistant_turn <- tryCatch(
+        llm$last_turn(role = "assistant"),
+        error = function(e) NULL
       )
 
-      # Record trace if requested
-      if (trace) {
-        # Get the full turn history from ellmer
-        turns <- tryCatch({
-          llm$get_turns(include_system_prompt = FALSE)
-        }, error = function(e) {
-          list()
-        })
+      # Get the last user turn for the prompt
+      user_turn <- tryCatch(
+        llm$last_turn(role = "user"),
+        error = function(e) NULL
+      )
 
-        self$state$traces <- append(self$state$traces, list(list(
+      # Extract token info from ellmer's AssistantTurn (has @tokens vector)
+      token_info <- if (!is.null(assistant_turn) && !is.null(assistant_turn@tokens)) {
+        tokens <- assistant_turn@tokens
+        list(
+          input_tokens = tokens[1],
+          output_tokens = tokens[2],
+          cached_input_tokens = tokens[3],
+          total_tokens = sum(tokens[1:2], na.rm = TRUE)
+        )
+      } else {
+        list(input_tokens = NA, output_tokens = NA, cached_input_tokens = NA, total_tokens = NA)
+      }
+
+      # Get cost and duration from AssistantTurn
+      cost <- if (!is.null(assistant_turn)) assistant_turn@cost else NA_real_
+      duration_s <- if (!is.null(assistant_turn)) assistant_turn@duration else NA_real_
+
+      model <- tryCatch(llm$get_model(), error = function(e) NA_character_)
+
+      # Create metadata - leverage ellmer's tracking
+      metadata <- list(
+        timestamp = end_time,
+        model = model,
+        prompt = prompt,  # Keep for convenience
+        instructions = self$signature@instructions,
+        prompt_length = nchar(prompt),
+        input_tokens = token_info$input_tokens,
+        output_tokens = token_info$output_tokens,
+        cached_input_tokens = token_info$cached_input_tokens,
+        total_tokens = token_info$total_tokens,
+        cost = cost,
+        duration_s = duration_s,
+        latency_ms = latency_ms  # Our measured latency (includes R overhead)
+      )
+
+      # Record trace if requested - store ellmer turns directly
+      if (trace) {
+        trace_entry <- list(
           timestamp = end_time,
           inputs = inputs,
-          prompt = prompt,
           output = result,
-          latency_ms = latency_ms,
-          tokens = token_info,
-          cost = cost,
-          model = metadata$model,
-          turns = turns,  # Full ellmer turn history
-          chat = llm  # Store the chat object itself for full access
-        )))
+          user_turn = user_turn,
+          assistant_turn = assistant_turn,
+          model = model
+        )
+
+        # Optionally include full chat object for advanced replay
+        if (isTRUE(self$config$store_chat_in_traces)) {
+          trace_entry$chat <- llm
+        }
+
+        self$state$traces <- append(self$state$traces, list(trace_entry))
       }
 
       # Return tibble format for consistency
@@ -192,7 +204,8 @@ PredictModule <- R6::R6Class(
         signature = self$signature,
         template = self$template,
         demos = list(),
-        config = list()
+        config = list(),
+        chat = self$chat
       )
     },
 
@@ -225,7 +238,8 @@ PredictModule <- R6::R6Class(
         signature = new_signature,
         template = self$template,
         demos = new_demos,
-        config = new_config
+        config = new_config,
+        chat = self$chat
       )
 
       # Copy state
@@ -259,6 +273,7 @@ PredictModule <- R6::R6Class(
 
   private = list(
     # Build prompt from inputs
+    # Supports both glue-style { } and ellmer-style {{ }} delimiters
     build_prompt = function(inputs) {
       prompt_parts <- character()
 
@@ -270,13 +285,7 @@ PredictModule <- R6::R6Class(
 
       # Add the main template with inputs
       if (nchar(self$template) > 0) {
-        filled_template <- glue::glue_data(
-          .x = inputs,
-          self$template,
-          .open = "{",
-          .close = "}",
-          .envir = parent.frame()
-        )
+        filled_template <- private$interpolate_template(self$template, inputs)
         prompt_parts <- c(prompt_parts, filled_template)
       } else {
         # Auto-generate template from inputs
@@ -285,6 +294,26 @@ PredictModule <- R6::R6Class(
       }
 
       paste(prompt_parts, collapse = "\n")
+    },
+
+    # Interpolate template with inputs, supporting both { } and {{ }} syntax
+    # Uses ellmer::interpolate() for {{ }} (ellmer-style), glue for { } (glue-style)
+    interpolate_template = function(template, inputs) {
+      # Check for ellmer-style {{ }} syntax
+      if (grepl("\\{\\{[^}]+\\}\\}", template)) {
+        # ellmer-style - use ellmer::interpolate with !!!inputs
+        # ellmer::interpolate uses {{ }} delimiters
+        rlang::inject(ellmer::interpolate(template, !!!inputs))
+      } else {
+        # glue-style { } - current behavior for backward compatibility
+        glue::glue_data(
+          .x = inputs,
+          template,
+          .open = "{",
+          .close = "}",
+          .envir = parent.frame()
+        )
+      }
     },
 
     # Format demonstrations for prompt
@@ -404,7 +433,7 @@ PredictModule <- R6::R6Class(
           max_tokens = self$config$max_tokens %||% 4096,
           api_args = build_api_args()
         ),
-        gemini = ellmer::chat_gemini(
+        gemini = ellmer::chat_google_gemini(
           model = self$config$model %||% "gemini-1.5-pro-latest",
           api_args = build_api_args()
         ),
@@ -419,20 +448,53 @@ PredictModule <- R6::R6Class(
     },
 
     # Call LLM with structured output
-    call_llm = function(llm, prompt, output_type, instructions = "") {
-      # Build the full prompt with instructions
-      full_prompt <- if (nchar(instructions) > 0) {
-        paste(instructions, prompt, sep = "\n\n")
-      } else {
-        prompt
-      }
+    # Supports multimodal inputs (images, PDFs) via ellmer Content objects
+    call_llm = function(llm, prompt, output_type, instructions = "", inputs = list()) {
+      # Check for Content objects in inputs (images, PDFs)
+      content_inputs <- Filter(function(x) {
+        inherits(x, "Content") ||
+        inherits(x, "ContentImageRemote") ||
+        inherits(x, "ContentImageInline") ||
+        inherits(x, "ContentPDF")
+      }, inputs)
 
-      # Make the API call through ellmer's chat_structured method
-      result <- llm$chat_structured(
-        full_prompt,
-        type = output_type,
-        echo = "none"
-      )
+      if (length(content_inputs) > 0) {
+        # Multimodal request - build content list
+        # Instructions go in system turn, prompt and content in user turn
+        full_prompt <- if (nchar(instructions) > 0) {
+          paste(instructions, prompt, sep = "\n\n")
+        } else {
+          prompt
+        }
+
+        # Build content list: text prompt followed by multimodal content
+        contents <- c(
+          list(ellmer::ContentText(full_prompt)),
+          unname(content_inputs)
+        )
+
+        # Make multimodal API call
+        result <- llm$chat_structured(
+          contents,
+
+          type = output_type,
+          echo = "none"
+        )
+      } else {
+        # Text-only request (current path)
+        full_prompt <- if (nchar(instructions) > 0) {
+          paste(instructions, prompt, sep = "\n\n")
+        } else {
+          prompt
+        }
+
+        # Make the API call through ellmer's chat_structured method
+        result <- llm$chat_structured(
+          full_prompt,
+          type = output_type,
+          echo = "none"
+        )
+      }
 
       result
     }

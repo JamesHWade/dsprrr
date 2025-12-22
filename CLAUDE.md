@@ -184,26 +184,68 @@ test_that("module returns expected output", {
 })
 ```
 
+### VCR Cassettes (HTTP Recording)
+
+Integration tests use [vcr](https://docs.ropensci.org/vcr/) to record and replay HTTP interactions with LLM APIs. This allows tests to run without API keys and ensures reproducible results.
+
+**Cassette locations:**
+- `tests/_vcr/` - Test cassettes (OpenAI)
+- `vignettes/_vcr/` - Vignette cassettes (Anthropic Claude)
+
+**Recording cassettes:**
+```bash
+# Use the helper script (requires API keys set)
+Rscript inst/scripts/record-cassettes.R
+```
+
+Or interactively:
+```r
+source("inst/scripts/record-cassettes.R")
+main()  # Run recording
+```
+
+**When to re-record:**
+- After changing API request format (prompt templates, output types)
+- After upgrading ellmer (may change request structure)
+- When cassettes become stale (API response format changes)
+
+**VCR in tests:**
+```r
+test_that("integration test with cassette", {
+  skip_if_not_installed("vcr")
+  cassette_file <- testthat::test_path("_vcr", "my-test.yml")
+  skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
+
+  vcr::local_cassette("my-test")
+  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
+  # ... test code
+})
+```
+
+**VCR in vignettes:**
+Vignettes use `vcr::setup_knitr()` which automatically names cassettes based on chunk labels. Set `eval = FALSE` for chunks that don't need recording.
+
 ## Implementation Status
 
-### Completed (Milestone A)
+### Completed (Milestone A & B)
 - R6 Module base class with `forward()`, `optimize_grid()`, `reset()`, trace methods
 - PredictModule subclass with template and demo support
+- ReactModule subclass with tool support (ReAct-style agents)
 - S7 Signature with DSPy-style string parsing
 - ellmer integration via `chat_structured()`
+- Chat-centric API: `dsp()`, `as_module()`, default Chat management
+- Streaming support: `mod$stream()` with callbacks or generators
+- Async support: `run_async()`, `stream_async()` with promises
 - vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)
 - Grid search optimization with tidymodels parameter support
 - LabeledFewShot and GridSearchTeleprompter
-
-### In Progress (Milestone B)
-- Tidymodels integration refinement
 - `module_parameter_set()` and `module_metric_summary()` helpers
-- Documentation updates for optimization workflow
+- Module persistence: `pin_module_config()`, `restore_module_config()`
 
 ### Planned
-- Chain-of-Thought and tool-aware module subclasses
+- Chain-of-Thought module type
 - Advanced teleprompters (MIPRO, GEPA)
-- Orchestration helpers (pins, targets templates)
+- Cost tracking and token budgets
 
 ## Coding Conventions
 
@@ -245,7 +287,9 @@ Suggested:
 
 - **PLAN.md**: Detailed roadmap with milestones and task tracking
 - **VITALS_INTEGRATION.md**: Documentation for vitals package integration
+- **inst/scripts/record-cassettes.R**: Helper script for re-recording VCR cassettes
 - **vignettes/**: User-facing tutorials
   - `getting-started.Rmd`: Introduction and basic usage
   - `compilation-optimization.Rmd`: Optimization workflow
   - `vitals-integration.Rmd`: Vitals bridge usage
+  - `orchestration.Rmd`: Production workflow patterns

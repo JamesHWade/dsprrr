@@ -18,17 +18,26 @@ Module <- R6::R6Class(
     #' @field state Mutable list for module state (traces, cache, etc.)
     state = NULL,
 
+    #' @field chat Optional ellmer Chat object for LLM operations
+    chat = NULL,
+
     #' @description
     #' Initialize a new Module
     #' @param signature S7 Signature object
     #' @param config Optional list of configuration parameters
-    initialize = function(signature, config = list()) {
+    #' @param chat Optional ellmer Chat object
+    initialize = function(signature, config = list(), chat = NULL) {
       if (!inherits(signature, "dsprrr::Signature")) {
         cli::cli_abort("signature must be a Signature object")
       }
 
+      if (!is.null(chat) && !inherits(chat, "Chat")) {
+        cli::cli_abort("chat must be an ellmer Chat object")
+      }
+
       self$signature <- signature
       self$config <- config
+      self$chat <- chat
       self$state <- list(
         traces = list(),
         cache = list(),
@@ -54,14 +63,20 @@ Module <- R6::R6Class(
     },
 
     #' @description
-    #' Run the module with inputs (delegates to forward)
+    #' Run the module with inputs
+    #'
+    #' This method provides a convenient interface for executing modules directly.
+    #' For batch processing with parallel execution support, use the `run()` generic
+    #' function instead: `run(module, ...)`.
+    #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
-    #' @param .verbose Logical for debug output
-    #' @param .parallel Logical for parallel batch processing
-    #' @param .progress Logical for progress bar
+    #' @param .verbose Logical for debug output (currently unused, for API consistency)
+    #' @param .parallel Logical for parallel batch processing (requires using run() generic)
+    #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
-    #' @return Module outputs
+    #' @return Module outputs. For .return_format="simple", returns the output value directly.
+    #'   For "structured", returns a tibble with output, chat, and metadata columns.
     run = function(..., .llm = NULL, .verbose = FALSE, .parallel = FALSE,
                    .progress = TRUE, .return_format = "simple") {
       inputs <- list(...)
@@ -76,14 +91,80 @@ Module <- R6::R6Class(
         }
       }
 
-      # Delegate to forward for now - full batch logic will be migrated later
+      # Check for batch inputs - warn if parallel requested but using $run()
+      input_lengths <- vapply(inputs, length, integer(1))
+      is_batch <- any(input_lengths > 1)
+
+      if (is_batch && .parallel) {
+        cli::cli_warn(c(
+          "Parallel batch processing requires using the {.fn run} generic function",
+          "i" = "Use {.code run(module, ...)} instead of {.code module$run(...)}"
+        ))
+      }
+
+      # Handle batch inputs by iterating over forward()
+      if (is_batch) {
+        max_length <- max(input_lengths)
+
+        # Validate all inputs have compatible lengths
+        invalid_lengths <- input_lengths[input_lengths != 1 & input_lengths != max_length]
+        if (length(invalid_lengths) > 0) {
+          cli::cli_abort("All inputs must have the same length or length 1 for batch processing")
+        }
+
+        # Expand scalar inputs
+        inputs <- lapply(inputs, function(x) {
+          if (length(x) == 1) rep(x, max_length) else x
+        })
+
+        # Process each item
+        results <- vector("list", max_length)
+        for (i in seq_len(max_length)) {
+          input_set <- lapply(inputs, `[[`, i)
+          result <- self$forward(input_set, .llm = .llm, trace = TRUE)
+
+          if (.return_format == "simple") {
+            results[[i]] <- result$output[[1]]
+          } else {
+            results[[i]] <- list(
+              output = result$output[[1]],
+              chat = result$chat[[1]],
+              metadata = result$metadata[[1]]
+            )
+          }
+        }
+
+        return(results)
+      }
+
+      # Single input processing
       result <- self$forward(inputs, .llm = .llm, trace = TRUE)
 
       if (.return_format == "simple") {
         return(result$output[[1]])
       } else {
-        return(result)
+        return(structure(
+          list(
+            output = result$output[[1]],
+            chat = result$chat[[1]],
+            metadata = result$metadata[[1]]
+          ),
+          class = "dsprrr_result"
+        ))
       }
+    },
+
+    #' @description
+    #' Predict using the module
+    #'
+    #' Convenience method that delegates to `run()`. Provides a familiar interface
+    #' for users coming from tidymodels or other prediction frameworks.
+    #'
+    #' @param ... Named inputs matching the signature
+    #' @param .llm Optional ellmer chat object (uses stored chat if not provided)
+    #' @return The output value(s) from the module
+    predict = function(..., .llm = NULL) {
+      self$run(..., .llm = .llm, .return_format = "simple")
     },
 
     #' @description
@@ -178,7 +259,7 @@ Module <- R6::R6Class(
         params <- as.list(candidate_grid[i, , drop = FALSE])
         parameters_col[[i]] <- params
 
-        candidate <- self$clone(deep = TRUE)
+        candidate <- self$copy(deep = TRUE)
         candidate$config <- utils::modifyList(candidate$config, params, keep.null = TRUE)
         if (is.function(candidate$apply_optimization_params)) {
           candidate$apply_optimization_params(params)
@@ -214,11 +295,10 @@ Module <- R6::R6Class(
         }
 
         if (!is.null(progress_id)) {
-          score_display <- if (is.na(scores[i])) "NA" else format(round(scores[i], 4), nsmall = 4)
+          msg_score <- if (is.na(scores[i])) "NA" else format(round(scores[i], 4), nsmall = 4)
           cli::cli_progress_update(
             id = progress_id,
-            set = i,
-            msg_score = score_display
+            set = i
           )
         }
       }
@@ -347,24 +427,41 @@ Module <- R6::R6Class(
         return(list(
           n_traces = 0,
           total_tokens = 0,
-          total_latency = 0
+          total_latency_ms = 0
         ))
       }
 
-      # Extract metrics from traces
+      # Extract metrics from ellmer AssistantTurn objects
+      # AssistantTurn@tokens is c(input, output, cached_input)
+      # AssistantTurn@cost and @duration are also available
+      extract_tokens <- function(trace) {
+        turn <- trace$assistant_turn
+        if (is.null(turn) || is.null(turn@tokens)) {
+          return(c(input = 0, output = 0, cached = 0))
+        }
+        c(input = turn@tokens[1] %||% 0,
+          output = turn@tokens[2] %||% 0,
+          cached = turn@tokens[3] %||% 0)
+      }
+
+      all_tokens <- vapply(traces, extract_tokens, numeric(3))
+
       list(
         n_traces = length(traces),
-        total_input_tokens = sum(vapply(traces, function(x) {
-          if (is.list(x$tokens)) x$tokens$input_tokens %||% 0 else 0
-        }, numeric(1))),
-        total_output_tokens = sum(vapply(traces, function(x) {
-          if (is.list(x$tokens)) x$tokens$output_tokens %||% 0 else 0
-        }, numeric(1))),
-        total_tokens = sum(vapply(traces, function(x) {
-          if (is.list(x$tokens)) x$tokens$total_tokens %||% 0 else 0
-        }, numeric(1))),
-        total_latency_ms = sum(vapply(traces, function(x) x$latency_ms %||% 0, numeric(1))),
-        total_cost = sum(vapply(traces, function(x) x$cost %||% 0, numeric(1)))
+        total_input_tokens = sum(all_tokens["input", ], na.rm = TRUE),
+        total_output_tokens = sum(all_tokens["output", ], na.rm = TRUE),
+        total_cached_tokens = sum(all_tokens["cached", ], na.rm = TRUE),
+        total_tokens = sum(all_tokens["input", ], na.rm = TRUE) +
+                       sum(all_tokens["output", ], na.rm = TRUE),
+        total_duration_s = sum(vapply(traces, function(x) {
+          if (!is.null(x$assistant_turn)) x$assistant_turn@duration %||% 0 else 0
+        }, numeric(1)), na.rm = TRUE),
+        total_latency_ms = sum(vapply(traces, function(x) {
+          if (!is.null(x$assistant_turn)) (x$assistant_turn@duration %||% 0) * 1000 else 0
+        }, numeric(1)), na.rm = TRUE),
+        total_cost = sum(vapply(traces, function(x) {
+          if (!is.null(x$assistant_turn)) x$assistant_turn@cost %||% 0 else 0
+        }, numeric(1)), na.rm = TRUE)
       )
     },
 
@@ -467,6 +564,115 @@ Module <- R6::R6Class(
       }
 
       invisible(self)
+    },
+
+    #' @description
+    #' Run the module asynchronously
+    #'
+    #' Returns a promise that resolves to the structured output.
+    #' Useful for running multiple modules in parallel.
+    #'
+    #' @param ... Named inputs matching the signature
+    #' @param .llm Optional ellmer chat object
+    #' @return A promise that resolves to the result
+    run_async = function(..., .llm = NULL) {
+      dsprrr::run_async(self, ..., .llm = .llm)
+    },
+
+    #' @description
+    #' Stream module output asynchronously
+    #'
+    #' Returns a promise that resolves to an async generator.
+    #'
+    #' @param ... Named inputs matching the signature
+    #' @param .llm Optional ellmer chat object
+    #' @return A promise that resolves to an async generator
+    stream_async = function(..., .llm = NULL) {
+      dsprrr::stream_async(self, ..., .llm = .llm)
+    },
+
+    #' @description
+    #' Stream text output from the module
+    #'
+    #' Returns a coro generator that yields text chunks as they arrive.
+    #' Note: Streaming bypasses structured output - use run() for structured results.
+    #'
+    #' @param ... Named inputs matching the signature
+    #' @param .llm Optional ellmer chat object
+    #' @param callback Optional function to call with each text chunk
+    #' @return If callback is NULL, returns a coro generator. Otherwise, returns
+    #'   the full response text invisibly after streaming completes.
+    stream = function(..., .llm = NULL, callback = NULL) {
+      llm <- .llm %||% self$chat %||% get_default_chat(create = TRUE)
+
+      inputs <- list(...)
+      prompt <- private$build_prompt(inputs)
+
+      # Add instructions if present
+      if (nchar(self$signature@instructions) > 0) {
+        prompt <- paste(self$signature@instructions, prompt, sep = "\n\n")
+      }
+
+      # Get stream generator from ellmer
+      gen <- llm$stream(prompt)
+
+      if (!is.null(callback)) {
+        # Consume stream with callback
+        if (!is.function(callback)) {
+          cli::cli_abort("{.arg callback} must be a function")
+        }
+
+        full_response <- character()
+        coro::loop(for (chunk in gen) {
+          callback(chunk)
+          full_response <- c(full_response, chunk)
+        })
+        invisible(paste(full_response, collapse = ""))
+      } else {
+        # Return generator for manual consumption
+        gen
+      }
+    },
+
+    #' @description
+    #' Copy the module with independent Chat
+    #'
+    #' Creates an independent copy of the module with the same provider settings
+    #' but fresh state. Uses R6's clone to preserve the exact class, then
+    #' recreates the Chat to ensure independent state.
+    #'
+    #' @param deep Logical; if TRUE (default), also copies configuration and demos
+    #' @return A new Module instance with independent state
+    copy = function(deep = TRUE) {
+      # Use R6's clone to preserve exact class (including subclasses)
+      new_mod <- self$clone(deep = deep)
+
+      # Create new Chat with fresh state (not shared conversation history)
+      if (!is.null(self$chat)) {
+        new_mod$chat <- private$clone_chat(self$chat)
+      }
+
+      # Reset state (traces, optimization history, etc.)
+      new_mod$state <- list(
+        traces = list(),
+        cache = list(),
+        compiled = FALSE,
+        optimization_history = list(),
+        trials = tibble::tibble(),
+        last_grid = tibble::tibble(),
+        best_score = NULL,
+        best_params = NULL,
+        best_trial = NULL
+      )
+
+      new_mod
+    },
+
+    #' @description
+    #' Create a reset copy of the module (to be overridden by subclasses)
+    #' @return New Module with reset state
+    reset_copy = function() {
+      cli::cli_abort("reset_copy() must be implemented by subclass")
     }
   ),
 
@@ -474,6 +680,54 @@ Module <- R6::R6Class(
     # Build prompt from inputs (to be overridden by subclasses)
     build_prompt = function(inputs) {
       cli::cli_abort("build_prompt() must be implemented by subclass")
+    },
+
+    # Clone a Chat object with fresh state but same provider settings
+    # Uses ellmer's R6 clone() method which preserves provider configuration
+    clone_chat = function(chat) {
+      if (is.null(chat)) {
+        return(NULL)
+      }
+
+      # Use R6's clone method (ellmer Chat is R6)
+      # deep = TRUE ensures internal state is also cloned
+      tryCatch({
+        cloned <- chat$clone(deep = TRUE)
+        # Reset the turn history to start fresh
+        cloned$set_turns(list())
+        cloned
+      }, error = function(e) {
+        # If clone fails, try to recreate from provider info
+        model <- tryCatch(chat$get_model(), error = function(e) NULL)
+        class_names <- class(chat)
+
+        for (cls in class_names) {
+          result <- switch(cls,
+            "Chat" = NULL,  # Skip base class
+            # OpenAI variants
+            "OpenAIChat" = ,
+            "chat_openai" = ellmer::chat_openai(model = model),
+            # Anthropic variants
+            "ClaudeChat" = ,
+            "chat_claude" = ellmer::chat_claude(model = model),
+            # Google variants
+            "ChatGoogleGemini" = ,
+            "chat_google_gemini" = ellmer::chat_google_gemini(model = model),
+            # Ollama variants
+            "OllamaChat" = ,
+            "chat_ollama" = ellmer::chat_ollama(model = model),
+            NULL
+          )
+
+          if (!is.null(result)) {
+            return(result)
+          }
+        }
+
+        # Fallback: return same chat (not ideal but better than failing)
+        cli::cli_warn("Could not clone Chat of class {.cls {class_names[1]}}; sharing reference")
+        chat
+      })
     },
 
     # Postprocess model output (to be overridden by subclasses)
@@ -491,3 +745,64 @@ Module$set("public", "apply_optimization_params", function(params) {
 #' @keywords internal
 #' @noRd
 `%||%` <- function(x, y) if (is.null(x)) y else x
+
+#' Predict Method for Modules (tidymodels-style)
+#'
+#' @description
+#' S3 predict method for dsprrr Modules, providing a tidymodels-familiar
+#' interface. This is an alternative to `run_dataset()` that matches the
+#' pattern used by parsnip and other tidymodels packages.
+#'
+#' @param object A dsprrr Module object
+#' @param new_data A data frame or tibble with columns matching the module's
+#'   signature inputs
+#' @param ... Additional arguments passed to `run_dataset()`
+#'
+#' @return A tibble with the input columns plus prediction results.
+#'   The output column is named according to the signature's output field.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Create a module
+#' mod <- signature("text -> sentiment") |>
+#'   module(type = "predict", chat = chat_openai())
+#'
+#' # Use predict() like parsnip models
+#' new_data <- tibble::tibble(text = c("Great!", "Terrible"))
+#' predict(mod, new_data)
+#'
+#' # Equivalent to run_dataset()
+#' run_dataset(mod, new_data, .llm = mod$chat)
+#' }
+predict.Module <- function(object, new_data, ...) {
+  if (!is.data.frame(new_data)) {
+    cli::cli_abort("{.arg new_data} must be a data frame or tibble")
+  }
+
+  # Get the LLM to use - prefer stored chat, then try default
+  llm <- object$chat
+  if (is.null(llm)) {
+    llm <- tryCatch(
+      get_default_chat(create = TRUE),
+      error = function(e) {
+        cli::cli_abort(c(
+          "No Chat available for prediction",
+          "i" = "Either set a chat on the module: {.code mod$chat <- chat_openai()}",
+          "i" = "Or pass .llm: {.code predict(mod, data, .llm = chat)}"
+        ))
+      }
+    )
+  }
+
+  # Use run_dataset for the actual processing
+  run_dataset(object, new_data, .llm = llm, ...)
+}
+
+#' Predict Method for PredictModule
+#'
+#' @rdname predict.Module
+#' @export
+predict.PredictModule <- function(object, new_data, ...) {
+  predict.Module(object, new_data, ...)
+}

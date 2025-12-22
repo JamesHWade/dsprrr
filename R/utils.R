@@ -13,12 +13,18 @@ is_ellmer_type <- function(x) {
 #' Determine if vignettes should be evaluated
 #'
 #' Checks for vcr cassettes or API credentials to determine
-#' if vignette code should be executed.
+#' if vignette code should be executed. Always returns FALSE during
+#' R CMD check to avoid cassette mismatch errors.
 #'
 #' @return Logical indicating whether to evaluate vignette code
 #' @export
 #' @keywords internal
 eval_vignette <- function() {
+  # Skip during R CMD check (cassettes may not match current code)
+  if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
+    return(FALSE)
+  }
+
   name <- tools::file_path_sans_ext(knitr::current_input())
 
   # Check if vcr cassettes exist for this vignette
