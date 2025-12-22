@@ -1,150 +1,246 @@
 http_interactions:
 - request:
     method: POST
-    uri: https://api.openai.com/v1/chat/completions
+    uri: https://api.openai.com/v1/responses
   response:
     status: 200
     headers:
-      access-control-expose-headers: X-Request-ID
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 983e4a9e7cb01855-ORD
+      cf-ray: 9b1c73dd7d4eb471-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Wed, 24 Sep 2025 00:51:07 GMT
-      openai-organization: dow-analytical-science
-      openai-processing-ms: '417'
-      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      date: Mon, 22 Dec 2025 03:15:05 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1239'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=JkzUWmmSg2X07HzSv8xoM.hqDlzAjV7Wo9To6eoy8Lo-1758675067-1.0.1.1-S.cGLVa65y7r27rCwKQkplVRqEmTAil9dhAQBkqW6Ot0w4SPGVEDH6wNEt8iKz.QM7JmqR4h_xNgFgFXP3M6cast8sBGDy.WKTrQNUrbpc0;
-        path=/; expires=Wed, 24-Sep-25 01:21:07 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=6eFprKwTYwM2GLHhECX9plScLXP309qJFkB_dbSVjq8-1766373305-1.0.1.1-ExCEMPGBeQYSysDELf33bNnBcxWKZgZ3mGDyHLiE8Rz9yJAv3S56SqnNyAtuXmwajSnDMLg7FQKeDTfw0XXc5lPhLWEoP_o67GwPIVVXcaI;
+        path=/; expires=Mon, 22-Dec-25 03:45:05 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=zTRHAQsu7SWlLIA1BjFdIay7zI1xR9YOwuH2FfdFwQI-1758675067159-0.0.1.1-604800000;
+      - _cfuvid=gWDbUZJIcv1GRSZBISbOe7o0.CbMkb36Ju9fHLskH9Y-1766373305217-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '456'
-      x-openai-proxy-wasm: v0.1
+      x-envoy-upstream-service-time: '1243'
       x-ratelimit-limit-requests: '10000'
-      x-ratelimit-limit-tokens: '10000000'
-      x-ratelimit-remaining-requests: '9999'
-      x-ratelimit-remaining-tokens: '9999983'
-      x-ratelimit-reset-requests: 6ms
-      x-ratelimit-reset-tokens: 0s
-      x-request-id: req_b358739ccc61438782dee32e4b1feadd
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9997'
+      x-ratelimit-remaining-tokens: '199931'
+      x-ratelimit-reset-requests: 23.319s
+      x-ratelimit-reset-tokens: 20ms
+      x-request-id: req_128299b6a07a4a0888e21aa23d27ad6f
     body:
-      string: |
+      string: |-
         {
-          "id": "chatcmpl-CJ80o10zYAgzGemHAYEPsNpKuFk1t",
-          "object": "chat.completion",
-          "created": 1758675066,
+          "id": "resp_053896b34d7922bb016948b7b7f590819584206a3d4d6b4642",
+          "object": "response",
+          "created_at": 1766373303,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1766373305,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
           "model": "gpt-4o-mini-2024-07-18",
-          "choices": [
+          "output": [
             {
-              "index": 0,
-              "message": {
-                "role": "assistant",
-                "content": "{\"wrapper\":\"positive\"}",
-                "refusal": null,
-                "annotations": []
-              },
-              "logprobs": null,
-              "finish_reason": "stop"
+              "id": "msg_053896b34d7922bb016948b7b919048195b8ce2f2a0fd824f5",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"wrapper\":\"positive\"}"
+                }
+              ],
+              "role": "assistant"
             }
           ],
-          "usage": {
-            "prompt_tokens": 57,
-            "completion_tokens": 5,
-            "total_tokens": 62,
-            "prompt_tokens_details": {
-              "cached_tokens": 0,
-              "audio_tokens": 0
-            },
-            "completion_tokens_details": {
-              "reasoning_tokens": 0,
-              "audio_tokens": 0,
-              "accepted_prediction_tokens": 0,
-              "rejected_prediction_tokens": 0
-            }
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
           },
+          "safety_identifier": null,
           "service_tier": "default",
-          "system_fingerprint": "fp_560af6e559"
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "wrapper": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "wrapper"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 50,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 56
+          },
+          "user": null,
+          "metadata": {}
         }
-  recorded_at: 2025-09-24 00:51:07
+  recorded_at: 2025-12-22 03:15:05
 - request:
     method: POST
-    uri: https://api.openai.com/v1/chat/completions
+    uri: https://api.openai.com/v1/responses
   response:
     status: 200
     headers:
-      access-control-expose-headers: X-Request-ID
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 983e4aa34c381855-ORD
+      cf-ray: 9b1c73e65d79b471-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Wed, 24 Sep 2025 00:51:07 GMT
-      openai-organization: dow-analytical-science
-      openai-processing-ms: '377'
-      openai-project: proj_s8MYPs4Tjuo3ovNOPKtHROT0
+      date: Mon, 22 Dec 2025 03:15:06 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '727'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=xZBmfpHDutTM63W4k0yl54u6qQoCnXG16tBptQNNv7U-1758675067-1.0.1.1-fBgaYFu8.EqcHuUX2C_PDekGx0MIdeSFa.kMavzV7Uzf.cFaPWmRYh2zGs90Nfqx6hrvDkPVPOVjWCF1XzGiFEVXF7O6rnRcMBjxCePiGcA;
-        path=/; expires=Wed, 24-Sep-25 01:21:07 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=8FZjn0RL_wg5NCsknehxf.agG5xVU7.S3KywJrtRQOo-1766373306-1.0.1.1-OJR3iiakCeMUxVDjE4dwelIC2gOOlIWedyYouFvfJ_AG315MbIfh7VPrCj1oQHGIltv4Of_mQSZJsj74oJWye.aSFmLgP0rw8N0w1feUtCA;
+        path=/; expires=Mon, 22-Dec-25 03:45:06 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=NryfeYpshDK0XbJUSFSHJX75mlkH3yJqwr_8uuWLQ8w-1758675067873-0.0.1.1-604800000;
+      - _cfuvid=OKXiMxb8Royo65bs5Kz0SWiG2ozq0xvy0VTzecBxVzk-1766373306125-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '401'
-      x-openai-proxy-wasm: v0.1
+      x-envoy-upstream-service-time: '729'
       x-ratelimit-limit-requests: '10000'
-      x-ratelimit-limit-tokens: '10000000'
-      x-ratelimit-remaining-requests: '9999'
-      x-ratelimit-remaining-tokens: '9999962'
-      x-ratelimit-reset-requests: 6ms
-      x-ratelimit-reset-tokens: 0s
-      x-request-id: req_0e48cacc7802402cabc5d782c3abc2c5
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9997'
+      x-ratelimit-remaining-tokens: '199902'
+      x-ratelimit-reset-requests: 22.226s
+      x-ratelimit-reset-tokens: 29ms
+      x-request-id: req_2ba722f823684e0e8372bc96a16fde0a
     body:
-      string: |
+      string: |-
         {
-          "id": "chatcmpl-CJ80p29nENW3in3cF0ECFHVulJLpQ",
-          "object": "chat.completion",
-          "created": 1758675067,
+          "id": "resp_02b10ec456e55fc7016948b7b95ea4819db2c1ae4298deea3a",
+          "object": "response",
+          "created_at": 1766373305,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1766373306,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
           "model": "gpt-4o-mini-2024-07-18",
-          "choices": [
+          "output": [
             {
-              "index": 0,
-              "message": {
-                "role": "assistant",
-                "content": "{\"wrapper\":\"negative\"}",
-                "refusal": null,
-                "annotations": []
-              },
-              "logprobs": null,
-              "finish_reason": "stop"
+              "id": "msg_02b10ec456e55fc7016948b7ba0758819d907c7ecd00b3b377",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"wrapper\":\"negative\"}"
+                }
+              ],
+              "role": "assistant"
             }
           ],
-          "usage": {
-            "prompt_tokens": 88,
-            "completion_tokens": 5,
-            "total_tokens": 93,
-            "prompt_tokens_details": {
-              "cached_tokens": 0,
-              "audio_tokens": 0
-            },
-            "completion_tokens_details": {
-              "reasoning_tokens": 0,
-              "audio_tokens": 0,
-              "accepted_prediction_tokens": 0,
-              "rejected_prediction_tokens": 0
-            }
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
           },
+          "safety_identifier": null,
           "service_tier": "default",
-          "system_fingerprint": "fp_560af6e559"
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "wrapper": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "wrapper"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 78,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 84
+          },
+          "user": null,
+          "metadata": {}
         }
-  recorded_at: 2025-09-24 00:51:07
-recorded_with: VCR-vcr/2.0.0
+  recorded_at: 2025-12-22 03:15:06
+recorded_with: VCR-vcr/2.1.0

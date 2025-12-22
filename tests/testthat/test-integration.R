@@ -2,7 +2,7 @@
 
 test_that("basic LLM integration works", {
   skip_if_not_installed("vcr")
-  cassette_file <- testthat::test_path("_vcr", "integration-basic.yml")
+  cassette_file <- vcr::vcr_test_path("_vcr", "integration-basic.yml")
   skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   sig <- Signature(
@@ -20,7 +20,7 @@ test_that("basic LLM integration works", {
   )
 
   vcr::local_cassette("integration-basic")
-  llm <- ellmer::chat_openai(model = "gpt-5-mini")
+  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
   result <- run(pred, text = "Hello world", .llm = llm)
   expect_type(result, "character")
   expect_true(grepl("Hello", result, ignore.case = TRUE))
@@ -28,7 +28,7 @@ test_that("basic LLM integration works", {
 
 test_that("structured output works with real LLM", {
   skip_if_not_installed("vcr")
-  cassette_file <- testthat::test_path("_vcr", "integration-structured.yml")
+  cassette_file <- vcr::vcr_test_path("_vcr", "integration-structured.yml")
   skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   sig <- Signature(
@@ -49,7 +49,7 @@ test_that("structured output works with real LLM", {
   )
 
   vcr::local_cassette("integration-structured")
-  llm <- ellmer::chat_openai(model = "gpt-5-mini")
+  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
   result <- run(pred, text = "I love this package!", .llm = llm)
 
   expect_type(result, "list")
@@ -60,7 +60,7 @@ test_that("structured output works with real LLM", {
 
 test_that("batch processing works with real LLM", {
   skip_if_not_installed("vcr")
-  cassette_file <- testthat::test_path("_vcr", "integration-batch.yml")
+  cassette_file <- vcr::vcr_test_path("_vcr", "integration-batch.yml")
   skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   sig <- Signature(
@@ -78,7 +78,7 @@ test_that("batch processing works with real LLM", {
   )
 
   vcr::local_cassette("integration-batch")
-  llm <- ellmer::chat_openai(model = "gpt-5-mini")
+  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
   results <- run(pred,
                 text = c("Great!", "Terrible!"),
                 .llm = llm,
@@ -93,7 +93,7 @@ test_that("batch processing works with real LLM", {
 test_that("optimize_grid integrates with real LLM", {
   skip_if_not_installed("vcr")
   cassette_name <- "integration-optimize-grid"
-  cassette_path <- testthat::test_path("_vcr", paste0(cassette_name, ".yml"))
+  cassette_path <- vcr::vcr_test_path("_vcr", paste0(cassette_name, ".yml"))
   skip_if_not(file.exists(cassette_path), "VCR cassette not recorded")
 
   sig <- Signature(
@@ -120,11 +120,13 @@ test_that("optimize_grid integrates with real LLM", {
   }
 
   vcr::local_cassette(cassette_name)
+  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
   optimize_grid(
     mod,
     devset = devset,
     metric = metric,
     parameters = list(prompt_style = c("baseline", "energetic")),
+    .llm = llm,
     control = list(progress = FALSE, parallel = FALSE)
   )
 
