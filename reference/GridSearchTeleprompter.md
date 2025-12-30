@@ -3,21 +3,6 @@
 A teleprompter that performs grid search over different instruction and
 template variants to find the best performing configuration.
 
-## Usage
-
-``` r
-GridSearchTeleprompter(
-  metric = NULL,
-  metric_threshold = NULL,
-  max_errors = 5L,
-  variants = structure(list(id = 1L, instructions = NA_character_, template =
-    NA_character_), class = c("tbl_df", "tbl", "data.frame"), row.names = c(NA, -1L)),
-  k = 2L,
-  eval_sample_size = 50L,
-  verbose = TRUE
-)
-```
-
 ## Arguments
 
 - metric:

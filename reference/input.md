@@ -20,7 +20,9 @@ input(name, type = NULL, description = NULL, ...)
 
   Input type specification. Can be:
 
-  - An ellmer type object (e.g., `type_string()`, `type_number()`)
+  - An ellmer type object (e.g.,
+    [`type_string()`](https://ellmer.tidyverse.org/reference/type_boolean.html),
+    [`type_number()`](https://ellmer.tidyverse.org/reference/type_boolean.html))
 
   - A string shortcut (e.g., "string", "number", "boolean")
 

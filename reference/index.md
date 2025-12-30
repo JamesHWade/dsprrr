@@ -81,7 +81,7 @@ Optimization strategies
   : Teleprompter Base Class
 - [`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md)
   : LabeledFewShot Teleprompter
-- [`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)
+- [`GridSearchTeleprompter`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)
   : GridSearchTeleprompter
 
 ## Optimization
