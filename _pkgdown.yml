@@ -1,6 +1,43 @@
 url: https://jameshwade.github.io/dsprrr/
 template:
   bootstrap: 5
+  light-switch: true
+  bslib:
+    primary: "#6366f1"
+    border-radius: "0.5rem"
+    btn-border-radius: "0.375rem"
+    base_font: {google: "Inter"}
+    heading_font: {google: "Inter"}
+    code_font: {google: "Fira Code"}
+
+home:
+  title: "dsprrr: Programming—not prompting—LLMs in R"
+  description: >
+    dsprrr brings the power of DSPy to R. Instead of wrestling with prompt strings,
+    declare what you want, compose modules into pipelines, and let optimization find
+    the best prompts automatically.
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [search, lightswitch, github]
+  components:
+    intro:
+      text: Get Started
+      href: articles/getting-started.html
+    articles:
+      text: Learn
+      menu:
+        - text: "Getting Started"
+          href: articles/getting-started.html
+        - text: "Compilation & Optimization"
+          href: articles/compilation-optimization.html
+        - text: "---"
+        - text: "Integrations"
+        - text: "Vitals Integration"
+          href: articles/vitals-integration.html
+        - text: "Production Orchestration"
+          href: articles/orchestration.html
 
 logo:
   file: man/figures/logo.png
