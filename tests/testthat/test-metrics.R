@@ -53,7 +53,10 @@ test_that("metric_f1 calculates correct scores", {
 
   # Normalization
   metric_normalized <- metric_f1(normalize = TRUE)
-  score_norm <- metric_normalized("THE QUICK, BROWN FOX!", "the quick brown fox")
+  score_norm <- metric_normalized(
+    "THE QUICK, BROWN FOX!",
+    "the quick brown fox"
+  )
   expect_equal(score_norm, 1.0)
 })
 
@@ -91,9 +94,12 @@ test_that("metric_contains works with patterns", {
 
 test_that("metric_custom validates and wraps functions", {
   # Valid custom metric
-  length_metric <- metric_custom(function(pred, exp) {
-    nchar(as.character(pred)) == nchar(as.character(exp))
-  }, name = "length_match")
+  length_metric <- metric_custom(
+    function(pred, exp) {
+      nchar(as.character(pred)) == nchar(as.character(exp))
+    },
+    name = "length_match"
+  )
 
   expect_true(length_metric("hello", "world"))
   expect_false(length_metric("hi", "world"))
@@ -111,9 +117,12 @@ test_that("metric_custom validates and wraps functions", {
   expect_error(bad_metric("test", "test"), "must return logical or numeric")
 
   # Error in custom function
-  error_metric <- metric_custom(function(pred, exp) {
-    stop("Custom error")
-  }, name = "error_metric")
+  error_metric <- metric_custom(
+    function(pred, exp) {
+      stop("Custom error")
+    },
+    name = "error_metric"
+  )
   expect_error(error_metric("test", "test"), "Error in metric error_metric")
 
   # Non-function input
@@ -131,15 +140,21 @@ test_that("metric_field_match checks multiple fields", {
   expect_false(metric_single(pred2, exp))
 
   # Multiple fields with AND
-  metric_all <- metric_field_match(c("sentiment", "confidence"), require_all = TRUE)
-  expect_false(metric_all(pred, exp))  # confidence differs
+  metric_all <- metric_field_match(
+    c("sentiment", "confidence"),
+    require_all = TRUE
+  )
+  expect_false(metric_all(pred, exp)) # confidence differs
 
   pred3 <- list(sentiment = "positive", confidence = 0.8)
-  expect_true(metric_all(pred3, exp))  # both match
+  expect_true(metric_all(pred3, exp)) # both match
 
   # Multiple fields with OR
-  metric_any <- metric_field_match(c("sentiment", "confidence"), require_all = FALSE)
-  expect_true(metric_any(pred, exp))  # sentiment matches
+  metric_any <- metric_field_match(
+    c("sentiment", "confidence"),
+    require_all = FALSE
+  )
+  expect_true(metric_any(pred, exp)) # sentiment matches
 
   # Invalid input
   expect_error(metric_field_match(character(0)), "non-empty character vector")
@@ -164,7 +179,10 @@ test_that("metric_threshold converts numeric to logical", {
 
   # Invalid inputs
   expect_error(metric_threshold("not a function"), "must be a function")
-  expect_error(metric_threshold(base_metric, "not numeric"), "single numeric value")
+  expect_error(
+    metric_threshold(base_metric, "not numeric"),
+    "single numeric value"
+  )
 
   # Non-numeric base metric
   bool_metric <- metric_exact_match()

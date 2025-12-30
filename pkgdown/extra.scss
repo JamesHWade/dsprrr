@@ -1,0 +1,103 @@
+// dsprrr custom styles
+// This file is processed by pkgdown and integrates with bslib
+
+// Tab styling improvements
+.nav-tabs {
+  border-bottom: 2px solid var(--bs-primary);
+  margin-bottom: 1rem;
+
+  .nav-link {
+    border: none;
+    border-radius: 0;
+    padding: 0.75rem 1.25rem;
+    font-weight: 500;
+    color: var(--bs-body-color);
+
+    &:hover {
+      color: var(--bs-primary);
+      border-color: transparent;
+    }
+
+    &.active {
+      color: var(--bs-primary);
+      background-color: transparent;
+      border-bottom: 3px solid var(--bs-primary);
+    }
+  }
+}
+
+.tab-content {
+  padding-top: 1rem;
+
+  > .tab-pane {
+    // Ensure code blocks render properly in tabs
+    pre {
+      margin-top: 0;
+    }
+  }
+}
+
+// Feature cards
+.card.border-start.border-primary {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .card-title {
+    color: var(--bs-primary);
+    font-weight: 600;
+  }
+}
+
+// Section separators
+hr {
+  border: none;
+  border-top: 2px solid var(--bs-border-color);
+  margin: 3rem 0;
+}
+
+// Result callouts in tabs
+.tab-pane p strong:first-child {
+  color: var(--bs-success);
+}
+
+// Ecosystem table
+.table {
+  th {
+    background-color: var(--bs-primary);
+    color: white;
+  }
+
+  tr:hover {
+    background-color: var(--bs-tertiary-bg);
+  }
+}
+
+// Hero section - first code block
+.contents > .sourceCode:first-of-type {
+  border-left: 4px solid var(--bs-primary);
+  border-radius: var(--bs-border-radius);
+}
+
+// Make the tagline more prominent
+.contents > h2:first-of-type {
+  font-size: 1.5rem;
+  color: var(--bs-primary);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+// Improve code block styling
+pre {
+  border-radius: var(--bs-border-radius);
+  border: 1px solid var(--bs-border-color);
+}
+
+// Output comments styling (simulated output)
+.sourceCode .co {
+  color: var(--bs-secondary-color);
+  font-style: italic;
+}

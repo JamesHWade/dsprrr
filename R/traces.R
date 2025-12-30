@@ -36,7 +36,11 @@
 #'   geom_line() +
 #'   geom_point()
 #' }
-export_traces <- function(module, include_prompts = FALSE, include_outputs = FALSE) {
+export_traces <- function(
+  module,
+  include_prompts = FALSE,
+  include_outputs = FALSE
+) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("module must be a DSPrrr Module object")
   }
@@ -53,7 +57,11 @@ export_traces <- function(module, include_prompts = FALSE, include_outputs = FAL
 
   # Add optional fields
   if (include_prompts) {
-    result$prompt <- vapply(traces, function(x) x$prompt %||% NA_character_, character(1))
+    result$prompt <- vapply(
+      traces,
+      function(x) x$prompt %||% NA_character_,
+      character(1)
+    )
   }
 
   if (include_outputs) {
@@ -107,7 +115,9 @@ summarize_traces <- function(module) {
       output = summary$total_output_tokens,
       ratio = if (summary$total_input_tokens > 0) {
         round(summary$total_output_tokens / summary$total_input_tokens, 2)
-      } else NA
+      } else {
+        NA
+      }
     )
   }
 
@@ -142,7 +152,9 @@ print.dsprrr_trace_summary <- function(x, ...) {
   if (!is.null(x$model_usage) && nrow(x$model_usage) > 0) {
     cli::cli_h3("Models Used")
     for (i in seq_len(nrow(x$model_usage))) {
-      cli::cli_text("  {x$model_usage$model[i]}: {x$model_usage$n_requests[i]} request{?s}")
+      cli::cli_text(
+        "  {x$model_usage$model[i]}: {x$model_usage$n_requests[i]} request{?s}"
+      )
     }
   }
 

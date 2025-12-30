@@ -6,7 +6,12 @@ test_that("optimize_grid updates module configuration with best parameters", {
     inherit = dsprrr:::PredictModule,
     public = list(
       initialize = function(signature, config = list()) {
-        super$initialize(signature, template = "", demos = list(), config = config)
+        super$initialize(
+          signature,
+          template = "",
+          demos = list(),
+          config = config
+        )
       },
       forward = function(batch, .llm = NULL, trace = TRUE, ...) {
         inputs <- if (is.data.frame(batch)) {
@@ -94,7 +99,10 @@ test_that("optimize_grid updates module configuration with best parameters", {
     truth = "target",
     estimate = "result"
   )
-  expect_true(is.null(yard_metrics$yardstick[[2]]) || inherits(yard_metrics$yardstick[[2]], "tbl_df"))
+  expect_true(
+    is.null(yard_metrics$yardstick[[2]]) ||
+      inherits(yard_metrics$yardstick[[2]], "tbl_df")
+  )
 })
 
 test_that("optimize_grid accepts explicit grid data frames", {
@@ -105,7 +113,12 @@ test_that("optimize_grid accepts explicit grid data frames", {
     inherit = dsprrr:::PredictModule,
     public = list(
       initialize = function(signature, config = list()) {
-        super$initialize(signature, template = "", demos = list(), config = config)
+        super$initialize(
+          signature,
+          template = "",
+          demos = list(),
+          config = config
+        )
       },
       forward = function(batch, .llm = NULL, trace = TRUE, ...) {
         inputs <- if (is.data.frame(batch)) {
@@ -138,7 +151,10 @@ test_that("optimize_grid accepts explicit grid data frames", {
     instructions = "Return label"
   )
 
-  mod <- ConcatPredictModule$new(signature = sig, config = list(multiplier = 1, suffix = ""))
+  mod <- ConcatPredictModule$new(
+    signature = sig,
+    config = list(multiplier = 1, suffix = "")
+  )
 
   devset <- tibble::tibble(
     text = "a",
@@ -195,7 +211,10 @@ test_that("optimize_grid accepts explicit grid data frames", {
     truth = "target",
     estimate = "result"
   )
-  expect_true(is.null(yard_metrics$yardstick[[1]]) || inherits(yard_metrics$yardstick[[1]], "tbl_df"))
+  expect_true(
+    is.null(yard_metrics$yardstick[[1]]) ||
+      inherits(yard_metrics$yardstick[[1]], "tbl_df")
+  )
 })
 
 test_that("module_parameter_set derives defaults from signature", {
@@ -204,7 +223,10 @@ test_that("module_parameter_set derives defaults from signature", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "mode", type = ellmer::type_enum(values = c("prod", "debug")))
+      input(
+        name = "mode",
+        type = ellmer::type_enum(values = c("prod", "debug"))
+      )
     ),
     output_type = ellmer::type_string(),
     instructions = ""

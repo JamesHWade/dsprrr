@@ -144,6 +144,7 @@ test_that("format_output handles different output types", {
 })
 
 test_that("get_default_llm returns ellmer chat object", {
+
   # Create a mock module
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
@@ -152,8 +153,12 @@ test_that("get_default_llm returns ellmer chat object", {
   mod <- module(signature = sig, type = "predict")
 
   # Test with module that has no stored chat - should auto-detect
-  llm <- dsprrr:::get_default_llm(mod)
-  expect_true(inherits(llm, "Chat"))
+
+  # Skip auto-detect test if no API credentials available
+  if (has_ellmer_credentials()) {
+    llm <- dsprrr:::get_default_llm(mod)
+    expect_true(inherits(llm, "Chat"))
+  }
 
   # Test with module that has chat stored
   mock_llm <- list(chat = function(...) "test")
@@ -194,8 +199,12 @@ test_that("batch processing works with multiple inputs", {
   class(mock_llm) <- "Chat"
 
   # Test batch processing
-  results <- run(pred, text = c("Hello", "World"), .llm = mock_llm,
-                .progress = FALSE)
+  results <- run(
+    pred,
+    text = c("Hello", "World"),
+    .llm = mock_llm,
+    .progress = FALSE
+  )
 
   expect_length(results, 2)
   expect_equal(results[[1]], "Hello")
@@ -224,8 +233,12 @@ test_that("structured return format includes metadata", {
   class(mock_llm) <- "Chat"
 
   # Test structured return
-  result <- run(pred, text = "test", .llm = mock_llm,
-               .return_format = "structured")
+  result <- run(
+    pred,
+    text = "test",
+    .llm = mock_llm,
+    .return_format = "structured"
+  )
 
   expect_type(result, "list")
   expect_named(result, c("output", "chat", "metadata"))
@@ -270,8 +283,7 @@ test_that("run_dataset processes data frames", {
   )
 
   # Test run_dataset
-  results <- run_dataset(pred, test_data, .llm = mock_llm,
-                        .progress = FALSE)
+  results <- run_dataset(pred, test_data, .llm = mock_llm, .progress = FALSE)
 
   expect_s3_class(results, "data.frame")
   expect_equal(nrow(results), 3)
@@ -337,8 +349,12 @@ test_that("batch processing handles errors gracefully", {
 
   # Test with mixed success/failure
   expect_warning(
-    results <- run(pred, text = c("OK", "ERROR", "FINE"),
-                  .llm = mock_llm, .progress = FALSE),
+    results <- run(
+      pred,
+      text = c("OK", "ERROR", "FINE"),
+      .llm = mock_llm,
+      .progress = FALSE
+    ),
     "Failed to process item"
   )
 
@@ -361,8 +377,13 @@ test_that("run warns when parallel execution with custom llm", {
   )
 
   expect_warning(
-    out <- run(module, text = c("a", "b"), .llm = mock_llm,
-               .parallel = TRUE, .progress = FALSE),
+    out <- run(
+      module,
+      text = c("a", "b"),
+      .llm = mock_llm,
+      .parallel = TRUE,
+      .progress = FALSE
+    ),
     "Parallel execution requires a NULL"
   )
   expect_equal(length(out), 2)
@@ -427,7 +448,6 @@ test_that("process_batch_item returns correct format for structured mode", {
 })
 
 test_that("extract_simple_output extracts single-field objects", {
-
   # Create real TypeObject with single property
   single_field_type <- ellmer::type_object(answer = ellmer::type_string())
 
@@ -466,7 +486,10 @@ test_that("create_error_result formats simple errors correctly", {
   )
 
   expect_true(is.na(result))
-  expect_equal(attr(result, "error_message"), "Failed to process item 3: test error")
+  expect_equal(
+    attr(result, "error_message"),
+    "Failed to process item 3: test error"
+  )
 })
 
 test_that("create_error_result formats structured errors correctly", {
@@ -539,7 +562,9 @@ test_that("run_batch_sequential handles errors per item", {
 
   mock_llm <- structure(
     list(chat_structured = function(prompt, ...) {
-      if (grepl("fail", prompt)) stop("intentional failure")
+      if (grepl("fail", prompt)) {
+        stop("intentional failure")
+      }
       "ok"
     }),
     class = "Chat"
@@ -592,7 +617,12 @@ test_that("parallel execution works with mock factory", {
 
   # so we only verify that the parallel path executes without crashing
   # and returns the correct number of results
-  results <- run(mod, text = c("a", "b", "c"), .parallel = TRUE, .progress = FALSE)
+  results <- run(
+    mod,
+    text = c("a", "b", "c"),
+    .parallel = TRUE,
+    .progress = FALSE
+  )
 
   expect_length(results, 3)
   # Results may be NA due to serialization issues with mock closures in workers,

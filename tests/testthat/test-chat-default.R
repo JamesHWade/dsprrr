@@ -24,7 +24,11 @@ test_that("get_default_chat returns NULL when create=FALSE and no default", {
   on.exit(options(old_opt))
   clear_default_chat()
 
-  old_env <- Sys.getenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
+  old_env <- Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))
   on.exit(do.call(Sys.setenv, as.list(old_env)), add = TRUE)
   Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
 
@@ -37,7 +41,11 @@ test_that("get_default_chat errors when create=TRUE and no default", {
   on.exit(options(old_opt))
   clear_default_chat()
 
-  old_env <- Sys.getenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
+  old_env <- Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))
   on.exit(do.call(Sys.setenv, as.list(old_env)), add = TRUE)
   Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
 
@@ -53,8 +61,7 @@ test_that("get_default_chat caches auto-detected Chat", {
   clear_default_chat()
 
   # Ensure OPENAI_API_KEY is set for auto-detection
-  skip_if(Sys.getenv("OPENAI_API_KEY") == "",
-          "OPENAI_API_KEY not set")
+  skip_if(Sys.getenv("OPENAI_API_KEY") == "", "OPENAI_API_KEY not set")
 
   chat1 <- get_default_chat()
   chat2 <- get_default_chat()
@@ -95,8 +102,10 @@ test_that("set_default_chat returns previous value", {
 })
 
 test_that("set_default_chat overrides any cached value", {
-  skip_if(Sys.getenv("OPENAI_API_KEY") == "",
-          "OPENAI_API_KEY not set for auto-detection")
+  skip_if(
+    Sys.getenv("OPENAI_API_KEY") == "",
+    "OPENAI_API_KEY not set for auto-detection"
+  )
 
   old_opt <- options(dsprrr.default_chat = NULL)
   on.exit(options(old_opt))
@@ -125,8 +134,10 @@ test_that("set_default_chat(NULL) clears default", {
 })
 
 test_that("clear_default_chat allows re-detection", {
-  skip_if(Sys.getenv("OPENAI_API_KEY") == "",
-          "OPENAI_API_KEY not set for auto-detection")
+  skip_if(
+    Sys.getenv("OPENAI_API_KEY") == "",
+    "OPENAI_API_KEY not set for auto-detection"
+  )
 
   old_opt <- options(dsprrr.default_chat = NULL)
   on.exit(options(old_opt))
@@ -150,8 +161,7 @@ test_that("clear_default_chat returns NULL invisibly", {
 # -- Auto-detection tests --
 
 test_that("auto_detect_chat returns chat_openai when OPENAI_API_KEY set", {
-  skip_if(Sys.getenv("OPENAI_API_KEY") == "",
-          "OPENAI_API_KEY not set")
+  skip_if(Sys.getenv("OPENAI_API_KEY") == "", "OPENAI_API_KEY not set")
 
   old_opt <- options(dsprrr.default_chat = NULL)
   on.exit(options(old_opt))
@@ -163,7 +173,11 @@ test_that("auto_detect_chat returns chat_openai when OPENAI_API_KEY set", {
 })
 
 test_that("auto_detect_chat returns NULL when no API keys", {
-  old_env <- Sys.getenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
+  old_env <- Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))
   on.exit(do.call(Sys.setenv, as.list(old_env)))
   Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
 

@@ -24,7 +24,11 @@
 #' # Case insensitive matching
 #' metric <- metric_exact_match(ignore_case = TRUE)
 #' metric("Hello", "hello")  # TRUE
-metric_exact_match <- function(field = NULL, ignore_case = FALSE, normalize = TRUE) {
+metric_exact_match <- function(
+  field = NULL,
+  ignore_case = FALSE,
+  normalize = TRUE
+) {
   function(prediction, expected) {
     # Extract field if specified
     if (!is.null(field)) {
@@ -139,7 +143,12 @@ metric_f1 <- function(field = NULL, normalize = TRUE) {
 #' # Regex pattern
 #' metric <- metric_contains("\\d+", fixed = FALSE)
 #' metric("The answer is 42", NULL)  # TRUE
-metric_contains <- function(pattern, field = NULL, ignore_case = FALSE, fixed = TRUE) {
+metric_contains <- function(
+  pattern,
+  field = NULL,
+  ignore_case = FALSE,
+  fixed = TRUE
+) {
   function(prediction, expected = NULL) {
     # Extract field if specified
     if (!is.null(field)) {
@@ -193,35 +202,41 @@ metric_custom <- function(fn, name = NULL) {
   metric_name <- name %||% "custom_metric"
 
   function(prediction, expected) {
-    tryCatch({
-      result <- fn(prediction, expected)
+    tryCatch(
+      {
+        result <- fn(prediction, expected)
 
-      # Validate result
-      if (!is.logical(result) && !is.numeric(result)) {
-        cli::cli_abort(c(
-          "Metric {.fn {metric_name}} must return logical or numeric value",
-          "x" = "Got {.cls {class(result)}}"
-        ))
-      }
-
-      # Ensure numeric metrics are in [0, 1]
-      if (is.numeric(result)) {
-        if (result < 0 || result > 1) {
-          cli::cli_warn(c(
-            "Metric {.fn {metric_name}} returned value outside [0, 1]",
-            "i" = "Value: {result}"
+        # Validate result
+        if (!is.logical(result) && !is.numeric(result)) {
+          cli::cli_abort(c(
+            "Metric {.fn {metric_name}} must return logical or numeric value",
+            "x" = "Got {.cls {class(result)}}"
           ))
-          result <- max(0, min(1, result))
         }
-      }
 
-      result
-    }, error = function(e) {
-      cli::cli_abort(c(
-        paste0("Error in metric ", metric_name),
-        "x" = e$message
-      ), parent = e)
-    })
+        # Ensure numeric metrics are in [0, 1]
+        if (is.numeric(result)) {
+          if (result < 0 || result > 1) {
+            cli::cli_warn(c(
+              "Metric {.fn {metric_name}} returned value outside [0, 1]",
+              "i" = "Value: {result}"
+            ))
+            result <- max(0, min(1, result))
+          }
+        }
+
+        result
+      },
+      error = function(e) {
+        cli::cli_abort(
+          c(
+            paste0("Error in metric ", metric_name),
+            "x" = e$message
+          ),
+          parent = e
+        )
+      }
+    )
   }
 }
 
@@ -249,11 +264,15 @@ metric_field_match <- function(fields, require_all = TRUE) {
   }
 
   function(prediction, expected) {
-    matches <- vapply(fields, function(field) {
-      pred_val <- extract_field(prediction, field)
-      exp_val <- extract_field(expected, field)
-      identical(pred_val, exp_val)
-    }, logical(1))
+    matches <- vapply(
+      fields,
+      function(field) {
+        pred_val <- extract_field(prediction, field)
+        exp_val <- extract_field(expected, field)
+        identical(pred_val, exp_val)
+      },
+      logical(1)
+    )
 
     if (require_all) {
       all(matches)
@@ -327,10 +346,13 @@ metric_threshold <- function(metric, threshold = 0.5, comparison = ">=") {
     score <- metric(prediction, expected)
 
     if (!is.numeric(score)) {
-      cli::cli_abort("Base metric must return numeric value for threshold comparison")
+      cli::cli_abort(
+        "Base metric must return numeric value for threshold comparison"
+      )
     }
 
-    result <- switch(comparison,
+    result <- switch(
+      comparison,
       ">=" = score >= threshold,
       ">" = score > threshold,
       "==" = score == threshold,

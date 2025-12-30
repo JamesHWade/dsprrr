@@ -61,13 +61,13 @@ test_that("build_simple_prompt handles missing inputs", {
   inputs <- list(name = "Alice")
   specs <- list(
     list(name = "name"),
-    list(name = "age")  # Not provided in inputs
+    list(name = "age") # Not provided in inputs
   )
 
   result <- dsprrr:::build_simple_prompt(inputs, specs)
 
   expect_true(grepl("name: Alice", result))
-  expect_false(grepl("age:", result))  # Should not include missing input
+  expect_false(grepl("age:", result)) # Should not include missing input
 })
 
 # Integration tests (require ellmer with async support)
@@ -82,8 +82,10 @@ test_that("run_async returns a promise", {
   )
 
   skip_if(is.null(chat), "Could not create chat")
-  skip_if(!("chat_structured_async" %in% names(chat)),
-          "chat_structured_async not available")
+  skip_if(
+    !("chat_structured_async" %in% names(chat)),
+    "chat_structured_async not available"
+  )
 
   sig <- signature("text -> result")
   mod <- module(sig, type = "predict", chat = chat)

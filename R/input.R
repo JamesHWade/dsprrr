@@ -52,10 +52,10 @@ input <- function(name, type = NULL, description = NULL, ...) {
   structure(
     list(
       name = name,
-      type = normalized_type,        # Store the ellmer type
-      class = s7_class,             # Keep S7 class for backward compatibility
+      type = normalized_type, # Store the ellmer type
+      class = s7_class, # Keep S7 class for backward compatibility
       description = description,
-      ...                           # Additional metadata
+      ... # Additional metadata
     ),
     class = "dsprrr_input"
   )
@@ -87,13 +87,15 @@ normalize_input_type <- function(type, description = NULL) {
 
   # If it's an S7 class (backward compatibility), convert to ellmer
   # Check for common S7 classes by identity
-  if (identical(type, S7::class_character) ||
+  if (
+    identical(type, S7::class_character) ||
       identical(type, S7::class_double) ||
       identical(type, S7::class_integer) ||
       identical(type, S7::class_logical) ||
       identical(type, S7::class_list) ||
       identical(type, S7::class_any) ||
-      inherits(type, "S7_class")) {
+      inherits(type, "S7_class")
+  ) {
     return(s7_class_to_ellmer_type(type))
   }
 
@@ -107,7 +109,8 @@ normalize_input_type <- function(type, description = NULL) {
 string_to_ellmer_type <- function(type_str, description = NULL) {
   type_str <- tolower(trimws(type_str))
 
-  switch(type_str,
+  switch(
+    type_str,
     # String types
     "string" = ellmer::type_string(description = description),
     "str" = ellmer::type_string(description = description),
@@ -130,8 +133,14 @@ string_to_ellmer_type <- function(type_str, description = NULL) {
     "logical" = ellmer::type_boolean(description = description),
 
     # Array types (can't pass description to nested type)
-    "array" = ellmer::type_array(items = ellmer::type_string(), description = description),
-    "list" = ellmer::type_array(items = ellmer::type_string(), description = description),
+    "array" = ellmer::type_array(
+      items = ellmer::type_string(),
+      description = description
+    ),
+    "list" = ellmer::type_array(
+      items = ellmer::type_string(),
+      description = description
+    ),
 
     # Object type
     "object" = ellmer::type_object(.description = description),
@@ -183,7 +192,7 @@ type_to_s7_class <- function(ellmer_type) {
   } else if (inherits(ellmer_type, "ellmer::TypeArray")) {
     return(S7::class_list)
   } else if (inherits(ellmer_type, "ellmer::TypeEnum")) {
-    return(S7::class_character)  # Enums are strings
+    return(S7::class_character) # Enums are strings
   } else if (inherits(ellmer_type, "ellmer::TypeObject")) {
     return(S7::class_list)
   }
@@ -207,7 +216,11 @@ is_dsprrr_input <- function(x) {
 #' @param item_type For input_array, the type of array items
 #' @export
 input_string <- function(name, description = NULL, ...) {
-  input(name, type = ellmer::type_string(description = description, ...), description = description)
+  input(
+    name,
+    type = ellmer::type_string(description = description, ...),
+    description = description
+  )
 }
 
 #' @rdname input_helpers
@@ -223,7 +236,11 @@ input_number <- function(name, description = NULL, ...) {
 #' @rdname input_helpers
 #' @export
 input_boolean <- function(name, description = NULL, ...) {
-  input(name, type = ellmer::type_boolean(description = description, ...), description = description)
+  input(
+    name,
+    type = ellmer::type_boolean(description = description, ...),
+    description = description
+  )
 }
 
 #' @rdname input_helpers
@@ -239,17 +256,38 @@ input_integer <- function(name, description = NULL, ...) {
 #' @rdname input_helpers
 #' @export
 input_enum <- function(name, values, description = NULL, ...) {
-  input(name, type = ellmer::type_enum(values = values, description = description, ...), description = description)
+  input(
+    name,
+    type = ellmer::type_enum(values = values, description = description, ...),
+    description = description
+  )
 }
 
 #' @rdname input_helpers
 #' @export
-input_array <- function(name, item_type = ellmer::type_string(), description = NULL, ...) {
-  input(name, type = ellmer::type_array(items = item_type, description = description, ...), description = description)
+input_array <- function(
+  name,
+  item_type = ellmer::type_string(),
+  description = NULL,
+  ...
+) {
+  input(
+    name,
+    type = ellmer::type_array(
+      items = item_type,
+      description = description,
+      ...
+    ),
+    description = description
+  )
 }
 
 #' @rdname input_helpers
 #' @export
 input_object <- function(name, ..., description = NULL) {
-  input(name, type = ellmer::type_object(.description = description, ...), description = description)
+  input(
+    name,
+    type = ellmer::type_object(.description = description, ...),
+    description = description
+  )
 }

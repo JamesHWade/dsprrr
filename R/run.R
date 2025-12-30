@@ -107,7 +107,6 @@ run.PredictModule <- function(
   input_lengths <- vapply(inputs, length, integer(1))
   is_batch <- any(input_lengths > 1)
 
-
   if (is_batch) {
     if (.parallel && !is.null(.llm)) {
       cli::cli_warn(
@@ -181,8 +180,14 @@ run.PredictModule <- function(
 #' @param .return_format "simple" or "structured"
 #' @return Processed result (simple value or structured list)
 #' @noRd
-process_batch_item <- function(input_set, module, llm, index, .verbose, .return_format) {
-
+process_batch_item <- function(
+  input_set,
+  module,
+  llm,
+  index,
+  .verbose,
+  .return_format
+) {
   prompt <- build_prompt(module, input_set)
 
   if (.verbose) {
@@ -201,7 +206,8 @@ process_batch_item <- function(input_set, module, llm, index, .verbose, .return_
   )
 
   end_time <- Sys.time()
-  latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+  latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
+    1000
 
   if (.return_format == "simple") {
     extract_simple_output(response, module$signature@output_type)
@@ -230,8 +236,10 @@ process_batch_item <- function(input_set, module, llm, index, .verbose, .return_
 #' @return Extracted value or full response
 #' @noRd
 extract_simple_output <- function(response, output_type) {
-  if (inherits(output_type, "ellmer::TypeObject") &&
-      length(output_type@properties) == 1) {
+  if (
+    inherits(output_type, "ellmer::TypeObject") &&
+      length(output_type@properties) == 1
+  ) {
     field_name <- names(output_type@properties)[1]
     if (!is.null(response[[field_name]])) {
       return(response[[field_name]])
@@ -250,11 +258,23 @@ extract_simple_output <- function(response, output_type) {
 #' @param .return_format "simple" or "structured"
 #' @return Error result in appropriate format
 #' @noRd
-create_error_result <- function(error, index, prompt, instructions, llm, .return_format) {
+create_error_result <- function(
+  error,
+  index,
+  prompt,
+  instructions,
+  llm,
+  .return_format
+) {
   if (.return_format == "simple") {
     structure(
       NA,
-      error_message = paste0("Failed to process item ", index, ": ", error$message)
+      error_message = paste0(
+        "Failed to process item ",
+        index,
+        ": ",
+        error$message
+      )
     )
   } else {
     list(
@@ -287,11 +307,23 @@ run_batch <- function(
 
   if (parallel_mode) {
     results <- run_batch_parallel(
-      module, input_sets, n, .llm, .verbose, .return_format, .progress
+      module,
+      input_sets,
+      n,
+      .llm,
+      .verbose,
+      .return_format,
+      .progress
     )
   } else {
     results <- run_batch_sequential(
-      module, input_sets, n, .llm, .verbose, .return_format, .progress
+      module,
+      input_sets,
+      n,
+      .llm,
+      .verbose,
+      .return_format,
+      .progress
     )
   }
 
@@ -304,7 +336,15 @@ run_batch <- function(
 
 #' Run batch processing sequentially
 #' @noRd
-run_batch_sequential <- function(module, input_sets, n, .llm, .verbose, .return_format, .progress) {
+run_batch_sequential <- function(
+  module,
+  input_sets,
+  n,
+  .llm,
+  .verbose,
+  .return_format,
+  .progress
+) {
   shared_llm <- .llm %||% module$chat %||% get_default_llm(module)
   results <- vector("list", n)
 
@@ -359,7 +399,15 @@ run_batch_sequential <- function(module, input_sets, n, .llm, .verbose, .return_
 
 #' Run batch processing in parallel using mirai
 #' @noRd
-run_batch_parallel <- function(module, input_sets, n, .llm, .verbose, .return_format, .progress) {
+run_batch_parallel <- function(
+  module,
+  input_sets,
+  n,
+  .llm,
+  .verbose,
+  .return_format,
+  .progress
+) {
   llm_factory <- if (!is.null(.llm)) {
     function() .llm
   } else if (!is.null(module$chat)) {
@@ -379,10 +427,19 @@ run_batch_parallel <- function(module, input_sets, n, .llm, .verbose, .return_fo
   # Launch parallel tasks
   mirai_tasks <- mirai::mirai_map(
     .x = seq_len(n),
-    .f = function(i, input_sets, module, .verbose, .return_format,
-                  process_batch_item_fn, extract_simple_output_fn,
-                  build_prompt_fn, call_llm_fn, llm_factory,
-                  create_error_result_fn) {
+    .f = function(
+      i,
+      input_sets,
+      module,
+      .verbose,
+      .return_format,
+      process_batch_item_fn,
+      extract_simple_output_fn,
+      build_prompt_fn,
+      call_llm_fn,
+      llm_factory,
+      create_error_result_fn
+    ) {
       input_set <- input_sets[[i]]
       prompt <- build_prompt_fn(module, input_set)
       worker_llm <- llm_factory()
@@ -404,7 +461,7 @@ run_batch_parallel <- function(module, input_sets, n, .llm, .verbose, .return_fo
             index = i,
             prompt = prompt,
             instructions = module$signature@instructions,
-            llm = NULL,  # Can't serialize LLM in parallel mode
+            llm = NULL, # Can't serialize LLM in parallel mode
             .return_format = .return_format
           )
         }
@@ -435,9 +492,12 @@ run_batch_parallel <- function(module, input_sets, n, .llm, .verbose, .return_fo
         result <- mirai_tasks[[i]][["data"]]
 
         # Handle errors from parallel execution
-        if (.return_format == "simple" &&
-            length(result) == 1 && is.na(result) &&
-            !is.null(attr(result, "error_message"))) {
+        if (
+          .return_format == "simple" &&
+            length(result) == 1 &&
+            is.na(result) &&
+            !is.null(attr(result, "error_message"))
+        ) {
           warnings_to_emit <- c(warnings_to_emit, attr(result, "error_message"))
           result <- NA
         }

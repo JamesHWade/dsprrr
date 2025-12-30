@@ -23,7 +23,13 @@ PredictModule <- R6::R6Class(
     #' @param demos Optional list of demonstrations
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
-    initialize = function(signature, template = "", demos = list(), config = list(), chat = NULL) {
+    initialize = function(
+      signature,
+      template = "",
+      demos = list(),
+      config = list(),
+      chat = NULL
+    ) {
       super$initialize(signature, config, chat)
 
       if (!is.character(template) || length(template) != 1) {
@@ -63,21 +69,25 @@ PredictModule <- R6::R6Class(
       start_time <- Sys.time()
 
       # Make LLM call (pass inputs for multimodal support)
-      result <- tryCatch({
-        private$call_llm(
-          llm = llm,
-          prompt = prompt,
-          output_type = self$signature@output_type,
-          instructions = self$signature@instructions,
-          inputs = inputs
-        )
-      }, error = function(e) {
-        cli::cli_abort("LLM call failed: {e$message}", parent = e)
-      })
+      result <- tryCatch(
+        {
+          private$call_llm(
+            llm = llm,
+            prompt = prompt,
+            output_type = self$signature@output_type,
+            instructions = self$signature@instructions,
+            inputs = inputs
+          )
+        },
+        error = function(e) {
+          cli::cli_abort("LLM call failed: {e$message}", parent = e)
+        }
+      )
 
       # Calculate metrics
       end_time <- Sys.time()
-      latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+      latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
+        1000
 
       # Get the last assistant turn - it has tokens, cost, duration built in
       assistant_turn <- tryCatch(
@@ -92,7 +102,9 @@ PredictModule <- R6::R6Class(
       )
 
       # Extract token info from ellmer's AssistantTurn (has @tokens vector)
-      token_info <- if (!is.null(assistant_turn) && !is.null(assistant_turn@tokens)) {
+      token_info <- if (
+        !is.null(assistant_turn) && !is.null(assistant_turn@tokens)
+      ) {
         tokens <- assistant_turn@tokens
         list(
           input_tokens = tokens[1],
@@ -101,12 +113,21 @@ PredictModule <- R6::R6Class(
           total_tokens = sum(tokens[1:2], na.rm = TRUE)
         )
       } else {
-        list(input_tokens = NA, output_tokens = NA, cached_input_tokens = NA, total_tokens = NA)
+        list(
+          input_tokens = NA,
+          output_tokens = NA,
+          cached_input_tokens = NA,
+          total_tokens = NA
+        )
       }
 
       # Get cost and duration from AssistantTurn
       cost <- if (!is.null(assistant_turn)) assistant_turn@cost else NA_real_
-      duration_s <- if (!is.null(assistant_turn)) assistant_turn@duration else NA_real_
+      duration_s <- if (!is.null(assistant_turn)) {
+        assistant_turn@duration
+      } else {
+        NA_real_
+      }
 
       model <- tryCatch(llm$get_model(), error = function(e) NA_character_)
 
@@ -114,7 +135,7 @@ PredictModule <- R6::R6Class(
       metadata <- list(
         timestamp = end_time,
         model = model,
-        prompt = prompt,  # Keep for convenience
+        prompt = prompt, # Keep for convenience
         instructions = self$signature@instructions,
         prompt_length = nchar(prompt),
         input_tokens = token_info$input_tokens,
@@ -123,7 +144,7 @@ PredictModule <- R6::R6Class(
         total_tokens = token_info$total_tokens,
         cost = cost,
         duration_s = duration_s,
-        latency_ms = latency_ms  # Our measured latency (includes R overhead)
+        latency_ms = latency_ms # Our measured latency (includes R overhead)
       )
 
       # Record trace if requested - store ellmer turns directly
@@ -186,11 +207,17 @@ PredictModule <- R6::R6Class(
       if (trace_summary$n_traces > 0) {
         cli::cli_h3("Traces")
         cli::cli_text("  {trace_summary$n_traces} trace(s) recorded")
-        cli::cli_text("  Total tokens: {trace_summary$total_tokens} (in: {trace_summary$total_input_tokens}, out: {trace_summary$total_output_tokens})")
+        cli::cli_text(
+          "  Total tokens: {trace_summary$total_tokens} (in: {trace_summary$total_input_tokens}, out: {trace_summary$total_output_tokens})"
+        )
         if (!is.na(trace_summary$total_cost) && trace_summary$total_cost > 0) {
-          cli::cli_text("  Total cost: ${format(trace_summary$total_cost, digits = 4)}")
+          cli::cli_text(
+            "  Total cost: ${format(trace_summary$total_cost, digits = 4)}"
+          )
         }
-        cli::cli_text("  Total latency: {round(trace_summary$total_latency_ms / 1000, 2)}s")
+        cli::cli_text(
+          "  Total latency: {round(trace_summary$total_latency_ms / 1000, 2)}s"
+        )
       }
 
       invisible(self)
@@ -376,9 +403,13 @@ PredictModule <- R6::R6Class(
         } else {
           # Multiple fields
           paste(
-            vapply(names(output), function(name) {
-              paste0(name, ": ", output[[name]])
-            }, character(1)),
+            vapply(
+              names(output),
+              function(name) {
+                paste0(name, ": ", output[[name]])
+              },
+              character(1)
+            ),
             collapse = ", "
           )
         }
@@ -390,11 +421,9 @@ PredictModule <- R6::R6Class(
     # Get default LLM client
     get_default_llm = function() {
       # Check for configured provider
-      provider <- self$config$provider %||% Sys.getenv("DSPRRR_PROVIDER", "openai")
-      provider <- switch(provider,
-        anthropic = "claude",
-        provider
-      )
+      provider <- self$config$provider %||%
+        Sys.getenv("DSPRRR_PROVIDER", "openai")
+      provider <- switch(provider, anthropic = "claude", provider)
 
       build_api_args <- function() {
         args <- self$config$api_args
@@ -423,7 +452,8 @@ PredictModule <- R6::R6Class(
         args
       }
 
-      llm <- switch(provider,
+      llm <- switch(
+        provider,
         openai = ellmer::chat_openai(
           model = self$config$model %||% "gpt-5-mini",
           api_args = build_api_args()
@@ -449,14 +479,23 @@ PredictModule <- R6::R6Class(
 
     # Call LLM with structured output
     # Supports multimodal inputs (images, PDFs) via ellmer Content objects
-    call_llm = function(llm, prompt, output_type, instructions = "", inputs = list()) {
+    call_llm = function(
+      llm,
+      prompt,
+      output_type,
+      instructions = "",
+      inputs = list()
+    ) {
       # Check for Content objects in inputs (images, PDFs)
-      content_inputs <- Filter(function(x) {
-        inherits(x, "Content") ||
-        inherits(x, "ContentImageRemote") ||
-        inherits(x, "ContentImageInline") ||
-        inherits(x, "ContentPDF")
-      }, inputs)
+      content_inputs <- Filter(
+        function(x) {
+          inherits(x, "Content") ||
+            inherits(x, "ContentImageRemote") ||
+            inherits(x, "ContentImageInline") ||
+            inherits(x, "ContentPDF")
+        },
+        inputs
+      )
 
       if (length(content_inputs) > 0) {
         # Multimodal request - build content list

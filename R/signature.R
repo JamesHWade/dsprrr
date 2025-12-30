@@ -29,7 +29,9 @@ Signature <- S7::new_class(
 
         # Check if it's an ellmer type object
         if (!is_ellmer_type(value)) {
-          return("output_type must be an ellmer type object (e.g., ellmer::type_string())")
+          return(
+            "output_type must be an ellmer type object (e.g., ellmer::type_string())"
+          )
         }
         NULL
       }
@@ -111,7 +113,13 @@ print_signature <- function(x, ...) {
 #'   ),
 #'   instructions = "Analyze the text"
 #' )
-signature <- function(x = NULL, inputs = NULL, output_type = NULL, instructions = "", ...) {
+signature <- function(
+  x = NULL,
+  inputs = NULL,
+  output_type = NULL,
+  instructions = "",
+  ...
+) {
   # If first argument is a string, parse it as DSPy-style notation
   if (is.character(x) && !is.null(x)) {
     return(parse_signature(x, instructions))

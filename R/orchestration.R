@@ -52,17 +52,22 @@ NULL
 #' config <- pins::pin_read(board, "sentiment-classifier-v1")
 #' restored_mod <- restore_module_config(config)
 #' }
-pin_module_config <- function(board, name, module,
-                              description = NULL,
-                              versioned = TRUE,
-                              ...) {
+pin_module_config <- function(
+  board,
+  name,
+  module,
+  description = NULL,
+  versioned = TRUE,
+  ...
+) {
   rlang::check_installed("pins", reason = "to save module configurations")
 
-  if (!inherits(module, "Module"))
+  if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
+  }
 
   # Extract configuration
- config_data <- list(
+  config_data <- list(
     # Signature details
     signature = list(
       inputs = lapply(module$signature@inputs, function(inp) {
@@ -231,11 +236,15 @@ restore_module_config <- function(config, signature = NULL) {
 #'           include_prompts = TRUE,
 #'           description = "Production run traces")
 #' }
-pin_trace <- function(board, name, module,
-                      include_prompts = FALSE,
-                      include_outputs = FALSE,
-                      description = NULL,
-                      ...) {
+pin_trace <- function(
+  board,
+  name,
+  module,
+  include_prompts = FALSE,
+  include_outputs = FALSE,
+  description = NULL,
+  ...
+) {
   rlang::check_installed("pins", reason = "to save module traces")
 
   if (!inherits(module, "Module")) {
@@ -316,10 +325,14 @@ pin_trace <- function(board, name, module,
 #'                module = mod,
 #'                description = "Test set evaluation")
 #' }
-pin_vitals_log <- function(board, name, eval_result,
-                           module = NULL,
-                           description = NULL,
-                           ...) {
+pin_vitals_log <- function(
+  board,
+  name,
+  eval_result,
+  module = NULL,
+  description = NULL,
+  ...
+) {
   rlang::check_installed("pins", reason = "to save evaluation logs")
 
   # Handle different result types
@@ -339,7 +352,9 @@ pin_vitals_log <- function(board, name, eval_result,
       data = eval_result
     )
   } else {
-    cli::cli_abort("Unsupported evaluation result type: {.cls {class(eval_result)}}")
+    cli::cli_abort(
+      "Unsupported evaluation result type: {.cls {class(eval_result)}}"
+    )
   }
 
   # Add module metadata if provided
@@ -402,15 +417,19 @@ pin_vitals_log <- function(board, name, eval_result,
 #' # Copy all templates
 #' use_dsprrr_template("all", path = "workflows/")
 #' }
-use_dsprrr_template <- function(template = c("targets", "quarto", "all"),
-                                path = ".",
-                                overwrite = FALSE) {
+use_dsprrr_template <- function(
+  template = c("targets", "quarto", "all"),
+  path = ".",
+  overwrite = FALSE
+) {
   template <- match.arg(template)
 
   template_dir <- system.file("templates", package = "dsprrr")
   if (template_dir == "") {
-    cli::cli_abort("Template directory not found. Is dsprrr installed correctly?
-")
+    cli::cli_abort(
+      "Template directory not found. Is dsprrr installed correctly?
+"
+    )
   }
 
   created <- character()
@@ -418,7 +437,9 @@ use_dsprrr_template <- function(template = c("targets", "quarto", "all"),
   # Helper to copy a template
   copy_template <- function(from, to) {
     if (file.exists(to) && !overwrite) {
-      cli::cli_warn("File already exists: {.file {to}}. Use {.code overwrite = TRUE} to replace.")
+      cli::cli_warn(
+        "File already exists: {.file {to}}. Use {.code overwrite = TRUE} to replace."
+      )
       return(NULL)
     }
 
@@ -515,12 +536,20 @@ validate_workflow <- function(module, dataset = NULL, board = NULL) {
       results$valid <- FALSE
       results$checks$dataset <- list(
         passed = FALSE,
-        message = paste("Missing columns:", paste(missing_cols, collapse = ", "))
+        message = paste(
+          "Missing columns:",
+          paste(missing_cols, collapse = ", ")
+        )
       )
     } else {
       results$checks$dataset <- list(
         passed = TRUE,
-        message = paste(nrow(dataset), "rows,", length(present_cols), "required columns present")
+        message = paste(
+          nrow(dataset),
+          "rows,",
+          length(present_cols),
+          "required columns present"
+        )
       )
     }
   }

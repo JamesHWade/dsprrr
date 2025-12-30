@@ -17,8 +17,13 @@
 #' @return A function accepting a data frame of inputs and returning a list with
 #'   components `result`, `solver_chat`, and `metadata`.
 #' @export
-as_vitals_solver <- function(module, .llm = NULL, .parallel = FALSE,
-                             .return_format = "structured", ...) {
+as_vitals_solver <- function(
+  module,
+  .llm = NULL,
+  .parallel = FALSE,
+  .return_format = "structured",
+  ...
+) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("as_vitals_solver() requires an R6 Module object")
   }
@@ -75,18 +80,32 @@ as_vitals_solver <- function(module, .llm = NULL, .parallel = FALSE,
 #'   returning numeric values in `[0, 1]` or `NA` when the scorer output cannot
 #'   be interpreted.
 #' @export
-as_dsprrr_metric <- function(vitals_scorer,
-                             input_column = "input",
-                             target_column = "target",
-                             result_column = "result") {
+as_dsprrr_metric <- function(
+  vitals_scorer,
+  input_column = "input",
+  target_column = "target",
+  result_column = "result"
+) {
   if (!is.function(vitals_scorer)) {
     cli::cli_abort("vitals_scorer must be a function")
   }
 
   function(prediction, expected_row) {
     sample <- tibble::tibble(
-      !!input_column := list(if (input_column %in% names(expected_row)) expected_row[[input_column]] else NA),
-      !!target_column := list(if (target_column %in% names(expected_row)) expected_row[[target_column]] else NA),
+      !!input_column := list(
+        if (input_column %in% names(expected_row)) {
+          expected_row[[input_column]]
+        } else {
+          NA
+        }
+      ),
+      !!target_column := list(
+        if (target_column %in% names(expected_row)) {
+          expected_row[[target_column]]
+        } else {
+          NA
+        }
+      ),
       !!result_column := list(prediction)
     )
 

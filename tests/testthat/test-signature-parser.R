@@ -23,16 +23,24 @@ test_that("parse_signature handles output type annotations", {
   expect_true(inherits(sig1@output_type@properties$answer, "ellmer::TypeBasic"))
 
   # Enum type - wrapped in TypeObject
-  sig2 <- parse_signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+  sig2 <- parse_signature(
+    "text -> sentiment: enum('positive', 'negative', 'neutral')"
+  )
   expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
   # Check the field type
-  expect_true(inherits(sig2@output_type@properties$sentiment, "ellmer::TypeEnum"))
+  expect_true(inherits(
+    sig2@output_type@properties$sentiment,
+    "ellmer::TypeEnum"
+  ))
 
   # String with constraints - wrapped in TypeObject
   sig3 <- parse_signature("text -> summary: string[50, 200]")
   expect_true(inherits(sig3@output_type, "ellmer::TypeObject"))
   # Check the field type
-  expect_true(inherits(sig3@output_type@properties$summary, "ellmer::TypeBasic"))
+  expect_true(inherits(
+    sig3@output_type@properties$summary,
+    "ellmer::TypeBasic"
+  ))
 })
 
 test_that("parse_signature handles Literal notation", {
@@ -65,7 +73,10 @@ test_that("parse_signature handles numeric bounds", {
 
   sig2 <- parse_signature("data -> probability: float(0, 1)")
   expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
-  expect_true(inherits(sig2@output_type@properties$probability, "ellmer::TypeBasic"))
+  expect_true(inherits(
+    sig2@output_type@properties$probability,
+    "ellmer::TypeBasic"
+  ))
 })
 
 test_that("parse_signature accepts instructions", {
@@ -84,7 +95,10 @@ test_that("signature() constructor handles string notation", {
   expect_s7_class(sig, Signature)
   expect_length(sig@inputs, 1)
   expect_true(inherits(sig@output_type, "ellmer::TypeObject"))
-  expect_true(inherits(sig@output_type@properties$sentiment, "ellmer::TypeEnum"))
+  expect_true(inherits(
+    sig@output_type@properties$sentiment,
+    "ellmer::TypeEnum"
+  ))
 })
 
 test_that("signature() constructor still handles explicit notation", {
@@ -139,9 +153,14 @@ test_that("complex signatures parse correctly", {
   expect_equal(sig@inputs[[2]]$name, "question")
 
   # Classification with confidence
-  sig2 <- signature("sentence -> sentiment: enum('positive', 'negative', 'neutral')")
+  sig2 <- signature(
+    "sentence -> sentiment: enum('positive', 'negative', 'neutral')"
+  )
   expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
-  expect_true(inherits(sig2@output_type@properties$sentiment, "ellmer::TypeEnum"))
+  expect_true(inherits(
+    sig2@output_type@properties$sentiment,
+    "ellmer::TypeEnum"
+  ))
 
   # Math problem
   sig3 <- signature("problem -> answer: float")
@@ -163,7 +182,9 @@ test_that("multiple output fields parse correctly", {
   expect_true("confidence" %in% names(sig2@output_type@properties))
 
   # Multiple outputs with complex types
-  sig3 <- parse_signature("question, choices: list[string] -> reasoning: string, selection: int")
+  sig3 <- parse_signature(
+    "question, choices: list[string] -> reasoning: string, selection: int"
+  )
   expect_length(sig3@inputs, 2)
   expect_true(inherits(sig3@output_type, "ellmer::TypeObject"))
   expect_true("reasoning" %in% names(sig3@output_type@properties))
@@ -175,7 +196,10 @@ test_that("Optional and Union types parse correctly", {
   sig1 <- parse_signature("text -> summary: Optional[string]")
   expect_true(inherits(sig1@output_type, "ellmer::TypeObject"))
   # The field should have required=FALSE
-  expect_true(inherits(sig1@output_type@properties$summary, "ellmer::TypeBasic"))
+  expect_true(inherits(
+    sig1@output_type@properties$summary,
+    "ellmer::TypeBasic"
+  ))
   expect_false(sig1@output_type@properties$summary@required)
 
   # Union type (simplified - uses first type) - wrapped in TypeObject
@@ -200,10 +224,15 @@ test_that("complex nested types parse correctly", {
   # List of dicts - wrapped in TypeObject
   sig1 <- parse_signature("text -> entities: list[dict[str, str]]")
   expect_true(inherits(sig1@output_type, "ellmer::TypeObject"))
-  expect_true(inherits(sig1@output_type@properties$entities, "ellmer::TypeArray"))
+  expect_true(inherits(
+    sig1@output_type@properties$entities,
+    "ellmer::TypeArray"
+  ))
 
   # Nested structures in multiple outputs
-  sig2 <- parse_signature("doc -> title: string, sections: list[string], metadata: dict[str, str]")
+  sig2 <- parse_signature(
+    "doc -> title: string, sections: list[string], metadata: dict[str, str]"
+  )
   expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
   expect_equal(length(names(sig2@output_type@properties)), 3)
 })
