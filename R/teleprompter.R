@@ -186,6 +186,7 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #'   grid search. Default is 50.
 #' @param verbose Whether to print progress messages. Default is TRUE.
 #'
+#' @usage NULL
 #' @export
 GridSearchTeleprompter <- S7::new_class(
   "GridSearchTeleprompter",
