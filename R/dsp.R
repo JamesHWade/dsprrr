@@ -128,15 +128,32 @@ dsp.Chat <- function(x, signature, ..., .instructions = NULL, .echo = "none") {
 dsp.character <- function(x, ..., .instructions = NULL, .echo = "none") {
   # x is the signature string, use default chat
   chat <- get_default_chat()
-  dsp.Chat(chat, signature = x, ..., .instructions = .instructions, .echo = .echo)
+  dsp.Chat(
+    chat,
+    signature = x,
+    ...,
+    .instructions = .instructions,
+    .echo = .echo
+  )
 }
 
 #' @rdname dsp
 #' @export
-`dsp.dsprrr::Signature` <- function(x, ..., .instructions = NULL, .echo = "none") {
+`dsp.dsprrr::Signature` <- function(
+  x,
+  ...,
+  .instructions = NULL,
+  .echo = "none"
+) {
   # x is a Signature object, use default chat
   chat <- get_default_chat()
-  dsp.Chat(chat, signature = x, ..., .instructions = .instructions, .echo = .echo)
+  dsp.Chat(
+    chat,
+    signature = x,
+    ...,
+    .instructions = .instructions,
+    .echo = .echo
+  )
 }
 
 #' Create a Module from a Chat
@@ -283,10 +300,14 @@ build_dsp_prompt <- function(sig, inputs) {
       input_lines <- c(input_lines, paste0(name, ": ", value))
     } else {
       # For complex values, use JSON
-      input_lines <- c(input_lines, paste0(
-        name, ": ",
-        jsonlite::toJSON(value, auto_unbox = TRUE)
-      ))
+      input_lines <- c(
+        input_lines,
+        paste0(
+          name,
+          ": ",
+          jsonlite::toJSON(value, auto_unbox = TRUE)
+        )
+      )
     }
   }
 
@@ -296,8 +317,10 @@ build_dsp_prompt <- function(sig, inputs) {
 # Internal: Simplify output for single-field results
 simplify_output <- function(result, output_type) {
   # If output is a single-field object, extract just that field
-  if (inherits(output_type, "ellmer::TypeObject") &&
-      length(output_type@properties) == 1) {
+  if (
+    inherits(output_type, "ellmer::TypeObject") &&
+      length(output_type@properties) == 1
+  ) {
     field_name <- names(output_type@properties)[1]
     if (!is.null(result[[field_name]])) {
       return(result[[field_name]])

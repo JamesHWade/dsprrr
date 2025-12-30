@@ -64,8 +64,14 @@ compile <- S7::new_generic("compile", c("teleprompter", "program"))
 #' )
 #' optimized <- compile_module(classifier, tp, trainset)
 #' }
-compile_module <- function(program, teleprompter, trainset, valset = NULL,
-                           .llm = NULL, ...) {
+compile_module <- function(
+  program,
+  teleprompter,
+  trainset,
+  valset = NULL,
+  .llm = NULL,
+  ...
+) {
   # Validate inputs
   if (!inherits(teleprompter, "dsprrr::Teleprompter")) {
     cli::cli_abort(c(
@@ -152,7 +158,10 @@ dsp_trainset <- function(..., .data = NULL) {
     # If result is empty, create with proper number of rows
     if (nrow(result) == 0 && length(dots) > 0) {
       n_rows <- lengths[1]
-      result <- data.frame(row.names = seq_len(n_rows), stringsAsFactors = FALSE)
+      result <- data.frame(
+        row.names = seq_len(n_rows),
+        stringsAsFactors = FALSE
+      )
     }
 
     # Add to result
@@ -205,7 +214,9 @@ evaluate_dsp <- function(module, dataset, metric, .llm = NULL, verbose = TRUE) {
   )
 
   if (verbose) {
-    cli::cli_alert_success("Evaluated {results$n_evaluated}/{nrow(dataset)} examples")
+    cli::cli_alert_success(
+      "Evaluated {results$n_evaluated}/{nrow(dataset)} examples"
+    )
     if (results$n_errors > 0) {
       cli::cli_alert_warning("{results$n_errors} examples failed")
     }

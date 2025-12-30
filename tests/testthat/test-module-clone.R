@@ -63,8 +63,8 @@ test_that("copy() with deep=FALSE still copies config values", {
 
   # But modifying one does NOT affect the other (shallow copy creates new list)
   mod2$config$temperature <- 0.7
-  expect_equal(mod1$config$temperature, 0.5)  # Original unchanged
-  expect_equal(mod2$config$temperature, 0.7)  # New value in copy
+  expect_equal(mod1$config$temperature, 0.5) # Original unchanged
+  expect_equal(mod2$config$temperature, 0.7) # New value in copy
 })
 
 test_that("PredictModule copy preserves template", {

@@ -13,13 +13,18 @@ check_api_keys <- function() {
   )
 
   if (!any(keys_present)) {
-    stop("No API keys found. Please set at least one of:\n",
-         "  - OPENAI_API_KEY\n",
-         "  - ANTHROPIC_API_KEY\n",
-         "  - GOOGLE_GEMINI_API_KEY")
+    stop(
+      "No API keys found. Please set at least one of:\n",
+      "  - OPENAI_API_KEY\n",
+      "  - ANTHROPIC_API_KEY\n",
+      "  - GOOGLE_GEMINI_API_KEY"
+    )
   }
 
-  message("Found API keys for: ", paste(names(keys_present)[keys_present], collapse = ", "))
+  message(
+    "Found API keys for: ",
+    paste(names(keys_present)[keys_present], collapse = ", ")
+  )
 }
 
 # Record vignette cassettes
@@ -39,21 +44,24 @@ record_vignettes <- function() {
 
   for (vignette in vignettes) {
     message("Recording cassettes for: ", basename(vignette))
-    tryCatch({
-      # Set environment to force evaluation
-      withr::local_envvar(list(VITALS_SHOULD_EVAL = "true"))
+    tryCatch(
+      {
+        # Set environment to force evaluation
+        withr::local_envvar(list(VITALS_SHOULD_EVAL = "true"))
 
-      # Render vignette (this will record cassettes)
-      rmarkdown::render(
-        vignette,
-        output_format = "html_document",
-        quiet = TRUE,
-        envir = new.env()
-      )
-      message("  ✓ Success")
-    }, error = function(e) {
-      message("  ✗ Error: ", e$message)
-    })
+        # Render vignette (this will record cassettes)
+        rmarkdown::render(
+          vignette,
+          output_format = "html_document",
+          quiet = TRUE,
+          envir = new.env()
+        )
+        message("  ✓ Success")
+      },
+      error = function(e) {
+        message("  ✗ Error: ", e$message)
+      }
+    )
   }
 }
 
@@ -74,14 +82,22 @@ clean_cassettes <- function() {
   message("\n=== Cleaning old cassettes ===\n")
 
   # Remove old vignette cassettes
-  old_vignettes <- list.files("vignettes/_vcr", pattern = "\\.yml$", full.names = TRUE)
+  old_vignettes <- list.files(
+    "vignettes/_vcr",
+    pattern = "\\.yml$",
+    full.names = TRUE
+  )
   if (length(old_vignettes) > 0) {
     message("Removing ", length(old_vignettes), " old vignette cassettes")
     file.remove(old_vignettes)
   }
 
   # Remove old test cassettes
-  old_tests <- list.files("tests/testthat/_vcr", pattern = "\\.yml$", full.names = TRUE)
+  old_tests <- list.files(
+    "tests/testthat/_vcr",
+    pattern = "\\.yml$",
+    full.names = TRUE
+  )
   if (length(old_tests) > 0) {
     message("Removing ", length(old_tests), " old test cassettes")
     file.remove(old_tests)

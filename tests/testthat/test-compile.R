@@ -4,13 +4,16 @@ mock_llm <- structure(
       if (inherits(type, "ellmer::TypeObject")) {
         # Return minimal structured response
         props <- names(type@properties)
-        stats::setNames(lapply(props, function(name) {
-          if (grepl("confidence", name)) {
-            0.5
-          } else {
-            "mock"
-          }
-        }), props)
+        stats::setNames(
+          lapply(props, function(name) {
+            if (grepl("confidence", name)) {
+              0.5
+            } else {
+              "mock"
+            }
+          }),
+          props
+        )
       } else {
         "mock"
       }
@@ -53,11 +56,19 @@ test_that("compile_module works with different teleprompters", {
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict", template = "Q: {question}\nA:")
+  mod <- module(
+    signature = sig,
+    type = "predict",
+    template = "Q: {question}\nA:"
+  )
 
   # Create training data
   trainset <- data.frame(
-    question = c("What is 2+2?", "What is the capital of France?", "Who wrote Hamlet?"),
+    question = c(
+      "What is 2+2?",
+      "What is the capital of France?",
+      "Who wrote Hamlet?"
+    ),
     answer = c("4", "Paris", "Shakespeare"),
     stringsAsFactors = FALSE
   )

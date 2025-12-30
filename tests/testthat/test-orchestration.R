@@ -46,7 +46,7 @@ test_that("pin_module_config saves correct structure", {
   config <- pins::pin_read(board, "test-module")
 
   # Check structure
- expect_true("signature" %in% names(config))
+  expect_true("signature" %in% names(config))
   expect_true("config" %in% names(config))
   expect_true("optimization" %in% names(config))
   expect_true("metadata" %in% names(config))
@@ -338,7 +338,12 @@ test_that("use_dsprrr_template creates targets template", {
   on.exit(unlink(file.path(temp_dir, "_targets.R")))
 
   # Check if template exists in installed package
-  template_path <- system.file("templates", "targets", "_targets.R", package = "dsprrr")
+  template_path <- system.file(
+    "templates",
+    "targets",
+    "_targets.R",
+    package = "dsprrr"
+  )
 
   if (file.exists(template_path)) {
     result <- use_dsprrr_template("targets", path = temp_dir)
@@ -358,7 +363,12 @@ test_that("use_dsprrr_template respects overwrite argument", {
   # Create existing file
   writeLines("existing content", test_file)
 
-  template_path <- system.file("templates", "targets", "_targets.R", package = "dsprrr")
+  template_path <- system.file(
+    "templates",
+    "targets",
+    "_targets.R",
+    package = "dsprrr"
+  )
 
   if (file.exists(template_path)) {
     # Should warn without overwrite

@@ -57,8 +57,17 @@
 #' agent <- signature("question -> answer") |>
 #'   module(type = "react", tools = list(search_tool), chat = chat_openai())
 #' }
-module <- function(signature, type = "predict", tools = NULL, max_iterations = 10L,
-                   template = "", demos = list(), config = list(), chat = NULL, ...) {
+module <- function(
+  signature,
+  type = "predict",
+  tools = NULL,
+  max_iterations = 10L,
+  template = "",
+  demos = list(),
+  config = list(),
+  chat = NULL,
+  ...
+) {
   # Validate signature
   if (!inherits(signature, "dsprrr::Signature")) {
     cli::cli_abort("First argument must be a Signature object")
@@ -78,7 +87,8 @@ module <- function(signature, type = "predict", tools = NULL, max_iterations = 1
   type <- match.arg(type, c("predict", "react"))
 
   # Create the appropriate R6 module based on type
-  switch(type,
+  switch(
+    type,
     predict = PredictModule$new(
       signature = signature,
       template = template,

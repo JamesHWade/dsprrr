@@ -15,7 +15,9 @@ parse_signature <- function(signature_str, instructions = "") {
   parts <- strsplit(signature_str, "\\s*->\\s*")[[1]]
 
   if (length(parts) != 2) {
-    cli::cli_abort("Signature must have format: 'inputs -> output' or 'inputs -> output: type'")
+    cli::cli_abort(
+      "Signature must have format: 'inputs -> output' or 'inputs -> output: type'"
+    )
   }
 
   # Parse inputs
@@ -30,7 +32,12 @@ parse_signature <- function(signature_str, instructions = "") {
   if (nchar(instructions) == 0) {
     # Get input field names
     input_names <- if (length(inputs) > 0) {
-      paste0("`", vapply(inputs, function(x) x$name, character(1)), "`", collapse = ", ")
+      paste0(
+        "`",
+        vapply(inputs, function(x) x$name, character(1)),
+        "`",
+        collapse = ", "
+      )
     } else {
       "no inputs"
     }
@@ -56,7 +63,13 @@ parse_signature <- function(signature_str, instructions = "") {
     }
 
     # Generate instructions similar to DSPy
-    instructions <- paste0("Given the fields ", input_names, ", produce the fields ", output_field_names, ".")
+    instructions <- paste0(
+      "Given the fields ",
+      input_names,
+      ", produce the fields ",
+      output_field_names,
+      "."
+    )
   }
 
   # Create Signature
@@ -87,8 +100,12 @@ parse_inputs <- function(inputs_str) {
       depth <- 0
       colon_pos <- -1
       for (i in seq_along(chars)) {
-        if (chars[i] %in% c("[", "(")) depth <- depth + 1
-        if (chars[i] %in% c("]", ")")) depth <- depth - 1
+        if (chars[i] %in% c("[", "(")) {
+          depth <- depth + 1
+        }
+        if (chars[i] %in% c("]", ")")) {
+          depth <- depth - 1
+        }
         if (chars[i] == ":" && depth == 0) {
           colon_pos <- i
           break
@@ -106,7 +123,7 @@ parse_inputs <- function(inputs_str) {
       }
     } else {
       name <- spec
-      type <- NULL  # Will default to string
+      type <- NULL # Will default to string
     }
 
     input(
@@ -130,8 +147,12 @@ parse_output <- function(output_str) {
   first_colon_pos <- -1
 
   for (i in seq_along(chars)) {
-    if (chars[i] %in% c("[", "(")) depth <- depth + 1
-    if (chars[i] %in% c("]", ")")) depth <- depth - 1
+    if (chars[i] %in% c("[", "(")) {
+      depth <- depth + 1
+    }
+    if (chars[i] %in% c("]", ")")) {
+      depth <- depth - 1
+    }
     if (chars[i] == "," && depth == 0 && first_comma_pos == -1) {
       first_comma_pos <- i
     }
@@ -141,7 +162,10 @@ parse_output <- function(output_str) {
   }
 
   # If we have a comma before a colon (or no colon), it's likely multiple outputs
-  if (first_comma_pos > 0 && (first_colon_pos == -1 || first_comma_pos < first_colon_pos)) {
+  if (
+    first_comma_pos > 0 &&
+      (first_colon_pos == -1 || first_comma_pos < first_colon_pos)
+  ) {
     # Check if the comma is part of a type specification or truly separates fields
     # Look at the string before the first comma
     before_comma <- substr(output_str, 1, first_comma_pos - 1)
@@ -160,8 +184,12 @@ parse_output <- function(output_str) {
     depth <- 0
     colon_pos <- -1
     for (i in seq_along(chars)) {
-      if (chars[i] %in% c("[", "(")) depth <- depth + 1
-      if (chars[i] %in% c("]", ")")) depth <- depth - 1
+      if (chars[i] %in% c("[", "(")) {
+        depth <- depth + 1
+      }
+      if (chars[i] %in% c("]", ")")) {
+        depth <- depth - 1
+      }
       if (chars[i] == ":" && depth == 0) {
         colon_pos <- i
         break
@@ -177,8 +205,12 @@ parse_output <- function(output_str) {
       depth <- 0
       chars_remainder <- strsplit(remainder, "")[[1]]
       for (i in seq_along(chars_remainder)) {
-        if (chars_remainder[i] %in% c("[", "(")) depth <- depth + 1
-        if (chars_remainder[i] %in% c("]", ")")) depth <- depth - 1
+        if (chars_remainder[i] %in% c("[", "(")) {
+          depth <- depth + 1
+        }
+        if (chars_remainder[i] %in% c("]", ")")) {
+          depth <- depth - 1
+        }
         if (chars_remainder[i] == "," && depth == 0) {
           # Check if this comma is followed by another field (name:)
           rest <- substr(remainder, i + 1, nchar(remainder))
@@ -214,7 +246,7 @@ parse_output <- function(output_str) {
 
   # Single output case without type annotation
   output_name <- trimws(output_str)
-  type_str <- "string"  # Default type
+  type_str <- "string" # Default type
 
   # For single outputs, wrap in an object type to get proper field access
   # This ensures we get back a named list/object instead of raw JSON string
@@ -267,7 +299,7 @@ split_respecting_nesting <- function(str, delimiter) {
     char <- chars[i]
 
     # Handle quotes
-    if (char %in% c("'", '"') && (i == 1 || chars[i-1] != "\\")) {
+    if (char %in% c("'", '"') && (i == 1 || chars[i - 1] != "\\")) {
       if (!in_quotes) {
         in_quotes <- TRUE
         quote_char <- char
@@ -334,7 +366,9 @@ parse_type_string <- function(type_str, field_name = NULL) {
     if (length(types) > 0) {
       # For now, use the first type and warn
       if (length(types) > 1) {
-        cli::cli_warn("Union types not fully supported. Using first type: {types[1]}")
+        cli::cli_warn(
+          "Union types not fully supported. Using first type: {types[1]}"
+        )
       }
       return(parse_type_string(types[1], field_name))
     }
@@ -358,11 +392,15 @@ parse_type_string <- function(type_str, field_name = NULL) {
   # Simple types
   if (type_str == "string" || type_str == "str") {
     return(ellmer::type_string())
-  } else if (type_str == "float" || type_str == "number" || type_str == "numeric") {
+  } else if (
+    type_str == "float" || type_str == "number" || type_str == "numeric"
+  ) {
     return(ellmer::type_number())
   } else if (type_str == "int" || type_str == "integer") {
     return(ellmer::type_integer())
-  } else if (type_str == "bool" || type_str == "boolean" || type_str == "logical") {
+  } else if (
+    type_str == "bool" || type_str == "boolean" || type_str == "logical"
+  ) {
     return(ellmer::type_boolean())
   }
 
@@ -388,7 +426,11 @@ parse_type_string <- function(type_str, field_name = NULL) {
   # list[string]
   # string[]
   # list[dict[str, str]]
-  if (grepl("^array\\s*\\(", type_str) || grepl("^list\\s*\\[", type_str) || grepl("\\[\\]$", type_str)) {
+  if (
+    grepl("^array\\s*\\(", type_str) ||
+      grepl("^list\\s*\\[", type_str) ||
+      grepl("\\[\\]$", type_str)
+  ) {
     if (grepl("^array\\s*\\(", type_str)) {
       inner_type_str <- sub("^array\\s*\\((.*)\\)$", "\\1", type_str)
     } else if (grepl("^list\\s*\\[", type_str)) {
@@ -401,7 +443,9 @@ parse_type_string <- function(type_str, field_name = NULL) {
         depth <- 0
         end_pos <- -1
         for (i in start_pos:length(chars)) {
-          if (chars[i] == "[") depth <- depth + 1
+          if (chars[i] == "[") {
+            depth <- depth + 1
+          }
           if (chars[i] == "]") {
             depth <- depth - 1
             if (depth == 0) {
@@ -430,7 +474,10 @@ parse_type_string <- function(type_str, field_name = NULL) {
   # number[0, 100]
   # float(0, 1)
   if (grepl("(number|float|numeric)\\s*[\\[\\(]", type_str)) {
-    bounds_match <- regmatches(type_str, regexpr("[\\[\\(]([^\\]\\)]+)[\\]\\)]", type_str))
+    bounds_match <- regmatches(
+      type_str,
+      regexpr("[\\[\\(]([^\\]\\)]+)[\\]\\)]", type_str)
+    )
     if (length(bounds_match) > 0) {
       bounds_str <- gsub("[\\[\\(\\]\\)]", "", bounds_match)
       bounds <- as.numeric(strsplit(bounds_str, "\\s*,\\s*")[[1]])
@@ -451,7 +498,10 @@ parse_type_string <- function(type_str, field_name = NULL) {
       if (length(bounds) == 1) {
         return(ellmer::type_string(max_length = bounds[1]))
       } else if (length(bounds) == 2) {
-        return(ellmer::type_string(min_length = bounds[1], max_length = bounds[2]))
+        return(ellmer::type_string(
+          min_length = bounds[1],
+          max_length = bounds[2]
+        ))
       }
     }
   }

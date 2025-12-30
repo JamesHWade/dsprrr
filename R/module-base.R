@@ -77,13 +77,23 @@ Module <- R6::R6Class(
     #' @param .return_format Either "simple" or "structured"
     #' @return Module outputs. For .return_format="simple", returns the output value directly.
     #'   For "structured", returns a tibble with output, chat, and metadata columns.
-    run = function(..., .llm = NULL, .verbose = FALSE, .parallel = FALSE,
-                   .progress = TRUE, .return_format = "simple") {
+    run = function(
+      ...,
+      .llm = NULL,
+      .verbose = FALSE,
+      .parallel = FALSE,
+      .progress = TRUE,
+      .return_format = "simple"
+    ) {
       inputs <- list(...)
 
       # Validate inputs against signature
       if (length(self$signature@inputs) > 0) {
-        required_names <- vapply(self$signature@inputs, function(x) x$name, character(1))
+        required_names <- vapply(
+          self$signature@inputs,
+          function(x) x$name,
+          character(1)
+        )
         missing_inputs <- setdiff(required_names, names(inputs))
 
         if (length(missing_inputs) > 0) {
@@ -107,9 +117,13 @@ Module <- R6::R6Class(
         max_length <- max(input_lengths)
 
         # Validate all inputs have compatible lengths
-        invalid_lengths <- input_lengths[input_lengths != 1 & input_lengths != max_length]
+        invalid_lengths <- input_lengths[
+          input_lengths != 1 & input_lengths != max_length
+        ]
         if (length(invalid_lengths) > 0) {
-          cli::cli_abort("All inputs must have the same length or length 1 for batch processing")
+          cli::cli_abort(
+            "All inputs must have the same length or length 1 for batch processing"
+          )
         }
 
         # Expand scalar inputs
@@ -173,14 +187,16 @@ Module <- R6::R6Class(
     #' @param objective Metric or metric set
     #' @param control Optimization control parameters
     #' @return Updated module (self)
-    optimize = function(devset,
-                        metric = metric_exact_match(),
-                        grid = NULL,
-                        parameters = NULL,
-                        objective = c("maximize", "minimize"),
-                        .llm = NULL,
-                        control = list(),
-                        ...) {
+    optimize = function(
+      devset,
+      metric = metric_exact_match(),
+      grid = NULL,
+      parameters = NULL,
+      objective = c("maximize", "minimize"),
+      .llm = NULL,
+      control = list(),
+      ...
+    ) {
       self$optimize_grid(
         devset = devset,
         metric = metric,
@@ -203,14 +219,16 @@ Module <- R6::R6Class(
     #' @param .llm Optional ellmer chat object reused during optimisation
     #' @param control List of control options (progress, grid_type, etc.)
     #' @param ... Additional arguments forwarded to [evaluate()]
-    optimize_grid = function(devset,
-                             metric = metric_exact_match(),
-                             grid = NULL,
-                             parameters = NULL,
-                             objective = c("maximize", "minimize"),
-                             .llm = NULL,
-                             control = list(),
-                             ...) {
+    optimize_grid = function(
+      devset,
+      metric = metric_exact_match(),
+      grid = NULL,
+      parameters = NULL,
+      objective = c("maximize", "minimize"),
+      .llm = NULL,
+      control = list(),
+      ...
+    ) {
       if (!is.data.frame(devset)) {
         cli::cli_abort("devset must be a data frame or tibble")
       }
@@ -220,7 +238,9 @@ Module <- R6::R6Class(
       }
 
       if (!is.function(metric)) {
-        cli::cli_abort("metric must be a function; wrap yardstick metrics with as_dsprrr_metric()")
+        cli::cli_abort(
+          "metric must be a function; wrap yardstick metrics with as_dsprrr_metric()"
+        )
       }
 
       objective <- match.arg(objective)
@@ -233,7 +253,9 @@ Module <- R6::R6Class(
 
       n_candidates <- nrow(candidate_grid)
       if (n_candidates == 0) {
-        cli::cli_abort("The optimisation grid is empty; provide parameters or a non-empty grid")
+        cli::cli_abort(
+          "The optimisation grid is empty; provide parameters or a non-empty grid"
+        )
       }
 
       progress_id <- NULL
@@ -250,7 +272,10 @@ Module <- R6::R6Class(
       n_errors <- integer(n_candidates)
       parameters_col <- vector("list", n_candidates)
       evaluations <- vector("list", n_candidates)
-      timestamps <- rep(as.POSIXct(NA_real_, origin = "1970-01-01"), n_candidates)
+      timestamps <- rep(
+        as.POSIXct(NA_real_, origin = "1970-01-01"),
+        n_candidates
+      )
 
       best_idx <- NA_integer_
       best_score <- if (objective == "maximize") -Inf else Inf
@@ -260,7 +285,11 @@ Module <- R6::R6Class(
         parameters_col[[i]] <- params
 
         candidate <- self$copy(deep = TRUE)
-        candidate$config <- utils::modifyList(candidate$config, params, keep.null = TRUE)
+        candidate$config <- utils::modifyList(
+          candidate$config,
+          params,
+          keep.null = TRUE
+        )
         if (is.function(candidate$apply_optimization_params)) {
           candidate$apply_optimization_params(params)
         }
@@ -295,7 +324,11 @@ Module <- R6::R6Class(
         }
 
         if (!is.null(progress_id)) {
-          msg_score <- if (is.na(scores[i])) "NA" else format(round(scores[i], 4), nsmall = 4)
+          msg_score <- if (is.na(scores[i])) {
+            "NA"
+          } else {
+            format(round(scores[i], 4), nsmall = 4)
+          }
           cli::cli_progress_update(
             id = progress_id,
             set = i
@@ -318,12 +351,19 @@ Module <- R6::R6Class(
       )
 
       self$state$trials <- trials_tbl
-      self$state$optimization_history <- append(self$state$optimization_history, list(trials_tbl))
+      self$state$optimization_history <- append(
+        self$state$optimization_history,
+        list(trials_tbl)
+      )
       self$state$last_grid <- candidate_grid
 
       if (!is.na(best_idx)) {
         best_params <- parameters_col[[best_idx]]
-        self$config <- utils::modifyList(self$config, best_params, keep.null = TRUE)
+        self$config <- utils::modifyList(
+          self$config,
+          best_params,
+          keep.null = TRUE
+        )
         self$state$best_score <- scores[best_idx]
         self$state$best_params <- best_params
         self$state$best_trial <- best_idx
@@ -332,7 +372,9 @@ Module <- R6::R6Class(
           self$apply_optimization_params(best_params)
         }
       } else {
-        cli::cli_warn("No valid scores produced during optimisation; configuration left unchanged")
+        cli::cli_warn(
+          "No valid scores produced during optimisation; configuration left unchanged"
+        )
       }
 
       invisible(self)
@@ -399,21 +441,57 @@ Module <- R6::R6Class(
       # Convert list of traces to tibble
       tibble::tibble(
         timestamp = vapply(traces, function(x) x$timestamp, .POSIXct(1)),
-        latency_ms = vapply(traces, function(x) x$latency_ms %||% NA_real_, numeric(1)),
-        input_tokens = vapply(traces, function(x) {
-          if (is.list(x$tokens)) as.integer(x$tokens$input_tokens %||% NA) else NA_integer_
-        }, integer(1)),
-        output_tokens = vapply(traces, function(x) {
-          if (is.list(x$tokens)) as.integer(x$tokens$output_tokens %||% NA) else NA_integer_
-        }, integer(1)),
-        total_tokens = vapply(traces, function(x) {
-          if (is.list(x$tokens)) as.integer(x$tokens$total_tokens %||% NA) else NA_integer_
-        }, integer(1)),
+        latency_ms = vapply(
+          traces,
+          function(x) x$latency_ms %||% NA_real_,
+          numeric(1)
+        ),
+        input_tokens = vapply(
+          traces,
+          function(x) {
+            if (is.list(x$tokens)) {
+              as.integer(x$tokens$input_tokens %||% NA)
+            } else {
+              NA_integer_
+            }
+          },
+          integer(1)
+        ),
+        output_tokens = vapply(
+          traces,
+          function(x) {
+            if (is.list(x$tokens)) {
+              as.integer(x$tokens$output_tokens %||% NA)
+            } else {
+              NA_integer_
+            }
+          },
+          integer(1)
+        ),
+        total_tokens = vapply(
+          traces,
+          function(x) {
+            if (is.list(x$tokens)) {
+              as.integer(x$tokens$total_tokens %||% NA)
+            } else {
+              NA_integer_
+            }
+          },
+          integer(1)
+        ),
         cost = vapply(traces, function(x) x$cost %||% NA_real_, numeric(1)),
-        model = vapply(traces, function(x) x$model %||% NA_character_, character(1)),
-        prompt_length = vapply(traces, function(x) {
-          if (!is.null(x$prompt)) nchar(x$prompt) else NA_integer_
-        }, integer(1))
+        model = vapply(
+          traces,
+          function(x) x$model %||% NA_character_,
+          character(1)
+        ),
+        prompt_length = vapply(
+          traces,
+          function(x) {
+            if (!is.null(x$prompt)) nchar(x$prompt) else NA_integer_
+          },
+          integer(1)
+        )
       )
     },
 
@@ -439,9 +517,11 @@ Module <- R6::R6Class(
         if (is.null(turn) || is.null(turn@tokens)) {
           return(c(input = 0, output = 0, cached = 0))
         }
-        c(input = turn@tokens[1] %||% 0,
+        c(
+          input = turn@tokens[1] %||% 0,
           output = turn@tokens[2] %||% 0,
-          cached = turn@tokens[3] %||% 0)
+          cached = turn@tokens[3] %||% 0
+        )
       }
 
       all_tokens <- vapply(traces, extract_tokens, numeric(3))
@@ -452,16 +532,49 @@ Module <- R6::R6Class(
         total_output_tokens = sum(all_tokens["output", ], na.rm = TRUE),
         total_cached_tokens = sum(all_tokens["cached", ], na.rm = TRUE),
         total_tokens = sum(all_tokens["input", ], na.rm = TRUE) +
-                       sum(all_tokens["output", ], na.rm = TRUE),
-        total_duration_s = sum(vapply(traces, function(x) {
-          if (!is.null(x$assistant_turn)) x$assistant_turn@duration %||% 0 else 0
-        }, numeric(1)), na.rm = TRUE),
-        total_latency_ms = sum(vapply(traces, function(x) {
-          if (!is.null(x$assistant_turn)) (x$assistant_turn@duration %||% 0) * 1000 else 0
-        }, numeric(1)), na.rm = TRUE),
-        total_cost = sum(vapply(traces, function(x) {
-          if (!is.null(x$assistant_turn)) x$assistant_turn@cost %||% 0 else 0
-        }, numeric(1)), na.rm = TRUE)
+          sum(all_tokens["output", ], na.rm = TRUE),
+        total_duration_s = sum(
+          vapply(
+            traces,
+            function(x) {
+              if (!is.null(x$assistant_turn)) {
+                x$assistant_turn@duration %||% 0
+              } else {
+                0
+              }
+            },
+            numeric(1)
+          ),
+          na.rm = TRUE
+        ),
+        total_latency_ms = sum(
+          vapply(
+            traces,
+            function(x) {
+              if (!is.null(x$assistant_turn)) {
+                (x$assistant_turn@duration %||% 0) * 1000
+              } else {
+                0
+              }
+            },
+            numeric(1)
+          ),
+          na.rm = TRUE
+        ),
+        total_cost = sum(
+          vapply(
+            traces,
+            function(x) {
+              if (!is.null(x$assistant_turn)) {
+                x$assistant_turn@cost %||% 0
+              } else {
+                0
+              }
+            },
+            numeric(1)
+          ),
+          na.rm = TRUE
+        )
       )
     },
 
@@ -479,8 +592,12 @@ Module <- R6::R6Class(
     #' @param .return_format Either "simple" or "structured"
     #' @param ... Additional arguments
     #' @return Function compatible with vitals Tasks
-    as_vitals_solver = function(.llm = NULL, .parallel = FALSE,
-                                .return_format = "structured", ...) {
+    as_vitals_solver = function(
+      .llm = NULL,
+      .parallel = FALSE,
+      .return_format = "structured",
+      ...
+    ) {
       module <- self
 
       function(inputs, ...) {
@@ -556,11 +673,17 @@ Module <- R6::R6Class(
       if (trace_summary$n_traces > 0) {
         cli::cli_h3("Traces")
         cli::cli_text("  {trace_summary$n_traces} trace(s) recorded")
-        cli::cli_text("  Total tokens: {trace_summary$total_tokens} (in: {trace_summary$total_input_tokens}, out: {trace_summary$total_output_tokens})")
+        cli::cli_text(
+          "  Total tokens: {trace_summary$total_tokens} (in: {trace_summary$total_input_tokens}, out: {trace_summary$total_output_tokens})"
+        )
         if (!is.na(trace_summary$total_cost) && trace_summary$total_cost > 0) {
-          cli::cli_text("  Total cost: ${format(trace_summary$total_cost, digits = 4)}")
+          cli::cli_text(
+            "  Total cost: ${format(trace_summary$total_cost, digits = 4)}"
+          )
         }
-        cli::cli_text("  Total latency: {round(trace_summary$total_latency_ms / 1000, 2)}s")
+        cli::cli_text(
+          "  Total latency: {round(trace_summary$total_latency_ms / 1000, 2)}s"
+        )
       }
 
       invisible(self)
@@ -623,10 +746,12 @@ Module <- R6::R6Class(
         }
 
         full_response <- character()
-        coro::loop(for (chunk in gen) {
-          callback(chunk)
-          full_response <- c(full_response, chunk)
-        })
+        coro::loop(
+          for (chunk in gen) {
+            callback(chunk)
+            full_response <- c(full_response, chunk)
+          }
+        )
         invisible(paste(full_response, collapse = ""))
       } else {
         # Return generator for manual consumption
@@ -691,43 +816,49 @@ Module <- R6::R6Class(
 
       # Use R6's clone method (ellmer Chat is R6)
       # deep = TRUE ensures internal state is also cloned
-      tryCatch({
-        cloned <- chat$clone(deep = TRUE)
-        # Reset the turn history to start fresh
-        cloned$set_turns(list())
-        cloned
-      }, error = function(e) {
-        # If clone fails, try to recreate from provider info
-        model <- tryCatch(chat$get_model(), error = function(e) NULL)
-        class_names <- class(chat)
+      tryCatch(
+        {
+          cloned <- chat$clone(deep = TRUE)
+          # Reset the turn history to start fresh
+          cloned$set_turns(list())
+          cloned
+        },
+        error = function(e) {
+          # If clone fails, try to recreate from provider info
+          model <- tryCatch(chat$get_model(), error = function(e) NULL)
+          class_names <- class(chat)
 
-        for (cls in class_names) {
-          result <- switch(cls,
-            "Chat" = NULL,  # Skip base class
-            # OpenAI variants
-            "OpenAIChat" = ,
-            "chat_openai" = ellmer::chat_openai(model = model),
-            # Anthropic variants
-            "ClaudeChat" = ,
-            "chat_claude" = ellmer::chat_claude(model = model),
-            # Google variants
-            "ChatGoogleGemini" = ,
-            "chat_google_gemini" = ellmer::chat_google_gemini(model = model),
-            # Ollama variants
-            "OllamaChat" = ,
-            "chat_ollama" = ellmer::chat_ollama(model = model),
-            NULL
-          )
+          for (cls in class_names) {
+            result <- switch(
+              cls,
+              "Chat" = NULL, # Skip base class
+              # OpenAI variants
+              "OpenAIChat" = ,
+              "chat_openai" = ellmer::chat_openai(model = model),
+              # Anthropic variants
+              "ClaudeChat" = ,
+              "chat_claude" = ellmer::chat_claude(model = model),
+              # Google variants
+              "ChatGoogleGemini" = ,
+              "chat_google_gemini" = ellmer::chat_google_gemini(model = model),
+              # Ollama variants
+              "OllamaChat" = ,
+              "chat_ollama" = ellmer::chat_ollama(model = model),
+              NULL
+            )
 
-          if (!is.null(result)) {
-            return(result)
+            if (!is.null(result)) {
+              return(result)
+            }
           }
-        }
 
-        # Fallback: return same chat (not ideal but better than failing)
-        cli::cli_warn("Could not clone Chat of class {.cls {class_names[1]}}; sharing reference")
-        chat
-      })
+          # Fallback: return same chat (not ideal but better than failing)
+          cli::cli_warn(
+            "Could not clone Chat of class {.cls {class_names[1]}}; sharing reference"
+          )
+          chat
+        }
+      )
     },
 
     # Postprocess model output (to be overridden by subclasses)

@@ -32,15 +32,17 @@ optimize_grid <- function(module, ...) {
 
 #' @rdname optimize_grid
 #' @export
-optimize_grid.Module <- function(module,
-                                 devset,
-                                 metric = metric_exact_match(),
-                                 grid = NULL,
-                                 parameters = NULL,
-                                 objective = c("maximize", "minimize"),
-                                 .llm = NULL,
-                                 control = list(),
-                                 ...) {
+optimize_grid.Module <- function(
+  module,
+  devset,
+  metric = metric_exact_match(),
+  grid = NULL,
+  parameters = NULL,
+  objective = c("maximize", "minimize"),
+  .llm = NULL,
+  control = list(),
+  ...
+) {
   objective <- match.arg(objective)
 
   module$optimize_grid(
@@ -100,7 +102,9 @@ prepare_candidate_grid <- function(parameters, grid, control) {
     }
 
     if (!is.data.frame(grid)) {
-      cli::cli_abort("grid must be a data frame/tibble or a named list of parameter values")
+      cli::cli_abort(
+        "grid must be a data frame/tibble or a named list of parameter values"
+      )
     }
 
     candidate_grid <- tibble::as_tibble(grid)
@@ -123,7 +127,10 @@ prepare_candidate_grid <- function(parameters, grid, control) {
 #' @keywords internal
 generate_grid_from_parameters <- function(parameters, control) {
   if (is_dials_parameters(parameters)) {
-    rlang::check_installed("dials", reason = "to expand tidymodels parameter sets")
+    rlang::check_installed(
+      "dials",
+      reason = "to expand tidymodels parameter sets"
+    )
 
     if (identical(control$grid_type, "regular")) {
       grid <- dials::grid_regular(parameters, levels = control$grid_levels)
@@ -136,7 +143,9 @@ generate_grid_from_parameters <- function(parameters, control) {
   } else if (is.list(parameters)) {
     expand_grid_from_list(parameters)
   } else {
-    cli::cli_abort("parameters must be a named list or tidymodels parameter set")
+    cli::cli_abort(
+      "parameters must be a named list or tidymodels parameter set"
+    )
   }
 }
 
@@ -170,7 +179,9 @@ is_dials_parameters <- function(x) {
 signature_parameter_defaults <- function(signature, prefix = "input") {
   defaults <- list()
 
-  if (!inherits(signature, "dsprrr::Signature") || length(signature@inputs) == 0) {
+  if (
+    !inherits(signature, "dsprrr::Signature") || length(signature@inputs) == 0
+  ) {
     return(defaults)
   }
 
@@ -219,9 +230,11 @@ signature_parameter_defaults <- function(signature, prefix = "input") {
 #' )
 #' module_parameter_set(mod)
 #' }
-module_parameter_set <- function(module,
-                                 include = NULL,
-                                 exclude = c("id", "instructions", "instructions_suffix")) {
+module_parameter_set <- function(
+  module,
+  include = NULL,
+  exclude = c("id", "instructions", "instructions_suffix")
+) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("module must be a DSPrrr Module object")
   }
@@ -246,7 +259,9 @@ module_parameter_set <- function(module,
   if (is.data.frame(trials) && nrow(trials) > 0) {
     trial_params <- trials$parameters
     for (params in trial_params) {
-      if (!is.list(params)) next
+      if (!is.list(params)) {
+        next
+      }
       for (name in names(params)) {
         param_values[[name]] <- c(param_values[[name]], params[[name]])
       }
@@ -262,7 +277,9 @@ module_parameter_set <- function(module,
   sig_defaults <- signature_parameter_defaults(module$signature)
   for (name in names(sig_defaults)) {
     should_include <- is.null(include) || name %in% include
-    if (should_include && !(name %in% exclude) && is.null(param_values[[name]])) {
+    if (
+      should_include && !(name %in% exclude) && is.null(param_values[[name]])
+    ) {
       param_values[[name]] <- sig_defaults[[name]]
     }
   }
@@ -276,7 +293,8 @@ module_parameter_set <- function(module,
   )
 
   for (name in names(known_defaults)) {
-    should_include <- (is.null(include) || name %in% include) && !(name %in% exclude)
+    should_include <- (is.null(include) || name %in% include) &&
+      !(name %in% exclude)
     if (should_include && !name %in% names(param_values)) {
       param_values[[name]] <- known_defaults[[name]]
     }
@@ -366,7 +384,10 @@ module_parameter_set <- function(module,
 #' summary <- module_trials_summary(my_module)
 #' summary$best_params
 #' }
-module_trials_summary <- function(module, objective = c("maximize", "minimize")) {
+module_trials_summary <- function(
+  module,
+  objective = c("maximize", "minimize")
+) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("module must be a DSPrrr Module object")
   }
@@ -387,14 +408,22 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
   }
 
   scores <- trials$score
-  best_idx <- if (objective == "maximize") which.max(scores) else which.min(scores)
+  best_idx <- if (objective == "maximize") {
+    which.max(scores)
+  } else {
+    which.min(scores)
+  }
   best_score <- scores[best_idx]
   best_trial <- trials$trial_id[best_idx]
   best_params <- trials$parameters[[best_idx]]
 
   mean_score <- mean(scores, na.rm = TRUE)
   sd_score <- stats::sd(scores, na.rm = TRUE)
-  std_error <- if (is.na(sd_score)) NA_real_ else sd_score / sqrt(length(scores))
+  std_error <- if (is.na(sd_score)) {
+    NA_real_
+  } else {
+    sd_score / sqrt(length(scores))
+  }
 
   tibble::tibble(
     n_trials = nrow(trials),
@@ -415,7 +444,7 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
 #' visualisations comparing trial performance. When yardstick metrics are
 #' supplied, the function also computes those metrics for each trial using the
 #' stored evaluation datasets.
-#' 
+#'
 #' @param module A DSPrrr module optimised with [optimize_grid()].
 #' @param metrics Optional yardstick metric (or metric set) to compute for each
 #'   trial.
@@ -446,11 +475,13 @@ module_trials_summary <- function(module, objective = c("maximize", "minimize"))
 #'   estimate = result
 #' )
 #' }
-module_metric_summary <- function(module,
-                                  metrics = NULL,
-                                  truth = NULL,
-                                  estimate = NULL,
-                                  ...) {
+module_metric_summary <- function(
+  module,
+  metrics = NULL,
+  truth = NULL,
+  estimate = NULL,
+  ...
+) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("module must be a DSPrrr Module object")
   }
@@ -477,15 +508,25 @@ module_metric_summary <- function(module,
   if (!is.null(metrics)) {
     rlang::check_installed("yardstick")
     if (is.null(truth) || is.null(estimate)) {
-      cli::cli_abort("Provide `truth` and `estimate` column names when supplying yardstick metrics.")
+      cli::cli_abort(
+        "Provide `truth` and `estimate` column names when supplying yardstick metrics."
+      )
     }
     if (inherits(metrics, "metric_set")) {
       yardstick_metrics <- metrics
     } else {
       yardstick_metrics <- do.call(yardstick::metric_set, as.list(metrics))
     }
-    truth_sym <- if (is.character(truth)) rlang::sym(truth) else rlang::ensym(truth)
-    estimate_sym <- if (is.character(estimate)) rlang::sym(estimate) else rlang::ensym(estimate)
+    truth_sym <- if (is.character(truth)) {
+      rlang::sym(truth)
+    } else {
+      rlang::ensym(truth)
+    }
+    estimate_sym <- if (is.character(estimate)) {
+      rlang::sym(estimate)
+    } else {
+      rlang::ensym(estimate)
+    }
   }
 
   rows <- vector("list", nrow(trials))
@@ -493,11 +534,22 @@ module_metric_summary <- function(module,
   for (i in seq_len(nrow(trials))) {
     eval <- trials$evaluation[[i]]
     scores <- eval$scores %||% numeric()
-    score_mean <- eval$mean_score %||% if (length(scores)) mean(scores, na.rm = TRUE) else trials$score[[i]]
-    score_median <- if (length(scores)) stats::median(scores, na.rm = TRUE) else NA_real_
-    score_sd <- if (length(scores) > 1) stats::sd(scores, na.rm = TRUE) else NA_real_
-    n_eval <- eval$n_evaluated %||% if (length(scores)) sum(!is.na(scores)) else NA_integer_
-    n_err <- eval$n_errors %||% if (length(scores)) sum(is.na(scores)) else NA_integer_
+    score_mean <- eval$mean_score %||%
+      if (length(scores)) mean(scores, na.rm = TRUE) else trials$score[[i]]
+    score_median <- if (length(scores)) {
+      stats::median(scores, na.rm = TRUE)
+    } else {
+      NA_real_
+    }
+    score_sd <- if (length(scores) > 1) {
+      stats::sd(scores, na.rm = TRUE)
+    } else {
+      NA_real_
+    }
+    n_eval <- eval$n_evaluated %||%
+      if (length(scores)) sum(!is.na(scores)) else NA_integer_
+    n_err <- eval$n_errors %||%
+      if (length(scores)) sum(is.na(scores)) else NA_integer_
 
     yardstick_results <- NULL
     if (!is.null(yardstick_metrics) && !is.null(eval$dataset)) {
@@ -507,9 +559,13 @@ module_metric_summary <- function(module,
 
       coerce_col <- function(vec) {
         if (is.list(vec)) {
-          vec <- vapply(vec, function(x) {
-            if (length(x) == 0) NA_character_ else as.character(x[[1]])
-          }, character(1))
+          vec <- vapply(
+            vec,
+            function(x) {
+              if (length(x) == 0) NA_character_ else as.character(x[[1]])
+            },
+            character(1)
+          )
         }
         vec
       }
@@ -521,15 +577,24 @@ module_metric_summary <- function(module,
       truth_vec <- NULL
 
       if (!(truth_col %in% names(data))) {
-        cli::cli_warn("Truth column '{truth_col}' not found in evaluation dataset for trial {trials$trial_id[[i]]}.")
+        cli::cli_warn(
+          "Truth column '{truth_col}' not found in evaluation dataset for trial {trials$trial_id[[i]]}."
+        )
       } else if (!(estimate_col %in% names(data))) {
-        cli::cli_warn("Estimate column '{estimate_col}' not found in evaluation dataset for trial {trials$trial_id[[i]]}.")
+        cli::cli_warn(
+          "Estimate column '{estimate_col}' not found in evaluation dataset for trial {trials$trial_id[[i]]}."
+        )
       } else {
         truth_vec <- coerce_col(data[[truth_col]])
         est_vec <- coerce_col(data[[estimate_col]])
-        levels_union <- unique(c(stats::na.omit(truth_vec), stats::na.omit(est_vec)))
+        levels_union <- unique(c(
+          stats::na.omit(truth_vec),
+          stats::na.omit(est_vec)
+        ))
         if (length(levels_union) == 0) {
-          cli::cli_warn("Unable to determine class levels for trial {trials$trial_id[[i]]}; skipping yardstick metrics.")
+          cli::cli_warn(
+            "Unable to determine class levels for trial {trials$trial_id[[i]]}; skipping yardstick metrics."
+          )
         } else {
           data[[truth_col]] <- factor(truth_vec, levels = levels_union)
           data[[estimate_col]] <- factor(est_vec, levels = levels_union)
@@ -542,7 +607,9 @@ module_metric_summary <- function(module,
               ...
             ),
             error = function(e) {
-              cli::cli_warn("Failed to compute yardstick metrics for trial {trials$trial_id[[i]]}: {e$message}")
+              cli::cli_warn(
+                "Failed to compute yardstick metrics for trial {trials$trial_id[[i]]}: {e$message}"
+              )
               NULL
             }
           )

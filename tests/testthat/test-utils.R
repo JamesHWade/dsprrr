@@ -104,11 +104,11 @@ test_that("null coalescing operator works correctly", {
 
   # With various types
 
-  expect_equal(0 %||% 1, 0)  # 0 is not NULL
-  expect_equal(FALSE %||% TRUE, FALSE)  # FALSE is not NULL
-  expect_equal("" %||% "default", "")  # Empty string is not NULL
-  expect_equal(NA %||% "default", NA)  # NA is not NULL
-  expect_equal(list() %||% list(a = 1), list())  # Empty list is not NULL
+  expect_equal(0 %||% 1, 0) # 0 is not NULL
+  expect_equal(FALSE %||% TRUE, FALSE) # FALSE is not NULL
+  expect_equal("" %||% "default", "") # Empty string is not NULL
+  expect_equal(NA %||% "default", NA) # NA is not NULL
+  expect_equal(list() %||% list(a = 1), list()) # Empty list is not NULL
 })
 
 # --- Helper function tests from run.R ---
@@ -132,7 +132,11 @@ test_that("format_output handles various types", {
 
 test_that("format_inputs creates proper format", {
   sig_inputs <- list(
-    input(name = "text", class = S7::class_character, description = "Input text"),
+    input(
+      name = "text",
+      class = S7::class_character,
+      description = "Input text"
+    ),
     input(name = "count", class = S7::class_integer, description = "A count")
   )
 
@@ -161,7 +165,7 @@ test_that("format_inputs handles inputs without descriptions", {
   result <- dsprrr:::format_inputs(inputs, sig_inputs)
 
   expect_true(grepl("text: hello", result))
-  expect_false(grepl("#", result))  # No description comment
+  expect_false(grepl("#", result)) # No description comment
 })
 
 # --- Optimization helpers tests ---
@@ -206,7 +210,7 @@ test_that("expand_grid_from_list creates correct grid", {
   result <- dsprrr:::expand_grid_from_list(params)
 
   expect_s3_class(result, "tbl_df")
-  expect_equal(nrow(result), 6)  # 2 * 3
+  expect_equal(nrow(result), 6) # 2 * 3
   expect_true("a" %in% names(result))
   expect_true("b" %in% names(result))
 })

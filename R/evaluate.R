@@ -39,9 +39,15 @@ evaluate <- function(module, ...) {
 #'
 #' @exportS3Method
 #' @noRd
-evaluate.Module <- function(module, dataset, metric,
-                             .llm = NULL, .parallel = FALSE,
-                             .progress = TRUE, ...) {
+evaluate.Module <- function(
+  module,
+  dataset,
+  metric,
+  .llm = NULL,
+  .parallel = FALSE,
+  .progress = TRUE,
+  ...
+) {
   if (!is.data.frame(dataset)) {
     cli::cli_abort("dataset must be a data frame or tibble")
   }
@@ -66,7 +72,9 @@ evaluate.Module <- function(module, dataset, metric,
   # Safety: disallow parallel reuse of custom LLM clients
   parallel_allowed <- .parallel
   if (.parallel && !is.null(.llm)) {
-    cli::cli_warn("Parallel execution requires a NULL .llm so each worker can create its own client; falling back to sequential processing")
+    cli::cli_warn(
+      "Parallel execution requires a NULL .llm so each worker can create its own client; falling back to sequential processing"
+    )
     parallel_allowed <- FALSE
   }
 
@@ -82,7 +90,11 @@ evaluate.Module <- function(module, dataset, metric,
   )
 
   predictions <- evaluated$result
-  metadata <- if (".metadata" %in% names(evaluated)) evaluated$.metadata else replicate(nrow(evaluated), list(), simplify = FALSE)
+  metadata <- if (".metadata" %in% names(evaluated)) {
+    evaluated$.metadata
+  } else {
+    replicate(nrow(evaluated), list(), simplify = FALSE)
+  }
 
   scores <- numeric(nrow(evaluated))
   errors <- character(nrow(evaluated))
@@ -91,22 +103,25 @@ evaluate.Module <- function(module, dataset, metric,
     expected_row <- dataset[i, , drop = FALSE]
     prediction <- predictions[[i]]
 
-    scores[i] <- tryCatch({
-      score <- metric(prediction, expected_row)
-      if (is.logical(score)) {
-        as.numeric(score)
-      } else if (is.numeric(score)) {
-        score
-      } else {
-        cli::cli_abort(c(
-          "Metric must return logical or numeric values",
-          "i" = "Got {.cls {class(score)[1]}}"
-        ))
+    scores[i] <- tryCatch(
+      {
+        score <- metric(prediction, expected_row)
+        if (is.logical(score)) {
+          as.numeric(score)
+        } else if (is.numeric(score)) {
+          score
+        } else {
+          cli::cli_abort(c(
+            "Metric must return logical or numeric values",
+            "i" = "Got {.cls {class(score)[1]}}"
+          ))
+        }
+      },
+      error = function(e) {
+        errors[i] <- e$message
+        NA_real_
       }
-    }, error = function(e) {
-      errors[i] <- e$message
-      NA_real_
-    })
+    )
   }
 
   mean_score <- mean(scores, na.rm = TRUE)

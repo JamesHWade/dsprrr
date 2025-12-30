@@ -22,7 +22,7 @@ library(tarchetypes)
 
 # Set target options
 tar_option_set(
- packages = c("dsprrr", "ellmer", "tibble", "dplyr"),
+  packages = c("dsprrr", "ellmer", "tibble", "dplyr"),
   format = "rds"
 )
 
@@ -64,8 +64,14 @@ list(
           "Worst product I've bought, complete waste.",
           "Decent quality for the price."
         ),
-        target = c("positive", "negative", "neutral",
-                   "positive", "negative", "neutral")
+        target = c(
+          "positive",
+          "negative",
+          "neutral",
+          "positive",
+          "negative",
+          "neutral"
+        )
       )
     }
   ),
@@ -132,7 +138,7 @@ list(
       metric <- function(prediction, expected_row) {
         as.numeric(
           tolower(as.character(prediction)) ==
-          tolower(as.character(expected_row$target))
+            tolower(as.character(expected_row$target))
         )
       }
 
@@ -166,7 +172,7 @@ list(
       metric <- function(prediction, expected_row) {
         as.numeric(
           tolower(as.character(prediction)) ==
-          tolower(as.character(expected_row$target))
+            tolower(as.character(expected_row$target))
         )
       }
 
@@ -279,7 +285,9 @@ list(
         is_compiled = optimized_module$is_compiled(),
         best_params = if (optimized_module$is_compiled()) {
           optimized_module$state$best_params
-        } else NULL,
+        } else {
+          NULL
+        },
         timestamp = Sys.time()
       )
     }

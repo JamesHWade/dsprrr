@@ -65,8 +65,7 @@ test_that("dsp.Chat warns about extra inputs", {
   )
 
   expect_warning(
-    dsp(mock_chat, "question -> answer",
-        question = "test", extra = "ignored"),
+    dsp(mock_chat, "question -> answer", question = "test", extra = "ignored"),
     "unknown inputs"
   )
 })
@@ -100,8 +99,7 @@ test_that("dsp.Chat includes .instructions", {
     class = "Chat"
   )
 
-  dsp(mock_chat, "q -> answer", q = "test",
-      .instructions = "Be very brief")
+  dsp(mock_chat, "q -> answer", q = "test", .instructions = "Be very brief")
 
   expect_true(grepl("Be very brief", prompt_received))
 })
@@ -154,7 +152,11 @@ test_that("dsp errors with helpful message when no default Chat", {
   clear_default_chat()
 
   # Temporarily unset API keys
-  old_env <- Sys.getenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
+  old_env <- Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))
   on.exit(do.call(Sys.setenv, as.list(old_env)), add = TRUE)
   Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
 
@@ -343,7 +345,11 @@ test_that("predict.Module errors clearly when no Chat available", {
   on.exit(options(old_opt))
   clear_default_chat()
 
-  old_env <- Sys.getenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
+  old_env <- Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))
   on.exit(do.call(Sys.setenv, as.list(old_env)), add = TRUE)
   Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
 

@@ -25,11 +25,24 @@ test_that("as_vitals_solver returns vitals-compatible results", {
 
   expect_equal(result$result, list("foo", "bar"))
   expect_equal(length(result$solver_chat), 2)
-  expect_true(all(vapply(result$solver_chat, inherits, logical(1), what = "Chat")))
+  expect_true(all(vapply(
+    result$solver_chat,
+    inherits,
+    logical(1),
+    what = "Chat"
+  )))
   expect_equal(length(result$metadata), 2)
-  expect_true(all(vapply(result$metadata, function(x) "prompt" %in% names(x), logical(1))))
+  expect_true(all(vapply(
+    result$metadata,
+    function(x) "prompt" %in% names(x),
+    logical(1)
+  )))
 
-  simple_solver <- as_vitals_solver(mod, .llm = mock_llm, .return_format = "simple")
+  simple_solver <- as_vitals_solver(
+    mod,
+    .llm = mock_llm,
+    .return_format = "simple"
+  )
   simple_result <- simple_solver(inputs)
   expect_equal(simple_result$result, list("foo", "bar"))
   expect_equal(simple_result$solver_chat, list(NULL, NULL))
@@ -95,7 +108,6 @@ test_that("as_vitals_solver converts list inputs to data frame", {
 })
 
 test_that("as_vitals_solver structured format includes metadata", {
-
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
     output_type = ellmer::type_string(),
@@ -108,7 +120,11 @@ test_that("as_vitals_solver structured format includes metadata", {
     class = "Chat"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm, .return_format = "structured")
+  solver <- as_vitals_solver(
+    mod,
+    .llm = mock_llm,
+    .return_format = "structured"
+  )
   result <- solver(data.frame(text = "test", stringsAsFactors = FALSE))
 
   expect_true("latency_ms" %in% names(result$metadata[[1]]))
@@ -331,9 +347,15 @@ test_that("as_dsprrr_metric works with complex predictions", {
   metric <- as_dsprrr_metric(list_scorer)
 
   # List prediction
-  result <- metric(list(correct = TRUE, value = "test"), data.frame(target = "t"))
+  result <- metric(
+    list(correct = TRUE, value = "test"),
+    data.frame(target = "t")
+  )
   expect_equal(result, 1)
 
-  result2 <- metric(list(correct = FALSE, value = "test"), data.frame(target = "t"))
+  result2 <- metric(
+    list(correct = FALSE, value = "test"),
+    data.frame(target = "t")
+  )
   expect_equal(result2, 0)
 })

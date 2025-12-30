@@ -155,9 +155,9 @@ test_that("input() works in signature creation", {
   # Using new flexible input syntax
   sig1 <- Signature(
     inputs = list(
-      input("text"),  # defaults to string
-      input("count", "integer"),  # string shortcut
-      input("score", ellmer::type_number())  # ellmer type
+      input("text"), # defaults to string
+      input("count", "integer"), # string shortcut
+      input("score", ellmer::type_number()) # ellmer type
     ),
     output_type = ellmer::type_string(),
     instructions = "Process inputs"

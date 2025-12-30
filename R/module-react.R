@@ -32,13 +32,15 @@ ReactModule <- R6::R6Class(
     #' @param demos Optional list of demonstrations
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
-    initialize = function(signature,
-                          tools = list(),
-                          max_iterations = 10L,
-                          template = "",
-                          demos = list(),
-                          config = list(),
-                          chat = NULL) {
+    initialize = function(
+      signature,
+      tools = list(),
+      max_iterations = 10L,
+      template = "",
+      demos = list(),
+      config = list(),
+      chat = NULL
+    ) {
       super$initialize(signature, template, demos, config, chat)
 
       if (!is.list(tools)) {
@@ -47,8 +49,10 @@ ReactModule <- R6::R6Class(
 
       # Validate each tool is a ToolDef
       for (i in seq_along(tools)) {
-        if (!inherits(tools[[i]], "ellmer::ToolDef") &&
-            !inherits(tools[[i]], "ToolDef")) {
+        if (
+          !inherits(tools[[i]], "ellmer::ToolDef") &&
+            !inherits(tools[[i]], "ToolDef")
+        ) {
           cli::cli_abort(c(
             "All tools must be ellmer ToolDef objects",
             "x" = "tools[[{i}]] is a {.cls {class(tools[[i]])[1]}}"
@@ -158,20 +162,30 @@ ReactModule <- R6::R6Class(
         }
 
         # Make LLM call (non-structured to allow tool use)
-        tryCatch({
-          llm$chat(prompt, echo = "none")
-        }, error = function(e) {
-          cli::cli_abort("LLM call failed in ReAct loop: {e$message}", parent = e)
-        })
+        tryCatch(
+          {
+            llm$chat(prompt, echo = "none")
+          },
+          error = function(e) {
+            cli::cli_abort(
+              "LLM call failed in ReAct loop: {e$message}",
+              parent = e
+            )
+          }
+        )
 
         # Get the last assistant turn
         last_turn <- llm$last_turn(role = "assistant")
         all_turns <- c(all_turns, list(last_turn))
 
         # Check if there's a tool request in the response
-        has_tool_request <- any(vapply(last_turn@contents, function(c) {
-          inherits(c, "ContentToolRequest")
-        }, logical(1)))
+        has_tool_request <- any(vapply(
+          last_turn@contents,
+          function(c) {
+            inherits(c, "ContentToolRequest")
+          },
+          logical(1)
+        ))
 
         if (!has_tool_request) {
           # No more tool calls - we're done with reasoning
@@ -181,12 +195,15 @@ ReactModule <- R6::R6Class(
         # Extract tool calls for tracing
         for (content in last_turn@contents) {
           if (inherits(content, "ContentToolRequest")) {
-            tool_calls <- c(tool_calls, list(list(
-              iteration = iterations,
-              tool_name = content@name,
-              tool_id = content@id,
-              arguments = content@arguments
-            )))
+            tool_calls <- c(
+              tool_calls,
+              list(list(
+                iteration = iterations,
+                tool_name = content@name,
+                tool_id = content@id,
+                arguments = content@arguments
+              ))
+            )
           }
         }
 
@@ -196,19 +213,26 @@ ReactModule <- R6::R6Class(
       }
 
       # Get final structured output
-      result <- tryCatch({
-        llm$chat_structured(
-          "Based on the conversation above, provide your final answer.",
-          type = self$signature@output_type,
-          echo = "none"
-        )
-      }, error = function(e) {
-        cli::cli_abort("Failed to get structured output: {e$message}", parent = e)
-      })
+      result <- tryCatch(
+        {
+          llm$chat_structured(
+            "Based on the conversation above, provide your final answer.",
+            type = self$signature@output_type,
+            echo = "none"
+          )
+        },
+        error = function(e) {
+          cli::cli_abort(
+            "Failed to get structured output: {e$message}",
+            parent = e
+          )
+        }
+      )
 
       # Calculate metrics
       end_time <- Sys.time()
-      latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+      latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
+        1000
 
       # Get the final assistant turn
       final_turn <- tryCatch(
@@ -265,7 +289,11 @@ ReactModule <- R6::R6Class(
         latency_ms = latency_ms,
         iterations = iterations,
         tool_calls = tool_calls,
-        tools_used = unique(vapply(tool_calls, function(x) x$tool_name, character(1)))
+        tools_used = unique(vapply(
+          tool_calls,
+          function(x) x$tool_name,
+          character(1)
+        ))
       )
 
       # Record trace if requested
@@ -339,11 +367,17 @@ ReactModule <- R6::R6Class(
       if (trace_summary$n_traces > 0) {
         cli::cli_h3("Traces")
         cli::cli_text("  {trace_summary$n_traces} trace(s) recorded")
-        cli::cli_text("  Total tokens: {trace_summary$total_tokens} (in: {trace_summary$total_input_tokens}, out: {trace_summary$total_output_tokens})")
+        cli::cli_text(
+          "  Total tokens: {trace_summary$total_tokens} (in: {trace_summary$total_input_tokens}, out: {trace_summary$total_output_tokens})"
+        )
         if (!is.na(trace_summary$total_cost) && trace_summary$total_cost > 0) {
-          cli::cli_text("  Total cost: ${format(trace_summary$total_cost, digits = 4)}")
+          cli::cli_text(
+            "  Total cost: ${format(trace_summary$total_cost, digits = 4)}"
+          )
         }
-        cli::cli_text("  Total latency: {round(trace_summary$total_latency_ms / 1000, 2)}s")
+        cli::cli_text(
+          "  Total latency: {round(trace_summary$total_latency_ms / 1000, 2)}s"
+        )
       }
 
       invisible(self)
@@ -388,7 +422,7 @@ ReactModule <- R6::R6Class(
 
       new_module <- ReactModule$new(
         signature = new_signature,
-        tools = self$tools,  # Tools are immutable ToolDef objects
+        tools = self$tools, # Tools are immutable ToolDef objects
         max_iterations = self$max_iterations,
         template = self$template,
         demos = new_demos,

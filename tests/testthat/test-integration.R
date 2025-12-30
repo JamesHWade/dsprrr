@@ -36,8 +36,12 @@ test_that("structured output works with real LLM", {
       input(name = "text", class = S7::class_character)
     ),
     output_type = ellmer::type_object(
-      sentiment = ellmer::type_enum(values = c("positive", "negative", "neutral")),
-      confidence = ellmer::type_number(description = "Confidence score between 0 and 1")
+      sentiment = ellmer::type_enum(
+        values = c("positive", "negative", "neutral")
+      ),
+      confidence = ellmer::type_number(
+        description = "Confidence score between 0 and 1"
+      )
     ),
     instructions = "Analyze sentiment"
   )
@@ -79,10 +83,12 @@ test_that("batch processing works with real LLM", {
 
   vcr::local_cassette("integration-batch")
   llm <- ellmer::chat_openai(model = "gpt-4o-mini")
-  results <- run(pred,
-                text = c("Great!", "Terrible!"),
-                .llm = llm,
-                .progress = FALSE)
+  results <- run(
+    pred,
+    text = c("Great!", "Terrible!"),
+    .llm = llm,
+    .progress = FALSE
+  )
 
   expect_length(results, 2)
   expect_type(results, "list")
@@ -133,7 +139,9 @@ test_that("optimize_grid integrates with real LLM", {
   expect_true(mod$is_compiled())
   expect_equal(nrow(mod$state$trials), 2)
   expect_false(all(is.na(mod$state$trials$score)))
-  expect_true(is.numeric(mod$state$best_score) || is.logical(mod$state$best_score))
+  expect_true(
+    is.numeric(mod$state$best_score) || is.logical(mod$state$best_score)
+  )
 
   skip_if_not_installed("dials")
   skip_if_not_installed("yardstick")
@@ -147,7 +155,10 @@ test_that("optimize_grid integrates with real LLM", {
 
   metrics <- module_metric_summary(mod)
   expect_equal(nrow(metrics), 2)
-  expect_equal(metrics$params[[mod$state$best_trial]]$prompt_style, mod$config$prompt_style)
+  expect_equal(
+    metrics$params[[mod$state$best_trial]]$prompt_style,
+    mod$config$prompt_style
+  )
 
   yard_metrics <- module_metric_summary(
     mod,
@@ -155,7 +166,10 @@ test_that("optimize_grid integrates with real LLM", {
     truth = "target",
     estimate = "result"
   )
-  expect_true(is.null(yard_metrics$yardstick[[mod$state$best_trial]]) || inherits(yard_metrics$yardstick[[mod$state$best_trial]], "tbl_df"))
+  expect_true(
+    is.null(yard_metrics$yardstick[[mod$state$best_trial]]) ||
+      inherits(yard_metrics$yardstick[[mod$state$best_trial]], "tbl_df")
+  )
 })
 
 # --- finetune integration tests ---
@@ -174,7 +188,12 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
     inherit = dsprrr:::PredictModule,
     public = list(
       initialize = function(signature, config = list()) {
-        super$initialize(signature, template = "", demos = list(), config = config)
+        super$initialize(
+          signature,
+          template = "",
+          demos = list(),
+          config = config
+        )
       },
       forward = function(batch, .llm = NULL, trace = TRUE, ...) {
         inputs <- if (is.data.frame(batch)) {
@@ -208,7 +227,10 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
     instructions = "Classify sentiment"
   )
 
-  mod <- MockTunableModule$new(signature = sig, config = list(temperature = 0.5))
+  mod <- MockTunableModule$new(
+    signature = sig,
+    config = list(temperature = 0.5)
+  )
 
   # Create a development set with known labels
   devset <- tibble::tibble(
@@ -265,7 +287,9 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
   # Test that module_metric_summary produces yardstick-compatible output
   metric_summary <- module_metric_summary(mod)
   expect_equal(nrow(metric_summary), 5)
-  expect_true(all(c("trial_id", "score", "mean_score", "params") %in% names(metric_summary)))
+  expect_true(all(
+    c("trial_id", "score", "mean_score", "params") %in% names(metric_summary)
+  ))
 
   # Verify trial structure is compatible with tune_race_anova expectations
   # The trials tibble should have the structure finetune expects
@@ -285,8 +309,7 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
   expect_true("temperature" %in% names(grid))
 })
 
-test_that("module_parameter_set works with finetune grid functions",
-{
+test_that("module_parameter_set works with finetune grid functions", {
   skip_on_cran()
   skip_if_not_installed("finetune")
   skip_if_not_installed("dials")
@@ -329,7 +352,7 @@ test_that("module_parameter_set works with finetune grid functions",
 
   # Verify it works with finetune's grid functions
   regular_grid <- dials::grid_regular(param_set, levels = 3)
-  expect_equal(nrow(regular_grid), 9)  # 3 * 3
+  expect_equal(nrow(regular_grid), 9) # 3 * 3
 
   random_grid <- dials::grid_random(param_set, size = 10)
   expect_equal(nrow(random_grid), 10)

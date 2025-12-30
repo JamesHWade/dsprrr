@@ -39,7 +39,7 @@ test_that("Teleprompter validates properties", {
 test_that("LabeledFewShot can be created and validated", {
   tp <- LabeledFewShot()
   expect_s3_class(tp, "dsprrr::LabeledFewShot")
-  expect_s3_class(tp, "dsprrr::Teleprompter")  # Inherits from Teleprompter
+  expect_s3_class(tp, "dsprrr::Teleprompter") # Inherits from Teleprompter
   expect_equal(tp@k, 4L)
   expect_true(tp@sample)
   expect_equal(tp@seed, 123L)
@@ -86,7 +86,10 @@ test_that("LabeledFewShot compile works", {
   expect_true(is.list(demo1))
   expect_true("inputs" %in% names(demo1))
   expect_true("output" %in% names(demo1))
-  expect_equal(demo1$inputs$text, trainset$text[demo1$inputs$text %in% trainset$text][1])
+  expect_equal(
+    demo1$inputs$text,
+    trainset$text[demo1$inputs$text %in% trainset$text][1]
+  )
 
   # Empty trainset
   empty_trainset <- data.frame(text = character(), label = character())
@@ -162,8 +165,18 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
     "MockVariantModule",
     inherit = dsprrr:::PredictModule,
     public = list(
-      initialize = function(signature, template = "", demos = list(), config = list()) {
-        super$initialize(signature, template = template, demos = demos, config = config)
+      initialize = function(
+        signature,
+        template = "",
+        demos = list(),
+        config = list()
+      ) {
+        super$initialize(
+          signature,
+          template = template,
+          demos = demos,
+          config = config
+        )
         self$config$prompt_style <- self$config$prompt_style %||% "baseline"
       },
       forward = function(batch, .llm = NULL, trace = TRUE, ...) {
@@ -283,7 +296,7 @@ test_that("Module state management methods work", {
 
   # Verify deep copy is independent
   copy$demos[[1]]$output <- "modified"
-  expect_equal(module$demos[[1]]$output, "result")  # Original unchanged
+  expect_equal(module$demos[[1]]$output, "result") # Original unchanged
 
   # Test is_compiled
   expect_true(module$is_compiled())
