@@ -144,6 +144,7 @@ test_that("format_output handles different output types", {
 })
 
 test_that("get_default_llm returns ellmer chat object", {
+
   # Create a mock module
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
@@ -152,8 +153,12 @@ test_that("get_default_llm returns ellmer chat object", {
   mod <- module(signature = sig, type = "predict")
 
   # Test with module that has no stored chat - should auto-detect
-  llm <- dsprrr:::get_default_llm(mod)
-  expect_true(inherits(llm, "Chat"))
+
+  # Skip auto-detect test if no API credentials available
+  if (has_ellmer_credentials()) {
+    llm <- dsprrr:::get_default_llm(mod)
+    expect_true(inherits(llm, "Chat"))
+  }
 
   # Test with module that has chat stored
   mock_llm <- list(chat = function(...) "test")
