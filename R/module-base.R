@@ -690,6 +690,145 @@ Module <- R6::R6Class(
     },
 
     #' @description
+    #' Inspect module state and recent activity
+    #'
+    #' Shows detailed information about the module including its signature,
+
+    #' configuration, compilation status, and the last prompt sent to the LLM.
+    #' Useful for debugging and understanding module behavior.
+    #'
+    #' @return Invisibly returns self
+    inspect = function() {
+      cli::cli_h2("Module Inspection")
+
+      # Show signature with inputs and output
+      cli::cli_h3("Signature")
+      sig <- self$signature
+      input_names <- vapply(sig@inputs, function(x) x$name, character(1))
+      if (length(input_names) > 0) {
+        cli::cli_text("  Inputs: {.field {input_names}}")
+      }
+      cli::cli_text("  Output type: {.cls {class(sig@output_type)[1]}}")
+      if (nzchar(sig@instructions)) {
+        instructions_preview <- if (nchar(sig@instructions) > 80) {
+          paste0(substr(sig@instructions, 1, 80), "...")
+        } else {
+          sig@instructions
+        }
+        cli::cli_text("  Instructions: {.emph {instructions_preview}}")
+      }
+
+      # Show configuration
+      if (length(self$config) > 0) {
+        cli::cli_h3("Configuration")
+        for (name in names(self$config)) {
+          val <- self$config[[name]]
+          if (is.null(val)) {
+            cli::cli_text("  {name}: {.val NULL}")
+          } else if (is.atomic(val) && length(val) == 1) {
+            cli::cli_text("  {name}: {.val {val}}")
+          } else {
+            cli::cli_text("  {name}: {.cls {class(val)[1]}}")
+          }
+        }
+      }
+
+      # Show chat/LLM info if available
+      if (!is.null(self$chat)) {
+        cli::cli_h3("Chat")
+        cli::cli_text("  {.cls {class(self$chat)[1]}} attached")
+      }
+
+      # Show compilation status
+      cli::cli_h3("State")
+      if (self$is_compiled()) {
+        cli::cli_text("  {cli::symbol$tick} Compiled")
+        if (!is.null(self$state$best_score)) {
+          cli::cli_text("  Best score: {.val {round(self$state$best_score, 3)}}")
+        }
+      } else {
+        cli::cli_text("  {cli::symbol$cross} Not compiled")
+      }
+
+      # Show trace summary
+      trace_summary <- self$trace_summary()
+      cli::cli_text(
+        "  Traces: {trace_summary$n_traces} call(s), {trace_summary$total_tokens} tokens"
+      )
+      if (
+        !is.null(trace_summary$total_cost) &&
+          !is.na(trace_summary$total_cost) &&
+          trace_summary$total_cost > 0
+      ) {
+        cli::cli_text(
+          "  Cost: ${format(trace_summary$total_cost, digits = 4)}"
+        )
+      }
+
+      # Show last prompt if available
+      if (length(self$state$traces) > 0) {
+        cli::cli_h3("Last Prompt")
+        last_trace <- self$state$traces[[length(self$state$traces)]]
+
+        # Try to extract prompt
+        prompt_text <- NULL
+        if (!is.null(last_trace$prompt)) {
+          prompt_text <- last_trace$prompt
+        } else if (!is.null(last_trace$user_turn)) {
+          # Try to extract from ellmer Turn
+          tryCatch(
+            {
+              if (!is.null(last_trace$user_turn@contents) &&
+                length(last_trace$user_turn@contents) > 0) {
+                contents <- last_trace$user_turn@contents
+                texts <- vapply(
+                  contents,
+                  function(c) {
+                    if (inherits(c, "ContentText")) c@text else ""
+                  },
+                  character(1)
+                )
+                prompt_text <- paste(texts, collapse = "\n")
+              }
+            },
+            error = function(e) NULL
+          )
+        }
+
+        if (!is.null(prompt_text) && nzchar(prompt_text)) {
+          # Truncate if very long
+          if (nchar(prompt_text) > 300) {
+            prompt_text <- paste0(substr(prompt_text, 1, 300), "\n... (truncated)")
+          }
+          cli::cat_line(prompt_text)
+        } else {
+          cli::cli_text("{.emph Prompt not available}")
+        }
+
+        # Show response preview
+        cli::cli_h3("Last Response")
+        if (!is.null(last_trace$output)) {
+          response_text <- if (is.character(last_trace$output)) {
+            last_trace$output
+          } else if (is.list(last_trace$output)) {
+            jsonlite::toJSON(last_trace$output, auto_unbox = TRUE, pretty = FALSE)
+          } else {
+            as.character(last_trace$output)
+          }
+
+          if (nchar(response_text) > 200) {
+            response_text <- paste0(substr(response_text, 1, 200), "...")
+          }
+          cli::cat_line(response_text)
+        } else {
+          cli::cli_text("{.emph Response not available}")
+        }
+      }
+
+      invisible(self)
+    },
+
+    #' @description
     #' Run the module asynchronously
     #'
     #' Returns a promise that resolves to the structured output.

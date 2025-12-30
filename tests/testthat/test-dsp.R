@@ -66,7 +66,7 @@ test_that("dsp.Chat warns about extra inputs", {
 
   expect_warning(
     dsp(mock_chat, "question -> answer", question = "test", extra = "ignored"),
-    "unknown inputs"
+    "unknown input"
   )
 })
 

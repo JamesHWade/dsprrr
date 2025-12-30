@@ -61,8 +61,14 @@ run.Module <- function(
   .verbose = FALSE,
   .parallel = FALSE,
   .progress = TRUE,
-  .return_format = "simple"
+  .return_format = "simple",
+  .show_prompt = FALSE
 ) {
+  # Show prompt preview if requested
+  if (.show_prompt) {
+    show_prompt_preview(module)
+  }
+
   # Delegate to the module's run method
   module$run(
     ...,
@@ -82,8 +88,14 @@ run.PredictModule <- function(
   .verbose = FALSE,
   .parallel = FALSE,
   .progress = TRUE,
-  .return_format = "simple"
+  .return_format = "simple",
+  .show_prompt = FALSE
 ) {
+  # Show prompt preview if requested
+  if (.show_prompt) {
+    show_prompt_preview(module)
+  }
+
   # Capture input arguments
   inputs <- list(...)
 
@@ -787,4 +799,42 @@ run_dataset.Module <- function(
   }
 
   tibble::as_tibble(dataset)
+}
+
+# Internal: Show prompt preview before LLM call
+show_prompt_preview <- function(module) {
+  cli::cli_h3("Prompt Preview")
+
+  # Show instructions
+  instructions <- module$signature@instructions
+  if (nzchar(instructions)) {
+    cli::cli_text("{.emph Instructions:}")
+    # Truncate if very long
+    if (nchar(instructions) > 200) {
+      instructions <- paste0(substr(instructions, 1, 200), "...")
+    }
+    cli::cat_line(instructions)
+    cli::cat_line()
+  }
+
+  # Show input fields expected
+  input_names <- vapply(
+    module$signature@inputs,
+    function(x) x$name,
+    character(1)
+  )
+  if (length(input_names) > 0) {
+    cli::cli_text("{.emph Input fields:} {.field {input_names}}")
+  }
+
+  # Show output type
+  output_type <- module$signature@output_type
+  cli::cli_text("{.emph Output type:} {.cls {class(output_type)[1]}}")
+
+  # Show if module has demos
+  if (inherits(module, "PredictModule") && length(module$demos) > 0) {
+    cli::cli_text("{.emph Demos:} {length(module$demos)} example(s)")
+  }
+
+  cli::cat_line()
 }
