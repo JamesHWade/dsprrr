@@ -18,3 +18,4 @@ vignettes/*.R
 # vcr cassettes (contain API responses)
 vignettes/_vcr/*.yml
 tests/testthat/_vcr/*.yml
+gh-issue-advanced-modules.md
