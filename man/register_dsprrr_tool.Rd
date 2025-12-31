@@ -4,7 +4,13 @@
 \alias{register_dsprrr_tool}
 \title{Register a DSPrrr Module as a Tool in a Chat}
 \usage{
-register_dsprrr_tool(chat, module, name = NULL, description = NULL)
+register_dsprrr_tool(
+  chat,
+  module,
+  name = NULL,
+  description = NULL,
+  .llm = NULL
+)
 }
 \arguments{
 \item{chat}{An ellmer Chat object.}
@@ -14,6 +20,9 @@ register_dsprrr_tool(chat, module, name = NULL, description = NULL)
 \item{name}{Optional tool name.}
 
 \item{description}{Optional tool description.}
+
+\item{.llm}{Optional ellmer Chat object for the module to use when called.
+If not provided, the module's stored chat or default chat is used.}
 }
 \value{
 The Chat object (invisibly), with the tool registered.

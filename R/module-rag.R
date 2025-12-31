@@ -276,15 +276,34 @@ RAGModule <- R6::R6Class(
 
     # Retrieve context from store or retriever
     retrieve_context = function(query) {
+      fail_on_error <- self$config$fail_on_retrieval_error %||% FALSE
+      retrieval_error <- NULL
+
       if (!is.null(self$retriever)) {
         # Use custom retriever
         docs <- tryCatch(
           self$retriever(query, k = self$k),
           error = function(e) {
-            cli::cli_warn("Retriever failed: {e$message}")
+            retrieval_error <<- e
             character(0)
           }
         )
+
+        if (!is.null(retrieval_error)) {
+          if (fail_on_error) {
+            cli::cli_abort(c(
+              "Retriever failed",
+              "x" = retrieval_error$message,
+              "i" = "Set {.code config$fail_on_retrieval_error = FALSE} to continue with empty context"
+            ), parent = retrieval_error)
+          } else {
+            cli::cli_warn(c(
+              "Retriever failed, continuing with empty context",
+              "x" = retrieval_error$message,
+              "i" = "Set {.code config$fail_on_retrieval_error = TRUE} to fail on errors"
+            ))
+          }
+        }
       } else if (!is.null(self$store)) {
         # Check if ragnar is available
         if (!requireNamespace("ragnar", quietly = TRUE)) {
@@ -308,12 +327,31 @@ RAGModule <- R6::R6Class(
             }
           },
           error = function(e) {
-            cli::cli_warn("ragnar retrieval failed: {e$message}")
+            retrieval_error <<- e
             character(0)
           }
         )
+
+        if (!is.null(retrieval_error)) {
+          if (fail_on_error) {
+            cli::cli_abort(c(
+              "ragnar retrieval failed",
+              "x" = retrieval_error$message,
+              "i" = "Set {.code config$fail_on_retrieval_error = FALSE} to continue with empty context"
+            ), parent = retrieval_error)
+          } else {
+            cli::cli_warn(c(
+              "ragnar retrieval failed, continuing with empty context",
+              "x" = retrieval_error$message,
+              "i" = "Set {.code config$fail_on_retrieval_error = TRUE} to fail on errors"
+            ))
+          }
+        }
       } else {
-        cli::cli_warn("No store or retriever configured, using empty context")
+        cli::cli_warn(c(
+          "No store or retriever configured",
+          "i" = "RAG module requires a {.arg store} or {.arg retriever}"
+        ))
         docs <- character(0)
       }
 

@@ -18,7 +18,8 @@ instructions or a generated description.}
 If not provided, the module's stored chat or default chat is used.}
 }
 \value{
-A function suitable for use with \code{ellmer::Chat$register_tool()}.
+A \code{ToolDef} object from ellmer, suitable for use with
+\code{ellmer::Chat$register_tool()}.
 }
 \description{
 Creates an ellmer-compatible tool from a dsprrr module. This allows modules

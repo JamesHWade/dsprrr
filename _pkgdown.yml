@@ -199,7 +199,6 @@ reference:
     contents:
     - as_ellmer_tool
     - register_dsprrr_tool
-    - print.dsprrr_tool
 
   - title: RAG Integration
     desc: Retrieval-Augmented Generation with ragnar

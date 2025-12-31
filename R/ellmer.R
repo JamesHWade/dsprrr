@@ -12,7 +12,8 @@
 #' @param .llm Optional ellmer Chat object for the module to use when called.
 #'   If not provided, the module's stored chat or default chat is used.
 #'
-#' @return A function suitable for use with `ellmer::Chat$register_tool()`.
+#' @return A `ToolDef` object from ellmer, suitable for use with
+#'   `ellmer::Chat$register_tool()`.
 #'
 #' @export
 #' @examples
@@ -45,7 +46,6 @@ as_ellmer_tool <- function(
       "x" = "Got {.cls {class(module)[1]}}",
       "i" = "Create a module with {.code module()} or {.code as_module()}"
     ))
-
   }
 
   # Generate name from signature if not provided
@@ -81,7 +81,7 @@ as_ellmer_tool <- function(
     }
   }
 
-  # Build argument specification from signature inputs
+  # Build argument specification for ellmer::tool() from signature inputs
   arg_specs <- list()
   sig_inputs <- module$signature@inputs
   for (input_spec in sig_inputs) {
@@ -89,48 +89,34 @@ as_ellmer_tool <- function(
     input_desc <- input_spec$description %||% paste("The", input_name, "value")
     input_type <- input_spec$type
 
-    # Map ellmer types to JSON schema types
-    json_type <- if (inherits(input_type, "ellmer::TypeString")) {
-      "string"
-    } else if (inherits(input_type, "ellmer::TypeNumber")) {
-      "number"
-    } else if (inherits(input_type, "ellmer::TypeInteger")) {
-      "integer"
-    } else if (inherits(input_type, "ellmer::TypeBoolean")) {
-      "boolean"
-    } else if (inherits(input_type, "ellmer::TypeEnum")) {
-      "string"  # Enums are strings with constraints
-    } else {
-      "string"  # Default to string
-    }
-
-    arg_specs[[input_name]] <- list(
-      type = json_type,
-      description = input_desc
+    # Map to ellmer type_ functions based on input type class
+    type_class <- class(input_type)[1]
+    ellmer_type <- switch(
+      type_class,
+      "ellmer_type_number" = ellmer::type_number(input_desc),
+      "ellmer_type_integer" = ellmer::type_integer(input_desc),
+      "ellmer_type_boolean" = ellmer::type_boolean(input_desc),
+      # Default to string for unknown types
+      ellmer::type_string(input_desc)
     )
+
+    arg_specs[[input_name]] <- ellmer_type
   }
 
   # Capture module and llm in closure
   captured_module <- module
   captured_llm <- .llm
 
-  # Create the tool function
+  # Create the tool function that will be called by ellmer
   tool_fn <- function(...) {
     inputs <- list(...)
 
-    # Run the module
-    result <- tryCatch(
-      {
-        run(
-          captured_module,
-          !!!inputs,
-          .llm = captured_llm,
-          .return_format = "simple"
-        )
-      },
-      error = function(e) {
-        paste("Error:", e$message)
-      }
+    # Run the module - let errors propagate so the LLM can handle them
+    result <- run(
+      captured_module,
+      !!!inputs,
+      .llm = captured_llm,
+      .return_format = "simple"
     )
 
     # Format result for LLM consumption
@@ -143,15 +129,13 @@ as_ellmer_tool <- function(
     }
   }
 
-  # Attach metadata for ellmer tool registration
-  attr(tool_fn, "name") <- name
-  attr(tool_fn, "description") <- description
-  attr(tool_fn, "arguments") <- arg_specs
-
-  # Set class for ellmer compatibility
-  class(tool_fn) <- c("dsprrr_tool", "function")
-
-  tool_fn
+  # Create the ellmer ToolDef using ellmer::tool()
+  ellmer::tool(
+    tool_fn,
+    name = name,
+    description = description,
+    arguments = arg_specs
+  )
 }
 
 #' Register a DSPrrr Module as a Tool in a Chat
@@ -164,6 +148,8 @@ as_ellmer_tool <- function(
 #' @param module A DSPrrr module.
 #' @param name Optional tool name.
 #' @param description Optional tool description.
+#' @param .llm Optional ellmer Chat object for the module to use when called.
+#'   If not provided, the module's stored chat or default chat is used.
 #'
 #' @return The Chat object (invisibly), with the tool registered.
 #'
@@ -183,7 +169,8 @@ register_dsprrr_tool <- function(
   chat,
   module,
   name = NULL,
-  description = NULL
+  description = NULL,
+  .llm = NULL
 ) {
   if (!inherits(chat, "Chat")) {
     cli::cli_abort(c(
@@ -192,36 +179,18 @@ register_dsprrr_tool <- function(
     ))
   }
 
-  tool <- as_ellmer_tool(module, name = name, description = description)
+  # Create the ellmer ToolDef from the module
 
-  # Register with ellmer
-  # ellmer expects tools registered via register_tool() method
-  chat$register_tool(
-    tool,
-    name = attr(tool, "name"),
-    description = attr(tool, "description")
+  tool_def <- as_ellmer_tool(
+    module,
+    name = name,
+    description = description,
+    .llm = .llm
   )
+
+  # Register the ToolDef with the Chat
+  chat$register_tool(tool_def)
 
   invisible(chat)
 }
 
-#' Print method for dsprrr_tool
-#' @param x A dsprrr_tool object
-#' @param ... Additional arguments (unused)
-#' @export
-print.dsprrr_tool <- function(x, ...) {
-  cli::cli_h3("DSPrrr Tool")
-  cli::cli_text("{.field Name}: {attr(x, 'name')}")
-  cli::cli_text("{.field Description}: {attr(x, 'description')}")
-
-  args <- attr(x, "arguments")
-  if (length(args) > 0) {
-    cli::cli_text("{.field Arguments}:")
-    for (name in names(args)) {
-      arg <- args[[name]]
-      cli::cli_text("  {.field {name}} ({arg$type}): {arg$description}")
-    }
-  }
-
-  invisible(x)
-}

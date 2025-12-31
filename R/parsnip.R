@@ -342,20 +342,55 @@ fit_llm_predict <- function(
 #' @keywords internal
 #' @export
 predict_llm_class <- function(object, new_data, ...) {
+  # Validate inputs
+  if (!inherits(object, "Module")) {
+    cli::cli_abort(c(
+      "{.arg object} must be a dsprrr Module",
+      "x" = "Got {.cls {class(object)[1]}}"
+    ))
+  }
+
+  if (!is.data.frame(new_data)) {
+    cli::cli_abort(c(
+      "{.arg new_data} must be a data frame",
+      "x" = "Got {.cls {class(new_data)[1]}}"
+    ))
+  }
+
   # Get predictions using the module
   input_names <- attr(object, "input_names") %||% names(new_data)
 
-  results <- run_dataset(
-    object,
-    new_data[input_names],
-    .progress = FALSE,
-    .return_format = "simple"
+  # Check that required columns exist
+
+  missing_cols <- setdiff(input_names, names(new_data))
+  if (length(missing_cols) > 0) {
+    cli::cli_abort(c(
+      "Required columns missing from {.arg new_data}",
+      "x" = "Missing: {.field {missing_cols}}"
+    ))
+  }
+
+  results <- tryCatch(
+    run_dataset(
+      object,
+      new_data[input_names],
+      .progress = FALSE,
+      .return_format = "simple"
+    ),
+    error = function(e) {
+      cli::cli_abort(c(
+        "Failed to generate predictions",
+        "x" = conditionMessage(e)
+      ), parent = e)
+    }
   )
 
-  # Extract predictions
+  # Extract predictions with error handling
   preds <- vapply(results$result, function(x) {
     if (is.list(x) && !is.null(x$output)) {
       as.character(x$output)
+    } else if (is.na(x) || identical(x, NA_character_)) {
+      NA_character_
     } else {
       as.character(x)
     }
@@ -377,21 +412,57 @@ predict_llm_class <- function(object, new_data, ...) {
 #' @keywords internal
 #' @export
 predict_llm_numeric <- function(object, new_data, ...) {
+  # Validate inputs
+  if (!inherits(object, "Module")) {
+    cli::cli_abort(c(
+      "{.arg object} must be a dsprrr Module",
+      "x" = "Got {.cls {class(object)[1]}}"
+    ))
+  }
+
+  if (!is.data.frame(new_data)) {
+    cli::cli_abort(c(
+      "{.arg new_data} must be a data frame",
+      "x" = "Got {.cls {class(new_data)[1]}}"
+    ))
+  }
+
   input_names <- attr(object, "input_names") %||% names(new_data)
 
-  results <- run_dataset(
-    object,
-    new_data[input_names],
-    .progress = FALSE,
-    .return_format = "simple"
+  # Check that required columns exist
+  missing_cols <- setdiff(input_names, names(new_data))
+  if (length(missing_cols) > 0) {
+    cli::cli_abort(c(
+      "Required columns missing from {.arg new_data}",
+      "x" = "Missing: {.field {missing_cols}}"
+    ))
+  }
+
+  results <- tryCatch(
+    run_dataset(
+      object,
+      new_data[input_names],
+      .progress = FALSE,
+      .return_format = "simple"
+    ),
+    error = function(e) {
+      cli::cli_abort(c(
+        "Failed to generate predictions",
+        "x" = conditionMessage(e)
+      ), parent = e)
+    }
   )
 
-  # Extract numeric predictions
+  # Extract numeric predictions with error handling
   preds <- vapply(results$result, function(x) {
     if (is.list(x) && !is.null(x$output)) {
-      as.numeric(x$output)
+      val <- suppressWarnings(as.numeric(x$output))
+      if (is.na(val)) NA_real_ else val
+    } else if (is.na(x)) {
+      NA_real_
     } else {
-      as.numeric(x)
+      val <- suppressWarnings(as.numeric(x))
+      if (is.na(val)) NA_real_ else val
     }
   }, numeric(1))
 

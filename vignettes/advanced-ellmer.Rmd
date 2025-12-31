@@ -22,7 +22,7 @@ library(ellmer)
 
 ## Introduction
 
-dsprrr is built on top of ellmer, Anthropic's R package for LLM interactions. This vignette explores advanced integration patterns that leverage ellmer's full capabilities.
+dsprrr is built on top of ellmer, Posit's R package for LLM interactions. This vignette explores advanced integration patterns that leverage ellmer's full capabilities.
 
 ## Parallel Processing
 
