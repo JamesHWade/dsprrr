@@ -27,6 +27,12 @@
     <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
     <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Integration</a></li>
     <li><a class="dropdown-item" href="../articles/orchestration.html">Production Orchestration</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Ecosystem</h6></li>
+    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">RAG Workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels Integration</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -598,6 +604,133 @@
 
         </dt>
         <dd>Adapt a vitals scorer for use as a dsprrr metric</dd>
+      </dl></div><div class="section level2">
+      <h2 id="ellmer-integration">ellmer Integration<a class="anchor" aria-label="anchor" href="#ellmer-integration"></a></h2>
+
+      <div class="section-desc"><p>Deep integration with ellmer</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>
+
+        </dt>
+        <dd>Convert a DSPrrr Module to an ellmer Tool</dd>
+
+        <dt>
+
+          <code><a href="register_dsprrr_tool.html">register_dsprrr_tool()</a></code>
+
+        </dt>
+        <dd>Register a DSPrrr Module as a Tool in a Chat</dd>
+      </dl></div><div class="section level2">
+      <h2 id="rag-integration">RAG Integration<a class="anchor" aria-label="anchor" href="#rag-integration"></a></h2>
+
+      <div class="section-desc"><p>Retrieval-Augmented Generation with ragnar</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="rag_module.html">rag_module()</a></code>
+
+        </dt>
+        <dd>Create a RAG Module</dd>
+
+        <dt>
+
+          <code><a href="ragnar_tool.html">ragnar_tool()</a></code>
+
+        </dt>
+        <dd>Create a ragnar Search Tool for ReAct Modules</dd>
+
+        <dt>
+
+          <code><a href="create_search_tool.html">create_search_tool()</a></code>
+
+        </dt>
+        <dd>Create a Semantic Search Tool from Documents</dd>
+
+        <dt>
+
+          <code><a href="print.ragnar_tool.html">print(<i>&lt;ragnar_tool&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print method for ragnar_tool</dd>
+      </dl></div><div class="section level2">
+      <h2 id="tidymodels-integration">tidymodels Integration<a class="anchor" aria-label="anchor" href="#tidymodels-integration"></a></h2>
+
+      <div class="section-desc"><p>parsnip model specification and dials parameters</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="llm_predict.html">llm_predict()</a></code>
+
+        </dt>
+        <dd>LLM Prediction Model Specification</dd>
+
+        <dt>
+
+          <code><a href="register_dsprrr_engine.html">register_dsprrr_engine()</a></code>
+
+        </dt>
+        <dd>Register dsprrr Engine with parsnip</dd>
+
+        <dt>
+
+          <code><a href="temperature.html">temperature()</a></code>
+
+        </dt>
+        <dd>Temperature Parameter for dials</dd>
+
+        <dt>
+
+          <code><a href="top_p.html">top_p()</a></code>
+
+        </dt>
+        <dd>Top-p Parameter for dials</dd>
+
+        <dt>
+
+          <code><a href="reasoning_effort.html">reasoning_effort()</a></code>
+
+        </dt>
+        <dd>Reasoning Effort Parameter for dials</dd>
+      </dl></div><div class="section level2">
+      <h2 id="model-utilities">Model Utilities<a class="anchor" aria-label="anchor" href="#model-utilities"></a></h2>
+
+      <div class="section-desc"><p>Model detection and provider defaults</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="is_reasoning_model.html">is_reasoning_model()</a></code>
+
+        </dt>
+        <dd>Check if a model is a reasoning model</dd>
+
+        <dt>
+
+          <code><a href="provider_defaults.html">provider_defaults()</a></code>
+
+        </dt>
+        <dd>Get default parameters for a provider</dd>
       </dl></div><div class="section level2">
       <h2 id="utilities">Utilities<a class="anchor" aria-label="anchor" href="#utilities"></a></h2>
 

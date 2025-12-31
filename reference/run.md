@@ -41,6 +41,15 @@ run(module, ...)
       worker unless a custom `.llm` is supplied (in which case the call
       falls back to sequential execution).
 
+  .parallel_method
+
+  :   Character, either "mirai" (default) or "ellmer". "mirai" uses
+      mirai for multi-process parallelism (one LLM client per worker).
+      "ellmer" uses ellmer's
+      [`parallel_chat_structured()`](https://ellmer.tidyverse.org/reference/parallel_chat.html)
+      for native async HTTP parallelism (more efficient, single
+      process).
+
   .progress
 
   :   Logical indicating whether to show progress bar for batch

@@ -23,3 +23,16 @@ Deploy and orchestrate LLM workflows
 
 - [Production Workflows with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/orchestration.md):
+
+### Ecosystem
+
+Integration with the R ecosystem
+
+- [Working with Reasoning
+  Models](https://jameshwade.github.io/dsprrr/articles/reasoning-models.md):
+- [Advanced ellmer
+  Integration](https://jameshwade.github.io/dsprrr/articles/advanced-ellmer.md):
+- [RAG Workflows with
+  ragnar](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md):
+- [tidymodels
+  Integration](https://jameshwade.github.io/dsprrr/articles/tidymodels-integration.md):

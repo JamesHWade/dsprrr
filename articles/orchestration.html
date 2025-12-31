@@ -49,6 +49,12 @@
     <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
     <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Integration</a></li>
     <li><a class="dropdown-item" href="../articles/orchestration.html">Production Orchestration</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Ecosystem</h6></li>
+    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">RAG Workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels Integration</a></li>
   </ul>
 </li>
       </ul>
@@ -269,10 +275,10 @@ usage, prompts, and outputs. Pinning traces enables:</p>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot latency over time</span></span>
-<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">traces_df</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">timestamp</span>, y <span class="op">=</span> <span class="va">latency_ms</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu">geom_smooth</span><span class="op">(</span>method <span class="op">=</span> <span class="st">"loess"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Request Latency Over Time"</span>, y <span class="op">=</span> <span class="st">"Latency (ms)"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">traces_df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">timestamp</span>, y <span class="op">=</span> <span class="va">latency_ms</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_smooth.html" class="external-link">geom_smooth</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"loess"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Request Latency Over Time"</span>, y <span class="op">=</span> <span class="st">"Latency (ms)"</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">

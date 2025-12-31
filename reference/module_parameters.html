@@ -3,11 +3,17 @@
 module. Numeric parameters (e.g., temperature, top_p) derive their ranges
 from observed optimisation trials (if present) or fall back to sensible
 defaults. Qualitative parameters (e.g., prompt_style) are converted to
-value sets."><meta property="og:description" content="Construct a dials::parameters() set from the information available on a
+value sets.
+For reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series), temperature and
+top_p are automatically excluded since these models don't support them.
+Instead, reasoning_effort is included as a tunable parameter."><meta property="og:description" content="Construct a dials::parameters() set from the information available on a
 module. Numeric parameters (e.g., temperature, top_p) derive their ranges
 from observed optimisation trials (if present) or fall back to sensible
 defaults. Qualitative parameters (e.g., prompt_style) are converted to
-value sets."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.png"></head><body>
+value sets.
+For reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series), temperature and
+top_p are automatically excluded since these models don't support them.
+Instead, reasoning_effort is included as a tunable parameter."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -35,6 +41,12 @@ value sets."><meta property="og:image" content="https://jameshwade.github.io/dsp
     <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
     <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Integration</a></li>
     <li><a class="dropdown-item" href="../articles/orchestration.html">Production Orchestration</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Ecosystem</h6></li>
+    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">RAG Workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels Integration</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -63,12 +75,16 @@ module. Numeric parameters (e.g., <code>temperature</code>, <code>top_p</code>) 
 from observed optimisation trials (if present) or fall back to sensible
 defaults. Qualitative parameters (e.g., <code>prompt_style</code>) are converted to
 value sets.</p>
+<p>For reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series), <code>temperature</code> and
+<code>top_p</code> are automatically excluded since these models don't support them.
+Instead, <code>reasoning_effort</code> is included as a tunable parameter.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">module_parameters</span><span class="op">(</span></span>
 <span>  <span class="va">module</span>,</span>
+<span>  model <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  include <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exclude <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"instructions"</span>, <span class="st">"instructions_suffix"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -80,6 +96,12 @@ value sets.</p>
 
 <dl><dt id="arg-module">module<a class="anchor" aria-label="anchor" href="#arg-module"></a></dt>
 <dd><p>A DSPrrr module (created with <code><a href="module.html">module()</a></code>).</p></dd>
+
+
+<dt id="arg-model">model<a class="anchor" aria-label="anchor" href="#arg-model"></a></dt>
+<dd><p>Optional model name string. When provided, parameters are
+filtered based on model capabilities (e.g., reasoning models exclude
+<code>temperature</code>/<code>top_p</code> and include <code>reasoning_effort</code>).</p></dd>
 
 
 <dt id="arg-include">include<a class="anchor" aria-label="anchor" href="#arg-include"></a></dt>
@@ -109,6 +131,9 @@ Returns an empty parameter set when no tunables are discovered.</p>
 <span class="r-in"><span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">module_parameters</span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># For reasoning models, temperature is excluded</span></span></span>
+<span class="r-in"><span><span class="fu">module_parameters</span><span class="op">(</span><span class="va">mod</span>, model <span class="op">=</span> <span class="st">"o3"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

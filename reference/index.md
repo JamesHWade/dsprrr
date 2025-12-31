@@ -197,6 +197,52 @@ Integration with vitals package
 - [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
   : Adapt a vitals scorer for use as a dsprrr metric
 
+## ellmer Integration
+
+Deep integration with ellmer
+
+- [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
+  : Convert a DSPrrr Module to an ellmer Tool
+- [`register_dsprrr_tool()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_tool.md)
+  : Register a DSPrrr Module as a Tool in a Chat
+
+## RAG Integration
+
+Retrieval-Augmented Generation with ragnar
+
+- [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md)
+  : Create a RAG Module
+- [`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md)
+  : Create a ragnar Search Tool for ReAct Modules
+- [`create_search_tool()`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md)
+  : Create a Semantic Search Tool from Documents
+- [`print(`*`<ragnar_tool>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.ragnar_tool.md)
+  : Print method for ragnar_tool
+
+## tidymodels Integration
+
+parsnip model specification and dials parameters
+
+- [`llm_predict()`](https://jameshwade.github.io/dsprrr/reference/llm_predict.md)
+  : LLM Prediction Model Specification
+- [`register_dsprrr_engine()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_engine.md)
+  : Register dsprrr Engine with parsnip
+- [`temperature()`](https://jameshwade.github.io/dsprrr/reference/temperature.md)
+  : Temperature Parameter for dials
+- [`top_p()`](https://jameshwade.github.io/dsprrr/reference/top_p.md) :
+  Top-p Parameter for dials
+- [`reasoning_effort()`](https://jameshwade.github.io/dsprrr/reference/reasoning_effort.md)
+  : Reasoning Effort Parameter for dials
+
+## Model Utilities
+
+Model detection and provider defaults
+
+- [`is_reasoning_model()`](https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.md)
+  : Check if a model is a reasoning model
+- [`provider_defaults()`](https://jameshwade.github.io/dsprrr/reference/provider_defaults.md)
+  : Get default parameters for a provider
+
 ## Utilities
 
 Helper functions

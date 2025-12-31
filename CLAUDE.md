@@ -35,6 +35,7 @@ devtools::install()            # Install package locally
 ``` r
 devtools::build_readme()       # Rebuild README.md from README.Rmd
 # For vignettes, use build_rmd() - DO NOT use devtools::build_vignettes()
+pkgdown::build_site()          # Build pkgdown site
 ```
 
 ### Continuous Integration

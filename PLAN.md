@@ -128,8 +128,9 @@ module itself for chaining.
 
 - Define tunables with
   [`dials::parameters()`](https://dials.tidymodels.org/reference/parameters.html)
-  (`temperature()`, `top_p()`, `cot_depth()`, `values_set()` for tool
-  choices).
+  ([`temperature()`](https://jameshwade.github.io/dsprrr/reference/temperature.md),
+  [`top_p()`](https://jameshwade.github.io/dsprrr/reference/top_p.md),
+  `cot_depth()`, `values_set()` for tool choices).
 - Generate candidates via `grid_regular()` / `grid_random()`.
 - Resample with
   [`rsample::vfold_cv()`](https://rsample.tidymodels.org/reference/vfold_cv.html)
@@ -159,21 +160,28 @@ module itself for chaining.
 #### Phase 2 – Native tune/workflows
 
 - Define parsnip spec for `"dsprrr_module"` and custom engine.
-- Support `recipes::recipe()` preprocessing (retrieval features, prompt
-  augmentation).
-- Provide `workflows::workflow()` helpers bundling recipe + module spec.
-- Expose `tune::tune_grid()` / `tune_bayes()` for Bayesian optimisation
-  and `stacks::stacks()` for ensembling module variants.
+- Support
+  [`recipes::recipe()`](https://recipes.tidymodels.org/reference/recipe.html)
+  preprocessing (retrieval features, prompt augmentation).
+- Provide
+  [`workflows::workflow()`](https://workflows.tidymodels.org/reference/workflow.html)
+  helpers bundling recipe + module spec.
+- Expose
+  [`tune::tune_grid()`](https://tune.tidymodels.org/reference/tune_grid.html)
+  / `tune_bayes()` for Bayesian optimisation and `stacks::stacks()` for
+  ensembling module variants.
   - **Tasks:**
-    - Register the model via `parsnip::set_new_model()` in
-      `R/optimize.R` and implement the corresponding `fit.model_spec()`
-      method.
+    - Register the model via
+      [`parsnip::set_new_model()`](https://parsnip.tidymodels.org/reference/set_new_model.html)
+      in `R/optimize.R` and implement the corresponding
+      `fit.model_spec()` method.
     - Add a `prep_recipe()` helper that accepts a module signature and
       builds default recipes for text/token columns.
     - Write integration tests in `tests/testthat/test-compile.R`
       (skipped on CRAN) that demonstrate a `workflow()` with a dummy
-      recipe and confirm `tune::tune_grid()` runs end-to-end using the
-      mock LLM.
+      recipe and confirm
+      [`tune::tune_grid()`](https://tune.tidymodels.org/reference/tune_grid.html)
+      runs end-to-end using the mock LLM.
     - Expand `vignettes/optimisation.Rmd` with a section on
       workflows/tune/stacks, including guidance for vitals scorer
       interoperability.
@@ -435,7 +443,8 @@ schema or even shared S7 components if the overlap deepens.
     - `dsprrr.syncify()` for running optimizers on async programs
   - **Optimizers:**
     - GRPO: reinforcement learning training of compound AI systems
-    - Bayesian optimization via `tune::tune_bayes()`
+    - Bayesian optimization via
+      [`tune::tune_bayes()`](https://tune.tidymodels.org/reference/tune_bayes.html)
 
 ------------------------------------------------------------------------
 
