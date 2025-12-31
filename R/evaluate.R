@@ -57,10 +57,19 @@ evaluate.Module <- function(
 ) {
   .return_format <- match.arg(.return_format)
   if (!is.data.frame(data)) {
-    cli::cli_abort("{.arg data} must be a data frame or tibble")
+    cli::cli_abort(c(
+      "{.arg data} must be a data frame or tibble",
+      "x" = "Got {.cls {class(data)[1]}}",
+      "i" = "Use {.code data.frame()} or {.code tibble::tibble()} to create one"
+    ))
   }
   if (!is.function(metric)) {
-    cli::cli_abort("{.arg metric} must be a function")
+    cli::cli_abort(c(
+      "{.arg metric} must be a function",
+      "x" = "Got {.cls {class(metric)[1]}}",
+      "i" = "Use a metric from {.code metric_exact_match()}, {.code metric_contains()}, etc.",
+      "i" = "Or provide a custom function: {.code function(prediction, row) ...}"
+    ))
   }
 
   if (nrow(data) == 0) {

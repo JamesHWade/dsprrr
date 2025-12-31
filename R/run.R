@@ -118,9 +118,26 @@ run.PredictModule <- function(
     missing_inputs <- setdiff(required_names, names(inputs))
 
     if (length(missing_inputs) > 0) {
-      cli::cli_abort(
-        "Missing required inputs: {.field {missing_inputs}}"
+      provided <- names(inputs)
+
+      # Build error message with "Did you mean?" suggestions
+      msg <- c("Missing required inputs: {.field {missing_inputs}}")
+
+      # Check for typos in provided names
+      for (missing in missing_inputs) {
+        suggestion <- suggest_match(missing, provided)
+        if (!is.null(suggestion)) {
+          msg <- c(msg, "i" = suggestion)
+        }
+      }
+
+      msg <- c(
+        msg,
+        "i" = "Signature expects: {.field {required_names}}",
+        if (length(provided) > 0) c("i" = "You provided: {.field {provided}}")
       )
+
+      cli::cli_abort(msg)
     }
   }
 
@@ -130,9 +147,11 @@ run.PredictModule <- function(
 
   if (is_batch) {
     if (.parallel && !is.null(.llm)) {
-      cli::cli_warn(
-        "Parallel execution requires a NULL .llm so each worker can create an independent client; falling back to sequential processing"
-      )
+      cli::cli_warn(c(
+        "Parallel execution requires {.code .llm = NULL} so each worker can create an independent client",
+        "i" = "Falling back to sequential processing",
+        "i" = "To enable parallel: remove {.arg .llm} or set {.code .llm = NULL}"
+      ))
       .parallel <- FALSE
     }
 
@@ -143,9 +162,11 @@ run.PredictModule <- function(
     ]
 
     if (length(invalid_lengths) > 0) {
-      cli::cli_abort(
-        "All inputs must have the same length or length 1 for batch processing"
-      )
+      cli::cli_abort(c(
+        "All inputs must have the same length or length 1 for batch processing",
+        "x" = "Got lengths: {.val {input_lengths}}",
+        "i" = "Either make all inputs the same length, or use length 1 for scalar values"
+      ))
     }
 
     # Expand scalar inputs to match batch size
@@ -739,7 +760,11 @@ run_dataset.Module <- function(
 ) {
   # Validate data
   if (!is.data.frame(data)) {
-    cli::cli_abort("{.arg data} must be a data frame or tibble")
+    cli::cli_abort(c(
+      "{.arg data} must be a data frame or tibble",
+      "x" = "Got {.cls {class(data)[1]}}",
+      "i" = "Use {.code data.frame()} or {.code tibble::tibble()} to create one"
+    ))
   }
 
   # Get required input names from signature
@@ -749,9 +774,26 @@ run_dataset.Module <- function(
     missing_cols <- setdiff(required_names, names(data))
 
     if (length(missing_cols) > 0) {
-      cli::cli_abort(
-        "{.arg data} missing required columns: {.field {missing_cols}}"
+      available_cols <- names(data)
+
+      # Build error message with "Did you mean?" suggestions
+      msg <- c("{.arg data} missing required columns: {.field {missing_cols}}")
+
+      # Check for typos in column names
+      for (missing in missing_cols) {
+        suggestion <- suggest_match(missing, available_cols)
+        if (!is.null(suggestion)) {
+          msg <- c(msg, "i" = suggestion)
+        }
+      }
+
+      msg <- c(
+        msg,
+        "i" = "Signature expects: {.field {required_names}}",
+        if (length(available_cols) > 0) c("i" = "Data has: {.field {available_cols}}")
       )
+
+      cli::cli_abort(msg)
     }
   } else {
     required_names <- character(0)

@@ -230,17 +230,27 @@ Module <- R6::R6Class(
       ...
     ) {
       if (!is.data.frame(data)) {
-        cli::cli_abort("{.arg data} must be a data frame or tibble")
+        cli::cli_abort(c(
+          "{.arg data} must be a data frame or tibble",
+          "x" = "Got {.cls {class(data)[1]}}",
+          "i" = "Provide a data frame with columns matching your signature inputs"
+        ))
       }
 
       if (nrow(data) == 0) {
-        cli::cli_abort("{.arg data} must contain at least one row")
+        cli::cli_abort(c(
+          "{.arg data} must contain at least one row",
+          "i" = "Optimization requires at least one example to evaluate"
+        ))
       }
 
       if (!is.function(metric)) {
-        cli::cli_abort(
-          "metric must be a function; wrap yardstick metrics with as_dsprrr_metric()"
-        )
+        cli::cli_abort(c(
+          "{.arg metric} must be a function",
+          "x" = "Got {.cls {class(metric)[1]}}",
+          "i" = "Use a built-in metric: {.code metric_exact_match()}, {.code metric_contains()}",
+          "i" = "Or wrap yardstick metrics: {.code as_dsprrr_metric(yardstick::accuracy)}"
+        ))
       }
 
       objective <- match.arg(objective)
@@ -253,9 +263,11 @@ Module <- R6::R6Class(
 
       n_candidates <- nrow(candidate_grid)
       if (n_candidates == 0) {
-        cli::cli_abort(
-          "The optimisation grid is empty; provide parameters or a non-empty grid"
-        )
+        cli::cli_abort(c(
+          "The optimization grid is empty",
+          "i" = "Provide {.arg parameters}: {.code list(temperature = c(0.3, 0.7, 1.0))}",
+          "i" = "Or provide a {.arg grid} data frame with parameter columns"
+        ))
       }
 
       progress_id <- NULL

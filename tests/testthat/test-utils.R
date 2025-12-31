@@ -228,3 +228,54 @@ test_that("expand_grid_from_list rejects unnamed parameters", {
     "must be named"
   )
 })
+
+# --- find_closest_match tests ---
+
+test_that("find_closest_match finds exact matches", {
+  options <- c("question", "answer", "context")
+  expect_equal(dsprrr:::find_closest_match("question", options), "question")
+  expect_equal(dsprrr:::find_closest_match("answer", options), "answer")
+})
+
+test_that("find_closest_match finds typos", {
+  options <- c("question", "answer", "context")
+
+  # One character off
+  expect_equal(dsprrr:::find_closest_match("questoin", options), "question")
+  expect_equal(dsprrr:::find_closest_match("anser", options), "answer")
+
+  # Two characters off
+  expect_equal(dsprrr:::find_closest_match("qestion", options), "question")
+})
+
+test_that("find_closest_match returns NULL for distant matches", {
+  options <- c("question", "answer", "context")
+
+  # Too different
+  expect_null(dsprrr:::find_closest_match("xyz", options))
+  expect_null(dsprrr:::find_closest_match("completely_different", options))
+})
+
+test_that("find_closest_match handles empty options", {
+  expect_null(dsprrr:::find_closest_match("question", character(0)))
+})
+
+test_that("find_closest_match is case insensitive", {
+  options <- c("Question", "Answer", "Context")
+
+  expect_equal(dsprrr:::find_closest_match("question", options), "Question")
+  expect_equal(dsprrr:::find_closest_match("ANSWER", options), "Answer")
+})
+
+test_that("suggest_match returns formatted suggestion", {
+  options <- c("question", "answer")
+
+  suggestion <- dsprrr:::suggest_match("questoin", options)
+  expect_true(grepl("Did you mean", suggestion))
+  expect_true(grepl("question", suggestion))
+})
+test_that("suggest_match returns NULL for no match", {
+  options <- c("question", "answer")
+
+  expect_null(dsprrr:::suggest_match("xyz", options))
+})

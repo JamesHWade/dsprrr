@@ -378,7 +378,7 @@ test_that("run warns when parallel execution with custom llm", {
       .parallel = TRUE,
       .progress = FALSE
     ),
-    "Parallel execution requires a NULL"
+    "Parallel execution requires"
   )
   expect_equal(length(out), 2)
 })
