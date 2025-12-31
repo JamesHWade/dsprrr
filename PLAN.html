@@ -148,7 +148,7 @@
 <li>Optional <code>finetune::tune_race_anova()</code> for adaptive pruning.
 <ul><li>
 <strong>Tasks:</strong>
-<ul><li>Create <code>R/optimize.R</code> with helpers <code>module_parameters()</code>, <code>module_grid()</code>, and <code>collect_trials()</code> that operate on R6 modules.</li>
+<ul><li>Create <code>R/optimize.R</code> with helpers <code><a href="reference/module_parameters.html">module_parameters()</a></code>, <code>module_grid()</code>, and <code>collect_trials()</code> that operate on R6 modules.</li>
 <li>Refactor <code>R/teleprompter.R</code> grid search logic to call the new helpers instead of hand-rolled loops.</li>
 <li>Update <code>tests/testthat/test-compile.R</code> to exercise tidy grid search with a deterministic mock LLM and verify tidy outputs.</li>
 <li>Add documentation chunks in <code>vignettes/optimisation.Rmd</code> showing <code><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">dials::parameters()</a></code> and <code><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">rsample::vfold_cv()</a></code> usage.</li>
@@ -289,15 +289,15 @@ vignettes/
 <td>✅ COMPLETED</td>
 <td>Integration tests in test-integration.R</td>
 </tr><tr class="odd"><td>
-<code><a href="reference/module_parameter_set.html">module_parameter_set()</a></code> helper</td>
+<code><a href="reference/module_parameters.html">module_parameters()</a></code> helper</td>
 <td>✅ COMPLETED</td>
 <td>Derives dials parameters from module</td>
 </tr><tr class="even"><td>
-<code><a href="reference/module_trials_summary.html">module_trials_summary()</a></code> helper</td>
+<code><a href="reference/module_trials.html">module_trials()</a></code> helper</td>
 <td>✅ COMPLETED</td>
 <td>Tidy summary of optimization trials</td>
 </tr><tr class="odd"><td>
-<code><a href="reference/module_metric_summary.html">module_metric_summary()</a></code> helper</td>
+<code><a href="reference/module_metrics.html">module_metrics()</a></code> helper</td>
 <td>✅ COMPLETED</td>
 <td>Per-trial yardstick metrics</td>
 </tr><tr class="even"><td>Signature → parameter mapping</td>
@@ -484,9 +484,9 @@ vignettes/
 <div class="section level3">
 <h3 id="id_13-progress-log">13. Progress Log<a class="anchor" aria-label="anchor" href="#id_13-progress-log"></a></h3>
 <p><strong>Dec 2025 (Milestone C):</strong> - Completed Milestone C - Orchestration &amp; Persistence: - Created <code>R/orchestration.R</code> with pins helpers: - <code><a href="reference/pin_module_config.html">pin_module_config()</a></code> / <code><a href="reference/restore_module_config.html">restore_module_config()</a></code> for saving/loading modules - <code><a href="reference/pin_trace.html">pin_trace()</a></code> for persisting execution traces - <code><a href="reference/pin_vitals_log.html">pin_vitals_log()</a></code> for evaluation results - <code><a href="reference/validate_workflow.html">validate_workflow()</a></code> for pre-flight checks - <code><a href="reference/use_dsprrr_template.html">use_dsprrr_template()</a></code> for copying templates - Created <code>inst/templates/targets/_targets.R</code> with complete pipeline template - Created <code>inst/templates/quarto/report.qmd</code> with visualization report - Created <code>vignettes/orchestration.Rmd</code> with comprehensive documentation - Updated <code>_pkgdown.yml</code> with articles and reference sections - Added 25 tests for orchestration helpers (skipped when pins not installed) - Updated DESCRIPTION with pins, targets, tarchetypes, quarto in Suggests</p>
-<p><strong>Dec 2025 (continued):</strong> - Completed Milestone B - Tidymodels Integration: - Updated optimization vignette with comprehensive tidymodels helper documentation - Added sections for <code><a href="reference/module_parameter_set.html">module_parameter_set()</a></code>, <code><a href="reference/module_trials_summary.html">module_trials_summary()</a></code>, <code><a href="reference/module_metric_summary.html">module_metric_summary()</a></code> - Added complete tidymodels workflow example in vignette - Added finetune::tune_race_anova() integration tests in test-integration.R - Verified signature → parameter mapping with <code>signature_parameter_defaults()</code> - All tidymodels helpers tested with dials grid functions (regular, random, latin_hypercube)</p>
+<p><strong>Dec 2025 (continued):</strong> - Completed Milestone B - Tidymodels Integration: - Updated optimization vignette with comprehensive tidymodels helper documentation - Added sections for <code><a href="reference/module_parameters.html">module_parameters()</a></code>, <code><a href="reference/module_trials.html">module_trials()</a></code>, <code><a href="reference/module_metrics.html">module_metrics()</a></code> - Added complete tidymodels workflow example in vignette - Added finetune::tune_race_anova() integration tests in test-integration.R - Verified signature → parameter mapping with <code>signature_parameter_defaults()</code> - All tidymodels helpers tested with dials grid functions (regular, random, latin_hypercube)</p>
 <p><strong>Dec 2025:</strong> - Completed major Milestone A quality improvements: - Refactored <code>run_batch()</code> eliminating ~200 lines of duplicated code - Extracted reusable helpers: <code>process_batch_item()</code>, <code>extract_simple_output()</code>, <code>create_error_result()</code> - Split parallel/sequential execution into separate functions for clarity - Fixed memory leak by making chat object storage optional (<code>config$store_chat_in_traces</code>) - Expanded test coverage: test-vitals.R (59→340 lines), test-utils.R (20→227 lines) - Added comprehensive parallel execution tests - Improved <code>Module$run()</code> with proper batch processing - Updated CLAUDE.md with comprehensive codebase documentation - Reviewed DSPy 3.0 features for future integration (MIPROv2, SIMBA, GEPA, CodeAct) - Researched ecosystem updates: ellmer 0.3.0, vitals 0.1.0, shinychat 0.3.0</p>
-<p><strong>Previous:</strong> - Milestone B kickoff: tidymodels integration planning begun with shared tracker and dependency mapping. - Implemented base <code>$optimize_grid()</code> flow with stateful trial tracking and helper scaffolding. - Realigned ellmer integrations to the latest API (shared <code>api_args</code> flow, <code>chat_claude()</code> usage) and updated docs/tests accordingly. - GridSearch teleprompter now delegates to <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>; module state stores trials/best variant and tests cover the new path. - Added <code><a href="reference/module_parameter_set.html">module_parameter_set()</a></code>/<code><a href="reference/module_trials_summary.html">module_trials_summary()</a></code> helpers to bridge tidymodels parameter sets and optimisation summaries.</p>
+<p><strong>Previous:</strong> - Milestone B kickoff: tidymodels integration planning begun with shared tracker and dependency mapping. - Implemented base <code>$optimize_grid()</code> flow with stateful trial tracking and helper scaffolding. - Realigned ellmer integrations to the latest API (shared <code>api_args</code> flow, <code>chat_claude()</code> usage) and updated docs/tests accordingly. - GridSearch teleprompter now delegates to <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>; module state stores trials/best variant and tests cover the new path. - Added <code><a href="reference/module_parameters.html">module_parameters()</a></code>/<code><a href="reference/module_trials.html">module_trials()</a></code> helpers to bridge tidymodels parameter sets and optimisation summaries.</p>
 <hr></div>
 <div class="section level3">
 <h3 id="id_14-references">14. References<a class="anchor" aria-label="anchor" href="#id_14-references"></a></h3>

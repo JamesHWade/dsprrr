@@ -65,6 +65,27 @@ according to the module's signature. For single inputs with
 - metadata: Additional metadata (tokens used, latency, etc.) For batch
   inputs: A list of results matching the input length
 
+## Details
+
+**Retry Behavior:** ellmer automatically retries failed requests up to 3
+times (configurable via `options(ellmer_max_tries = n)`). This handles
+transient errors like rate limits and connection failures. See ellmer
+documentation for more details.
+
+## See also
+
+- [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) for
+  one-shot LLM calls without creating a module
+
+- [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+  for running a module on a data frame
+
+- [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+  for running with metric evaluation
+
+- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  for creating modules
+
 ## Examples
 
 ``` r
@@ -85,5 +106,8 @@ result <- signature("text -> sentiment") |>
   module(type = "predict") |>
   run(text = "Great!", .llm = llm, .return_format = "structured")
 # Access: result$output, result$chat, result$metadata
+
+# Configure ellmer retry behavior (if needed)
+options(ellmer_max_tries = 5)
 } # }
 ```

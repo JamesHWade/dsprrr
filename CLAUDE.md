@@ -162,8 +162,8 @@ mod$optimize_grid(
 )
 
 # Check optimization results
-module_trials_summary(mod)
-module_metric_summary(mod)
+module_trials(mod)
+module_metrics(mod)
 ```
 
 ### Evaluation
@@ -269,9 +269,10 @@ which automatically names cassettes based on chunk labels. Set
 - vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)
 - Grid search optimization with tidymodels parameter support
 - LabeledFewShot and GridSearchTeleprompter
-- [`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md)
+- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md),
+  [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md),
   and
-  [`module_metric_summary()`](https://jameshwade.github.io/dsprrr/reference/module_metric_summary.md)
+  [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
   helpers
 - Module persistence:
   [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),

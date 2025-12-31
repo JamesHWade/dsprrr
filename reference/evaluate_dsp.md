@@ -5,7 +5,7 @@ Evaluate the performance of a compiled module on a test dataset.
 ## Usage
 
 ``` r
-evaluate_dsp(module, dataset, metric, .llm = NULL, verbose = TRUE)
+evaluate_dsp(module, data, metric, .llm = NULL, verbose = TRUE)
 ```
 
 ## Arguments
@@ -14,9 +14,9 @@ evaluate_dsp(module, dataset, metric, .llm = NULL, verbose = TRUE)
 
   A DSPrrr module (compiled or not)
 
-- dataset:
+- data:
 
-  Test dataset as a data frame
+  Test data as a data frame or tibble.
 
 - metric:
 
@@ -42,9 +42,9 @@ if (FALSE) { # \dontrun{
 # Evaluate a module
 results <- evaluate_dsp(
   module = optimized_classifier,
-  dataset = test_data,
+  data = test_data,
   metric = metric_exact_match(field = "sentiment"),
-  llm = llm_connection
+  .llm = llm_connection
 )
 
 print(results$mean_score)

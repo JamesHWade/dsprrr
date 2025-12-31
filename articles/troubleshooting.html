@@ -99,7 +99,7 @@ dsprrr.</p>
 <span><span class="fu"><a href="../reference/dsprrr_sitrep.html">dsprrr_sitrep</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 2. If a call failed, inspect the last prompt</span></span>
-<span><span class="fu"><a href="../reference/last_prompt.html">last_prompt</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 3. View recent prompt history</span></span>
 <span><span class="fu"><a href="../reference/inspect_history.html">inspect_history</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></code></pre></div>
@@ -432,7 +432,7 @@ issues):</li>
 ✖ Failed to parse JSON response
 ! Response parsing failed
 ℹ The LLM returned invalid JSON. Try simplifying the output type
-ℹ Check `last_prompt()` to see the raw response</code></pre>
+ℹ Check `get_last_prompt()` to see the raw response</code></pre>
 <p><strong>Cause:</strong> The LLM didn’t return valid structured
 output.</p>
 <p><strong>Solutions:</strong></p>
@@ -440,7 +440,7 @@ output.</p>
 <li><strong>Inspect what happened:</strong></li>
 </ol>
 <div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/last_prompt.html">last_prompt</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># See the prompt and response</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># See the prompt and response</span></span></code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li><strong>Simplify your output type:</strong></li>
 </ol>
@@ -564,10 +564,10 @@ and model are active - API key status</p>
 </h3>
 <div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># See the full prompt that was sent</span></span>
-<span><span class="fu"><a href="../reference/last_prompt.html">last_prompt</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Get the trace with all details</span></span>
-<span><span class="va">trace</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/last_trace.html">last_trace</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">trace</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_last_trace.html">get_last_trace</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">trace</span><span class="op">$</span><span class="va">prompt</span>      <span class="co"># The prompt</span></span>
 <span><span class="va">trace</span><span class="op">$</span><span class="va">output</span>      <span class="co"># The raw output</span></span>
 <span><span class="va">trace</span><span class="op">$</span><span class="va">model</span>       <span class="co"># Which model was used</span></span></code></pre></div>

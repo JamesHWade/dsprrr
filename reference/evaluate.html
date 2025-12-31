@@ -73,27 +73,40 @@ together with the predictions and metadata required for downstream analysis.</p>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments including:</p><ul><li><p>dataset: A data frame or tibble containing columns that match the
-module's signature inputs plus any expected fields used by metric</p></li>
-<li><p>metric: A function applied per example with signature
-metric(prediction, expected_row)</p></li>
-<li><p>.llm: Optional ellmer chat object supplied to run()</p></li>
-<li><p>.parallel: Logical; whether to allow parallel execution</p></li>
-<li><p>.progress: Logical; whether to display progress while evaluating</p></li>
+<dd><p>Arguments passed to methods:</p><ul><li><p><code>data</code>: A data frame or tibble containing columns that match the
+module's signature inputs plus any expected fields used by metric.</p></li>
+<li><p><code>metric</code>: A function applied per example with signature
+<code>metric(prediction, expected_row)</code>.</p></li>
+</ul><p>Additional arguments passed to <code><a href="run_dataset.html">run_dataset()</a></code>:</p><ul><li><p><code>.llm</code>: Optional ellmer chat object</p></li>
+<li><p><code>.parallel</code>: Logical; whether to allow parallel execution</p></li>
+<li><p><code>.progress</code>: Logical; whether to display progress while evaluating</p></li>
+<li><p><code>.return_format</code>: Character; <code>"simple"</code> returns just scores and predictions,
+<code>"structured"</code> (default) includes full metadata and data</p></li>
 </ul></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list with elements</p><ul><li><p><code>mean_score</code>: numeric mean over all successful metric evaluations.</p></li>
+    <p>A list with elements. When <code>.return_format = "structured"</code> (default):</p><ul><li><p><code>mean_score</code>: numeric mean over all successful metric evaluations.</p></li>
 <li><p><code>scores</code>: per-example numeric scores (coerced from logical metrics).</p></li>
 <li><p><code>predictions</code>: list of model outputs.</p></li>
 <li><p><code>metadata</code>: list of metadata captured from <code><a href="run.html">run()</a></code>.</p></li>
 <li><p><code>n_evaluated</code>: number of successful evaluations.</p></li>
 <li><p><code>n_errors</code>: number of metric failures.</p></li>
 <li><p><code>errors</code>: character vector with error messages, when any.</p></li>
-<li><p><code>dataset</code>: input dataset augmented with prediction metadata.</p></li>
+<li><p><code>data</code>: input data augmented with prediction metadata.</p></li>
+</ul><p>When <code>.return_format = "simple"</code>:</p><ul><li><p><code>mean_score</code>, <code>scores</code>, <code>predictions</code>, <code>n_evaluated</code>, <code>n_errors</code>, <code>errors</code>
+(omits <code>metadata</code> and <code>data</code> for lighter-weight results)</p></li>
 </ul></div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index">
+<ul><li><p><code><a href="run.html">run()</a></code> for executing without metrics</p></li>
+<li><p><code><a href="run_dataset.html">run_dataset()</a></code> for batch execution without metrics</p></li>
+<li><p><code><a href="optimize_grid.html">optimize_grid()</a></code> for parameter optimization</p></li>
+<li><p><code><a href="metric_exact_match.html">metric_exact_match()</a></code>, <code><a href="metric_contains.html">metric_contains()</a></code> for built-in metrics</p></li>
+</ul></div>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

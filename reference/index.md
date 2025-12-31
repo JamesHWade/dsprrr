@@ -12,7 +12,7 @@ Main functions for building LLM applications
 - [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) :
   Execute an LLM Module
 - [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-  : Execute Module on Dataset
+  : Execute Module on Data
 - [`predict(`*`<Module>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
   [`predict(`*`<PredictModule>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
   : Predict Method for Modules (tidymodels-style)
@@ -29,7 +29,7 @@ ellmer-style pipe-friendly functions
   Declarative Structured Prediction
 - [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)
   : Create a Module from a Chat
-- [`last_trace()`](https://jameshwade.github.io/dsprrr/reference/last_trace.md)
+- [`get_last_trace()`](https://jameshwade.github.io/dsprrr/reference/get_last_trace.md)
   : Get the Last DSP Trace
 
 ## Configuration
@@ -98,11 +98,11 @@ Functions for optimizing module performance
   : Compile S7 Generic and Methods
 - [`compile_module()`](https://jameshwade.github.io/dsprrr/reference/compile_module.md)
   : Compile a DSPrrr Program
-- [`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md)
+- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)
   : Suggest tidymodels parameters for a module
-- [`module_trials_summary()`](https://jameshwade.github.io/dsprrr/reference/module_trials_summary.md)
+- [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
   : Summarise optimisation trials for a module
-- [`module_metric_summary()`](https://jameshwade.github.io/dsprrr/reference/module_metric_summary.md)
+- [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
   : Summarise optimisation metrics per trial
 
 ## Metrics
@@ -147,12 +147,33 @@ Prompt inspection and history
 
 - [`prompt-visibility`](https://jameshwade.github.io/dsprrr/reference/prompt-visibility.md)
   : Prompt Visibility and Inspection
-- [`last_prompt()`](https://jameshwade.github.io/dsprrr/reference/last_prompt.md)
+- [`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md)
   : Get the Last Prompt
 - [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md)
   : Inspect LLM Call History
 - [`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md)
   : Clear Prompt History
+
+## Result Accessors
+
+Extract data from structured results
+
+- [`accessors`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+  : Accessor Functions for DSPrrr Results
+- [`get_output()`](https://jameshwade.github.io/dsprrr/reference/get_output.md)
+  : Get output from a result
+- [`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/get_metadata.md)
+  : Get metadata from a result
+- [`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/get_tokens.md)
+  : Get token counts from a result
+- [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/get_cost.md)
+  : Get cost from a result
+- [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)
+  : Session Cost Summary
+- [`print(`*`<dsprrr_evaluation>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_evaluation.md)
+  : Print method for dsprrr_evaluation
+- [`print(`*`<dsprrr_batch_result>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_batch_result.md)
+  : Print method for dsprrr_batch_result
 
 ## Traces
 

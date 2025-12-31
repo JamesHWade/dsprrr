@@ -164,8 +164,8 @@ downstream reports can reuse the trial data.</p>
 <p>dsprrr provides three key helpers for integrating with the tidymodels
 ecosystem:</p>
 <div class="section level3">
-<h3 id="module_parameter_set-derive-dials-parameters">
-<code>module_parameter_set()</code>: Derive dials parameters<a class="anchor" aria-label="anchor" href="#module_parameter_set-derive-dials-parameters"></a>
+<h3 id="module_parameters-derive-dials-parameters">
+<code>module_parameters()</code>: Derive dials parameters<a class="anchor" aria-label="anchor" href="#module_parameters-derive-dials-parameters"></a>
 </h3>
 <p>After running <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>, you can extract a
 <code><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">dials::parameters()</a></code> set from the module. This is useful for
@@ -174,7 +174,7 @@ further tuning or for generating additional grid configurations:</p>
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dials.tidymodels.org" class="external-link">dials</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># After optimization, extract discovered parameters</span></span>
-<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameter_set.html">module_parameter_set</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
+<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameters.html">module_parameters</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">param_set</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Use the parameter set to generate a more refined grid</span></span>
@@ -189,24 +189,24 @@ Previous optimization trials - Signature enum types (prefixed with
 <p>You can filter which parameters are included:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Only include specific parameters</span></span>
-<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameter_set.html">module_parameter_set</a></span><span class="op">(</span></span>
+<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameters.html">module_parameters</a></span><span class="op">(</span></span>
 <span>  <span class="va">sentiment_module</span>,</span>
 <span>  include <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"temperature"</span>, <span class="st">"prompt_style"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Exclude certain parameters</span></span>
-<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameter_set.html">module_parameter_set</a></span><span class="op">(</span></span>
+<span><span class="va">param_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameters.html">module_parameters</a></span><span class="op">(</span></span>
 <span>  <span class="va">sentiment_module</span>,</span>
 <span>  exclude <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"instructions"</span>, <span class="st">"max_output_tokens"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="module_trials_summary-optimization-overview">
-<code>module_trials_summary()</code>: Optimization overview<a class="anchor" aria-label="anchor" href="#module_trials_summary-optimization-overview"></a>
+<h3 id="module_trials-optimization-overview">
+<code>module_trials()</code>: Optimization overview<a class="anchor" aria-label="anchor" href="#module_trials-optimization-overview"></a>
 </h3>
 <p>Get a tidy summary of all optimization trials:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_trials_summary.html">module_trials_summary</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Returns a tibble with:</span></span>
 <span><span class="co"># - n_trials: number of trials evaluated</span></span>
@@ -225,15 +225,14 @@ Previous optimization trials - Signature enum types (prefixed with
 <span><span class="va">trials_df</span> <span class="op">&lt;-</span> <span class="va">summary</span><span class="op">$</span><span class="va">trials</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="module_metric_summary-per-trial-metrics-with-yardstick">
-<code>module_metric_summary()</code>: Per-trial metrics with
-yardstick<a class="anchor" aria-label="anchor" href="#module_metric_summary-per-trial-metrics-with-yardstick"></a>
+<h3 id="module_metrics-per-trial-metrics-with-yardstick">
+<code>module_metrics()</code>: Per-trial metrics with yardstick<a class="anchor" aria-label="anchor" href="#module_metrics-per-trial-metrics-with-yardstick"></a>
 </h3>
 <p>For more detailed per-trial analysis, including integration with
 yardstick metrics:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Basic summary without yardstick</span></span>
-<span><span class="va">metrics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metric_summary.html">module_metric_summary</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
+<span><span class="va">metrics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metrics.html">module_metrics</a></span><span class="op">(</span><span class="va">sentiment_module</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Returns a tibble with one row per trial:</span></span>
 <span><span class="co"># - trial_id, score: trial identifier and overall score</span></span>
@@ -246,7 +245,7 @@ yardstick metrics:</p>
 <span><span class="co"># With yardstick metrics for classification tasks</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/yardstick" class="external-link">yardstick</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">yardstick_metrics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metric_summary.html">module_metric_summary</a></span><span class="op">(</span></span>
+<span><span class="va">yardstick_metrics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metrics.html">module_metrics</a></span><span class="op">(</span></span>
 <span></span>
 <span>  <span class="va">sentiment_module</span>,</span>
 <span>  metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">accuracy</span>, <span class="va">precision</span>, <span class="va">recall</span><span class="op">)</span>,</span>
@@ -283,13 +282,13 @@ together:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 2. Review optimization results</span></span>
-<span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_trials_summary.html">module_trials_summary</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
+<span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Best score:"</span>, <span class="va">summary</span><span class="op">$</span><span class="va">best_score</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Best params:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">summary</span><span class="op">$</span><span class="va">best_params</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>    <span class="va">summary</span><span class="op">$</span><span class="va">best_params</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, sep <span class="op">=</span> <span class="st">"="</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 3. Compute detailed metrics</span></span>
-<span><span class="va">detailed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metric_summary.html">module_metric_summary</a></span><span class="op">(</span></span>
+<span><span class="va">detailed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_metrics.html">module_metrics</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod</span>,</span>
 <span>  metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">accuracy</span>, <span class="va">f_meas</span><span class="op">)</span>,</span>
 <span>  truth <span class="op">=</span> <span class="st">"label"</span>,</span>
@@ -302,7 +301,7 @@ together:</p>
 <span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Score by Trial"</span>, x <span class="op">=</span> <span class="st">"Trial"</span>, y <span class="op">=</span> <span class="st">"Score"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 5. Extract parameters for further tuning</span></span>
-<span><span class="va">params</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameter_set.html">module_parameter_set</a></span><span class="op">(</span><span class="va">mod</span>, include <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"temperature"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">params</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_parameters.html">module_parameters</a></span><span class="op">(</span><span class="va">mod</span>, include <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"temperature"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Generate a finer grid around the best temperature</span></span>
 <span><span class="va">fine_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dials.tidymodels.org/reference/grid_regular.html" class="external-link">grid_regular</a></span><span class="op">(</span><span class="va">params</span>, levels <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>

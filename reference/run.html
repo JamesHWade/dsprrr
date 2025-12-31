@@ -111,6 +111,22 @@ For single inputs with .return_format="structured": A list with components:</p><
 <li><p>metadata: Additional metadata (tokens used, latency, etc.)
 For batch inputs: A list of results matching the input length</p></li>
 </ul></div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p><strong>Retry Behavior:</strong> ellmer automatically retries failed requests up to 3 times
+(configurable via <code>options(ellmer_max_tries = n)</code>). This handles transient
+errors like rate limits and connection failures. See ellmer documentation
+for more details.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index">
+<ul><li><p><code><a href="dsp.html">dsp()</a></code> for one-shot LLM calls without creating a module</p></li>
+<li><p><code><a href="run_dataset.html">run_dataset()</a></code> for running a module on a data frame</p></li>
+<li><p><code><a href="evaluate.html">evaluate()</a></code> for running with metric evaluation</p></li>
+<li><p><code><a href="module.html">module()</a></code> for creating modules</p></li>
+</ul></div>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -131,6 +147,9 @@ For batch inputs: A list of results matching the input length</p></li>
 <span class="r-in"><span>  <span class="fu"><a href="module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">run</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Great!"</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .return_format <span class="op">=</span> <span class="st">"structured"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Access: result$output, result$chat, result$metadata</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Configure ellmer retry behavior (if needed)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>ellmer_max_tries <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

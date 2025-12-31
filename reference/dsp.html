@@ -64,13 +64,13 @@ to ellmer users while providing the power of declarative signatures.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">dsp</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'Chat'</span></span>
-<span><span class="fu">dsp</span><span class="op">(</span><span class="va">x</span>, <span class="va">signature</span>, <span class="va">...</span>, .instructions <span class="op">=</span> <span class="cn">NULL</span>, .echo <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
+<span><span class="fu">dsp</span><span class="op">(</span><span class="va">x</span>, <span class="va">signature</span>, <span class="va">...</span>, .instructions <span class="op">=</span> <span class="cn">NULL</span>, .echo <span class="op">=</span> <span class="st">"none"</span>, .simplify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'character'</span></span>
-<span><span class="fu">dsp</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, .instructions <span class="op">=</span> <span class="cn">NULL</span>, .echo <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
+<span><span class="fu">dsp</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, .instructions <span class="op">=</span> <span class="cn">NULL</span>, .echo <span class="op">=</span> <span class="st">"none"</span>, .simplify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class '`dsprrr::Signature`'</span></span>
-<span><span class="fu">dsp</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, .instructions <span class="op">=</span> <span class="cn">NULL</span>, .echo <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">dsp</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, .instructions <span class="op">=</span> <span class="cn">NULL</span>, .echo <span class="op">=</span> <span class="st">"none"</span>, .simplify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -96,12 +96,18 @@ to ellmer users while providing the power of declarative signatures.</p>
 <dt id="arg--echo">.echo<a class="anchor" aria-label="anchor" href="#arg--echo"></a></dt>
 <dd><p>Whether to echo output. See <a href="https://ellmer.tidyverse.org/reference/Chat.html" class="external-link">ellmer::Chat</a> for options.</p></dd>
 
+
+<dt id="arg--simplify">.simplify<a class="anchor" aria-label="anchor" href="#arg--simplify"></a></dt>
+<dd><p>Logical. If <code>TRUE</code> (default), single-field outputs are
+simplified to just the value. If <code>FALSE</code>, always returns a named list.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The structured output according to the signature's output type.
-For single-field outputs, returns just the value. For multi-field outputs,
-returns a named list.</p>
+When <code>.simplify = TRUE</code> (default): single-field outputs return just the
+value, multi-field outputs return a named list.
+When <code>.simplify = FALSE</code>: always returns a named list.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -113,6 +119,15 @@ structured output. For more control (optimization, tracing), use
 <li><p><code>dsp.character</code>: When providing a signature string (uses default Chat)</p></li>
 <li><p><code>dsp.dsprrr::Signature</code>: When providing a Signature object</p></li>
 </ul></div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index">
+<ul><li><p><code><a href="signature.html">signature()</a></code> for creating signature objects</p></li>
+<li><p><code><a href="module.html">module()</a></code> and <code><a href="run.html">run()</a></code> for reusable modules with optimization support</p></li>
+<li><p><code><a href="as_module.html">as_module()</a></code> to convert a Chat to a module</p></li>
+<li><p><code><a href="set_default_chat.html">set_default_chat()</a></code> to configure the default LLM</p></li>
+</ul></div>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -136,7 +151,12 @@ structured output. For more control (optimization, tracing), use
 <span class="r-in"><span>  text <span class="op">=</span> <span class="va">long_article</span>,</span></span>
 <span class="r-in"><span>  .instructions <span class="op">=</span> <span class="st">"Keep the summary under 50 words"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Control output simplification</span></span></span>
+<span class="r-in"><span><span class="fu">dsp</span><span class="op">(</span><span class="st">"q -&gt; answer"</span>, q <span class="op">=</span> <span class="st">"Hi"</span>, .simplify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>   <span class="co"># Returns: "Hello"</span></span></span>
+<span class="r-in"><span><span class="fu">dsp</span><span class="op">(</span><span class="st">"q -&gt; answer"</span>, q <span class="op">=</span> <span class="st">"Hi"</span>, .simplify <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>  <span class="co"># Returns: list(answer = "Hello")</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

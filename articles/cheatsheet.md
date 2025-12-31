@@ -269,8 +269,8 @@ mod$optimize_grid(
 )
 
 # Check results
-module_trials_summary(mod)
-module_metric_summary(mod)
+module_trials(mod)
+module_metrics(mod)
 ```
 
 ### Teleprompters
@@ -296,7 +296,7 @@ compiled <- compile(tp, mod, trainset, .llm = llm)
 
 ``` r
 # Get the last prompt sent
-last_prompt()
+get_last_prompt()
 #> ── Last Prompt ──
 #> Model: gpt-4o-mini via OpenAI
 #> Input tokens: 45
@@ -321,7 +321,7 @@ clear_prompt_history()
 mod$inspect()
 
 # Last trace from dsp()
-last_trace()
+get_last_trace()
 ```
 
 ### Traces

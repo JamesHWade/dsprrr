@@ -142,7 +142,8 @@ module itself for chaining.
   `optimize_grid(mod, ...)` wrapper for piping.
 - Optional `finetune::tune_race_anova()` for adaptive pruning.
   - **Tasks:**
-    - Create `R/optimize.R` with helpers `module_parameters()`,
+    - Create `R/optimize.R` with helpers
+      [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md),
       `module_grid()`, and `collect_trials()` that operate on R6
       modules.
     - Refactor `R/teleprompter.R` grid search logic to call the new
@@ -341,18 +342,18 @@ schema or even shared S7 components if the overlap deepens.
   vignette and Quarto template.
   - **Tasks & Status:**
 
-    | Task                                                                                                       | Status       | Notes                                                                                                                                                                                                                      |
-    |------------------------------------------------------------------------------------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-    | Implement `$optimize_grid()` and `$optimize()` dispatch                                                    | ✅ COMPLETED | Baseline grid search with state tracking                                                                                                                                                                                   |
-    | Helper functions in `R/optimize.R`                                                                         | ✅ COMPLETED | [`merge_optimization_control()`](https://jameshwade.github.io/dsprrr/reference/merge_optimization_control.md), [`prepare_candidate_grid()`](https://jameshwade.github.io/dsprrr/reference/prepare_candidate_grid.md), etc. |
-    | Refactor `GridSearchTeleprompter`                                                                          | ✅ COMPLETED | Delegates to [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md), records trials/best variant                                                                                              |
-    | Tests for dials grids + yardstick metrics                                                                  | ✅ COMPLETED | Deterministic specs for delegation and state                                                                                                                                                                               |
-    | Update docs (README/vignettes)                                                                             | ✅ COMPLETED | Vignette updated with tidymodels helpers                                                                                                                                                                                   |
-    | `finetune::tune_race_anova()` regression test                                                              | ✅ COMPLETED | Integration tests in test-integration.R                                                                                                                                                                                    |
-    | [`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md) helper   | ✅ COMPLETED | Derives dials parameters from module                                                                                                                                                                                       |
-    | [`module_trials_summary()`](https://jameshwade.github.io/dsprrr/reference/module_trials_summary.md) helper | ✅ COMPLETED | Tidy summary of optimization trials                                                                                                                                                                                        |
-    | [`module_metric_summary()`](https://jameshwade.github.io/dsprrr/reference/module_metric_summary.md) helper | ✅ COMPLETED | Per-trial yardstick metrics                                                                                                                                                                                                |
-    | Signature → parameter mapping                                                                              | ✅ COMPLETED | Extracts enum types from signature inputs                                                                                                                                                                                  |
+    | Task                                                                                               | Status       | Notes                                                                                                                                                                                                                      |
+    |----------------------------------------------------------------------------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | Implement `$optimize_grid()` and `$optimize()` dispatch                                            | ✅ COMPLETED | Baseline grid search with state tracking                                                                                                                                                                                   |
+    | Helper functions in `R/optimize.R`                                                                 | ✅ COMPLETED | [`merge_optimization_control()`](https://jameshwade.github.io/dsprrr/reference/merge_optimization_control.md), [`prepare_candidate_grid()`](https://jameshwade.github.io/dsprrr/reference/prepare_candidate_grid.md), etc. |
+    | Refactor `GridSearchTeleprompter`                                                                  | ✅ COMPLETED | Delegates to [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md), records trials/best variant                                                                                              |
+    | Tests for dials grids + yardstick metrics                                                          | ✅ COMPLETED | Deterministic specs for delegation and state                                                                                                                                                                               |
+    | Update docs (README/vignettes)                                                                     | ✅ COMPLETED | Vignette updated with tidymodels helpers                                                                                                                                                                                   |
+    | `finetune::tune_race_anova()` regression test                                                      | ✅ COMPLETED | Integration tests in test-integration.R                                                                                                                                                                                    |
+    | [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md) helper | ✅ COMPLETED | Derives dials parameters from module                                                                                                                                                                                       |
+    | [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md) helper         | ✅ COMPLETED | Tidy summary of optimization trials                                                                                                                                                                                        |
+    | [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md) helper       | ✅ COMPLETED | Per-trial yardstick metrics                                                                                                                                                                                                |
+    | Signature → parameter mapping                                                                      | ✅ COMPLETED | Extracts enum types from signature inputs                                                                                                                                                                                  |
 
 #### Milestone C – Orchestration & Persistence ✅ COMPLETED
 
@@ -546,9 +547,9 @@ tarchetypes, quarto in Suggests
 **Dec 2025 (continued):** - Completed Milestone B - Tidymodels
 Integration: - Updated optimization vignette with comprehensive
 tidymodels helper documentation - Added sections for
-[`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md),
-[`module_trials_summary()`](https://jameshwade.github.io/dsprrr/reference/module_trials_summary.md),
-[`module_metric_summary()`](https://jameshwade.github.io/dsprrr/reference/module_metric_summary.md) -
+[`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md),
+[`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md),
+[`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md) -
 Added complete tidymodels workflow example in vignette - Added
 finetune::tune_race_anova() integration tests in test-integration.R -
 Verified signature → parameter mapping with
@@ -578,7 +579,7 @@ accordingly. - GridSearch teleprompter now delegates to
 [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md);
 module state stores trials/best variant and tests cover the new path. -
 Added
-[`module_parameter_set()`](https://jameshwade.github.io/dsprrr/reference/module_parameter_set.md)/[`module_trials_summary()`](https://jameshwade.github.io/dsprrr/reference/module_trials_summary.md)
+[`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)/[`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
 helpers to bridge tidymodels parameter sets and optimisation summaries.
 
 ------------------------------------------------------------------------

@@ -6,7 +6,7 @@ Useful for validating pipelines before running expensive LLM operations.
 ## Usage
 
 ``` r
-validate_workflow(module, dataset = NULL, board = NULL)
+validate_workflow(module, data = NULL, board = NULL)
 ```
 
 ## Arguments
@@ -15,9 +15,9 @@ validate_workflow(module, dataset = NULL, board = NULL)
 
   A DSPrrr module to validate
 
-- dataset:
+- data:
 
-  Optional dataset to validate against the module's signature
+  Optional data to validate against the module's signature
 
 - board:
 
@@ -42,6 +42,6 @@ Other orchestration:
 ``` r
 if (FALSE) { # \dontrun{
 mod <- signature("text -> sentiment") |> module(type = "predict")
-validate_workflow(mod, dataset = test_data)
+validate_workflow(mod, data = test_data)
 } # }
 ```

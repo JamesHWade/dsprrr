@@ -13,7 +13,7 @@ optimize_grid(module, ...)
 # S3 method for class 'Module'
 optimize_grid(
   module,
-  devset,
+  data,
   metric = metric_exact_match(),
   grid = NULL,
   parameters = NULL,
@@ -36,14 +36,15 @@ optimize_grid(
   Additional arguments forwarded to
   [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md).
 
-- devset:
+- data:
 
-  Development dataset containing columns required by the module's
-  signature plus any fields consumed by the metric.
+  Development data containing columns required by the module's signature
+  plus any fields consumed by the metric.
 
 - metric:
 
   Metric function applied per example. Defaults to
+
   [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md).
   Use
   [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)

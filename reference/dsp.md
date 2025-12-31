@@ -10,13 +10,13 @@ to ellmer users while providing the power of declarative signatures.
 dsp(x, ...)
 
 # S3 method for class 'Chat'
-dsp(x, signature, ..., .instructions = NULL, .echo = "none")
+dsp(x, signature, ..., .instructions = NULL, .echo = "none", .simplify = TRUE)
 
 # S3 method for class 'character'
-dsp(x, ..., .instructions = NULL, .echo = "none")
+dsp(x, ..., .instructions = NULL, .echo = "none", .simplify = TRUE)
 
 # S3 method for class '`dsprrr::Signature`'
-dsp(x, ..., .instructions = NULL, .echo = "none")
+dsp(x, ..., .instructions = NULL, .echo = "none", .simplify = TRUE)
 ```
 
 ## Arguments
@@ -43,11 +43,17 @@ dsp(x, ..., .instructions = NULL, .echo = "none")
   [ellmer::Chat](https://ellmer.tidyverse.org/reference/Chat.html) for
   options.
 
+- .simplify:
+
+  Logical. If `TRUE` (default), single-field outputs are simplified to
+  just the value. If `FALSE`, always returns a named list.
+
 ## Value
 
-The structured output according to the signature's output type. For
-single-field outputs, returns just the value. For multi-field outputs,
-returns a named list.
+The structured output according to the signature's output type. When
+`.simplify = TRUE` (default): single-field outputs return just the
+value, multi-field outputs return a named list. When
+`.simplify = FALSE`: always returns a named list.
 
 ## Details
 
@@ -64,6 +70,21 @@ The function dispatches on the first argument:
 - `dsp.character`: When providing a signature string (uses default Chat)
 
 - `dsp.dsprrr::Signature`: When providing a Signature object
+
+## See also
+
+- [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
+  for creating signature objects
+
+- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  and [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
+  for reusable modules with optimization support
+
+- [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)
+  to convert a Chat to a module
+
+- [`set_default_chat()`](https://jameshwade.github.io/dsprrr/reference/set_default_chat.md)
+  to configure the default LLM
 
 ## Examples
 
@@ -88,5 +109,9 @@ chat |> dsp(
   text = long_article,
   .instructions = "Keep the summary under 50 words"
 )
+
+# Control output simplification
+dsp("q -> answer", q = "Hi", .simplify = TRUE)   # Returns: "Hello"
+dsp("q -> answer", q = "Hi", .simplify = FALSE)  # Returns: list(answer = "Hello")
 } # }
 ```

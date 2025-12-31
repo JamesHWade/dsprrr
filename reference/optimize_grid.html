@@ -66,7 +66,7 @@ can be expanded into a grid (named lists or tidymodels parameter sets).</p>
 <span><span class="co"># S3 method for class 'Module'</span></span>
 <span><span class="fu">optimize_grid</span><span class="op">(</span></span>
 <span>  <span class="va">module</span>,</span>
-<span>  <span class="va">devset</span>,</span>
+<span>  <span class="va">data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  grid <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -89,14 +89,14 @@ can be expanded into a grid (named lists or tidymodels parameter sets).</p>
 <dd><p>Additional arguments forwarded to <code><a href="evaluate.html">evaluate()</a></code>.</p></dd>
 
 
-<dt id="arg-devset">devset<a class="anchor" aria-label="anchor" href="#arg-devset"></a></dt>
-<dd><p>Development dataset containing columns required by the module's
+<dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
+<dd><p>Development data containing columns required by the module's
 signature plus any fields consumed by the metric.</p></dd>
 
 
 <dt id="arg-metric">metric<a class="anchor" aria-label="anchor" href="#arg-metric"></a></dt>
-<dd><p>Metric function applied per example. Defaults to
-<code><a href="metric_exact_match.html">metric_exact_match()</a></code>. Use <code><a href="as_dsprrr_metric.html">as_dsprrr_metric()</a></code> to adapt yardstick/vitals
+<dd><p>Metric function applied per example. Defaults to</p>
+<p><code><a href="metric_exact_match.html">metric_exact_match()</a></code>. Use <code><a href="as_dsprrr_metric.html">as_dsprrr_metric()</a></code> to adapt yardstick/vitals
 metrics.</p></dd>
 
 

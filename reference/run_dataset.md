@@ -1,7 +1,6 @@
-# Execute Module on Dataset
+# Execute Module on Data
 
-Execute a module on a dataset (tibble/data.frame) with optimized batch
-processing.
+Execute a module on a data frame/tibble with optimized batch processing.
 
 ## Usage
 
@@ -11,7 +10,7 @@ run_dataset(module, ...)
 # S3 method for class 'Module'
 run_dataset(
   module,
-  dataset,
+  data,
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
@@ -30,35 +29,12 @@ run_dataset(
 
 - ...:
 
-  Additional arguments including:
+  Additional arguments passed to
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md).
 
-  dataset
+- data:
 
-  :   A tibble or data frame with columns matching the module's inputs
-
-  .llm
-
-  :   An ellmer chat object for LLM interaction (optional)
-
-  .verbose
-
-  :   Logical indicating whether to print debug information
-
-  .parallel
-
-  :   Logical indicating whether to process in parallel (default TRUE)
-
-  .progress
-
-  :   Logical indicating whether to show progress bar (default TRUE)
-
-  .return_format
-
-  :   Character, either "simple" or "structured" (default "simple")
-
-- dataset:
-
-  A data frame or tibble containing input columns
+  A tibble or data frame with columns matching the module's inputs.
 
 - .llm:
 
@@ -88,14 +64,14 @@ A tibble with the input columns plus a result column containing outputs
 
 ``` r
 if (FALSE) { # \dontrun{
-# Process a dataset
-data <- tibble::tibble(
+# Process data
+df <- tibble::tibble(
   text = c("I love this!", "This is bad", "Okay product")
 )
 
 llm <- ellmer::chat_openai()
 results <- signature("text -> sentiment") |>
   module(type = "predict") |>
-  run_dataset(data, .llm = llm)
+  run_dataset(df, .llm = llm)
 } # }
 ```

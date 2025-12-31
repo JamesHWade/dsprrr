@@ -13,7 +13,7 @@ library(dsprrr)
 dsprrr_sitrep()
 
 # 2. If a call failed, inspect the last prompt
-last_prompt()
+get_last_prompt()
 
 # 3. View recent prompt history
 inspect_history(n = 5)
@@ -390,7 +390,7 @@ final <- dsp("summaries -> combined", summaries = paste(summaries, collapse = "\
     ✖ Failed to parse JSON response
     ! Response parsing failed
     ℹ The LLM returned invalid JSON. Try simplifying the output type
-    ℹ Check `last_prompt()` to see the raw response
+    ℹ Check `get_last_prompt()` to see the raw response
 
 **Cause:** The LLM didn’t return valid structured output.
 
@@ -399,7 +399,7 @@ final <- dsp("summaries -> combined", summaries = paste(summaries, collapse = "\
 1.  **Inspect what happened:**
 
 ``` r
-last_prompt()  # See the prompt and response
+get_last_prompt()  # See the prompt and response
 ```
 
 2.  **Simplify your output type:**
@@ -538,10 +538,10 @@ model are active - API key status
 
 ``` r
 # See the full prompt that was sent
-last_prompt()
+get_last_prompt()
 
 # Get the trace with all details
-trace <- last_trace()
+trace <- get_last_trace()
 trace$prompt      # The prompt
 trace$output      # The raw output
 trace$model       # Which model was used

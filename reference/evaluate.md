@@ -20,23 +20,30 @@ evaluate(module, ...)
 
 - ...:
 
-  Additional arguments including:
+  Arguments passed to methods:
 
-  - dataset: A data frame or tibble containing columns that match the
-    module's signature inputs plus any expected fields used by metric
+  - `data`: A data frame or tibble containing columns that match the
+    module's signature inputs plus any expected fields used by metric.
 
-  - metric: A function applied per example with signature
-    metric(prediction, expected_row)
+  - `metric`: A function applied per example with signature
+    `metric(prediction, expected_row)`.
 
-  - .llm: Optional ellmer chat object supplied to run()
+  Additional arguments passed to
+  [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md):
 
-  - .parallel: Logical; whether to allow parallel execution
+  - `.llm`: Optional ellmer chat object
 
-  - .progress: Logical; whether to display progress while evaluating
+  - `.parallel`: Logical; whether to allow parallel execution
+
+  - `.progress`: Logical; whether to display progress while evaluating
+
+  - `.return_format`: Character; `"simple"` returns just scores and
+    predictions, `"structured"` (default) includes full metadata and
+    data
 
 ## Value
 
-A list with elements
+A list with elements. When `.return_format = "structured"` (default):
 
 - `mean_score`: numeric mean over all successful metric evaluations.
 
@@ -53,4 +60,24 @@ A list with elements
 
 - `errors`: character vector with error messages, when any.
 
-- `dataset`: input dataset augmented with prediction metadata.
+- `data`: input data augmented with prediction metadata.
+
+When `.return_format = "simple"`:
+
+- `mean_score`, `scores`, `predictions`, `n_evaluated`, `n_errors`,
+  `errors` (omits `metadata` and `data` for lighter-weight results)
+
+## See also
+
+- [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
+  executing without metrics
+
+- [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+  for batch execution without metrics
+
+- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+  for parameter optimization
+
+- [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md),
+  [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md)
+  for built-in metrics

@@ -79,7 +79,7 @@ data.
 dsprrr provides three key helpers for integrating with the tidymodels
 ecosystem:
 
-### `module_parameter_set()`: Derive dials parameters
+### `module_parameters()`: Derive dials parameters
 
 After running
 [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
@@ -92,7 +92,7 @@ additional grid configurations:
 library(dials)
 
 # After optimization, extract discovered parameters
-param_set <- module_parameter_set(sentiment_module)
+param_set <- module_parameters(sentiment_module)
 print(param_set)
 
 # Use the parameter set to generate a more refined grid
@@ -111,24 +111,24 @@ You can filter which parameters are included:
 
 ``` r
 # Only include specific parameters
-param_set <- module_parameter_set(
+param_set <- module_parameters(
   sentiment_module,
   include = c("temperature", "prompt_style")
 )
 
 # Exclude certain parameters
-param_set <- module_parameter_set(
+param_set <- module_parameters(
   sentiment_module,
   exclude = c("id", "instructions", "max_output_tokens")
 )
 ```
 
-### `module_trials_summary()`: Optimization overview
+### `module_trials()`: Optimization overview
 
 Get a tidy summary of all optimization trials:
 
 ``` r
-summary <- module_trials_summary(sentiment_module)
+summary <- module_trials(sentiment_module)
 
 # Returns a tibble with:
 # - n_trials: number of trials evaluated
@@ -147,14 +147,14 @@ print(summary$best_params[[1]])  # Best parameter combination
 trials_df <- summary$trials[[1]]
 ```
 
-### `module_metric_summary()`: Per-trial metrics with yardstick
+### `module_metrics()`: Per-trial metrics with yardstick
 
 For more detailed per-trial analysis, including integration with
 yardstick metrics:
 
 ``` r
 # Basic summary without yardstick
-metrics <- module_metric_summary(sentiment_module)
+metrics <- module_metrics(sentiment_module)
 
 # Returns a tibble with one row per trial:
 # - trial_id, score: trial identifier and overall score
@@ -167,7 +167,7 @@ metrics <- module_metric_summary(sentiment_module)
 # With yardstick metrics for classification tasks
 library(yardstick)
 
-yardstick_metrics <- module_metric_summary(
+yardstick_metrics <- module_metrics(
 
   sentiment_module,
   metrics = metric_set(accuracy, precision, recall),
@@ -204,13 +204,13 @@ optimize_grid(
 )
 
 # 2. Review optimization results
-summary <- module_trials_summary(mod)
+summary <- module_trials(mod)
 cat("Best score:", summary$best_score, "\n")
 cat("Best params:", paste(names(summary$best_params[[1]]),
     summary$best_params[[1]], sep = "=", collapse = ", "), "\n")
 
 # 3. Compute detailed metrics
-detailed <- module_metric_summary(
+detailed <- module_metrics(
   mod,
   metrics = metric_set(accuracy, f_meas),
   truth = "label",
@@ -223,7 +223,7 @@ ggplot(detailed, aes(x = trial_id, y = score)) +
   labs(title = "Score by Trial", x = "Trial", y = "Score")
 
 # 5. Extract parameters for further tuning
-params <- module_parameter_set(mod, include = c("temperature"))
+params <- module_parameters(mod, include = c("temperature"))
 
 # Generate a finer grid around the best temperature
 fine_grid <- grid_regular(params, levels = 10)
