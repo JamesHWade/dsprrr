@@ -161,6 +161,7 @@ reference:
     - session_cost
     - print.dsprrr_evaluation
     - print.dsprrr_batch_result
+    - print.dsprrr_cost_summary
 
   - title: Traces
     desc: Execution trace utilities

@@ -143,7 +143,12 @@ evaluate.Module <- function(
         }
       },
       error = function(e) {
-        errors[i] <- e$message
+        errors[i] <<- e$message
+        cli::cli_warn(
+          c("Metric evaluation failed for row {i}",
+            "x" = e$message),
+          class = "dsprrr_metric_error"
+        )
         NA_real_
       }
     )

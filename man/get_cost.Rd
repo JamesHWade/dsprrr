@@ -12,7 +12,13 @@ get_cost(x, ...)
 \item{...}{Additional arguments (unused)}
 }
 \value{
-A numeric value or tibble with cost information
+A numeric value (for single results) or a \code{dsprrr_cost_summary} object
+(for batch results and evaluations) containing:
+\itemize{
+\item \code{costs}: A tibble with per-item costs
+\item \code{total}: Total cost across all items
+\item \code{n_missing}: Count of items with missing cost data
+}
 }
 \description{
 Extract cost information from a DSPrrr result object.
@@ -22,4 +28,7 @@ Extract cost information from a DSPrrr result object.
 result <- run(mod, text = "hello", .return_format = "structured")
 get_cost(result)
 }
+}
+\seealso{
+\code{\link[=session_cost]{session_cost()}} for session-level cost tracking
 }
