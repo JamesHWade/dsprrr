@@ -150,6 +150,18 @@ reference:
     - inspect_history
     - clear_prompt_history
 
+  - title: Result Accessors
+    desc: Extract data from structured results
+    contents:
+    - accessors
+    - get_output
+    - get_metadata
+    - get_tokens
+    - get_cost
+    - session_cost
+    - print.dsprrr_evaluation
+    - print.dsprrr_batch_result
+
   - title: Traces
     desc: Execution trace utilities
     contents:
