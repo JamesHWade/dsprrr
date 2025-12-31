@@ -706,3 +706,71 @@ test_that("get_cost_summary returns empty tibble for module with no traces", {
   expect_equal(nrow(result), 0)
   expect_true(all(c("timestamp", "model", "input_tokens", "output_tokens", "cost") %in% names(result)))
 })
+
+test_that("batch run with structured format returns dsprrr_batch_result class", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+
+  pred <- module(
+    signature = sig,
+    type = "predict",
+    template = "{text}"
+  )
+
+  mock_llm <- list(
+    chat_structured = function(prompt, ...) "result"
+  )
+  class(mock_llm) <- "Chat"
+
+  results <- run(
+    pred,
+    text = c("a", "b", "c"),
+    .llm = mock_llm,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_s3_class(results, "dsprrr_batch_result")
+
+  # Print method should work without error
+  output <- capture.output(print(results), type = "message")
+  expect_true(any(grepl("Batch Results", output)))
+  expect_true(any(grepl("Items", output)))
+})
+
+test_that("dsprrr_batch_result print method handles many items", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+
+  pred <- module(
+    signature = sig,
+    type = "predict",
+    template = "{text}"
+  )
+
+  mock_llm <- list(
+    chat_structured = function(prompt, ...) "result"
+  )
+  class(mock_llm) <- "Chat"
+
+  # Run with 5 items to trigger truncated display
+  results <- run(
+    pred,
+    text = c("a", "b", "c", "d", "e"),
+    .llm = mock_llm,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_s3_class(results, "dsprrr_batch_result")
+
+  # Should show "and X more"
+  output <- capture.output(print(results), type = "message")
+  expect_true(any(grepl("and.*more", output)))
+})

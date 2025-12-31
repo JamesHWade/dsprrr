@@ -840,3 +840,53 @@ show_prompt_preview <- function(module) {
 
   cli::cat_line()
 }
+
+#' Print method for dsprrr_batch_result
+#' @export
+print.dsprrr_batch_result <- function(x, ...) {
+  n <- length(x)
+
+  cli::cli_h3("DSPrrr Batch Results")
+  cli::cli_text("{.field Items}: {n}")
+
+  # Count successes vs errors
+  n_errors <- sum(vapply(x, function(item) {
+    isTRUE(item$error) || inherits(item$output, "error")
+  }, logical(1)))
+
+  if (n_errors > 0) {
+    cli::cli_alert_warning("{.field Errors}: {n_errors} of {n} items")
+  } else {
+    cli::cli_alert_success("All items completed successfully")
+  }
+
+  # Show first few results
+  if (n > 0 && n <= 3) {
+    cli::cli_text("{.field Outputs}:")
+    for (i in seq_len(n)) {
+      output <- x[[i]]$output
+      if (is.character(output)) {
+        cli::cli_text("  [{i}] {substr(output, 1, 50)}{if (nchar(output) > 50) '...' else ''}")
+      } else if (is.list(output)) {
+        cli::cli_text("  [{i}] <list> with {length(output)} elements")
+      } else {
+        cli::cli_text("  [{i}] <{class(output)[1]}>")
+      }
+    }
+  } else if (n > 3) {
+    cli::cli_text("{.field First 3 outputs}:")
+    for (i in 1:3) {
+      output <- x[[i]]$output
+      if (is.character(output)) {
+        cli::cli_text("  [{i}] {substr(output, 1, 50)}{if (nchar(output) > 50) '...' else ''}")
+      } else if (is.list(output)) {
+        cli::cli_text("  [{i}] <list> with {length(output)} elements")
+      } else {
+        cli::cli_text("  [{i}] <{class(output)[1]}>")
+      }
+    }
+    cli::cli_text("  ... and {n - 3} more")
+  }
+
+  invisible(x)
+}

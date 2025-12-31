@@ -152,5 +152,33 @@ evaluate.Module <- function(
     result$data <- evaluated
   }
 
-  result
+  structure(result, class = "dsprrr_evaluation")
+}
+
+#' Print method for dsprrr_evaluation
+#' @export
+print.dsprrr_evaluation <- function(x, ...) {
+
+  cli::cli_h3("DSPrrr Evaluation Results")
+
+  if (is.na(x$mean_score)) {
+    cli::cli_alert_warning("No successful evaluations")
+  } else {
+    cli::cli_alert_success("Mean Score: {round(x$mean_score, 4)}")
+  }
+
+  cli::cli_text("{.field Evaluated}: {x$n_evaluated}")
+  if (x$n_errors > 0) {
+    cli::cli_alert_warning("{.field Errors}: {x$n_errors}")
+  }
+
+  if (length(x$scores) <= 10) {
+    cli::cli_text("{.field Scores}: {paste(round(x$scores, 3), collapse = ', ')}")
+  } else {
+    cli::cli_text(
+      "{.field Scores}: {paste(round(x$scores[1:5], 3), collapse = ', ')}, ... ({length(x$scores)} total)"
+    )
+  }
+
+  invisible(x)
 }

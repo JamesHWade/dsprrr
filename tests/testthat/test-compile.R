@@ -348,3 +348,70 @@ test_that("evaluate generic executes modules", {
   expect_equal(results$n_evaluated, 2)
   expect_equal(unlist(results$predictions), dataset$text)
 })
+
+test_that("evaluate returns dsprrr_evaluation class", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  dataset <- data.frame(
+    text = c("hello", "world"),
+    expected = c("greeting", "noun")
+  )
+
+  metric <- metric_exact_match(field = "result")
+
+  results <- evaluate(
+    mod,
+    dataset,
+    metric = metric,
+    .llm = mock_llm,
+    .progress = FALSE
+  )
+
+  # Check S3 class
+
+  expect_s3_class(results, "dsprrr_evaluation")
+  expect_true(inherits(results, "dsprrr_evaluation"))
+
+  # Print method should work without error
+  output <- capture.output(print(results), type = "message")
+  expect_true(any(grepl("Evaluation Results", output)))
+  expect_true(any(grepl("Evaluated", output)))
+})
+
+test_that("dsprrr_evaluation print method handles errors", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Create evaluation with some errors (metric fails)
+  dataset <- data.frame(
+    text = c("hello", "world"),
+    expected = c("greeting", "noun")
+  )
+
+  # Metric that always fails
+  bad_metric <- function(pred, row) stop("intentional failure")
+
+  results <- evaluate(
+    mod,
+    dataset,
+    metric = bad_metric,
+    .llm = mock_llm,
+    .progress = FALSE
+  )
+
+  expect_s3_class(results, "dsprrr_evaluation")
+  expect_equal(results$n_errors, 2)
+
+  # Print should still work
+  output <- capture.output(print(results), type = "message")
+  expect_true(any(grepl("Errors", output)))
+})
