@@ -505,7 +505,8 @@ Module <- R6::R6Class(
         return(list(
           n_traces = 0,
           total_tokens = 0,
-          total_latency_ms = 0
+          total_latency_ms = 0,
+          total_cost = 0
         ))
       }
 
@@ -575,6 +576,36 @@ Module <- R6::R6Class(
           ),
           na.rm = TRUE
         )
+      )
+    },
+
+    #' @description
+    #' Get total cost for this module's LLM calls
+    #' @return Numeric total cost in USD
+    get_total_cost = function() {
+      self$trace_summary()$total_cost
+    },
+
+    #' @description
+    #' Get cost summary with per-call breakdown
+    #' @return A tibble with timestamp, model, tokens, and cost per call
+    get_cost_summary = function() {
+      traces <- self$get_traces()
+      if (nrow(traces) == 0) {
+        return(tibble::tibble(
+          timestamp = .POSIXct(numeric(0)),
+          model = character(0),
+          input_tokens = integer(0),
+          output_tokens = integer(0),
+          cost = numeric(0)
+        ))
+      }
+      tibble::tibble(
+        timestamp = traces$timestamp,
+        model = traces$model,
+        input_tokens = traces$input_tokens,
+        output_tokens = traces$output_tokens,
+        cost = traces$cost
       )
     },
 

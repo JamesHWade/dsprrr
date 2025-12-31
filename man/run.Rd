@@ -41,6 +41,12 @@ Supports both single inputs and batch processing. Batch execution can be
 parallelised, but is conservative by default to avoid reusing LLM clients
 across workers.
 }
+\details{
+\strong{Retry Behavior:} ellmer automatically retries failed requests up to 3 times
+(configurable via \code{options(ellmer_max_tries = n)}). This handles transient
+errors like rate limits and connection failures. See ellmer documentation
+for more details.
+}
 \examples{
 \dontrun{
 # Single input
@@ -59,5 +65,8 @@ result <- signature("text -> sentiment") |>
   module(type = "predict") |>
   run(text = "Great!", .llm = llm, .return_format = "structured")
 # Access: result$output, result$chat, result$metadata
+
+# Configure ellmer retry behavior (if needed)
+options(ellmer_max_tries = 5)
 }
 }

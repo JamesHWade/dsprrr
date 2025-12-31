@@ -393,3 +393,83 @@ test_that("dsprrr_sitrep shows API key status", {
   expect_true("ANTHROPIC_API_KEY" %in% names(result$api_keys))
   expect_true("GOOGLE_API_KEY" %in% names(result$api_keys))
 })
+
+# -- session_cost tests --
+
+test_that("session_cost returns empty summary when no calls made", {
+  clear_prompt_history()
+  on.exit(clear_prompt_history())
+
+  result <- session_cost()
+
+  expect_s3_class(result, "dsprrr_session_cost")
+  expect_equal(result$n_calls, 0L)
+  expect_equal(result$tokens_in, 0L)
+  expect_equal(result$tokens_out, 0L)
+  expect_equal(result$total_tokens, 0L)
+  expect_equal(result$cost, 0)
+  expect_s3_class(result$by_model, "tbl_df")
+  expect_equal(nrow(result$by_model), 0)
+})
+
+test_that("session_cost aggregates from prompt history", {
+  clear_prompt_history()
+  on.exit(clear_prompt_history())
+
+  # Simulate some prompt history entries
+  .dsprrr_env <- dsprrr:::.dsprrr_env
+  .dsprrr_env$prompt_history <- list(
+    list(
+      model = "gpt-4o-mini",
+      tokens_in = 100L,
+      tokens_out = 50L,
+      cost = 0.001
+    ),
+    list(
+      model = "gpt-4o-mini",
+      tokens_in = 200L,
+      tokens_out = 100L,
+      cost = 0.002
+    ),
+    list(
+      model = "claude-3-haiku",
+      tokens_in = 150L,
+      tokens_out = 75L,
+      cost = 0.0015
+    )
+  )
+
+  result <- session_cost()
+
+  expect_equal(result$n_calls, 3)
+  expect_equal(result$tokens_in, 450L)
+  expect_equal(result$tokens_out, 225L)
+  expect_equal(result$total_tokens, 675L)
+  expect_equal(result$cost, 0.0045)
+
+  # Check by_model breakdown
+  expect_equal(nrow(result$by_model), 2)
+  expect_true("gpt-4o-mini" %in% result$by_model$model)
+  expect_true("claude-3-haiku" %in% result$by_model$model)
+})
+
+test_that("session_cost print method works", {
+  clear_prompt_history()
+  on.exit(clear_prompt_history())
+
+  # Empty case - capture cli messages
+  result <- session_cost()
+  output <- capture.output(print(result), type = "message")
+  expect_true(any(grepl("No LLM calls recorded", output)))
+
+  # With data
+  .dsprrr_env <- dsprrr:::.dsprrr_env
+  .dsprrr_env$prompt_history <- list(
+    list(model = "gpt-4o", tokens_in = 100L, tokens_out = 50L, cost = 0.01)
+  )
+
+  result <- session_cost()
+  output <- capture.output(print(result), type = "message")
+  expect_true(any(grepl("LLM calls", output)))
+  expect_true(any(grepl("Tokens", output)))
+})

@@ -398,64 +398,127 @@ detect_provider_name <- function(chat) {
 #' dsprrr Situation Report
 #'
 #' @description
-#' Displays the current dsprrr configuration, available API keys, and
-#' session usage statistics. Inspired by `usethis::git_sitrep()`.
+#' Displays a comprehensive overview of your dsprrr configuration,
+#' including API keys, default chat settings, prompt history, and
+#' package versions. Inspired by `usethis::git_sitrep()`.
 #'
-#' @return Invisibly returns a list with configuration details.
+#' @return Invisibly returns a list with configuration details:
+#'   - `has_default_chat`: Logical, whether a default chat is configured
+#'   - `provider`: Character, name of the default provider
+#'   - `model`: Character, name of the default model
+#'   - `api_keys`: Named list of API key availability (logical)
+#'   - `n_calls`: Integer, number of LLM calls this session
+#'   - `prompt_history_count`: Integer, entries in prompt history
+#'   - `prompt_history_max`: Integer, maximum history size
+#'   - `ellmer_version`: Character, installed ellmer version
+#'   - `dsprrr_version`: Character, installed dsprrr version
 #'
 #' @export
 #' @examples
 #' \dontrun{
 #' dsprrr_sitrep()
 #' #> dsprrr configuration
-#' #> --------------------
+#' #> ────────────────────────────────────────────────────────
 #' #>
-#' #> Default provider: OpenAI (gpt-4o-mini)
-#' #> Source: Auto-detected from OPENAI_API_KEY
+#' #> ── Packages ──
+#' #> ✔ ellmer 0.2.0 (OK)
+#' #> ✔ dsprrr 0.1.0
 #' #>
-#' #> API keys found:
-#' #>   OPENAI_API_KEY
-#' #>   ANTHROPIC_API_KEY
+#' #> ── Default Chat ──
+#' #> ✔ OpenAI (gpt-4o-mini)
+#' #>   Source: Auto-detected from OPENAI_API_KEY
 #' #>
-#' #> Session usage:
-#' #>   LLM calls: 12
-#' #>   Tokens: 2,450 in / 890 out
-#' #>   Est. cost: $0.02
+#' #> ── API Keys ──
+#' #> ✔ OPENAI_API_KEY
+#' #> ✔ ANTHROPIC_API_KEY
+#' #> ✖ GOOGLE_API_KEY
+#' #>
+#' #> ── Session State ──
+#' #> • Prompt history: 12 / 100 entries
+#' #> • LLM calls: 15
+#' #> • Tokens: 2,450 in / 890 out
+#' #>
+#' #> ── Options ──
+#' #> • dsprrr.verbose: TRUE
+#' #> • dsprrr.quiet: FALSE
 #' }
 dsprrr_sitrep <- function() {
   cli::cli_h1("dsprrr configuration")
 
-  # Check for default chat
+  # Collect data for return value
+  result <- list()
+
+  # ── Packages section ──
+  cli::cli_h2("Packages")
+
+  pkg_version <- tryCatch(
+    as.character(utils::packageVersion("dsprrr")),
+    error = function(e) "not installed"
+  )
+  ellmer_version <- tryCatch(
+    as.character(utils::packageVersion("ellmer")),
+    error = function(e) "not installed"
+  )
+
+  result$dsprrr_version <- pkg_version
+  result$ellmer_version <- ellmer_version
+
+  # Check ellmer minimum version
+
+  ellmer_ok <- check_ellmer_version(ellmer_version)
+
+  if (ellmer_ok) {
+    cli::cli_bullets(c("v" = "ellmer {ellmer_version} (OK)"))
+  } else {
+    cli::cli_bullets(c(
+      "!" = "ellmer {ellmer_version} (update recommended)",
+      " " = "  Run: {.code install.packages('ellmer')}"
+    ))
+  }
+
+  cli::cli_bullets(c("v" = "dsprrr {pkg_version}"))
+
+  cli::cat_line()
+
+  # ── Default Chat section ──
+  cli::cli_h2("Default Chat")
+
   chat <- tryCatch(
     get_default_chat(create = FALSE),
     error = function(e) NULL
   )
 
-  # Default provider section
-  cli::cli_h2("Default Provider")
-
   if (!is.null(chat)) {
     model <- tryCatch(chat$get_model(), error = function(e) "unknown")
     provider <- detect_provider_name(chat)
 
-    cli::cli_text("{.strong {provider}} ({model})")
+    result$has_default_chat <- TRUE
+    result$provider <- provider
+    result$model <- model
+
+    cli::cli_bullets(c("v" = "{provider} ({model})"))
 
     # Check source of configuration
-    if (!is.null(getOption("dsprrr.default_chat"))) {
-      cli::cli_text("{.emph Source: Explicitly set via options}")
+    source_msg <- if (!is.null(getOption("dsprrr.default_chat"))) {
+      "Explicitly set via {.code options(dsprrr.default_chat = ...)}"
     } else if (!is.null(.dsprrr_env$config)) {
-      cli::cli_text("{.emph Source: Configured via dsp_configure()}")
+      "Configured via {.code dsp_configure()}"
     } else {
-      cli::cli_text("{.emph Source: Auto-detected}")
+      "Auto-detected from environment"
     }
+    cli::cli_text("  {.emph {source_msg}}")
   } else {
-    cli::cli_text("{.emph Not configured}")
-    cli::cli_text("Run {.code dsp_configure()} or set an API key")
+    result$has_default_chat <- FALSE
+    result$provider <- NA_character_
+    result$model <- NA_character_
+
+    cli::cli_bullets(c("x" = "Not configured"))
+    cli::cli_text("  Run {.code dsp_configure()} or set an API key")
   }
 
   cli::cat_line()
 
-  # API keys section
+  # ── API Keys section ──
   cli::cli_h2("API Keys")
 
   api_keys <- list(
@@ -464,30 +527,33 @@ dsprrr_sitrep <- function() {
     GOOGLE_API_KEY = nzchar(Sys.getenv("GOOGLE_API_KEY"))
   )
 
-  found_keys <- names(api_keys)[unlist(api_keys)]
-  missing_keys <- names(api_keys)[!unlist(api_keys)]
+  result$api_keys <- api_keys
 
-  if (length(found_keys) > 0) {
-    cli::cli_text("Found:")
-    for (key in found_keys) {
-      cli::cli_bullets(c("v" = "{key}"))
-    }
-  }
-
-  if (length(missing_keys) > 0) {
-    cli::cli_text("Not set:")
-    for (key in missing_keys) {
-      cli::cli_bullets(c("x" = "{key}"))
+  for (key_name in names(api_keys)) {
+    if (api_keys[[key_name]]) {
+      cli::cli_bullets(c("v" = "{key_name}"))
+    } else {
+      cli::cli_bullets(c("x" = "{key_name}"))
     }
   }
 
   cli::cat_line()
 
-  # Session usage section
-  cli::cli_h2("Session Usage")
+  # ── Session State section ──
+  cli::cli_h2("Session State")
 
   history <- .dsprrr_env$prompt_history %||% list()
   n_calls <- length(history)
+  history_max <- .dsprrr_env$prompt_history_max %||% 100L
+
+  result$n_calls <- n_calls
+  result$prompt_history_count <- n_calls
+  result$prompt_history_max <- history_max
+
+  # Prompt history
+  cli::cli_bullets(c(
+    "*" = "Prompt history: {n_calls} / {history_max} entries"
+  ))
 
   if (n_calls > 0) {
     # Aggregate stats
@@ -501,41 +567,234 @@ dsprrr_sitrep <- function() {
       total_cost <- total_cost + (entry$cost %||% 0)
     }
 
-    cli::cli_text("LLM calls: {.strong {n_calls}}")
-    cli::cli_text(
-      "Tokens: {.strong {format(total_tokens_in, big.mark = ',')}} in / {.strong {format(total_tokens_out, big.mark = ',')}} out"
-    )
+    result$total_tokens_in <- total_tokens_in
+    result$total_tokens_out <- total_tokens_out
+    result$total_cost <- total_cost
+
+    cli::cli_bullets(c("*" = "LLM calls: {n_calls}"))
+
+    if (total_tokens_in > 0 || total_tokens_out > 0) {
+      cli::cli_bullets(c(
+        "*" = "Tokens: {format(total_tokens_in, big.mark = ',')} in / {format(total_tokens_out, big.mark = ',')} out"
+      ))
+    }
 
     if (total_cost > 0) {
-      cli::cli_text(
-        "Est. cost: {.strong ${format(total_cost, digits = 2, nsmall = 2)}}"
-      )
+      cli::cli_bullets(c(
+        "*" = "Est. cost: ${format(total_cost, digits = 2, nsmall = 2)}"
+      ))
     }
-  } else {
-    cli::cli_text("{.emph No LLM calls recorded this session}")
   }
 
   cli::cat_line()
 
-  # Package info
-  cli::cli_h2("Package Info")
-  pkg_version <- tryCatch(
-    as.character(utils::packageVersion("dsprrr")),
-    error = function(e) "unknown"
-  )
-  ellmer_version <- tryCatch(
-    as.character(utils::packageVersion("ellmer")),
-    error = function(e) "unknown"
+  # ── Options section ──
+  cli::cli_h2("Options")
+
+  # List relevant dsprrr options
+  dsprrr_options <- list(
+    "dsprrr.verbose" = getOption("dsprrr.verbose"),
+    "dsprrr.quiet" = getOption("dsprrr.quiet"),
+    "dsprrr.default_return_format" = getOption("dsprrr.default_return_format")
   )
 
-  cli::cli_text("dsprrr: {.strong {pkg_version}}")
-  cli::cli_text("ellmer: {.strong {ellmer_version}}")
+  # Filter to only set options
+  set_options <- dsprrr_options[!vapply(dsprrr_options, is.null, logical(1))]
 
-  # Return invisibly
-  invisible(list(
-    has_default_chat = !is.null(chat),
-    provider = if (!is.null(chat)) detect_provider_name(chat) else NA_character_,
-    api_keys = api_keys,
-    n_calls = n_calls
+  if (length(set_options) > 0) {
+    for (opt_name in names(set_options)) {
+      opt_val <- set_options[[opt_name]]
+      cli::cli_bullets(c("*" = "{opt_name}: {.val {opt_val}}"))
+    }
+  } else {
+    cli::cli_text("{.emph Using defaults (no options set)}")
+  }
+
+  cli::cat_line()
+
+  invisible(result)
+}
+
+#' Session Cost Summary
+#'
+#' @description
+#' Get cost and token usage summary for the current dsprrr session.
+#' This aggregates data from all LLM calls tracked in the prompt history.
+#'
+#' @return A list with:
+#'   - `n_calls`: Integer, number of LLM calls
+#'   - `tokens_in`: Integer, total input tokens
+#'   - `tokens_out`: Integer, total output tokens
+#'   - `total_tokens`: Integer, sum of input and output tokens
+#'   - `cost`: Numeric, total estimated cost in USD
+#'   - `by_model`: A tibble with per-model breakdown (if available)
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # After running some dsp() calls
+#' dsp("question -> answer", question = "What is 2+2?")
+#' dsp("question -> answer", question = "What is the capital of France?")
+#'
+#' # Get session summary
+#' session_cost()
+#' #> $n_calls
+#' #> [1] 2
+#' #> $tokens_in
+#' #> [1] 45
+#' #> $tokens_out
+#' #> [1] 12
+#' #> $cost
+#' #> [1] 0.0001
+#'
+#' # Access total cost directly
+#' session_cost()$cost
+#' }
+session_cost <- function() {
+  history <- .dsprrr_env$prompt_history %||% list()
+
+  if (length(history) == 0) {
+    return(structure(
+      list(
+        n_calls = 0L,
+        tokens_in = 0L,
+        tokens_out = 0L,
+        total_tokens = 0L,
+        cost = 0,
+        by_model = tibble::tibble(
+          model = character(0),
+          n_calls = integer(0),
+          tokens_in = integer(0),
+          tokens_out = integer(0),
+          cost = numeric(0)
+        )
+      ),
+      class = "dsprrr_session_cost"
+    ))
+  }
+
+  # Aggregate totals
+  tokens_in <- sum(vapply(
+    history,
+    function(e) e$tokens_in %||% 0L,
+    integer(1)
   ))
+  tokens_out <- sum(vapply(
+    history,
+    function(e) e$tokens_out %||% 0L,
+    integer(1)
+  ))
+  cost <- sum(vapply(
+    history,
+    function(e) e$cost %||% 0,
+    numeric(1)
+  ))
+
+  # Build per-model breakdown
+  models <- vapply(
+    history,
+    function(e) e$model %||% "unknown",
+    character(1)
+  )
+  unique_models <- unique(models)
+
+  by_model <- tibble::tibble(
+    model = unique_models,
+    n_calls = vapply(unique_models, function(m) sum(models == m), integer(1)),
+    tokens_in = vapply(unique_models, function(m) {
+      sum(vapply(
+        history[models == m],
+        function(e) e$tokens_in %||% 0L,
+        integer(1)
+      ))
+    }, integer(1)),
+    tokens_out = vapply(unique_models, function(m) {
+      sum(vapply(
+        history[models == m],
+        function(e) e$tokens_out %||% 0L,
+        integer(1)
+      ))
+    }, integer(1)),
+    cost = vapply(unique_models, function(m) {
+      sum(vapply(
+        history[models == m],
+        function(e) e$cost %||% 0,
+        numeric(1)
+      ))
+    }, numeric(1))
+  )
+
+  structure(
+    list(
+      n_calls = length(history),
+      tokens_in = tokens_in,
+      tokens_out = tokens_out,
+      total_tokens = tokens_in + tokens_out,
+      cost = cost,
+      by_model = by_model
+    ),
+    class = "dsprrr_session_cost"
+  )
+}
+
+#' @export
+print.dsprrr_session_cost <- function(x, ...) {
+  cli::cli_h3("dsprrr Session Cost")
+
+  if (x$n_calls == 0) {
+    cli::cli_text("{.emph No LLM calls recorded in this session}")
+    return(invisible(x))
+  }
+
+  cli::cli_bullets(c(
+    "*" = "LLM calls: {x$n_calls}",
+    "*" = "Tokens: {format(x$tokens_in, big.mark = ',')} in / {format(x$tokens_out, big.mark = ',')} out",
+    "*" = "Total: {format(x$total_tokens, big.mark = ',')} tokens"
+  ))
+
+  if (x$cost > 0) {
+    cli::cli_bullets(c(
+      "*" = "Est. cost: ${format(x$cost, digits = 4, nsmall = 4)}"
+    ))
+  }
+
+  if (nrow(x$by_model) > 1) {
+    cli::cli_text("")
+    cli::cli_text("{.emph By model:}")
+    for (i in seq_len(nrow(x$by_model))) {
+      row <- x$by_model[i, ]
+      cli::cli_bullets(c(
+        " " = "{row$model}: {row$n_calls} call{?s}, {row$tokens_in + row$tokens_out} tokens, ${format(row$cost, digits = 4)}"
+      ))
+    }
+  }
+
+  invisible(x)
+}
+
+#' Check ellmer Version Compatibility
+#'
+#' @description
+#' Checks if the installed ellmer version meets minimum requirements.
+#'
+#' @param version Character string of ellmer version.
+#'
+#' @return Logical, TRUE if version is compatible.
+#'
+#' @noRd
+check_ellmer_version <- function(version) {
+  if (version == "not installed") {
+    return(FALSE)
+  }
+
+
+  # Minimum recommended ellmer version
+  min_version <- "0.1.0"
+
+  tryCatch(
+    {
+      utils::compareVersion(version, min_version) >= 0
+    },
+    error = function(e) TRUE # Assume OK if we can't parse
+  )
 }

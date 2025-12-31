@@ -678,3 +678,31 @@ test_that("run with .show_prompt defaults to FALSE", {
   # Should not contain preview-related text
   expect_false(any(grepl("Prompt Preview|Input fields", output)))
 })
+
+# -- Module cost tracking tests --
+
+test_that("get_total_cost returns 0 for module with no traces", {
+  sig <- Signature(
+    inputs = list(input(name = "q", class = S7::class_character)),
+    output_type = ellmer::type_string()
+  )
+
+  mod <- module(signature = sig, type = "predict")
+
+  expect_equal(mod$get_total_cost(), 0)
+})
+
+test_that("get_cost_summary returns empty tibble for module with no traces", {
+  sig <- Signature(
+    inputs = list(input(name = "q", class = S7::class_character)),
+    output_type = ellmer::type_string()
+  )
+
+  mod <- module(signature = sig, type = "predict")
+
+  result <- mod$get_cost_summary()
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 0)
+  expect_true(all(c("timestamp", "model", "input_tokens", "output_tokens", "cost") %in% names(result)))
+})

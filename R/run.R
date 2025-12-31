@@ -23,6 +23,12 @@
 #'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
 #'   }
 #'
+#' @details
+#' **Retry Behavior:** ellmer automatically retries failed requests up to 3 times
+#' (configurable via `options(ellmer_max_tries = n)`). This handles transient
+#' errors like rate limits and connection failures. See ellmer documentation
+#' for more details.
+#'
 #' @return For single inputs with .return_format="simple": The parsed output according to the module's signature.
 #'   For single inputs with .return_format="structured": A list with components:
 #'   - output: The parsed output
@@ -48,6 +54,9 @@
 #'   module(type = "predict") |>
 #'   run(text = "Great!", .llm = llm, .return_format = "structured")
 #' # Access: result$output, result$chat, result$metadata
+#'
+#' # Configure ellmer retry behavior (if needed)
+#' options(ellmer_max_tries = 5)
 #' }
 run <- function(module, ...) {
   UseMethod("run")
@@ -157,7 +166,8 @@ run.PredictModule <- function(
     ))
   }
 
-  # Single input processing - use module$forward
+  # Single input processing
+  # Note: ellmer handles retries internally (configurable via options(ellmer_max_tries))
   result <- module$forward(inputs, .llm = .llm, trace = TRUE)
 
   if (.verbose && !is.null(result$metadata[[1]]$prompt)) {
