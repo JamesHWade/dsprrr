@@ -181,7 +181,14 @@ get_tokens.dsprrr_evaluation <- function(x, ...) {
 #' @param x A DSPrrr result object
 #' @param ... Additional arguments (unused)
 #'
-#' @return A numeric value or tibble with cost information
+#' @return A numeric value (for single results) or a `dsprrr_cost_summary` object
+#'   (for batch results and evaluations) containing:
+#'   - `costs`: A tibble with per-item costs
+#'   - `total`: Total cost across all items
+#'
+#'   - `n_missing`: Count of items with missing cost data
+#'
+#' @seealso [session_cost()] for session-level cost tracking
 #' @export
 #' @examples
 #' \dontrun{
@@ -209,13 +216,22 @@ get_cost.dsprrr_batch_result <- function(x, ...) {
     meta$cost %||% NA_real_
   }, numeric(1))
 
+  n_missing <- sum(is.na(costs))
+  if (n_missing > 0) {
+    cli::cli_warn(c(
+      "Cost data missing for {n_missing} of {length(costs)} items",
+      "i" = "Total cost may be underreported"
+    ))
+  }
+
   structure(
     list(
       costs = tibble::tibble(
         index = seq_along(costs),
         cost = costs
       ),
-      total = sum(costs, na.rm = TRUE)
+      total = sum(costs, na.rm = TRUE),
+      n_missing = n_missing
     ),
     class = "dsprrr_cost_summary"
   )
@@ -231,7 +247,8 @@ get_cost.dsprrr_evaluation <- function(x, ...) {
           index = integer(0),
           cost = numeric(0)
         ),
-        total = 0
+        total = 0,
+        n_missing = 0L
       ),
       class = "dsprrr_cost_summary"
     ))
@@ -243,14 +260,45 @@ get_cost.dsprrr_evaluation <- function(x, ...) {
     numeric(1)
   )
 
+  n_missing <- sum(is.na(costs))
+  if (n_missing > 0) {
+    cli::cli_warn(c(
+      "Cost data missing for {n_missing} of {length(costs)} items",
+      "i" = "Total cost may be underreported"
+    ))
+  }
+
   structure(
     list(
       costs = tibble::tibble(
         index = seq_along(costs),
         cost = costs
       ),
-      total = sum(costs, na.rm = TRUE)
+      total = sum(costs, na.rm = TRUE),
+      n_missing = n_missing
     ),
     class = "dsprrr_cost_summary"
   )
+}
+
+#' Print method for dsprrr_cost_summary
+#' @param x A dsprrr_cost_summary object
+#' @param ... Additional arguments (unused)
+#' @export
+print.dsprrr_cost_summary <- function(x, ...) {
+  cli::cli_h3("DSPrrr Cost Summary")
+
+  if (nrow(x$costs) == 0) {
+    cli::cli_alert_info("No cost data available")
+    return(invisible(x))
+  }
+
+  cli::cli_alert_success("Total Cost: ${round(x$total, 4)}")
+  cli::cli_text("{.field Items}: {nrow(x$costs)}")
+
+  if (x$n_missing > 0) {
+    cli::cli_alert_warning("{.field Missing}: {x$n_missing} items without cost data")
+  }
+
+  invisible(x)
 }

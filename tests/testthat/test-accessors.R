@@ -129,6 +129,7 @@ test_that("get_cost works with dsprrr_batch_result", {
   expect_s3_class(result$costs, "tbl_df")
   expect_equal(result$costs$cost, c(0.001, 0.002))
   expect_equal(result$total, 0.003)
+  expect_equal(result$n_missing, 0)
 })
 
 test_that("get_cost works with dsprrr_evaluation", {
@@ -152,6 +153,7 @@ test_that("get_cost works with dsprrr_evaluation", {
   expect_s3_class(result$costs, "tbl_df")
   expect_equal(result$costs$cost, c(0.001, 0.002))
   expect_equal(result$total, 0.003)
+  expect_equal(result$n_missing, 0)
 })
 
 test_that("get_tokens works with dsprrr_evaluation", {
@@ -212,4 +214,51 @@ test_that("get_cost handles empty dsprrr_evaluation", {
   expect_s3_class(result$costs, "tbl_df")
   expect_equal(nrow(result$costs), 0)
   expect_equal(result$total, 0)
+  expect_equal(result$n_missing, 0L)
+})
+
+test_that("get_cost warns when costs are missing", {
+  batch <- structure(
+    list(
+      list(output = "a", metadata = list(cost = 0.001)),
+      list(output = "b", metadata = list())
+    ),
+    class = c("dsprrr_batch_result", "list")
+  )
+
+  expect_warning(
+    result <- get_cost(batch),
+    "Cost data missing for 1 of 2 items"
+  )
+  expect_equal(result$n_missing, 1)
+  expect_equal(result$total, 0.001)
+})
+
+test_that("print.dsprrr_cost_summary works", {
+  result <- structure(
+    list(
+      costs = tibble::tibble(index = 1:2, cost = c(0.001, 0.002)),
+      total = 0.003,
+      n_missing = 0
+    ),
+    class = "dsprrr_cost_summary"
+  )
+
+  output <- capture.output(print(result), type = "message")
+  expect_true(any(grepl("Cost Summary", output)))
+  expect_true(any(grepl("0.003", output)))
+})
+
+test_that("print.dsprrr_cost_summary shows missing warning", {
+  result <- structure(
+    list(
+      costs = tibble::tibble(index = 1:2, cost = c(0.001, NA)),
+      total = 0.001,
+      n_missing = 1
+    ),
+    class = "dsprrr_cost_summary"
+  )
+
+  output <- capture.output(print(result), type = "message")
+  expect_true(any(grepl("Missing", output)))
 })

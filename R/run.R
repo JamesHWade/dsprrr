@@ -529,12 +529,16 @@ run_batch_parallel <- function(
     )
   )
 
-  # Collect results
+  # Collect results with timeout protection
   results <- vector("list", n)
   completed <- 0
-  warnings_to_emit <- character(0)
 
-  while (completed < n) {
+  warnings_to_emit <- character(0)
+  max_wait_seconds <- getOption("dsprrr.parallel_timeout", 600) # 10 min default
+  max_iterations <- max_wait_seconds * 100 # 0.01s sleep per iteration
+  iterations <- 0
+
+  while (completed < n && iterations < max_iterations) {
     for (i in seq_len(n)) {
       if (is.null(results[[i]]) && !mirai::unresolved(mirai_tasks[[i]])) {
         result <- mirai_tasks[[i]][["data"]]
@@ -559,6 +563,28 @@ run_batch_parallel <- function(
       }
     }
     Sys.sleep(0.01)
+    iterations <- iterations + 1
+  }
+
+  # Handle timeout
+
+  if (completed < n) {
+    n_incomplete <- n - completed
+    cli::cli_warn(c(
+      "Parallel processing timed out after {max_wait_seconds} seconds",
+      "x" = "{n_incomplete} of {n} tasks did not complete",
+      "i" = "Increase timeout with {.code options(dsprrr.parallel_timeout = seconds)}"
+    ))
+    # Fill incomplete results with error markers
+    for (i in seq_len(n)) {
+      if (is.null(results[[i]])) {
+        results[[i]] <- create_error_result(
+          list(),
+          "Task timed out",
+          .return_format
+        )
+      }
+    }
   }
 
   # Emit accumulated warnings
