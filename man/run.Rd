@@ -18,6 +18,10 @@ Can be single values or vectors for batch processing. Additional parameters:
 When \code{TRUE}, a fresh LLM client is created per worker unless a custom
 \code{.llm} is supplied (in which case the call falls back to sequential
 execution).}
+\item{.parallel_method}{Character, either "mirai" (default) or "ellmer".
+"mirai" uses mirai for multi-process parallelism (one LLM client per worker).
+"ellmer" uses ellmer's \code{parallel_chat_structured()} for native async HTTP
+parallelism (more efficient, single process).}
 \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 \item{.return_format}{Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.}

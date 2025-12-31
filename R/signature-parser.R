@@ -384,9 +384,7 @@ split_respecting_nesting <- function(str, delimiter) {
 #' @noRd
 parse_type_string <- function(type_str, field_name = NULL) {
   # Load ellmer types
-  if (!requireNamespace("ellmer", quietly = TRUE)) {
-    cli::cli_abort("Package 'ellmer' is required for type specifications")
-  }
+  rlang::check_installed("ellmer", reason = "for type specifications")
 
   # Handle common type patterns
   type_str <- trimws(type_str)

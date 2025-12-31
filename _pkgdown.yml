@@ -42,6 +42,16 @@ navbar:
           href: articles/vitals-integration.html
         - text: "Production Orchestration"
           href: articles/orchestration.html
+        - text: "---"
+        - text: "Ecosystem"
+        - text: "Reasoning Models"
+          href: articles/reasoning-models.html
+        - text: "Advanced ellmer"
+          href: articles/advanced-ellmer.html
+        - text: "RAG Workflows"
+          href: articles/rag-workflows.html
+        - text: "tidymodels Integration"
+          href: articles/tidymodels-integration.html
 
 logo:
   file: man/figures/logo.png
@@ -65,6 +75,14 @@ articles:
     desc: Deploy and orchestrate LLM workflows
     contents:
     - orchestration
+
+  - title: Ecosystem
+    desc: Integration with the R ecosystem
+    contents:
+    - reasoning-models
+    - advanced-ellmer
+    - rag-workflows
+    - tidymodels-integration
 
 reference:
   - title: Core Functions
@@ -175,6 +193,35 @@ reference:
     contents:
     - as_vitals_solver
     - as_dsprrr_metric
+
+  - title: ellmer Integration
+    desc: Deep integration with ellmer
+    contents:
+    - as_ellmer_tool
+    - register_dsprrr_tool
+
+  - title: RAG Integration
+    desc: Retrieval-Augmented Generation with ragnar
+    contents:
+    - rag_module
+    - ragnar_tool
+    - create_search_tool
+    - print.ragnar_tool
+
+  - title: tidymodels Integration
+    desc: parsnip model specification and dials parameters
+    contents:
+    - llm_predict
+    - register_dsprrr_engine
+    - temperature
+    - top_p
+    - reasoning_effort
+
+  - title: Model Utilities
+    desc: Model detection and provider defaults
+    contents:
+    - is_reasoning_model
+    - provider_defaults
 
   - title: Utilities
     desc: Helper functions

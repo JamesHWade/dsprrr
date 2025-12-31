@@ -18,6 +18,10 @@
 #'       When `TRUE`, a fresh LLM client is created per worker unless a custom
 #'       `.llm` is supplied (in which case the call falls back to sequential
 #'       execution).}
+#'     \item{.parallel_method}{Character, either "mirai" (default) or "ellmer".
+#'       "mirai" uses mirai for multi-process parallelism (one LLM client per worker).
+#'       "ellmer" uses ellmer's `parallel_chat_structured()` for native async HTTP
+#'       parallelism (more efficient, single process).}
 #'     \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 #'     \item{.return_format}{Character, either "simple" (default) or "structured".
 #'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
@@ -101,10 +105,12 @@ run.PredictModule <- function(
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
+  .parallel_method = c("mirai", "ellmer"),
   .progress = TRUE,
   .return_format = "simple",
   .show_prompt = FALSE
 ) {
+  .parallel_method <- match.arg(.parallel_method)
   # Show prompt preview if requested
   if (.show_prompt) {
     show_prompt_preview(module)
@@ -188,7 +194,8 @@ run.PredictModule <- function(
       .verbose,
       .parallel,
       .progress,
-      .return_format
+      .return_format,
+      .parallel_method
     ))
   }
 
@@ -348,13 +355,25 @@ run_batch <- function(
   .verbose,
   .parallel,
   .progress,
-  .return_format
+  .return_format,
+  .parallel_method = "mirai"
 ) {
-  parallel_mode <- .parallel && n > 1
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
 
-  if (parallel_mode) {
-    results <- run_batch_parallel(
+  # Determine execution method
+  if (!.parallel || n <= 1) {
+    results <- run_batch_sequential(
+      module,
+      input_sets,
+      n,
+      .llm,
+      .verbose,
+      .return_format,
+      .progress
+    )
+  } else if (.parallel_method == "ellmer") {
+    # Use ellmer's parallel_chat_structured for native parallelism
+    results <- run_batch_ellmer_parallel(
       module,
       input_sets,
       n,
@@ -364,7 +383,8 @@ run_batch <- function(
       .progress
     )
   } else {
-    results <- run_batch_sequential(
+    # Default: mirai-based parallelism
+    results <- run_batch_parallel(
       module,
       input_sets,
       n,
@@ -440,6 +460,111 @@ run_batch_sequential <- function(
 
   if (!is.null(progress_id)) {
     cli::cli_progress_done(id = progress_id)
+  }
+
+  results
+}
+
+#' Run batch processing using ellmer's parallel_chat_structured
+#'
+#' Uses ellmer's native parallel processing for structured outputs.
+#' This approach is more efficient as it handles parallel HTTP requests
+#' internally without the overhead of spawning R processes.
+#'
+#' @noRd
+run_batch_ellmer_parallel <- function(
+  module,
+  input_sets,
+  n,
+  .llm,
+  .verbose,
+  .return_format,
+  .progress
+) {
+  # Build prompts for all inputs
+  prompts <- vapply(input_sets, function(input_set) {
+    prompt <- build_prompt(module, input_set)
+    instructions <- module$signature@instructions
+    if (nchar(instructions) > 0) {
+      paste(instructions, prompt, sep = "\n\n")
+    } else {
+      prompt
+    }
+  }, character(1))
+
+  # Get the Chat provider - need to clone for parallel use
+  chat <- .llm %||% module$chat %||% get_default_llm(module)
+
+  # Check if ellmer has parallel_chat_structured
+  if (!exists("parallel_chat_structured", envir = asNamespace("ellmer"))) {
+    cli::cli_warn(c(
+      "ellmer::parallel_chat_structured() not available",
+      "i" = "Falling back to mirai-based parallelism",
+      "i" = "Update ellmer to use native parallel processing"
+    ))
+    return(run_batch_parallel(
+      module, input_sets, n, .llm, .verbose, .return_format, .progress
+    ))
+  }
+
+  # Show progress indication
+  if (.progress && n > 1) {
+    cli::cli_progress_step(
+      "Processing {n} items with ellmer parallel...",
+      spinner = TRUE
+    )
+  }
+
+  start_time <- Sys.time()
+
+  # Call ellmer's parallel_chat_structured
+  responses <- tryCatch(
+    {
+      ellmer::parallel_chat_structured(
+        chat = chat,
+        prompts = prompts,
+        type = module$signature@output_type
+      )
+    },
+    error = function(e) {
+      cli::cli_abort(c(
+        "Parallel LLM call failed",
+        "x" = e$message,
+        "i" = "Try sequential processing with {.code .parallel = FALSE}"
+      ), parent = e)
+    }
+  )
+
+  end_time <- Sys.time()
+  total_latency <- as.numeric(difftime(end_time, start_time, units = "secs")) *
+    1000
+
+  if (.progress && n > 1) {
+    cli::cli_progress_done()
+  }
+
+  # Format results
+  results <- vector("list", n)
+  for (i in seq_len(n)) {
+    response <- responses[[i]]
+
+    if (.return_format == "simple") {
+      results[[i]] <- extract_simple_output(response, module$signature@output_type)
+    } else {
+      results[[i]] <- list(
+        output = response,
+        chat = chat,
+        metadata = list(
+          latency_ms = total_latency / n,  # Approximate per-item latency
+          prompt_length = nchar(prompts[[i]]),
+          prompt = prompts[[i]],
+          instructions = module$signature@instructions,
+          timestamp = end_time,
+          batch_index = i,
+          parallel_method = "ellmer"
+        )
+      )
+    }
   }
 
   results
@@ -533,6 +658,16 @@ run_batch_parallel <- function(
   results <- vector("list", n)
   completed <- 0
 
+  # Create progress bar for parallel processing
+  progress_id <- NULL
+  if (.progress && n > 1) {
+    progress_id <- cli::cli_progress_bar(
+      format = "Processing {cli::pb_current}/{cli::pb_total} | {cli::pb_percent} | ETA: {cli::pb_eta}",
+      total = n,
+      clear = FALSE
+    )
+  }
+
   warnings_to_emit <- character(0)
   max_wait_seconds <- getOption("dsprrr.parallel_timeout", 600) # 10 min default
   max_iterations <- max_wait_seconds * 100 # 0.01s sleep per iteration
@@ -557,8 +692,8 @@ run_batch_parallel <- function(
         results[[i]] <- result
         completed <- completed + 1
 
-        if (.progress && n > 1) {
-          cli::cli_progress_update()
+        if (!is.null(progress_id)) {
+          cli::cli_progress_update(id = progress_id)
         }
       }
     }
@@ -579,9 +714,12 @@ run_batch_parallel <- function(
     for (i in seq_len(n)) {
       if (is.null(results[[i]])) {
         results[[i]] <- create_error_result(
-          list(),
-          "Task timed out",
-          .return_format
+          error = list(message = "Task timed out"),
+          index = i,
+          prompt = NA_character_,
+          instructions = NA_character_,
+          llm = NULL,
+          .return_format = .return_format
         )
       }
     }

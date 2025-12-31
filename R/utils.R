@@ -94,10 +94,77 @@ find_closest_match <- function(input, valid_options, max_distance = 3L) {
 #' @return A cli-formatted string, or NULL if no suggestion
 #' @noRd
 suggest_match <- function(input, valid_options, max_distance = 3L) {
+
   match <- find_closest_match(input, valid_options, max_distance)
   if (!is.null(match)) {
     paste0("Did you mean {.field ", match, "}?")
   } else {
     NULL
   }
+}
+
+#' Check if a model is a reasoning model
+#'
+#' Reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series) use different
+#' parameters than traditional models. They don't support `temperature`
+#' or `top_p`, instead using `reasoning_effort` (low/medium/high).
+#'
+#' @param model_name Character string of the model name (e.g., "o3", "gpt-5").
+#' @return Logical indicating whether the model is a reasoning model.
+#' @export
+#' @examples
+#' is_reasoning_model("gpt-4o")      # FALSE
+#' is_reasoning_model("o3")          # TRUE
+#' is_reasoning_model("o4-mini")     # TRUE
+#' is_reasoning_model("gpt-5")       # TRUE
+is_reasoning_model <- function(model_name) {
+  if (is.null(model_name) || is.na(model_name) || !nzchar(model_name)) {
+    return(FALSE)
+  }
+  model_lower <- tolower(model_name)
+
+  reasoning_patterns <- c(
+    "^o[0-9]",           # o1, o3, o4-mini
+    "^gpt-5",            # gpt-5 series
+    "-reasoning",        # explicit reasoning suffix
+    "reasoning"          # generic reasoning indicator
+  )
+
+  any(vapply(reasoning_patterns, function(p) grepl(p, model_lower), logical(1)))
+}
+
+#' Get default parameters for a provider
+#'
+#' Returns sensible default parameter values and capability flags
+#' for different LLM providers.
+#'
+#' @param provider Character string identifying the provider
+#'   (e.g., "openai", "anthropic", "google").
+#' @return A named list with default values and capabilities.
+#' @export
+#' @examples
+#' provider_defaults("openai")
+#' provider_defaults("anthropic")
+provider_defaults <- function(provider) {
+  defaults <- list(
+    openai = list(
+      temperature = 0.7,
+      supports_json_schema = TRUE,
+      supports_reasoning = TRUE
+    ),
+    anthropic = list(
+      temperature = 1.0,
+      supports_json_schema = TRUE,
+      supports_extended_thinking = TRUE
+    ),
+    google = list(
+      temperature = 0.7,
+      supports_json_schema = TRUE
+    ),
+    ollama = list(
+      temperature = 0.7,
+      supports_json_schema = FALSE
+    )
+  )
+  defaults[[tolower(provider)]] %||% list(temperature = 0.7)
 }

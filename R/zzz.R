@@ -33,5 +33,16 @@
     compile_default(teleprompter, program, trainset, ...)
   }
 
+  # Register parsnip engine if parsnip is available
+  if (rlang::is_installed("parsnip")) {
+    setHook(
+      packageEvent("parsnip", "onLoad"),
+      function(...) register_dsprrr_engine()
+    )
+    if ("parsnip" %in% loadedNamespaces()) {
+      register_dsprrr_engine()
+    }
+  }
+
   invisible()
 }
