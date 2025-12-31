@@ -228,11 +228,11 @@ result <- run(mod, question = "Test", .llm = llm, .show_prompt = TRUE)
 | Metric | Use Case |
 |--------|----------|
 | `metric_exact_match()` | Exact string equality |
-| `metric_fuzzy_match(threshold)` | Similarity above threshold |
-| `metric_contains()` | Output contains expected |
-| `metric_regex(pattern)` | Matches regex pattern |
-| `metric_numeric_tolerance(tol)` | Numeric within tolerance |
-| `metric_classification()` | Multi-class accuracy |
+| `metric_f1()` | Token overlap similarity |
+| `metric_contains()` | Output contains expected substring |
+| `metric_field_match(fields)` | Match specific output fields |
+| `metric_threshold(metric, 0.8)` | Apply threshold to any metric |
+| `metric_custom(fn)` | Custom scoring function |
 
 ### Metric Selection Guide
 
@@ -242,17 +242,17 @@ What are you measuring?
 ├─ Exact correctness → metric_exact_match()
 │   └─ Facts, names, simple answers
 │
-├─ Approximate match → metric_fuzzy_match(0.8)
+├─ Approximate match → metric_f1() or metric_threshold(metric_f1(), 0.8)
 │   └─ Paraphrased answers, spelling tolerance
 │
 ├─ Contains key info → metric_contains()
 │   └─ Important terms must appear
 │
-├─ Numeric answer → metric_numeric_tolerance(0.01)
-│   └─ Math, measurements, scores
+├─ Specific fields → metric_field_match(c("answer", "score"))
+│   └─ Multi-field outputs
 │
-└─ Classification → metric_classification()
-    └─ Sentiment, categories, labels
+└─ Custom logic → metric_custom(my_scorer_fn)
+    └─ Domain-specific evaluation
 ```
 
 ### Running Evaluation

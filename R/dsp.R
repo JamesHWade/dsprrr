@@ -337,9 +337,6 @@ validate_dsp_inputs <- function(sig, inputs) {
   invisible(NULL)
 }
 
-# Re-export find_closest_match from signature-parser.R for use here
-# (it's already defined there)
-
 # Internal: Build prompt from signature and inputs
 build_dsp_prompt <- function(sig, inputs) {
   # Format each input

@@ -80,7 +80,7 @@ last_prompt <- function() {
 #'   - `tokens_in`: Input tokens
 #'   - `tokens_out`: Output tokens
 #'   - `cost`: Cost in USD (if available)
-#'   - `duration_s`: Duration in seconds (if available
+#'   - `duration_s`: Duration in seconds (if available)
 #'   - `prompt`: Full prompt text (if `include_prompts = TRUE`)
 #'   - `response`: Full response text (if `include_responses = TRUE`)
 #'
@@ -183,7 +183,7 @@ clear_prompt_history <- function() {
   .dsprrr_env$prompt_history <- list()
 
   if (n_cleared > 0) {
-    cli::cli_inform("Cleared {n_cleared} prompt histor{?y/ies}")
+    cli::cli_inform("Cleared {n_cleared} prompt history entr{?y/ies}")
   }
 
   invisible(n_cleared)
@@ -223,15 +223,20 @@ add_to_global_history <- function(trace, source = "unknown") {
       invisible(NULL)
     },
     error = function(e) {
-      # Warn in verbose mode to help with debugging during development
-      # History capture should never break user code in production
-      if (getOption("dsprrr.verbose", FALSE)) {
-        cli::cli_warn(
-          "Failed to add entry to prompt history: {e$message}",
-          .frequency = "once",
-          .frequency_id = "add_history_error"
-        )
-      }
+      # Always warn about history capture failures so users know something is wrong
+      # Use a condition class so advanced users can catch/suppress if needed
+      # Use "regularly" frequency so repeated errors are visible
+      cli::cli_warn(
+        c(
+          "Failed to capture prompt history",
+          "i" = "Error: {e$message}",
+          "i" = "This is a non-critical error; your code will continue to work.",
+          "i" = "Set {.code options(dsprrr.verbose = TRUE)} for more details."
+        ),
+        class = "dsprrr_history_capture_warning",
+        .frequency = "regularly",
+        .frequency_id = "add_history_error"
+      )
       invisible(NULL)
     }
   )
@@ -261,19 +266,39 @@ extract_history_entry <- function(trace, source) {
   }
 
   # Extract metadata from assistant_turn if available
+  # Wrap in tryCatch since S7 slot access can fail for incompatible objects
   if (!is.null(trace$assistant_turn)) {
     at <- trace$assistant_turn
-    # ellmer AssistantTurn stores tokens as c(input, output, cached)
-    if (!is.null(at@tokens) && length(at@tokens) >= 2) {
-      entry$tokens_in <- as.integer(at@tokens[1])
-      entry$tokens_out <- as.integer(at@tokens[2])
-    }
-    if (!is.null(at@cost)) {
-      entry$cost <- at@cost
-    }
-    if (!is.null(at@duration)) {
-      entry$duration_s <- at@duration
-    }
+    tryCatch(
+      {
+        # ellmer AssistantTurn stores tokens as c(input, output, cached)
+        if (
+          !is.null(at@tokens) &&
+            is.numeric(at@tokens) &&
+            length(at@tokens) >= 2
+        ) {
+          entry$tokens_in <- as.integer(at@tokens[1])
+          entry$tokens_out <- as.integer(at@tokens[2])
+        }
+        if (!is.null(at@cost)) {
+          entry$cost <- at@cost
+        }
+        if (!is.null(at@duration)) {
+          entry$duration_s <- at@duration
+        }
+      },
+      error = function(e) {
+        # S7 slot access failed - object may not be compatible
+        # This is non-critical, just skip metadata extraction
+        if (getOption("dsprrr.verbose", FALSE)) {
+          cli::cli_warn(
+            "Failed to extract metadata from assistant turn: {e$message}",
+            .frequency = "once",
+            .frequency_id = "extract_turn_metadata_error"
+          )
+        }
+      }
+    )
   }
 
   # Try legacy metadata fields
