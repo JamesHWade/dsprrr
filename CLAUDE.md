@@ -41,9 +41,12 @@ GitHub Actions runs R CMD check across multiple R versions and OS platforms, wit
 R/
   signature.R           # S7 Signature class + string parsing
   signature-parser.R    # DSPy-style string notation parser
+  signature-transforms.R # Signature transforms (with_reasoning, chain_of_thought)
   input.R               # input() helper for signature definitions
   module-base.R         # R6 Module base class (forward, optimize, traces)
   module-predict.R      # PredictModule subclass for text generation
+  module-wrapper.R      # BestOfNModule and RefineModule wrapper classes
+  module-multichain.R   # MultiChainComparisonModule for ensemble reasoning
   module.R              # module() factory function
   run.R                 # run() and run_dataset() generics
   evaluate.R            # evaluate() generic for metric computation
@@ -243,10 +246,18 @@ Vignettes use `vcr::setup_knitr()` which automatically names cassettes based on 
 - `module_parameters()`, `module_trials()`, and `module_metrics()` helpers
 - Module persistence: `pin_module_config()`, `restore_module_config()`
 
+### Completed (Milestone C - Advanced Module Types)
+- ChainOfThought via signature transforms (`with_reasoning()`, `chain_of_thought()`)
+- BestOfN wrapper module with reward functions
+- Refine wrapper module with feedback loop
+- MultiChainComparison module for ensemble reasoning
+- `module()` factory support for `type = "multichain"`
+- Utility functions: `as_reward_fn()`, `has_reasoning()`, `without_reasoning()`
+
 ### Planned
-- Chain-of-Thought module type
 - Advanced teleprompters (MIPRO, GEPA)
 - Cost tracking and token budgets
+- ProgramOfThought (code generation + execution)
 
 ## Coding Conventions
 

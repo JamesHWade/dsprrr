@@ -9,6 +9,8 @@ module(
   type = "predict",
   tools = NULL,
   max_iterations = 10L,
+  M = 3L,
+  temperature = 0.7,
   template = "",
   demos = list(),
   config = list(),
@@ -23,12 +25,17 @@ module(
 \itemize{
 \item \code{"predict"} (default): Standard prediction module
 \item \code{"react"}: ReAct-style module with tool support
+\item \code{"multichain"}: MultiChainComparison module for ensemble reasoning
 }}
 
 \item{tools}{Optional list of ellmer ToolDef objects for react modules.
 If provided with \code{type = "predict"}, automatically upgrades to react.}
 
 \item{max_iterations}{Maximum ReAct iterations (default: 10, only for react)}
+
+\item{M}{Number of reasoning chains for multichain (default: 3)}
+
+\item{temperature}{Temperature for multichain diversity (default: 0.7)}
 
 \item{template}{Optional glue template for prompt generation}
 
@@ -46,8 +53,8 @@ A module object (R6) that can be executed with \code{run()}
 }
 \description{
 The primary function for creating executable LLM modules. Supports
-"predict" for standard structured prediction and "react" for ReAct-style
-tool-using modules.
+"predict" for standard structured prediction, "react" for ReAct-style
+tool-using modules, and "multichain" for multi-chain comparison.
 }
 \examples{
 # Create a simple prediction module
@@ -65,6 +72,10 @@ qa <- signature("context, question -> answer") |>
       )
     )
   )
+
+# Create a multichain comparison module
+mcc <- signature("question -> answer") |>
+  module(type = "multichain", M = 5, temperature = 0.8)
 
 \dontrun{
 # Execute the module (requires an llm object)

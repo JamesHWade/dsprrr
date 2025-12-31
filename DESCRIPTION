@@ -25,6 +25,7 @@ Imports:
     glue,
     jsonlite,
     lifecycle,
+    methods,
     mirai,
     R6,
     rlang,
