@@ -430,11 +430,17 @@ PredictModule <- R6::R6Class(
         Sys.getenv("DSPRRR_PROVIDER", "openai")
       provider <- switch(provider, anthropic = "claude", provider)
 
-      build_api_args <- function() {
+      # Get model name for reasoning model detection
+      model_name <- self$config$model
+
+      build_api_args <- function(model) {
         args <- self$config$api_args
         if (is.null(args)) {
           args <- list()
         }
+
+        # Check if this is a reasoning model
+        is_reasoning <- is_reasoning_model(model)
 
         append_arg <- function(name, value, allow_zero = TRUE) {
           if (is.null(value)) {
@@ -448,8 +454,17 @@ PredictModule <- R6::R6Class(
           }
         }
 
-        append_arg("temperature", self$config$temperature, allow_zero = FALSE)
-        append_arg("top_p", self$config$top_p)
+        if (is_reasoning) {
+          # Reasoning models use reasoning_effort instead of temperature/top_p
+          # ellmer passes this via params(reasoning_effort = ...)
+          append_arg("reasoning_effort", self$config$reasoning_effort)
+        } else {
+          # Traditional models use temperature and top_p
+          append_arg("temperature", self$config$temperature, allow_zero = FALSE)
+          append_arg("top_p", self$config$top_p)
+        }
+
+        # These parameters work for all models
         append_arg("frequency_penalty", self$config$frequency_penalty)
         append_arg("presence_penalty", self$config$presence_penalty)
         append_arg("max_output_tokens", self$config$max_output_tokens)
@@ -460,21 +475,21 @@ PredictModule <- R6::R6Class(
       llm <- switch(
         provider,
         openai = ellmer::chat_openai(
-          model = self$config$model %||% "gpt-5-mini",
-          api_args = build_api_args()
+          model = model_name %||% "gpt-4o-mini",
+          api_args = build_api_args(model_name %||% "gpt-4o-mini")
         ),
         claude = ellmer::chat_claude(
-          model = self$config$model %||% "claude-3-5-sonnet-latest",
+          model = model_name %||% "claude-sonnet-4-20250514",
           max_tokens = self$config$max_tokens %||% 4096,
-          api_args = build_api_args()
+          api_args = build_api_args(model_name %||% "claude-sonnet-4-20250514")
         ),
         gemini = ellmer::chat_google_gemini(
-          model = self$config$model %||% "gemini-1.5-pro-latest",
-          api_args = build_api_args()
+          model = model_name %||% "gemini-2.0-flash",
+          api_args = build_api_args(model_name %||% "gemini-2.0-flash")
         ),
         ollama = ellmer::chat_ollama(
-          model = self$config$model %||% "llama3.2:3b",
-          api_args = build_api_args()
+          model = model_name %||% "llama3.2:3b",
+          api_args = build_api_args(model_name %||% "llama3.2:3b")
         ),
         cli::cli_abort("Unknown provider: {provider}")
       )

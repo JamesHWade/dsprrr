@@ -1,0 +1,268 @@
+---
+title: "RAG Workflows with ragnar"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{RAG Workflows with ragnar}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(dsprrr)
+library(ellmer)
+# library(ragnar)  # Install from: pak::pak("tidyverse/ragnar")
+```
+
+## Introduction
+
+Retrieval-Augmented Generation (RAG) combines document retrieval with LLM generation to produce grounded, factual responses. dsprrr provides native integration with ragnar, the tidyverse RAG package.
+
+## RAG Architecture
+
+A typical RAG workflow:
+
+1. **Index**: Process documents and create embeddings
+2. **Retrieve**: Find relevant documents for a query
+3. **Generate**: Use retrieved context to generate responses
+
+dsprrr's `RAGModule` handles steps 2 and 3 automatically.
+
+## Creating a RAG Module
+
+### With a ragnar Store
+
+```{r rag-store}
+# First, create a ragnar store with your documents
+# library(ragnar)
+#
+# documents <- c(
+#   "R is a programming language for statistical computing and graphics.",
+#   "Python is widely used for machine learning and data science.",
+#   "Julia is designed for high-performance numerical computing.",
+#   "dsprrr brings DSPy-style programming to R."
+# )
+#
+# store <- ragnar_store_create(
+#   documents = documents,
+#   embedding_fn = embed_openai()
+# )
+
+# Create a RAG module
+# mod <- rag_module(
+#   signature = "question, relevant_context -> answer",
+#   store = store,
+#   k = 3  # Retrieve top 3 documents
+# )
+
+# Run queries
+# result <- run(mod, question = "What is dsprrr?")
+```
+
+### With a Custom Retriever
+
+For custom retrieval logic, provide a retriever function:
+
+```{r custom-retriever}
+# Custom retriever function
+my_retriever <- function(query, k = 5) {
+  # Your custom retrieval logic here
+  # Could be: database query, API call, local search, etc.
+  c(
+    "Document 1: Relevant information...",
+    "Document 2: More context..."
+  )
+}
+
+# Create module with custom retriever
+mod <- rag_module(
+  signature = "query, relevant_context -> response",
+  retriever = my_retriever,
+  k = 5
+)
+```
+
+## RAG Module Configuration
+
+### Context Field Naming
+
+Control how retrieved context appears in prompts:
+
+```{r context-format}
+mod <- rag_module(
+  signature = "question, context -> answer",
+  store = store,
+  context_format = "context"  # Match signature field name
+)
+```
+
+### Adjusting Retrieval
+
+```{r retrieval-config}
+# Retrieve more documents for complex questions
+mod_detailed <- rag_module(
+  signature = "question, relevant_context -> detailed_answer",
+  store = store,
+  k = 10  # More context for detailed responses
+)
+
+# Retrieve fewer for focused answers
+mod_focused <- rag_module(
+  signature = "question, relevant_context -> brief_answer",
+  store = store,
+  k = 2  # Minimal context
+)
+```
+
+## Creating Search Tools for ReAct Agents
+
+For agentic workflows, create search tools that can be called by LLMs:
+
+```{r ragnar-tool}
+# Create a search tool from a ragnar store
+# search_tool <- ragnar_tool(
+#   store = store,
+#   k = 5,
+#   name = "search_knowledge",
+#   description = "Search the knowledge base for relevant information"
+# )
+
+# Use with a ReAct module
+# react_mod <- module(
+#   signature = "question -> answer",
+#   type = "react",
+#   tools = list(search_tool)
+# )
+
+# The agent can now search for information
+# result <- run(react_mod, question = "What programming languages are best for data science?")
+```
+
+### Creating Tools Directly from Documents
+
+For quick setup, create a tool directly from documents:
+
+```{r create-search-tool}
+docs <- c(
+  "The capital of France is Paris.",
+  "The capital of Germany is Berlin.",
+  "The capital of Italy is Rome."
+)
+
+# Create tool in one step (requires ragnar and embedding function)
+# search_tool <- create_search_tool(
+#   documents = docs,
+#   embedding_fn = ragnar::embed_openai(),
+#   k = 2,
+#   name = "lookup_capitals"
+# )
+```
+
+## RAG Best Practices
+
+### Document Preparation
+
+```{r doc-prep}
+# Good: Chunk documents appropriately
+chunks <- c(
+  "Chapter 1, Section 1: Introduction to R...",
+  "Chapter 1, Section 2: Data types in R...",
+  "Chapter 2, Section 1: Functions in R..."
+)
+
+# Include metadata in chunks for better retrieval
+# store <- ragnar_store_create(
+#   documents = data.frame(
+#     text = chunks,
+#     source = c("ch1.1", "ch1.2", "ch2.1"),
+#     topic = c("intro", "datatypes", "functions")
+#   ),
+#   embedding_fn = embed_openai()
+# )
+```
+
+### Query Optimization
+
+```{r query-tips}
+# The query field should match typical question patterns
+# Good signature - clear query field
+mod <- rag_module(
+  signature = "question, relevant_context -> answer",
+  store = store
+)
+
+# The module looks for these field names for retrieval:
+# "query", "question", "text", "input", "prompt"
+```
+
+### Handling No Results
+
+```{r no-results}
+# RAGModule handles empty results gracefully
+# When no documents are retrieved, context is:
+# "No relevant context found."
+
+# Your signature instructions should handle this:
+mod <- rag_module(
+  signature(
+    "question, relevant_context -> answer",
+    instructions = "Answer the question using the provided context. If no relevant context is found, say 'I don't have information about that.'"
+  ),
+  store = store
+)
+```
+
+## Tracing RAG Calls
+
+RAG modules include retrieval information in traces:
+
+```{r rag-tracing}
+# Run a query
+# result <- run(mod, question = "What is R?")
+
+# Inspect the trace
+# trace <- get_last_trace()
+# trace$retrieved_context  # What was retrieved
+# trace$query             # The query used for retrieval
+```
+
+## Combining RAG with Optimization
+
+RAG modules support optimization like any other module:
+
+```{r rag-optimize, eval = FALSE}
+# Optimize retrieval parameters
+train_data <- tibble::tibble(
+  question = c("What is R?", "What is Python?"),
+  expected = c("statistical computing", "machine learning")
+)
+
+optimize_grid(
+  mod,
+  data = train_data,
+  metric = metric_contains(),  # Check if answer contains expected
+  parameters = list(
+    k = c(2, 5, 10)  # Try different retrieval counts
+  )
+)
+```
+
+## Summary
+
+Key RAG integration features:
+
+1. **`rag_module()`**: Create modules that auto-retrieve context
+2. **`ragnar_tool()`**: Create search tools for agents
+3. **`create_search_tool()`**: Quick tool creation from documents
+4. **Custom retrievers**: Plug in any retrieval backend
+5. **Tracing**: Full visibility into retrieved context
+6. **Optimization**: Tune retrieval parameters like k
+
+For more on ragnar, see the [ragnar documentation](https://tidyverse.github.io/ragnar/).

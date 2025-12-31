@@ -6,12 +6,17 @@
 \usage{
 module_parameters(
   module,
+  model = NULL,
   include = NULL,
   exclude = c("id", "instructions", "instructions_suffix")
 )
 }
 \arguments{
 \item{module}{A DSPrrr module (created with \code{\link[=module]{module()}}).}
+
+\item{model}{Optional model name string. When provided, parameters are
+filtered based on model capabilities (e.g., reasoning models exclude
+\code{temperature}/\code{top_p} and include \code{reasoning_effort}).}
 
 \item{include}{Optional character vector restricting which parameters are
 returned. Defaults to all parameters discovered in the module configuration
@@ -30,6 +35,10 @@ module. Numeric parameters (e.g., \code{temperature}, \code{top_p}) derive their
 from observed optimisation trials (if present) or fall back to sensible
 defaults. Qualitative parameters (e.g., \code{prompt_style}) are converted to
 value sets.
+
+For reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series), \code{temperature} and
+\code{top_p} are automatically excluded since these models don't support them.
+Instead, \code{reasoning_effort} is included as a tunable parameter.
 }
 \examples{
 \dontrun{
@@ -40,5 +49,8 @@ optimize_grid(mod,
   parameters = list(temperature = c(0.1, 0.5))
 )
 module_parameters(mod)
+
+# For reasoning models, temperature is excluded
+module_parameters(mod, model = "o3")
 }
 }

@@ -211,7 +211,14 @@ signature_parameter_defaults <- function(signature, prefix = "input") {
 #' defaults. Qualitative parameters (e.g., `prompt_style`) are converted to
 #' value sets.
 #'
+#' For reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series), `temperature` and
+#' `top_p` are automatically excluded since these models don't support them.
+#' Instead, `reasoning_effort` is included as a tunable parameter.
+#'
 #' @param module A DSPrrr module (created with [module()]).
+#' @param model Optional model name string. When provided, parameters are
+#'   filtered based on model capabilities (e.g., reasoning models exclude
+#'   `temperature`/`top_p` and include `reasoning_effort`).
 #' @param include Optional character vector restricting which parameters are
 #'   returned. Defaults to all parameters discovered in the module configuration
 #'   and optimisation trials.
@@ -230,9 +237,13 @@ signature_parameter_defaults <- function(signature, prefix = "input") {
 #'   parameters = list(temperature = c(0.1, 0.5))
 #' )
 #' module_parameters(mod)
+#'
+#' # For reasoning models, temperature is excluded
+#' module_parameters(mod, model = "o3")
 #' }
 module_parameters <- function(
   module,
+  model = NULL,
   include = NULL,
   exclude = c("id", "instructions", "instructions_suffix")
 ) {
@@ -285,13 +296,36 @@ module_parameters <- function(
     }
   }
 
-  known_defaults <- list(
-    temperature = c(0, 1),
-    top_p = c(0, 1),
-    frequency_penalty = c(-2, 2),
-    presence_penalty = c(-2, 2),
-    max_output_tokens = c(32, 4096)
-  )
+  # Check if this is a reasoning model
+
+  is_reasoning <- if (!is.null(model)) {
+    is_reasoning_model(model)
+  } else {
+    FALSE
+  }
+
+  # Define known defaults based on model type
+  if (is_reasoning) {
+    # Reasoning models don't support temperature/top_p
+    # They use reasoning_effort instead
+    known_defaults <- list(
+      reasoning_effort = c("low", "medium", "high"),
+      frequency_penalty = c(-2, 2),
+      presence_penalty = c(-2, 2),
+      max_output_tokens = c(32, 4096)
+    )
+    # Also exclude temperature/top_p from any existing param_values
+    param_values <- param_values[!names(param_values) %in% c("temperature", "top_p")]
+  } else {
+    # Traditional models use temperature/top_p
+    known_defaults <- list(
+      temperature = c(0, 1),
+      top_p = c(0, 1),
+      frequency_penalty = c(-2, 2),
+      presence_penalty = c(-2, 2),
+      max_output_tokens = c(32, 4096)
+    )
+  }
 
   for (name in names(known_defaults)) {
     should_include <- (is.null(include) || name %in% include) &&
