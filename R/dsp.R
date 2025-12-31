@@ -21,10 +21,13 @@
 #' @param ... Named arguments matching the signature's inputs.
 #' @param .instructions Optional additional instructions (appended to signature instructions).
 #' @param .echo Whether to echo output. See [ellmer::Chat] for options.
+#' @param .simplify Logical. If `TRUE` (default), single-field outputs are
+#'   simplified to just the value. If `FALSE`, always returns a named list.
 #'
 #' @return The structured output according to the signature's output type.
-#'   For single-field outputs, returns just the value. For multi-field outputs,
-#'   returns a named list.
+#'   When `.simplify = TRUE` (default): single-field outputs return just the
+#'   value, multi-field outputs return a named list.
+#'   When `.simplify = FALSE`: always returns a named list.
 #'
 #' @export
 #' @examples
@@ -48,6 +51,10 @@
 #'   text = long_article,
 #'   .instructions = "Keep the summary under 50 words"
 #' )
+#'
+#' # Control output simplification
+#' dsp("q -> answer", q = "Hi", .simplify = TRUE)   # Returns: "Hello"
+#' dsp("q -> answer", q = "Hi", .simplify = FALSE)  # Returns: list(answer = "Hello")
 #' }
 dsp <- function(x, ...) {
   UseMethod("dsp")
@@ -55,7 +62,14 @@ dsp <- function(x, ...) {
 
 #' @rdname dsp
 #' @export
-dsp.Chat <- function(x, signature, ..., .instructions = NULL, .echo = "none") {
+dsp.Chat <- function(
+    x,
+    signature,
+    ...,
+    .instructions = NULL,
+    .echo = "none",
+    .simplify = TRUE
+) {
   chat <- x
 
   # Parse signature if string
@@ -140,13 +154,19 @@ dsp.Chat <- function(x, signature, ..., .instructions = NULL, .echo = "none") {
     model = model
   ))
 
-  # Simplify single-field results
-  simplify_output(result, sig@output_type)
+  # Simplify single-field results (if requested)
+  simplify_output(result, sig@output_type, simplify = .simplify)
 }
 
 #' @rdname dsp
 #' @export
-dsp.character <- function(x, ..., .instructions = NULL, .echo = "none") {
+dsp.character <- function(
+    x,
+    ...,
+    .instructions = NULL,
+    .echo = "none",
+    .simplify = TRUE
+) {
   # x is the signature string, use default chat
   chat <- get_default_chat()
   dsp.Chat(
@@ -154,17 +174,19 @@ dsp.character <- function(x, ..., .instructions = NULL, .echo = "none") {
     signature = x,
     ...,
     .instructions = .instructions,
-    .echo = .echo
+    .echo = .echo,
+    .simplify = .simplify
   )
 }
 
 #' @rdname dsp
 #' @export
 `dsp.dsprrr::Signature` <- function(
-  x,
-  ...,
-  .instructions = NULL,
-  .echo = "none"
+    x,
+    ...,
+    .instructions = NULL,
+    .echo = "none",
+    .simplify = TRUE
 ) {
   # x is a Signature object, use default chat
   chat <- get_default_chat()
@@ -173,7 +195,8 @@ dsp.character <- function(x, ..., .instructions = NULL, .echo = "none") {
     signature = x,
     ...,
     .instructions = .instructions,
-    .echo = .echo
+    .echo = .echo,
+    .simplify = .simplify
   )
 }
 
@@ -262,14 +285,14 @@ as_module.character <- function(x, ...) {
 #' @examples
 #' \dontrun{
 #' dsp("q -> a", q = "What is 2+2?")
-#' trace <- last_trace()
+#' trace <- get_last_trace()
 #' trace$prompt  # See the prompt that was sent
 #' }
-last_trace <- function() {
+get_last_trace <- function() {
   .dsprrr_env$last_trace
 }
 
-# Internal: Store trace for last_trace() and global history
+# Internal: Store trace for get_last_trace() and global history
 store_last_trace <- function(trace) {
   .dsprrr_env$last_trace <- trace
   # Also add to global prompt history for inspect_history()
@@ -371,7 +394,13 @@ build_dsp_prompt <- function(sig, inputs) {
 }
 
 # Internal: Simplify output for single-field results
-simplify_output <- function(result, output_type) {
+simplify_output <- function(result, output_type, simplify = TRUE) {
+  # If simplification disabled, always return the full result
+
+  if (!simplify) {
+    return(result)
+  }
+
   # If output is a single-field object, extract just that field
   if (
     inherits(output_type, "ellmer::TypeObject") &&
@@ -435,7 +464,7 @@ wrap_llm_error <- function(e, model_name, provider_name, prompt) {
       error_parts,
       "!" = "Response parsing failed",
       "i" = "The LLM returned invalid JSON. Try simplifying the output type",
-      "i" = "Check {.code last_prompt()} to see the raw response"
+      "i" = "Check {.code get_last_prompt()} to see the raw response"
     )
   } else if (grepl("content.?filter|safety|blocked", error_lower)) {
     error_parts <- c(
@@ -448,7 +477,7 @@ wrap_llm_error <- function(e, model_name, provider_name, prompt) {
   # Add debugging tip
   error_parts <- c(
     error_parts,
-    "i" = "Use {.code last_prompt()} to inspect the prompt that was sent"
+    "i" = "Use {.code get_last_prompt()} to inspect the prompt that was sent"
   )
 
   cli::cli_abort(error_parts, parent = e)

@@ -145,22 +145,22 @@ test_that("optimize_grid integrates with real LLM", {
 
   skip_if_not_installed("dials")
   skip_if_not_installed("yardstick")
-  param_set <- module_parameter_set(mod)
+  param_set <- module_parameters(mod)
   expect_true(all(c("prompt_style", "temperature") %in% param_set$id))
 
-  summary <- module_trials_summary(mod)
+  summary <- module_trials(mod)
   expect_equal(summary$n_trials, 2)
   expect_equal(summary$best_trial, mod$state$best_trial)
   expect_equal(summary$best_params[[1]]$prompt_style, mod$config$prompt_style)
 
-  metrics <- module_metric_summary(mod)
+  metrics <- module_metrics(mod)
   expect_equal(nrow(metrics), 2)
   expect_equal(
     metrics$params[[mod$state$best_trial]]$prompt_style,
     mod$config$prompt_style
   )
 
-  yard_metrics <- module_metric_summary(
+  yard_metrics <- module_metrics(
     mod,
     metrics = list(yardstick::accuracy),
     truth = "target",
@@ -276,7 +276,7 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
   expect_equal(nrow(mod$state$trials), 5)
 
   # Extract parameter set - this is what finetune would use
-  param_set <- module_parameter_set(mod, include = "temperature")
+  param_set <- module_parameters(mod, include = "temperature")
   expect_s3_class(param_set, "parameters")
   expect_true("temperature" %in% param_set$id)
 
@@ -285,7 +285,7 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
   expect_true(inherits(temp_param, "quant_param"))
 
   # Test that module_metric_summary produces yardstick-compatible output
-  metric_summary <- module_metric_summary(mod)
+  metric_summary <- module_metrics(mod)
   expect_equal(nrow(metric_summary), 5)
   expect_true(all(
     c("trial_id", "score", "mean_score", "params") %in% names(metric_summary)
@@ -348,7 +348,7 @@ test_that("module_parameter_set works with finetune grid functions", {
   mod$config$compiled <- TRUE
 
   # Extract parameter set
-  param_set <- module_parameter_set(mod, include = c("temperature", "top_p"))
+  param_set <- module_parameters(mod, include = c("temperature", "top_p"))
 
   # Verify it works with finetune's grid functions
   regular_grid <- dials::grid_regular(param_set, levels = 3)

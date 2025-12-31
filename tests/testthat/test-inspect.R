@@ -4,7 +4,7 @@ test_that("last_prompt returns NULL when no history", {
   # Clear any existing history
   clear_prompt_history()
 
-  result <- last_prompt()
+  result <- get_last_prompt()
   expect_null(result)
 })
 
@@ -94,7 +94,7 @@ test_that("last_prompt returns dsprrr_prompt_inspection object", {
   )
   add_to_global_history(trace, source = "test")
 
-  result <- last_prompt()
+  result <- get_last_prompt()
   expect_s3_class(result, "dsprrr_prompt_inspection")
   expect_equal(result$prompt, "Test prompt")
   expect_equal(result$model, "test-model")
@@ -199,7 +199,7 @@ test_that("print.dsprrr_prompt_inspection works", {
   )
   add_to_global_history(trace, source = "test")
 
-  result <- last_prompt()
+  result <- get_last_prompt()
 
   # Check that print returns invisible(x) and doesn't error
   expect_invisible(print(result))

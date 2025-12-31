@@ -9,11 +9,11 @@
 \usage{
 dsp(x, ...)
 
-\method{dsp}{Chat}(x, signature, ..., .instructions = NULL, .echo = "none")
+\method{dsp}{Chat}(x, signature, ..., .instructions = NULL, .echo = "none", .simplify = TRUE)
 
-\method{dsp}{character}(x, ..., .instructions = NULL, .echo = "none")
+\method{dsp}{character}(x, ..., .instructions = NULL, .echo = "none", .simplify = TRUE)
 
-\method{dsp}{`dsprrr::Signature`}(x, ..., .instructions = NULL, .echo = "none")
+\method{dsp}{`dsprrr::Signature`}(x, ..., .instructions = NULL, .echo = "none", .simplify = TRUE)
 }
 \arguments{
 \item{x}{A Chat object, signature string, or Signature object.}
@@ -25,11 +25,15 @@ dsp(x, ...)
 \item{.instructions}{Optional additional instructions (appended to signature instructions).}
 
 \item{.echo}{Whether to echo output. See \link[ellmer:Chat]{ellmer::Chat} for options.}
+
+\item{.simplify}{Logical. If \code{TRUE} (default), single-field outputs are
+simplified to just the value. If \code{FALSE}, always returns a named list.}
 }
 \value{
 The structured output according to the signature's output type.
-For single-field outputs, returns just the value. For multi-field outputs,
-returns a named list.
+When \code{.simplify = TRUE} (default): single-field outputs return just the
+value, multi-field outputs return a named list.
+When \code{.simplify = FALSE}: always returns a named list.
 }
 \description{
 The \code{dsp()} function provides a pipe-friendly interface for structured
@@ -70,5 +74,9 @@ chat |> dsp(
   text = long_article,
   .instructions = "Keep the summary under 50 words"
 )
+
+# Control output simplification
+dsp("q -> answer", q = "Hi", .simplify = TRUE)   # Returns: "Hello"
+dsp("q -> answer", q = "Hi", .simplify = FALSE)  # Returns: list(answer = "Hello")
 }
 }

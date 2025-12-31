@@ -18,10 +18,12 @@ metric(prediction, expected_row)
 \item .llm: Optional ellmer chat object supplied to run()
 \item .parallel: Logical; whether to allow parallel execution
 \item .progress: Logical; whether to display progress while evaluating
+\item .return_format: Character; \code{"simple"} returns just scores and predictions,
+\code{"structured"} (default) includes full metadata and dataset
 }}
 }
 \value{
-A list with elements
+A list with elements. When \code{.return_format = "structured"} (default):
 \itemize{
 \item \code{mean_score}: numeric mean over all successful metric evaluations.
 \item \code{scores}: per-example numeric scores (coerced from logical metrics).
@@ -31,6 +33,12 @@ A list with elements
 \item \code{n_errors}: number of metric failures.
 \item \code{errors}: character vector with error messages, when any.
 \item \code{dataset}: input dataset augmented with prediction metadata.
+}
+
+When \code{.return_format = "simple"}:
+\itemize{
+\item \code{mean_score}, \code{scores}, \code{predictions}, \code{n_evaluated}, \code{n_errors}, \code{errors}
+(omits \code{metadata} and \code{dataset} for lighter-weight results)
 }
 }
 \description{

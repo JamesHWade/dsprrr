@@ -83,7 +83,7 @@ reference:
     contents:
     - dsp
     - as_module
-    - last_trace
+    - get_last_trace
 
   - title: Configuration
     desc: Setup and configure dsprrr
@@ -122,9 +122,9 @@ reference:
     - optimize_grid
     - compile
     - compile_module
-    - module_parameter_set
-    - module_trials_summary
-    - module_metric_summary
+    - module_parameters
+    - module_trials
+    - module_metrics
 
   - title: Metrics
     desc: Evaluation metrics
@@ -146,7 +146,7 @@ reference:
     desc: Prompt inspection and history
     contents:
     - prompt-visibility
-    - last_prompt
+    - get_last_prompt
     - inspect_history
     - clear_prompt_history
 

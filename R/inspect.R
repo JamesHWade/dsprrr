@@ -37,7 +37,7 @@ NULL
 #' dsp("question -> answer", question = "What is 2+2?")
 #'
 #' # Inspect what happened
-#' last_prompt()
+#' get_last_prompt()
 #' #> ─── Last Prompt ───────────────────────────────────
 #' #> System: Given the fields `question`, produce the fields `answer`.
 #' #>
@@ -49,7 +49,7 @@ NULL
 #' #> ─── Metadata ──────────────────────────────────────
 #' #> Model: gpt-4o-mini | Tokens: 45 in, 12 out | Cost: $0.0001
 #' }
-last_prompt <- function() {
+get_last_prompt <- function() {
   history <- .dsprrr_env$prompt_history
   if (is.null(history) || length(history) == 0) {
     cli::cli_inform("No LLM calls recorded yet")

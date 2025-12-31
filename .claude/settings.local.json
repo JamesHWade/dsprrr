@@ -17,7 +17,9 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:dspy.ai)",
       "Bash(ls:*)",
-      "mcp__r-btw__btw_tool_docs_available_vignettes"
+      "mcp__r-btw__btw_tool_docs_available_vignettes",
+      "Bash(gh issue view:*)",
+      "WebFetch(domain:httr2.r-lib.org)"
     ],
     "deny": [],
     "ask": [],

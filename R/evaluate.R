@@ -14,8 +14,10 @@
 #'   - .llm: Optional ellmer chat object supplied to run()
 #'   - .parallel: Logical; whether to allow parallel execution
 #'   - .progress: Logical; whether to display progress while evaluating
+#'   - .return_format: Character; `"simple"` returns just scores and predictions,
+#'     `"structured"` (default) includes full metadata and dataset
 #'
-#' @return A list with elements
+#' @return A list with elements. When `.return_format = "structured"` (default):
 #'   - `mean_score`: numeric mean over all successful metric evaluations.
 #'   - `scores`: per-example numeric scores (coerced from logical metrics).
 #'   - `predictions`: list of model outputs.
@@ -24,6 +26,10 @@
 #'   - `n_errors`: number of metric failures.
 #'   - `errors`: character vector with error messages, when any.
 #'   - `dataset`: input dataset augmented with prediction metadata.
+#'
+#'   When `.return_format = "simple"`:
+#'   - `mean_score`, `scores`, `predictions`, `n_evaluated`, `n_errors`, `errors`
+#'   (omits `metadata` and `dataset` for lighter-weight results)
 #' @export
 evaluate <- function(module, ...) {
   UseMethod("evaluate")
@@ -40,14 +46,16 @@ evaluate <- function(module, ...) {
 #' @exportS3Method
 #' @noRd
 evaluate.Module <- function(
-  module,
-  dataset,
-  metric,
-  .llm = NULL,
-  .parallel = FALSE,
-  .progress = TRUE,
-  ...
+    module,
+    dataset,
+    metric,
+    .llm = NULL,
+    .parallel = FALSE,
+    .progress = TRUE,
+    .return_format = c("structured", "simple"),
+    ...
 ) {
+  .return_format <- match.arg(.return_format)
   if (!is.data.frame(dataset)) {
     cli::cli_abort("dataset must be a data frame or tibble")
   }
@@ -128,14 +136,21 @@ evaluate.Module <- function(
   n_evaluated <- sum(!is.na(scores))
   n_errors <- sum(is.na(scores))
 
-  list(
+  # Build result based on return format
+  result <- list(
     mean_score = mean_score,
     scores = scores,
     predictions = predictions,
-    metadata = metadata,
     n_evaluated = n_evaluated,
     n_errors = n_errors,
-    errors = errors[errors != ""],
-    dataset = evaluated
+    errors = errors[errors != ""]
   )
+
+  # Add metadata and dataset for structured format
+  if (.return_format == "structured") {
+    result$metadata <- metadata
+    result$dataset <- evaluated
+  }
+
+  result
 }

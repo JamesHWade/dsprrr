@@ -228,9 +228,9 @@ signature_parameter_defaults <- function(signature, prefix = "input") {
 #'   devset = tibble::tibble(text = "sample", target = "positive"),
 #'   parameters = list(temperature = c(0.1, 0.5))
 #' )
-#' module_parameter_set(mod)
+#' module_parameters(mod)
 #' }
-module_parameter_set <- function(
+module_parameters <- function(
   module,
   include = NULL,
   exclude = c("id", "instructions", "instructions_suffix")
@@ -381,10 +381,10 @@ module_parameter_set <- function(
 #' @export
 #' @examples
 #' \dontrun{
-#' summary <- module_trials_summary(my_module)
+#' summary <- module_trials(my_module)
 #' summary$best_params
 #' }
-module_trials_summary <- function(
+module_trials <- function(
   module,
   objective = c("maximize", "minimize")
 ) {
@@ -467,15 +467,15 @@ module_trials_summary <- function(
 #' @export
 #' @examples
 #' \dontrun{
-#' trial_metrics <- module_metric_summary(my_module)
-#' yardstick_metrics <- module_metric_summary(
+#' trial_metrics <- module_metrics(my_module)
+#' yardstick_metrics <- module_metrics(
 #'   my_module,
 #'   metrics = yardstick::metric_set(yardstick::accuracy),
 #'   truth = target,
 #'   estimate = result
 #' )
 #' }
-module_metric_summary <- function(
+module_metrics <- function(
   module,
   metrics = NULL,
   truth = NULL,

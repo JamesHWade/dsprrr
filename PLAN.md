@@ -203,9 +203,9 @@ vignettes/
     | Tests for dials grids + yardstick metrics | ✅ COMPLETED | Deterministic specs for delegation and state |
     | Update docs (README/vignettes) | ✅ COMPLETED | Vignette updated with tidymodels helpers |
     | `finetune::tune_race_anova()` regression test | ✅ COMPLETED | Integration tests in test-integration.R |
-    | `module_parameter_set()` helper | ✅ COMPLETED | Derives dials parameters from module |
-    | `module_trials_summary()` helper | ✅ COMPLETED | Tidy summary of optimization trials |
-    | `module_metric_summary()` helper | ✅ COMPLETED | Per-trial yardstick metrics |
+    | `module_parameters()` helper | ✅ COMPLETED | Derives dials parameters from module |
+    | `module_trials()` helper | ✅ COMPLETED | Tidy summary of optimization trials |
+    | `module_metrics()` helper | ✅ COMPLETED | Per-trial yardstick metrics |
     | Signature → parameter mapping | ✅ COMPLETED | Extracts enum types from signature inputs |
 
 #### Milestone C – Orchestration & Persistence ✅ COMPLETED
@@ -355,7 +355,7 @@ vignettes/
 **Dec 2025 (continued):**
 - Completed Milestone B - Tidymodels Integration:
   - Updated optimization vignette with comprehensive tidymodels helper documentation
-  - Added sections for `module_parameter_set()`, `module_trials_summary()`, `module_metric_summary()`
+  - Added sections for `module_parameters()`, `module_trials()`, `module_metrics()`
   - Added complete tidymodels workflow example in vignette
   - Added finetune::tune_race_anova() integration tests in test-integration.R
   - Verified signature → parameter mapping with `signature_parameter_defaults()`
@@ -379,7 +379,7 @@ vignettes/
 - Implemented base `$optimize_grid()` flow with stateful trial tracking and helper scaffolding.
 - Realigned ellmer integrations to the latest API (shared `api_args` flow, `chat_claude()` usage) and updated docs/tests accordingly.
 - GridSearch teleprompter now delegates to `optimize_grid()`; module state stores trials/best variant and tests cover the new path.
-- Added `module_parameter_set()`/`module_trials_summary()` helpers to bridge tidymodels parameter sets and optimisation summaries.
+- Added `module_parameters()`/`module_trials()` helpers to bridge tidymodels parameter sets and optimisation summaries.
 
 ---
 
