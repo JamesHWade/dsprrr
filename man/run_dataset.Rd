@@ -3,13 +3,13 @@
 \name{run_dataset}
 \alias{run_dataset}
 \alias{run_dataset.Module}
-\title{Execute Module on Dataset}
+\title{Execute Module on Data}
 \usage{
 run_dataset(module, ...)
 
 \method{run_dataset}{Module}(
   module,
-  dataset,
+  data,
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
@@ -21,17 +21,9 @@ run_dataset(module, ...)
 \arguments{
 \item{module}{A DSPrrr module (e.g., created with \code{module()})}
 
-\item{...}{Additional arguments including:
-\describe{
-\item{dataset}{A tibble or data frame with columns matching the module's inputs}
-\item{.llm}{An ellmer chat object for LLM interaction (optional)}
-\item{.verbose}{Logical indicating whether to print debug information}
-\item{.parallel}{Logical indicating whether to process in parallel (default TRUE)}
-\item{.progress}{Logical indicating whether to show progress bar (default TRUE)}
-\item{.return_format}{Character, either "simple" or "structured" (default "simple")}
-}}
+\item{...}{Additional arguments passed to \code{\link[=run]{run()}}.}
 
-\item{dataset}{A data frame or tibble containing input columns}
+\item{data}{A tibble or data frame with columns matching the module's inputs.}
 
 \item{.llm}{Optional ellmer Chat object for LLM calls}
 
@@ -47,18 +39,18 @@ run_dataset(module, ...)
 A tibble with the input columns plus a result column containing outputs
 }
 \description{
-Execute a module on a dataset (tibble/data.frame) with optimized batch processing.
+Execute a module on a data frame/tibble with optimized batch processing.
 }
 \examples{
 \dontrun{
-# Process a dataset
-data <- tibble::tibble(
+# Process data
+df <- tibble::tibble(
   text = c("I love this!", "This is bad", "Okay product")
 )
 
 llm <- ellmer::chat_openai()
 results <- signature("text -> sentiment") |>
   module(type = "predict") |>
-  run_dataset(data, .llm = llm)
+  run_dataset(df, .llm = llm)
 }
 }

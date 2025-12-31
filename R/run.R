@@ -58,6 +58,11 @@
 #' # Configure ellmer retry behavior (if needed)
 #' options(ellmer_max_tries = 5)
 #' }
+#' @seealso
+#' * [dsp()] for one-shot LLM calls without creating a module
+#' * [run_dataset()] for running a module on a data frame
+#' * [evaluate()] for running with metric evaluation
+#' * [module()] for creating modules
 run <- function(module, ...) {
   UseMethod("run")
 }
@@ -879,6 +884,8 @@ show_prompt_preview <- function(module) {
 }
 
 #' Print method for dsprrr_batch_result
+#' @param x A dsprrr_batch_result object
+#' @param ... Additional arguments (unused)
 #' @export
 print.dsprrr_batch_result <- function(x, ...) {
   n <- length(x)

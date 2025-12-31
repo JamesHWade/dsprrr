@@ -79,4 +79,13 @@ chat |> dsp(
 dsp("q -> answer", q = "Hi", .simplify = TRUE)   # Returns: "Hello"
 dsp("q -> answer", q = "Hi", .simplify = FALSE)  # Returns: list(answer = "Hello")
 }
+
+}
+\seealso{
+\itemize{
+\item \code{\link[=signature]{signature()}} for creating signature objects
+\item \code{\link[=module]{module()}} and \code{\link[=run]{run()}} for reusable modules with optimization support
+\item \code{\link[=as_module]{as_module()}} to convert a Chat to a module
+\item \code{\link[=set_default_chat]{set_default_chat()}} to configure the default LLM
+}
 }

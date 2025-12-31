@@ -19,3 +19,4 @@ vignettes/*.R
 vignettes/_vcr/*.yml
 tests/testthat/_vcr/*.yml
 gh-issue-advanced-modules.md
+settings.local.json

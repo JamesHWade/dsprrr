@@ -9,7 +9,7 @@ optimize_grid(module, ...)
 
 \method{optimize_grid}{Module}(
   module,
-  devset,
+  data,
   metric = metric_exact_match(),
   grid = NULL,
   parameters = NULL,
@@ -24,10 +24,11 @@ optimize_grid(module, ...)
 
 \item{...}{Additional arguments forwarded to \code{\link[=evaluate]{evaluate()}}.}
 
-\item{devset}{Development dataset containing columns required by the module's
+\item{data}{Development data containing columns required by the module's
 signature plus any fields consumed by the metric.}
 
 \item{metric}{Metric function applied per example. Defaults to
+
 \code{\link[=metric_exact_match]{metric_exact_match()}}. Use \code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}} to adapt yardstick/vitals
 metrics.}
 

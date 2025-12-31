@@ -6,11 +6,13 @@
 #' together with the predictions and metadata required for downstream analysis.
 #'
 #' @param module A DSPrrr module created with [module()].
-#' @param data A data frame or tibble containing columns that match the
-#'   module's signature inputs plus any expected fields used by metric.
-#' @param metric A function applied per example with signature
-#'   `metric(prediction, expected_row)`.
-#' @param ... Additional arguments passed to [run_dataset()]:
+#' @param ... Arguments passed to methods:
+#'   - `data`: A data frame or tibble containing columns that match the
+#'     module's signature inputs plus any expected fields used by metric.
+#'   - `metric`: A function applied per example with signature
+#'     `metric(prediction, expected_row)`.
+#'
+#'   Additional arguments passed to [run_dataset()]:
 #'   - `.llm`: Optional ellmer chat object
 #'   - `.parallel`: Logical; whether to allow parallel execution
 #'   - `.progress`: Logical; whether to display progress while evaluating
@@ -30,6 +32,12 @@
 #'   When `.return_format = "simple"`:
 #'   - `mean_score`, `scores`, `predictions`, `n_evaluated`, `n_errors`, `errors`
 #'   (omits `metadata` and `data` for lighter-weight results)
+#'
+#' @seealso
+#' * [run()] for executing without metrics
+#' * [run_dataset()] for batch execution without metrics
+#' * [optimize_grid()] for parameter optimization
+#' * [metric_exact_match()], [metric_contains()] for built-in metrics
 #' @export
 evaluate <- function(module, ...) {
   UseMethod("evaluate")
@@ -165,6 +173,8 @@ evaluate.Module <- function(
 }
 
 #' Print method for dsprrr_evaluation
+#' @param x A dsprrr_evaluation object
+#' @param ... Additional arguments (unused)
 #' @export
 print.dsprrr_evaluation <- function(x, ...) {
 

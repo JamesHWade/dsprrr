@@ -4,12 +4,12 @@
 \alias{validate_workflow}
 \title{Validate Workflow Configuration}
 \usage{
-validate_workflow(module, dataset = NULL, board = NULL)
+validate_workflow(module, data = NULL, board = NULL)
 }
 \arguments{
 \item{module}{A DSPrrr module to validate}
 
-\item{dataset}{Optional dataset to validate against the module's signature}
+\item{data}{Optional data to validate against the module's signature}
 
 \item{board}{Optional pins board to check for accessibility}
 }
@@ -23,7 +23,7 @@ Useful for validating pipelines before running expensive LLM operations.
 \examples{
 \dontrun{
 mod <- signature("text -> sentiment") |> module(type = "predict")
-validate_workflow(mod, dataset = test_data)
+validate_workflow(mod, data = test_data)
 }
 }
 \seealso{

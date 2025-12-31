@@ -70,3 +70,11 @@ result <- signature("text -> sentiment") |>
 options(ellmer_max_tries = 5)
 }
 }
+\seealso{
+\itemize{
+\item \code{\link[=dsp]{dsp()}} for one-shot LLM calls without creating a module
+\item \code{\link[=run_dataset]{run_dataset()}} for running a module on a data frame
+\item \code{\link[=evaluate]{evaluate()}} for running with metric evaluation
+\item \code{\link[=module]{module()}} for creating modules
+}
+}

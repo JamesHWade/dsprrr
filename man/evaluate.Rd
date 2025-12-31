@@ -9,17 +9,21 @@ evaluate(module, ...)
 \arguments{
 \item{module}{A DSPrrr module created with \code{\link[=module]{module()}}.}
 
-\item{...}{Additional arguments including:
+\item{...}{Arguments passed to methods:
 \itemize{
-\item dataset: A data frame or tibble containing columns that match the
-module's signature inputs plus any expected fields used by metric
-\item metric: A function applied per example with signature
-metric(prediction, expected_row)
-\item .llm: Optional ellmer chat object supplied to run()
-\item .parallel: Logical; whether to allow parallel execution
-\item .progress: Logical; whether to display progress while evaluating
-\item .return_format: Character; \code{"simple"} returns just scores and predictions,
-\code{"structured"} (default) includes full metadata and dataset
+\item \code{data}: A data frame or tibble containing columns that match the
+module's signature inputs plus any expected fields used by metric.
+\item \code{metric}: A function applied per example with signature
+\code{metric(prediction, expected_row)}.
+}
+
+Additional arguments passed to \code{\link[=run_dataset]{run_dataset()}}:
+\itemize{
+\item \code{.llm}: Optional ellmer chat object
+\item \code{.parallel}: Logical; whether to allow parallel execution
+\item \code{.progress}: Logical; whether to display progress while evaluating
+\item \code{.return_format}: Character; \code{"simple"} returns just scores and predictions,
+\code{"structured"} (default) includes full metadata and data
 }}
 }
 \value{
@@ -32,17 +36,25 @@ A list with elements. When \code{.return_format = "structured"} (default):
 \item \code{n_evaluated}: number of successful evaluations.
 \item \code{n_errors}: number of metric failures.
 \item \code{errors}: character vector with error messages, when any.
-\item \code{dataset}: input dataset augmented with prediction metadata.
+\item \code{data}: input data augmented with prediction metadata.
 }
 
 When \code{.return_format = "simple"}:
 \itemize{
 \item \code{mean_score}, \code{scores}, \code{predictions}, \code{n_evaluated}, \code{n_errors}, \code{errors}
-(omits \code{metadata} and \code{dataset} for lighter-weight results)
+(omits \code{metadata} and \code{data} for lighter-weight results)
 }
 }
 \description{
 Generic evaluation entry point for DSPrrr modules. Executes the module on a
 dataset, applies a metric to each example, and returns aggregate statistics
 together with the predictions and metadata required for downstream analysis.
+}
+\seealso{
+\itemize{
+\item \code{\link[=run]{run()}} for executing without metrics
+\item \code{\link[=run_dataset]{run_dataset()}} for batch execution without metrics
+\item \code{\link[=optimize_grid]{optimize_grid()}} for parameter optimization
+\item \code{\link[=metric_exact_match]{metric_exact_match()}}, \code{\link[=metric_contains]{metric_contains()}} for built-in metrics
+}
 }

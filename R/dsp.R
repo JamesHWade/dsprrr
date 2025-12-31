@@ -56,6 +56,12 @@
 #' dsp("q -> answer", q = "Hi", .simplify = TRUE)   # Returns: "Hello"
 #' dsp("q -> answer", q = "Hi", .simplify = FALSE)  # Returns: list(answer = "Hello")
 #' }
+#'
+#' @seealso
+#' * [signature()] for creating signature objects
+#' * [module()] and [run()] for reusable modules with optimization support
+#' * [as_module()] to convert a Chat to a module
+#' * [set_default_chat()] to configure the default LLM
 dsp <- function(x, ...) {
   UseMethod("dsp")
 }
