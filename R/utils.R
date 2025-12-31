@@ -52,3 +52,52 @@ has_ellmer_credentials <- function() {
     nzchar(Sys.getenv("GOOGLE_GEMINI_API_KEY"))
   )
 }
+
+#' Find closest match for "Did you mean?" suggestions
+#'
+#' Uses Levenshtein distance to find the closest match to a given string
+#' from a set of valid options.
+#'
+#' @param input The input string to match
+#' @param valid_options Character vector of valid options
+#' @param max_distance Maximum edit distance to consider (default 3)
+#' @return The closest match, or NULL if no match within max_distance
+#' @noRd
+find_closest_match <- function(input, valid_options, max_distance = 3L) {
+  if (length(valid_options) == 0) {
+    return(NULL)
+  }
+
+  # Calculate distances
+  distances <- vapply(valid_options, function(opt) {
+    as.integer(utils::adist(tolower(input), tolower(opt))[1, 1])
+  }, integer(1))
+
+  # Find minimum distance
+
+  min_idx <- which.min(distances)
+  min_dist <- distances[min_idx]
+
+  # Only suggest if within max_distance
+  if (min_dist <= max_distance) {
+    valid_options[min_idx]
+  } else {
+    NULL
+  }
+}
+
+#' Format "Did you mean?" suggestion for error message
+#'
+#' @param input The input that didn't match
+#' @param valid_options Character vector of valid options
+#' @param max_distance Maximum edit distance to consider
+#' @return A cli-formatted string, or NULL if no suggestion
+#' @noRd
+suggest_match <- function(input, valid_options, max_distance = 3L) {
+  match <- find_closest_match(input, valid_options, max_distance)
+  if (!is.null(match)) {
+    paste0("Did you mean {.field ", match, "}?")
+  } else {
+    NULL
+  }
+}

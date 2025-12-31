@@ -21,3 +21,6 @@
 ^\.claude$
 ^examples$
 ^getting-started\.md$
+^gh-issue.*\.md$
+^PHASE2_ISSUE\.md$
+^vignettes/_vcr/\.gitkeep$

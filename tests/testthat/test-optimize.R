@@ -63,7 +63,7 @@ test_that("optimize_grid updates module configuration with best parameters", {
 
   optimized <- optimize_grid(
     mod,
-    devset = devset,
+    data = devset,
     metric = metric,
     parameters = list(bias = c(0, 1)),
     .llm = mock_llm,
@@ -78,22 +78,22 @@ test_that("optimize_grid updates module configuration with best parameters", {
 
   skip_if_not_installed("dials")
   skip_if_not_installed("yardstick")
-  param_set <- module_parameter_set(mod)
+  param_set <- module_parameters(mod)
   expect_s3_class(param_set, "parameters")
   expect_true(all(c("bias", "temperature") %in% param_set$id))
 
-  trial_summary <- module_trials_summary(mod)
+  trial_summary <- module_trials(mod)
   expect_equal(trial_summary$n_trials, 2)
   expect_equal(trial_summary$best_trial, 2)
   expect_equal(trial_summary$best_params[[1]]$bias, 1)
   expect_true(is.data.frame(trial_summary$trials[[1]]))
 
-  metrics <- module_metric_summary(mod)
+  metrics <- module_metrics(mod)
   expect_equal(nrow(metrics), 2)
   expect_equal(metrics$trial_id, c(1, 2))
   expect_equal(metrics$params[[2]]$bias, 1)
 
-  yard_metrics <- module_metric_summary(
+  yard_metrics <- module_metrics(
     mod,
     metrics = list(yardstick::accuracy),
     truth = "target",
@@ -179,7 +179,7 @@ test_that("optimize_grid accepts explicit grid data frames", {
 
   optimize_grid(
     mod,
-    devset = devset,
+    data = devset,
     metric = metric,
     grid = grid,
     .llm = mock_llm,
@@ -192,20 +192,20 @@ test_that("optimize_grid accepts explicit grid data frames", {
 
   skip_if_not_installed("dials")
   skip_if_not_installed("yardstick")
-  param_set <- module_parameter_set(mod)
+  param_set <- module_parameters(mod)
   expect_true(all(c("multiplier", "suffix", "temperature") %in% param_set$id))
 
-  trial_summary <- module_trials_summary(mod)
+  trial_summary <- module_trials(mod)
   expect_equal(trial_summary$n_trials, 2)
   expect_equal(trial_summary$best_trial, 1)
   expect_equal(trial_summary$best_params[[1]]$suffix, "")
 
-  metrics <- module_metric_summary(mod)
+  metrics <- module_metrics(mod)
   expect_equal(nrow(metrics), 2)
   expect_equal(metrics$trial_id[[1]], 1)
   expect_equal(metrics$params[[1]]$suffix, "")
 
-  yard_metrics <- module_metric_summary(
+  yard_metrics <- module_metrics(
     mod,
     metrics = list(yardstick::accuracy),
     truth = "target",
@@ -233,7 +233,7 @@ test_that("module_parameter_set derives defaults from signature", {
   )
 
   mod <- module(signature = sig, type = "predict")
-  params <- module_parameter_set(mod)
+  params <- module_parameters(mod)
   expect_true("input_mode" %in% params$id)
 })
 
@@ -245,6 +245,6 @@ test_that("module_metric_summary handles modules without trials", {
   )
   mod <- module(signature = sig, type = "predict")
 
-  metrics <- module_metric_summary(mod)
+  metrics <- module_metrics(mod)
   expect_equal(nrow(metrics), 0)
 })

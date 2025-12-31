@@ -70,12 +70,21 @@ module <- function(
 ) {
   # Validate signature
   if (!inherits(signature, "dsprrr::Signature")) {
-    cli::cli_abort("First argument must be a Signature object")
+    cli::cli_abort(c(
+      "First argument must be a Signature object",
+      "x" = "Got {.cls {class(signature)[1]}}",
+      "i" = "Create one with: {.code signature('question -> answer')}",
+      "i" = "Or use explicit form: {.code Signature(inputs = list(input('q')), ...)}"
+    ))
   }
 
   # Validate chat if provided
   if (!is.null(chat) && !inherits(chat, "Chat")) {
-    cli::cli_abort("{.arg chat} must be an ellmer Chat object")
+    cli::cli_abort(c(
+      "{.arg chat} must be an ellmer Chat object",
+      "x" = "Got {.cls {class(chat)[1]}}",
+      "i" = "Create one with: {.code ellmer::chat_openai()} or {.code ellmer::chat_claude()}"
+    ))
   }
 
   # Auto-upgrade to react if tools are provided

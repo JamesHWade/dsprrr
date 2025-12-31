@@ -149,8 +149,8 @@ mod$optimize_grid(
 )
 
 # Check optimization results
-module_trials_summary(mod)
-module_metric_summary(mod)
+module_trials(mod)
+module_metrics(mod)
 ```
 
 ### Evaluation
@@ -239,7 +239,7 @@ Vignettes use `vcr::setup_knitr()` which automatically names cassettes based on 
 - vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)
 - Grid search optimization with tidymodels parameter support
 - LabeledFewShot and GridSearchTeleprompter
-- `module_parameter_set()` and `module_metric_summary()` helpers
+- `module_parameters()`, `module_trials()`, and `module_metrics()` helpers
 - Module persistence: `pin_module_config()`, `restore_module_config()`
 
 ### Planned

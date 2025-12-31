@@ -308,14 +308,14 @@ test_that("validate_workflow checks dataset compatibility", {
 
   # Compatible dataset
   good_data <- tibble::tibble(text = c("a", "b", "c"))
-  result1 <- validate_workflow(mod, dataset = good_data)
-  expect_true(result1$checks$dataset$passed)
+  result1 <- validate_workflow(mod, data = good_data)
+  expect_true(result1$checks$data$passed)
 
-  # Incompatible dataset
+  # Incompatible data
   bad_data <- tibble::tibble(wrong_column = c("a", "b", "c"))
-  result2 <- validate_workflow(mod, dataset = bad_data)
+  result2 <- validate_workflow(mod, data = bad_data)
   expect_false(result2$valid)
-  expect_false(result2$checks$dataset$passed)
+  expect_false(result2$checks$data$passed)
 })
 
 test_that("validate_workflow checks pins board", {

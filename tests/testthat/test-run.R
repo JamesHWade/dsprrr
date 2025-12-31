@@ -166,12 +166,6 @@ test_that("get_default_llm returns ellmer chat object", {
   mod$chat <- mock_llm
   llm <- dsprrr:::get_default_llm(mod)
   expect_identical(llm, mock_llm)
-
-  # Test with module that has llm in config (legacy)
-  mod$chat <- NULL
-  mod$config$llm <- mock_llm
-  llm <- dsprrr:::get_default_llm(mod)
-  expect_identical(llm, mock_llm)
 })
 
 test_that("batch processing works with multiple inputs", {
@@ -384,7 +378,7 @@ test_that("run warns when parallel execution with custom llm", {
       .parallel = TRUE,
       .progress = FALSE
     ),
-    "Parallel execution requires a NULL"
+    "Parallel execution requires"
   )
   expect_equal(length(out), 2)
 })
@@ -606,13 +600,13 @@ test_that("parallel execution works with mock factory", {
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
-  # Configure module to use a testable LLM factory
-  mod$config$llm <- structure(
+  # Configure module to use a testable Chat
+  mod$chat <- structure(
     list(chat_structured = function(prompt, ...) "parallel_result"),
     class = "Chat"
   )
 
-  # Test parallel execution (will use llm from config)
+  # Test parallel execution (will use chat from module)
   # Note: Mock LLM closures may not serialize correctly to mirai workers,
 
   # so we only verify that the parallel path executes without crashing
@@ -677,4 +671,100 @@ test_that("run with .show_prompt defaults to FALSE", {
 
   # Should not contain preview-related text
   expect_false(any(grepl("Prompt Preview|Input fields", output)))
+})
+
+# -- Module cost tracking tests --
+
+test_that("get_total_cost returns 0 for module with no traces", {
+  sig <- Signature(
+    inputs = list(input(name = "q", class = S7::class_character)),
+    output_type = ellmer::type_string()
+  )
+
+  mod <- module(signature = sig, type = "predict")
+
+  expect_equal(mod$get_total_cost(), 0)
+})
+
+test_that("get_cost_summary returns empty tibble for module with no traces", {
+  sig <- Signature(
+    inputs = list(input(name = "q", class = S7::class_character)),
+    output_type = ellmer::type_string()
+  )
+
+  mod <- module(signature = sig, type = "predict")
+
+  result <- mod$get_cost_summary()
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 0)
+  expect_true(all(c("timestamp", "model", "input_tokens", "output_tokens", "cost") %in% names(result)))
+})
+
+test_that("batch run with structured format returns dsprrr_batch_result class", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+
+  pred <- module(
+    signature = sig,
+    type = "predict",
+    template = "{text}"
+  )
+
+  mock_llm <- list(
+    chat_structured = function(prompt, ...) "result"
+  )
+  class(mock_llm) <- "Chat"
+
+  results <- run(
+    pred,
+    text = c("a", "b", "c"),
+    .llm = mock_llm,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_s3_class(results, "dsprrr_batch_result")
+
+  # Print method should work without error
+  output <- capture.output(print(results), type = "message")
+  expect_true(any(grepl("Batch Results", output)))
+  expect_true(any(grepl("Items", output)))
+})
+
+test_that("dsprrr_batch_result print method handles many items", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+
+  pred <- module(
+    signature = sig,
+    type = "predict",
+    template = "{text}"
+  )
+
+  mock_llm <- list(
+    chat_structured = function(prompt, ...) "result"
+  )
+  class(mock_llm) <- "Chat"
+
+  # Run with 5 items to trigger truncated display
+  results <- run(
+    pred,
+    text = c("a", "b", "c", "d", "e"),
+    .llm = mock_llm,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_s3_class(results, "dsprrr_batch_result")
+
+  # Should show "and X more"
+  output <- capture.output(print(results), type = "message")
+  expect_true(any(grepl("and.*more", output)))
 })

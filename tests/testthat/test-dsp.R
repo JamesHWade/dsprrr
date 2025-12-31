@@ -10,9 +10,9 @@ test_that("as_module generic exists", {
   expect_true("as_module" %in% ls("package:dsprrr"))
 })
 
-test_that("last_trace function exists", {
-  expect_true(is.function(last_trace))
-  expect_true("last_trace" %in% ls("package:dsprrr"))
+test_that("get_last_trace function exists", {
+  expect_true(is.function(get_last_trace))
+  expect_true("get_last_trace" %in% ls("package:dsprrr"))
 })
 
 # -- dsp.Chat tests --
@@ -46,6 +46,31 @@ test_that("dsp.Chat accepts Signature object", {
   expect_equal(result, "test response")
 })
 
+test_that("dsp.Chat respects .simplify parameter", {
+  mock_chat <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        list(answer = "42")
+      }
+    ),
+    class = "Chat"
+  )
+
+  # Default: .simplify = TRUE returns just the value for single-field outputs
+  result_simplified <- dsp(
+    mock_chat,
+    "q -> answer",
+    q = "test",
+    .simplify = TRUE
+  )
+  expect_equal(result_simplified, "42")
+
+  # .simplify = FALSE returns the full list
+  result_full <- dsp(mock_chat, "q -> answer", q = "test", .simplify = FALSE)
+  expect_type(result_full, "list")
+  expect_equal(result_full$answer, "42")
+})
+
 test_that("dsp.Chat validates inputs against signature", {
   mock_chat <- structure(
     list(chat_structured = function(...) list(answer = "x")),
@@ -70,14 +95,14 @@ test_that("dsp.Chat warns about extra inputs", {
   )
 })
 
-test_that("dsp.Chat stores trace for last_trace()", {
+test_that("dsp.Chat stores trace for get_last_trace()", {
   mock_chat <- structure(
     list(chat_structured = function(...) list(answer = "traced")),
     class = "Chat"
   )
 
   dsp(mock_chat, "q -> answer", q = "test")
-  trace <- last_trace()
+  trace <- get_last_trace()
 
   expect_type(trace, "list")
   expect_true("signature" %in% names(trace))

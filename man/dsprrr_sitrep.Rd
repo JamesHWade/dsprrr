@@ -7,28 +7,50 @@
 dsprrr_sitrep()
 }
 \value{
-Invisibly returns a list with configuration details.
+Invisibly returns a list with configuration details:
+\itemize{
+\item \code{has_default_chat}: Logical, whether a default chat is configured
+\item \code{provider}: Character, name of the default provider
+\item \code{model}: Character, name of the default model
+\item \code{api_keys}: Named list of API key availability (logical)
+\item \code{n_calls}: Integer, number of LLM calls this session
+\item \code{prompt_history_count}: Integer, entries in prompt history
+\item \code{prompt_history_max}: Integer, maximum history size
+\item \code{ellmer_version}: Character, installed ellmer version
+\item \code{dsprrr_version}: Character, installed dsprrr version
+}
 }
 \description{
-Displays the current dsprrr configuration, available API keys, and
-session usage statistics. Inspired by \code{usethis::git_sitrep()}.
+Displays a comprehensive overview of your dsprrr configuration,
+including API keys, default chat settings, prompt history, and
+package versions. Inspired by \code{usethis::git_sitrep()}.
 }
 \examples{
 \dontrun{
 dsprrr_sitrep()
 #> dsprrr configuration
-#> --------------------
+#> ────────────────────────────────────────────────────────
 #>
-#> Default provider: OpenAI (gpt-4o-mini)
-#> Source: Auto-detected from OPENAI_API_KEY
+#> ── Packages ──
+#> ✔ ellmer 0.2.0 (OK)
+#> ✔ dsprrr 0.1.0
 #>
-#> API keys found:
-#>   OPENAI_API_KEY
-#>   ANTHROPIC_API_KEY
+#> ── Default Chat ──
+#> ✔ OpenAI (gpt-4o-mini)
+#>   Source: Auto-detected from OPENAI_API_KEY
 #>
-#> Session usage:
-#>   LLM calls: 12
-#>   Tokens: 2,450 in / 890 out
-#>   Est. cost: $0.02
+#> ── API Keys ──
+#> ✔ OPENAI_API_KEY
+#> ✔ ANTHROPIC_API_KEY
+#> ✖ GOOGLE_API_KEY
+#>
+#> ── Session State ──
+#> • Prompt history: 12 / 100 entries
+#> • LLM calls: 15
+#> • Tokens: 2,450 in / 890 out
+#>
+#> ── Options ──
+#> • dsprrr.verbose: TRUE
+#> • dsprrr.quiet: FALSE
 }
 }

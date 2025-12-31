@@ -253,8 +253,8 @@ mod$optimize_grid(
 )
 
 # Check results
-module_trials_summary(mod)
-module_metric_summary(mod)
+module_trials(mod)
+module_metrics(mod)
 ```
 
 ### Comprehensive Metrics
@@ -299,7 +299,7 @@ mod$trace_summary()
 export_traces(mod, format = "tibble")
 
 # Get the last trace
-last_trace()
+get_last_trace()
 ```
 
 ### Module Persistence

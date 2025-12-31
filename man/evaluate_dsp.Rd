@@ -4,12 +4,12 @@
 \alias{evaluate_dsp}
 \title{Evaluate a Compiled Module}
 \usage{
-evaluate_dsp(module, dataset, metric, .llm = NULL, verbose = TRUE)
+evaluate_dsp(module, data, metric, .llm = NULL, verbose = TRUE)
 }
 \arguments{
 \item{module}{A DSPrrr module (compiled or not)}
 
-\item{dataset}{Test dataset as a data frame}
+\item{data}{Test data as a data frame or tibble.}
 
 \item{metric}{A metric function from \verb{metric_*()} functions}
 
@@ -28,9 +28,9 @@ Evaluate the performance of a compiled module on a test dataset.
 # Evaluate a module
 results <- evaluate_dsp(
   module = optimized_classifier,
-  dataset = test_data,
+  data = test_data,
   metric = metric_exact_match(field = "sentiment"),
-  llm = llm_connection
+  .llm = llm_connection
 )
 
 print(results$mean_score)

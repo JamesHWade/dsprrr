@@ -23,6 +23,12 @@
 #'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
 #'   }
 #'
+#' @details
+#' **Retry Behavior:** ellmer automatically retries failed requests up to 3 times
+#' (configurable via `options(ellmer_max_tries = n)`). This handles transient
+#' errors like rate limits and connection failures. See ellmer documentation
+#' for more details.
+#'
 #' @return For single inputs with .return_format="simple": The parsed output according to the module's signature.
 #'   For single inputs with .return_format="structured": A list with components:
 #'   - output: The parsed output
@@ -48,7 +54,15 @@
 #'   module(type = "predict") |>
 #'   run(text = "Great!", .llm = llm, .return_format = "structured")
 #' # Access: result$output, result$chat, result$metadata
+#'
+#' # Configure ellmer retry behavior (if needed)
+#' options(ellmer_max_tries = 5)
 #' }
+#' @seealso
+#' * [dsp()] for one-shot LLM calls without creating a module
+#' * [run_dataset()] for running a module on a data frame
+#' * [evaluate()] for running with metric evaluation
+#' * [module()] for creating modules
 run <- function(module, ...) {
   UseMethod("run")
 }
@@ -109,9 +123,26 @@ run.PredictModule <- function(
     missing_inputs <- setdiff(required_names, names(inputs))
 
     if (length(missing_inputs) > 0) {
-      cli::cli_abort(
-        "Missing required inputs: {.field {missing_inputs}}"
+      provided <- names(inputs)
+
+      # Build error message with "Did you mean?" suggestions
+      msg <- c("Missing required inputs: {.field {missing_inputs}}")
+
+      # Check for typos in provided names
+      for (missing in missing_inputs) {
+        suggestion <- suggest_match(missing, provided)
+        if (!is.null(suggestion)) {
+          msg <- c(msg, "i" = suggestion)
+        }
+      }
+
+      msg <- c(
+        msg,
+        "i" = "Signature expects: {.field {required_names}}",
+        if (length(provided) > 0) c("i" = "You provided: {.field {provided}}")
       )
+
+      cli::cli_abort(msg)
     }
   }
 
@@ -121,9 +152,11 @@ run.PredictModule <- function(
 
   if (is_batch) {
     if (.parallel && !is.null(.llm)) {
-      cli::cli_warn(
-        "Parallel execution requires a NULL .llm so each worker can create an independent client; falling back to sequential processing"
-      )
+      cli::cli_warn(c(
+        "Parallel execution requires {.code .llm = NULL} so each worker can create an independent client",
+        "i" = "Falling back to sequential processing",
+        "i" = "To enable parallel: remove {.arg .llm} or set {.code .llm = NULL}"
+      ))
       .parallel <- FALSE
     }
 
@@ -134,9 +167,11 @@ run.PredictModule <- function(
     ]
 
     if (length(invalid_lengths) > 0) {
-      cli::cli_abort(
-        "All inputs must have the same length or length 1 for batch processing"
-      )
+      cli::cli_abort(c(
+        "All inputs must have the same length or length 1 for batch processing",
+        "x" = "Got lengths: {.val {input_lengths}}",
+        "i" = "Either make all inputs the same length, or use length 1 for scalar values"
+      ))
     }
 
     # Expand scalar inputs to match batch size
@@ -157,7 +192,8 @@ run.PredictModule <- function(
     ))
   }
 
-  # Single input processing - use module$forward
+  # Single input processing
+  # Note: ellmer handles retries internally (configurable via options(ellmer_max_tries))
   result <- module$forward(inputs, .llm = .llm, trace = TRUE)
 
   if (.verbose && !is.null(result$metadata[[1]]$prompt)) {
@@ -628,8 +664,8 @@ format_output <- function(output) {
 
 #' Get default LLM configuration
 #'
-#' Checks module's stored Chat, then config$llm, then auto-detects from
-#' environment variables using get_default_chat().
+#' Checks module's stored Chat, then auto-detects from environment
+#' variables using get_default_chat().
 #'
 #' @param module The module to get an LLM for
 #' @return An ellmer Chat object
@@ -638,11 +674,6 @@ get_default_llm <- function(module) {
   # Check for Chat stored on module
   if (!is.null(module$chat)) {
     return(module$chat)
-  }
-
-  # Check for LLM in config (legacy support)
-  if (!is.null(module$config$llm)) {
-    return(module$config$llm)
   }
 
   # Use the new auto-detection from chat-default.R
@@ -688,42 +719,34 @@ call_llm <- function(
   )
 }
 
-#' Execute Module on Dataset
+#' Execute Module on Data
 #'
 #' @description
-#' Execute a module on a dataset (tibble/data.frame) with optimized batch processing.
+#' Execute a module on a data frame/tibble with optimized batch processing.
 #'
 #' @param module A DSPrrr module (e.g., created with `module()`)
-#' @param ... Additional arguments including:
-#'   \describe{
-#'     \item{dataset}{A tibble or data frame with columns matching the module's inputs}
-#'     \item{.llm}{An ellmer chat object for LLM interaction (optional)}
-#'     \item{.verbose}{Logical indicating whether to print debug information}
-#'     \item{.parallel}{Logical indicating whether to process in parallel (default TRUE)}
-#'     \item{.progress}{Logical indicating whether to show progress bar (default TRUE)}
-#'     \item{.return_format}{Character, either "simple" or "structured" (default "simple")}
-#'   }
+#' @param data A tibble or data frame with columns matching the module's inputs.
+#' @param ... Additional arguments passed to [run()].
 #'
 #' @return A tibble with the input columns plus a result column containing outputs
 #' @export
 #' @examples
 #' \dontrun{
-#' # Process a dataset
-#' data <- tibble::tibble(
+#' # Process data
+#' df <- tibble::tibble(
 #'   text = c("I love this!", "This is bad", "Okay product")
 #' )
 #'
 #' llm <- ellmer::chat_openai()
 #' results <- signature("text -> sentiment") |>
 #'   module(type = "predict") |>
-#'   run_dataset(data, .llm = llm)
+#'   run_dataset(df, .llm = llm)
 #' }
 run_dataset <- function(module, ...) {
   UseMethod("run_dataset")
 }
 
 #' @rdname run_dataset
-#' @param dataset A data frame or tibble containing input columns
 #' @param .llm Optional ellmer Chat object for LLM calls
 #' @param .verbose Logical whether to print verbose output
 #' @param .parallel Logical whether to enable parallel processing
@@ -732,7 +755,7 @@ run_dataset <- function(module, ...) {
 #' @export
 run_dataset.Module <- function(
   module,
-  dataset,
+  data,
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
@@ -740,21 +763,42 @@ run_dataset.Module <- function(
   .return_format = "simple",
   ...
 ) {
-  # Validate dataset
-  if (!is.data.frame(dataset)) {
-    cli::cli_abort("dataset must be a data frame or tibble")
+  # Validate data
+  if (!is.data.frame(data)) {
+    cli::cli_abort(c(
+      "{.arg data} must be a data frame or tibble",
+      "x" = "Got {.cls {class(data)[1]}}",
+      "i" = "Use {.code data.frame()} or {.code tibble::tibble()} to create one"
+    ))
   }
 
   # Get required input names from signature
   sig_inputs <- module$signature@inputs
   if (length(sig_inputs) > 0) {
     required_names <- vapply(sig_inputs, function(x) x$name, character(1))
-    missing_cols <- setdiff(required_names, names(dataset))
+    missing_cols <- setdiff(required_names, names(data))
 
     if (length(missing_cols) > 0) {
-      cli::cli_abort(
-        "Dataset missing required columns: {.field {missing_cols}}"
+      available_cols <- names(data)
+
+      # Build error message with "Did you mean?" suggestions
+      msg <- c("{.arg data} missing required columns: {.field {missing_cols}}")
+
+      # Check for typos in column names
+      for (missing in missing_cols) {
+        suggestion <- suggest_match(missing, available_cols)
+        if (!is.null(suggestion)) {
+          msg <- c(msg, "i" = suggestion)
+        }
+      }
+
+      msg <- c(
+        msg,
+        "i" = "Signature expects: {.field {required_names}}",
+        if (length(available_cols) > 0) c("i" = "Data has: {.field {available_cols}}")
       )
+
+      cli::cli_abort(msg)
     }
   } else {
     required_names <- character(0)
@@ -762,10 +806,10 @@ run_dataset.Module <- function(
 
   # Extract input columns as list
   if (length(required_names) > 0) {
-    input_args <- as.list(dataset[required_names])
+    input_args <- as.list(data[required_names])
   } else {
     # If no specific inputs, try to use all columns
-    input_args <- as.list(dataset)
+    input_args <- as.list(data)
   }
 
   # Run batch processing
@@ -788,17 +832,17 @@ run_dataset.Module <- function(
     results <- list(results)
   }
 
-  # Add results to dataset
+  # Add results to data
   if (.return_format == "simple") {
-    dataset$result <- results
+    data$result <- results
   } else {
     # For structured format, extract outputs and add metadata columns
-    dataset$result <- lapply(results, `[[`, "output")
-    dataset$.metadata <- lapply(results, `[[`, "metadata")
-    dataset$.chat <- lapply(results, `[[`, "chat")
+    data$result <- lapply(results, `[[`, "output")
+    data$.metadata <- lapply(results, `[[`, "metadata")
+    data$.chat <- lapply(results, `[[`, "chat")
   }
 
-  tibble::as_tibble(dataset)
+  tibble::as_tibble(data)
 }
 
 # Internal: Show prompt preview before LLM call
@@ -837,4 +881,56 @@ show_prompt_preview <- function(module) {
   }
 
   cli::cat_line()
+}
+
+#' Print method for dsprrr_batch_result
+#' @param x A dsprrr_batch_result object
+#' @param ... Additional arguments (unused)
+#' @export
+print.dsprrr_batch_result <- function(x, ...) {
+  n <- length(x)
+
+  cli::cli_h3("DSPrrr Batch Results")
+  cli::cli_text("{.field Items}: {n}")
+
+  # Count successes vs errors
+  n_errors <- sum(vapply(x, function(item) {
+    isTRUE(item$error) || inherits(item$output, "error")
+  }, logical(1)))
+
+  if (n_errors > 0) {
+    cli::cli_alert_warning("{.field Errors}: {n_errors} of {n} items")
+  } else {
+    cli::cli_alert_success("All items completed successfully")
+  }
+
+  # Show first few results
+  if (n > 0 && n <= 3) {
+    cli::cli_text("{.field Outputs}:")
+    for (i in seq_len(n)) {
+      output <- x[[i]]$output
+      if (is.character(output)) {
+        cli::cli_text("  [{i}] {substr(output, 1, 50)}{if (nchar(output) > 50) '...' else ''}")
+      } else if (is.list(output)) {
+        cli::cli_text("  [{i}] <list> with {length(output)} elements")
+      } else {
+        cli::cli_text("  [{i}] <{class(output)[1]}>")
+      }
+    }
+  } else if (n > 3) {
+    cli::cli_text("{.field First 3 outputs}:")
+    for (i in 1:3) {
+      output <- x[[i]]$output
+      if (is.character(output)) {
+        cli::cli_text("  [{i}] {substr(output, 1, 50)}{if (nchar(output) > 50) '...' else ''}")
+      } else if (is.list(output)) {
+        cli::cli_text("  [{i}] <list> with {length(output)} elements")
+      } else {
+        cli::cli_text("  [{i}] <{class(output)[1]}>")
+      }
+    }
+    cli::cli_text("  ... and {n - 3} more")
+  }
+
+  invisible(x)
 }

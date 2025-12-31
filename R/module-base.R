@@ -182,13 +182,13 @@ Module <- R6::R6Class(
     },
 
     #' @description
-    #' Optimize the module using a development set
-    #' @param devset Development dataset
+    #' Optimize the module using development data
+    #' @param data Development data as a data frame or tibble
     #' @param objective Metric or metric set
     #' @param control Optimization control parameters
     #' @return Updated module (self)
     optimize = function(
-      devset,
+      data,
       metric = metric_exact_match(),
       grid = NULL,
       parameters = NULL,
@@ -198,7 +198,7 @@ Module <- R6::R6Class(
       ...
     ) {
       self$optimize_grid(
-        devset = devset,
+        data = data,
         metric = metric,
         grid = grid,
         parameters = parameters,
@@ -211,7 +211,7 @@ Module <- R6::R6Class(
 
     #' @description
     #' Run grid search optimisation for the module
-    #' @param devset Development dataset as data frame
+    #' @param data Development data as data frame or tibble
     #' @param metric Metric function applied per example
     #' @param grid Candidate configurations as data frame (optional)
     #' @param parameters Parameter definitions (named list or dials param set)
@@ -220,7 +220,7 @@ Module <- R6::R6Class(
     #' @param control List of control options (progress, grid_type, etc.)
     #' @param ... Additional arguments forwarded to [evaluate()]
     optimize_grid = function(
-      devset,
+      data,
       metric = metric_exact_match(),
       grid = NULL,
       parameters = NULL,
@@ -229,18 +229,28 @@ Module <- R6::R6Class(
       control = list(),
       ...
     ) {
-      if (!is.data.frame(devset)) {
-        cli::cli_abort("devset must be a data frame or tibble")
+      if (!is.data.frame(data)) {
+        cli::cli_abort(c(
+          "{.arg data} must be a data frame or tibble",
+          "x" = "Got {.cls {class(data)[1]}}",
+          "i" = "Provide a data frame with columns matching your signature inputs"
+        ))
       }
 
-      if (nrow(devset) == 0) {
-        cli::cli_abort("devset must contain at least one row")
+      if (nrow(data) == 0) {
+        cli::cli_abort(c(
+          "{.arg data} must contain at least one row",
+          "i" = "Optimization requires at least one example to evaluate"
+        ))
       }
 
       if (!is.function(metric)) {
-        cli::cli_abort(
-          "metric must be a function; wrap yardstick metrics with as_dsprrr_metric()"
-        )
+        cli::cli_abort(c(
+          "{.arg metric} must be a function",
+          "x" = "Got {.cls {class(metric)[1]}}",
+          "i" = "Use a built-in metric: {.code metric_exact_match()}, {.code metric_contains()}",
+          "i" = "Or wrap yardstick metrics: {.code as_dsprrr_metric(yardstick::accuracy)}"
+        ))
       }
 
       objective <- match.arg(objective)
@@ -253,9 +263,11 @@ Module <- R6::R6Class(
 
       n_candidates <- nrow(candidate_grid)
       if (n_candidates == 0) {
-        cli::cli_abort(
-          "The optimisation grid is empty; provide parameters or a non-empty grid"
-        )
+        cli::cli_abort(c(
+          "The optimization grid is empty",
+          "i" = "Provide {.arg parameters}: {.code list(temperature = c(0.3, 0.7, 1.0))}",
+          "i" = "Or provide a {.arg grid} data frame with parameter columns"
+        ))
       }
 
       progress_id <- NULL
@@ -296,7 +308,7 @@ Module <- R6::R6Class(
 
         eval_result <- evaluate(
           candidate,
-          dataset = devset,
+          data = data,
           metric = metric,
           .llm = .llm,
           .parallel = control$parallel,
@@ -505,7 +517,8 @@ Module <- R6::R6Class(
         return(list(
           n_traces = 0,
           total_tokens = 0,
-          total_latency_ms = 0
+          total_latency_ms = 0,
+          total_cost = 0
         ))
       }
 
@@ -575,6 +588,36 @@ Module <- R6::R6Class(
           ),
           na.rm = TRUE
         )
+      )
+    },
+
+    #' @description
+    #' Get total cost for this module's LLM calls
+    #' @return Numeric total cost in USD
+    get_total_cost = function() {
+      self$trace_summary()$total_cost
+    },
+
+    #' @description
+    #' Get cost summary with per-call breakdown
+    #' @return A tibble with timestamp, model, tokens, and cost per call
+    get_cost_summary = function() {
+      traces <- self$get_traces()
+      if (nrow(traces) == 0) {
+        return(tibble::tibble(
+          timestamp = .POSIXct(numeric(0)),
+          model = character(0),
+          input_tokens = integer(0),
+          output_tokens = integer(0),
+          cost = numeric(0)
+        ))
+      }
+      tibble::tibble(
+        timestamp = traces$timestamp,
+        model = traces$model,
+        input_tokens = traces$input_tokens,
+        output_tokens = traces$output_tokens,
+        cost = traces$cost
       )
     },
 

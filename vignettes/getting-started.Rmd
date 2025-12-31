@@ -269,7 +269,7 @@ mod$trace_summary()
 traces <- export_traces(mod, format = "tibble")
 
 # Get the most recent trace
-last_trace()
+get_last_trace()
 ```
 
 ## Optimization
@@ -314,7 +314,7 @@ mod$optimize_grid(
 )
 
 # Check results
-module_trials_summary(mod)
+module_trials(mod)
 mod$state$best_score
 ```
 

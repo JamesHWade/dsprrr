@@ -239,7 +239,7 @@ classifier$optimize_grid(
 )
 
 # View results
-module_trials_summary(classifier)
+module_trials(classifier)
 #> # A tibble: 6 × 4
 #>   temperature prompt_style score    n
 #>         <dbl> <chr>        <dbl> <int>

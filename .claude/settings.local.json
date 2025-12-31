@@ -17,7 +17,13 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:dspy.ai)",
       "Bash(ls:*)",
-      "mcp__r-btw__btw_tool_docs_available_vignettes"
+      "mcp__r-btw__btw_tool_docs_available_vignettes",
+      "Bash(gh issue view:*)",
+      "WebFetch(domain:httr2.r-lib.org)",
+      "Bash(wc:*)",
+      "WebFetch(domain:ellmer.tidyverse.org)",
+      "WebFetch(domain:posit-dev.github.io)",
+      "WebFetch(domain:ragnar.tidyverse.org)"
     ],
     "deny": [],
     "ask": [],

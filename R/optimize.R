@@ -6,9 +6,10 @@
 #' can be expanded into a grid (named lists or tidymodels parameter sets).
 #'
 #' @param module A DSPrrr module (created via [module()]).
-#' @param devset Development dataset containing columns required by the module's
+#' @param data Development data containing columns required by the module's
 #'   signature plus any fields consumed by the metric.
 #' @param metric Metric function applied per example. Defaults to
+#'
 #'   [metric_exact_match()]. Use [as_dsprrr_metric()] to adapt yardstick/vitals
 #'   metrics.
 #' @param grid Optional data frame/tibble of candidate configurations.
@@ -34,7 +35,7 @@ optimize_grid <- function(module, ...) {
 #' @export
 optimize_grid.Module <- function(
   module,
-  devset,
+  data,
   metric = metric_exact_match(),
   grid = NULL,
   parameters = NULL,
@@ -46,7 +47,7 @@ optimize_grid.Module <- function(
   objective <- match.arg(objective)
 
   module$optimize_grid(
-    devset = devset,
+    data = data,
     metric = metric,
     grid = grid,
     parameters = parameters,
@@ -228,9 +229,9 @@ signature_parameter_defaults <- function(signature, prefix = "input") {
 #'   devset = tibble::tibble(text = "sample", target = "positive"),
 #'   parameters = list(temperature = c(0.1, 0.5))
 #' )
-#' module_parameter_set(mod)
+#' module_parameters(mod)
 #' }
-module_parameter_set <- function(
+module_parameters <- function(
   module,
   include = NULL,
   exclude = c("id", "instructions", "instructions_suffix")
@@ -381,10 +382,10 @@ module_parameter_set <- function(
 #' @export
 #' @examples
 #' \dontrun{
-#' summary <- module_trials_summary(my_module)
+#' summary <- module_trials(my_module)
 #' summary$best_params
 #' }
-module_trials_summary <- function(
+module_trials <- function(
   module,
   objective = c("maximize", "minimize")
 ) {
@@ -467,15 +468,15 @@ module_trials_summary <- function(
 #' @export
 #' @examples
 #' \dontrun{
-#' trial_metrics <- module_metric_summary(my_module)
-#' yardstick_metrics <- module_metric_summary(
+#' trial_metrics <- module_metrics(my_module)
+#' yardstick_metrics <- module_metrics(
 #'   my_module,
 #'   metrics = yardstick::metric_set(yardstick::accuracy),
 #'   truth = target,
 #'   estimate = result
 #' )
 #' }
-module_metric_summary <- function(
+module_metrics <- function(
   module,
   metrics = NULL,
   truth = NULL,
