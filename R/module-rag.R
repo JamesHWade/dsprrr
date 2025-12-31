@@ -306,12 +306,7 @@ RAGModule <- R6::R6Class(
         }
       } else if (!is.null(self$store)) {
         # Check if ragnar is available
-        if (!requireNamespace("ragnar", quietly = TRUE)) {
-          cli::cli_abort(c(
-            "ragnar package required for store-based retrieval",
-            "i" = "Install with: {.code pak::pak('tidyverse/ragnar')}"
-          ))
-        }
+        rlang::check_installed("ragnar", reason = "for store-based retrieval")
 
         # Use ragnar store retrieval
         docs <- tryCatch(

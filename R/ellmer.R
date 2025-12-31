@@ -107,16 +107,29 @@ as_ellmer_tool <- function(
   captured_module <- module
   captured_llm <- .llm
 
-  # Create the tool function that will be called by ellmer
-  tool_fn <- function(...) {
-    inputs <- list(...)
+  # Create a function with named parameters matching the signature inputs
+  # ellmer::tool() requires argument names to match function formals
+  input_names <- vapply(module$signature@inputs, function(x) x$name, character(1))
+
+  # Create formal arguments list (all default to missing)
+  tool_formals <- rlang::set_names(
+    rep(list(rlang::missing_arg()), length(input_names)),
+    input_names
+  )
+
+  # Build function body using bquote to inject the captured variables
+  tool_body <- bquote({
+    # Collect all arguments passed to this function
+    inputs <- as.list(match.call())[-1]
 
     # Run the module - let errors propagate so the LLM can handle them
-    result <- run(
-      captured_module,
-      !!!inputs,
-      .llm = captured_llm,
-      .return_format = "simple"
+    result <- do.call(
+      run,
+      c(
+        list(.(captured_module)),
+        inputs,
+        list(.llm = .(captured_llm), .return_format = "simple")
+      )
     )
 
     # Format result for LLM consumption
@@ -127,7 +140,11 @@ as_ellmer_tool <- function(
     } else {
       as.character(result)
     }
-  }
+  })
+
+  # Create the function with proper signature
+  # Use the package namespace so `run` and other functions are available
+  tool_fn <- rlang::new_function(tool_formals, tool_body, env = rlang::ns_env("dsprrr"))
 
   # Create the ellmer ToolDef using ellmer::tool()
   ellmer::tool(

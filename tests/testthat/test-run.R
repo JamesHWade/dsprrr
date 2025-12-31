@@ -507,6 +507,42 @@ test_that("create_error_result formats structured errors correctly", {
   expect_equal(result$metadata$prompt, "test prompt")
 })
 
+test_that("create_error_result handles list-style error objects (timeout case)", {
+ # This tests the timeout error path which passes list(message = "...")
+ # instead of a simpleError object
+ error <- list(message = "Task timed out")
+
+ result <- dsprrr:::create_error_result(
+   error = error,
+   index = 5,
+   prompt = NA_character_,
+   instructions = NA_character_,
+   llm = NULL,
+   .return_format = "simple"
+ )
+
+ expect_true(is.na(result))
+})
+
+test_that("create_error_result handles list-style error for structured format", {
+ error <- list(message = "Task timed out")
+ mock_llm <- structure(list(), class = "Chat")
+
+ result <- dsprrr:::create_error_result(
+   error = error,
+   index = 2,
+   prompt = "test prompt",
+   instructions = "test instructions",
+   llm = mock_llm,
+   .return_format = "structured"
+ )
+
+ expect_type(result, "list")
+ expect_true(is.na(result$output))
+ expect_equal(result$metadata$error, "Task timed out")
+ expect_equal(result$metadata$batch_index, 2)
+})
+
 test_that("run_batch_sequential processes all items", {
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),

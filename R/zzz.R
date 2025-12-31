@@ -34,7 +34,7 @@
   }
 
   # Register parsnip engine if parsnip is available
-  if (requireNamespace("parsnip", quietly = TRUE)) {
+  if (rlang::is_installed("parsnip")) {
     setHook(
       packageEvent("parsnip", "onLoad"),
       function(...) register_dsprrr_engine()

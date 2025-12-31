@@ -61,12 +61,7 @@ llm_predict <- function(
   provider = NULL
 ) {
   # Check for parsnip
-  if (!requireNamespace("parsnip", quietly = TRUE)) {
-    cli::cli_abort(c(
-      "parsnip package required for llm_predict()",
-      "i" = "Install with: {.code install.packages('parsnip')}"
-    ))
-  }
+  rlang::check_installed("parsnip", reason = "for llm_predict()")
 
   args <- list(
     signature = rlang::enquo(signature),
@@ -125,7 +120,7 @@ print.llm_predict <- function(x, ...) {
 #' register_dsprrr_engine()
 #' }
 register_dsprrr_engine <- function() {
-  if (!requireNamespace("parsnip", quietly = TRUE)) {
+  if (!rlang::is_installed("parsnip")) {
     return(invisible(NULL))
   }
 
@@ -520,9 +515,7 @@ tunable_llm_predict <- function(x, ...) {
 #' temperature(range = c(0.1, 0.9))
 #' }
 temperature <- function(range = c(0, 1), trans = NULL) {
-  if (!requireNamespace("dials", quietly = TRUE)) {
-    cli::cli_abort("dials package required for temperature()")
-  }
+  rlang::check_installed("dials", reason = "for temperature()")
 
   dials::new_quant_param(
     type = "double",
@@ -550,9 +543,7 @@ temperature <- function(range = c(0, 1), trans = NULL) {
 #' top_p(range = c(0.5, 1))
 #' }
 top_p <- function(range = c(0, 1), trans = NULL) {
-  if (!requireNamespace("dials", quietly = TRUE)) {
-    cli::cli_abort("dials package required for top_p()")
-  }
+  rlang::check_installed("dials", reason = "for top_p()")
 
   dials::new_quant_param(
     type = "double",
@@ -577,9 +568,7 @@ top_p <- function(range = c(0, 1), trans = NULL) {
 #' reasoning_effort()
 #' }
 reasoning_effort <- function() {
-  if (!requireNamespace("dials", quietly = TRUE)) {
-    cli::cli_abort("dials package required for reasoning_effort()")
-  }
+  rlang::check_installed("dials", reason = "for reasoning_effort()")
 
   dials::new_qual_param(
     type = "character",

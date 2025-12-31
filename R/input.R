@@ -65,9 +65,7 @@ input <- function(name, type = NULL, description = NULL, ...) {
 #' @noRd
 normalize_input_type <- function(type, description = NULL) {
   # Load ellmer
-  if (!requireNamespace("ellmer", quietly = TRUE)) {
-    cli::cli_abort("Package 'ellmer' is required for type specifications")
-  }
+  rlang::check_installed("ellmer", reason = "for type specifications")
 
   # Handle NULL/missing - default to string with description
   if (is.null(type)) {

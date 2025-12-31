@@ -44,12 +44,7 @@ ragnar_tool <- function(
   description = NULL
 ) {
   # Check ragnar availability
-  if (!requireNamespace("ragnar", quietly = TRUE)) {
-    cli::cli_abort(c(
-      "ragnar package required for ragnar_tool()",
-      "i" = "Install with: {.code pak::pak('tidyverse/ragnar')}"
-    ))
-  }
+  rlang::check_installed("ragnar", reason = "for ragnar_tool()")
 
   if (is.null(description)) {
     description <- paste(
@@ -170,12 +165,7 @@ create_search_tool <- function(
   description = NULL,
   ...
 ) {
-  if (!requireNamespace("ragnar", quietly = TRUE)) {
-    cli::cli_abort(c(
-      "ragnar package required for create_search_tool()",
-      "i" = "Install with: {.code pak::pak('tidyverse/ragnar')}"
-    ))
-  }
+  rlang::check_installed("ragnar", reason = "for create_search_tool()")
 
   # Create ragnar store
   store <- tryCatch(
