@@ -28,7 +28,6 @@ NULL
 #'
 #' @details
 #' The transform works by:
-#' 1
 #' 1. Extracting existing output fields from the signature's output_type
 #' 2. Creating a new output_type with reasoning as the first field
 #' 3. Adding appropriate description to guide the model
@@ -57,8 +56,7 @@ with_reasoning <- function(
     instructions = NULL,
     ...) {
   # Coerce to Signature if string
-
-sig <- if (is.character(x)) {
+  sig <- if (is.character(x)) {
     signature(x)
   } else if (S7::S7_inherits(x, Signature)) {
     x

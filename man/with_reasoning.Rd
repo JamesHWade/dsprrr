@@ -36,7 +36,6 @@ asked to "show its work" before providing the final answer.
 }
 \details{
 The transform works by:
-1
 \enumerate{
 \item Extracting existing output fields from the signature's output_type
 \item Creating a new output_type with reasoning as the first field

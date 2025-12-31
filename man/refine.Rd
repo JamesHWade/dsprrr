@@ -42,7 +42,8 @@ Factory function to create a Refine wrapper around any module.
 Extends BestOfN with iterative refinement using feedback.
 }
 \examples{
-# Create a QA module
+# Create a QA module - include feedback in signature for refinement
+# RefineModule will automatically inject feedback on subsequent attempts
 qa <- module(signature("question, feedback -> answer"))
 
 # Wrap with refinement
@@ -57,4 +58,7 @@ refined <- refine(
   reward_fn = one_word_reward,
   feedback_template = "Score: {score}. Your answer '{prediction}' was too long. Give a single word."
 )
+
+# When running, only provide 'question' - feedback is auto-injected:
+# result <- run(refined, question = "What is the capital of France?", .llm = llm)
 }

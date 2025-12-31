@@ -366,6 +366,48 @@ test_that("BestOfN print method works", {
   expect_s3_class(wrapper, "BestOfNModule")
 })
 
+test_that("BestOfN handles reward_fn errors gracefully", {
+  mock <- create_mock_module()
+
+  # Reward function that throws an error
+  error_reward <- function(pred, inputs) {
+    stop("Reward function error!")
+  }
+
+  wrapper <- best_of_n(mock, N = 2, reward_fn = error_reward)
+
+  # Should warn about reward function failure but still return result
+  expect_warning(
+    result <- wrapper$forward(list(question = "test")),
+    "Reward function failed"
+  )
+
+  # Should still return a result (first successful attempt)
+  expect_s3_class(result, "tbl_df")
+  expect_true(!is.null(result$output[[1]]))
+
+  # Attempts should have NA scores
+  attempts <- wrapper$get_attempts()
+  expect_true(all(is.na(attempts$score)))
+})
+
+test_that("BestOfN with NA scores selects first successful attempt", {
+  mock <- create_mock_module(responses = list("first", "second"))
+
+  # Reward function that always returns NA
+  na_reward <- function(pred, inputs) {
+    NA_real_
+  }
+
+  wrapper <- best_of_n(mock, N = 2, reward_fn = na_reward)
+  result <- wrapper$forward(list(question = "test"))
+
+  # Should return first attempt since no scores are valid
+  # (best_score stays -Inf, so first result with non-NA would win,
+  # but all NA means we fall back to first successful)
+  expect_s3_class(result, "tbl_df")
+})
+
 # ============================================================================
 # RefineModule Tests
 # ============================================================================

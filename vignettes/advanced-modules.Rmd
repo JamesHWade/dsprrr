@@ -232,18 +232,22 @@ all_attempts <- wrapper$get_attempts(all = TRUE)
 
 ### Metadata
 
-BestOfN tracks useful metadata:
+BestOfN tracks useful metadata. Use `.return_format = "structured"` to access it:
 
-```{r bon-metadata, eval=FALSE
-result <- run(wrapper, question = "Test", .llm = llm)
+```{r bon-metadata, eval=FALSE}
+# Use structured format to access metadata
+result <- run(wrapper, question = "Test", .llm = llm, .return_format = "structured")
 
-# Access via .metadata
-result$.metadata[[1]]$n_attempts     # How many attempts were made
-result$.metadata[[1]]$best_score     # Score of selected result
-result$.metadata[[1]]$all_scores     # Scores of all attempts
-result$.metadata[[1]]$early_stopped  # Did we hit threshold?
-result$.metadata[[1]]$total_tokens   # Tokens across all attempts
-result$.metadata[[1]]$total_cost     # Cost across all attempts
+# Access metadata fields
+result$metadata$n_attempts     # How many attempts were made
+result$metadata$best_score     # Score of selected result
+result$metadata$all_scores     # Scores of all attempts
+result$metadata$early_stopped  # Did we hit threshold?
+result$metadata$total_tokens   # Tokens across all attempts
+result$metadata$total_cost     # Cost across all attempts
+
+# For batch operations with run_dataset(), use .metadata column:
+# batch_result$.metadata[[1]]$n_attempts
 ```
 
 ## Refine

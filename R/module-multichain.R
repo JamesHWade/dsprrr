@@ -94,6 +94,12 @@ MultiChainComparisonModule <- R6::R6Class(
       }
 
       self$M <- as.integer(M)
+      if (self$M < 1L) {
+        cli::cli_abort(c(
+          "M must be at least 1",
+          "x" = "Got M = {.val {M}}"
+        ))
+      }
       self$temperature <- temperature
       self$comparison_template <- comparison_template %||%
         private$default_comparison_template()
@@ -193,6 +199,7 @@ MultiChainComparisonModule <- R6::R6Class(
         model = comparison_metadata$model,
         M = self$M,
         n_successful_attempts = length(attempts),
+        n_failed_attempts = self$M - length(attempts),
         n_llm_calls = length(attempts) + 1, # M attempts + 1 comparison
         total_tokens = total_tokens,
         total_cost = total_cost,
@@ -209,6 +216,7 @@ MultiChainComparisonModule <- R6::R6Class(
           comparison_output = final_output,
           M = self$M,
           n_successful_attempts = length(attempts),
+          n_failed_attempts = self$M - length(attempts),
           model = comparison_metadata$model
         )
         self$state$traces <- append(self$state$traces, list(trace_entry))
@@ -368,7 +376,6 @@ MultiChainComparisonModule <- R6::R6Class(
     build_comparison_signature = function() {
       # Build a signature for the comparison step
       # Output should match the original signature's output
-      original_output <- self$signature@output_type
 
       # Add reasoning field if not already present
       if (has_reasoning(self$signature)) {

@@ -41,7 +41,7 @@ BestOfNModule <- R6::R6Class(
     #' @field N Maximum number of attempts
     N = NULL,
 
-    #' @field reward_fn Reward function: function(prediction, inputs) -> [0, 1]
+    #' @field reward_fn Reward function returning a score between 0 and 1
     reward_fn = NULL,
 
     #' @field threshold Score threshold for early stopping
@@ -55,7 +55,7 @@ BestOfNModule <- R6::R6Class(
     #'
     #' @param module The module to wrap (must inherit from Module)
     #' @param N Maximum number of attempts (default 3)
-    #' @param reward_fn Reward function: function(prediction, inputs) -> [0, 1]
+    #' @param reward_fn Reward function returning a score between 0 and 1
     #' @param threshold Score threshold for early stopping (default 1.0)
     #' @param fail_count Maximum consecutive failures before giving up (default N)
     #' @param config Optional configuration list
@@ -115,6 +115,9 @@ BestOfNModule <- R6::R6Class(
       best_result <- NULL
       best_metadata <- NULL
       best_chat <- NULL
+      first_result <- NULL  # Fallback if all scores are NA
+      first_metadata <- NULL
+      first_chat <- NULL
       consecutive_failures <- 0
       total_tokens <- 0
       total_cost <- 0
@@ -127,6 +130,11 @@ BestOfNModule <- R6::R6Class(
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1
+            cli::cli_warn(c(
+              "Attempt {i} of {self$N} failed in BestOfN",
+              "x" = e$message,
+              "i" = "Consecutive failures: {consecutive_failures}/{self$fail_count}"
+            ))
             if (consecutive_failures >= self$fail_count) {
               cli::cli_abort(c(
                 "Too many consecutive failures in BestOfN",
@@ -150,6 +158,13 @@ BestOfNModule <- R6::R6Class(
         metadata <- result$metadata[[1]]
         chat_obj <- result$chat[[1]]
 
+        # Keep first successful result as fallback (in case all scores are NA)
+        if (is.null(first_result)) {
+          first_result <- prediction
+          first_metadata <- metadata
+          first_chat <- chat_obj
+        }
+
         # Accumulate token counts and costs
         if (!is.null(metadata$total_tokens)) {
           total_tokens <- total_tokens + metadata$total_tokens
@@ -167,9 +182,10 @@ BestOfNModule <- R6::R6Class(
           error = function(e) {
             cli::cli_warn(c(
               "Reward function failed for attempt {i}",
+              "x" = "Treating as unscored (will not be selected as best)",
               "i" = e$message
             ))
-            0.0
+            NA_real_
           }
         )
 
@@ -182,16 +198,16 @@ BestOfNModule <- R6::R6Class(
         )
         attempts <- append(attempts, list(attempt_entry))
 
-        # Track best result
-        if (score > best_score) {
+        # Track best result (NA scores are not eligible for best)
+        if (!is.na(score) && score > best_score) {
           best_score <- score
           best_result <- prediction
           best_metadata <- metadata
           best_chat <- chat_obj
         }
 
-        # Early stopping if threshold met
-        if (score >= self$threshold) {
+        # Early stopping if threshold met (NA scores don't trigger early stop)
+        if (!is.na(score) && score >= self$threshold) {
           break
         }
       }
@@ -200,9 +216,17 @@ BestOfNModule <- R6::R6Class(
       latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
         1000
 
-      # If no successful attempts, error
-      if (is.null(best_result)) {
+      # If no successful attempts at all, error
+      if (is.null(first_result)) {
         cli::cli_abort("All {self$N} attempts failed in BestOfN")
+      }
+
+      # Use first_result as fallback if all scores were NA
+      if (is.null(best_result)) {
+        best_result <- first_result
+        best_metadata <- first_metadata
+        best_chat <- first_chat
+        # best_score stays -Inf since no valid scores
       }
 
       # Create aggregated metadata
@@ -212,7 +236,7 @@ BestOfNModule <- R6::R6Class(
         n_attempts = length(attempts),
         best_score = best_score,
         all_scores = vapply(attempts, function(a) a$score, numeric(1)),
-        early_stopped = best_score >= self$threshold,
+        early_stopped = !is.infinite(best_score) && best_score >= self$threshold,
         total_tokens = total_tokens,
         total_cost = total_cost,
         latency_ms = latency_ms
@@ -593,6 +617,9 @@ RefineModule <- R6::R6Class(
       best_result <- NULL
       best_metadata <- NULL
       best_chat <- NULL
+      first_result <- NULL  # Fallback if all scores are NA
+      first_metadata <- NULL
+      first_chat <- NULL
       consecutive_failures <- 0
       total_tokens <- 0
       total_cost <- 0
@@ -612,6 +639,11 @@ RefineModule <- R6::R6Class(
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1
+            cli::cli_warn(c(
+              "Attempt {i} of {self$N} failed in Refine",
+              "x" = e$message,
+              "i" = "Consecutive failures: {consecutive_failures}/{self$fail_count}"
+            ))
             if (consecutive_failures >= self$fail_count) {
               cli::cli_abort(c(
                 "Too many consecutive failures in Refine",
@@ -635,6 +667,13 @@ RefineModule <- R6::R6Class(
         metadata <- result$metadata[[1]]
         chat_obj <- result$chat[[1]]
 
+        # Keep first successful result as fallback (in case all scores are NA)
+        if (is.null(first_result)) {
+          first_result <- prediction
+          first_metadata <- metadata
+          first_chat <- chat_obj
+        }
+
         # Accumulate token counts and costs
         if (!is.null(metadata$total_tokens)) {
           total_tokens <- total_tokens + metadata$total_tokens
@@ -652,9 +691,10 @@ RefineModule <- R6::R6Class(
           error = function(e) {
             cli::cli_warn(c(
               "Reward function failed for attempt {i}",
+              "x" = "Treating as unscored (will not be selected as best)",
               "i" = e$message
             ))
-            0.0
+            NA_real_
           }
         )
 
@@ -668,16 +708,16 @@ RefineModule <- R6::R6Class(
         )
         attempts <- append(attempts, list(attempt_entry))
 
-        # Track best result
-        if (score > best_score) {
+        # Track best result (NA scores are not eligible for best)
+        if (!is.na(score) && score > best_score) {
           best_score <- score
           best_result <- prediction
           best_metadata <- metadata
           best_chat <- chat_obj
         }
 
-        # Early stopping if threshold met
-        if (score >= self$threshold) {
+        # Early stopping if threshold met (NA scores don't trigger early stop)
+        if (!is.na(score) && score >= self$threshold) {
           break
         }
 
@@ -692,9 +732,17 @@ RefineModule <- R6::R6Class(
       latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
         1000
 
-      # If no successful attempts, error
-      if (is.null(best_result)) {
+      # If no successful attempts at all, error
+      if (is.null(first_result)) {
         cli::cli_abort("All {self$N} attempts failed in Refine")
+      }
+
+      # Use first_result as fallback if all scores were NA
+      if (is.null(best_result)) {
+        best_result <- first_result
+        best_metadata <- first_metadata
+        best_chat <- first_chat
+        # best_score stays -Inf since no valid scores
       }
 
       # Create aggregated metadata
@@ -704,7 +752,7 @@ RefineModule <- R6::R6Class(
         n_attempts = length(attempts),
         best_score = best_score,
         all_scores = vapply(attempts, function(a) a$score, numeric(1)),
-        early_stopped = best_score >= self$threshold,
+        early_stopped = !is.infinite(best_score) && best_score >= self$threshold,
         feedback_count = length(feedback_history),
         total_tokens = total_tokens,
         total_cost = total_cost,
@@ -871,7 +919,8 @@ RefineModule <- R6::R6Class(
 #'
 #' @export
 #' @examples
-#' # Create a QA module
+#' # Create a QA module - include feedback in signature for refinement
+#' # RefineModule will automatically inject feedback on subsequent attempts
 #' qa <- module(signature("question, feedback -> answer"))
 #'
 #' # Wrap with refinement
@@ -886,6 +935,9 @@ RefineModule <- R6::R6Class(
 #'   reward_fn = one_word_reward,
 #'   feedback_template = "Score: {score}. Your answer '{prediction}' was too long. Give a single word."
 #' )
+#'
+#' # When running, only provide 'question' - feedback is auto-injected:
+#' # result <- run(refined, question = "What is the capital of France?", .llm = llm)
 refine <- function(
     module,
     N = 3L,
