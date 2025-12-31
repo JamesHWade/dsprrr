@@ -14,6 +14,8 @@ Useful links:
 
 - <https://github.com/JamesHWade/dsprrr>
 
+- <https://jameshwade.github.io/dsprrr/>
+
 - Report bugs at <https://github.com/JamesHWade/dsprrr/issues>
 
 ## Author

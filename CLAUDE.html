@@ -23,6 +23,7 @@
     <li><a class="dropdown-item" href="articles/cheatsheet.html">Quick Reference</a></li>
     <li><a class="dropdown-item" href="articles/troubleshooting.html">Troubleshooting</a></li>
     <li><a class="dropdown-item" href="articles/compilation-optimization.html">Compilation &amp; Optimization</a></li>
+    <li><a class="dropdown-item" href="articles/advanced-modules.html">Advanced Reasoning Modules</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
     <li><a class="dropdown-item" href="articles/vitals-integration.html">Vitals Integration</a></li>
@@ -93,9 +94,12 @@
 <pre><code><span><span class="va">R</span><span class="op">/</span></span>
 <span>  <span class="va">signature.R</span>           <span class="co"># S7 Signature class + string parsing</span></span>
 <span>  <span class="va">signature</span><span class="op">-</span><span class="va">parser.R</span>    <span class="co"># DSPy-style string notation parser</span></span>
+<span>  <span class="va">signature</span><span class="op">-</span><span class="va">transforms.R</span> <span class="co"># Signature transforms (with_reasoning, chain_of_thought)</span></span>
 <span>  <span class="va">input.R</span>               <span class="co"># input() helper for signature definitions</span></span>
 <span>  <span class="va">module</span><span class="op">-</span><span class="va">base.R</span>         <span class="co"># R6 Module base class (forward, optimize, traces)</span></span>
 <span>  <span class="va">module</span><span class="op">-</span><span class="va">predict.R</span>      <span class="co"># PredictModule subclass for text generation</span></span>
+<span>  <span class="va">module</span><span class="op">-</span><span class="va">wrapper.R</span>      <span class="co"># BestOfNModule and RefineModule wrapper classes</span></span>
+<span>  <span class="va">module</span><span class="op">-</span><span class="va">multichain.R</span>   <span class="co"># MultiChainComparisonModule for ensemble reasoning</span></span>
 <span>  <span class="va">module.R</span>              <span class="co"># module() factory function</span></span>
 <span>  <span class="va">run.R</span>                 <span class="co"># run() and run_dataset() generics</span></span>
 <span>  <span class="va">evaluate.R</span>            <span class="co"># evaluate() generic for metric computation</span></span>
@@ -270,10 +274,22 @@
 </li>
 </ul></div>
 <div class="section level3">
+<h3 id="completed-milestone-c---advanced-module-types">Completed (Milestone C - Advanced Module Types)<a class="anchor" aria-label="anchor" href="#completed-milestone-c---advanced-module-types"></a></h3>
+<ul><li>ChainOfThought via signature transforms (<code><a href="reference/with_reasoning.html">with_reasoning()</a></code>, <code><a href="reference/chain_of_thought.html">chain_of_thought()</a></code>)</li>
+<li>BestOfN wrapper module with reward functions</li>
+<li>Refine wrapper module with feedback loop</li>
+<li>MultiChainComparison module for ensemble reasoning</li>
+<li>
+<code><a href="reference/module.html">module()</a></code> factory support for <code>type = "multichain"</code>
+</li>
+<li>Utility functions: <code><a href="reference/as_reward_fn.html">as_reward_fn()</a></code>, <code><a href="reference/has_reasoning.html">has_reasoning()</a></code>, <code><a href="reference/without_reasoning.html">without_reasoning()</a></code>
+</li>
+</ul></div>
+<div class="section level3">
 <h3 id="planned">Planned<a class="anchor" aria-label="anchor" href="#planned"></a></h3>
-<ul><li>Chain-of-Thought module type</li>
-<li>Advanced teleprompters (MIPRO, GEPA)</li>
+<ul><li>Advanced teleprompters (MIPRO, GEPA)</li>
 <li>Cost tracking and token budgets</li>
+<li>ProgramOfThought (code generation + execution)</li>
 </ul></div>
 </div>
 <div class="section level2">

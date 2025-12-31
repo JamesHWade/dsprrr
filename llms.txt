@@ -295,6 +295,33 @@ Main functions for building LLM applications
 - [`evaluate_dsp()`](https://jameshwade.github.io/dsprrr/reference/evaluate_dsp.md)
   : Evaluate a Compiled Module
 
+## Advanced Reasoning Modules
+
+DSPy-inspired reasoning patterns for improved accuracy
+
+- [`signature-transforms`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
+  : Signature Transforms for Advanced Reasoning Modules
+- [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md)
+  : Add Chain-of-Thought Reasoning to a Signature
+- [`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
+  : Remove Chain-of-Thought from a Signature
+- [`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md)
+  : Check if a Signature has Chain-of-Thought
+- [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+  : Create a Chain-of-Thought Module
+- [`module-wrapper`](https://jameshwade.github.io/dsprrr/reference/module-wrapper.md)
+  : Wrapper Modules for Advanced Reasoning Patterns
+- [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md)
+  : Create a BestOfN Wrapper Module
+- [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md)
+  : Create a Refine Wrapper Module
+- [`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md)
+  : Convert a Metric to a Reward Function
+- [`module-multichain`](https://jameshwade.github.io/dsprrr/reference/module-multichain.md)
+  : MultiChainComparison Module
+- [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md)
+  : Create a MultiChainComparison Module
+
 ## Chat-Centric API
 
 ellmer-style pipe-friendly functions
@@ -542,6 +569,8 @@ Learn how to build and optimize LLM applications
 
 - [Automatic Prompt Optimization with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md):
+- [Advanced Reasoning
+  Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
 - [Integration with
   vitals](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md):
 

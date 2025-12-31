@@ -1,8 +1,8 @@
 # Create an LLM Module
 
 The primary function for creating executable LLM modules. Supports
-"predict" for standard structured prediction and "react" for ReAct-style
-tool-using modules.
+"predict" for standard structured prediction, "react" for ReAct-style
+tool-using modules, and "multichain" for multi-chain comparison.
 
 ## Usage
 
@@ -12,6 +12,8 @@ module(
   type = "predict",
   tools = NULL,
   max_iterations = 10L,
+  M = 3L,
+  temperature = 0.7,
   template = "",
   demos = list(),
   config = list(),
@@ -34,6 +36,8 @@ module(
 
   - `"react"`: ReAct-style module with tool support
 
+  - `"multichain"`: MultiChainComparison module for ensemble reasoning
+
 - tools:
 
   Optional list of ellmer ToolDef objects for react modules. If provided
@@ -42,6 +46,14 @@ module(
 - max_iterations:
 
   Maximum ReAct iterations (default: 10, only for react)
+
+- M:
+
+  Number of reasoning chains for multichain (default: 3)
+
+- temperature:
+
+  Temperature for multichain diversity (default: 0.7)
 
 - template:
 
@@ -88,6 +100,10 @@ qa <- signature("context, question -> answer") |>
       )
     )
   )
+
+# Create a multichain comparison module
+mcc <- signature("question -> answer") |>
+  module(type = "multichain", M = 5, temperature = 0.8)
 
 if (FALSE) { # \dontrun{
 # Execute the module (requires an llm object)

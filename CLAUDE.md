@@ -50,9 +50,12 @@ platforms, with test coverage reporting to Codecov.
     R/
       signature.R           # S7 Signature class + string parsing
       signature-parser.R    # DSPy-style string notation parser
+      signature-transforms.R # Signature transforms (with_reasoning, chain_of_thought)
       input.R               # input() helper for signature definitions
       module-base.R         # R6 Module base class (forward, optimize, traces)
       module-predict.R      # PredictModule subclass for text generation
+      module-wrapper.R      # BestOfNModule and RefineModule wrapper classes
+      module-multichain.R   # MultiChainComparisonModule for ensemble reasoning
       module.R              # module() factory function
       run.R                 # run() and run_dataset() generics
       evaluate.R            # evaluate() generic for metric computation
@@ -279,11 +282,26 @@ which automatically names cassettes based on chunk labels. Set
   [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),
   [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
 
+### Completed (Milestone C - Advanced Module Types)
+
+- ChainOfThought via signature transforms
+  ([`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
+  [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md))
+- BestOfN wrapper module with reward functions
+- Refine wrapper module with feedback loop
+- MultiChainComparison module for ensemble reasoning
+- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  factory support for `type = "multichain"`
+- Utility functions:
+  [`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md),
+  [`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md),
+  [`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
+
 ### Planned
 
-- Chain-of-Thought module type
 - Advanced teleprompters (MIPRO, GEPA)
 - Cost tracking and token budgets
+- ProgramOfThought (code generation + execution)
 
 ## Coding Conventions
 

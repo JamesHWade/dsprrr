@@ -14,6 +14,8 @@ Learn how to build and optimize LLM applications
 
 - [Automatic Prompt Optimization with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md):
+- [Advanced Reasoning
+  Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
 - [Integration with
   vitals](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md):
 
