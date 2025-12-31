@@ -75,6 +75,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict.Module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/prepare_candidate_grid.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_batch_result.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_evaluation.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/prompt-visibility.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/restore_module_config.html</loc></url>

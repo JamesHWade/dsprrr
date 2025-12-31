@@ -448,6 +448,8 @@ Extract data from structured results
   : Print method for dsprrr_evaluation
 - [`print(`*`<dsprrr_batch_result>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_batch_result.md)
   : Print method for dsprrr_batch_result
+- [`print(`*`<dsprrr_cost_summary>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.md)
+  : Print method for dsprrr_cost_summary
 
 ## Traces
 

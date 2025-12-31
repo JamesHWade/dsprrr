@@ -72,7 +72,14 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A numeric value or tibble with cost information</p>
+    <p>A numeric value (for single results) or a <code>dsprrr_cost_summary</code> object
+(for batch results and evaluations) containing:</p><ul><li><p><code>costs</code>: A tibble with per-item costs</p></li>
+<li><p><code>total</code>: Total cost across all items</p></li>
+<li><p><code>n_missing</code>: Count of items with missing cost data</p></li>
+</ul></div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="session_cost.html">session_cost()</a></code> for session-level cost tracking</p></div>
     </div>
 
     <div class="section level2">
