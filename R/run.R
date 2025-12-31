@@ -638,8 +638,8 @@ format_output <- function(output) {
 
 #' Get default LLM configuration
 #'
-#' Checks module's stored Chat, then config$llm, then auto-detects from
-#' environment variables using get_default_chat().
+#' Checks module's stored Chat, then auto-detects from environment
+#' variables using get_default_chat().
 #'
 #' @param module The module to get an LLM for
 #' @return An ellmer Chat object
@@ -648,11 +648,6 @@ get_default_llm <- function(module) {
   # Check for Chat stored on module
   if (!is.null(module$chat)) {
     return(module$chat)
-  }
-
-  # Check for LLM in config (legacy support)
-  if (!is.null(module$config$llm)) {
-    return(module$config$llm)
   }
 
   # Use the new auto-detection from chat-default.R

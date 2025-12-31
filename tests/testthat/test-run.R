@@ -166,12 +166,6 @@ test_that("get_default_llm returns ellmer chat object", {
   mod$chat <- mock_llm
   llm <- dsprrr:::get_default_llm(mod)
   expect_identical(llm, mock_llm)
-
-  # Test with module that has llm in config (legacy)
-  mod$chat <- NULL
-  mod$config$llm <- mock_llm
-  llm <- dsprrr:::get_default_llm(mod)
-  expect_identical(llm, mock_llm)
 })
 
 test_that("batch processing works with multiple inputs", {
@@ -606,13 +600,13 @@ test_that("parallel execution works with mock factory", {
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
-  # Configure module to use a testable LLM factory
-  mod$config$llm <- structure(
+  # Configure module to use a testable Chat
+  mod$chat <- structure(
     list(chat_structured = function(prompt, ...) "parallel_result"),
     class = "Chat"
   )
 
-  # Test parallel execution (will use llm from config)
+  # Test parallel execution (will use chat from module)
   # Note: Mock LLM closures may not serialize correctly to mirai workers,
 
   # so we only verify that the parallel path executes without crashing
