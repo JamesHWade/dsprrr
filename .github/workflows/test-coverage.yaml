@@ -29,15 +29,22 @@ jobs:
 
       - name: Test coverage
         run: |
-          options(covr.gcov = "")
+          options(
+            covr.gcov = "",
+            covr.fix_parallel_mcexit = TRUE
+          )
           cov <- tryCatch(
             covr::package_coverage(
+              type = "tests",
               quiet = FALSE,
               clean = TRUE,
+              pre_clean = TRUE,
               install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package")
             ),
             error = function(e) {
               message("Coverage failed: ", e$message)
+              message("Traceback: ")
+              traceback()
               NULL
             }
           )
@@ -45,9 +52,9 @@ jobs:
             print(cov)
             covr::to_cobertura(cov)
           } else {
-            # Create empty coverage file so workflow doesn't fail completely
+            # Create empty coverage file so codecov step doesn't fail
             writeLines('<?xml version="1.0"?><coverage version="1"></coverage>', "cobertura.xml")
-            stop("Coverage collection failed")
+            stop("Coverage collection failed - see log above for details")
           }
         shell: Rscript {0}
 
