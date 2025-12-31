@@ -704,7 +704,7 @@ run_batch_parallel <- function(
     for (i in seq_len(n)) {
       if (is.null(results[[i]])) {
         results[[i]] <- create_error_result(
-          error = "Task timed out",
+          error = list(message = "Task timed out"),
           index = i,
           prompt = NA_character_,
           instructions = NA_character_,

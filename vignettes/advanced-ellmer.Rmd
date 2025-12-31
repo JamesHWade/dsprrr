@@ -111,31 +111,30 @@ chat$chat("Use knowledge_lookup to find: What is the capital of France?")
 
 ## Leveraging ellmer's Cost Tracking
 
-ellmer provides robust token and cost tracking. dsprrr integrates with this:
+ellmer provides robust token and cost tracking. dsprrr integrates with this via accessor functions:
 
 ```{r cost-tracking, eval = FALSE}
 # After running some predictions
 result <- dsp("question -> answer", question = "What is 2+2?")
 
-# Get the last trace which includes cost info
-trace <- get_last_trace()
-trace$assistant_turn@tokens  # [input_tokens, output_tokens, cached_tokens]
-trace$assistant_turn@cost    # Cost in dollars
+# Get cost and token info from results using public accessors
+get_cost(result)    # Cost in dollars
+get_tokens(result)  # Token counts
 
-# For batch operations, use session_cost()
+# For session-wide aggregates
 session_cost()
 ```
 
-### Token Usage from Chat Objects
+### Token Usage from Batch Results
 
 ```{r token-usage, eval = FALSE}
-chat <- chat_openai()
+# Run batch predictions
+mod <- module(signature("q -> a"), type = "predict")
+results <- run(mod, q = c("Hello", "World"), .return_format = "batch")
 
-# Run some predictions
-result <- chat |> dsp("q -> a", q = "Hello")
-
-# Get token usage from the Chat
-chat$token_usage()
+# Get aggregated cost and tokens from batch
+get_cost(results)    # Total cost for batch
+get_tokens(results)  # Total tokens for batch
 ```
 
 ## Advanced Chat Patterns
@@ -198,14 +197,16 @@ mod <- module(
   type = "predict"
 )
 
-# Stream with callback
+# Stream with callback - pass named arguments directly
 mod$stream(
-  list(topic = "The future of AI"),
+  topic = "The future of AI",
   callback = function(chunk) cat(chunk)
 )
 
-# Or use async streaming
-stream <- stream_async(mod, topic = "The future of AI")
+# Or use async streaming with promises
+library(promises)
+stream_async(mod, topic = "The future of AI") %...>%
+  print()  # Prints the final result when complete
 ```
 
 ## Error Handling and Retries
@@ -232,10 +233,9 @@ tryCatch(
 ## Summary
 
 Key integration points with ellmer:
-
 1. **Parallel processing**: Choose between mirai (multi-process) or ellmer native (async HTTP)
 2. **Tool integration**: Convert modules to ellmer tools with `as_ellmer_tool()`
-3. **Cost tracking**: Leverage ellmer's `token_usage()` and dsprrr's `session_cost()`
+3. **Cost tracking**: Use `get_cost()`, `get_tokens()`, and `session_cost()` for usage tracking
 4. **Chat management**: Use `set_default_chat()` for session-wide defaults
 5. **Multimodal**: Pass ellmer Content objects for images, PDFs, etc.
 6. **Streaming**: Use `stream()` or `stream_async()` for long-form generation

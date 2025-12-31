@@ -357,6 +357,10 @@ RAGModule <- R6::R6Class(
 
       # Format context for prompt
       if (length(docs) == 0) {
+        cli::cli_inform(c(
+          "i" = "No documents matched the retrieval query",
+          "i" = "Query: {.val {substr(query, 1, 80)}}"
+        ))
         return("No relevant context found.")
       }
 

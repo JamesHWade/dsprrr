@@ -454,15 +454,26 @@ predict_llm_numeric <- function(object, new_data, ...) {
   )
 
   # Extract numeric predictions with error handling
-  preds <- vapply(results$result, function(x) {
+  preds <- vapply(seq_along(results$result), function(i) {
+    x <- results$result[[i]]
     if (is.list(x) && !is.null(x$output)) {
-      val <- suppressWarnings(as.numeric(x$output))
-      if (is.na(val)) NA_real_ else val
+      val <- as.numeric(x$output)
+      if (is.na(val)) {
+        cli::cli_warn("Could not convert LLM output to numeric for row {i}: {.val {x$output}}")
+        NA_real_
+      } else {
+        val
+      }
     } else if (is.na(x)) {
       NA_real_
     } else {
-      val <- suppressWarnings(as.numeric(x))
-      if (is.na(val)) NA_real_ else val
+      val <- as.numeric(x)
+      if (is.na(val)) {
+        cli::cli_warn("Could not convert LLM output to numeric for row {i}: {.val {x}}")
+        NA_real_
+      } else {
+        val
+      }
     }
   }, numeric(1))
 
