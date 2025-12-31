@@ -658,6 +658,16 @@ run_batch_parallel <- function(
   results <- vector("list", n)
   completed <- 0
 
+  # Create progress bar for parallel processing
+  progress_id <- NULL
+  if (.progress && n > 1) {
+    progress_id <- cli::cli_progress_bar(
+      format = "Processing {cli::pb_current}/{cli::pb_total} | {cli::pb_percent} | ETA: {cli::pb_eta}",
+      total = n,
+      clear = FALSE
+    )
+  }
+
   warnings_to_emit <- character(0)
   max_wait_seconds <- getOption("dsprrr.parallel_timeout", 600) # 10 min default
   max_iterations <- max_wait_seconds * 100 # 0.01s sleep per iteration
@@ -682,8 +692,8 @@ run_batch_parallel <- function(
         results[[i]] <- result
         completed <- completed + 1
 
-        if (.progress && n > 1) {
-          cli::cli_progress_update()
+        if (!is.null(progress_id)) {
+          cli::cli_progress_update(id = progress_id)
         }
       }
     }
