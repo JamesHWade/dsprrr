@@ -315,7 +315,9 @@ module_parameters <- function(
       max_output_tokens = c(32, 4096)
     )
     # Also exclude temperature/top_p from any existing param_values
-    param_values <- param_values[!names(param_values) %in% c("temperature", "top_p")]
+    param_values <- param_values[
+      !names(param_values) %in% c("temperature", "top_p")
+    ]
   } else {
     # Traditional models use temperature/top_p
     known_defaults <- list(

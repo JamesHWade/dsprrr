@@ -94,7 +94,11 @@ get_last_prompt <- function() {
 #' history <- inspect_history(n = 20)
 #' sum(history$cost)  # Total cost
 #' }
-inspect_history <- function(n = 10, include_prompts = TRUE, include_responses = TRUE) {
+inspect_history <- function(
+  n = 10,
+  include_prompts = TRUE,
+  include_responses = TRUE
+) {
   history <- .dsprrr_env$prompt_history
   if (is.null(history) || length(history) == 0) {
     cli::cli_inform("No LLM calls recorded yet")
@@ -323,7 +327,6 @@ extract_history_entry <- function(trace, source) {
 
 # Internal: Extract text content from an ellmer Turn object
 extract_turn_text <- function(turn) {
-
   if (is.null(turn)) {
     return(NA_character_)
   }

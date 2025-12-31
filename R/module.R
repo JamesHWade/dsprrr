@@ -2,16 +2,19 @@
 #'
 #' @description
 #' The primary function for creating executable LLM modules. Supports
-#' "predict" for standard structured prediction and "react" for ReAct-style
-#' tool-using modules.
+#' "predict" for standard structured prediction, "react" for ReAct-style
+#' tool-using modules, and "multichain" for multi-chain comparison.
 #'
 #' @param signature A Signature object defining the module's interface
 #' @param type Character string specifying the module type:
 #'   - `"predict"` (default): Standard prediction module
 #'   - `"react"`: ReAct-style module with tool support
+#'   - `"multichain"`: MultiChainComparison module for ensemble reasoning
 #' @param tools Optional list of ellmer ToolDef objects for react modules.
 #'   If provided with `type = "predict"`, automatically upgrades to react.
 #' @param max_iterations Maximum ReAct iterations (default: 10, only for react)
+#' @param M Number of reasoning chains for multichain (default: 3)
+#' @param temperature Temperature for multichain diversity (default: 0.7)
 #' @param template Optional glue template for prompt generation
 #' @param demos Optional list of demonstration examples
 #' @param config Optional configuration list
@@ -38,6 +41,10 @@
 #'     )
 #'   )
 #'
+#' # Create a multichain comparison module
+#' mcc <- signature("question -> answer") |>
+#'   module(type = "multichain", M = 5, temperature = 0.8)
+#'
 #' \dontrun{
 #' # Execute the module (requires an llm object)
 #' llm <- ellmer::chat_openai()
@@ -62,6 +69,8 @@ module <- function(
   type = "predict",
   tools = NULL,
   max_iterations = 10L,
+  M = 3L,
+  temperature = 0.7,
   template = "",
   demos = list(),
   config = list(),
@@ -93,7 +102,7 @@ module <- function(
   }
 
   # Validate type
-  type <- match.arg(type, c("predict", "react"))
+  type <- match.arg(type, c("predict", "react", "multichain"))
 
   # Create the appropriate R6 module based on type
   switch(
@@ -111,6 +120,13 @@ module <- function(
       max_iterations = max_iterations,
       template = template,
       demos = demos,
+      config = config,
+      chat = chat
+    ),
+    multichain = MultiChainComparisonModule$new(
+      signature = signature,
+      M = M,
+      temperature = temperature,
       config = config,
       chat = chat
     ),

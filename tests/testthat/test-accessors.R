@@ -88,11 +88,19 @@ test_that("get_tokens works with dsprrr_batch_result", {
     list(
       list(
         output = "a",
-        metadata = list(input_tokens = 10L, output_tokens = 5L, total_tokens = 15L)
+        metadata = list(
+          input_tokens = 10L,
+          output_tokens = 5L,
+          total_tokens = 15L
+        )
       ),
       list(
         output = "b",
-        metadata = list(input_tokens = 20L, output_tokens = 10L, total_tokens = 30L)
+        metadata = list(
+          input_tokens = 20L,
+          output_tokens = 10L,
+          total_tokens = 30L
+        )
       )
     ),
     class = c("dsprrr_batch_result", "list")
@@ -245,7 +253,7 @@ test_that("print.dsprrr_cost_summary works", {
   )
 
   output <- capture.output(print(result), type = "message")
-  expect_true(any(grepl("Cost Summary", output)))
+  expect_true(any(grepl("Cost Summary", output, fixed = TRUE)))
   expect_true(any(grepl("0.003", output)))
 })
 
@@ -260,5 +268,5 @@ test_that("print.dsprrr_cost_summary shows missing warning", {
   )
 
   output <- capture.output(print(result), type = "message")
-  expect_true(any(grepl("Missing", output)))
+  expect_true(any(grepl("Missing", output, fixed = TRUE)))
 })

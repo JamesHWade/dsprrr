@@ -123,8 +123,8 @@ test_that("format_output handles various types", {
   # List gets converted to JSON
   result <- dsprrr:::format_output(list(a = 1, b = "test"))
   expect_true(is.character(result))
-  expect_true(grepl("a", result))
-  expect_true(grepl("test", result))
+  expect_true(grepl("a", result, fixed = TRUE))
+  expect_true(grepl("test", result, fixed = TRUE))
 
   # Logical
   expect_equal(dsprrr:::format_output(TRUE), "TRUE")
@@ -144,10 +144,10 @@ test_that("format_inputs creates proper format", {
 
   result <- dsprrr:::format_inputs(inputs, sig_inputs)
 
-  expect_true(grepl("Input text", result))
-  expect_true(grepl("text: hello", result))
-  expect_true(grepl("A count", result))
-  expect_true(grepl("count: 5", result))
+  expect_true(grepl("Input text", result, fixed = TRUE))
+  expect_true(grepl("text: hello", result, fixed = TRUE))
+  expect_true(grepl("A count", result, fixed = TRUE))
+  expect_true(grepl("count: 5", result, fixed = TRUE))
 })
 
 test_that("format_inputs handles empty inputs", {
@@ -164,8 +164,8 @@ test_that("format_inputs handles inputs without descriptions", {
 
   result <- dsprrr:::format_inputs(inputs, sig_inputs)
 
-  expect_true(grepl("text: hello", result))
-  expect_false(grepl("#", result)) # No description comment
+  expect_true(grepl("text: hello", result, fixed = TRUE))
+  expect_false(grepl("#", result, fixed = TRUE)) # No description comment
 })
 
 # --- Optimization helpers tests ---
@@ -271,8 +271,8 @@ test_that("suggest_match returns formatted suggestion", {
   options <- c("question", "answer")
 
   suggestion <- dsprrr:::suggest_match("questoin", options)
-  expect_true(grepl("Did you mean", suggestion))
-  expect_true(grepl("question", suggestion))
+  expect_true(grepl("Did you mean", suggestion, fixed = TRUE))
+  expect_true(grepl("question", suggestion, fixed = TRUE))
 })
 test_that("suggest_match returns NULL for no match", {
   options <- c("question", "answer")

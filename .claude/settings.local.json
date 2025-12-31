@@ -23,7 +23,10 @@
       "Bash(wc:*)",
       "WebFetch(domain:ellmer.tidyverse.org)",
       "WebFetch(domain:posit-dev.github.io)",
-      "WebFetch(domain:ragnar.tidyverse.org)"
+      "WebFetch(domain:ragnar.tidyverse.org)",
+      "Bash(gh issue list:*)",
+      "WebFetch(domain:callr.r-lib.org)",
+      "Bash(gh pr view:*)"
     ],
     "deny": [],
     "ask": [],

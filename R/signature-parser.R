@@ -90,7 +90,7 @@ parse_signature <- function(signature_str, instructions = "") {
     # For simple cases like "sentiment", use that
     # For typed cases like "sentiment: string", extract the field name
     # For multiple outputs like "sentiment, issues: array(string)", parse them
-    output_field_names <- if (grepl(",", output_str)) {
+    output_field_names <- if (grepl(",", output_str, fixed = TRUE)) {
       # Multiple outputs - extract field names
       fields <- split_respecting_nesting(output_str, ",")
       field_names <- character()
@@ -138,7 +138,7 @@ parse_inputs <- function(inputs_str) {
   inputs <- lapply(input_specs, function(spec) {
     spec <- trimws(spec)
     # Check for type annotation (e.g., "text: string" or "choices: list[string]")
-    if (grepl(":", spec)) {
+    if (grepl(":", spec, fixed = TRUE)) {
       # Find the first colon not inside brackets
       chars <- strsplit(spec, "")[[1]]
       depth <- 0
@@ -216,13 +216,13 @@ parse_output <- function(output_str) {
 
     # If before_comma contains a colon, it might be a single complex output
     # Otherwise, it's multiple outputs
-    if (!grepl(":", before_comma)) {
+    if (!grepl(":", before_comma, fixed = TRUE)) {
       return(parse_multiple_outputs(output_str))
     }
   }
 
   # Original logic for single output with type specification
-  if (grepl(":", output_str)) {
+  if (grepl(":", output_str, fixed = TRUE)) {
     # Find the first colon not inside brackets/parens
     chars <- strsplit(output_str, "")[[1]]
     depth <- 0
@@ -281,7 +281,7 @@ parse_output <- function(output_str) {
   }
 
   # Check for multiple outputs without types (e.g., "answer, confidence")
-  if (grepl(",", output_str)) {
+  if (grepl(",", output_str, fixed = TRUE)) {
     # Simple check: if no colons or brackets, treat as multiple outputs
     if (!grepl("[\\[\\(]", output_str)) {
       return(parse_multiple_outputs(output_str))
@@ -311,7 +311,7 @@ parse_multiple_outputs <- function(output_str) {
     output <- trimws(output)
 
     # Parse field name and type
-    if (grepl(":", output)) {
+    if (grepl(":", output, fixed = TRUE)) {
       parts <- strsplit(output, "\\s*:\\s*")[[1]]
       field_name <- trimws(parts[1])
       type_str <- trimws(parts[2])
@@ -602,21 +602,24 @@ detect_arrow_mistake <- function(signature_str) {
 #' Suggest a fix for a signature without an arrow
 #' @noRd
 suggest_signature_fix <- function(signature_str) {
-
   # Check if it looks like space-separated words (common mistake)
   words <- strsplit(trimws(signature_str), "\\s+")[[1]]
 
   if (length(words) == 2) {
     # Two words - probably meant "input -> output"
     return(paste0(
-      "Did you mean: {.code '", words[1], " -> ", words[2], "'}"
+      "Did you mean: {.code '",
+      words[1],
+      " -> ",
+      words[2],
+      "'}"
     ))
   }
 
   if (length(words) > 2) {
     # Multiple words - guess the split point
     # If there's a comma, split there
-    if (grepl(",", signature_str)) {
+    if (grepl(",", signature_str, fixed = TRUE)) {
       # Has commas - probably multiple inputs
       return(paste0(
         "Add {.code ->} between inputs and output. ",
@@ -627,7 +630,11 @@ suggest_signature_fix <- function(signature_str) {
     inputs <- paste(words[-length(words)], collapse = ", ")
     output <- words[length(words)]
     return(paste0(
-      "Did you mean: {.code '", inputs, " -> ", output, "'}"
+      "Did you mean: {.code '",
+      inputs,
+      " -> ",
+      output,
+      "'}"
     ))
   }
 
@@ -673,15 +680,32 @@ validate_type_string <- function(type_str, context = "output") {
 
   # Check for completely unknown types
   known_types <- c(
-    "string", "str", "number", "float", "numeric",
-    "integer", "int", "boolean", "bool", "logical",
-    "object", "dict"
+    "string",
+    "str",
+    "number",
+    "float",
+    "numeric",
+    "integer",
+    "int",
+    "boolean",
+    "bool",
+    "logical",
+    "object",
+    "dict"
   )
 
   # Check if it starts with a known constructor
-  known_constructors <- c("enum", "array", "list", "Literal", "Optional", "Union")
+  known_constructors <- c(
+    "enum",
+    "array",
+    "list",
+    "Literal",
+    "Optional",
+    "Union"
+  )
 
-  is_known <- type_lower %in% known_types ||
+  is_known <- type_lower %in%
+    known_types ||
     any(vapply(
       known_constructors,
       function(c) grepl(paste0("^", tolower(c)), type_lower),
@@ -712,8 +736,12 @@ find_closest_match <- function(input, candidates, max_distance = 3) {
     s1 <- tolower(s1)
     s2 <- tolower(s2)
 
-    if (nchar(s1) == 0) return(nchar(s2))
-    if (nchar(s2) == 0) return(nchar(s1))
+    if (nchar(s1) == 0) {
+      return(nchar(s2))
+    }
+    if (nchar(s2) == 0) {
+      return(nchar(s1))
+    }
 
     m <- nchar(s1)
     n <- nchar(s2)

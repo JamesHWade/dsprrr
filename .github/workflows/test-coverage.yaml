@@ -29,13 +29,26 @@ jobs:
 
       - name: Test coverage
         run: |
-          cov <- covr::package_coverage(
-            quiet = FALSE,
-            clean = FALSE,
-            install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package")
+          options(covr.gcov = "")
+          cov <- tryCatch(
+            covr::package_coverage(
+              quiet = FALSE,
+              clean = TRUE,
+              install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package")
+            ),
+            error = function(e) {
+              message("Coverage failed: ", e$message)
+              NULL
+            }
           )
-          print(cov)
-          covr::to_cobertura(cov)
+          if (!is.null(cov)) {
+            print(cov)
+            covr::to_cobertura(cov)
+          } else {
+            # Create empty coverage file so workflow doesn't fail completely
+            writeLines('<?xml version="1.0"?><coverage version="1"></coverage>', "cobertura.xml")
+            stop("Coverage collection failed")
+          }
         shell: Rscript {0}
 
       - uses: codecov/codecov-action@v5

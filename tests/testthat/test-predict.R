@@ -120,9 +120,9 @@ test_that("PredictModule print method works", {
 
   output <- capture.output(print(pred), type = "message")
   # Check for headers - they appear in message output
-  expect_true(any(grepl("PredictModule", output)))
-  expect_true(any(grepl("Signature", output)))
-  expect_true(any(grepl("Template", output)))
+  expect_true(any(grepl("PredictModule", output, fixed = TRUE)))
+  expect_true(any(grepl("Signature", output, fixed = TRUE)))
+  expect_true(any(grepl("Template", output, fixed = TRUE)))
 })
 
 test_that("PredictModule with empty template works", {

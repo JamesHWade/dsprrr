@@ -22,8 +22,8 @@ test_that("glue-style { } interpolation works", {
 
   # The result should contain the interpolated template
 
-  expect_true(grepl("Hello Alice", result$result))
-  expect_true(grepl("you are 30 years old", result$result))
+  expect_true(grepl("Hello Alice", result$result, fixed = TRUE))
+  expect_true(grepl("you are 30 years old", result$result, fixed = TRUE))
 })
 
 test_that("ellmer-style {{ }} interpolation works", {
@@ -49,8 +49,8 @@ test_that("ellmer-style {{ }} interpolation works", {
   result <- run(mod, name = "Bob", age = 25)
 
   # The result should contain the interpolated template
-  expect_true(grepl("Hello Bob", result$result))
-  expect_true(grepl("you are 25 years old", result$result))
+  expect_true(grepl("Hello Bob", result$result, fixed = TRUE))
+  expect_true(grepl("you are 25 years old", result$result, fixed = TRUE))
 })
 
 test_that("mixed template detection uses ellmer for {{ }}", {
@@ -75,7 +75,7 @@ test_that("mixed template detection uses ellmer for {{ }}", {
   )
 
   result <- run(mod, x = "test_value")
-  expect_true(grepl("test_value", result$result))
+  expect_true(grepl("test_value", result$result, fixed = TRUE))
 })
 
 test_that("template without braces still works", {
@@ -117,6 +117,6 @@ test_that("empty template uses auto-generated format", {
   result <- run(mod, question = "What is 2+2?")
 
   # Should contain the input name and value
-  expect_true(grepl("question", result$result))
+  expect_true(grepl("question", result$result, fixed = TRUE))
   expect_true(grepl("What is 2\\+2", result$result))
 })

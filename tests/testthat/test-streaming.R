@@ -117,5 +117,5 @@ test_that("stream includes instructions in prompt", {
 
   mod$stream(text = "test", callback = function(x) {})
 
-  expect_true(grepl("Be very helpful", prompt_received))
+  expect_true(grepl("Be very helpful", prompt_received, fixed = TRUE))
 })

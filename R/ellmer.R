@@ -109,7 +109,11 @@ as_ellmer_tool <- function(
 
   # Create a function with named parameters matching the signature inputs
   # ellmer::tool() requires argument names to match function formals
-  input_names <- vapply(module$signature@inputs, function(x) x$name, character(1))
+  input_names <- vapply(
+    module$signature@inputs,
+    function(x) x$name,
+    character(1)
+  )
 
   # Create formal arguments list (all default to missing)
   tool_formals <- rlang::set_names(
@@ -144,7 +148,11 @@ as_ellmer_tool <- function(
 
   # Create the function with proper signature
   # Use the package namespace so `run` and other functions are available
-  tool_fn <- rlang::new_function(tool_formals, tool_body, env = rlang::ns_env("dsprrr"))
+  tool_fn <- rlang::new_function(
+    tool_formals,
+    tool_body,
+    env = rlang::ns_env("dsprrr")
+  )
 
   # Create the ellmer ToolDef using ellmer::tool()
   ellmer::tool(
@@ -210,4 +218,3 @@ register_dsprrr_tool <- function(
 
   invisible(chat)
 }
-

@@ -102,7 +102,7 @@ Module <- R6::R6Class(
       }
 
       # Check for batch inputs - warn if parallel requested but using $run()
-      input_lengths <- vapply(inputs, length, integer(1))
+      input_lengths <- lengths(inputs)
       is_batch <- any(input_lengths > 1)
 
       if (is_batch && .parallel) {
@@ -787,7 +787,9 @@ Module <- R6::R6Class(
       if (self$is_compiled()) {
         cli::cli_text("  {cli::symbol$tick} Compiled")
         if (!is.null(self$state$best_score)) {
-          cli::cli_text("  Best score: {.val {round(self$state$best_score, 3)}}")
+          cli::cli_text(
+            "  Best score: {.val {round(self$state$best_score, 3)}}"
+          )
         }
       } else {
         cli::cli_text("  {cli::symbol$cross} Not compiled")
@@ -821,8 +823,10 @@ Module <- R6::R6Class(
           # Try to extract from ellmer Turn
           tryCatch(
             {
-              if (!is.null(last_trace$user_turn@contents) &&
-                length(last_trace$user_turn@contents) > 0) {
+              if (
+                !is.null(last_trace$user_turn@contents) &&
+                  length(last_trace$user_turn@contents) > 0
+              ) {
                 contents <- last_trace$user_turn@contents
                 texts <- vapply(
                   contents,
@@ -841,7 +845,10 @@ Module <- R6::R6Class(
         if (!is.null(prompt_text) && nzchar(prompt_text)) {
           # Truncate if very long
           if (nchar(prompt_text) > 300) {
-            prompt_text <- paste0(substr(prompt_text, 1, 300), "\n... (truncated)")
+            prompt_text <- paste0(
+              substr(prompt_text, 1, 300),
+              "\n... (truncated)"
+            )
           }
           cli::cat_line(prompt_text)
         } else {
@@ -854,7 +861,11 @@ Module <- R6::R6Class(
           response_text <- if (is.character(last_trace$output)) {
             last_trace$output
           } else if (is.list(last_trace$output)) {
-            jsonlite::toJSON(last_trace$output, auto_unbox = TRUE, pretty = FALSE)
+            jsonlite::toJSON(
+              last_trace$output,
+              auto_unbox = TRUE,
+              pretty = FALSE
+            )
           } else {
             as.character(last_trace$output)
           }

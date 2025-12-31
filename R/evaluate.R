@@ -54,14 +54,14 @@ evaluate <- function(module, ...) {
 #' @exportS3Method
 #' @noRd
 evaluate.Module <- function(
-    module,
-    data,
-    metric,
-    .llm = NULL,
-    .parallel = FALSE,
-    .progress = TRUE,
-    .return_format = c("structured", "simple"),
-    ...
+  module,
+  data,
+  metric,
+  .llm = NULL,
+  .parallel = FALSE,
+  .progress = TRUE,
+  .return_format = c("structured", "simple"),
+  ...
 ) {
   .return_format <- match.arg(.return_format)
   if (!is.data.frame(data)) {
@@ -145,8 +145,7 @@ evaluate.Module <- function(
       error = function(e) {
         errors[i] <<- e$message
         cli::cli_warn(
-          c("Metric evaluation failed for row {i}",
-            "x" = e$message),
+          c("Metric evaluation failed for row {i}", "x" = e$message),
           class = "dsprrr_metric_error"
         )
         NA_real_
@@ -182,7 +181,6 @@ evaluate.Module <- function(
 #' @param ... Additional arguments (unused)
 #' @export
 print.dsprrr_evaluation <- function(x, ...) {
-
   cli::cli_h3("DSPrrr Evaluation Results")
 
   if (is.na(x$mean_score)) {
@@ -197,7 +195,9 @@ print.dsprrr_evaluation <- function(x, ...) {
   }
 
   if (length(x$scores) <= 10) {
-    cli::cli_text("{.field Scores}: {paste(round(x$scores, 3), collapse = ', ')}")
+    cli::cli_text(
+      "{.field Scores}: {paste(round(x$scores, 3), collapse = ', ')}"
+    )
   } else {
     cli::cli_text(
       "{.field Scores}: {paste(round(x$scores[1:5], 3), collapse = ', ')}, ... ({length(x$scores)} total)"

@@ -6,7 +6,7 @@ mock_llm <- structure(
         props <- names(type@properties)
         stats::setNames(
           lapply(props, function(name) {
-            if (grepl("confidence", name)) {
+            if (grepl("confidence", name, fixed = TRUE)) {
               0.5
             } else {
               "mock"
@@ -379,8 +379,8 @@ test_that("evaluate returns dsprrr_evaluation class", {
 
   # Print method should work without error
   output <- capture.output(print(results), type = "message")
-  expect_true(any(grepl("Evaluation Results", output)))
-  expect_true(any(grepl("Evaluated", output)))
+  expect_true(any(grepl("Evaluation Results", output, fixed = TRUE)))
+  expect_true(any(grepl("Evaluated", output, fixed = TRUE)))
 })
 
 test_that("dsprrr_evaluation print method handles errors", {
@@ -413,5 +413,5 @@ test_that("dsprrr_evaluation print method handles errors", {
 
   # Print should still work
   output <- capture.output(print(results), type = "message")
-  expect_true(any(grepl("Errors", output)))
+  expect_true(any(grepl("Errors", output, fixed = TRUE)))
 })

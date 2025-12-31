@@ -153,7 +153,7 @@ run.PredictModule <- function(
   }
 
   # Check if this is batch processing
-  input_lengths <- vapply(inputs, length, integer(1))
+  input_lengths <- lengths(inputs)
   is_batch <- any(input_lengths > 1)
 
   if (is_batch) {
@@ -482,15 +482,19 @@ run_batch_ellmer_parallel <- function(
   .progress
 ) {
   # Build prompts for all inputs
-  prompts <- vapply(input_sets, function(input_set) {
-    prompt <- build_prompt(module, input_set)
-    instructions <- module$signature@instructions
-    if (nchar(instructions) > 0) {
-      paste(instructions, prompt, sep = "\n\n")
-    } else {
-      prompt
-    }
-  }, character(1))
+  prompts <- vapply(
+    input_sets,
+    function(input_set) {
+      prompt <- build_prompt(module, input_set)
+      instructions <- module$signature@instructions
+      if (nchar(instructions) > 0) {
+        paste(instructions, prompt, sep = "\n\n")
+      } else {
+        prompt
+      }
+    },
+    character(1)
+  )
 
   # Get the Chat provider - need to clone for parallel use
   chat <- .llm %||% module$chat %||% get_default_llm(module)
@@ -503,7 +507,13 @@ run_batch_ellmer_parallel <- function(
       "i" = "Update ellmer to use native parallel processing"
     ))
     return(run_batch_parallel(
-      module, input_sets, n, .llm, .verbose, .return_format, .progress
+      module,
+      input_sets,
+      n,
+      .llm,
+      .verbose,
+      .return_format,
+      .progress
     ))
   }
 
@@ -527,11 +537,14 @@ run_batch_ellmer_parallel <- function(
       )
     },
     error = function(e) {
-      cli::cli_abort(c(
-        "Parallel LLM call failed",
-        "x" = e$message,
-        "i" = "Try sequential processing with {.code .parallel = FALSE}"
-      ), parent = e)
+      cli::cli_abort(
+        c(
+          "Parallel LLM call failed",
+          "x" = e$message,
+          "i" = "Try sequential processing with {.code .parallel = FALSE}"
+        ),
+        parent = e
+      )
     }
   )
 
@@ -549,13 +562,16 @@ run_batch_ellmer_parallel <- function(
     response <- responses[[i]]
 
     if (.return_format == "simple") {
-      results[[i]] <- extract_simple_output(response, module$signature@output_type)
+      results[[i]] <- extract_simple_output(
+        response,
+        module$signature@output_type
+      )
     } else {
       results[[i]] <- list(
         output = response,
         chat = chat,
         metadata = list(
-          latency_ms = total_latency / n,  # Approximate per-item latency
+          latency_ms = total_latency / n, # Approximate per-item latency
           prompt_length = nchar(prompts[[i]]),
           prompt = prompts[[i]],
           instructions = module$signature@instructions,
@@ -959,7 +975,9 @@ run_dataset.Module <- function(
       msg <- c(
         msg,
         "i" = "Signature expects: {.field {required_names}}",
-        if (length(available_cols) > 0) c("i" = "Data has: {.field {available_cols}}")
+        if (length(available_cols) > 0) {
+          c("i" = "Data has: {.field {available_cols}}")
+        }
       )
 
       cli::cli_abort(msg)
@@ -1058,9 +1076,13 @@ print.dsprrr_batch_result <- function(x, ...) {
   cli::cli_text("{.field Items}: {n}")
 
   # Count successes vs errors
-  n_errors <- sum(vapply(x, function(item) {
-    isTRUE(item$error) || inherits(item$output, "error")
-  }, logical(1)))
+  n_errors <- sum(vapply(
+    x,
+    function(item) {
+      isTRUE(item$error) || inherits(item$output, "error")
+    },
+    logical(1)
+  ))
 
   if (n_errors > 0) {
     cli::cli_alert_warning("{.field Errors}: {n_errors} of {n} items")
@@ -1074,7 +1096,9 @@ print.dsprrr_batch_result <- function(x, ...) {
     for (i in seq_len(n)) {
       output <- x[[i]]$output
       if (is.character(output)) {
-        cli::cli_text("  [{i}] {substr(output, 1, 50)}{if (nchar(output) > 50) '...' else ''}")
+        cli::cli_text(
+          "  [{i}] {substr(output, 1, 50)}{if (nchar(output) > 50) '...' else ''}"
+        )
       } else if (is.list(output)) {
         cli::cli_text("  [{i}] <list> with {length(output)} elements")
       } else {
@@ -1086,7 +1110,9 @@ print.dsprrr_batch_result <- function(x, ...) {
     for (i in 1:3) {
       output <- x[[i]]$output
       if (is.character(output)) {
-        cli::cli_text("  [{i}] {substr(output, 1, 50)}{if (nchar(output) > 50) '...' else ''}")
+        cli::cli_text(
+          "  [{i}] {substr(output, 1, 50)}{if (nchar(output) > 50) '...' else ''}"
+        )
       } else if (is.list(output)) {
         cli::cli_text("  [{i}] <list> with {length(output)} elements")
       } else {

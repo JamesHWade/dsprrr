@@ -49,7 +49,9 @@ ragnar_tool <- function(
   if (is.null(description)) {
     description <- paste(
       "Search the knowledge base for relevant information.",
-      "Returns the top", k, "most relevant documents.",
+      "Returns the top",
+      k,
+      "most relevant documents.",
       "Use this tool to find facts, context, or supporting information."
     )
   }
@@ -87,16 +89,20 @@ ragnar_tool <- function(
       }
 
       # Include metadata if available
-      formatted <- vapply(seq_along(docs), function(i) {
-        header <- paste0("[Result ", i, "]")
+      formatted <- vapply(
+        seq_along(docs),
+        function(i) {
+          header <- paste0("[Result ", i, "]")
 
-        # Add source if available
-        if ("source" %in% names(results)) {
-          header <- paste0(header, " (", results$source[i], ")")
-        }
+          # Add source if available
+          if ("source" %in% names(results)) {
+            header <- paste0(header, " (", results$source[i], ")")
+          }
 
-        paste0(header, "\n", docs[i])
-      }, character(1))
+          paste0(header, "\n", docs[i])
+        },
+        character(1)
+      )
 
       paste(formatted, collapse = "\n\n---\n\n")
     } else if (is.character(results)) {
@@ -177,10 +183,13 @@ create_search_tool <- function(
       )
     },
     error = function(e) {
-      cli::cli_abort(c(
-        "Failed to create ragnar store",
-        "x" = e$message
-      ), parent = e)
+      cli::cli_abort(
+        c(
+          "Failed to create ragnar store",
+          "x" = e$message
+        ),
+        parent = e
+      )
     }
   )
 
