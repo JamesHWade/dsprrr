@@ -36,6 +36,8 @@ navbar:
           href: articles/troubleshooting.html
         - text: "Compilation & Optimization"
           href: articles/compilation-optimization.html
+        - text: "Advanced Reasoning Modules"
+          href: articles/advanced-modules.html
         - text: "---"
         - text: "Integrations"
         - text: "Vitals Integration"
@@ -69,6 +71,7 @@ articles:
     desc: Learn how to build and optimize LLM applications
     contents:
     - compilation-optimization
+    - advanced-modules
     - vitals-integration
 
   - title: Production
@@ -95,6 +98,21 @@ reference:
     - predict.Module
     - evaluate
     - evaluate_dsp
+
+  - title: Advanced Reasoning Modules
+    desc: DSPy-inspired reasoning patterns for improved accuracy
+    contents:
+    - signature-transforms
+    - with_reasoning
+    - without_reasoning
+    - has_reasoning
+    - chain_of_thought
+    - module-wrapper
+    - best_of_n
+    - refine
+    - as_reward_fn
+    - module-multichain
+    - multi_chain_comparison
 
   - title: Chat-Centric API
     desc: ellmer-style pipe-friendly functions

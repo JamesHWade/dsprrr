@@ -14,6 +14,7 @@ Build principled, test-driven, and optimizable applications using Large Language
 Useful links:
 \itemize{
   \item \url{https://github.com/JamesHWade/dsprrr}
+  \item \url{https://jameshwade.github.io/dsprrr/}
   \item Report bugs at \url{https://github.com/JamesHWade/dsprrr/issues}
 }
 
