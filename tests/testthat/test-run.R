@@ -629,3 +629,52 @@ test_that("parallel execution works with mock factory", {
   # but the function should complete without error
   expect_true(is.list(results))
 })
+
+
+# -- .show_prompt tests --
+
+test_that("run with .show_prompt=TRUE shows prompt preview", {
+  sig <- Signature(
+    inputs = list(input(name = "q", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Answer the question"
+  )
+
+  mod <- module(signature = sig, type = "predict", template = "Question: {q}")
+
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, ...) "answer"),
+    class = "Chat"
+  )
+
+  # cli output goes through message stream, so use expect_message
+  # or check that instructions text appears
+  expect_output(
+    run(mod, q = "test question", .llm = mock_llm, .show_prompt = TRUE),
+    "Answer the question|Input fields|Output type"
+  )
+})
+
+test_that("run with .show_prompt defaults to FALSE", {
+  sig <- Signature(
+    inputs = list(input(name = "q", class = S7::class_character)),
+    output_type = ellmer::type_string()
+  )
+
+  mod <- module(signature = sig, type = "predict", template = "{q}")
+
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, ...) "answer"),
+    class = "Chat"
+  )
+
+  # Default .show_prompt = FALSE - should produce no output about prompt preview
+  # Note: cli uses message stream, so capturing stdout may not catch everything
+  output <- capture.output(
+    run(mod, q = "test", .llm = mock_llm),
+    type = "message"
+  )
+
+  # Should not contain preview-related text
+  expect_false(any(grepl("Prompt Preview|Input fields", output)))
+})

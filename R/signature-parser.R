@@ -11,13 +11,57 @@
 #' @keywords internal
 #' @noRd
 parse_signature <- function(signature_str, instructions = "") {
+  # Validate input is a non-empty string
+
+  if (!is.character(signature_str) || length(signature_str) != 1) {
+    cli::cli_abort(c(
+      "Signature must be a single character string",
+      "x" = "You provided: {.cls {class(signature_str)[1]}}",
+      "i" = "Example: {.code signature('question -> answer')}"
+    ))
+  }
+
+  signature_str <- trimws(signature_str)
+  if (nchar(signature_str) == 0) {
+    cli::cli_abort(c(
+      "Signature cannot be empty",
+      "i" = "Example: {.code signature('question -> answer')}"
+    ))
+  }
+
+  # Check for common arrow mistakes before splitting
+  arrow_suggestion <- detect_arrow_mistake(signature_str)
+  if (!is.null(arrow_suggestion)) {
+    cli::cli_abort(c(
+      "Invalid arrow in signature",
+      "x" = "You provided: {.val {signature_str}}",
+      "i" = arrow_suggestion$message,
+      "i" = "Corrected: {.code {arrow_suggestion$corrected}}"
+    ))
+  }
+
   # Split by arrow
   parts <- strsplit(signature_str, "\\s*->\\s*")[[1]]
 
   if (length(parts) != 2) {
-    cli::cli_abort(
-      "Signature must have format: 'inputs -> output' or 'inputs -> output: type'"
-    )
+    # Provide helpful error messages based on what's wrong
+    if (length(parts) == 1) {
+      # No arrow found - suggest likely fix
+      suggestion <- suggest_signature_fix(signature_str)
+      cli::cli_abort(c(
+        "Missing {.code ->} separator in signature",
+        "x" = "You provided: {.val {signature_str}}",
+        "i" = suggestion
+      ))
+    } else {
+      # Multiple arrows
+      cli::cli_abort(c(
+        "Multiple {.code ->} separators found in signature",
+        "x" = "You provided: {.val {signature_str}}",
+        "i" = "Use exactly one {.code ->} to separate inputs from outputs",
+        "i" = "Example: {.code 'input1, input2 -> output'}"
+      ))
+    }
   }
 
   # Parse inputs
@@ -523,4 +567,188 @@ parse_enum_values <- function(values_str) {
   values_str <- gsub("['\"]", "", values_str)
   values <- strsplit(values_str, "\\s*,\\s*")[[1]]
   trimws(values)
+}
+
+# ============================================================================
+# Error Detection and Suggestion Helpers
+# ============================================================================
+
+#' Detect common arrow mistakes in signature string
+#' @noRd
+detect_arrow_mistake <- function(signature_str) {
+  # Common wrong arrows that users might type
+  # Order matters: check longer patterns first to avoid partial matches
+  wrong_arrows <- list(
+    list(pattern = "-->", name = "double dash arrow"),
+    list(pattern = "=>", name = "fat arrow"),
+    list(pattern = "<-", name = "left arrow"),
+    list(pattern = "~>", name = "tilde arrow")
+  )
+
+  for (arrow in wrong_arrows) {
+    if (grepl(arrow$pattern, signature_str, fixed = TRUE)) {
+      # Create corrected version
+      corrected <- gsub(arrow$pattern, "->", signature_str, fixed = TRUE)
+      return(list(
+        message = paste0("Use {.code ->} not {.code ", arrow$pattern, "}"),
+        corrected = corrected
+      ))
+    }
+  }
+
+  # Only if no wrong arrows found, check if there's a correct arrow
+  # If there's already a correct arrow, no mistake to report
+  NULL
+}
+
+#' Suggest a fix for a signature without an arrow
+#' @noRd
+suggest_signature_fix <- function(signature_str) {
+
+  # Check if it looks like space-separated words (common mistake)
+  words <- strsplit(trimws(signature_str), "\\s+")[[1]]
+
+  if (length(words) == 2) {
+    # Two words - probably meant "input -> output"
+    return(paste0(
+      "Did you mean: {.code '", words[1], " -> ", words[2], "'}"
+    ))
+  }
+
+  if (length(words) > 2) {
+    # Multiple words - guess the split point
+    # If there's a comma, split there
+    if (grepl(",", signature_str)) {
+      # Has commas - probably multiple inputs
+      return(paste0(
+        "Add {.code ->} between inputs and output. ",
+        "Example: {.code 'input1, input2 -> output'}"
+      ))
+    }
+    # No commas - last word is probably the output
+    inputs <- paste(words[-length(words)], collapse = ", ")
+    output <- words[length(words)]
+    return(paste0(
+      "Did you mean: {.code '", inputs, " -> ", output, "'}"
+    ))
+  }
+
+  # Single word or other case
+  paste0(
+    "Add inputs and {.code ->} separator. ",
+    "Example: {.code 'question -> answer'}"
+  )
+}
+
+#' Validate type string and provide helpful error
+#' @noRd
+validate_type_string <- function(type_str, context = "output") {
+  type_str <- trimws(type_str)
+
+  # Check for empty type after colon
+
+  if (nchar(type_str) == 0) {
+    cli::cli_abort(c(
+      "Type annotation is incomplete",
+      "x" = "Missing type after {.code :}",
+      "i" = "Available types: {.code string}, {.code number}, {.code boolean}, {.code enum(...)}, {.code array(...)}"
+    ))
+  }
+
+  # Check for common type mistakes
+  type_lower <- tolower(type_str)
+
+  # Check for Python-style types
+  python_types <- list(
+    list(wrong = "str", correct = "string"),
+    list(wrong = "int", correct = "integer"),
+    list(wrong = "float", correct = "number"),
+    list(wrong = "bool", correct = "boolean")
+  )
+
+  for (pt in python_types) {
+    if (type_lower == pt$wrong) {
+      # These are actually supported, so no error needed
+      return(NULL)
+    }
+  }
+
+  # Check for completely unknown types
+  known_types <- c(
+    "string", "str", "number", "float", "numeric",
+    "integer", "int", "boolean", "bool", "logical",
+    "object", "dict"
+  )
+
+  # Check if it starts with a known constructor
+  known_constructors <- c("enum", "array", "list", "Literal", "Optional", "Union")
+
+  is_known <- type_lower %in% known_types ||
+    any(vapply(
+      known_constructors,
+      function(c) grepl(paste0("^", tolower(c)), type_lower),
+      logical(1)
+    ))
+
+  if (!is_known && !grepl("\\[|\\(", type_str)) {
+    # Unknown simple type
+    cli::cli_abort(c(
+      "Unknown type: {.val {type_str}}",
+      "i" = "Available simple types: {.code string}, {.code number}, {.code integer}, {.code boolean}",
+      "i" = "Available complex types: {.code enum('a', 'b')}, {.code array(string)}, {.code object}"
+    ))
+  }
+
+  NULL
+}
+
+#' Find closest match using Levenshtein distance
+#' @noRd
+find_closest_match <- function(input, candidates, max_distance = 3) {
+  if (length(candidates) == 0) {
+    return(NULL)
+  }
+
+  # Simple Levenshtein distance implementation
+  levenshtein <- function(s1, s2) {
+    s1 <- tolower(s1)
+    s2 <- tolower(s2)
+
+    if (nchar(s1) == 0) return(nchar(s2))
+    if (nchar(s2) == 0) return(nchar(s1))
+
+    m <- nchar(s1)
+    n <- nchar(s2)
+
+    d <- matrix(0, m + 1, n + 1)
+    d[, 1] <- 0:m
+    d[1, ] <- 0:n
+
+    s1_chars <- strsplit(s1, "")[[1]]
+    s2_chars <- strsplit(s2, "")[[1]]
+
+    for (i in 2:(m + 1)) {
+      for (j in 2:(n + 1)) {
+        cost <- if (s1_chars[i - 1] == s2_chars[j - 1]) 0 else 1
+        d[i, j] <- min(
+          d[i - 1, j] + 1,
+          d[i, j - 1] + 1,
+          d[i - 1, j - 1] + cost
+        )
+      }
+    }
+
+    d[m + 1, n + 1]
+  }
+
+  # Find closest match
+  distances <- vapply(candidates, function(c) levenshtein(input, c), numeric(1))
+  min_idx <- which.min(distances)
+  min_dist <- distances[min_idx]
+
+  if (min_dist <= max_distance) {
+    return(candidates[min_idx])
+  }
+
+  NULL
 }

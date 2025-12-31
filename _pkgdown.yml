@@ -30,6 +30,10 @@ navbar:
       menu:
         - text: "Getting Started"
           href: articles/getting-started.html
+        - text: "Quick Reference"
+          href: articles/cheatsheet.html
+        - text: "Troubleshooting"
+          href: articles/troubleshooting.html
         - text: "Compilation & Optimization"
           href: articles/compilation-optimization.html
         - text: "---"
@@ -48,6 +52,8 @@ articles:
     navbar: ~
     contents:
     - getting-started
+    - cheatsheet
+    - troubleshooting
 
   - title: Core Workflows
     desc: Learn how to build and optimize LLM applications
@@ -79,9 +85,11 @@ reference:
     - as_module
     - last_trace
 
-  - title: Default Chat Management
-    desc: Automatic LLM client configuration
+  - title: Configuration
+    desc: Setup and configure dsprrr
     contents:
+    - dsp_configure
+    - dsprrr_sitrep
     - default-chat
     - get_default_chat
     - set_default_chat
@@ -133,6 +141,14 @@ reference:
     - pin_vitals_log
     - use_dsprrr_template
     - validate_workflow
+
+  - title: Debugging & Inspection
+    desc: Prompt inspection and history
+    contents:
+    - prompt-visibility
+    - last_prompt
+    - inspect_history
+    - clear_prompt_history
 
   - title: Traces
     desc: Execution trace utilities

@@ -93,6 +93,13 @@ dsp.Chat <- function(x, signature, ..., .instructions = NULL, .echo = "none") {
     prompt
   }
 
+  # Get model info for error context
+  model_name <- tryCatch(chat$get_model(), error = function(e) "unknown")
+  provider_name <- tryCatch(
+    detect_provider_name(chat),
+    error = function(e) "unknown"
+  )
+
   # Call chat_structured
   result <- tryCatch(
     {
@@ -103,12 +110,23 @@ dsp.Chat <- function(x, signature, ..., .instructions = NULL, .echo = "none") {
       )
     },
     error = function(e) {
-      cli::cli_abort(
-        "dsp() failed: {e$message}",
-        parent = e
-      )
+      # Provide context-rich error message
+      wrap_llm_error(e, model_name, provider_name, full_prompt)
     }
   )
+
+  # Capture Turn objects for metadata extraction
+  assistant_turn <- tryCatch(
+    chat$last_turn(role = "assistant"),
+    error = function(e) NULL
+  )
+  user_turn <- tryCatch(
+    chat$last_turn(role = "user"),
+    error = function(e) NULL
+  )
+
+  # Extract model name
+  model <- tryCatch(chat$get_model(), error = function(e) NA_character_)
 
   # Store trace for debugging
   store_last_trace(list(
@@ -116,7 +134,10 @@ dsp.Chat <- function(x, signature, ..., .instructions = NULL, .echo = "none") {
     inputs = inputs,
     prompt = full_prompt,
     output = result,
-    timestamp = Sys.time()
+    timestamp = Sys.time(),
+    user_turn = user_turn,
+    assistant_turn = assistant_turn,
+    model = model
   ))
 
   # Simplify single-field results
@@ -248,9 +269,11 @@ last_trace <- function() {
   .dsprrr_env$last_trace
 }
 
-# Internal: Store trace for last_trace()
+# Internal: Store trace for last_trace() and global history
 store_last_trace <- function(trace) {
   .dsprrr_env$last_trace <- trace
+  # Also add to global prompt history for inspect_history()
+  add_to_global_history(trace, source = "dsp()")
 }
 
 # Internal: Validate inputs against signature
@@ -265,17 +288,50 @@ validate_dsp_inputs <- function(sig, inputs) {
   # Check for missing required inputs
   missing <- setdiff(required_names, provided_names)
   if (length(missing) > 0) {
-    cli::cli_abort(c(
-      "Missing required inputs",
-      "x" = "Missing: {.field {missing}}",
+    # Build error message with suggestions
+    error_parts <- c("Missing required inputs")
+
+    for (field in missing) {
+      error_parts <- c(error_parts, "x" = "Missing: {.field {field}}")
+
+      # Check if there's a close match in provided names
+      if (length(provided_names) > 0) {
+        suggestion <- find_closest_match(field, provided_names)
+        if (!is.null(suggestion)) {
+          error_parts <- c(
+            error_parts,
+            " " = "  Did you mean: {.field {suggestion}}?"
+          )
+        }
+      }
+    }
+
+    error_parts <- c(
+      error_parts,
       "i" = "Signature requires: {.field {required_names}}"
-    ))
+    )
+
+    cli::cli_abort(error_parts)
   }
 
-  # Warn about extra inputs
+  # Warn about extra inputs with suggestions
   extra <- setdiff(provided_names, required_names)
   if (length(extra) > 0) {
-    cli::cli_warn("Ignoring unknown inputs: {.field {extra}}")
+    for (field in extra) {
+      suggestion <- find_closest_match(field, required_names)
+      if (!is.null(suggestion)) {
+        cli::cli_warn(c(
+          "Unknown input: {.field {field}}",
+          "i" = "Did you mean: {.field {suggestion}}?",
+          "i" = "Available fields: {.field {required_names}}"
+        ))
+      } else {
+        cli::cli_warn(c(
+          "Ignoring unknown input: {.field {field}}",
+          "i" = "Available fields: {.field {required_names}}"
+        ))
+      }
+    }
   }
 
   invisible(NULL)
@@ -327,4 +383,73 @@ simplify_output <- function(result, output_type) {
     }
   }
   result
+}
+
+# Internal: Wrap LLM errors with helpful context
+wrap_llm_error <- function(e, model_name, provider_name, prompt) {
+  # Parse the error message to provide helpful suggestions
+  error_msg <- conditionMessage(e)
+  error_lower <- tolower(error_msg)
+
+  # Build context-aware error message
+  error_parts <- c("LLM call failed")
+
+  # Add the original error
+  error_parts <- c(error_parts, "x" = error_msg)
+
+  # Add model context
+  error_parts <- c(
+    error_parts,
+    "i" = "Model: {model_name} via {provider_name}"
+  )
+
+  # Detect common error patterns and provide suggestions
+  if (grepl("rate.?limit|too.?many.?requests|429", error_lower)) {
+    error_parts <- c(
+      error_parts,
+      "!" = "Rate limit exceeded",
+      "i" = "Suggestion: Wait a few seconds and try again, or use a different model"
+    )
+  } else if (grepl("api.?key|auth|401|403|unauthorized", error_lower)) {
+    error_parts <- c(
+      error_parts,
+      "!" = "Authentication failed",
+      "i" = "Check that your API key is set correctly",
+      "i" = "Run {.code dsprrr_sitrep()} to check configuration"
+    )
+  } else if (grepl("timeout|timed.?out", error_lower)) {
+    error_parts <- c(
+      error_parts,
+      "!" = "Request timed out",
+      "i" = "Try reducing prompt length or using a faster model"
+    )
+  } else if (grepl("context.?length|token.?limit|too.?long", error_lower)) {
+    prompt_len <- nchar(prompt)
+    error_parts <- c(
+      error_parts,
+      "!" = "Prompt too long ({prompt_len} characters)",
+      "i" = "Reduce input size or use a model with larger context window"
+    )
+  } else if (grepl("invalid.?json|parse|format", error_lower)) {
+    error_parts <- c(
+      error_parts,
+      "!" = "Response parsing failed",
+      "i" = "The LLM returned invalid JSON. Try simplifying the output type",
+      "i" = "Check {.code last_prompt()} to see the raw response"
+    )
+  } else if (grepl("content.?filter|safety|blocked", error_lower)) {
+    error_parts <- c(
+      error_parts,
+      "!" = "Content was blocked by safety filters",
+      "i" = "Rephrase your input to avoid triggering content filters"
+    )
+  }
+
+  # Add debugging tip
+  error_parts <- c(
+    error_parts,
+    "i" = "Use {.code last_prompt()} to inspect the prompt that was sent"
+  )
+
+  cli::cli_abort(error_parts, parent = e)
 }

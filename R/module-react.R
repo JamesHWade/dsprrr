@@ -315,6 +315,9 @@ ReactModule <- R6::R6Class(
         }
 
         self$state$traces <- append(self$state$traces, list(trace_entry))
+
+        # Also add to global prompt history for inspect_history()
+        add_to_global_history(trace_entry, source = "ReactModule")
       }
 
       # Return tibble format for consistency

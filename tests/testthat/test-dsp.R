@@ -66,7 +66,7 @@ test_that("dsp.Chat warns about extra inputs", {
 
   expect_warning(
     dsp(mock_chat, "question -> answer", question = "test", extra = "ignored"),
-    "unknown inputs"
+    "unknown input"
   )
 })
 
@@ -350,6 +350,7 @@ test_that("predict.Module errors clearly when no Chat available", {
     "ANTHROPIC_API_KEY",
     "GOOGLE_API_KEY"
   ))
+
   on.exit(do.call(Sys.setenv, as.list(old_env)), add = TRUE)
   Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
 
@@ -362,4 +363,108 @@ test_that("predict.Module errors clearly when no Chat available", {
     predict(mod, new_data = new_data),
     "No default Chat available|Chat"
   )
+})
+
+# -- wrap_llm_error tests --
+
+test_that("wrap_llm_error detects rate limit errors", {
+  e <- simpleError("Rate limit exceeded: 429 Too Many Requests")
+  expect_error(
+    dsprrr:::wrap_llm_error(e, "gpt-4o", "OpenAI", "test prompt"),
+    "Rate limit exceeded"
+  )
+})
+
+test_that("wrap_llm_error detects authentication errors", {
+  e <- simpleError("Invalid API key: 401 Unauthorized")
+  expect_error(
+    dsprrr:::wrap_llm_error(e, "gpt-4o", "OpenAI", "test prompt"),
+    "Authentication failed"
+  )
+})
+
+test_that("wrap_llm_error detects timeout errors", {
+  e <- simpleError("Connection timed out after 30 seconds")
+  expect_error(
+    dsprrr:::wrap_llm_error(e, "gpt-4o", "OpenAI", "test prompt"),
+    "Request timed out"
+  )
+})
+
+test_that("wrap_llm_error detects context length errors", {
+  e <- simpleError("This model's maximum context length is 8192 tokens")
+  long_prompt <- paste(rep("x", 10000), collapse = "")
+  expect_error(
+    dsprrr:::wrap_llm_error(e, "gpt-4o", "OpenAI", long_prompt),
+    "Prompt too long"
+  )
+})
+
+test_that("wrap_llm_error detects JSON parsing errors", {
+  e <- simpleError("Failed to parse JSON response from API")
+  expect_error(
+    dsprrr:::wrap_llm_error(e, "gpt-4o", "OpenAI", "test prompt"),
+    "Response parsing failed"
+  )
+})
+
+test_that("wrap_llm_error detects content filter errors", {
+  e <- simpleError("Content blocked by safety filter")
+  expect_error(
+    dsprrr:::wrap_llm_error(e, "gpt-4o", "OpenAI", "test prompt"),
+    "Content was blocked"
+  )
+})
+
+test_that("wrap_llm_error includes model and provider info", {
+  e <- simpleError("Some error")
+  expect_error(
+    dsprrr:::wrap_llm_error(e, "gpt-4o-mini", "OpenAI", "test"),
+    "gpt-4o-mini.*OpenAI"
+  )
+})
+
+# -- Input validation suggestion tests --
+
+test_that("dsp suggests corrections for typos in missing input names", {
+  mock_chat <- structure(
+    list(chat_structured = function(...) list(answer = "x")),
+    class = "Chat"
+  )
+
+  # Typo: "questoin" instead of "question"
+  expect_error(
+    dsp(mock_chat, "question -> answer", questoin = "test"),
+    "Did you mean.*question"
+  )
+})
+
+test_that("dsp suggests corrections for extra inputs with typos", {
+  mock_chat <- structure(
+    list(chat_structured = function(...) list(answer = "x")),
+    class = "Chat"
+  )
+
+  expect_warning(
+    dsp(mock_chat, "question -> answer", question = "test", questoin = "extra"),
+    "Did you mean.*question"
+  )
+})
+
+# -- dsp() to inspect_history() integration test --
+
+test_that("dsp populates global prompt history", {
+  clear_prompt_history()
+  on.exit(clear_prompt_history())
+
+  mock_chat <- structure(
+    list(chat_structured = function(...) list(answer = "42")),
+    class = "Chat"
+  )
+
+  dsp(mock_chat, "q -> answer", q = "What is 6*7?")
+
+  history <- inspect_history(n = 1)
+  expect_equal(nrow(history), 1)
+  expect_equal(history$source[1], "dsp()")
 })

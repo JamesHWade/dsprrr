@@ -185,3 +185,211 @@ test_that("auto_detect_chat returns NULL when no API keys", {
 
   expect_null(result)
 })
+
+# -- Auto-detection messaging tests --
+
+test_that("emit_auto_detection_message respects quiet option", {
+  old_opt <- options(dsprrr.quiet = TRUE)
+  on.exit(options(old_opt))
+
+  mock_chat <- structure(
+    list(get_model = function() "test-model"),
+    class = "Chat"
+  )
+
+  # Should not emit any message when quiet
+  expect_silent(
+    dsprrr:::emit_auto_detection_message("OpenAI", mock_chat)
+  )
+})
+
+test_that("emit_auto_detection_message shows once per session", {
+  old_opt <- options(dsprrr.quiet = FALSE)
+  on.exit(options(old_opt))
+  .dsprrr_env$auto_detect_message_shown <- FALSE
+
+  mock_chat <- structure(
+    list(get_model = function() "test-model"),
+    class = "Chat"
+  )
+
+  # First call should emit message
+  expect_message(
+    dsprrr:::emit_auto_detection_message("OpenAI", mock_chat),
+    "Using OpenAI"
+  )
+
+  # Second call should be silent (already shown)
+  expect_silent(
+    dsprrr:::emit_auto_detection_message("OpenAI", mock_chat)
+  )
+
+  # Reset for other tests
+  .dsprrr_env$auto_detect_message_shown <- FALSE
+})
+
+test_that("clear_default_chat resets auto_detect_message_shown", {
+  .dsprrr_env$auto_detect_message_shown <- TRUE
+  clear_default_chat()
+  expect_false(isTRUE(.dsprrr_env$auto_detect_message_shown))
+})
+
+# -- dsp_configure tests --
+
+test_that("dsp_configure validates provider", {
+  expect_error(
+    dsp_configure(provider = "invalid"),
+    "Unknown provider"
+  )
+})
+
+test_that("dsp_configure accepts valid providers", {
+  skip_if(Sys.getenv("OPENAI_API_KEY") == "", "OPENAI_API_KEY not set")
+
+  old_opt <- options(dsprrr.default_chat = NULL, dsprrr.quiet = TRUE)
+  on.exit(options(old_opt))
+  clear_default_chat()
+
+  chat <- dsp_configure(provider = "openai")
+  expect_s3_class(chat, "Chat")
+
+  # Clean up
+  clear_default_chat()
+})
+
+test_that("dsp_configure sets default chat", {
+  skip_if(Sys.getenv("OPENAI_API_KEY") == "", "OPENAI_API_KEY not set")
+
+  old_opt <- options(dsprrr.default_chat = NULL, dsprrr.quiet = TRUE)
+  on.exit(options(old_opt))
+  clear_default_chat()
+
+  dsp_configure(provider = "openai")
+
+  # Should be able to get it back
+  chat <- get_default_chat()
+  expect_s3_class(chat, "Chat")
+
+  # Clean up
+  clear_default_chat()
+})
+
+test_that("dsp_configure stores configuration metadata", {
+  skip_if(Sys.getenv("OPENAI_API_KEY") == "", "OPENAI_API_KEY not set")
+
+  old_opt <- options(dsprrr.default_chat = NULL, dsprrr.quiet = TRUE)
+  on.exit(options(old_opt))
+  clear_default_chat()
+
+  dsp_configure(provider = "openai", model = "gpt-4o-mini")
+
+  config <- .dsprrr_env$config
+  expect_equal(config$provider, "openai")
+  expect_equal(config$model, "gpt-4o-mini")
+  expect_true(inherits(config$configured_at, "POSIXct"))
+
+  # Clean up
+  clear_default_chat()
+  .dsprrr_env$config <- NULL
+})
+
+test_that("dsp_configure errors without provider and no API keys", {
+  old_env <- Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))
+  on.exit(do.call(Sys.setenv, as.list(old_env)))
+  Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
+
+  old_opt <- options(dsprrr.default_chat = NULL, dsprrr.quiet = TRUE)
+  on.exit(options(old_opt), add = TRUE)
+  clear_default_chat()
+
+  expect_error(
+    dsp_configure(),
+    "Could not auto-detect provider"
+  )
+})
+
+test_that("dsp_configure shows confirmation message", {
+  skip_if(Sys.getenv("OPENAI_API_KEY") == "", "OPENAI_API_KEY not set")
+
+  old_opt <- options(dsprrr.default_chat = NULL, dsprrr.quiet = FALSE)
+  on.exit(options(old_opt))
+  clear_default_chat()
+  .dsprrr_env$auto_detect_message_shown <- TRUE # Suppress auto-detect msg
+
+  expect_message(
+    dsp_configure(provider = "openai"),
+    "Configured dsprrr"
+  )
+
+  # Clean up
+  clear_default_chat()
+})
+
+# -- detect_provider_name tests --
+
+test_that("detect_provider_name identifies providers", {
+  openai_chat <- structure(list(), class = c("ChatOpenAI", "Chat"))
+  anthropic_chat <- structure(list(), class = c("ChatClaude", "Chat"))
+  google_chat <- structure(list(), class = c("ChatGemini", "Chat"))
+  unknown_chat <- structure(list(), class = c("ChatUnknown", "Chat"))
+
+  expect_equal(dsprrr:::detect_provider_name(openai_chat), "OpenAI")
+  expect_equal(dsprrr:::detect_provider_name(anthropic_chat), "Anthropic")
+  expect_equal(dsprrr:::detect_provider_name(google_chat), "Google")
+  expect_equal(dsprrr:::detect_provider_name(unknown_chat), "Unknown")
+})
+
+# -- dsprrr_sitrep tests --
+
+test_that("dsprrr_sitrep returns invisible list", {
+  old_opt <- options(dsprrr.default_chat = NULL)
+  on.exit(options(old_opt))
+  clear_default_chat()
+
+  # Clear API keys temporarily
+  old_env <- Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))
+  on.exit(do.call(Sys.setenv, as.list(old_env)), add = TRUE)
+
+  result <- dsprrr_sitrep()
+
+  expect_type(result, "list")
+  expect_true("has_default_chat" %in% names(result))
+  expect_true("provider" %in% names(result))
+  expect_true("api_keys" %in% names(result))
+  expect_true("n_calls" %in% names(result))
+})
+
+test_that("dsprrr_sitrep shows configured provider", {
+  skip_if(Sys.getenv("OPENAI_API_KEY") == "", "OPENAI_API_KEY not set")
+
+  old_opt <- options(dsprrr.default_chat = NULL, dsprrr.quiet = TRUE)
+  on.exit(options(old_opt))
+  clear_default_chat()
+
+  dsp_configure(provider = "openai")
+
+  result <- dsprrr_sitrep()
+
+  expect_true(result$has_default_chat)
+  expect_equal(result$provider, "OpenAI")
+
+  # Clean up
+  clear_default_chat()
+})
+
+test_that("dsprrr_sitrep shows API key status", {
+  result <- dsprrr_sitrep()
+
+  expect_type(result$api_keys, "list")
+  expect_true("OPENAI_API_KEY" %in% names(result$api_keys))
+  expect_true("ANTHROPIC_API_KEY" %in% names(result$api_keys))
+  expect_true("GOOGLE_API_KEY" %in% names(result$api_keys))
+})

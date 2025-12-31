@@ -116,11 +116,11 @@ test_that("signature() constructor still handles explicit notation", {
 })
 
 test_that("parse_signature handles edge cases", {
-  # Empty input
-  expect_error(parse_signature(""), "must have format")
+  # Empty input - now has better error message
+  expect_error(parse_signature(""), "cannot be empty")
 
-  # Missing arrow
-  expect_error(parse_signature("text sentiment"), "must have format")
+  # Missing arrow - now suggests fix
+  expect_error(parse_signature("text sentiment"), "Missing.*->.*separator")
 
   # No inputs - should provide instructions to be valid
   sig <- parse_signature(" -> output", instructions = "Generate output")
@@ -235,4 +235,117 @@ test_that("complex nested types parse correctly", {
   )
   expect_true(inherits(sig2@output_type, "ellmer::TypeObject"))
   expect_equal(length(names(sig2@output_type@properties)), 3)
+})
+
+# ============================================================================
+# Error Handling Tests
+# ============================================================================
+
+test_that("parse_signature errors on non-string input", {
+  expect_error(
+    parse_signature(123),
+    "must be a single character string"
+  )
+
+  expect_error(
+    parse_signature(c("a -> b", "c -> d")),
+    "must be a single character string"
+  )
+})
+
+test_that("parse_signature errors on empty string", {
+  expect_error(
+    parse_signature(""),
+    "cannot be empty"
+  )
+
+  expect_error(
+    parse_signature("   "),
+    "cannot be empty"
+  )
+})
+
+test_that("parse_signature detects wrong arrow types", {
+  # Fat arrow
+  expect_error(
+    parse_signature("text => sentiment"),
+    "Use.*->.*not.*=>"
+  )
+
+  # Double dash arrow
+  expect_error(
+    parse_signature("text --> sentiment"),
+    "Use.*->.*not.*-->"
+  )
+
+  # Left arrow
+  expect_error(
+    parse_signature("text <- sentiment"),
+    "Use.*->.*not.*<-"
+  )
+})
+
+test_that("parse_signature suggests fix for missing arrow", {
+  # Two words without arrow
+  expect_error(
+    parse_signature("question answer"),
+    "Did you mean.*question -> answer"
+  )
+
+  # Multiple words without arrow
+  expect_error(
+    parse_signature("context question answer"),
+    "Did you mean"
+  )
+})
+
+test_that("parse_signature errors on multiple arrows", {
+  expect_error(
+    parse_signature("a -> b -> c"),
+    "Multiple.*separators"
+  )
+})
+
+# ============================================================================
+# Helper Function Tests
+# ============================================================================
+
+test_that("detect_arrow_mistake identifies common mistakes", {
+  # Fat arrow
+  result <- dsprrr:::detect_arrow_mistake("text => output")
+  expect_false(is.null(result))
+  expect_equal(result$corrected, "text -> output")
+
+  # Double dash
+  result <- dsprrr:::detect_arrow_mistake("text --> output")
+  expect_false(is.null(result))
+  expect_equal(result$corrected, "text -> output")
+
+  # Correct arrow returns NULL
+  result <- dsprrr:::detect_arrow_mistake("text -> output")
+  expect_null(result)
+})
+
+test_that("suggest_signature_fix provides helpful suggestions", {
+  # Two words
+  result <- dsprrr:::suggest_signature_fix("question answer")
+  expect_match(result, "question -> answer")
+
+  # Single word
+  result <- dsprrr:::suggest_signature_fix("question")
+  expect_match(result, "->")
+})
+
+test_that("find_closest_match works correctly", {
+  candidates <- c("text", "question", "context")
+
+  # Exact match
+  expect_equal(dsprrr:::find_closest_match("text", candidates), "text")
+
+  # Close match (typo)
+  expect_equal(dsprrr:::find_closest_match("tect", candidates), "text")
+  expect_equal(dsprrr:::find_closest_match("questoin", candidates), "question")
+
+  # No close match
+  expect_null(dsprrr:::find_closest_match("zzzzz", candidates))
 })

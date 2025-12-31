@@ -164,6 +164,11 @@ PredictModule <- R6::R6Class(
         }
 
         self$state$traces <- append(self$state$traces, list(trace_entry))
+
+        # Also add to global prompt history for inspect_history()
+        # Include the prompt text in the trace for history extraction
+        trace_entry$prompt <- prompt
+        add_to_global_history(trace_entry, source = "PredictModule")
       }
 
       # Return tibble format for consistency
