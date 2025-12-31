@@ -145,6 +145,7 @@ reference:
   - title: Debugging & Inspection
     desc: Prompt inspection and history
     contents:
+    - prompt-visibility
     - last_prompt
     - inspect_history
     - clear_prompt_history
