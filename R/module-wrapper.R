@@ -61,13 +61,14 @@ BestOfNModule <- R6::R6Class(
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
     initialize = function(
-        module,
-        N = 3L,
-        reward_fn = NULL,
-        threshold = 1.0,
-        fail_count = NULL,
-        config = list(),
-        chat = NULL) {
+      module,
+      N = 3L,
+      reward_fn = NULL,
+      threshold = 1.0,
+      fail_count = NULL,
+      config = list(),
+      chat = NULL
+    ) {
       # Validate module
       if (!inherits(module, "Module")) {
         cli::cli_abort(c(
@@ -115,7 +116,7 @@ BestOfNModule <- R6::R6Class(
       best_result <- NULL
       best_metadata <- NULL
       best_chat <- NULL
-      first_result <- NULL  # Fallback if all scores are NA
+      first_result <- NULL # Fallback if all scores are NA
       first_metadata <- NULL
       first_chat <- NULL
       consecutive_failures <- 0
@@ -236,7 +237,8 @@ BestOfNModule <- R6::R6Class(
         n_attempts = length(attempts),
         best_score = best_score,
         all_scores = vapply(attempts, function(a) a$score, numeric(1)),
-        early_stopped = !is.infinite(best_score) && best_score >= self$threshold,
+        early_stopped = !is.infinite(best_score) &&
+          best_score >= self$threshold,
         total_tokens = total_tokens,
         total_cost = total_cost,
         latency_ms = latency_ms
@@ -285,12 +287,15 @@ BestOfNModule <- R6::R6Class(
         for (run_idx in seq_along(self$state$attempts)) {
           run_attempts <- self$state$attempts[[run_idx]]
           for (a in run_attempts) {
-            rows <- append(rows, list(list(
-              run = run_idx,
-              attempt = a$attempt,
-              prediction = list(a$prediction),
-              score = a$score
-            )))
+            rows <- append(
+              rows,
+              list(list(
+                run = run_idx,
+                attempt = a$attempt,
+                prediction = list(a$prediction),
+                score = a$score
+              ))
+            )
           }
         }
       } else {
@@ -416,12 +421,13 @@ BestOfNModule <- R6::R6Class(
 #'   threshold = 1.0
 #' )
 best_of_n <- function(
-    module,
-    N = 3L,
-    reward_fn = NULL,
-    threshold = 1.0,
-    fail_count = NULL,
-    ...) {
+  module,
+  N = 3L,
+  reward_fn = NULL,
+  threshold = 1.0,
+  fail_count = NULL,
+  ...
+) {
   BestOfNModule$new(
     module = module,
     N = N,
@@ -457,9 +463,10 @@ best_of_n <- function(
 #'   expected_field = "expected_sentiment"
 #' )
 as_reward_fn <- function(
-    metric,
-    expected_field = "expected",
-    prediction_field = NULL) {
+  metric,
+  expected_field = "expected",
+  prediction_field = NULL
+) {
   if (!is.function(metric)) {
     cli::cli_abort("metric must be a function")
   }
@@ -567,15 +574,16 @@ RefineModule <- R6::R6Class(
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
     initialize = function(
-        module,
-        N = 3L,
-        reward_fn = NULL,
-        threshold = 1.0,
-        fail_count = NULL,
-        feedback_template = NULL,
-        feedback_field = "feedback",
-        config = list(),
-        chat = NULL) {
+      module,
+      N = 3L,
+      reward_fn = NULL,
+      threshold = 1.0,
+      fail_count = NULL,
+      feedback_template = NULL,
+      feedback_field = "feedback",
+      config = list(),
+      chat = NULL
+    ) {
       super$initialize(
         module = module,
         N = N,
@@ -617,7 +625,7 @@ RefineModule <- R6::R6Class(
       best_result <- NULL
       best_metadata <- NULL
       best_chat <- NULL
-      first_result <- NULL  # Fallback if all scores are NA
+      first_result <- NULL # Fallback if all scores are NA
       first_metadata <- NULL
       first_chat <- NULL
       consecutive_failures <- 0
@@ -629,7 +637,10 @@ RefineModule <- R6::R6Class(
       for (i in seq_len(self$N)) {
         # Inject feedback from previous attempt (if any)
         if (i > 1 && !is.null(previous_feedback)) {
-          current_batch <- private$inject_feedback(current_batch, previous_feedback)
+          current_batch <- private$inject_feedback(
+            current_batch,
+            previous_feedback
+          )
         }
 
         # Run the wrapped module
@@ -723,7 +734,11 @@ RefineModule <- R6::R6Class(
 
         # Generate feedback for next attempt (only if there will be one)
         if (i < self$N) {
-          previous_feedback <- private$generate_feedback(inputs, prediction, score)
+          previous_feedback <- private$generate_feedback(
+            inputs,
+            prediction,
+            score
+          )
           feedback_history <- append(feedback_history, list(previous_feedback))
         }
       }
@@ -752,7 +767,8 @@ RefineModule <- R6::R6Class(
         n_attempts = length(attempts),
         best_score = best_score,
         all_scores = vapply(attempts, function(a) a$score, numeric(1)),
-        early_stopped = !is.infinite(best_score) && best_score >= self$threshold,
+        early_stopped = !is.infinite(best_score) &&
+          best_score >= self$threshold,
         feedback_count = length(feedback_history),
         total_tokens = total_tokens,
         total_cost = total_cost,
@@ -799,7 +815,9 @@ RefineModule <- R6::R6Class(
       if (all) {
         unlist(self$state$feedback_history)
       } else {
-        unlist(self$state$feedback_history[[length(self$state$feedback_history)]])
+        unlist(self$state$feedback_history[[length(
+          self$state$feedback_history
+        )]])
       }
     },
 
@@ -817,7 +835,9 @@ RefineModule <- R6::R6Class(
         cli::cli_h3("Last Run")
         cli::cli_text("  Attempts: {last_trace$n_attempts}")
         cli::cli_text("  Best score: {round(last_trace$best_score, 3)}")
-        cli::cli_text("  Feedback rounds: {length(last_trace$feedback_history)}")
+        cli::cli_text(
+          "  Feedback rounds: {length(last_trace$feedback_history)}"
+        )
       }
 
       invisible(self)
@@ -881,7 +901,11 @@ RefineModule <- R6::R6Class(
             "Failed to generate feedback from template",
             "i" = e$message
           ))
-          paste0("Previous attempt scored ", round(score, 3), ". Please try again.")
+          paste0(
+            "Previous attempt scored ",
+            round(score, 3),
+            ". Please try again."
+          )
         }
       )
     },
@@ -939,14 +963,15 @@ RefineModule <- R6::R6Class(
 #' # When running, only provide 'question' - feedback is auto-injected:
 #' # result <- run(refined, question = "What is the capital of France?", .llm = llm)
 refine <- function(
-    module,
-    N = 3L,
-    reward_fn = NULL,
-    threshold = 1.0,
-    fail_count = NULL,
-    feedback_template = NULL,
-    feedback_field = "feedback",
-    ...) {
+  module,
+  N = 3L,
+  reward_fn = NULL,
+  threshold = 1.0,
+  fail_count = NULL,
+  feedback_template = NULL,
+  feedback_field = "feedback",
+  ...
+) {
   RefineModule$new(
     module = module,
     N = N,

@@ -126,7 +126,7 @@ test_that("dsp.Chat includes .instructions", {
 
   dsp(mock_chat, "q -> answer", q = "test", .instructions = "Be very brief")
 
-  expect_true(grepl("Be very brief", prompt_received))
+  expect_true(grepl("Be very brief", prompt_received, fixed = TRUE))
 })
 
 test_that("dsp.Chat simplifies single-field output", {

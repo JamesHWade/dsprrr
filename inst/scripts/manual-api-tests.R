@@ -24,13 +24,21 @@ cat("\n=== Test 1: Basic Module ===\n")
 mod <- module(signature("question -> answer"), type = "predict")
 
 # Use structured format to get cost/token metadata
-result <- run(mod, question = "What is 2+2?", .llm = llm, .return_format = "structured")
+result <- run(
+  mod,
+  question = "What is 2+2?",
+  .llm = llm,
+  .return_format = "structured"
+)
 print(result)
 
 # Now these should work (structured format includes metadata)
-cat("\nCost: "); print(get_cost(result))
-cat("Tokens: "); print(get_tokens(result))
-cat("\nSession cost:\n"); print(session_cost())
+cat("\nCost: ")
+print(get_cost(result))
+cat("Tokens: ")
+print(get_tokens(result))
+cat("\nSession cost:\n")
+print(session_cost())
 
 # =============================================================================
 # 2. Test parallel batch processing
@@ -42,7 +50,7 @@ cat("\n=== Test 2: Parallel Batch Processing ===\n")
 batch_results <- run(
   mod,
   question = c("What is 2+2?", "Capital of France?", "Who wrote Hamlet?"),
-  .parallel = TRUE,  # No .llm - workers create their own clients
+  .parallel = TRUE, # No .llm - workers create their own clients
   .return_format = "structured"
 )
 print(batch_results)
@@ -63,12 +71,12 @@ print(seq_results)
 cat("\n=== Test 3: RAG Module Empty Retrieval ===\n")
 
 empty_retriever <- function(query, k = 3) {
- character(0)
+  character(0)
 }
 
 rag_mod <- rag_module(
- signature = signature("question -> answer"),
- retriever = empty_retriever
+  signature = signature("question -> answer"),
+  retriever = empty_retriever
 )
 
 # Should log: "No documents matched the retrieval query"
@@ -81,21 +89,26 @@ print(rag_result)
 cat("\n=== Test 4: ellmer Tool Integration ===\n")
 
 sentiment_mod <- module(
- signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
- type = "predict"
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
+  type = "predict"
 )
 
 tool <- as_ellmer_tool(
- sentiment_mod,
- name = "analyze_sentiment",
- description = "Analyze sentiment of text",
- .llm = llm
+  sentiment_mod,
+  name = "analyze_sentiment",
+  description = "Analyze sentiment of text",
+  .llm = llm
 )
 print(tool)
 
 # Register and use
 agent <- chat_openai(model = "gpt-4o-mini")
-register_dsprrr_tool(agent, sentiment_mod, name = "sentiment_analyzer", .llm = llm)
+register_dsprrr_tool(
+  agent,
+  sentiment_mod,
+  name = "sentiment_analyzer",
+  .llm = llm
+)
 response <- agent$chat("Analyze the sentiment of: 'I absolutely love this!'")
 cat("\nAgent response:\n")
 print(response)
@@ -109,9 +122,9 @@ stream_mod <- module(signature("topic -> summary"), type = "predict")
 
 cat("Streaming response:\n")
 stream_mod$stream(
- topic = "Benefits of R programming in 2-3 sentences",
- .llm = llm,
- callback = function(chunk) cat(chunk)
+  topic = "Benefits of R programming in 2-3 sentences",
+  .llm = llm,
+  callback = function(chunk) cat(chunk)
 )
 cat("\n")
 

@@ -147,7 +147,7 @@ dsp_trainset <- function(..., .data = NULL) {
   # Add columns from dots
   if (length(dots) > 0) {
     # Check all have same length
-    lengths <- vapply(dots, length, integer(1))
+    lengths <- lengths(dots)
     if (length(unique(lengths)) > 1) {
       cli::cli_abort(c(
         "All arguments must have the same length",

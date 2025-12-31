@@ -63,20 +63,23 @@ MultiChainComparisonModule <- R6::R6Class(
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
     initialize = function(
-        signature,
-        inner_module = NULL,
-        M = 3L,
-        temperature = 0.7,
-        comparison_template = NULL,
-        config = list(),
-        chat = NULL) {
+      signature,
+      inner_module = NULL,
+      M = 3L,
+      temperature = 0.7,
+      comparison_template = NULL,
+      config = list(),
+      chat = NULL
+    ) {
       # Coerce signature if string
       sig <- if (is.character(signature)) {
         signature(signature)
       } else if (S7::S7_inherits(signature, Signature)) {
         signature
       } else {
-        cli::cli_abort("signature must be a Signature object or string notation")
+        cli::cli_abort(
+          "signature must be a Signature object or string notation"
+        )
       }
 
       super$initialize(signature = sig, config = config, chat = chat)
@@ -157,11 +160,14 @@ MultiChainComparisonModule <- R6::R6Class(
             total_cost <- total_cost + metadata$cost
           }
 
-          attempts <- append(attempts, list(list(
-            attempt = i,
-            prediction = prediction,
-            metadata = metadata
-          )))
+          attempts <- append(
+            attempts,
+            list(list(
+              attempt = i,
+              prediction = prediction,
+              metadata = metadata
+            ))
+          )
         }
       }
 
@@ -182,7 +188,9 @@ MultiChainComparisonModule <- R6::R6Class(
       if (!is.null(comparison_metadata$total_tokens)) {
         total_tokens <- total_tokens + comparison_metadata$total_tokens
       }
-      if (!is.null(comparison_metadata$cost) && !is.na(comparison_metadata$cost)) {
+      if (
+        !is.null(comparison_metadata$cost) && !is.na(comparison_metadata$cost)
+      ) {
         total_cost <- total_cost + comparison_metadata$cost
       }
 
@@ -248,11 +256,14 @@ MultiChainComparisonModule <- R6::R6Class(
         for (run_idx in seq_along(self$state$attempts)) {
           run_attempts <- self$state$attempts[[run_idx]]
           for (a in run_attempts) {
-            rows <- append(rows, list(list(
-              run = run_idx,
-              attempt = a$attempt,
-              prediction = list(a$prediction)
-            )))
+            rows <- append(
+              rows,
+              list(list(
+                run = run_idx,
+                attempt = a$attempt,
+                prediction = list(a$prediction)
+              ))
+            )
           }
         }
       } else {
@@ -292,7 +303,9 @@ MultiChainComparisonModule <- R6::R6Class(
       if (length(self$state$traces) > 0) {
         last_trace <- self$state$traces[[length(self$state$traces)]]
         cli::cli_h3("Last Run")
-        cli::cli_text("  Successful attempts: {last_trace$n_successful_attempts}")
+        cli::cli_text(
+          "  Successful attempts: {last_trace$n_successful_attempts}"
+        )
       }
 
       invisible(self)
@@ -415,7 +428,9 @@ MultiChainComparisonModule <- R6::R6Class(
         error = function(e) {
           cli::cli_warn("Failed to build comparison prompt: {e$message}")
           paste0(
-            "Evaluate these ", length(attempts), " attempts and provide the best answer:\n\n",
+            "Evaluate these ",
+            length(attempts),
+            " attempts and provide the best answer:\n\n",
             attempts_text
           )
         }
@@ -548,12 +563,13 @@ MultiChainComparisonModule <- R6::R6Class(
 #'   temperature = 0.8
 #' )
 multi_chain_comparison <- function(
-    signature,
-    inner_module = NULL,
-    M = 3L,
-    temperature = 0.7,
-    comparison_template = NULL,
-    ...) {
+  signature,
+  inner_module = NULL,
+  M = 3L,
+  temperature = 0.7,
+  comparison_template = NULL,
+  ...
+) {
   MultiChainComparisonModule$new(
     signature = signature,
     inner_module = inner_module,

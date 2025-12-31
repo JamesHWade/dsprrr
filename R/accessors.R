@@ -211,10 +211,14 @@ get_cost.default <- function(x, ...) {
 
 #' @export
 get_cost.dsprrr_batch_result <- function(x, ...) {
-  costs <- vapply(x, function(item) {
-    meta <- item$metadata %||% list()
-    meta$cost %||% NA_real_
-  }, numeric(1))
+  costs <- vapply(
+    x,
+    function(item) {
+      meta <- item$metadata %||% list()
+      meta$cost %||% NA_real_
+    },
+    numeric(1)
+  )
 
   n_missing <- sum(is.na(costs))
   if (n_missing > 0) {
@@ -297,7 +301,9 @@ print.dsprrr_cost_summary <- function(x, ...) {
   cli::cli_text("{.field Items}: {nrow(x$costs)}")
 
   if (x$n_missing > 0) {
-    cli::cli_alert_warning("{.field Missing}: {x$n_missing} items without cost data")
+    cli::cli_alert_warning(
+      "{.field Missing}: {x$n_missing} items without cost data"
+    )
   }
 
   invisible(x)

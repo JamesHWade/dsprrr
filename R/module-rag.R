@@ -291,11 +291,14 @@ RAGModule <- R6::R6Class(
 
         if (!is.null(retrieval_error)) {
           if (fail_on_error) {
-            cli::cli_abort(c(
-              "Retriever failed",
-              "x" = retrieval_error$message,
-              "i" = "Set {.code config$fail_on_retrieval_error = FALSE} to continue with empty context"
-            ), parent = retrieval_error)
+            cli::cli_abort(
+              c(
+                "Retriever failed",
+                "x" = retrieval_error$message,
+                "i" = "Set {.code config$fail_on_retrieval_error = FALSE} to continue with empty context"
+              ),
+              parent = retrieval_error
+            )
           } else {
             cli::cli_warn(c(
               "Retriever failed, continuing with empty context",
@@ -316,7 +319,11 @@ RAGModule <- R6::R6Class(
             if (is.data.frame(results) && "text" %in% names(results)) {
               results$text
             } else if (is.list(results)) {
-              vapply(results, function(x) x$text %||% as.character(x), character(1))
+              vapply(
+                results,
+                function(x) x$text %||% as.character(x),
+                character(1)
+              )
             } else {
               as.character(results)
             }
@@ -329,11 +336,14 @@ RAGModule <- R6::R6Class(
 
         if (!is.null(retrieval_error)) {
           if (fail_on_error) {
-            cli::cli_abort(c(
-              "ragnar retrieval failed",
-              "x" = retrieval_error$message,
-              "i" = "Set {.code config$fail_on_retrieval_error = FALSE} to continue with empty context"
-            ), parent = retrieval_error)
+            cli::cli_abort(
+              c(
+                "ragnar retrieval failed",
+                "x" = retrieval_error$message,
+                "i" = "Set {.code config$fail_on_retrieval_error = FALSE} to continue with empty context"
+              ),
+              parent = retrieval_error
+            )
           } else {
             cli::cli_warn(c(
               "ragnar retrieval failed, continuing with empty context",
@@ -360,9 +370,13 @@ RAGModule <- R6::R6Class(
       }
 
       # Number and format documents
-      formatted <- vapply(seq_along(docs), function(i) {
-        paste0("[", i, "] ", docs[i])
-      }, character(1))
+      formatted <- vapply(
+        seq_along(docs),
+        function(i) {
+          paste0("[", i, "] ", docs[i])
+        },
+        character(1)
+      )
 
       paste(formatted, collapse = "\n\n")
     },
@@ -378,8 +392,13 @@ RAGModule <- R6::R6Class(
           value <- inputs[[name]]
 
           # Add description as comment if present
-          if (!is.null(input_spec$description) && nzchar(input_spec$description)) {
-            prompt_parts <- c(prompt_parts, paste0("# ", input_spec$description))
+          if (
+            !is.null(input_spec$description) && nzchar(input_spec$description)
+          ) {
+            prompt_parts <- c(
+              prompt_parts,
+              paste0("# ", input_spec$description)
+            )
           }
 
           if (is.character(value) && length(value) == 1) {

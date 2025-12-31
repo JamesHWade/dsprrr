@@ -69,9 +69,13 @@ find_closest_match <- function(input, valid_options, max_distance = 3L) {
   }
 
   # Calculate distances
-  distances <- vapply(valid_options, function(opt) {
-    as.integer(utils::adist(tolower(input), tolower(opt))[1, 1])
-  }, integer(1))
+  distances <- vapply(
+    valid_options,
+    function(opt) {
+      as.integer(utils::adist(tolower(input), tolower(opt))[1, 1])
+    },
+    integer(1)
+  )
 
   # Find minimum distance
 
@@ -94,7 +98,6 @@ find_closest_match <- function(input, valid_options, max_distance = 3L) {
 #' @return A cli-formatted string, or NULL if no suggestion
 #' @noRd
 suggest_match <- function(input, valid_options, max_distance = 3L) {
-
   match <- find_closest_match(input, valid_options, max_distance)
   if (!is.null(match)) {
     paste0("Did you mean {.field ", match, "}?")
@@ -124,10 +127,10 @@ is_reasoning_model <- function(model_name) {
   model_lower <- tolower(model_name)
 
   reasoning_patterns <- c(
-    "^o[0-9]",           # o1, o3, o4-mini
-    "^gpt-5",            # gpt-5 series
-    "-reasoning",        # explicit reasoning suffix
-    "reasoning"          # generic reasoning indicator
+    "^o[0-9]", # o1, o3, o4-mini
+    "^gpt-5", # gpt-5 series
+    "-reasoning", # explicit reasoning suffix
+    "reasoning" # generic reasoning indicator
   )
 
   any(vapply(reasoning_patterns, function(p) grepl(p, model_lower), logical(1)))

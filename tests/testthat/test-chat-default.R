@@ -460,7 +460,7 @@ test_that("session_cost print method works", {
   # Empty case - capture cli messages
   result <- session_cost()
   output <- capture.output(print(result), type = "message")
-  expect_true(any(grepl("No LLM calls recorded", output)))
+  expect_true(any(grepl("No LLM calls recorded", output, fixed = TRUE)))
 
   # With data
   .dsprrr_env <- dsprrr:::.dsprrr_env
@@ -470,6 +470,6 @@ test_that("session_cost print method works", {
 
   result <- session_cost()
   output <- capture.output(print(result), type = "message")
-  expect_true(any(grepl("LLM calls", output)))
-  expect_true(any(grepl("Tokens", output)))
+  expect_true(any(grepl("LLM calls", output, fixed = TRUE)))
+  expect_true(any(grepl("Tokens", output, fixed = TRUE)))
 })

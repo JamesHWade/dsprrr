@@ -1,7 +1,9 @@
 # Tests for module-wrapper.R (BestOfN and Refine)
 
 # Helper: Create a mock module for testing
-create_mock_module <- function(responses = list("answer1", "answer2", "answer3")) {
+create_mock_module <- function(
+  responses = list("answer1", "answer2", "answer3")
+) {
   idx <- 0
   mock_mod <- list(
     signature = signature("question -> answer"),
@@ -547,7 +549,7 @@ test_that("RefineModule template uses input fields", {
   wrapper$forward(list(question = "test question"))
 
   history <- wrapper$get_feedback_history()
-  expect_true(grepl("test question", history[1]))
+  expect_true(grepl("test question", history[1], fixed = TRUE))
 })
 
 test_that("RefineModule early stops like BestOfN", {

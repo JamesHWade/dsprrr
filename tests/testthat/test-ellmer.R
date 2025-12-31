@@ -24,7 +24,7 @@ test_that("as_ellmer_tool creates tool with correct function signature", {
 
   # Function should have named parameter matching signature input
   # ToolDef IS the function, so formals() works directly
- fn_args <- names(formals(tool))
+  fn_args <- names(formals(tool))
   expect_equal(fn_args, "text")
 })
 

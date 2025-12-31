@@ -50,11 +50,12 @@ NULL
 #' sig <- signature("context, question -> answer")
 #' cot_sig <- with_reasoning(sig)
 with_reasoning <- function(
-    x,
-    prefix = "Let's think step by step in order to",
-    reasoning_field = "reasoning",
-    instructions = NULL,
-    ...) {
+  x,
+  prefix = "Let's think step by step in order to",
+  reasoning_field = "reasoning",
+  instructions = NULL,
+  ...
+) {
   # Coerce to Signature if string
   sig <- if (is.character(x)) {
     signature(x)
@@ -83,7 +84,9 @@ with_reasoning <- function(
 
   # Create new output type with reasoning first
   new_fields <- list()
-  new_fields[[reasoning_field]] <- ellmer::type_string(description = reasoning_desc)
+  new_fields[[reasoning_field]] <- ellmer::type_string(
+    description = reasoning_desc
+  )
 
   # Add original fields
   for (name in names(original_fields)) {
@@ -115,8 +118,11 @@ with_reasoning <- function(
     }
     output_names <- paste0("`", names(original_fields), "`", collapse = ", ")
     paste0(
-      "Given ", input_names, ", think step by step and produce ",
-      output_names, "."
+      "Given ",
+      input_names,
+      ", think step by step and produce ",
+      output_names,
+      "."
     )
   }
 
@@ -151,9 +157,10 @@ with_reasoning <- function(
 #' # result$reasoning contains step-by-step reasoning
 #' # result$answer contains the final answer
 chain_of_thought <- function(
-    x,
-    prefix = "Let's think step by step in order to",
-    ...) {
+  x,
+  prefix = "Let's think step by step in order to",
+  ...
+) {
   cot_sig <- with_reasoning(x, prefix = prefix)
   module(cot_sig, type = "predict", ...)
 }

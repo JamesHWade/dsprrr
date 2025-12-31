@@ -1,7 +1,9 @@
 # Tests for module-multichain.R (MultiChainComparisonModule)
 
 # Helper: Create a mock module for testing
-create_mock_module <- function(responses = list("answer1", "answer2", "answer3")) {
+create_mock_module <- function(
+  responses = list("answer1", "answer2", "answer3")
+) {
   idx <- 0
   mock_mod <- list(
     signature = signature("question -> answer"),
@@ -144,7 +146,7 @@ test_that("MultiChainComparisonModule has default comparison template", {
 
   expect_true(nchar(mcc$comparison_template) > 0)
   expect_true(grepl("\\{M\\}", mcc$comparison_template))
-  expect_true(grepl("attempts", mcc$comparison_template))
+  expect_true(grepl("attempts", mcc$comparison_template, fixed = TRUE))
 })
 
 test_that("MultiChainComparisonModule accepts custom comparison template", {
@@ -213,10 +215,10 @@ test_that("format_attempts creates readable output", {
   result <- format_fn(attempts)
 
   expect_type(result, "character")
-  expect_true(grepl("Attempt 1", result))
-  expect_true(grepl("Attempt 2", result))
-  expect_true(grepl("42", result))
-  expect_true(grepl("43", result))
+  expect_true(grepl("Attempt 1", result, fixed = TRUE))
+  expect_true(grepl("Attempt 2", result, fixed = TRUE))
+  expect_true(grepl("42", result, fixed = TRUE))
+  expect_true(grepl("43", result, fixed = TRUE))
 })
 
 # ============================================================================
@@ -285,7 +287,10 @@ test_that("MultiChainComparisonModule forward handles partial failures", {
         stop("Simulated failure")
       }
       tibble::tibble(
-        output = list(list(reasoning = "thinking", answer = paste0("answer", call_count))),
+        output = list(list(
+          reasoning = "thinking",
+          answer = paste0("answer", call_count)
+        )),
         chat = list(NULL),
         metadata = list(list(total_tokens = 50, cost = 0.001, model = "mock"))
       )
@@ -294,7 +299,11 @@ test_that("MultiChainComparisonModule forward handles partial failures", {
   )
   class(mock_mod) <- c("MockModule", "PredictModule", "Module", "R6")
 
-  mcc <- multi_chain_comparison("question -> answer", M = 3, inner_module = mock_mod)
+  mcc <- multi_chain_comparison(
+    "question -> answer",
+    M = 3,
+    inner_module = mock_mod
+  )
 
   # Note: run_comparison requires real LLM, so we just test that:
   # 1. Partial failures are warned about
@@ -312,11 +321,14 @@ test_that("MultiChainComparisonModule forward handles partial failures", {
   )
   class(all_fail_mod) <- c("MockModule", "PredictModule", "Module", "R6")
 
-  mcc_fail <- multi_chain_comparison("question -> answer", M = 2, inner_module = all_fail_mod)
+  mcc_fail <- multi_chain_comparison(
+    "question -> answer",
+    M = 2,
+    inner_module = all_fail_mod
+  )
 
   expect_error(
     suppressWarnings(mcc_fail$forward(list(question = "test?"))),
     "All.*attempts failed"
   )
 })
-

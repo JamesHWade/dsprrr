@@ -362,14 +362,17 @@ detect_provider_name <- function(chat) {
       error = function(e) NULL
     )
 
-    if (!is.null(provider_name) && is.character(provider_name) &&
-      nzchar(provider_name)) {
+    if (
+      !is.null(provider_name) &&
+        is.character(provider_name) &&
+        nzchar(provider_name)
+    ) {
       return(provider_name)
     }
 
     # Check provider class name as fallback
     provider_class <- class(provider_obj)[1]
-    if (grepl("OpenAI", provider_class)) {
+    if (grepl("OpenAI", provider_class, fixed = TRUE)) {
       return("OpenAI")
     }
     if (grepl("Claude|Anthropic", provider_class)) {
@@ -701,27 +704,39 @@ session_cost <- function() {
   by_model <- tibble::tibble(
     model = unique_models,
     n_calls = vapply(unique_models, function(m) sum(models == m), integer(1)),
-    tokens_in = vapply(unique_models, function(m) {
-      sum(vapply(
-        history[models == m],
-        function(e) e$tokens_in %||% 0L,
-        integer(1)
-      ))
-    }, integer(1)),
-    tokens_out = vapply(unique_models, function(m) {
-      sum(vapply(
-        history[models == m],
-        function(e) e$tokens_out %||% 0L,
-        integer(1)
-      ))
-    }, integer(1)),
-    cost = vapply(unique_models, function(m) {
-      sum(vapply(
-        history[models == m],
-        function(e) e$cost %||% 0,
-        numeric(1)
-      ))
-    }, numeric(1))
+    tokens_in = vapply(
+      unique_models,
+      function(m) {
+        sum(vapply(
+          history[models == m],
+          function(e) e$tokens_in %||% 0L,
+          integer(1)
+        ))
+      },
+      integer(1)
+    ),
+    tokens_out = vapply(
+      unique_models,
+      function(m) {
+        sum(vapply(
+          history[models == m],
+          function(e) e$tokens_out %||% 0L,
+          integer(1)
+        ))
+      },
+      integer(1)
+    ),
+    cost = vapply(
+      unique_models,
+      function(m) {
+        sum(vapply(
+          history[models == m],
+          function(e) e$cost %||% 0,
+          numeric(1)
+        ))
+      },
+      numeric(1)
+    )
   )
 
   structure(
@@ -786,7 +801,6 @@ check_ellmer_version <- function(version) {
   if (version == "not installed") {
     return(FALSE)
   }
-
 
   # Minimum recommended ellmer version
   min_version <- "0.1.0"

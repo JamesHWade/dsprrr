@@ -31,7 +31,7 @@ test_that("with_reasoning includes appropriate description", {
   desc <- reasoning_type@description
 
   expect_true(grepl("think step by step", desc, ignore.case = TRUE))
-  expect_true(grepl("answer", desc))
+  expect_true(grepl("answer", desc, fixed = TRUE))
 })
 
 test_that("with_reasoning allows custom prefix", {
@@ -41,7 +41,7 @@ test_that("with_reasoning allows custom prefix", {
   )
 
   desc <- sig@output_type@properties$reasoning@description
-  expect_true(grepl("solve this carefully", desc))
+  expect_true(grepl("solve this carefully", desc, fixed = TRUE))
 })
 
 test_that("with_reasoning allows custom reasoning field name", {
@@ -67,7 +67,7 @@ test_that("with_reasoning preserves multiple output fields", {
 
 test_that("with_reasoning updates instructions", {
   sig <- with_reasoning("question -> answer")
-  expect_true(grepl("step by step", sig@instructions))
+  expect_true(grepl("step by step", sig@instructions, fixed = TRUE))
 
   # With custom instructions
   sig2 <- with_reasoning(

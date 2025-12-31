@@ -259,7 +259,7 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
   expect_equal(optimized$config$teleprompter, "GridSearchTeleprompter")
   expect_equal(nrow(optimized$state$trials), nrow(variants))
   expect_named(optimized$config$all_scores, variants$id)
-  expect_false(any(is.na(optimized$config$all_scores)))
+  expect_false(anyNA(optimized$config$all_scores))
 })
 
 test_that("Module state management methods work", {

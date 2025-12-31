@@ -47,9 +47,9 @@ test_that("build_simple_prompt creates expected format", {
 
   result <- dsprrr:::build_simple_prompt(inputs, specs)
 
-  expect_true(grepl("Input:", result))
-  expect_true(grepl("name: Alice", result))
-  expect_true(grepl("age: 30", result))
+  expect_true(grepl("Input:", result, fixed = TRUE))
+  expect_true(grepl("name: Alice", result, fixed = TRUE))
+  expect_true(grepl("age: 30", result, fixed = TRUE))
 })
 
 test_that("build_simple_prompt handles empty inputs", {
@@ -66,8 +66,8 @@ test_that("build_simple_prompt handles missing inputs", {
 
   result <- dsprrr:::build_simple_prompt(inputs, specs)
 
-  expect_true(grepl("name: Alice", result))
-  expect_false(grepl("age:", result)) # Should not include missing input
+  expect_true(grepl("name: Alice", result, fixed = TRUE))
+  expect_false(grepl("age:", result, fixed = TRUE)) # Should not include missing input
 })
 
 # Integration tests (require ellmer with async support)

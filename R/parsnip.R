@@ -93,10 +93,14 @@ print.llm_predict <- function(x, ...) {
   }
 
   # Show tunable parameters
-  tuned <- vapply(x$args, function(a) {
-    expr <- rlang::quo_get_expr(a)
-    inherits(expr, "call") && identical(expr[[1]], quote(tune))
-  }, logical(1))
+  tuned <- vapply(
+    x$args,
+    function(a) {
+      expr <- rlang::quo_get_expr(a)
+      inherits(expr, "call") && identical(expr[[1]], quote(tune))
+    },
+    logical(1)
+  )
 
   if (any(tuned)) {
     cli::cli_text("{.field Tuned}: {names(x$args)[tuned]}")
@@ -305,10 +309,18 @@ fit_llm_predict <- function(
 
   # Build config
   config <- list()
-  if (!is.null(temperature)) config$temperature <- temperature
-  if (!is.null(top_p)) config$top_p <- top_p
-  if (!is.null(model)) config$model <- model
-  if (!is.null(provider)) config$provider <- provider
+  if (!is.null(temperature)) {
+    config$temperature <- temperature
+  }
+  if (!is.null(top_p)) {
+    config$top_p <- top_p
+  }
+  if (!is.null(model)) {
+    config$model <- model
+  }
+  if (!is.null(provider)) {
+    config$provider <- provider
+  }
 
   # Create module
   mod <- module(
@@ -373,23 +385,30 @@ predict_llm_class <- function(object, new_data, ...) {
       .return_format = "simple"
     ),
     error = function(e) {
-      cli::cli_abort(c(
-        "Failed to generate predictions",
-        "x" = conditionMessage(e)
-      ), parent = e)
+      cli::cli_abort(
+        c(
+          "Failed to generate predictions",
+          "x" = conditionMessage(e)
+        ),
+        parent = e
+      )
     }
   )
 
   # Extract predictions with error handling
-  preds <- vapply(results$result, function(x) {
-    if (is.list(x) && !is.null(x$output)) {
-      as.character(x$output)
-    } else if (is.na(x) || identical(x, NA_character_)) {
-      NA_character_
-    } else {
-      as.character(x)
-    }
-  }, character(1))
+  preds <- vapply(
+    results$result,
+    function(x) {
+      if (is.list(x) && !is.null(x$output)) {
+        as.character(x$output)
+      } else if (is.na(x) || identical(x, NA_character_)) {
+        NA_character_
+      } else {
+        as.character(x)
+      }
+    },
+    character(1)
+  )
 
   tibble::tibble(.pred_class = factor(preds))
 }
@@ -441,36 +460,47 @@ predict_llm_numeric <- function(object, new_data, ...) {
       .return_format = "simple"
     ),
     error = function(e) {
-      cli::cli_abort(c(
-        "Failed to generate predictions",
-        "x" = conditionMessage(e)
-      ), parent = e)
+      cli::cli_abort(
+        c(
+          "Failed to generate predictions",
+          "x" = conditionMessage(e)
+        ),
+        parent = e
+      )
     }
   )
 
   # Extract numeric predictions with error handling
-  preds <- vapply(seq_along(results$result), function(i) {
-    x <- results$result[[i]]
-    if (is.list(x) && !is.null(x$output)) {
-      val <- as.numeric(x$output)
-      if (is.na(val)) {
-        cli::cli_warn("Could not convert LLM output to numeric for row {i}: {.val {x$output}}")
+  preds <- vapply(
+    seq_along(results$result),
+    function(i) {
+      x <- results$result[[i]]
+      if (is.list(x) && !is.null(x$output)) {
+        val <- as.numeric(x$output)
+        if (is.na(val)) {
+          cli::cli_warn(
+            "Could not convert LLM output to numeric for row {i}: {.val {x$output}}"
+          )
+          NA_real_
+        } else {
+          val
+        }
+      } else if (is.na(x)) {
         NA_real_
       } else {
-        val
+        val <- as.numeric(x)
+        if (is.na(val)) {
+          cli::cli_warn(
+            "Could not convert LLM output to numeric for row {i}: {.val {x}}"
+          )
+          NA_real_
+        } else {
+          val
+        }
       }
-    } else if (is.na(x)) {
-      NA_real_
-    } else {
-      val <- as.numeric(x)
-      if (is.na(val)) {
-        cli::cli_warn("Could not convert LLM output to numeric for row {i}: {.val {x}}")
-        NA_real_
-      } else {
-        val
-      }
-    }
-  }, numeric(1))
+    },
+    numeric(1)
+  )
 
   tibble::tibble(.pred = preds)
 }
@@ -576,4 +606,3 @@ reasoning_effort <- function() {
     label = c(reasoning_effort = "Reasoning Effort")
   )
 }
-

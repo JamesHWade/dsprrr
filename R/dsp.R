@@ -69,12 +69,12 @@ dsp <- function(x, ...) {
 #' @rdname dsp
 #' @export
 dsp.Chat <- function(
-    x,
-    signature,
-    ...,
-    .instructions = NULL,
-    .echo = "none",
-    .simplify = TRUE
+  x,
+  signature,
+  ...,
+  .instructions = NULL,
+  .echo = "none",
+  .simplify = TRUE
 ) {
   chat <- x
 
@@ -167,11 +167,11 @@ dsp.Chat <- function(
 #' @rdname dsp
 #' @export
 dsp.character <- function(
-    x,
-    ...,
-    .instructions = NULL,
-    .echo = "none",
-    .simplify = TRUE
+  x,
+  ...,
+  .instructions = NULL,
+  .echo = "none",
+  .simplify = TRUE
 ) {
   # x is the signature string, use default chat
   chat <- get_default_chat()
@@ -188,11 +188,11 @@ dsp.character <- function(
 #' @rdname dsp
 #' @export
 `dsp.dsprrr::Signature` <- function(
-    x,
-    ...,
-    .instructions = NULL,
-    .echo = "none",
-    .simplify = TRUE
+  x,
+  ...,
+  .instructions = NULL,
+  .echo = "none",
+  .simplify = TRUE
 ) {
   # x is a Signature object, use default chat
   chat <- get_default_chat()

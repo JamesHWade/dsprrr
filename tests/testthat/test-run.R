@@ -48,8 +48,8 @@ test_that("build_prompt creates proper prompt", {
 
   prompt <- dsprrr:::build_prompt(pred, list(text = "Great product!"))
 
-  expect_false(grepl("Classify sentiment", prompt))
-  expect_true(grepl("Text: Great product!", prompt))
+  expect_false(grepl("Classify sentiment", prompt, fixed = TRUE))
+  expect_true(grepl("Text: Great product!", prompt, fixed = TRUE))
 })
 
 test_that("build_prompt includes demonstrations", {
@@ -77,9 +77,9 @@ test_that("build_prompt includes demonstrations", {
 
   prompt <- dsprrr:::build_prompt(pred, list(text = "Test"))
 
-  expect_true(grepl("Example 1", prompt))
-  expect_true(grepl("Good", prompt))
-  expect_true(grepl("positive", prompt))
+  expect_true(grepl("Example 1", prompt, fixed = TRUE))
+  expect_true(grepl("Good", prompt, fixed = TRUE))
+  expect_true(grepl("positive", prompt, fixed = TRUE))
 })
 
 test_that("format_demos creates proper demo text", {
@@ -102,10 +102,10 @@ test_that("format_demos creates proper demo text", {
 
   demo_text <- dsprrr:::format_demos(demos, sig)
 
-  expect_true(grepl("Example 1", demo_text))
-  expect_true(grepl("Example 2", demo_text))
-  expect_true(grepl("input1", demo_text))
-  expect_true(grepl("output1", demo_text))
+  expect_true(grepl("Example 1", demo_text, fixed = TRUE))
+  expect_true(grepl("Example 2", demo_text, fixed = TRUE))
+  expect_true(grepl("input1", demo_text, fixed = TRUE))
+  expect_true(grepl("output1", demo_text, fixed = TRUE))
 })
 
 test_that("format_inputs handles missing template", {
@@ -121,16 +121,16 @@ test_that("format_inputs handles missing template", {
 
   formatted <- dsprrr:::format_inputs(inputs, sig_inputs)
 
-  expect_true(grepl("The input text", formatted))
-  expect_true(grepl("text: Hello world", formatted))
+  expect_true(grepl("The input text", formatted, fixed = TRUE))
+  expect_true(grepl("text: Hello world", formatted, fixed = TRUE))
 })
 
 test_that("format_output handles different output types", {
   # List output
   list_output <- list(a = 1, b = "test")
   formatted_list <- dsprrr:::format_output(list_output)
-  expect_true(grepl("a", formatted_list))
-  expect_true(grepl("test", formatted_list))
+  expect_true(grepl("a", formatted_list, fixed = TRUE))
+  expect_true(grepl("test", formatted_list, fixed = TRUE))
 
   # Character output
   char_output <- "simple string"
@@ -144,7 +144,6 @@ test_that("format_output handles different output types", {
 })
 
 test_that("get_default_llm returns ellmer chat object", {
-
   # Create a mock module
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
@@ -333,7 +332,7 @@ test_that("batch processing handles errors gracefully", {
   # Mock LLM that fails on certain inputs
   mock_llm <- list(
     chat_structured = function(prompt, ...) {
-      if (grepl("ERROR", prompt)) {
+      if (grepl("ERROR", prompt, fixed = TRUE)) {
         stop("API error")
       }
       "success"
@@ -508,39 +507,39 @@ test_that("create_error_result formats structured errors correctly", {
 })
 
 test_that("create_error_result handles list-style error objects (timeout case)", {
- # This tests the timeout error path which passes list(message = "...")
- # instead of a simpleError object
- error <- list(message = "Task timed out")
+  # This tests the timeout error path which passes list(message = "...")
+  # instead of a simpleError object
+  error <- list(message = "Task timed out")
 
- result <- dsprrr:::create_error_result(
-   error = error,
-   index = 5,
-   prompt = NA_character_,
-   instructions = NA_character_,
-   llm = NULL,
-   .return_format = "simple"
- )
+  result <- dsprrr:::create_error_result(
+    error = error,
+    index = 5,
+    prompt = NA_character_,
+    instructions = NA_character_,
+    llm = NULL,
+    .return_format = "simple"
+  )
 
- expect_true(is.na(result))
+  expect_true(is.na(result))
 })
 
 test_that("create_error_result handles list-style error for structured format", {
- error <- list(message = "Task timed out")
- mock_llm <- structure(list(), class = "Chat")
+  error <- list(message = "Task timed out")
+  mock_llm <- structure(list(), class = "Chat")
 
- result <- dsprrr:::create_error_result(
-   error = error,
-   index = 2,
-   prompt = "test prompt",
-   instructions = "test instructions",
-   llm = mock_llm,
-   .return_format = "structured"
- )
+  result <- dsprrr:::create_error_result(
+    error = error,
+    index = 2,
+    prompt = "test prompt",
+    instructions = "test instructions",
+    llm = mock_llm,
+    .return_format = "structured"
+  )
 
- expect_type(result, "list")
- expect_true(is.na(result$output))
- expect_equal(result$metadata$error, "Task timed out")
- expect_equal(result$metadata$batch_index, 2)
+  expect_type(result, "list")
+  expect_true(is.na(result$output))
+  expect_equal(result$metadata$error, "Task timed out")
+  expect_equal(result$metadata$batch_index, 2)
 })
 
 test_that("run_batch_sequential processes all items", {
@@ -592,7 +591,7 @@ test_that("run_batch_sequential handles errors per item", {
 
   mock_llm <- structure(
     list(chat_structured = function(prompt, ...) {
-      if (grepl("fail", prompt)) {
+      if (grepl("fail", prompt, fixed = TRUE)) {
         stop("intentional failure")
       }
       "ok"
@@ -734,7 +733,10 @@ test_that("get_cost_summary returns empty tibble for module with no traces", {
 
   expect_s3_class(result, "tbl_df")
   expect_equal(nrow(result), 0)
-  expect_true(all(c("timestamp", "model", "input_tokens", "output_tokens", "cost") %in% names(result)))
+  expect_true(all(
+    c("timestamp", "model", "input_tokens", "output_tokens", "cost") %in%
+      names(result)
+  ))
 })
 
 test_that("batch run with structured format returns dsprrr_batch_result class", {
@@ -767,8 +769,8 @@ test_that("batch run with structured format returns dsprrr_batch_result class", 
 
   # Print method should work without error
   output <- capture.output(print(results), type = "message")
-  expect_true(any(grepl("Batch Results", output)))
-  expect_true(any(grepl("Items", output)))
+  expect_true(any(grepl("Batch Results", output, fixed = TRUE)))
+  expect_true(any(grepl("Items", output, fixed = TRUE)))
 })
 
 test_that("dsprrr_batch_result print method handles many items", {
