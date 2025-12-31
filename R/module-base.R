@@ -182,13 +182,13 @@ Module <- R6::R6Class(
     },
 
     #' @description
-    #' Optimize the module using a development set
-    #' @param devset Development dataset
+    #' Optimize the module using development data
+    #' @param data Development data as a data frame or tibble
     #' @param objective Metric or metric set
     #' @param control Optimization control parameters
     #' @return Updated module (self)
     optimize = function(
-      devset,
+      data,
       metric = metric_exact_match(),
       grid = NULL,
       parameters = NULL,
@@ -198,7 +198,7 @@ Module <- R6::R6Class(
       ...
     ) {
       self$optimize_grid(
-        devset = devset,
+        data = data,
         metric = metric,
         grid = grid,
         parameters = parameters,
@@ -211,7 +211,7 @@ Module <- R6::R6Class(
 
     #' @description
     #' Run grid search optimisation for the module
-    #' @param devset Development dataset as data frame
+    #' @param data Development data as data frame or tibble
     #' @param metric Metric function applied per example
     #' @param grid Candidate configurations as data frame (optional)
     #' @param parameters Parameter definitions (named list or dials param set)
@@ -220,7 +220,7 @@ Module <- R6::R6Class(
     #' @param control List of control options (progress, grid_type, etc.)
     #' @param ... Additional arguments forwarded to [evaluate()]
     optimize_grid = function(
-      devset,
+      data,
       metric = metric_exact_match(),
       grid = NULL,
       parameters = NULL,
@@ -229,12 +229,12 @@ Module <- R6::R6Class(
       control = list(),
       ...
     ) {
-      if (!is.data.frame(devset)) {
-        cli::cli_abort("devset must be a data frame or tibble")
+      if (!is.data.frame(data)) {
+        cli::cli_abort("{.arg data} must be a data frame or tibble")
       }
 
-      if (nrow(devset) == 0) {
-        cli::cli_abort("devset must contain at least one row")
+      if (nrow(data) == 0) {
+        cli::cli_abort("{.arg data} must contain at least one row")
       }
 
       if (!is.function(metric)) {
@@ -296,7 +296,7 @@ Module <- R6::R6Class(
 
         eval_result <- evaluate(
           candidate,
-          dataset = devset,
+          data = data,
           metric = metric,
           .llm = .llm,
           .parallel = control$parallel,

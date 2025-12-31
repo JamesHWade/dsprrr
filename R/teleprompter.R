@@ -321,7 +321,7 @@ compile_gridsearch <- function(
   optimized$demos <- demos
 
   optimized$optimize_grid(
-    devset = valset,
+    data = valset,
     metric = teleprompter@metric,
     grid = variants,
     .llm = .llm,
@@ -442,12 +442,12 @@ format_trainset_as_demos <- function(trainset, signature) {
   demos
 }
 
-#' Evaluate a module on a dataset
+#' Evaluate a module on data
 #' @noRd
-evaluate_module <- function(module, dataset, metric, .llm = NULL, ...) {
+evaluate_module <- function(module, data, metric, .llm = NULL, ...) {
   evaluate(
     module,
-    dataset,
+    data,
     metric,
     .llm = .llm,
     .parallel = FALSE,

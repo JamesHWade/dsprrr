@@ -177,7 +177,7 @@ test_that("evaluate_dsp evaluates modules", {
   # Mock evaluation (actual would need LLM)
   results <- evaluate_dsp(
     module = mod,
-    dataset = dataset,
+    data = dataset,
     metric = metric,
     .llm = mock_llm,
     verbose = FALSE
@@ -190,15 +190,15 @@ test_that("evaluate_dsp evaluates modules", {
   expect_true("n_errors" %in% names(results))
   expect_equal(length(results$scores), nrow(dataset))
 
-  # Empty dataset
+  # Empty data
   expect_warning(
     empty_results <- evaluate_dsp(
       module = mod,
-      dataset = data.frame(),
+      data = data.frame(),
       metric = metric,
       verbose = FALSE
     ),
-    "Empty dataset provided"
+    "Empty data provided"
   )
   expect_true(is.na(empty_results$mean_score))
   expect_equal(empty_results$n_evaluated, 0)

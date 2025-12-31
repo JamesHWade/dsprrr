@@ -698,42 +698,34 @@ call_llm <- function(
   )
 }
 
-#' Execute Module on Dataset
+#' Execute Module on Data
 #'
 #' @description
-#' Execute a module on a dataset (tibble/data.frame) with optimized batch processing.
+#' Execute a module on a data frame/tibble with optimized batch processing.
 #'
 #' @param module A DSPrrr module (e.g., created with `module()`)
-#' @param ... Additional arguments including:
-#'   \describe{
-#'     \item{dataset}{A tibble or data frame with columns matching the module's inputs}
-#'     \item{.llm}{An ellmer chat object for LLM interaction (optional)}
-#'     \item{.verbose}{Logical indicating whether to print debug information}
-#'     \item{.parallel}{Logical indicating whether to process in parallel (default TRUE)}
-#'     \item{.progress}{Logical indicating whether to show progress bar (default TRUE)}
-#'     \item{.return_format}{Character, either "simple" or "structured" (default "simple")}
-#'   }
+#' @param data A tibble or data frame with columns matching the module's inputs.
+#' @param ... Additional arguments passed to [run()].
 #'
 #' @return A tibble with the input columns plus a result column containing outputs
 #' @export
 #' @examples
 #' \dontrun{
-#' # Process a dataset
-#' data <- tibble::tibble(
+#' # Process data
+#' df <- tibble::tibble(
 #'   text = c("I love this!", "This is bad", "Okay product")
 #' )
 #'
 #' llm <- ellmer::chat_openai()
 #' results <- signature("text -> sentiment") |>
 #'   module(type = "predict") |>
-#'   run_dataset(data, .llm = llm)
+#'   run_dataset(df, .llm = llm)
 #' }
 run_dataset <- function(module, ...) {
   UseMethod("run_dataset")
 }
 
 #' @rdname run_dataset
-#' @param dataset A data frame or tibble containing input columns
 #' @param .llm Optional ellmer Chat object for LLM calls
 #' @param .verbose Logical whether to print verbose output
 #' @param .parallel Logical whether to enable parallel processing
@@ -742,7 +734,7 @@ run_dataset <- function(module, ...) {
 #' @export
 run_dataset.Module <- function(
   module,
-  dataset,
+  data,
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
@@ -750,20 +742,20 @@ run_dataset.Module <- function(
   .return_format = "simple",
   ...
 ) {
-  # Validate dataset
-  if (!is.data.frame(dataset)) {
-    cli::cli_abort("dataset must be a data frame or tibble")
+  # Validate data
+  if (!is.data.frame(data)) {
+    cli::cli_abort("{.arg data} must be a data frame or tibble")
   }
 
   # Get required input names from signature
   sig_inputs <- module$signature@inputs
   if (length(sig_inputs) > 0) {
     required_names <- vapply(sig_inputs, function(x) x$name, character(1))
-    missing_cols <- setdiff(required_names, names(dataset))
+    missing_cols <- setdiff(required_names, names(data))
 
     if (length(missing_cols) > 0) {
       cli::cli_abort(
-        "Dataset missing required columns: {.field {missing_cols}}"
+        "{.arg data} missing required columns: {.field {missing_cols}}"
       )
     }
   } else {
@@ -772,10 +764,10 @@ run_dataset.Module <- function(
 
   # Extract input columns as list
   if (length(required_names) > 0) {
-    input_args <- as.list(dataset[required_names])
+    input_args <- as.list(data[required_names])
   } else {
     # If no specific inputs, try to use all columns
-    input_args <- as.list(dataset)
+    input_args <- as.list(data)
   }
 
   # Run batch processing
@@ -798,17 +790,17 @@ run_dataset.Module <- function(
     results <- list(results)
   }
 
-  # Add results to dataset
+  # Add results to data
   if (.return_format == "simple") {
-    dataset$result <- results
+    data$result <- results
   } else {
     # For structured format, extract outputs and add metadata columns
-    dataset$result <- lapply(results, `[[`, "output")
-    dataset$.metadata <- lapply(results, `[[`, "metadata")
-    dataset$.chat <- lapply(results, `[[`, "chat")
+    data$result <- lapply(results, `[[`, "output")
+    data$.metadata <- lapply(results, `[[`, "metadata")
+    data$.chat <- lapply(results, `[[`, "chat")
   }
 
-  tibble::as_tibble(dataset)
+  tibble::as_tibble(data)
 }
 
 # Internal: Show prompt preview before LLM call

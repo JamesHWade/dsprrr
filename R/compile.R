@@ -184,7 +184,7 @@ dsp_trainset <- function(..., .data = NULL) {
 #' Evaluate the performance of a compiled module on a test dataset.
 #'
 #' @param module A DSPrrr module (compiled or not)
-#' @param dataset Test dataset as a data frame
+#' @param data Test data as a data frame or tibble.
 #' @param metric A metric function from `metric_*()` functions
 #' @param .llm Optional LLM connection for running the module
 #' @param verbose Whether to show progress
@@ -196,17 +196,17 @@ dsp_trainset <- function(..., .data = NULL) {
 #' # Evaluate a module
 #' results <- evaluate_dsp(
 #'   module = optimized_classifier,
-#'   dataset = test_data,
+#'   data = test_data,
 #'   metric = metric_exact_match(field = "sentiment"),
-#'   llm = llm_connection
+#'   .llm = llm_connection
 #' )
 #'
 #' print(results$mean_score)
 #' }
-evaluate_dsp <- function(module, dataset, metric, .llm = NULL, verbose = TRUE) {
+evaluate_dsp <- function(module, data, metric, .llm = NULL, verbose = TRUE) {
   results <- evaluate(
     module,
-    dataset,
+    data,
     metric,
     .llm = .llm,
     .parallel = FALSE,
@@ -215,7 +215,7 @@ evaluate_dsp <- function(module, dataset, metric, .llm = NULL, verbose = TRUE) {
 
   if (verbose) {
     cli::cli_alert_success(
-      "Evaluated {results$n_evaluated}/{nrow(dataset)} examples"
+      "Evaluated {results$n_evaluated}/{nrow(data)} examples"
     )
     if (results$n_errors > 0) {
       cli::cli_alert_warning("{results$n_errors} examples failed")

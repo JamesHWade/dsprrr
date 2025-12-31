@@ -6,16 +6,16 @@
 #' together with the predictions and metadata required for downstream analysis.
 #'
 #' @param module A DSPrrr module created with [module()].
-#' @param ... Additional arguments including:
-#'   - dataset: A data frame or tibble containing columns that match the
-#'     module's signature inputs plus any expected fields used by metric
-#'   - metric: A function applied per example with signature
-#'     metric(prediction, expected_row)
-#'   - .llm: Optional ellmer chat object supplied to run()
-#'   - .parallel: Logical; whether to allow parallel execution
-#'   - .progress: Logical; whether to display progress while evaluating
-#'   - .return_format: Character; `"simple"` returns just scores and predictions,
-#'     `"structured"` (default) includes full metadata and dataset
+#' @param data A data frame or tibble containing columns that match the
+#'   module's signature inputs plus any expected fields used by metric.
+#' @param metric A function applied per example with signature
+#'   `metric(prediction, expected_row)`.
+#' @param ... Additional arguments passed to [run_dataset()]:
+#'   - `.llm`: Optional ellmer chat object
+#'   - `.parallel`: Logical; whether to allow parallel execution
+#'   - `.progress`: Logical; whether to display progress while evaluating
+#'   - `.return_format`: Character; `"simple"` returns just scores and predictions,
+#'     `"structured"` (default) includes full metadata and data
 #'
 #' @return A list with elements. When `.return_format = "structured"` (default):
 #'   - `mean_score`: numeric mean over all successful metric evaluations.
@@ -25,11 +25,11 @@
 #'   - `n_evaluated`: number of successful evaluations.
 #'   - `n_errors`: number of metric failures.
 #'   - `errors`: character vector with error messages, when any.
-#'   - `dataset`: input dataset augmented with prediction metadata.
+#'   - `data`: input data augmented with prediction metadata.
 #'
 #'   When `.return_format = "simple"`:
 #'   - `mean_score`, `scores`, `predictions`, `n_evaluated`, `n_errors`, `errors`
-#'   (omits `metadata` and `dataset` for lighter-weight results)
+#'   (omits `metadata` and `data` for lighter-weight results)
 #' @export
 evaluate <- function(module, ...) {
   UseMethod("evaluate")
@@ -47,7 +47,7 @@ evaluate <- function(module, ...) {
 #' @noRd
 evaluate.Module <- function(
     module,
-    dataset,
+    data,
     metric,
     .llm = NULL,
     .parallel = FALSE,
@@ -56,15 +56,15 @@ evaluate.Module <- function(
     ...
 ) {
   .return_format <- match.arg(.return_format)
-  if (!is.data.frame(dataset)) {
-    cli::cli_abort("dataset must be a data frame or tibble")
+  if (!is.data.frame(data)) {
+    cli::cli_abort("{.arg data} must be a data frame or tibble")
   }
   if (!is.function(metric)) {
-    cli::cli_abort("metric must be a function")
+    cli::cli_abort("{.arg metric} must be a function")
   }
 
-  if (nrow(dataset) == 0) {
-    cli::cli_warn("Empty dataset provided")
+  if (nrow(data) == 0) {
+    cli::cli_warn("Empty data provided")
     return(list(
       mean_score = NA_real_,
       scores = numeric(0),
@@ -73,7 +73,7 @@ evaluate.Module <- function(
       n_evaluated = 0L,
       n_errors = 0L,
       errors = character(),
-      dataset = dataset
+      data = data
     ))
   }
 
@@ -89,7 +89,7 @@ evaluate.Module <- function(
   # Execute module
   evaluated <- run_dataset(
     module,
-    dataset,
+    data,
     .llm = .llm,
     .parallel = parallel_allowed,
     .progress = .progress,
@@ -108,7 +108,7 @@ evaluate.Module <- function(
   errors <- character(nrow(evaluated))
 
   for (i in seq_len(nrow(evaluated))) {
-    expected_row <- dataset[i, , drop = FALSE]
+    expected_row <- data[i, , drop = FALSE]
     prediction <- predictions[[i]]
 
     scores[i] <- tryCatch(
@@ -146,10 +146,10 @@ evaluate.Module <- function(
     errors = errors[errors != ""]
   )
 
-  # Add metadata and dataset for structured format
+  # Add metadata and data for structured format
   if (.return_format == "structured") {
     result$metadata <- metadata
-    result$dataset <- evaluated
+    result$data <- evaluated
   }
 
   result

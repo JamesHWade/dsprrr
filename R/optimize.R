@@ -6,9 +6,10 @@
 #' can be expanded into a grid (named lists or tidymodels parameter sets).
 #'
 #' @param module A DSPrrr module (created via [module()]).
-#' @param devset Development dataset containing columns required by the module's
+#' @param data Development data containing columns required by the module's
 #'   signature plus any fields consumed by the metric.
 #' @param metric Metric function applied per example. Defaults to
+#'
 #'   [metric_exact_match()]. Use [as_dsprrr_metric()] to adapt yardstick/vitals
 #'   metrics.
 #' @param grid Optional data frame/tibble of candidate configurations.
@@ -34,7 +35,7 @@ optimize_grid <- function(module, ...) {
 #' @export
 optimize_grid.Module <- function(
   module,
-  devset,
+  data,
   metric = metric_exact_match(),
   grid = NULL,
   parameters = NULL,
@@ -46,7 +47,7 @@ optimize_grid.Module <- function(
   objective <- match.arg(objective)
 
   module$optimize_grid(
-    devset = devset,
+    data = data,
     metric = metric,
     grid = grid,
     parameters = parameters,

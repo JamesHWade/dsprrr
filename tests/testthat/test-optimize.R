@@ -63,7 +63,7 @@ test_that("optimize_grid updates module configuration with best parameters", {
 
   optimized <- optimize_grid(
     mod,
-    devset = devset,
+    data = devset,
     metric = metric,
     parameters = list(bias = c(0, 1)),
     .llm = mock_llm,
@@ -179,7 +179,7 @@ test_that("optimize_grid accepts explicit grid data frames", {
 
   optimize_grid(
     mod,
-    devset = devset,
+    data = devset,
     metric = metric,
     grid = grid,
     .llm = mock_llm,

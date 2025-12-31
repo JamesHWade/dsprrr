@@ -129,7 +129,7 @@ test_that("optimize_grid integrates with real LLM", {
   llm <- ellmer::chat_openai(model = "gpt-4o-mini")
   optimize_grid(
     mod,
-    devset = devset,
+    data = devset,
     metric = metric,
     parameters = list(prompt_style = c("baseline", "energetic")),
     .llm = llm,
@@ -264,7 +264,7 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
   # Run optimization with temperature grid
   optimize_grid(
     mod,
-    devset = devset,
+    data = devset,
     metric = metric,
     parameters = list(temperature = c(0.1, 0.3, 0.5, 0.7, 0.9)),
     .llm = mock_llm,

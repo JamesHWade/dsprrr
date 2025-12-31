@@ -482,7 +482,7 @@ use_dsprrr_template <- function(
 #' Useful for validating pipelines before running expensive LLM operations.
 #'
 #' @param module A DSPrrr module to validate
-#' @param dataset Optional dataset to validate against the module's signature
+#' @param data Optional data to validate against the module's signature
 #' @param board Optional pins board to check for accessibility
 #'
 #' @return A list with validation results (invisibly). Prints a summary.
@@ -493,9 +493,9 @@ use_dsprrr_template <- function(
 #' @examples
 #' \dontrun{
 #' mod <- signature("text -> sentiment") |> module(type = "predict")
-#' validate_workflow(mod, dataset = test_data)
+#' validate_workflow(mod, data = test_data)
 #' }
-validate_workflow <- function(module, dataset = NULL, board = NULL) {
+validate_workflow <- function(module, data = NULL, board = NULL) {
   results <- list(
     valid = TRUE,
     checks = list()
@@ -522,19 +522,19 @@ validate_workflow <- function(module, dataset = NULL, board = NULL) {
     )
   }
 
-  # Check dataset compatibility
-  if (!is.null(dataset) && inherits(module, "Module")) {
+  # Check data compatibility
+  if (!is.null(data) && inherits(module, "Module")) {
     required_cols <- vapply(
       module$signature@inputs,
       function(x) x$name,
       character(1)
     )
-    present_cols <- intersect(required_cols, names(dataset))
-    missing_cols <- setdiff(required_cols, names(dataset))
+    present_cols <- intersect(required_cols, names(data))
+    missing_cols <- setdiff(required_cols, names(data))
 
     if (length(missing_cols) > 0) {
       results$valid <- FALSE
-      results$checks$dataset <- list(
+      results$checks$data <- list(
         passed = FALSE,
         message = paste(
           "Missing columns:",
@@ -542,10 +542,10 @@ validate_workflow <- function(module, dataset = NULL, board = NULL) {
         )
       )
     } else {
-      results$checks$dataset <- list(
+      results$checks$data <- list(
         passed = TRUE,
         message = paste(
-          nrow(dataset),
+          nrow(data),
           "rows,",
           length(present_cols),
           "required columns present"
