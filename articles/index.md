@@ -4,6 +4,9 @@
 
 - [Getting Started with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/getting-started.md):
+- [Quick
+  Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md):
+- [Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md):
 
 ### Core Workflows
 

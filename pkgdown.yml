@@ -2,11 +2,13 @@ pandoc: 3.1.11
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
+  cheatsheet: cheatsheet.html
   compilation-optimization: compilation-optimization.html
   getting-started: getting-started.html
   orchestration: orchestration.html
+  troubleshooting: troubleshooting.html
   vitals-integration: vitals-integration.html
-last_built: 2025-12-30T16:17Z
+last_built: 2025-12-31T01:31Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles

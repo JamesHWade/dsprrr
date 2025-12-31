@@ -306,10 +306,14 @@ ellmer-style pipe-friendly functions
 - [`last_trace()`](https://jameshwade.github.io/dsprrr/reference/last_trace.md)
   : Get the Last DSP Trace
 
-## Default Chat Management
+## Configuration
 
-Automatic LLM client configuration
+Setup and configure dsprrr
 
+- [`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md)
+  : Configure dsprrr Default Settings
+- [`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)
+  : dsprrr Situation Report
 - [`default-chat`](https://jameshwade.github.io/dsprrr/reference/default-chat.md)
   : Default Chat Configuration
 - [`get_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md)
@@ -411,6 +415,19 @@ Production workflow helpers
 - [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
   : Validate Workflow Configuration
 
+## Debugging & Inspection
+
+Prompt inspection and history
+
+- [`prompt-visibility`](https://jameshwade.github.io/dsprrr/reference/prompt-visibility.md)
+  : Prompt Visibility and Inspection
+- [`last_prompt()`](https://jameshwade.github.io/dsprrr/reference/last_prompt.md)
+  : Get the Last Prompt
+- [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md)
+  : Inspect LLM Call History
+- [`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md)
+  : Clear Prompt History
+
 ## Traces
 
 Execution trace utilities
@@ -446,6 +463,9 @@ Helper functions
 
 - [Getting Started with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/getting-started.md):
+- [Quick
+  Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md):
+- [Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md):
 
 ### Core Workflows
 

@@ -8,10 +8,12 @@
 <url><loc>https://jameshwade.github.io/dsprrr/PLAN.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/SUPPORT.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/VITALS_INTEGRATION.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/cheatsheet.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/getting-started.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/orchestration.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/troubleshooting.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/vitals-integration.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/authors.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/index.html</loc></url>
@@ -23,13 +25,16 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/clear_default_chat.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/clear_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/default-chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsp.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/dsp_configure.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsp_trainset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsprrr-package.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/eval_vignette.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/evaluate.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/evaluate_dsp.html</loc></url>
@@ -41,7 +46,9 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/input.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/input_helpers.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/inspect_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/is_dials_parameters.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/last_prompt.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/last_trace.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/merge_optimization_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_contains.html</loc></url>
@@ -61,6 +68,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict.Module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/prepare_candidate_grid.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/prompt-visibility.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/restore_module_config.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_async.html</loc></url>
