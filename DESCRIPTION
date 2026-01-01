@@ -87,6 +87,7 @@ Collate:
     'signature.R'
     'teleprompter.R'
     'teleprompter-bootstrap.R'
+    'teleprompter-bootstrap-rs.R'
     'traces.R'
     'utils.R'
     'vitals.R'
