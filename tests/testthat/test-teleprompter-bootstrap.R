@@ -255,56 +255,37 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
 })
 
 test_that("BootstrapFewShot handles teacher errors gracefully", {
-  FailingModule <- R6::R6Class(
-    "FailingModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      fail_count = 0,
-      max_fails = 2,
-      initialize = function(
-        signature,
-        template = "",
-        demos = list(),
-        config = list()
-      ) {
-        super$initialize(
-          signature,
-          template = template,
-          demos = demos,
-          config = config
-        )
-      },
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        self$fail_count <- self$fail_count + 1
-        if (self$fail_count <= self$max_fails) {
-          stop("Simulated failure")
-        }
-        tibble::tibble(
-          output = list("success"),
-          chat = list(NULL),
-          metadata = list(list())
-        )
-      },
-      deepcopy = function() {
-        # Use parent's clone-based deepcopy, then reset fail_count
-        new_module <- super$deepcopy()
-        new_module$fail_count <- 0
-        new_module
-      }
-    )
-  )
-
+  # Use a standard module with a mock LLM that fails intermittently
   sig <- Signature(
     inputs = list(input(name = "x", class = S7::class_character)),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
 
-  mod <- FailingModule$new(signature = sig)
+  mod <- module(signature = sig, type = "predict")
 
   trainset <- data.frame(
     x = c("a", "b", "c", "d", "e"),
     y = c("1", "2", "3", "4", "5")
+  )
+
+  # Create an environment to track call count across LLM invocations
+  call_counter <- new.env()
+  call_counter$count <- 0
+  call_counter$max_fails <- 2
+
+  # Mock LLM that fails for the first max_fails calls, then succeeds
+  failing_llm <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        call_counter$count <- call_counter$count + 1
+        if (call_counter$count <= call_counter$max_fails) {
+          stop("Simulated failure")
+        }
+        list(answer = "success")
+      }
+    ),
+    class = "Chat"
   )
 
   tp <- BootstrapFewShot(
@@ -316,7 +297,7 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
 
   # Should complete despite some failures
   expect_warning(
-    result <- compile(tp, mod, trainset),
+    result <- compile(tp, mod, trainset, .llm = failing_llm),
     "Bootstrap attempt failed"
   )
 
