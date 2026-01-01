@@ -426,6 +426,7 @@ TrialLog <- R6::R6Class(
     #' Save the trial log to disk.
     #'
     #' @param dir Optional directory override.
+    #' @return Invisibly returns self. Throws error on critical failure.
     save = function(dir = NULL) {
       save_dir <- dir %||% self$log_dir
 
@@ -434,40 +435,80 @@ TrialLog <- R6::R6Class(
         return(invisible(self))
       }
 
+      # Create directory with error handling
       if (!dir.exists(save_dir)) {
-        dir.create(save_dir, recursive = TRUE)
+        tryCatch(
+          dir.create(save_dir, recursive = TRUE),
+          error = function(e) {
+            cli::cli_abort(
+              c("Failed to create log directory",
+                "x" = "Path: {.path {save_dir}}",
+                "i" = "Error: {conditionMessage(e)}"),
+              class = "dsprrr_save_error"
+            )
+          }
+        )
       }
 
-      # Save trials as JSONL
+      # Save trials as JSONL with error handling
       trials_path <- file.path(save_dir, "trials.jsonl")
-      write_trials_jsonl(self$trials, trials_path)
+      tryCatch(
+        write_trials_jsonl(self$trials, trials_path),
+        error = function(e) {
+          cli::cli_abort(
+            c("Failed to save trials",
+              "x" = "Path: {.path {trials_path}}",
+              "i" = "Error: {conditionMessage(e)}"),
+            class = "dsprrr_save_error"
+          )
+        }
+      )
 
-      # Save metadata
+      # Save metadata with error handling
       metadata_path <- file.path(save_dir, "metadata.json")
       meta <- self$metadata
       meta$optimizer_name <- self$optimizer_name
       meta$n_trials <- length(self$trials)
       meta$saved_at <- Sys.time()
 
-      jsonlite::write_json(
-        meta,
-        metadata_path,
-        auto_unbox = TRUE,
-        pretty = TRUE
+      tryCatch(
+        jsonlite::write_json(
+          meta,
+          metadata_path,
+          auto_unbox = TRUE,
+          pretty = TRUE
+        ),
+        error = function(e) {
+          cli::cli_warn(
+            c("Failed to save metadata",
+              "x" = "Path: {.path {metadata_path}}",
+              "i" = "Error: {conditionMessage(e)}"),
+            class = "dsprrr_save_warning"
+          )
+        }
       )
 
-      # Save best program if available
+      # Save best program if available (non-critical, warn on failure)
       best <- self$best_trial()
       if (!is.null(best) && !is.null(best@compiled_artifact_ref)) {
         if (inherits(best@compiled_artifact_ref, "Module")) {
-          saveRDS(
-            best@compiled_artifact_ref,
-            file.path(save_dir, "best_program.rds")
+          tryCatch(
+            saveRDS(
+              best@compiled_artifact_ref,
+              file.path(save_dir, "best_program.rds")
+            ),
+            error = function(e) {
+              cli::cli_warn(
+                c("Failed to save best program",
+                  "i" = "Error: {conditionMessage(e)}"),
+                class = "dsprrr_save_warning"
+              )
+            }
           )
         }
       }
 
-      # Write README
+      # Write README (non-critical, warn on failure)
       readme_path <- file.path(save_dir, "README.md")
       summary <- self$summary()
       readme_content <- sprintf(
@@ -478,7 +519,16 @@ TrialLog <- R6::R6Class(
         summary$total_cost,
         format(self$metadata$created_at, "%Y-%m-%d %H:%M:%S")
       )
-      writeLines(readme_content, readme_path)
+      tryCatch(
+        writeLines(readme_content, readme_path),
+        error = function(e) {
+          cli::cli_warn(
+            c("Failed to save README",
+              "i" = "Error: {conditionMessage(e)}"),
+            class = "dsprrr_save_warning"
+          )
+        }
+      )
 
       if (isTRUE(getOption("dsprrr.verbose"))) {
         cli::cli_alert_success("Saved trial log to {.path {save_dir}}")
@@ -603,39 +653,58 @@ read_trials_jsonl <- function(path) {
     return(list())
   }
 
-  lapply(lines, function(line) {
-    data <- jsonlite::fromJSON(line)
+  # Helper to check if a value is valid for timestamp parsing
+  is_valid_timestamp <- function(x) {
+    !is.null(x) && length(x) > 0 && !is.na(x) && nzchar(x)
+  }
 
-    # Helper to check if a value is valid for timestamp parsing
-    is_valid_timestamp <- function(x) {
-      !is.null(x) && length(x) > 0 && !is.na(x) && nzchar(x)
-    }
+  # Parse each line with error handling
+  parsed_trials <- lapply(seq_along(lines), function(i) {
+    line <- lines[[i]]
 
-    # Parse timestamps
-    start_time <- if (is_valid_timestamp(data$start_time)) {
-      as.POSIXct(data$start_time, format = "%Y-%m-%dT%H:%M:%S")
-    } else {
-      NULL
-    }
+    tryCatch(
+      {
+        data <- jsonlite::fromJSON(line)
 
-    end_time <- if (is_valid_timestamp(data$end_time)) {
-      as.POSIXct(data$end_time, format = "%Y-%m-%dT%H:%M:%S")
-    } else {
-      NULL
-    }
+        # Parse timestamps
+        start_time <- if (is_valid_timestamp(data$start_time)) {
+          as.POSIXct(data$start_time, format = "%Y-%m-%dT%H:%M:%S")
+        } else {
+          NULL
+        }
 
-    Trial(
-      trial_id = data$trial_id %||% "",
-      optimizer_name = data$optimizer_name %||% "",
-      params = as.list(data$params %||% list()),
-      metric_summary = as.list(data$metric_summary %||% list()),
-      cost_summary = as.list(data$cost_summary %||% list()),
-      start_time = start_time,
-      end_time = end_time,
-      notes = data$notes %||% "",
-      status = data$status %||% "pending"
+        end_time <- if (is_valid_timestamp(data$end_time)) {
+          as.POSIXct(data$end_time, format = "%Y-%m-%dT%H:%M:%S")
+        } else {
+          NULL
+        }
+
+        Trial(
+          trial_id = data$trial_id %||% "",
+          optimizer_name = data$optimizer_name %||% "",
+          params = as.list(data$params %||% list()),
+          metric_summary = as.list(data$metric_summary %||% list()),
+          cost_summary = as.list(data$cost_summary %||% list()),
+          start_time = start_time,
+          end_time = end_time,
+          notes = data$notes %||% "",
+          status = data$status %||% "pending"
+        )
+      },
+      error = function(e) {
+        cli::cli_warn(
+          c("Failed to parse trial on line {i}",
+            "i" = "Error: {conditionMessage(e)}",
+            "i" = "Line content: {substr(line, 1, 100)}..."),
+          class = "dsprrr_parse_warning"
+        )
+        NULL
+      }
     )
   })
+
+  # Filter out failed parses (NULL values)
+  Filter(Negate(is.null), parsed_trials)
 }
 
 #' Load Trial Log from Directory

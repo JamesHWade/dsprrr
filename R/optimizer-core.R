@@ -256,16 +256,35 @@ eval_program <- function(
   # Clear traces before evaluation to get accurate cost for this run
   program_copy <- program$copy(deep = TRUE)
 
-  # Run evaluation using existing evaluate() function
-  eval_result <- evaluate(
-    program_copy,
-    data = dataset,
-    metric = metric,
-    .llm = .llm,
-    .parallel = control@num_threads > 1L,
-    .progress = control@progress,
-    .return_format = "structured",
-    ...
+  # Run evaluation using existing evaluate() function with error handling
+  eval_result <- tryCatch(
+    {
+      evaluate(
+        program_copy,
+        data = dataset,
+        metric = metric,
+        .llm = .llm,
+        .parallel = control@num_threads > 1L,
+        .progress = control@progress,
+        .return_format = "structured",
+        ...
+      )
+    },
+    error = function(e) {
+      cli::cli_warn(
+        "Evaluation failed: {conditionMessage(e)}",
+        class = "dsprrr_eval_error"
+      )
+      # Return a result structure indicating total failure
+      list(
+        scores = rep(NA_real_, nrow(dataset)),
+        predictions = rep(NA_character_, nrow(dataset)),
+        errors = rep(conditionMessage(e), nrow(dataset)),
+        mean_score = NA_real_,
+        n_evaluated = 0L,
+        n_errors = nrow(dataset)
+      )
+    }
   )
 
   end_time <- Sys.time()
@@ -351,7 +370,6 @@ sample_dataset <- function(dataset, n = NULL, seed = NULL, replace = FALSE) {
   total_rows <- nrow(dataset)
 
   # Handle edge cases
-
   if (total_rows == 0) {
     return(dataset)
   }
@@ -362,10 +380,25 @@ sample_dataset <- function(dataset, n = NULL, seed = NULL, replace = FALSE) {
     }
   }
 
-  # Set seed if provided
+  # Sample with proper RNG state management
   if (!is.null(seed)) {
+    # Save current RNG state
+    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
+      get(".Random.seed", envir = globalenv())
+    } else {
+      NULL
+    }
+
     set.seed(seed)
-    on.exit(set.seed(NULL), add = TRUE)
+
+    # Restore RNG state on exit
+    on.exit({
+      if (is.null(old_seed)) {
+        rm(".Random.seed", envir = globalenv())
+      } else {
+        assign(".Random.seed", old_seed, envir = globalenv())
+      }
+    }, add = TRUE)
   }
 
   # Sample indices
@@ -407,10 +440,25 @@ split_dataset <- function(dataset, prop = 0.8, seed = NULL) {
     return(list(train = dataset, val = dataset))
   }
 
-  # Set seed if provided
+  # Split with proper RNG state management
   if (!is.null(seed)) {
+    # Save current RNG state
+    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
+      get(".Random.seed", envir = globalenv())
+    } else {
+      NULL
+    }
+
     set.seed(seed)
-    on.exit(set.seed(NULL), add = TRUE)
+
+    # Restore RNG state on exit
+    on.exit({
+      if (is.null(old_seed)) {
+        rm(".Random.seed", envir = globalenv())
+      } else {
+        assign(".Random.seed", old_seed, envir = globalenv())
+      }
+    }, add = TRUE)
   }
 
   n_train <- floor(n * prop)
@@ -494,11 +542,16 @@ update_cost_summary <- function(summary, module) {
     return(summary)
   }
 
+  # Helper to safely get numeric value, treating NULL and NA as 0
+  safe_num <- function(x, default = 0) {
+    if (is.null(x) || length(x) == 0 || is.na(x)) default else x
+  }
+
   CostSummary(
-    tokens_in = summary@tokens_in + as.integer(cost$tokens_in %||% 0),
-    tokens_out = summary@tokens_out + as.integer(cost$tokens_out %||% 0),
-    total_tokens = summary@total_tokens + as.integer(cost$total_tokens %||% 0),
-    total_cost = summary@total_cost + (cost$total_cost %||% 0),
+    tokens_in = summary@tokens_in + as.integer(safe_num(cost$tokens_in, 0L)),
+    tokens_out = summary@tokens_out + as.integer(safe_num(cost$tokens_out, 0L)),
+    total_tokens = summary@total_tokens + as.integer(safe_num(cost$total_tokens, 0L)),
+    total_cost = summary@total_cost + safe_num(cost$total_cost, 0),
     n_calls = summary@n_calls + 1L
   )
 }

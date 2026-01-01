@@ -428,3 +428,96 @@ test_that("eval_program works with mock LLM", {
   expect_s3_class(result, "dsprrr::EvalResult")
   expect_equal(result@n_evaluated + result@n_errors, 2L)
 })
+
+# Tests for RNG state restoration
+test_that("sample_dataset restores RNG state", {
+  df <- tibble::tibble(x = 1:100)
+
+  # Set a known RNG state
+  set.seed(123)
+  before <- runif(1)
+
+  # Sample with seed (should not affect outer state)
+  set.seed(123)
+  sample_dataset(df, n = 5, seed = 42)
+  after <- runif(1)
+
+  expect_equal(before, after)
+})
+
+test_that("split_dataset restores RNG state", {
+  df <- tibble::tibble(x = 1:100)
+
+  # Set a known RNG state
+  set.seed(456)
+  before <- runif(1)
+
+  # Split with seed (should not affect outer state)
+  set.seed(456)
+  split_dataset(df, prop = 0.8, seed = 42)
+  after <- runif(1)
+
+  expect_equal(before, after)
+})
+
+# Tests for NA handling in cost accumulation
+test_that("update_cost_summary handles NA in total_cost", {
+  summary <- CostSummary()
+
+  # Cost with NA total_cost
+  cost_with_na <- list(
+    tokens_in = 100L,
+    tokens_out = 50L,
+    total_tokens = 150L,
+    total_cost = NA_real_
+  )
+
+  updated <- update_cost_summary(summary, cost_with_na)
+
+  expect_equal(updated@total_tokens, 150L)
+  expect_equal(updated@total_cost, 0)  # NA treated as 0
+  expect_equal(updated@n_calls, 1L)
+})
+
+test_that("update_cost_summary handles NULL values in cost list", {
+  summary <- CostSummary(total_tokens = 100L, total_cost = 0.01)
+
+  # Cost with NULL values
+  cost_with_nulls <- list(
+    tokens_in = NULL,
+    tokens_out = NULL,
+    total_tokens = NULL,
+    total_cost = NULL
+  )
+
+  updated <- update_cost_summary(summary, cost_with_nulls)
+
+  # Should preserve existing values, add 0 from NULL
+  expect_equal(updated@total_tokens, 100L)
+  expect_equal(updated@total_cost, 0.01)
+  expect_equal(updated@n_calls, 1L)
+})
+
+# Tests for JSONL parse error handling
+test_that("read_trials_jsonl handles malformed JSON gracefully", {
+  tmp <- tempfile(fileext = ".jsonl")
+  on.exit(unlink(tmp), add = TRUE)
+
+  # Write some valid and invalid lines
+  lines <- c(
+    '{"trial_id": "valid_1", "optimizer_name": "Test", "status": "completed"}',
+    'not valid json at all',
+    '{"trial_id": "valid_2", "optimizer_name": "Test", "status": "pending"}'
+  )
+  writeLines(lines, tmp)
+
+  # Should warn about the invalid line but still return valid trials
+  expect_warning(
+    trials <- read_trials_jsonl(tmp),
+    "Failed to parse trial on line 2"
+  )
+
+  expect_equal(length(trials), 2)
+  expect_equal(trials[[1]]@trial_id, "valid_1")
+  expect_equal(trials[[2]]@trial_id, "valid_2")
+})
