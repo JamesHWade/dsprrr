@@ -34,6 +34,45 @@ pkgdown::build_site()          # Build pkgdown site
 ### Continuous Integration
 GitHub Actions runs R CMD check across multiple R versions and OS platforms, with test coverage reporting to Codecov.
 
+### PR Workflow
+
+Before creating a pull request, run these checks:
+
+```bash
+# 1. Format ALL code with air (R/ and tests/)
+air format R/ tests/testthat/
+
+# 2. Lint with jarl
+jarl check R/
+
+# 3. Run tests
+Rscript -e "devtools::test()"
+
+# 4. Run R CMD check (catches codoc mismatches, missing docs, etc.)
+Rscript -e "devtools::check()"
+
+# 5. Build pkgdown site (checks _pkgdown.yml coverage)
+Rscript -e "devtools::document(); pkgdown::build_site(preview = FALSE)"
+```
+
+**Important**: The CI runs `air format --check` on both `R/` and `tests/` directories. Always format test files too!
+
+When adding new exported functions:
+1. Add roxygen documentation with `@export`
+2. For internal functions, use `@noRd` (not `@keywords internal`) to avoid codoc mismatch warnings with S7 classes
+3. Run `devtools::document()` to generate `.Rd` files
+4. Add the function to the appropriate section in `_pkgdown.yml`
+5. Rebuild pkgdown to verify coverage
+
+Create PRs on feature branches:
+```bash
+git checkout -b feature/my-feature
+# ... make changes ...
+git add -A && git commit -m "Description"
+git push -u origin feature/my-feature
+gh pr create --title "Title" --body "Description"
+```
+
 ## Core Architecture
 
 ### Package Layout
@@ -51,6 +90,8 @@ R/
   run.R                 # run() and run_dataset() generics
   evaluate.R            # evaluate() generic for metric computation
   optimize.R            # optimize_grid() and tidymodels helpers
+  optimizer-core.R      # Optimizer infrastructure (OptimizerControl, EvalResult, eval_program)
+  optimizer-logging.R   # Trial logging and persistence (Trial, TrialLog, JSONL I/O)
   teleprompter.R        # S7 Teleprompter classes (LabeledFewShot, GridSearch)
   compile.R             # compile() generic for teleprompter-based optimization
   metrics.R             # Built-in metrics (exact_match, etc.)
@@ -254,9 +295,21 @@ Vignettes use `vcr::setup_knitr()` which automatically names cassettes based on 
 - `module()` factory support for `type = "multichain"`
 - Utility functions: `as_reward_fn()`, `has_reasoning()`, `without_reasoning()`
 
+### Completed (Milestone D - Optimizer Infrastructure)
+- `OptimizerControl` (S7): Configuration for optimizer behavior (seed, max_trials, max_errors, etc.)
+- `EvalResult` (S7): Evaluation result container with per-example and aggregated statistics
+- `CostSummary` (S7): Cumulative cost tracking across optimizer trials
+- `Trial` (S7): Single optimization trial record with metadata and results
+- `TrialLog` (R6): Collection of trials with JSONL persistence support
+- `eval_program()`: Standard evaluation function for optimizers
+- `sample_dataset()` / `split_dataset()`: Deterministic sampling with RNG state preservation
+- `check_budget()`: Budget stopping condition checker
+- `write_trials_jsonl()` / `read_trials_jsonl()`: JSONL persistence with error handling
+
 ### Planned
-- Advanced teleprompters (MIPRO, GEPA)
-- Cost tracking and token budgets
+- DSPy-inspired optimizers: BootstrapFewShot, BootstrapFewShotWithRandomSearch, KNNFewShot
+- Advanced teleprompters: COPRO, MIPROv2, SIMBA, GEPA
+- Ensemble optimizer combining multiple strategies
 - ProgramOfThought (code generation + execution)
 
 ## Coding Conventions
@@ -291,9 +344,8 @@ Suggested:
 ## Known Issues
 
 - Some test files have `-improved` suffix that should be renamed
-- Documentation warnings may appear for R6 classes (expected)
 - Minor test failures related to deepcopy state preservation
-- CLAUDE.md and PLAN.md should be in .Rbuildignore for CRAN
+- For internal S7 classes with complex default values, use `@noRd` instead of `@keywords internal` to avoid R CMD check codoc mismatch warnings
 
 ## File References
 

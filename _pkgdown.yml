@@ -172,6 +172,22 @@ reference:
     - module_trials
     - module_metrics
 
+  - title: Optimizer Infrastructure
+    desc: Low-level optimizer building blocks
+    contents:
+    - OptimizerControl
+    - optimizer_control
+    - eval_program
+    - sample_dataset
+    - split_dataset
+    - Trial
+    - TrialLog
+    - create_trial
+    - complete_trial
+    - write_trials_jsonl
+    - read_trials_jsonl
+    - load_trial_log
+
   - title: Metrics
     desc: Evaluation metrics
     contents:
@@ -208,6 +224,8 @@ reference:
     - print.dsprrr_evaluation
     - print.dsprrr_batch_result
     - print.dsprrr_cost_summary
+    - print.EvalResult
+    - print.Trial
 
   - title: Traces
     desc: Execution trace utilities
