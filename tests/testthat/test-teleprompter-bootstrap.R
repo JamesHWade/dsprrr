@@ -200,22 +200,8 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
           chat = list(NULL),
           metadata = list(list())
         )
-      },
-      deepcopy = function() {
-        new_signature <- Signature(
-          inputs = self$signature@inputs,
-          output_type = self$signature@output_type,
-          instructions = self$signature@instructions
-        )
-        new_module <- MockBootstrapModule$new(
-          signature = new_signature,
-          template = self$template,
-          demos = lapply(self$demos, function(x) x),
-          config = lapply(self$config, function(x) x)
-        )
-        new_module$state <- lapply(self$state, function(x) x)
-        new_module
       }
+      # No need to override deepcopy - parent's clone-based impl preserves subclass
     )
   )
 
@@ -300,20 +286,9 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
         )
       },
       deepcopy = function() {
-        new_signature <- Signature(
-          inputs = self$signature@inputs,
-          output_type = self$signature@output_type,
-          instructions = self$signature@instructions
-        )
-        new_module <- FailingModule$new(
-          signature = new_signature,
-          template = self$template,
-          demos = lapply(self$demos, function(x) x),
-          config = lapply(self$config, function(x) x)
-        )
-        new_module$state <- lapply(self$state, function(x) x)
+        # Use parent's clone-based deepcopy, then reset fail_count
+        new_module <- super$deepcopy()
         new_module$fail_count <- 0
-        new_module$max_fails <- self$max_fails
         new_module
       }
     )
@@ -412,22 +387,8 @@ test_that("BootstrapFewShot respects metric_threshold", {
           chat = list(NULL),
           metadata = list(list())
         )
-      },
-      deepcopy = function() {
-        new_signature <- Signature(
-          inputs = self$signature@inputs,
-          output_type = self$signature@output_type,
-          instructions = self$signature@instructions
-        )
-        new_module <- MockThresholdModule$new(
-          signature = new_signature,
-          template = self$template,
-          demos = lapply(self$demos, function(x) x),
-          config = lapply(self$config, function(x) x)
-        )
-        new_module$state <- lapply(self$state, function(x) x)
-        new_module
       }
+      # No need to override deepcopy - parent's clone-based impl preserves subclass
     )
   )
 

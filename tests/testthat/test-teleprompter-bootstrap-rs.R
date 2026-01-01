@@ -211,22 +211,8 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
           chat = list(NULL),
           metadata = list(list())
         )
-      },
-      deepcopy = function() {
-        new_signature <- Signature(
-          inputs = self$signature@inputs,
-          output_type = self$signature@output_type,
-          instructions = self$signature@instructions
-        )
-        new_module <- MockRSModule$new(
-          signature = new_signature,
-          template = self$template,
-          demos = lapply(self$demos, function(x) x),
-          config = lapply(self$config, function(x) x)
-        )
-        new_module$state <- lapply(self$state, function(x) x)
-        new_module
       }
+      # No need to override deepcopy - parent's clone-based impl preserves subclass
     )
   )
 
@@ -305,22 +291,8 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
           chat = list(NULL),
           metadata = list(list())
         )
-      },
-      deepcopy = function() {
-        new_signature <- Signature(
-          inputs = self$signature@inputs,
-          output_type = self$signature@output_type,
-          instructions = self$signature@instructions
-        )
-        new_module <- MockEarlyStopModule$new(
-          signature = new_signature,
-          template = self$template,
-          demos = lapply(self$demos, function(x) x),
-          config = lapply(self$config, function(x) x)
-        )
-        new_module$state <- lapply(self$state, function(x) x)
-        new_module
       }
+      # No need to override deepcopy - parent's clone-based impl preserves subclass
     )
   )
 
@@ -458,23 +430,9 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
           chat = list(NULL),
           metadata = list(list())
         )
-      },
-      deepcopy = function() {
-        new_signature <- Signature(
-          inputs = self$signature@inputs,
-          output_type = self$signature@output_type,
-          instructions = self$signature@instructions
-        )
-        new_module <- FailingCandidateModule$new(
-          signature = new_signature,
-          template = self$template,
-          demos = lapply(self$demos, function(x) x),
-          config = lapply(self$config, function(x) x)
-        )
-        new_module$state <- lapply(self$state, function(x) x)
-        new_module$should_fail <- self$should_fail
-        new_module
       }
+      # No need to override deepcopy - parent's clone-based impl preserves
+      # subclass and all public fields (including should_fail)
     )
   )
 
@@ -524,22 +482,8 @@ test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
       },
       forward = function(batch, .llm = NULL, trace = TRUE, ...) {
         stop("Module always fails")
-      },
-      deepcopy = function() {
-        new_signature <- Signature(
-          inputs = self$signature@inputs,
-          output_type = self$signature@output_type,
-          instructions = self$signature@instructions
-        )
-        new_module <- AlwaysFailModule$new(
-          signature = new_signature,
-          template = self$template,
-          demos = lapply(self$demos, function(x) x),
-          config = lapply(self$config, function(x) x)
-        )
-        new_module$state <- lapply(self$state, function(x) x)
-        new_module
       }
+      # No need to override deepcopy - parent's clone-based impl preserves subclass
     )
   )
 

@@ -245,37 +245,31 @@ PredictModule <- R6::R6Class(
     #' Create a deep copy of the module
     #' @return New PredictModule with copied state
     deepcopy = function() {
-      # Copy demos
-      new_demos <- if (length(self$demos) > 0) {
+      # Use R6's clone mechanism to preserve subclass identity
+      # This is critical for test mocks that inherit from PredictModule
+      new_module <- self$clone(deep = FALSE)
+
+      # Deep copy list fields manually
+      new_module$demos <- if (length(self$demos) > 0) {
         lapply(self$demos, function(x) x)
       } else {
         list()
       }
 
-      # Copy config
-      new_config <- if (length(self$config) > 0) {
+      new_module$config <- if (length(self$config) > 0) {
         lapply(self$config, function(x) x)
       } else {
         list()
       }
 
+      new_module$state <- lapply(self$state, function(x) x)
+
       # Create new signature (S7 objects need special handling)
-      new_signature <- Signature(
+      new_module$signature <- Signature(
         inputs = self$signature@inputs,
         output_type = self$signature@output_type,
         instructions = self$signature@instructions
       )
-
-      new_module <- PredictModule$new(
-        signature = new_signature,
-        template = self$template,
-        demos = new_demos,
-        config = new_config,
-        chat = self$chat
-      )
-
-      # Copy state
-      new_module$state <- lapply(self$state, function(x) x)
 
       new_module
     },
