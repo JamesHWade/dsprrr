@@ -231,6 +231,23 @@ test_that("CodeActModule stores trajectory", {
   expect_true("iterations" %in% names(trajectories[[1]]))
 })
 
+test_that("CodeActModule respects trace=FALSE", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  agent <- code_act(
+    "question -> answer",
+    runner = runner
+  )
+
+  mock_llm <- create_mock_codeact_llm(list("42"))
+
+  agent$forward(list(question = "test"), .llm = mock_llm, trace = FALSE)
+
+  # No history should be stored when trace=FALSE
+  expect_length(agent$get_trajectories(), 0)
+})
+
 # ============================================================================
 # Metadata Tests
 # ============================================================================

@@ -3,7 +3,10 @@
 # Helper: Create a mock LLM for testing
 create_mock_pot_llm <- function(code_responses = list()) {
   call_count <- 0
-  list(
+  mock <- list(
+    clone = function() {
+      create_mock_pot_llm(code_responses)
+    },
     chat_structured = function(prompt, type, ...) {
       call_count <<- call_count + 1
       if (call_count <= length(code_responses)) {
@@ -20,6 +23,7 @@ create_mock_pot_llm <- function(code_responses = list()) {
       "42"
     }
   )
+  mock
 }
 
 # ============================================================================
@@ -306,6 +310,26 @@ test_that("ProgramOfThoughtModule handles data frame input", {
 
   expect_true(result$metadata[[1]]$success)
   expect_equal(result$metadata[[1]]$execution_result, 42)
+})
+
+test_that("ProgramOfThoughtModule respects trace=FALSE", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  pot <- program_of_thought(
+    "question -> answer",
+    runner = runner,
+    extract_answer = FALSE
+  )
+
+  mock_llm <- create_mock_pot_llm(list(
+    list(code = "42", explanation = "Return 42")
+  ))
+
+  pot$forward(list(question = "test"), .llm = mock_llm, trace = FALSE)
+
+  # No history should be stored when trace=FALSE
+  expect_length(pot$get_executions(), 0)
 })
 
 # ============================================================================

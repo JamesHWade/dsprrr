@@ -174,11 +174,14 @@ ProgramOfThoughtModule <- R6::R6Class(
         inputs <- batch
       }
 
-      # Get LLM
-      llm <- .llm %||% self$chat %||% get_default_chat()
-      if (is.null(llm)) {
+      # Get LLM - need to clone for fresh conversation
+      base_llm <- .llm %||% self$chat %||% get_default_chat()
+      if (is.null(base_llm)) {
         cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
       }
+
+      # Clone the chat for a fresh conversation
+      llm <- base_llm$clone()
 
       start_time <- Sys.time()
       iterations <- list()
@@ -402,11 +405,28 @@ Return your response as JSON with two fields:
         )
       )
 
-      result <- llm$chat_structured(prompt, type = output_type)
+      result <- tryCatch(
+        llm$chat_structured(prompt, type = output_type),
+        error = function(e) {
+          cli::cli_abort(c(
+            "Failed to generate code from LLM",
+            "x" = "Error: {e$message}",
+            "i" = "The LLM may be unavailable or returned an invalid response"
+          ))
+        }
+      )
+
+      # Validate result structure
+      if (is.null(result$code) || !is.character(result$code)) {
+        cli::cli_abort(c(
+          "LLM returned invalid code generation response",
+          "i" = "Missing or invalid 'code' field in response"
+        ))
+      }
 
       list(
         code = result$code,
-        explanation = result$explanation
+        explanation = result$explanation %||% ""
       )
     },
 
@@ -464,11 +484,28 @@ Return your response as JSON with two fields:
         )
       )
 
-      result <- llm$chat_structured(prompt, type = output_type)
+      result <- tryCatch(
+        llm$chat_structured(prompt, type = output_type),
+        error = function(e) {
+          cli::cli_abort(c(
+            "Failed to repair code via LLM",
+            "x" = "Error: {e$message}",
+            "i" = "The LLM may be unavailable or returned an invalid response"
+          ))
+        }
+      )
+
+      # Validate result structure
+      if (is.null(result$code) || !is.character(result$code)) {
+        cli::cli_abort(c(
+          "LLM returned invalid code repair response",
+          "i" = "Missing or invalid 'code' field in response"
+        ))
+      }
 
       list(
         code = result$code,
-        explanation = result$explanation
+        explanation = result$explanation %||% ""
       )
     },
 

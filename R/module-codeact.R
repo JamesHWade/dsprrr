@@ -213,6 +213,8 @@ CodeActModule <- R6::R6Class(
       # We use chat() which processes tool calls internally
       iterations <- 0
       last_response <- NULL
+      consecutive_failures <- 0
+      max_consecutive_failures <- 3
 
       while (iterations < self$max_iterations) {
         iterations <- iterations + 1
@@ -230,12 +232,25 @@ CodeActModule <- R6::R6Class(
             }
           },
           error = function(e) {
-            cli::cli_warn("Agent iteration {iterations} error: {e$message}")
+            consecutive_failures <<- consecutive_failures + 1
+            cli::cli_warn(c(
+              "Agent iteration {iterations} failed ({consecutive_failures}/{max_consecutive_failures})",
+              "x" = "Error: {e$message}"
+            ))
+
+            if (consecutive_failures >= max_consecutive_failures) {
+              cli::cli_abort(c(
+                "Agent aborted after {max_consecutive_failures} consecutive LLM failures",
+                "x" = "Last error: {e$message}",
+                "i" = "Check your API key, network connection, and rate limits"
+              ))
+            }
             NULL
           }
         )
 
         if (!is.null(response)) {
+          consecutive_failures <- 0 # Reset on success
           last_response <- response
 
           # Check if the agent seems done (no pending tool calls)
@@ -254,6 +269,14 @@ CodeActModule <- R6::R6Class(
             break
           }
         }
+      }
+
+      # Check for complete failure
+      if (is.null(last_response)) {
+        cli::cli_abort(c(
+          "Agent failed to produce any response in {iterations} iterations",
+          "i" = "All LLM calls failed. Check API connectivity and error messages above."
+        ))
       }
 
       # Extract final answer using structured output

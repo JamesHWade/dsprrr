@@ -395,26 +395,30 @@ RCodeRunner <- R6::R6Class(
       # Real security requires OS-level sandboxing
 
       dangerous_patterns <- list(
-        # System access
-        "system\\s*\\(" = "system() calls are not allowed",
-        "system2\\s*\\(" = "system2() calls are not allowed",
-        "Sys\\.setenv" = "Modifying environment variables is not allowed",
+        # System access (including base:: prefix bypass attempts)
+        "(?:base::)?system\\s*\\(" = "system() calls are not allowed",
+        "(?:base::)?system2\\s*\\(" = "system2() calls are not allowed",
+        "(?:base::)?Sys\\.setenv" = "Modifying environment variables is not allowed",
+
+        # do.call bypass attempts
+        "do\\.call\\s*\\(\\s*['\"]?system" = "do.call(system) is not allowed",
+        "do\\.call\\s*\\(\\s*['\"]?system2" = "do.call(system2) is not allowed",
 
         # File system (destructive operations)
-        "unlink\\s*\\(" = "unlink() is not allowed",
-        "file\\.remove" = "file.remove() is not allowed",
+        "(?:base::)?unlink\\s*\\(" = "unlink() is not allowed",
+        "(?:base::)?file\\.remove" = "file.remove() is not allowed",
 
         # Process control
-        "quit\\s*\\(" = "quit() is not allowed",
-        "q\\s*\\(\\s*\\)" = "q() is not allowed",
+        "(?:base::)?quit\\s*\\(" = "quit() is not allowed",
+        "(?:base::)?q\\s*\\(\\s*\\)" = "q() is not allowed",
 
         # Network (basic check)
-        "download\\.file" = "download.file() is not allowed",
-        "url\\s*\\(" = "url() connections are not allowed"
+        "(?:utils::)?download\\.file" = "download.file() is not allowed",
+        "(?:base::)?url\\s*\\(" = "url() connections are not allowed"
       )
 
       for (pattern in names(dangerous_patterns)) {
-        if (grepl(pattern, code, ignore.case = FALSE)) {
+        if (grepl(pattern, code, ignore.case = FALSE, perl = TRUE)) {
           return(paste0(
             "Dangerous pattern detected: ",
             dangerous_patterns[[pattern]]
@@ -430,7 +434,13 @@ RCodeRunner <- R6::R6Class(
       if (file.exists(filepath)) {
         tryCatch(
           paste(readLines(filepath, warn = FALSE), collapse = "\n"),
-          error = function(e) ""
+          error = function(e) {
+            cli::cli_warn(c(
+              "Failed to read subprocess output",
+              "x" = "Error: {e$message}"
+            ))
+            "[OUTPUT CAPTURE FAILED]"
+          }
         )
       } else {
         ""

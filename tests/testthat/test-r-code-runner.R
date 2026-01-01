@@ -172,6 +172,56 @@ test_that("RCodeRunner blocks quit()", {
   expect_match(result$error, "quit\\(\\) is not allowed")
 })
 
+test_that("RCodeRunner blocks Sys.setenv", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  result <- runner$execute("Sys.setenv(FOO = 'bar')")
+
+  expect_false(result$success)
+  expect_match(result$error, "Modifying environment variables")
+})
+
+test_that("RCodeRunner blocks download.file", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  result <- runner$execute("download.file('http://example.com', 'x')")
+
+  expect_false(result$success)
+  expect_match(result$error, "download.file")
+})
+
+test_that("RCodeRunner blocks url() connections", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  result <- runner$execute("url('http://example.com')")
+
+  expect_false(result$success)
+  expect_match(result$error, "url\\(\\) connections")
+})
+
+test_that("RCodeRunner blocks base::system() bypass", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  result <- runner$execute("base::system('ls')")
+
+  expect_false(result$success)
+  expect_match(result$error, "system\\(\\) calls are not allowed")
+})
+
+test_that("RCodeRunner blocks do.call(system) bypass", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  result <- runner$execute("do.call(system, list('ls'))")
+
+  expect_false(result$success)
+  expect_match(result$error, "do.call\\(system\\)")
+})
+
 test_that("RCodeRunner truncates large output in messages", {
   skip_if_not_installed("callr")
 
