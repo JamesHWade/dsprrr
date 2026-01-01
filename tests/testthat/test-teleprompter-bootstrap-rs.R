@@ -326,16 +326,17 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
   valset <- data.frame(x = c("e", "f"), y = c("correct", "correct"))
 
   tp <- BootstrapFewShotWithRandomSearch(
-    metric = function(pred, row) as.numeric(pred == row$y),
+    # Always return 1.0 so early stopping triggers on first candidate
+    metric = function(pred, row) 1.0,
     num_candidate_programs = 10L, # Would normally try 10
-    stop_at_score = 0.9, # But should stop early
+    stop_at_score = 0.9, # But should stop early since metric returns 1.0
     max_labeled_demos = 1L,
     max_bootstrapped_demos = 1L
   )
 
   result <- compile(tp, mod, trainset, valset = valset)
 
-  # Should have stopped early (not all 10 candidates evaluated)
+  # Should have stopped early (first candidate should hit threshold)
   expect_lt(
     result$config$optimizer$num_candidates_evaluated,
     10
@@ -485,4 +486,64 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
+})
+
+test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
+  # Create a module that always fails
+  AlwaysFailModule <- R6::R6Class(
+    "AlwaysFailModule",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      initialize = function(signature, template = "", demos = list(), config = list()) {
+        super$initialize(
+          signature,
+          template = template,
+          demos = demos,
+          config = config
+        )
+      },
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        stop("Module always fails")
+      },
+      deepcopy = function() {
+        new_signature <- Signature(
+          inputs = self$signature@inputs,
+          output_type = self$signature@output_type,
+          instructions = self$signature@instructions
+        )
+        new_module <- AlwaysFailModule$new(
+          signature = new_signature,
+          template = self$template,
+          demos = lapply(self$demos, function(x) x),
+          config = lapply(self$config, function(x) x)
+        )
+        new_module$state <- lapply(self$state, function(x) x)
+        new_module
+      }
+    )
+  )
+
+  sig <- Signature(
+    inputs = list(input(name = "x", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Test"
+  )
+
+  mod <- AlwaysFailModule$new(signature = sig)
+
+  trainset <- data.frame(x = c("a", "b"), y = c("1", "2"))
+  valset <- data.frame(x = c("c"), y = c("ok"))
+
+  tp <- BootstrapFewShotWithRandomSearch(
+    metric = function(pred, row) as.numeric(pred == row$y),
+    num_candidate_programs = 3L,
+    max_labeled_demos = 1L,
+    max_bootstrapped_demos = 1L
+  )
+
+  # Should error when all candidates fail
+  expect_error(
+    compile(tp, mod, trainset, valset = valset),
+    "All .* candidate programs failed"
+  )
 })

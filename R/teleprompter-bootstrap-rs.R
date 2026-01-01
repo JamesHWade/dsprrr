@@ -6,7 +6,7 @@
 
 #' BootstrapFewShotWithRandomSearch Teleprompter
 #'
-#' @include teleprompter.R teleprompter-bootstrap.R optimizer-core.R
+#' @include teleprompter.R teleprompter-bootstrap.R optimizer-core.R optimizer-logging.R
 #'
 #' @description
 #' A teleprompter that extends BootstrapFewShot with random search over
@@ -265,6 +265,7 @@ compile_bootstrap_rs <- function(
     )
 
     # Compile candidate
+    compile_error_msg <- NULL
     compiled <- tryCatch(
       {
         compile_candidate(
@@ -276,6 +277,7 @@ compile_bootstrap_rs <- function(
         )
       },
       error = function(e) {
+        compile_error_msg <<- conditionMessage(e)
         cli::cli_warn(
           c(
             "Failed to compile candidate {config$name}",
@@ -293,12 +295,14 @@ compile_bootstrap_rs <- function(
         config = config,
         program = NULL,
         score = NA_real_,
-        error = TRUE
+        error = TRUE,
+        error_message = compile_error_msg %||% "Unknown compilation error"
       )
       next
     }
 
     # Evaluate on validation set
+    eval_error_msg <- NULL
     eval_result <- tryCatch(
       {
         eval_program(
@@ -310,6 +314,7 @@ compile_bootstrap_rs <- function(
         )
       },
       error = function(e) {
+        eval_error_msg <<- conditionMessage(e)
         cli::cli_warn(
           c(
             "Failed to evaluate candidate {config$name}",
@@ -322,6 +327,7 @@ compile_bootstrap_rs <- function(
     )
 
     score <- if (!is.null(eval_result)) eval_result@mean_score else NA_real_
+    has_error <- is.null(eval_result)
 
     results[[i]] <- list(
       name = config$name,
@@ -329,7 +335,12 @@ compile_bootstrap_rs <- function(
       program = compiled,
       score = score,
       eval_result = eval_result,
-      error = FALSE
+      error = has_error,
+      error_message = if (has_error) {
+        eval_error_msg %||% "Evaluation failed"
+      } else {
+        NULL
+      }
     )
 
     # Track best
@@ -375,11 +386,35 @@ compile_bootstrap_rs <- function(
   ranked_order <- order(scores, decreasing = TRUE, na.last = TRUE)
   ranked_results <- results[ranked_order]
 
-  # Use best program or fall back to original
-
+  # Use best program or abort if all candidates failed
   if (is.null(best_program)) {
-    cli::cli_warn("No valid candidates found, returning unmodified program")
-    best_program <- copy_module(program)
+    # Collect error messages from failed candidates
+    error_msgs <- vapply(
+      results,
+      function(r) {
+        if (isTRUE(r$error)) {
+          r$error_message %||% "Unknown error"
+        } else {
+          NA_character_
+        }
+      },
+      character(1)
+    )
+    error_msgs <- error_msgs[!is.na(error_msgs)]
+
+    cli::cli_abort(
+      c(
+        "All {length(results)} candidate programs failed to compile or evaluate",
+        "i" = "This indicates a systemic issue with your configuration",
+        "x" = if (length(error_msgs) > 0) {
+          paste("Sample errors:", paste(utils::head(error_msgs, 3), collapse = "; "))
+        } else {
+          "No specific error messages captured"
+        },
+        "i" = "Check your LLM connection, metric function, and trainset format"
+      ),
+      class = "dsprrr_all_candidates_failed"
+    )
   }
 
   # Update program state
@@ -388,7 +423,11 @@ compile_bootstrap_rs <- function(
   best_program$config$teleprompter <- "BootstrapFewShotWithRandomSearch"
   best_program$config$optimizer <- list(
     num_candidates_evaluated = length(results),
-    best_candidate = best_candidate$name,
+    best_candidate = if (!is.null(best_candidate)) {
+      best_candidate$name
+    } else {
+      NA_character_
+    },
     best_score = best_score,
     candidate_programs = lapply(ranked_results, function(r) {
       list(
@@ -440,12 +479,8 @@ generate_candidate_configs <- function(teleprompter, n_train, base_seed) {
   # Remaining candidates: BootstrapFewShot with random seeds
   n_random <- teleprompter@num_candidate_programs - 3
   if (n_random > 0) {
-    # Generate random seeds
-    if (!is.null(base_seed)) {
-      random_seeds <- sample.int(10000, n_random)
-    } else {
-      random_seeds <- sample.int(10000, n_random)
-    }
+    # Generate random seeds (RNG state already set via base_seed if provided)
+    random_seeds <- sample.int(10000, n_random)
 
     for (i in seq_len(n_random)) {
       configs[[idx]] <- list(
