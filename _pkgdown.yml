@@ -161,6 +161,7 @@ reference:
     - Teleprompter
     - LabeledFewShot
     - GridSearchTeleprompter
+    - BootstrapFewShot
 
   - title: Optimization
     desc: Functions for optimizing module performance
@@ -226,6 +227,7 @@ reference:
     - print.dsprrr_cost_summary
     - print.EvalResult
     - print.Trial
+    - print.BootstrapFewShot
 
   - title: Traces
     desc: Execution trace utilities
