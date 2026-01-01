@@ -84,6 +84,12 @@ git push -u origin feature/my-feature
 gh pr create --title "Title" --body "Description"
 ```
 
+After PR is merged, clean up with:
+
+``` r
+usethis::pr_finish()
+```
+
 ## Core Architecture
 
 ### Package Layout
