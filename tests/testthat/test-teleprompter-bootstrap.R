@@ -347,7 +347,8 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
-  expect_gte(result$config$optimizer$error_count, 0)
+  # Verify error_count is actually tracked (was a scoping bug)
+  expect_equal(result$config$optimizer$error_count, 2)
 })
 
 test_that("find_output_column identifies common output columns", {

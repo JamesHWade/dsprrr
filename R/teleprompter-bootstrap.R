@@ -188,6 +188,19 @@ compile_bootstrap <- function(
   # Determine output column name
   output_col <- find_output_column(trainset, input_names)
 
+  if (is.null(output_col)) {
+    cli::cli_warn(
+      c(
+        "No output column found in trainset",
+        "i" = "Expected one of: 'output', 'label', 'answer', 'response', 'result', 'y'",
+        "i" = "Or any column not in inputs: {.val {input_names}}",
+        "i" = "Available columns: {.val {names(trainset)}}",
+        "!" = "Metric will receive NULL as expected value for all examples"
+      ),
+      class = "dsprrr_missing_output_column"
+    )
+  }
+
   # Phase 1: Select labeled demos from trainset
   n_labeled <- min(teleprompter@max_labeled_demos, nrow(trainset))
   labeled_demos <- list()
@@ -264,9 +277,13 @@ compile_bootstrap <- function(
           )
         },
         error = function(e) {
-          error_count <- error_count + 1
+          error_count <<- error_count + 1
           cli::cli_warn(
-            "Bootstrap attempt failed: {conditionMessage(e)}",
+            c(
+              "Bootstrap attempt failed",
+              "x" = conditionMessage(e),
+              "i" = "Error count: {error_count}/{control@max_errors}"
+            ),
             class = "dsprrr_bootstrap_warning"
           )
           NULL
@@ -283,6 +300,14 @@ compile_bootstrap <- function(
           teleprompter@metric(result, expected)
         },
         error = function(e) {
+          cli::cli_warn(
+            c(
+              "Metric evaluation failed for example {idx}",
+              "x" = conditionMessage(e),
+              "i" = "This example will be skipped for bootstrapping"
+            ),
+            class = "dsprrr_metric_warning"
+          )
           NA_real_
         }
       )
