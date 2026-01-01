@@ -210,6 +210,34 @@ agent <- signature("question -> answer") |>
 agent$predict(question = "What's the weather in NYC?")
 ```
 
+### Code Execution Modules
+
+For tasks requiring exact computation, dsprrr can generate and execute R
+code:
+
+``` r
+# Create a code runner (required for security - explicit opt-in)
+runner <- r_code_runner(timeout = 30)
+
+# ProgramOfThought: LLM generates code, R executes it
+pot <- program_of_thought("question -> answer", runner = runner)
+result <- run(pot, question = "What is the sum of primes under 100?", .llm = llm)
+
+# CodeAct: Hybrid agent with both tools AND code execution
+agent <- code_act(
+
+  "question -> answer",
+  tools = list(search = search_tool),
+
+  runner = runner
+)
+result <- run(agent, question = "What is 10% of France's population?", .llm = llm)
+```
+
+**Security**: Code execution uses subprocess isolation via `callr` with
+timeouts, output limits, and dangerous pattern blocking. For production
+with untrusted inputs, use OS-level sandboxing.
+
 ### Streaming Support
 
 ``` r
@@ -334,7 +362,7 @@ metric <- as_dsprrr_metric(model_graded_qa())
     ┌─────────────────────────────────────────────────────────────┐
     │                      Module Layer                           │
     │  PredictModule ◄── ReactModule (tools)                     │
-    │       │                                                     │
+    │       │           ProgramOfThought ◄── CodeAct (tools+code)│
     │       └── Signature (S7) + Chat (R6) + State               │
     └─────────────────────────────────────────────────────────────┘
                                   │
@@ -358,13 +386,16 @@ metric <- as_dsprrr_metric(model_graded_qa())
 - **Chat-Centric API**: `dsp()`, `as_module()`, default Chat
 - **Optimization**: Teleprompters, grid search, metrics
 - **Tool Support**: ReactModule with ellmer tools
+- **Code Execution**: ProgramOfThought and CodeAct modules with safe R
+  code execution
+- **Advanced Reasoning**: ChainOfThought, BestOfN, Refine,
+  MultiChainComparison
 - **Streaming & Async**: `stream()`, `run_async()`, `stream_async()`
 - **ellmer Integration**: Full compatibility with Chat, types, tools
 - **vitals Integration**: Bidirectional solver/metric adapters
 
 ### In Progress
 
-- Chain-of-Thought module type
 - Advanced teleprompters (MIPRO, GEPA)
 - Cost tracking and token budgets
 

@@ -42,6 +42,8 @@ dsprrr provides advanced module types inspired by [DSPy](https://dspy.ai/) that 
 - **Multiple attempts** with BestOfN
 - **Iterative refinement** with Refine
 - **Ensemble reasoning** with MultiChainComparison
+- **Exact computation** with ProgramOfThought (code generation)
+- **Hybrid agents** with CodeAct (tools + code execution)
 
 Each pattern addresses different challenges in LLM reliability and output quality.
 
@@ -440,6 +442,191 @@ chains$prediction[[1]]
 #> [1] "The answer is..."
 ```
 
+## ProgramOfThought
+
+ProgramOfThought addresses a fundamental LLM limitation: they're unreliable at exact computation. Instead of asking the model to compute directly, it generates R code that R executes.
+
+### Why Use ProgramOfThought?
+
+LLMs frequently make arithmetic errors, especially with multi-step calculations. ProgramOfThought solves this by:
+- Having the LLM generate R code to solve the problem
+- Executing that code in an isolated subprocess
+- If execution fails, feeding the error back for code repair
+- Extracting the final answer from the execution result
+
+### Setting Up Code Execution
+
+Code execution requires explicit opt-in via a runner:
+
+```{r pot-setup, eval=FALSE}
+# Create a runner - this enables code execution
+runner <- r_code_runner(
+  timeout = 30,                    # Max execution time
+  allowed_packages = c("base", "stats", "utils")  # Allowed packages
+)
+```
+
+**Security note**: The runner provides subprocess isolation but is NOT a security sandbox. For production with untrusted inputs, use OS-level sandboxing (containers, AppArmor).
+
+### Basic Usage
+
+```{r pot-basic, eval=FALSE}
+# Create a ProgramOfThought module
+pot <- program_of_thought("question -> answer", runner = runner)
+
+# Run it - the LLM generates code, R executes it
+result <- run(
+  pot,
+  question = "What is the sum of all prime numbers under 100?",
+  .llm = chat_openai()
+)
+
+# Result is the computed answer
+result$answer
+#> "1060"
+```
+
+### Automatic Error Recovery
+
+If the generated code fails, ProgramOfThought automatically feeds the error back to the LLM for repair:
+
+```{r pot-retry, eval=FALSE}
+pot <- program_of_thought(
+  "question -> answer",
+  runner = runner,
+  max_iters = 3  # Try up to 3 times to get working code
+)
+
+# Even if first attempt has a bug, it may self-correct
+result <- run(pot, question = "Calculate factorial of 10", .llm = llm)
+```
+
+### Accessing Execution History
+
+Track the code generation and execution process:
+
+```{r pot-history, eval=FALSE}
+# After running, inspect execution history
+executions <- pot$get_executions()
+executions[[1]]$iterations  # List of code attempts
+executions[[1]]$success     # Whether it succeeded
+```
+
+### Using Context Data
+
+Pass data to your code via the `.context` list:
+
+```{r pot-context, eval=FALSE}
+pot <- program_of_thought("data, question -> answer", runner = runner)
+
+result <- run(
+  pot,
+  data = mtcars,
+  question = "What is the correlation between mpg and hp?",
+  .llm = llm
+)
+# The LLM can generate: cor(.context$data$mpg, .context$data$hp)
+```
+
+## CodeAct
+
+CodeAct combines the best of both worlds: it can use external tools AND execute R code. This makes it ideal for complex agentic tasks that require both information retrieval and computation.
+
+### Why Use CodeAct?
+
+Some tasks require multiple capabilities:
+- Search for information (tool calling)
+- Perform calculations on that information (code execution)
+- Iterate until the answer is found (agent loop)
+
+CodeAct provides all of these in a single module.
+
+### Basic Usage
+
+```{r codeact-basic, eval=FALSE}
+# Create tools
+search_tool <- ellmer::tool(
+  function(query) search_api(query),
+  description = "Search for information",
+  arguments = list(query = ellmer::type_string())
+)
+
+# Create CodeAct agent with tools and code execution
+runner <- r_code_runner(timeout = 30)
+agent <- code_act(
+  "question -> answer",
+  tools = list(search = search_tool),
+  runner = runner
+)
+
+# The agent can search AND compute
+result <- run(
+  agent,
+  question = "What is 10% of France's current population?",
+  .llm = chat_openai()
+)
+# Agent might: 1) Search for France's population, 2) Execute: 67000000 * 0.10
+```
+
+### Built-in Code Execution Tool
+
+CodeAct automatically includes an `execute_r_code` tool that the LLM can call:
+
+```{r codeact-tool, eval=FALSE}
+agent <- code_act("question -> answer", runner = runner)
+
+# The LLM sees this tool:
+# execute_r_code(code): Execute R code in an isolated environment.
+#   The input data is available in the `.context` list.
+```
+
+### Controlling Iterations
+
+```{r codeact-iterations, eval=FALSE}
+agent <- code_act(
+  "question -> answer",
+  runner = runner,
+  max_iterations = 10  # Maximum tool/code calls before forcing answer
+)
+```
+
+### Inspecting Agent Trajectory
+
+Track the agent's decision-making process:
+
+```{r codeact-trajectory, eval=FALSE}
+result <- run(agent, question = "Complex question...", .llm = llm)
+
+# Get the trajectory
+trajectories <- agent$get_trajectories()
+trajectories[[1]]$iterations    # Number of iterations
+trajectories[[1]]$trajectory    # List of steps taken
+```
+
+### Combining with Custom Tools
+
+```{r codeact-custom-tools, eval=FALSE}
+# Create multiple tools
+weather_tool <- ellmer::tool(
+  function(city) get_weather(city),
+  description = "Get current weather",
+  arguments = list(city = ellmer::type_string())
+)
+
+database_tool <- ellmer::tool(
+  function(query) run_sql(query),
+  description = "Query the database",
+  arguments = list(query = ellmer::type_string())
+)
+
+# CodeAct with multiple tools + code execution
+agent <- code_act(
+  "question -> answer",
+  tools = list(weather = weather_tool, database = database_tool),
+  runner = runner
+)
+```
+
 ## Combining Modules
 
 These modules can be composed for sophisticated pipelines:
@@ -513,9 +700,17 @@ result$.metadata[[1]]$n_llm_calls
 
 dsprrr's advanced modules bring battle-tested patterns from DSPy to R:
 
-1. **`chain_of_thought()`** - Force step-by-step reasoning
-2. **`best_of_n()`** - Multiple attempts with scoring
-3. **`refine()`** - Iterative improvement with feedback
-4. **`multi_chain_comparison()`** - Ensemble synthesis
+| Module | Best For | Trade-off |
+|--------|----------|-----------|
+| `chain_of_thought()` | Complex reasoning, math, logic | Slight cost increase |
+| `best_of_n()` | High-variance tasks, critical outputs | N× cost (with early stopping) |
+| `refine()` | Tasks with clear failure modes | N× cost + feedback gen |
+| `multi_chain_comparison()` | Complex analysis, multiple valid approaches | (M+1)× cost |
+| `program_of_thought()` | Exact computation, data analysis | Code execution overhead |
+| `code_act()` | Tasks needing both tools AND computation | Agent loop overhead |
 
-Start with ChainOfThought for complex tasks, add BestOfN for reliability, and graduate to Refine or MCC when you need maximum quality.
+**Getting started:**
+- Start with **ChainOfThought** for complex reasoning tasks
+- Add **BestOfN** when you need reliability
+- Use **ProgramOfThought** for exact computation (math, statistics)
+- Use **CodeAct** when you need tools AND code execution together
