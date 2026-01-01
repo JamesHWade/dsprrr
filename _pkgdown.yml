@@ -165,6 +165,7 @@ reference:
     - BootstrapFewShotWithRandomSearch
     - KNNFewShot
     - SIMBA
+    - GEPA
 
   - title: Optimization
     desc: Functions for optimizing module performance
