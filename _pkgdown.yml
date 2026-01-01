@@ -164,6 +164,7 @@ reference:
     - BootstrapFewShot
     - BootstrapFewShotWithRandomSearch
     - KNNFewShot
+    - SIMBA
 
   - title: Optimization
     desc: Functions for optimizing module performance
@@ -231,6 +232,7 @@ reference:
     - print.Trial
     - print.BootstrapFewShot
     - print.BootstrapFewShotWithRandomSearch
+    - print.SIMBA
 
   - title: Traces
     desc: Execution trace utilities
