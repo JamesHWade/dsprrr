@@ -255,7 +255,8 @@ eval_program <- function(
   start_time <- Sys.time()
 
   # Clear traces before evaluation to get accurate cost for this run
-  program_copy <- program$copy(deep = TRUE)
+  # Use copy_module to properly preserve custom class behavior (e.g., mock modules in tests)
+  program_copy <- copy_module(program)
 
   # Run evaluation using existing evaluate() function with error handling
   eval_result <- tryCatch(
