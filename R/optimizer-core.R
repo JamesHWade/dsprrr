@@ -138,7 +138,7 @@ optimizer_control <- function(
 #' S7 class representing the result of evaluating a program on a dataset.
 #' Contains per-example results plus aggregated summary statistics.
 #'
-#' @keywords internal
+#' @noRd
 EvalResult <- S7::new_class(
   "EvalResult",
   properties = list(
@@ -497,7 +497,7 @@ split_dataset <- function(dataset, prop = 0.8, seed = NULL) {
 #'   - `total_tokens`: total tokens (in + out)
 #'   - `total_cost`: total cost in USD (may be NA if not available)
 #'
-#' @keywords internal
+#' @noRd
 extract_cost_from_module <- function(module) {
   if (!inherits(module, "Module")) {
     return(list(
@@ -523,7 +523,7 @@ extract_cost_from_module <- function(module) {
 #' @description
 #' S7 class for tracking cumulative costs across optimizer trials.
 #'
-#' @keywords internal
+#' @noRd
 CostSummary <- S7::new_class(
   "CostSummary",
   properties = list(
@@ -544,7 +544,7 @@ CostSummary <- S7::new_class(
 #' @param module A Module with traces, or a cost list from extract_cost_from_module.
 #'
 #' @return Updated CostSummary object.
-#' @keywords internal
+#' @noRd
 update_cost_summary <- function(summary, module) {
   if (inherits(module, "Module")) {
     cost <- extract_cost_from_module(module)
@@ -582,7 +582,7 @@ update_cost_summary <- function(summary, module) {
 #'   - `should_stop`: logical indicating if optimization should stop
 #'   - `reason`: character explaining why (or NULL if not stopping)
 #'
-#' @keywords internal
+#' @noRd
 check_budget <- function(trial_count, error_count, control) {
   # Check max trials
   if (!is.null(control@max_trials) && !is.na(control@max_trials)) {
@@ -617,7 +617,7 @@ check_budget <- function(trial_count, error_count, control) {
 #' @param prefix Optional prefix for the ID.
 #'
 #' @return A character string trial ID.
-#' @keywords internal
+#' @noRd
 generate_trial_id <- function(prefix = "trial") {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
   random_suffix <- paste0(

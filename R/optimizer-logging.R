@@ -99,7 +99,7 @@ create_trial <- function(
 #' @param trial A Trial object.
 #'
 #' @return Updated Trial object with status "running".
-#' @keywords internal
+#' @noRd
 start_trial <- function(trial) {
   Trial(
     trial_id = trial@trial_id,
@@ -169,7 +169,7 @@ complete_trial <- function(
 #' @param error_message Error message explaining the failure.
 #'
 #' @return Updated Trial object with status "failed".
-#' @keywords internal
+#' @noRd
 fail_trial <- function(trial, error_message) {
   Trial(
     trial_id = trial@trial_id,
