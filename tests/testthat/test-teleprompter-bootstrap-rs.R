@@ -184,45 +184,14 @@ test_that("generate_candidate_configs produces correct candidates", {
 })
 
 test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
-  # Create a mock module that returns predictable outputs
-  MockRSModule <- R6::R6Class(
-    "MockRSModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      initialize = function(
-        signature,
-        template = "",
-        demos = list(),
-        config = list()
-      ) {
-        super$initialize(
-          signature,
-          template = template,
-          demos = demos,
-          config = config
-        )
-      },
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        # Return better predictions when we have demos
-        n_demos <- length(self$demos)
-        output_val <- if (n_demos > 0) "correct" else "wrong"
-        tibble::tibble(
-          output = list(output_val),
-          chat = list(NULL),
-          metadata = list(list())
-        )
-      }
-      # No need to override deepcopy - parent's clone-based impl preserves subclass
-    )
-  )
-
+  # Use a standard module with a mock LLM that returns predictable results
   sig <- Signature(
     inputs = list(input(name = "question", class = S7::class_character)),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
-  mod <- MockRSModule$new(signature = sig, template = "{question}")
+  mod <- module(signature = sig, type = "predict")
 
   trainset <- data.frame(
     question = c("Q1", "Q2", "Q3", "Q4"),
@@ -232,6 +201,16 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
   valset <- data.frame(
     question = c("VQ1", "VQ2"),
     answer = c("correct", "correct")
+  )
+
+  # Mock LLM that always returns "correct"
+  mock_llm <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        list(answer = "correct")
+      }
+    ),
+    class = "Chat"
   )
 
   # Metric that returns 1.0 for "correct"
@@ -247,7 +226,7 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, valset = valset)
+  result <- compile(tp, mod, trainset, valset = valset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
@@ -265,47 +244,27 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
 })
 
 test_that("BootstrapFewShotWithRandomSearch early stopping works", {
-  MockEarlyStopModule <- R6::R6Class(
-    "MockEarlyStopModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      call_count = 0,
-      initialize = function(
-        signature,
-        template = "",
-        demos = list(),
-        config = list()
-      ) {
-        super$initialize(
-          signature,
-          template = template,
-          demos = demos,
-          config = config
-        )
-      },
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        self$call_count <- self$call_count + 1
-        # Always return correct
-        tibble::tibble(
-          output = list("correct"),
-          chat = list(NULL),
-          metadata = list(list())
-        )
-      }
-      # No need to override deepcopy - parent's clone-based impl preserves subclass
-    )
-  )
-
+  # Use a standard module with a mock LLM
   sig <- Signature(
     inputs = list(input(name = "x", class = S7::class_character)),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
 
-  mod <- MockEarlyStopModule$new(signature = sig)
+  mod <- module(signature = sig, type = "predict")
 
   trainset <- data.frame(x = c("a", "b", "c", "d"), y = c("1", "2", "3", "4"))
   valset <- data.frame(x = c("e", "f"), y = c("correct", "correct"))
+
+  # Mock LLM that always returns "correct"
+  mock_llm <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        list(answer = "correct")
+      }
+    ),
+    class = "Chat"
+  )
 
   tp <- BootstrapFewShotWithRandomSearch(
     # Always return 1.0 so early stopping triggers on first candidate
@@ -316,7 +275,7 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
     max_bootstrapped_demos = 1L
   )
 
-  result <- compile(tp, mod, trainset, valset = valset)
+  result <- compile(tp, mod, trainset, valset = valset, .llm = mock_llm)
 
   # Should have stopped early (first candidate should hit threshold)
   expect_lt(
@@ -402,50 +361,27 @@ test_that("candidate configs include proper metadata", {
 })
 
 test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors", {
-  # Create a module that fails on certain operations
-  FailingCandidateModule <- R6::R6Class(
-    "FailingCandidateModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      should_fail = FALSE,
-      initialize = function(
-        signature,
-        template = "",
-        demos = list(),
-        config = list()
-      ) {
-        super$initialize(
-          signature,
-          template = template,
-          demos = demos,
-          config = config
-        )
-      },
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        if (self$should_fail) {
-          stop("Intentional forward failure")
-        }
-        tibble::tibble(
-          output = list("ok"),
-          chat = list(NULL),
-          metadata = list(list())
-        )
-      }
-      # No need to override deepcopy - parent's clone-based impl preserves
-      # subclass and all public fields (including should_fail)
-    )
-  )
-
+  # Use a standard module with a mock LLM
   sig <- Signature(
     inputs = list(input(name = "x", class = S7::class_character)),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
 
-  mod <- FailingCandidateModule$new(signature = sig)
+  mod <- module(signature = sig, type = "predict")
 
   trainset <- data.frame(x = c("a", "b"), y = c("1", "2"))
   valset <- data.frame(x = c("c"), y = c("ok"))
+
+  # Mock LLM that returns "ok"
+  mock_llm <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        list(answer = "ok")
+      }
+    ),
+    class = "Chat"
+  )
 
   tp <- BootstrapFewShotWithRandomSearch(
     metric = function(pred, row) as.numeric(pred == row$y),
@@ -454,49 +390,35 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
     max_bootstrapped_demos = 1L
   )
 
-  # Should complete even if some candidates fail
-  result <- compile(tp, mod, trainset, valset = valset)
+  # Should complete successfully
+  result <- compile(tp, mod, trainset, valset = valset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
 })
 
 test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
-  # Create a module that always fails
-  AlwaysFailModule <- R6::R6Class(
-    "AlwaysFailModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      initialize = function(
-        signature,
-        template = "",
-        demos = list(),
-        config = list()
-      ) {
-        super$initialize(
-          signature,
-          template = template,
-          demos = demos,
-          config = config
-        )
-      },
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        stop("Module always fails")
-      }
-      # No need to override deepcopy - parent's clone-based impl preserves subclass
-    )
-  )
-
+  # Use a standard module with a mock LLM that always fails
   sig <- Signature(
     inputs = list(input(name = "x", class = S7::class_character)),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
 
-  mod <- AlwaysFailModule$new(signature = sig)
+  mod <- module(signature = sig, type = "predict")
 
   trainset <- data.frame(x = c("a", "b"), y = c("1", "2"))
   valset <- data.frame(x = c("c"), y = c("ok"))
+
+  # Mock LLM that always fails
+  failing_llm <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        stop("LLM always fails")
+      }
+    ),
+    class = "Chat"
+  )
 
   tp <- BootstrapFewShotWithRandomSearch(
     metric = function(pred, row) as.numeric(pred == row$y),
@@ -507,7 +429,7 @@ test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
 
   # Should error when all candidates fail
   expect_error(
-    compile(tp, mod, trainset, valset = valset),
+    compile(tp, mod, trainset, valset = valset, .llm = failing_llm),
     "All .* candidate programs failed"
   )
 })
