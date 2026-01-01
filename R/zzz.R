@@ -72,6 +72,15 @@
     compile_gepa(teleprompter, program, trainset, ...)
   }
 
+  S7::method(compile, list(MIPROv2, S7::class_any)) <- function(
+    teleprompter,
+    program,
+    trainset,
+    ...
+  ) {
+    compile_mipro(teleprompter, program, trainset, ...)
+  }
+
   S7::method(compile, list(Teleprompter, S7::class_any)) <- function(
     teleprompter,
     program,
