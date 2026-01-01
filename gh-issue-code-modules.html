@@ -339,7 +339,7 @@
 <p><strong>API Design</strong>:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create module</span></span>
-<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu">program_of_thought</span><span class="op">(</span></span>
+<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span>,</span>
 <span>  max_iters <span class="op">=</span> <span class="fl">3</span>,</span>
 <span>  interpreter <span class="op">=</span> <span class="va">CodeInterpreter</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
@@ -360,7 +360,7 @@
 <span><span class="co"># answer = "1060"</span></span>
 <span></span>
 <span><span class="co"># With data context</span></span>
-<span><span class="va">pot_data</span> <span class="op">&lt;-</span> <span class="fu">program_of_thought</span><span class="op">(</span></span>
+<span><span class="va">pot_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"data, question -&gt; answer"</span><span class="op">)</span>,</span>
 <span>  max_iters <span class="op">=</span> <span class="fl">3</span>,</span>
 <span>  allowed_packages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"base"</span>, <span class="st">"stats"</span>, <span class="st">"dplyr"</span><span class="op">)</span></span>
@@ -625,7 +625,7 @@
 <span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">codeact</span> <span class="op">&lt;-</span> <span class="fu">code_act</span><span class="op">(</span></span>
+<span><span class="va">codeact</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/code_act.html">code_act</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search_tool</span><span class="op">)</span>,</span>
 <span>  max_iters <span class="op">=</span> <span class="fl">5</span>,</span>
@@ -961,7 +961,7 @@
 <p>Both modules work with existing optimization infrastructure:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Grid search over execution parameters</span></span>
-<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu">program_of_thought</span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
+<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
 <span>  <span class="va">pot</span>,</span>
 <span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
@@ -973,7 +973,7 @@
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># CodeAct optimization</span></span>
-<span><span class="va">codeact</span> <span class="op">&lt;-</span> <span class="fu">code_act</span><span class="op">(</span><span class="va">sig</span>, tools <span class="op">=</span> <span class="va">tools</span><span class="op">)</span></span>
+<span><span class="va">codeact</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/code_act.html">code_act</a></span><span class="op">(</span><span class="va">sig</span>, tools <span class="op">=</span> <span class="va">tools</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
 <span>  <span class="va">codeact</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>max_iters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">5</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
@@ -1007,7 +1007,7 @@
 <p>A key feature: passing R objects as context for code execution.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Module can reference data objects in generated code</span></span>
-<span><span class="va">pot_data</span> <span class="op">&lt;-</span> <span class="fu">program_of_thought</span><span class="op">(</span></span>
+<span><span class="va">pot_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"data, question -&gt; answer"</span><span class="op">)</span>,</span>
 <span>  interpreter <span class="op">=</span> <span class="va">CodeInterpreter</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>    prelude <span class="op">=</span> <span class="st">"data &lt;- .context$data"</span>  <span class="co"># Inject data</span></span>
@@ -1042,7 +1042,7 @@
 <li><label><input type="checkbox">Build internal signatures (generate, regenerate, extract)</label></li>
 <li><label><input type="checkbox">Implement retry loop with error feedback</label></li>
 <li><label><input type="checkbox">Add code parsing (handle markdown fences)</label></li>
-<li><label><input type="checkbox">Create <code>program_of_thought()</code> factory function</label></li>
+<li><label><input type="checkbox">Create <code><a href="reference/program_of_thought.html">program_of_thought()</a></code> factory function</label></li>
 <li><label><input type="checkbox">Update <code><a href="reference/module.html">module()</a></code> for <code>type = "program_of_thought"</code></label></li>
 <li><label><input type="checkbox">Write unit tests with mock LLM</label></li>
 <li><label><input type="checkbox">Record VCR cassettes for integration tests</label></li>
@@ -1054,7 +1054,7 @@
 <li><label><input type="checkbox">Create code execution tool wrapper</label></li>
 <li><label><input type="checkbox">Implement trajectory tracking</label></li>
 <li><label><input type="checkbox">Build agentic prompt construction</label></li>
-<li><label><input type="checkbox">Create <code>code_act()</code> factory function</label></li>
+<li><label><input type="checkbox">Create <code><a href="reference/code_act.html">code_act()</a></code> factory function</label></li>
 <li><label><input type="checkbox">Update <code><a href="reference/module.html">module()</a></code> for <code>type = "codeact"</code></label></li>
 <li><label><input type="checkbox">Write unit tests</label></li>
 <li><label><input type="checkbox">Record VCR cassettes</label></li>
@@ -1101,7 +1101,7 @@
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>code <span class="op">=</span> <span class="st">"1 + 1"</span><span class="op">)</span>      <span class="co"># Retry succeeds</span></span>
 <span>  <span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu">program_of_thought</span><span class="op">(</span><span class="va">sig</span>, max_iters <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span>  <span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="va">sig</span>, max_iters <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">pot</span>, question <span class="op">=</span> <span class="st">"test"</span>, .llm <span class="op">=</span> <span class="va">mock_llm</span><span class="op">)</span></span>
 <span></span>
 <span>  <span class="fu">expect_equal</span><span class="op">(</span><span class="va">mock_llm</span><span class="op">$</span><span class="va">call_count</span>, <span class="fl">3</span><span class="op">)</span>  <span class="co"># generate, regenerate, extract</span></span>
@@ -1115,7 +1115,7 @@
 <span>  <span class="fu">vcr</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/vcr/reference/use_cassette.html" class="external-link">local_cassette</a></span><span class="op">(</span><span class="st">"pot-math"</span><span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
-<span>  <span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu">program_of_thought</span><span class="op">(</span><span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">pot</span>, question <span class="op">=</span> <span class="st">"What is 847 * 293?"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span>  <span class="fu">expect_equal</span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">answer</span>, <span class="st">"248171"</span><span class="op">)</span></span>
@@ -1132,7 +1132,7 @@
 <span>  <span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
-<span>  <span class="va">codeact</span> <span class="op">&lt;-</span> <span class="fu">code_act</span><span class="op">(</span><span class="va">sig</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search_tool</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">codeact</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/code_act.html">code_act</a></span><span class="op">(</span><span class="va">sig</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search_tool</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">codeact</span>,</span>
 <span>    question <span class="op">=</span> <span class="st">"What is 10% of France's population?"</span>,</span>

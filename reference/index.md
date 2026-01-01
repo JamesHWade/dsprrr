@@ -48,6 +48,23 @@ DSPy-inspired reasoning patterns for improved accuracy
 - [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md)
   : Create a MultiChainComparison Module
 
+## Code Execution Modules
+
+Execute LLM-generated R code safely
+
+- [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
+  : Create an R Code Runner
+- [`r-code-runner`](https://jameshwade.github.io/dsprrr/reference/r-code-runner.md)
+  : R Code Execution Backend
+- [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
+  : Create a Program of Thought Module
+- [`module-program-of-thought`](https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.md)
+  : Program of Thought Module
+- [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
+  : Create a CodeAct Module
+- [`module-codeact`](https://jameshwade.github.io/dsprrr/reference/module-codeact.md)
+  : CodeAct Module
+
 ## Chat-Centric API
 
 ellmer-style pipe-friendly functions

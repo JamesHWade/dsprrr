@@ -104,7 +104,9 @@ patterns. These modules go beyond simple prompt-response to enable: -
 <strong>Step-by-step reasoning</strong> with ChainOfThought -
 <strong>Multiple attempts</strong> with BestOfN - <strong>Iterative
 refinement</strong> with Refine - <strong>Ensemble reasoning</strong>
-with MultiChainComparison</p>
+with MultiChainComparison - <strong>Exact computation</strong> with
+ProgramOfThought (code generation) - <strong>Hybrid agents</strong> with
+CodeAct (tools + code execution)</p>
 <p>Each pattern addresses different challenges in LLM reliability and
 output quality.</p>
 </div>
@@ -519,10 +521,198 @@ provide your own:</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="programofthought">ProgramOfThought<a class="anchor" aria-label="anchor" href="#programofthought"></a>
+</h2>
+<p>ProgramOfThought addresses a fundamental LLM limitation: they’re
+unreliable at exact computation. Instead of asking the model to compute
+directly, it generates R code that R executes.</p>
+<div class="section level3">
+<h3 id="why-use-programofthought">Why Use ProgramOfThought?<a class="anchor" aria-label="anchor" href="#why-use-programofthought"></a>
+</h3>
+<p>LLMs frequently make arithmetic errors, especially with multi-step
+calculations. ProgramOfThought solves this by: - Having the LLM generate
+R code to solve the problem - Executing that code in an isolated
+subprocess - If execution fails, feeding the error back for code repair
+- Extracting the final answer from the execution result</p>
+</div>
+<div class="section level3">
+<h3 id="setting-up-code-execution">Setting Up Code Execution<a class="anchor" aria-label="anchor" href="#setting-up-code-execution"></a>
+</h3>
+<p>Code execution requires explicit opt-in via a runner:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create a runner - this enables code execution</span></span>
+<span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span></span>
+<span>  timeout <span class="op">=</span> <span class="fl">30</span>,                    <span class="co"># Max execution time</span></span>
+<span>  allowed_packages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"base"</span>, <span class="st">"stats"</span>, <span class="st">"utils"</span><span class="op">)</span>  <span class="co"># Allowed packages</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><strong>Security note</strong>: The runner provides subprocess
+isolation but is NOT a security sandbox. For production with untrusted
+inputs, use OS-level sandboxing (containers, AppArmor).</p>
+</div>
+<div class="section level3">
+<h3 id="basic-usage-4">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-4"></a>
+</h3>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create a ProgramOfThought module</span></span>
+<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run it - the LLM generates code, R executes it</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">pot</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What is the sum of all prime numbers under 100?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Result is the computed answer</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">answer</span></span>
+<span><span class="co">#&gt; "1060"</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="automatic-error-recovery">Automatic Error Recovery<a class="anchor" aria-label="anchor" href="#automatic-error-recovery"></a>
+</h3>
+<p>If the generated code fails, ProgramOfThought automatically feeds the
+error back to the LLM for repair:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
+<span>  max_iters <span class="op">=</span> <span class="fl">3</span>  <span class="co"># Try up to 3 times to get working code</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Even if first attempt has a bug, it may self-correct</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">pot</span>, question <span class="op">=</span> <span class="st">"Calculate factorial of 10"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="accessing-execution-history">Accessing Execution History<a class="anchor" aria-label="anchor" href="#accessing-execution-history"></a>
+</h3>
+<p>Track the code generation and execution process:</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># After running, inspect execution history</span></span>
+<span><span class="va">executions</span> <span class="op">&lt;-</span> <span class="va">pot</span><span class="op">$</span><span class="fu">get_executions</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">executions</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">iterations</span>  <span class="co"># List of code attempts</span></span>
+<span><span class="va">executions</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">success</span>     <span class="co"># Whether it succeeded</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="using-context-data">Using Context Data<a class="anchor" aria-label="anchor" href="#using-context-data"></a>
+</h3>
+<p>Pass data to your code via the <code>.context</code> list:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"data, question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">pot</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">mtcars</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What is the correlation between mpg and hp?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># The LLM can generate: cor(.context$data$mpg, .context$data$hp)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="codeact">CodeAct<a class="anchor" aria-label="anchor" href="#codeact"></a>
+</h2>
+<p>CodeAct combines the best of both worlds: it can use external tools
+AND execute R code. This makes it ideal for complex agentic tasks that
+require both information retrieval and computation.</p>
+<div class="section level3">
+<h3 id="why-use-codeact">Why Use CodeAct?<a class="anchor" aria-label="anchor" href="#why-use-codeact"></a>
+</h3>
+<p>Some tasks require multiple capabilities: - Search for information
+(tool calling) - Perform calculations on that information (code
+execution) - Iterate until the answer is found (agent loop)</p>
+<p>CodeAct provides all of these in a single module.</p>
+</div>
+<div class="section level3">
+<h3 id="basic-usage-5">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-5"></a>
+</h3>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create tools</span></span>
+<span><span class="va">search_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu">search_api</span><span class="op">(</span><span class="va">query</span><span class="op">)</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Search for information"</span>,</span>
+<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create CodeAct agent with tools and code execution</span></span>
+<span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>search <span class="op">=</span> <span class="va">search_tool</span><span class="op">)</span>,</span>
+<span>  runner <span class="op">=</span> <span class="va">runner</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># The agent can search AND compute</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">agent</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What is 10% of France's current population?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># Agent might: 1) Search for France's population, 2) Execute: 67000000 * 0.10</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="built-in-code-execution-tool">Built-in Code Execution Tool<a class="anchor" aria-label="anchor" href="#built-in-code-execution-tool"></a>
+</h3>
+<p>CodeAct automatically includes an <code>execute_r_code</code> tool
+that the LLM can call:</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># The LLM sees this tool:</span></span>
+<span><span class="co"># execute_r_code(code): Execute R code in an isolated environment.</span></span>
+<span><span class="co">#   The input data is available in the `.context` list.</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="controlling-iterations">Controlling Iterations<a class="anchor" aria-label="anchor" href="#controlling-iterations"></a>
+</h3>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
+<span>  max_iterations <span class="op">=</span> <span class="fl">10</span>  <span class="co"># Maximum tool/code calls before forcing answer</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="inspecting-agent-trajectory">Inspecting Agent Trajectory<a class="anchor" aria-label="anchor" href="#inspecting-agent-trajectory"></a>
+</h3>
+<p>Track the agent’s decision-making process:</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">agent</span>, question <span class="op">=</span> <span class="st">"Complex question..."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Get the trajectory</span></span>
+<span><span class="va">trajectories</span> <span class="op">&lt;-</span> <span class="va">agent</span><span class="op">$</span><span class="fu">get_trajectories</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">trajectories</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">iterations</span>    <span class="co"># Number of iterations</span></span>
+<span><span class="va">trajectories</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">trajectory</span>    <span class="co"># List of steps taken</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="combining-with-custom-tools">Combining with Custom Tools<a class="anchor" aria-label="anchor" href="#combining-with-custom-tools"></a>
+</h3>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create multiple tools</span></span>
+<span><span class="va">weather_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">city</span><span class="op">)</span> <span class="fu">get_weather</span><span class="op">(</span><span class="va">city</span><span class="op">)</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Get current weather"</span>,</span>
+<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>city <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">database_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu">run_sql</span><span class="op">(</span><span class="va">query</span><span class="op">)</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Query the database"</span>,</span>
+<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># CodeAct with multiple tools + code execution</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>weather <span class="op">=</span> <span class="va">weather_tool</span>, database <span class="op">=</span> <span class="va">database_tool</span><span class="op">)</span>,</span>
+<span>  runner <span class="op">=</span> <span class="va">runner</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
 <h2 id="combining-modules">Combining Modules<a class="anchor" aria-label="anchor" href="#combining-modules"></a>
 </h2>
 <p>These modules can be composed for sophisticated pipelines:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># ChainOfThought inside BestOfN</span></span>
 <span><span class="va">cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"math_problem -&gt; solution"</span><span class="op">)</span></span>
 <span><span class="va">reliable_cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">cot</span>, N <span class="op">=</span> <span class="fl">3</span>, reward_fn <span class="op">=</span> <span class="va">math_checker</span><span class="op">)</span></span>
@@ -539,7 +729,7 @@ provide your own:</p>
 <h2 id="optimization-support">Optimization Support<a class="anchor" aria-label="anchor" href="#optimization-support"></a>
 </h2>
 <p>All advanced modules integrate with dsprrr’s optimization:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Grid search over wrapper parameters</span></span>
 <span><span class="va">wrapper</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">qa</span>, N <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="va">wrapper</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
@@ -572,7 +762,7 @@ comparison)</p>
 <h3 id="cost-tracking">Cost Tracking<a class="anchor" aria-label="anchor" href="#cost-tracking"></a>
 </h3>
 <p>All modules track costs in metadata:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mcc</span>, question <span class="op">=</span> <span class="st">"Test"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">.metadata</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">total_cost</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">.metadata</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">total_tokens</span></span>
@@ -622,23 +812,56 @@ comparison)</p>
 </h2>
 <p>dsprrr’s advanced modules bring battle-tested patterns from DSPy to
 R:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code></strong> - Force
-step-by-step reasoning</li>
-<li>
-<strong><code><a href="../reference/best_of_n.html">best_of_n()</a></code></strong> - Multiple attempts with
-scoring</li>
-<li>
-<strong><code><a href="../reference/refine.html">refine()</a></code></strong> - Iterative improvement with
-feedback</li>
-<li>
-<strong><code><a href="../reference/multi_chain_comparison.html">multi_chain_comparison()</a></code></strong> - Ensemble
-synthesis</li>
-</ol>
-<p>Start with ChainOfThought for complex tasks, add BestOfN for
-reliability, and graduate to Refine or MCC when you need maximum
-quality.</p>
+<table class="table">
+<colgroup>
+<col width="27%">
+<col width="34%">
+<col width="37%">
+</colgroup>
+<thead><tr class="header">
+<th>Module</th>
+<th>Best For</th>
+<th>Trade-off</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code></td>
+<td>Complex reasoning, math, logic</td>
+<td>Slight cost increase</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/best_of_n.html">best_of_n()</a></code></td>
+<td>High-variance tasks, critical outputs</td>
+<td>N× cost (with early stopping)</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/refine.html">refine()</a></code></td>
+<td>Tasks with clear failure modes</td>
+<td>N× cost + feedback gen</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/multi_chain_comparison.html">multi_chain_comparison()</a></code></td>
+<td>Complex analysis, multiple valid approaches</td>
+<td>(M+1)× cost</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
+<td>Exact computation, data analysis</td>
+<td>Code execution overhead</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/code_act.html">code_act()</a></code></td>
+<td>Tasks needing both tools AND computation</td>
+<td>Agent loop overhead</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Getting started:</strong> - Start with
+<strong>ChainOfThought</strong> for complex reasoning tasks - Add
+<strong>BestOfN</strong> when you need reliability - Use
+<strong>ProgramOfThought</strong> for exact computation (math,
+statistics) - Use <strong>CodeAct</strong> when you need tools AND code
+execution together</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

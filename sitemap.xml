@@ -40,6 +40,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/clear_default_chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/clear_traces.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/code_act.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_search_tool.html</loc></url>
@@ -79,7 +80,9 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_f1.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_field_match.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_threshold.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/module-codeact.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-multichain.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-wrapper.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_metrics.html</loc></url>
@@ -100,8 +103,11 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_evaluation.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.ragnar_tool.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/program_of_thought.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/prompt-visibility.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/provider_defaults.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/r-code-runner.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/r_code_runner.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/rag_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/ragnar_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/reasoning_effort.html</loc></url>

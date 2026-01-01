@@ -2,7 +2,8 @@
 
 The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
-tool-using modules, and "multichain" for multi-chain comparison.
+tool-using modules, "multichain" for multi-chain comparison, and
+"program_of_thought" for code execution modules.
 
 ## Usage
 
@@ -14,6 +15,9 @@ module(
   max_iterations = 10L,
   M = 3L,
   temperature = 0.7,
+  runner = NULL,
+  max_iters = 3L,
+  extract_answer = TRUE,
   template = "",
   demos = list(),
   config = list(),
@@ -38,6 +42,11 @@ module(
 
   - `"multichain"`: MultiChainComparison module for ensemble reasoning
 
+  - `"program_of_thought"`: Code execution module (requires runner)
+
+  - `"codeact"`: Hybrid agent with tools + code execution (requires
+    runner)
+
 - tools:
 
   Optional list of ellmer ToolDef objects for react modules. If provided
@@ -54,6 +63,21 @@ module(
 - temperature:
 
   Temperature for multichain diversity (default: 0.7)
+
+- runner:
+
+  RCodeRunner for program_of_thought modules. Required for code
+  execution types. Create with
+  [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md).
+
+- max_iters:
+
+  Maximum code repair iterations for program_of_thought (default: 3)
+
+- extract_answer:
+
+  Logical. For program_of_thought, whether to use LLM to extract final
+  answer from execution result (default: TRUE)
 
 - template:
 

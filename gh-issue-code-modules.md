@@ -1041,7 +1041,9 @@ Implement retry loop with error feedback
 
 Add code parsing (handle markdown fences)
 
-Create `program_of_thought()` factory function
+Create
+[`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
+factory function
 
 Update
 [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
@@ -1063,7 +1065,9 @@ Implement trajectory tracking
 
 Build agentic prompt construction
 
-Create `code_act()` factory function
+Create
+[`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
+factory function
 
 Update
 [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
