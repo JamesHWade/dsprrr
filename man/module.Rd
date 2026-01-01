@@ -11,6 +11,9 @@ module(
   max_iterations = 10L,
   M = 3L,
   temperature = 0.7,
+  runner = NULL,
+  max_iters = 3L,
+  extract_answer = TRUE,
   template = "",
   demos = list(),
   config = list(),
@@ -26,6 +29,8 @@ module(
 \item \code{"predict"} (default): Standard prediction module
 \item \code{"react"}: ReAct-style module with tool support
 \item \code{"multichain"}: MultiChainComparison module for ensemble reasoning
+\item \code{"program_of_thought"}: Code execution module (requires runner)
+\item \code{"codeact"}: Hybrid agent with tools + code execution (requires runner)
 }}
 
 \item{tools}{Optional list of ellmer ToolDef objects for react modules.
@@ -36,6 +41,15 @@ If provided with \code{type = "predict"}, automatically upgrades to react.}
 \item{M}{Number of reasoning chains for multichain (default: 3)}
 
 \item{temperature}{Temperature for multichain diversity (default: 0.7)}
+
+\item{runner}{RCodeRunner for program_of_thought modules. Required for
+code execution types. Create with \code{r_code_runner()}.}
+
+\item{max_iters}{Maximum code repair iterations for program_of_thought
+(default: 3)}
+
+\item{extract_answer}{Logical. For program_of_thought, whether to use LLM
+to extract final answer from execution result (default: TRUE)}
 
 \item{template}{Optional glue template for prompt generation}
 
@@ -54,7 +68,8 @@ A module object (R6) that can be executed with \code{run()}
 \description{
 The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
-tool-using modules, and "multichain" for multi-chain comparison.
+tool-using modules, "multichain" for multi-chain comparison, and
+"program_of_thought" for code execution modules.
 }
 \examples{
 # Create a simple prediction module

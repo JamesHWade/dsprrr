@@ -33,6 +33,7 @@ Imports:
     S7,
     tibble
 Suggests:
+    callr,
     coro,
     dials,
     knitr,
