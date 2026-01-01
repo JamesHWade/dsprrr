@@ -168,14 +168,24 @@ test_that("CostSummary accumulates correctly", {
   summary <- CostSummary()
   expect_equal(summary@total_tokens, 0L)
 
-  cost1 <- list(tokens_in = 100L, tokens_out = 50L, total_tokens = 150L, total_cost = 0.01)
+  cost1 <- list(
+    tokens_in = 100L,
+    tokens_out = 50L,
+    total_tokens = 150L,
+    total_cost = 0.01
+  )
   summary <- update_cost_summary(summary, cost1)
 
   expect_equal(summary@total_tokens, 150L)
   expect_equal(summary@tokens_in, 100L)
   expect_equal(summary@n_calls, 1L)
 
-  cost2 <- list(tokens_in = 200L, tokens_out = 100L, total_tokens = 300L, total_cost = 0.02)
+  cost2 <- list(
+    tokens_in = 200L,
+    tokens_out = 100L,
+    total_tokens = 300L,
+    total_cost = 0.02
+  )
   summary <- update_cost_summary(summary, cost2)
 
   expect_equal(summary@total_tokens, 450L)
@@ -261,11 +271,17 @@ test_that("TrialLog tracks trials", {
   expect_equal(log$n_trials(), 0)
 
   trial1 <- create_trial("TestOptimizer", list(k = 1))
-  trial1 <- complete_trial(trial1, EvalResult(mean_score = 0.7, n_evaluated = 10L))
+  trial1 <- complete_trial(
+    trial1,
+    EvalResult(mean_score = 0.7, n_evaluated = 10L)
+  )
   log$add_trial(trial1, persist = FALSE)
 
   trial2 <- create_trial("TestOptimizer", list(k = 2))
-  trial2 <- complete_trial(trial2, EvalResult(mean_score = 0.9, n_evaluated = 10L))
+  trial2 <- complete_trial(
+    trial2,
+    EvalResult(mean_score = 0.9, n_evaluated = 10L)
+  )
   log$add_trial(trial2, persist = FALSE)
 
   expect_equal(log$n_trials(), 2)
@@ -286,7 +302,12 @@ test_that("TrialLog summary works", {
   trial1 <- create_trial("TestOptimizer")
   trial1 <- complete_trial(
     trial1,
-    EvalResult(mean_score = 0.8, n_evaluated = 10L, total_tokens = 100L, total_cost = 0.01)
+    EvalResult(
+      mean_score = 0.8,
+      n_evaluated = 10L,
+      total_tokens = 100L,
+      total_cost = 0.01
+    )
   )
   log$add_trial(trial1, persist = FALSE)
 
@@ -336,7 +357,10 @@ test_that("TrialLog persists to directory", {
   log <- TrialLog$new("TestOpt", log_dir = tmp_dir)
 
   trial <- create_trial("TestOpt", list(k = 4))
-  trial <- complete_trial(trial, EvalResult(mean_score = 0.9, n_evaluated = 10L))
+  trial <- complete_trial(
+    trial,
+    EvalResult(mean_score = 0.9, n_evaluated = 10L)
+  )
   log$add_trial(trial)
 
   # Check files created
@@ -475,7 +499,7 @@ test_that("update_cost_summary handles NA in total_cost", {
   updated <- update_cost_summary(summary, cost_with_na)
 
   expect_equal(updated@total_tokens, 150L)
-  expect_equal(updated@total_cost, 0)  # NA treated as 0
+  expect_equal(updated@total_cost, 0) # NA treated as 0
   expect_equal(updated@n_calls, 1L)
 })
 
