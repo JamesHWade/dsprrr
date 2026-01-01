@@ -22,7 +22,10 @@
 <url><loc>https://jameshwade.github.io/dsprrr/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/OptimizerControl.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/Teleprompter.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/Trial.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/TrialLog.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/accessors.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.html</loc></url>
@@ -38,13 +41,16 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/code_act.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile_module.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/complete_trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_search_tool.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/create_trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/default-chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsp.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsp_configure.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsp_trainset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsprrr-package.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/eval_program.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/eval_vignette.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/evaluate.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/evaluate_dsp.html</loc></url>
@@ -68,6 +74,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/is_dials_parameters.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/llm_predict.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/load_trial_log.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/merge_optimization_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_contains.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_custom.html</loc></url>
@@ -85,6 +92,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_trials.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/optimize_grid.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/optimizer_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/orchestration.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/parsnip-integration.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/pin_module_config.html</loc></url>
@@ -94,6 +102,8 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict_llm_class.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict_llm_numeric.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/prepare_candidate_grid.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/print.EvalResult.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/print.Trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_batch_result.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_evaluation.html</loc></url>
@@ -105,6 +115,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/r_code_runner.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/rag_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/ragnar_tool.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/reasoning_effort.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/refine.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/register_dsprrr_engine.html</loc></url>
@@ -113,10 +124,12 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_dataset.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/sample_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/session_cost.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/set_default_chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/signature-transforms.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/signature.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/split_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/stream_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/summarize_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/temperature.html</loc></url>
@@ -126,5 +139,6 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/validate_workflow.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/with_reasoning.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/without_reasoning.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/write_trials_jsonl.html</loc></url>
 </urlset>
 

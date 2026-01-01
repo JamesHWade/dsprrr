@@ -149,6 +149,35 @@ Functions for optimizing module performance
 - [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
   : Summarise optimisation metrics per trial
 
+## Optimizer Infrastructure
+
+Low-level optimizer building blocks
+
+- [`OptimizerControl()`](https://jameshwade.github.io/dsprrr/reference/OptimizerControl.md)
+  : Optimizer Control Parameters
+- [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
+  : Create Optimizer Control
+- [`eval_program()`](https://jameshwade.github.io/dsprrr/reference/eval_program.md)
+  : Evaluate a Program on a Dataset
+- [`sample_dataset()`](https://jameshwade.github.io/dsprrr/reference/sample_dataset.md)
+  : Sample from a Dataset Deterministically
+- [`split_dataset()`](https://jameshwade.github.io/dsprrr/reference/split_dataset.md)
+  : Split Dataset into Train and Validation Sets
+- [`Trial()`](https://jameshwade.github.io/dsprrr/reference/Trial.md) :
+  Trial Record
+- [`TrialLog`](https://jameshwade.github.io/dsprrr/reference/TrialLog.md)
+  : Trial Log
+- [`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md)
+  : Create a Trial Record
+- [`complete_trial()`](https://jameshwade.github.io/dsprrr/reference/complete_trial.md)
+  : Complete a Trial
+- [`write_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/write_trials_jsonl.md)
+  : Write Trials to JSONL File
+- [`read_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.md)
+  : Read Trials from JSONL File
+- [`load_trial_log()`](https://jameshwade.github.io/dsprrr/reference/load_trial_log.md)
+  : Load Trial Log from Directory
+
 ## Metrics
 
 Evaluation metrics
@@ -220,6 +249,10 @@ Extract data from structured results
   : Print method for dsprrr_batch_result
 - [`print(`*`<dsprrr_cost_summary>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.md)
   : Print method for dsprrr_cost_summary
+- [`print(`*`<EvalResult>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.EvalResult.md)
+  : Print method for EvalResult
+- [`print(`*`<Trial>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.Trial.md)
+  : Print method for Trial
 
 ## Traces
 

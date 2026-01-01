@@ -86,6 +86,32 @@
 <h3 id="continuous-integration">Continuous Integration<a class="anchor" aria-label="anchor" href="#continuous-integration"></a></h3>
 <p>GitHub Actions runs R CMD check across multiple R versions and OS platforms, with test coverage reporting to Codecov.</p>
 </div>
+<div class="section level3">
+<h3 id="pr-workflow">PR Workflow<a class="anchor" aria-label="anchor" href="#pr-workflow"></a></h3>
+<p>Before creating a pull request, run these checks:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># 1. Format ALL code with air (R/ and tests/)</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># 2. Lint with jarl</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># 3. Run tests</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::test()"</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co"># 4. Run R CMD check (catches codoc mismatches, missing docs, etc.)</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co"># 5. Build pkgdown site (checks _pkgdown.yml coverage)</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::document(); pkgdown::build_site(preview = FALSE)"</span></span></code></pre></div>
+<p><strong>Important</strong>: The CI runs <code>air format --check</code> on both <code>R/</code> and <code>tests/</code> directories. Always format test files too!</p>
+<p>When adding new exported functions: 1. Add roxygen documentation with <code>@export</code> 2. For internal functions, use <code>@noRd</code> (not <code>@keywords internal</code>) to avoid codoc mismatch warnings with S7 classes 3. Run <code>devtools::document()</code> to generate <code>.Rd</code> files 4. Add the function to the appropriate section in <code>_pkgdown.yml</code> 5. Rebuild pkgdown to verify coverage</p>
+<p>Create PRs on feature branches:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature/my-feature</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co"># ... make changes ...</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">git</span> add <span class="at">-A</span> <span class="kw">&amp;&amp;</span> <span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Description"</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin feature/my-feature</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"Title"</span> <span class="at">--body</span> <span class="st">"Description"</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="core-architecture">Core Architecture<a class="anchor" aria-label="anchor" href="#core-architecture"></a></h2>
@@ -104,6 +130,8 @@
 <span>  <span class="va">run.R</span>                 <span class="co"># run() and run_dataset() generics</span></span>
 <span>  <span class="va">evaluate.R</span>            <span class="co"># evaluate() generic for metric computation</span></span>
 <span>  <span class="va">optimize.R</span>            <span class="co"># optimize_grid() and tidymodels helpers</span></span>
+<span>  <span class="va">optimizer</span><span class="op">-</span><span class="va">core.R</span>      <span class="co"># Optimizer infrastructure (OptimizerControl, EvalResult, eval_program)</span></span>
+<span>  <span class="va">optimizer</span><span class="op">-</span><span class="va">logging.R</span>   <span class="co"># Trial logging and persistence (Trial, TrialLog, JSONL I/O)</span></span>
 <span>  <span class="va">teleprompter.R</span>        <span class="co"># S7 Teleprompter classes (LabeledFewShot, GridSearch)</span></span>
 <span>  <span class="va">compile.R</span>             <span class="co"># compile() generic for teleprompter-based optimization</span></span>
 <span>  <span class="va">metrics.R</span>             <span class="co"># Built-in metrics (exact_match, etc.)</span></span>
@@ -114,7 +142,7 @@
 <div class="section level3">
 <h3 id="key-classes">Key Classes<a class="anchor" aria-label="anchor" href="#key-classes"></a></h3>
 <p><strong>Signature (S7)</strong> - Declarative schema for LLM operations: - <code>inputs</code>: List of <code><a href="reference/input.html">input()</a></code> specifications - <code>output_type</code>: ellmer type object (e.g., <code>type_string()</code>, <code>type_enum()</code>) - <code>instructions</code>: System prompt text</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># String notation (DSPy-style)</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer: string"</span><span class="op">)</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span>, instructions <span class="op">=</span> <span class="st">"Be concise"</span><span class="op">)</span></span>
@@ -126,7 +154,7 @@
 <span>  instructions <span class="op">=</span> <span class="st">"Analyze sentiment"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><strong>Module (R6)</strong> - Stateful execution unit: - <code>signature</code>: Immutable S7 Signature reference - <code>config</code>: Mutable configuration (temperature, template, etc.) - <code>state</code>: Mutable runtime state (traces, trials, compilation status) - <code>forward()</code>: Execute on batch input, return tibble with output/metadata - <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>: Run grid search over parameter configurations - <code>is_compiled()</code>: Check if module has been optimized</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
 <p><strong>PredictModule (R6)</strong> - Subclass for text generation: - <code>template</code>: glue template for prompt construction - <code>demos</code>: List of few-shot examples - <code>apply_optimization_params()</code>: Hook for updating state after optimization</p>
@@ -149,7 +177,7 @@
 <div class="section level3">
 <h3 id="teleprompters-s7">Teleprompters (S7)<a class="anchor" aria-label="anchor" href="#teleprompters-s7"></a></h3>
 <p>Optimization strategies that compile modules: - <code>LabeledFewShot</code>: Add k examples from training set as demonstrations - <code>GridSearchTeleprompter</code>: Search over instruction/template variants</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span>, metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -162,7 +190,7 @@
 <h2 id="key-patterns">Key Patterns<a class="anchor" aria-label="anchor" href="#key-patterns"></a></h2>
 <div class="section level3">
 <h3 id="creating-and-running-modules">Creating and Running Modules<a class="anchor" aria-label="anchor" href="#creating-and-running-modules"></a></h3>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># 1. Define signature</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
 <span></span>
@@ -178,7 +206,7 @@
 </div>
 <div class="section level3">
 <h3 id="optimization-workflow">Optimization Workflow<a class="anchor" aria-label="anchor" href="#optimization-workflow"></a></h3>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Grid search with custom parameters</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
 <span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
@@ -193,7 +221,7 @@
 </div>
 <div class="section level3">
 <h3 id="evaluation">Evaluation<a class="anchor" aria-label="anchor" href="#evaluation"></a></h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">eval_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">test_data</span>, metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Returns: mean_score, scores, predictions, metadata, n_evaluated, n_errors</span></span></code></pre></div>
 </div>
@@ -210,7 +238,7 @@
 </ul></div>
 <div class="section level3">
 <h3 id="key-test-conventions">Key Test Conventions<a class="anchor" aria-label="anchor" href="#key-test-conventions"></a></h3>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Mock LLM for deterministic testing</span></span>
 <span><span class="va">mock_llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  chat_structured <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
@@ -231,15 +259,15 @@
 <p>Integration tests use <a href="https://docs.ropensci.org/vcr/" class="external-link">vcr</a> to record and replay HTTP interactions with LLM APIs. This allows tests to run without API keys and ensures reproducible results.</p>
 <p><strong>Cassette locations:</strong> - <code>tests/_vcr/</code> - Test cassettes (OpenAI) - <code>vignettes/_vcr/</code> - Vignette cassettes (Anthropic Claude)</p>
 <p><strong>Recording cassettes:</strong></p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Use the helper script (requires API keys set)</span></span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="ex">Rscript</span> inst/scripts/record-cassettes.R</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># Use the helper script (requires API keys set)</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="ex">Rscript</span> inst/scripts/record-cassettes.R</span></code></pre></div>
 <p>Or interactively:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"inst/scripts/record-cassettes.R"</span><span class="op">)</span></span>
 <span><span class="fu">main</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Run recording</span></span></code></pre></div>
 <p><strong>When to re-record:</strong> - After changing API request format (prompt templates, output types) - After upgrading ellmer (may change request structure) - When cassettes become stale (API response format changes)</p>
 <p><strong>VCR in tests:</strong></p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">test_that</span><span class="op">(</span><span class="st">"integration test with cassette"</span>, <span class="op">{</span></span>
 <span>  <span class="fu">skip_if_not_installed</span><span class="op">(</span><span class="st">"vcr"</span><span class="op">)</span></span>
 <span>  <span class="va">cassette_file</span> <span class="op">&lt;-</span> <span class="fu">testthat</span><span class="fu">::</span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_path.html" class="external-link">test_path</a></span><span class="op">(</span><span class="st">"_vcr"</span>, <span class="st">"my-test.yml"</span><span class="op">)</span></span>
@@ -286,9 +314,31 @@
 </li>
 </ul></div>
 <div class="section level3">
+<h3 id="completed-milestone-d---optimizer-infrastructure">Completed (Milestone D - Optimizer Infrastructure)<a class="anchor" aria-label="anchor" href="#completed-milestone-d---optimizer-infrastructure"></a></h3>
+<ul><li>
+<code>OptimizerControl</code> (S7): Configuration for optimizer behavior (seed, max_trials, max_errors, etc.)</li>
+<li>
+<code>EvalResult</code> (S7): Evaluation result container with per-example and aggregated statistics</li>
+<li>
+<code>CostSummary</code> (S7): Cumulative cost tracking across optimizer trials</li>
+<li>
+<code>Trial</code> (S7): Single optimization trial record with metadata and results</li>
+<li>
+<code>TrialLog</code> (R6): Collection of trials with JSONL persistence support</li>
+<li>
+<code><a href="reference/eval_program.html">eval_program()</a></code>: Standard evaluation function for optimizers</li>
+<li>
+<code><a href="reference/sample_dataset.html">sample_dataset()</a></code> / <code><a href="reference/split_dataset.html">split_dataset()</a></code>: Deterministic sampling with RNG state preservation</li>
+<li>
+<code>check_budget()</code>: Budget stopping condition checker</li>
+<li>
+<code><a href="reference/write_trials_jsonl.html">write_trials_jsonl()</a></code> / <code><a href="reference/read_trials_jsonl.html">read_trials_jsonl()</a></code>: JSONL persistence with error handling</li>
+</ul></div>
+<div class="section level3">
 <h3 id="planned">Planned<a class="anchor" aria-label="anchor" href="#planned"></a></h3>
-<ul><li>Advanced teleprompters (MIPRO, GEPA)</li>
-<li>Cost tracking and token budgets</li>
+<ul><li>DSPy-inspired optimizers: BootstrapFewShot, BootstrapFewShotWithRandomSearch, KNNFewShot</li>
+<li>Advanced teleprompters: COPRO, MIPROv2, SIMBA, GEPA</li>
+<li>Ensemble optimizer combining multiple strategies</li>
 <li>ProgramOfThought (code generation + execution)</li>
 </ul></div>
 </div>
@@ -328,9 +378,8 @@
 <div class="section level2">
 <h2 id="known-issues">Known Issues<a class="anchor" aria-label="anchor" href="#known-issues"></a></h2>
 <ul><li>Some test files have <code>-improved</code> suffix that should be renamed</li>
-<li>Documentation warnings may appear for R6 classes (expected)</li>
 <li>Minor test failures related to deepcopy state preservation</li>
-<li>CLAUDE.md and PLAN.md should be in .Rbuildignore for CRAN</li>
+<li>For internal S7 classes with complex default values, use <code>@noRd</code> instead of <code>@keywords internal</code> to avoid R CMD check codoc mismatch warnings</li>
 </ul></div>
 <div class="section level2">
 <h2 id="file-references">File References<a class="anchor" aria-label="anchor" href="#file-references"></a></h2>
