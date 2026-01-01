@@ -131,6 +131,8 @@ Optimization strategies
   : LabeledFewShot Teleprompter
 - [`GridSearchTeleprompter`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)
   : GridSearchTeleprompter
+- [`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md)
+  : BootstrapFewShot Teleprompter
 
 ## Optimization
 
@@ -253,6 +255,8 @@ Extract data from structured results
   : Print method for EvalResult
 - [`print(`*`<Trial>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.Trial.md)
   : Print method for Trial
+- [`print(`*`<BootstrapFewShot>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShot.md)
+  : Print method for BootstrapFewShot
 
 ## Traces
 
