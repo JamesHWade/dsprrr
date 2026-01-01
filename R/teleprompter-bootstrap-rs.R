@@ -407,7 +407,10 @@ compile_bootstrap_rs <- function(
         "All {length(results)} candidate programs failed to compile or evaluate",
         "i" = "This indicates a systemic issue with your configuration",
         "x" = if (length(error_msgs) > 0) {
-          paste("Sample errors:", paste(utils::head(error_msgs, 3), collapse = "; "))
+          paste(
+            "Sample errors:",
+            paste(utils::head(error_msgs, 3), collapse = "; ")
+          )
         } else {
           "No specific error messages captured"
         },

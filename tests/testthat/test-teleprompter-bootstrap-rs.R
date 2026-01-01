@@ -189,7 +189,12 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
     "MockRSModule",
     inherit = dsprrr:::PredictModule,
     public = list(
-      initialize = function(signature, template = "", demos = list(), config = list()) {
+      initialize = function(
+        signature,
+        template = "",
+        demos = list(),
+        config = list()
+      ) {
         super$initialize(
           signature,
           template = template,
@@ -279,7 +284,12 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
     inherit = dsprrr:::PredictModule,
     public = list(
       call_count = 0,
-      initialize = function(signature, template = "", demos = list(), config = list()) {
+      initialize = function(
+        signature,
+        template = "",
+        demos = list(),
+        config = list()
+      ) {
         super$initialize(
           signature,
           template = template,
@@ -426,7 +436,12 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
     inherit = dsprrr:::PredictModule,
     public = list(
       should_fail = FALSE,
-      initialize = function(signature, template = "", demos = list(), config = list()) {
+      initialize = function(
+        signature,
+        template = "",
+        demos = list(),
+        config = list()
+      ) {
         super$initialize(
           signature,
           template = template,
@@ -494,7 +509,12 @@ test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
     "AlwaysFailModule",
     inherit = dsprrr:::PredictModule,
     public = list(
-      initialize = function(signature, template = "", demos = list(), config = list()) {
+      initialize = function(
+        signature,
+        template = "",
+        demos = list(),
+        config = list()
+      ) {
         super$initialize(
           signature,
           template = template,
