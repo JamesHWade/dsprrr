@@ -282,7 +282,6 @@ RCodeRunner <- R6::R6Class(
   private = list(
     #' Wrapper function that runs inside the subprocess
     #' NOTE: Intentionally uses eval() - this is the core purpose of
-
     #' ProgramOfThought/CodeAct modules (execute LLM-generated code)
     execution_wrapper = function(code, context, prelude, allowed_packages) {
       # Capture messages and warnings
@@ -300,6 +299,47 @@ RCodeRunner <- R6::R6Class(
               # Create execution environment with context
               exec_env <- new.env(parent = globalenv())
               exec_env$.context <- context
+
+              # Override library/require to enforce allowed_packages
+              exec_env$library <- function(package, ...) {
+                pkg_expr <- substitute(package)
+                pkg_name <- if (is.character(pkg_expr)) {
+                  pkg_expr
+                } else {
+                  as.character(pkg_expr)
+                }
+                if (!pkg_name %in% allowed_packages) {
+                  stop(
+                    "Package '",
+                    pkg_name,
+                    "' is not in allowed_packages. ",
+                    "Allowed: ",
+                    paste(allowed_packages, collapse = ", "),
+                    call. = FALSE
+                  )
+                }
+                base::library(pkg_name, character.only = TRUE, ...)
+              }
+
+              exec_env$require <- function(package, ...) {
+                pkg_expr <- substitute(package)
+                pkg_name <- if (is.character(pkg_expr)) {
+                  pkg_expr
+                } else {
+                  as.character(pkg_expr)
+                }
+                if (!pkg_name %in% allowed_packages) {
+                  stop(
+                    "Package '",
+                    pkg_name,
+                    "' is not in allowed_packages. ",
+                    "Allowed: ",
+                    paste(allowed_packages, collapse = ", "),
+                    call. = FALSE
+                  )
+                }
+                base::require(pkg_name, character.only = TRUE, ...)
+              }
 
               # Run prelude if any
               if (length(prelude) > 0) {

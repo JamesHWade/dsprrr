@@ -205,6 +205,48 @@ test_that("RCodeRunner respects custom allowed_packages", {
   expect_equal(runner$allowed_packages, c("base", "stats", "dplyr"))
 })
 
+test_that("RCodeRunner blocks library() for disallowed packages", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(
+    timeout = 10,
+    allowed_packages = c("base", "stats")
+  )
+  result <- runner$execute("library(dplyr)")
+
+  expect_false(result$success)
+  expect_match(result$error, "not in allowed_packages")
+  expect_match(result$error, "dplyr")
+})
+
+test_that("RCodeRunner blocks require() for disallowed packages", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(
+    timeout = 10,
+    allowed_packages = c("base", "stats")
+  )
+  result <- runner$execute("require(ggplot2)")
+
+  expect_false(result$success)
+  expect_match(result$error, "not in allowed_packages")
+  expect_match(result$error, "ggplot2")
+})
+
+test_that("RCodeRunner allows library() for allowed packages", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(
+    timeout = 10,
+    allowed_packages = c("base", "stats", "utils")
+  )
+  # stats is always available, so this should succeed
+  result <- runner$execute("library(stats); mean(1:5)")
+
+  expect_true(result$success)
+  expect_equal(result$result, 3)
+})
+
 test_that("RCodeRunner runs prelude code", {
   skip_if_not_installed("callr")
 
