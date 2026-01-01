@@ -245,11 +245,12 @@ PredictModule <- R6::R6Class(
     #' Create a deep copy of the module
     #' @return New PredictModule with copied state
     deepcopy = function() {
-      # Use R6's clone mechanism to preserve subclass identity
+      # Use R6's deep clone mechanism to preserve subclass identity
       # This is critical for test mocks that inherit from PredictModule
-      new_module <- self$clone(deep = FALSE)
+      # Note: deep=TRUE copies list fields by reference, so we recreate them below
+      new_module <- self$clone(deep = TRUE)
 
-      # Deep copy list fields manually
+      # Explicitly recreate list fields to ensure true deep copies
       new_module$demos <- if (length(self$demos) > 0) {
         lapply(self$demos, function(x) x)
       } else {
