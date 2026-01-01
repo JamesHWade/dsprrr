@@ -73,11 +73,11 @@ NULL
 #' result <- run(agent, question = "Calculate 2^10", .llm = llm)
 #' }
 code_act <- function(
-    signature,
-    tools = list(),
-    runner,
-    max_iterations = 10L,
-    ...
+  signature,
+  tools = list(),
+  runner,
+  max_iterations = 10L,
+  ...
 ) {
   # Validate runner
   if (missing(runner) || is.null(runner)) {
@@ -149,12 +149,12 @@ CodeActModule <- R6::R6Class(
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
     initialize = function(
-        signature,
-        tools = list(),
-        runner,
-        max_iterations = 10L,
-        config = list(),
-        chat = NULL
+      signature,
+      tools = list(),
+      runner,
+      max_iterations = 10L,
+      config = list(),
+      chat = NULL
     ) {
       super$initialize(
         signature = signature,
@@ -224,7 +224,9 @@ CodeActModule <- R6::R6Class(
               llm$chat(task_prompt)
             } else {
               # Continue the conversation if we're iterating
-              llm$chat("Continue working on the task. If you have enough information, provide your final answer.")
+              llm$chat(
+                "Continue working on the task. If you have enough information, provide your final answer."
+              )
             }
           },
           error = function(e) {
@@ -262,7 +264,8 @@ CodeActModule <- R6::R6Class(
 
       duration_ms <- as.numeric(
         difftime(Sys.time(), start_time, units = "secs")
-      ) * 1000
+      ) *
+        1000
 
       # Store trajectory
       if (trace) {
@@ -375,7 +378,8 @@ CodeActModule <- R6::R6Class(
             # Format successful result
             output <- paste0(
               "Execution successful.\n",
-              "Result: ", deparse(result$result, width.cutoff = 500)[1],
+              "Result: ",
+              deparse(result$result, width.cutoff = 500)[1],
               if (nchar(result$stdout) > 0) {
                 paste0("\nStdout: ", result$stdout)
               } else {
@@ -392,7 +396,8 @@ CodeActModule <- R6::R6Class(
             # Format error
             paste0(
               "Execution failed.\n",
-              "Error: ", result$error,
+              "Error: ",
+              result$error,
               if (nchar(result$stderr) > 0) {
                 paste0("\nStderr: ", result$stderr)
               } else {
@@ -421,18 +426,23 @@ CodeActModule <- R6::R6Class(
     #' Build the task prompt
     build_task_prompt = function(inputs) {
       # Format inputs
-      input_parts <- vapply(names(inputs), function(name) {
-        val <- inputs[[name]]
-        if (is.character(val) && length(val) == 1) {
-          paste0(name, ": ", val)
-        } else {
-          paste0(name, ": ", deparse(val, width.cutoff = 500)[1])
-        }
-      }, character(1))
+      input_parts <- vapply(
+        names(inputs),
+        function(name) {
+          val <- inputs[[name]]
+          if (is.character(val) && length(val) == 1) {
+            paste0(name, ": ", val)
+          } else {
+            paste0(name, ": ", deparse(val, width.cutoff = 500)[1])
+          }
+        },
+        character(1)
+      )
 
       input_text <- paste(input_parts, collapse = "\n")
 
-      glue::glue("
+      glue::glue(
+        "
 You are a helpful assistant that can use tools and execute R code to solve problems.
 
 ## Task
@@ -445,12 +455,15 @@ You are a helpful assistant that can use tools and execute R code to solve probl
 4. When you have enough information, provide your final answer
 
 Work step by step to solve this task.
-")
+"
+      )
     },
 
     #' Check if turn has pending tool calls
     has_pending_tools = function(turn) {
-      if (is.null(turn)) return(FALSE)
+      if (is.null(turn)) {
+        return(FALSE)
+      }
 
       # Check if the turn contains tool requests
       # This is a simplified check - ellmer handles the actual tool execution
@@ -471,9 +484,13 @@ Work step by step to solve this task.
       }
 
       # Otherwise, ask for structured output
-      input_parts <- vapply(names(inputs), function(name) {
-        paste0(name, ": ", inputs[[name]])
-      }, character(1))
+      input_parts <- vapply(
+        names(inputs),
+        function(name) {
+          paste0(name, ": ", inputs[[name]])
+        },
+        character(1)
+      )
 
       prompt <- paste0(
         "Based on your work, provide the final answer to the task:\n",

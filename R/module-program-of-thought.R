@@ -60,18 +60,17 @@ NULL
 #' result <- run(pot, question = "Calculate 847 * 293", .llm = llm)
 #' }
 program_of_thought <- function(
-    signature,
-    runner,
-    max_iters = 3L,
-    extract_answer = TRUE,
-    ...
+  signature,
+  runner,
+  max_iters = 3L,
+  extract_answer = TRUE,
+  ...
 ) {
   # Validate runner
 
   if (missing(runner) || is.null(runner)) {
     cli::cli_abort(c(
-
-"Code execution requires an explicit runner",
+      "Code execution requires an explicit runner",
       "i" = "Create one with: {.code runner <- r_code_runner()}",
       "i" = "Then pass it: {.code program_of_thought(..., runner = runner)}"
     ))
@@ -138,12 +137,12 @@ ProgramOfThoughtModule <- R6::R6Class(
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
     initialize = function(
-        signature,
-        runner,
-        max_iters = 3L,
-        extract_answer = TRUE,
-        config = list(),
-        chat = NULL
+      signature,
+      runner,
+      max_iters = 3L,
+      extract_answer = TRUE,
+      config = list(),
+      chat = NULL
     ) {
       super$initialize(
         signature = signature,
@@ -260,7 +259,10 @@ ProgramOfThoughtModule <- R6::R6Class(
       # Extract or format final answer
       if (self$extract_answer && !is.null(final_result)) {
         answer <- private$extract_final_answer(
-          inputs, final_code, final_result, llm
+          inputs,
+          final_code,
+          final_result,
+          llm
         )
       } else {
         answer <- private$format_result(final_result)
@@ -271,7 +273,8 @@ ProgramOfThoughtModule <- R6::R6Class(
 
       duration_ms <- as.numeric(
         difftime(Sys.time(), start_time, units = "secs")
-      ) * 1000
+      ) *
+        1000
 
       # Build metadata
       metadata <- list(
@@ -352,20 +355,25 @@ ProgramOfThoughtModule <- R6::R6Class(
 
     #' Format inputs for code generation prompt
     format_inputs = function(inputs) {
-      parts <- vapply(names(inputs), function(name) {
-        val <- inputs[[name]]
-        if (is.character(val) && length(val) == 1) {
-          paste0(name, ": ", val)
-        } else {
-          paste0(name, ": ", deparse(val, width.cutoff = 500)[1])
-        }
-      }, character(1))
+      parts <- vapply(
+        names(inputs),
+        function(name) {
+          val <- inputs[[name]]
+          if (is.character(val) && length(val) == 1) {
+            paste0(name, ": ", val)
+          } else {
+            paste0(name, ": ", deparse(val, width.cutoff = 500)[1])
+          }
+        },
+        character(1)
+      )
       paste(parts, collapse = "\n")
     },
 
     #' Generate initial code
     generate_code = function(input_context, llm) {
-      prompt <- glue::glue("
+      prompt <- glue::glue(
+        "
 You are an expert R programmer. Generate R code to solve the following problem.
 
 ## Problem
@@ -381,7 +389,8 @@ You are an expert R programmer. Generate R code to solve the following problem.
 Return your response as JSON with two fields:
 - \"code\": The R code to execute (as a string)
 - \"explanation\": Brief explanation of your approach
-")
+"
+      )
 
       # Use structured output
       output_type <- ellmer::type_object(
@@ -404,7 +413,9 @@ Return your response as JSON with two fields:
     #' Repair code after execution error
     repair_code = function(input_context, previous_code, execution, llm) {
       error_context <- paste0(
-        "Error: ", execution$error, "\n",
+        "Error: ",
+        execution$error,
+        "\n",
         if (nchar(execution$stdout) > 0) {
           paste0("Stdout: ", execution$stdout, "\n")
         } else {
@@ -417,7 +428,8 @@ Return your response as JSON with two fields:
         }
       )
 
-      prompt <- glue::glue("
+      prompt <- glue::glue(
+        "
 You are an expert R programmer. Your previous code failed. Fix it.
 
 ## Original Problem
@@ -440,7 +452,8 @@ You are an expert R programmer. Your previous code failed. Fix it.
 Return your response as JSON with two fields:
 - \"code\": The fixed R code to execute
 - \"explanation\": What you changed and why
-")
+"
+      )
 
       output_type <- ellmer::type_object(
         code = ellmer::type_string(
@@ -480,7 +493,8 @@ Return your response as JSON with two fields:
 
       input_context <- private$format_inputs(inputs)
 
-      prompt <- glue::glue("
+      prompt <- glue::glue(
+        "
 Given the following problem and code execution result, provide the final answer.
 
 ## Problem
@@ -495,7 +509,8 @@ Given the following problem and code execution result, provide the final answer.
 {result_str}
 
 Provide a clear, concise answer to the original question.
-")
+"
+      )
 
       llm$chat(prompt)
     },

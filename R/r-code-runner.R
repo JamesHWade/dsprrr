@@ -70,10 +70,10 @@ NULL
 #' # [1] 4
 #' }
 r_code_runner <- function(
-    timeout = 30,
-    max_output_chars = 100000L,
-    allowed_packages = c("base", "stats", "utils", "methods"),
-    prelude = character()
+  timeout = 30,
+  max_output_chars = 100000L,
+  allowed_packages = c("base", "stats", "utils", "methods"),
+  prelude = character()
 ) {
   rlang::check_installed("callr", reason = "for code execution")
 
@@ -124,10 +124,10 @@ RCodeRunner <- R6::R6Class(
     #' @param allowed_packages Character vector of allowed packages
     #' @param prelude Character vector of prelude code
     initialize = function(
-        timeout = 30,
-        max_output_chars = 100000L,
-        allowed_packages = c("base", "stats", "utils", "methods"),
-        prelude = character()
+      timeout = 30,
+      max_output_chars = 100000L,
+      allowed_packages = c("base", "stats", "utils", "methods"),
+      prelude = character()
     ) {
       self$timeout <- timeout
       self$max_output_chars <- max_output_chars
@@ -195,17 +195,25 @@ RCodeRunner <- R6::R6Class(
         },
         callr_timeout_error = function(e) {
           structure(
-            list(error = paste0(
-              "Execution timed out after ", self$timeout, " seconds"
-            )),
+            list(
+              error = paste0(
+                "Execution timed out after ",
+                self$timeout,
+                " seconds"
+              )
+            ),
             class = "timeout_error"
           )
         },
         system_command_timeout_error = function(e) {
           structure(
-            list(error = paste0(
-              "Execution timed out after ", self$timeout, " seconds"
-            )),
+            list(
+              error = paste0(
+                "Execution timed out after ",
+                self$timeout,
+                " seconds"
+              )
+            ),
             class = "timeout_error"
           )
         },
@@ -219,7 +227,8 @@ RCodeRunner <- R6::R6Class(
 
       duration_ms <- as.numeric(
         difftime(Sys.time(), start_time, units = "secs")
-      ) * 1000
+      ) *
+        1000
 
       # Read captured output
       stdout_content <- private$read_output_file(stdout_file)
@@ -404,12 +413,12 @@ RCodeRunner <- R6::R6Class(
 
     #' Create an error result structure
     error_result = function(
-        error,
-        stdout = "",
-        stderr = "",
-        messages = "",
-        warnings = "",
-        duration_ms = 0
+      error,
+      stdout = "",
+      stderr = "",
+      messages = "",
+      warnings = "",
+      duration_ms = 0
     ) {
       list(
         success = FALSE,

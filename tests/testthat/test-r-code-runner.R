@@ -11,7 +11,6 @@ test_that("r_code_runner creates RCodeRunner object", {
 })
 
 test_that("RCodeRunner executes simple R code", {
-
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -307,8 +306,7 @@ test_that("RCodeRunner can create and manipulate data frames", {
   expect_equal(result$result, 3)
 })
 
-test_that("RCodeRunner isolation - variables don't persist",
-{
+test_that("RCodeRunner isolation - variables don't persist", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
