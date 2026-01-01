@@ -114,6 +114,16 @@ reference:
     - module-multichain
     - multi_chain_comparison
 
+  - title: Code Execution Modules
+    desc: Execute LLM-generated R code safely
+    contents:
+    - r_code_runner
+    - r-code-runner
+    - program_of_thought
+    - module-program-of-thought
+    - code_act
+    - module-codeact
+
   - title: Chat-Centric API
     desc: ellmer-style pipe-friendly functions
     contents:
