@@ -42,7 +42,10 @@ Trial <- S7::new_class(
       validator = function(value) {
         valid <- c("pending", "running", "completed", "failed")
         if (!value %in% valid) {
-          return(sprintf("status must be one of: %s", paste(valid, collapse = ", ")))
+          return(sprintf(
+            "status must be one of: %s",
+            paste(valid, collapse = ", ")
+          ))
         }
         NULL
       }
@@ -69,10 +72,11 @@ Trial <- S7::new_class(
 #'   params = list(max_demos = 4, temperature = 0.7)
 #' )
 create_trial <- function(
-    optimizer_name,
-    params = list(),
-    trial_id = NULL,
-    notes = "") {
+  optimizer_name,
+  params = list(),
+  trial_id = NULL,
+  notes = ""
+) {
   if (is.null(trial_id)) {
     trial_id <- generate_trial_id()
   }
@@ -124,10 +128,11 @@ start_trial <- function(trial) {
 #' @return Updated Trial object with status "completed".
 #' @export
 complete_trial <- function(
-    trial,
-    eval_result,
-    compiled_artifact_ref = NULL,
-    notes = NULL) {
+  trial,
+  eval_result,
+  compiled_artifact_ref = NULL,
+  notes = NULL
+) {
   metric_summary <- list(
     mean_score = eval_result@mean_score,
     std_error = eval_result@std_error,
@@ -212,10 +217,11 @@ TrialLog <- R6::R6Class(
       self$optimizer_name <- optimizer_name
       self$log_dir <- log_dir
       self$trials <- list()
-      self$metadata <- metadata %||% list(
-        created_at = Sys.time(),
-        r_version = R.version.string
-      )
+      self$metadata <- metadata %||%
+        list(
+          created_at = Sys.time(),
+          r_version = R.version.string
+        )
 
       # Create log directory if specified
       if (!is.null(log_dir)) {
@@ -323,14 +329,20 @@ TrialLog <- R6::R6Class(
           function(t) t@cost_summary$latency_ms %||% NA_real_,
           numeric(1)
         ),
-        start_time = do.call(c, lapply(
-          self$trials,
-          function(t) t@start_time %||% as.POSIXct(NA)
-        )),
-        end_time = do.call(c, lapply(
-          self$trials,
-          function(t) t@end_time %||% as.POSIXct(NA)
-        )),
+        start_time = do.call(
+          c,
+          lapply(
+            self$trials,
+            function(t) t@start_time %||% as.POSIXct(NA)
+          )
+        ),
+        end_time = do.call(
+          c,
+          lapply(
+            self$trials,
+            function(t) t@end_time %||% as.POSIXct(NA)
+          )
+        ),
         params = lapply(self$trials, function(t) t@params),
         notes = vapply(
           self$trials,
@@ -411,7 +423,7 @@ TrialLog <- R6::R6Class(
           function(t) t@status == "failed",
           logical(1)
         )),
-        best_score = if (length(scores) > 0 && any(!is.na(scores))) {
+        best_score = if (length(scores) > 0 && !all(is.na(scores))) {
           max(scores, na.rm = TRUE)
         } else {
           NA_real_
@@ -441,9 +453,11 @@ TrialLog <- R6::R6Class(
           dir.create(save_dir, recursive = TRUE),
           error = function(e) {
             cli::cli_abort(
-              c("Failed to create log directory",
+              c(
+                "Failed to create log directory",
                 "x" = "Path: {.path {save_dir}}",
-                "i" = "Error: {conditionMessage(e)}"),
+                "i" = "Error: {conditionMessage(e)}"
+              ),
               class = "dsprrr_save_error"
             )
           }
@@ -456,9 +470,11 @@ TrialLog <- R6::R6Class(
         write_trials_jsonl(self$trials, trials_path),
         error = function(e) {
           cli::cli_abort(
-            c("Failed to save trials",
+            c(
+              "Failed to save trials",
               "x" = "Path: {.path {trials_path}}",
-              "i" = "Error: {conditionMessage(e)}"),
+              "i" = "Error: {conditionMessage(e)}"
+            ),
             class = "dsprrr_save_error"
           )
         }
@@ -480,9 +496,11 @@ TrialLog <- R6::R6Class(
         ),
         error = function(e) {
           cli::cli_warn(
-            c("Failed to save metadata",
+            c(
+              "Failed to save metadata",
               "x" = "Path: {.path {metadata_path}}",
-              "i" = "Error: {conditionMessage(e)}"),
+              "i" = "Error: {conditionMessage(e)}"
+            ),
             class = "dsprrr_save_warning"
           )
         }
@@ -499,8 +517,10 @@ TrialLog <- R6::R6Class(
             ),
             error = function(e) {
               cli::cli_warn(
-                c("Failed to save best program",
-                  "i" = "Error: {conditionMessage(e)}"),
+                c(
+                  "Failed to save best program",
+                  "i" = "Error: {conditionMessage(e)}"
+                ),
                 class = "dsprrr_save_warning"
               )
             }
@@ -523,8 +543,7 @@ TrialLog <- R6::R6Class(
         writeLines(readme_content, readme_path),
         error = function(e) {
           cli::cli_warn(
-            c("Failed to save README",
-              "i" = "Error: {conditionMessage(e)}"),
+            c("Failed to save README", "i" = "Error: {conditionMessage(e)}"),
             class = "dsprrr_save_warning"
           )
         }
@@ -543,7 +562,9 @@ TrialLog <- R6::R6Class(
       cli::cli_h3("Trial Log: {self$optimizer_name}")
 
       summary <- self$summary()
-      cli::cli_text("{.field Trials}: {summary$n_trials} ({summary$n_completed} completed, {summary$n_failed} failed)")
+      cli::cli_text(
+        "{.field Trials}: {summary$n_trials} ({summary$n_completed} completed, {summary$n_failed} failed)"
+      )
 
       if (!is.na(summary$best_score)) {
         cli::cli_text("{.field Best Score}: {round(summary$best_score, 4)}")
@@ -554,7 +575,9 @@ TrialLog <- R6::R6Class(
       }
 
       if (summary$total_cost > 0) {
-        cli::cli_text("{.field Total Cost}: ${format(summary$total_cost, digits = 4)}")
+        cli::cli_text(
+          "{.field Total Cost}: ${format(summary$total_cost, digits = 4)}"
+        )
       }
 
       if (!is.null(self$log_dir)) {
@@ -647,7 +670,7 @@ read_trials_jsonl <- function(path) {
   }
 
   lines <- readLines(path, warn = FALSE)
-  lines <- lines[nzchar(trimws(lines))]  # Remove empty lines
+  lines <- lines[nzchar(trimws(lines))] # Remove empty lines
 
   if (length(lines) == 0) {
     return(list())
@@ -693,9 +716,11 @@ read_trials_jsonl <- function(path) {
       },
       error = function(e) {
         cli::cli_warn(
-          c("Failed to parse trial on line {i}",
+          c(
+            "Failed to parse trial on line {i}",
             "i" = "Error: {conditionMessage(e)}",
-            "i" = "Line content: {substr(line, 1, 100)}..."),
+            "i" = "Line content: {substr(line, 1, 100)}..."
+          ),
           class = "dsprrr_parse_warning"
         )
         NULL
@@ -787,7 +812,9 @@ print.Trial <- function(x, ...) {
   }
 
   if (!is.null(x@start_time)) {
-    cli::cli_text("{.field Started}: {format(x@start_time, '%Y-%m-%d %H:%M:%S')}")
+    cli::cli_text(
+      "{.field Started}: {format(x@start_time, '%Y-%m-%d %H:%M:%S')}"
+    )
   }
 
   invisible(x)

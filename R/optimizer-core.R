@@ -23,8 +23,7 @@
 #'
 #' @export
 OptimizerControl <- S7::new_class(
-
-"OptimizerControl",
+  "OptimizerControl",
   properties = list(
     seed = S7::new_property(
       S7::class_any,
@@ -109,13 +108,14 @@ OptimizerControl <- S7::new_class(
 #' # With specific settings
 #' ctrl <- optimizer_control(seed = 42L, max_trials = 100L, log_dir = "logs/")
 optimizer_control <- function(
-    seed = NULL,
-    max_trials = NULL,
-    max_errors = 5L,
-    num_threads = 1L,
-    progress = NA,
-    log_dir = NULL,
-    verbose = FALSE) {
+  seed = NULL,
+  max_trials = NULL,
+  max_errors = 5L,
+  num_threads = 1L,
+  progress = NA,
+  log_dir = NULL,
+  verbose = FALSE
+) {
   # Resolve progress default
   if (is.na(progress)) {
     progress <- interactive()
@@ -216,12 +216,13 @@ EvalResult <- S7::new_class(
 #' result@examples
 #' }
 eval_program <- function(
-    program,
-    dataset,
-    metric,
-    .llm = NULL,
-    control = NULL,
-    ...) {
+  program,
+  dataset,
+  metric,
+  .llm = NULL,
+  control = NULL,
+  ...
+) {
   # Validate inputs
   if (!inherits(program, "Module")) {
     cli::cli_abort("{.arg program} must be a DSPrrr Module object")
@@ -288,7 +289,12 @@ eval_program <- function(
   )
 
   end_time <- Sys.time()
-  total_latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+  total_latency_ms <- as.numeric(difftime(
+    end_time,
+    start_time,
+    units = "secs"
+  )) *
+    1000
 
   # Extract cost information from traces
   cost_info <- extract_cost_from_module(program_copy)
@@ -392,13 +398,16 @@ sample_dataset <- function(dataset, n = NULL, seed = NULL, replace = FALSE) {
     set.seed(seed)
 
     # Restore RNG state on exit
-    on.exit({
-      if (is.null(old_seed)) {
-        rm(".Random.seed", envir = globalenv())
-      } else {
-        assign(".Random.seed", old_seed, envir = globalenv())
-      }
-    }, add = TRUE)
+    on.exit(
+      {
+        if (is.null(old_seed)) {
+          rm(".Random.seed", envir = globalenv())
+        } else {
+          assign(".Random.seed", old_seed, envir = globalenv())
+        }
+      },
+      add = TRUE
+    )
   }
 
   # Sample indices
@@ -452,13 +461,16 @@ split_dataset <- function(dataset, prop = 0.8, seed = NULL) {
     set.seed(seed)
 
     # Restore RNG state on exit
-    on.exit({
-      if (is.null(old_seed)) {
-        rm(".Random.seed", envir = globalenv())
-      } else {
-        assign(".Random.seed", old_seed, envir = globalenv())
-      }
-    }, add = TRUE)
+    on.exit(
+      {
+        if (is.null(old_seed)) {
+          rm(".Random.seed", envir = globalenv())
+        } else {
+          assign(".Random.seed", old_seed, envir = globalenv())
+        }
+      },
+      add = TRUE
+    )
   }
 
   n_train <- floor(n * prop)
@@ -550,7 +562,8 @@ update_cost_summary <- function(summary, module) {
   CostSummary(
     tokens_in = summary@tokens_in + as.integer(safe_num(cost$tokens_in, 0L)),
     tokens_out = summary@tokens_out + as.integer(safe_num(cost$tokens_out, 0L)),
-    total_tokens = summary@total_tokens + as.integer(safe_num(cost$total_tokens, 0L)),
+    total_tokens = summary@total_tokens +
+      as.integer(safe_num(cost$total_tokens, 0L)),
     total_cost = summary@total_cost + safe_num(cost$total_cost, 0),
     n_calls = summary@n_calls + 1L
   )
@@ -638,7 +651,9 @@ print.EvalResult <- function(x, ...) {
     }
   }
 
-  cli::cli_text("{.field Evaluated}: {x@n_evaluated} / {x@n_evaluated + x@n_errors}")
+  cli::cli_text(
+    "{.field Evaluated}: {x@n_evaluated} / {x@n_evaluated + x@n_errors}"
+  )
   if (x@n_errors > 0) {
     cli::cli_alert_warning("{.field Errors}: {x@n_errors}")
   }

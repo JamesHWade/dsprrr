@@ -149,6 +149,9 @@ Save the trial log to disk.
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+Invisibly returns self. Throws error on critical failure.
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TrialLog-print"></a>}}

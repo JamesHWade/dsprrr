@@ -34,6 +34,38 @@ pkgdown::build_site()          # Build pkgdown site
 ### Continuous Integration
 GitHub Actions runs R CMD check across multiple R versions and OS platforms, with test coverage reporting to Codecov.
 
+### PR Workflow
+Before creating a pull request, run these checks:
+
+```bash
+# 1. Format code with air
+air format R/
+
+# 2. Lint with jarl
+jarl check R/
+
+# 3. Run tests
+Rscript -e "devtools::test()"
+
+# 4. Build pkgdown site (checks _pkgdown.yml coverage)
+Rscript -e "devtools::document(); pkgdown::build_site(preview = FALSE)"
+```
+
+When adding new exported functions:
+1. Add roxygen documentation with `@export`
+2. Run `devtools::document()` to generate `.Rd` files
+3. Add the function to the appropriate section in `_pkgdown.yml`
+4. Rebuild pkgdown to verify coverage
+
+Create PRs on feature branches:
+```bash
+git checkout -b feature/my-feature
+# ... make changes ...
+git add -A && git commit -m "Description"
+git push -u origin feature/my-feature
+gh pr create --title "Title" --body "Description"
+```
+
 ## Core Architecture
 
 ### Package Layout
