@@ -509,7 +509,23 @@ generate_simba_rule <- function(
   rule <- NULL
   used_fallback <- FALSE
 
-  if (is.function(prompt_model)) {
+  if (inherits(prompt_model, "Chat")) {
+    # Handle ellmer Chat objects (e.g., from chat_openai())
+    rule <- tryCatch(
+      prompt_model$chat(prompt),
+      error = function(e) {
+        cli::cli_warn(
+          c(
+            "SIMBA prompt_model Chat$chat() call failed",
+            "x" = conditionMessage(e),
+            "i" = "Falling back to example-based rule"
+          ),
+          class = "dsprrr_simba_rule_warning"
+        )
+        NULL
+      }
+    )
+  } else if (is.function(prompt_model)) {
     rule <- tryCatch(
       prompt_model(prompt),
       error = function(e) {
