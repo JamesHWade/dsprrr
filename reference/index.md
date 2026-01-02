@@ -135,6 +135,8 @@ Optimization strategies
   : BootstrapFewShot Teleprompter
 - [`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md)
   : BootstrapFewShotWithRandomSearch Teleprompter
+- [`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md)
+  : KNNFewShot Teleprompter
 
 ## Optimization
 
