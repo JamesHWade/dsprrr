@@ -99,7 +99,7 @@ trainset <- full_data[train_idx, ]
 valset <- full_data[-train_idx, ]
 
 # Or use the built-in helper
-splits <- split_dataset(full_data, train_pct = 0.7, seed = 42)
+splits <- split_dataset(full_data, prop = 0.7, seed = 42)
 trainset <- splits$train
 valset <- splits$val
 ```
@@ -188,12 +188,11 @@ tp <- BootstrapFewShotWithRandomSearch(
 
 compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
 
-# Access the candidate programs and their scores
-candidates <- compiled$config$optimizer$candidate_programs
-scores <- compiled$config$optimizer$candidate_scores
-
-# The compiled module is the best performer
+# Access the best score
 print(compiled$config$optimizer$best_score)
+
+# Access candidate programs (list of program metadata)
+candidates <- compiled$config$optimizer$candidate_programs
 ```
 
 **Parameters:**
@@ -202,17 +201,18 @@ print(compiled$config$optimizer$best_score)
 - `num_threads`: Parallel evaluation threads
 - All `BootstrapFewShot` parameters are inherited
 
-**Tip:** The candidate programs from this optimizer work great with `Ensemble`:
-
+**Tip:** Use `Ensemble` to combine the best optimized module with other strategies:
 ```{r bootstrap-to-ensemble}
-# Take top 3 candidates and ensemble them
-top_candidates <- candidates[1:3]
-top_scores <- scores[1:3]
+# Compile with different strategies and ensemble them
+mod1 <- compile(BootstrapFewShotWithRandomSearch(), qa_module, trainset, valset = valset, .llm = llm)
+mod2 <- compile(COPRO(), qa_module, trainset, valset = valset, .llm = llm)
+mod3 <- compile(LabeledFewShot(k = 3L), qa_module, trainset, .llm = llm)
 
+# Ensemble with weights from validation scores
 ens <- ensemble(
-  top_candidates,
+  list(mod1, mod2, mod3),
   reduce_fn = reduce_weighted_vote(),
-  weights = top_scores
+  weights = c(0.90, 0.85, 0.80)  # Validation scores
 )
 ```
 
@@ -228,13 +228,12 @@ tp <- KNNFewShot(
     # Use any embedding function
     ragnar::embed_openai(texts)
   },
-  metric = metric_exact_match(field = "answer"),
-  seed = 42L
+  cache_embeddings = TRUE  # Cache embeddings for efficiency
 )
 
 compiled <- compile(tp, qa_module, trainset, .llm = llm)
 
-# Each query now gets personalized demos
+# Each query now gets personalized demos based on similarity
 result <- run(compiled, question = "What is DNA made of?", .llm = llm)
 ```
 
@@ -242,7 +241,8 @@ result <- run(compiled, question = "What is DNA made of?", .llm = llm)
 
 - `k`: Number of nearest neighbors to use as demos
 - `vectorizer`: Function that converts text to embeddings
-- Supports caching embeddings for efficiency
+- `cache_embeddings`: Boolean to enable embedding caching
+- `input_text`: Which input field to use for similarity (default: first input)
 
 ## COPRO (Coordinate Prompt Optimization)
 
@@ -297,12 +297,10 @@ Multi-prompt Instruction Proposal Optimizer. Jointly optimizes instructions and 
 ```{r miprov2}
 tp <- MIPROv2(
   metric = metric_exact_match(field = "answer"),
-  num_candidates = 10L,
+  auto = "medium",           # Preset: "light", "medium", or "heavy"
+  num_candidates = 10L,      # Optional: override instruction candidates
   init_temperature = 1.0,
   prompt_model = chat_openai(model = "gpt-4o"),
-  num_trials = 20L,          # Bayesian optimization trials
-  minibatch_size = 25L,
-  minibatch_full_eval_steps = 10L,
   seed = 42L
 )
 
@@ -315,9 +313,10 @@ print(compiled$demos)
 
 **Parameters:**
 
-- `num_candidates`: Instruction candidates to generate
-- `num_trials`: Bayesian optimization budget
-- `minibatch_size`: Examples per evaluation batch
+- `auto`: Preset level - `"light"`, `"medium"`, or `"heavy"`
+- `num_candidates`: Override instruction candidates to generate
+- `prompt_model`: LLM for generating instruction proposals
+- `max_bootstrapped_demos`, `max_labeled_demos`: Demo limits
 - Supports `log_dir` for detailed trial logging
 
 **Presets:**
@@ -326,16 +325,13 @@ print(compiled$demos)
 # Light preset (faster, less thorough)
 tp_light <- MIPROv2(
   metric = metric_exact_match(),
-  num_candidates = 5L,
-  num_trials = 10L
+  auto = "light"
 )
 
 # Heavy preset (slower, more thorough)
 tp_heavy <- MIPROv2(
   metric = metric_exact_match(),
-  num_candidates = 20L,
-  num_trials = 50L,
-  minibatch_size = 50L
+  auto = "heavy"
 )
 ```
 
@@ -348,18 +344,25 @@ Focuses optimization on hard examples that the model struggles with.
 ```{r simba}
 tp <- SIMBA(
   metric = metric_exact_match(field = "answer"),
-  num_candidates = 5L,
-  max_bootstrapped_demos = 4L,
-  max_labeled_demos = 2L,
-  max_iterations = 3L,
+  bsize = 32L,            # Mini-batch size for evaluation
+  num_candidates = 6L,    # Candidate demos per step
+  max_steps = 8L,         # Optimization iterations
+  max_demos = 4L,         # Maximum demos to include
   seed = 42L
 )
 
 compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
 
 # SIMBA iteratively improves on hard examples
-print(compiled$config$optimizer$hard_examples)
+print(compiled$demos)
 ```
+
+**Parameters:**
+
+- `bsize`: Mini-batch size for evaluation
+- `num_candidates`: Number of demo candidates per step
+- `max_steps`: Number of optimization iterations
+- `max_demos`: Maximum demonstrations to include
 
 **How it works:**
 
@@ -375,28 +378,42 @@ Multi-objective optimization balancing quality vs. cost (or other objectives).
 **Best for:** Production systems where you need to balance accuracy against token usage or latency.
 
 ```{r gepa}
+# Single-objective GEPA
 tp <- GEPA(
   metric = metric_exact_match(field = "answer"),
-  population_size = 10L,
-  num_generations = 5L,
+  population_size = 20L,
+  generations = 10L,
   mutation_rate = 0.1,
   crossover_rate = 0.7,
-  objectives = c("quality", "cost"),
   seed = 42L
 )
 
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+# Multi-objective GEPA with named metrics
+tp_multi <- GEPA(
+  metrics = list(
+    quality = metric_exact_match(field = "answer"),
+    brevity = function(pred, expected) 1 / (1 + nchar(as.character(pred$answer)))
+  ),
+  population_size = 20L,
+  generations = 10L,
+  selection = "pareto",  # Use Pareto selection for multi-objective
+  seed = 42L
+)
 
-# GEPA returns Pareto-optimal solutions
-pareto_front <- compiled$config$optimizer$pareto_front
-print(pareto_front)
+compiled <- compile(tp_multi, qa_module, trainset, valset = valset, .llm = llm)
+
+# GEPA returns Pareto-optimal solutions for multi-objective
+pareto <- compiled$config$optimizer$pareto_frontier
+print(pareto)
 ```
 
 **Parameters:**
 
+- `metric`: Single metric function (for single-objective)
+- `metrics`: Named list of metric functions (for multi-objective)
 - `population_size`: Number of candidates per generation
-- `num_generations`: Evolution iterations
-- `objectives`: What to optimize (quality, cost, latency)
+- `generations`: Evolution iterations
+- `selection`: Selection strategy (`"tournament"` or `"pareto"`)
 - `mutation_rate`, `crossover_rate`: Genetic algorithm parameters
 
 ## Ensemble
@@ -507,14 +524,13 @@ compiled$config$optimizer$best_score
 compiled$config$optimizer$trials
 
 # For BootstrapFewShotWithRandomSearch
-compiled$config$optimizer$candidate_programs
-compiled$config$optimizer$candidate_scores
+compiled$config$optimizer$candidate_programs  # List of candidate metadata
 
 # For COPRO
 compiled$config$optimizer$history
 
-# For GEPA
-compiled$config$optimizer$pareto_front
+# For GEPA (multi-objective)
+compiled$config$optimizer$pareto_frontier
 ```
 
 ## Reproducibility
@@ -562,16 +578,37 @@ compiled$config$optimizer$n_errors
 simple <- compile(LabeledFewShot(k = 3L), qa_module, trainset, .llm = llm)
 simple_score <- evaluate(simple, valset, metric_exact_match(), .llm = llm)$mean_score
 
+best_module <- simple
+best_score <- simple_score
+
 # Step 2: If not good enough, try bootstrapping
-if (simple_score < 0.8) {
-  bootstrap <- compile(BootstrapFewShot(), qa_module, trainset, .llm = llm)
+if (best_score < 0.8) {
+  bootstrap <- compile(
+    BootstrapFewShot(metric = metric_exact_match()),
+    qa_module, trainset, .llm = llm
+  )
   bootstrap_score <- evaluate(bootstrap, valset, metric_exact_match(), .llm = llm)$mean_score
+  if (bootstrap_score > best_score) {
+    best_module <- bootstrap
+    best_score <- bootstrap_score
+  }
 }
 
 # Step 3: If still not good enough, try COPRO
-if (bootstrap_score < 0.85) {
-  copro <- compile(COPRO(), qa_module, trainset, valset = valset, .llm = llm)
+if (best_score < 0.85) {
+  copro <- compile(
+    COPRO(metric = metric_exact_match()),
+    qa_module, trainset, valset = valset, .llm = llm
+  )
+  copro_score <- evaluate(copro, valset, metric_exact_match(), .llm = llm)$mean_score
+  if (copro_score > best_score) {
+    best_module <- copro
+    best_score <- copro_score
+  }
 }
+
+# Use the best performing module
+print(paste("Best score:", best_score))
 ```
 
 ### 2. Use Parallel Evaluation
@@ -587,15 +624,26 @@ tp <- BootstrapFewShotWithRandomSearch(
 ### 3. Cache Embeddings for KNNFewShot
 
 ```{r caching}
-# Pre-compute and cache embeddings
-trainset_embeddings <- ragnar::embed_openai(trainset$question)
-
-# Pass cached embeddings to avoid recomputation
+# Enable embedding caching in KNNFewShot
 tp <- KNNFewShot(
   k = 3L,
   vectorizer = ragnar::embed_openai,
-  cached_embeddings = trainset_embeddings
+  cache_embeddings = TRUE  # Cache computed embeddings
 )
+
+# Or create a caching vectorizer manually
+cached_embed <- local({
+  cache <- new.env(parent = emptyenv())
+  function(texts) {
+    key <- digest::digest(texts)
+    if (!exists(key, envir = cache)) {
+      cache[[key]] <- ragnar::embed_openai(texts)
+    }
+    cache[[key]]
+  }
+})
+
+tp <- KNNFewShot(k = 3L, vectorizer = cached_embed)
 ```
 
 ### 4. Monitor Costs
@@ -604,8 +652,8 @@ tp <- KNNFewShot(
 # Track costs during optimization
 session_cost()  # Total cost so far
 
-# After compilation
-compiled$config$optimizer$total_cost
+# Costs are tracked in traces and trial logs
+# Use session_cost() for aggregate view
 ```
 
 ## Summary
