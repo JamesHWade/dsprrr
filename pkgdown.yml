@@ -4,6 +4,7 @@ pkgdown_sha: ~
 articles:
   advanced-ellmer: advanced-ellmer.html
   advanced-modules: advanced-modules.html
+  advanced-optimization: advanced-optimization.html
   cheatsheet: cheatsheet.html
   compilation-optimization: compilation-optimization.html
   getting-started: getting-started.html
@@ -13,7 +14,7 @@ articles:
   tidymodels-integration: tidymodels-integration.html
   troubleshooting: troubleshooting.html
   vitals-integration: vitals-integration.html
-last_built: 2026-01-02T15:42Z
+last_built: 2026-01-02T18:37Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles
