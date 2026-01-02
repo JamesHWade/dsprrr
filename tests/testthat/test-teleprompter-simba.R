@@ -114,38 +114,25 @@ test_that("SIMBA compile returns unmodified program for empty trainset", {
 })
 
 test_that("SIMBA compile applies rules and demos when improved", {
-  MockSIMBAModule <- R6::R6Class(
-    "MockSIMBAModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      initialize = function(
-        signature,
-        template = "",
-        demos = list(),
-        config = list()
-      ) {
-        super$initialize(
-          signature,
-          template = template,
-          demos = demos,
-          config = config
-        )
-      },
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        input_val <- batch[[1]][[1]]
-        expected_map <- c("What is 2+2?" = "4", "What is 3+3?" = "6")
-        output_val <- if (grepl("SIMBA_RULE", self$signature@instructions)) {
-          expected_map[[input_val]]
-        } else {
-          "wrong"
+  # Track call count to simulate improvement after rule is applied
+  call_count <- 0L
+
+  # Mock LLM that returns wrong answers initially, correct after SIMBA_RULE
+  mock_llm <- list(
+    chat_structured = function(prompt, type, ...) {
+      call_count <<- call_count + 1L
+      # Check if SIMBA_RULE has been applied by looking at the prompt
+      if (grepl("SIMBA_RULE", prompt)) {
+        # After rule is applied, return correct answers
+        if (grepl("2\\+2", prompt)) {
+          return("4")
+        } else if (grepl("3\\+3", prompt)) {
+          return("6")
         }
-        tibble::tibble(
-          output = list(output_val),
-          chat = list(NULL),
-          metadata = list(list())
-        )
       }
-    )
+      # Before rule, return wrong answer
+      "wrong"
+    }
   )
 
   sig <- Signature(
@@ -154,7 +141,7 @@ test_that("SIMBA compile applies rules and demos when improved", {
     instructions = "Answer the question"
   )
 
-  mod <- MockSIMBAModule$new(signature = sig, template = "{question}")
+  mod <- module(signature = sig, type = "predict")
 
   trainset <- data.frame(
     question = c("What is 2+2?", "What is 3+3?"),
@@ -184,7 +171,7 @@ test_that("SIMBA compile applies rules and demos when improved", {
     seed = 1L
   )
 
-  result <- compile(tp, mod, trainset)
+  result <- compile(tp, mod, trainset, .llm = mock_llm)
 
   expect_true(result$config$compiled)
   expect_equal(result$config$teleprompter, "SIMBA")
