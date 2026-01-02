@@ -141,6 +141,8 @@ Optimization strategies
   SIMBA Teleprompter
 - [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) :
   GEPA Teleprompter
+- [`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md)
+  : MIPROv2 Teleprompter
 
 ## Optimization
 
