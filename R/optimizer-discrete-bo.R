@@ -79,6 +79,10 @@ run_discrete_bo <- function(
   select_candidate <- function(stats, trial_idx) {
     untried <- which(vapply(stats, function(s) s$count == 0L, logical(1)))
     if (length(untried) > 0) {
+      # Handle single-element vector (sample(n, 1) samples from 1:n, not c(n))
+      if (length(untried) == 1) {
+        return(untried)
+      }
       return(sample(untried, 1))
     }
 
@@ -111,13 +115,48 @@ run_discrete_bo <- function(
         },
         error = function(e) {
           error_count <<- error_count + 1L
-          cli::cli_warn(
-            c(
-              "Evaluation failed for trial {trial_idx}",
-              "x" = conditionMessage(e)
-            ),
-            class = "dsprrr_mipro_eval_error"
+          msg <- conditionMessage(e)
+
+          # Classify error type for better user feedback
+          is_auth_error <- grepl(
+            "auth|401|403|api.?key|invalid.?key|unauthorized",
+            msg,
+            ignore.case = TRUE
           )
+          is_rate_limit <- grepl(
+            "rate.?limit|429|quota|too.?many",
+            msg,
+            ignore.case = TRUE
+          )
+
+          if (is_auth_error) {
+            cli::cli_abort(
+              c(
+                "Authentication error - cannot continue optimization",
+                "x" = msg,
+                "i" = "Please check your API key and permissions"
+              ),
+              class = "dsprrr_mipro_auth_error"
+            )
+          } else if (is_rate_limit) {
+            cli::cli_warn(
+              c(
+                "Rate limit hit for trial {trial_idx}",
+                "x" = msg,
+                "i" = "Consider reducing num_threads or adding delays"
+              ),
+              class = "dsprrr_mipro_rate_limit"
+            )
+          } else {
+            cli::cli_warn(
+              c(
+                "Evaluation failed for trial {trial_idx}",
+                "x" = msg,
+                "i" = "Error count: {error_count}/{control@max_errors}"
+              ),
+              class = "dsprrr_mipro_eval_error"
+            )
+          }
           NULL
         }
       )
@@ -132,35 +171,54 @@ run_discrete_bo <- function(
         std_error <- eval_result@std_error
         n_evaluated <- eval_result@n_evaluated
         n_errors <- eval_result@n_errors
-        stats[[candidate_idx]]$count <- stats[[candidate_idx]]$count + 1L
-        stats[[candidate_idx]]$last_score <- score
+        # Use <<- for parent scope modifications inside with_seed closure
+        stats[[candidate_idx]]$count <<- stats[[candidate_idx]]$count + 1L
+        stats[[candidate_idx]]$last_score <<- score
         if (is.na(stats[[candidate_idx]]$mean_score)) {
-          stats[[candidate_idx]]$mean_score <- score
+          stats[[candidate_idx]]$mean_score <<- score
         } else {
           prev <- stats[[candidate_idx]]$mean_score
           n <- stats[[candidate_idx]]$count
-          stats[[candidate_idx]]$mean_score <- prev + (score - prev) / n
+          stats[[candidate_idx]]$mean_score <<- prev + (score - prev) / n
         }
 
         if (!is.na(score) && score > best_any$score) {
-          best_any <- list(score = score, candidate = candidate)
+          best_any <<- list(score = score, candidate = candidate)
         }
 
         if (eval_type == "full" && !is.na(score) && score > best_full$score) {
-          best_full <- list(score = score, candidate = candidate)
+          best_full <<- list(score = score, candidate = candidate)
         }
       }
 
       if (!is.null(trial_log) && !is.null(eval_result)) {
-        trial <- create_trial(
-          optimizer_name = "MIPROv2",
-          params = c(candidate$params %||% list(), list(eval_type = eval_type))
+        tryCatch(
+          {
+            trial <- create_trial(
+              optimizer_name = "MIPROv2",
+              params = c(
+                candidate$params %||% list(),
+                list(eval_type = eval_type)
+              )
+            )
+            trial <- complete_trial(trial, eval_result, notes = eval_type)
+            trial_log$add_trial(trial)
+          },
+          error = function(e) {
+            cli::cli_warn(
+              c(
+                "Failed to log trial {trial_idx}",
+                "x" = conditionMessage(e),
+                "i" = "Optimization will continue, but this trial was not persisted"
+              ),
+              class = "dsprrr_trial_log_error"
+            )
+          }
         )
-        trial <- complete_trial(trial, eval_result, notes = eval_type)
-        trial_log$add_trial(trial)
       }
 
-      trial_history[[length(trial_history) + 1L]] <- list(
+      # Use <<- for parent scope modification inside with_seed closure
+      trial_history[[length(trial_history) + 1L]] <<- list(
         trial_index = trial_idx,
         candidate_id = candidate$id %||% NA_character_,
         eval_type = eval_type,
@@ -184,16 +242,73 @@ run_discrete_bo <- function(
     }
   })
 
-  trial_history_tbl <- if (track_stats) {
-    tibble::as_tibble(trial_history)
+  trial_history_tbl <- if (track_stats && length(trial_history) > 0) {
+    # Use explicit column construction for robustness
+    tibble::tibble(
+      trial_index = vapply(
+        trial_history,
+        function(x) x$trial_index,
+        integer(1)
+      ),
+      candidate_id = vapply(
+        trial_history,
+        function(x) x$candidate_id %||% NA_character_,
+        character(1)
+      ),
+      eval_type = vapply(
+        trial_history,
+        function(x) x$eval_type %||% NA_character_,
+        character(1)
+      ),
+      mean_score = vapply(
+        trial_history,
+        function(x) x$mean_score %||% NA_real_,
+        numeric(1)
+      ),
+      std_error = vapply(
+        trial_history,
+        function(x) x$std_error %||% NA_real_,
+        numeric(1)
+      ),
+      n_evaluated = vapply(
+        trial_history,
+        function(x) x$n_evaluated %||% 0L,
+        integer(1)
+      ),
+      n_errors = vapply(
+        trial_history,
+        function(x) x$n_errors %||% 0L,
+        integer(1)
+      ),
+      demo_id = vapply(
+        trial_history,
+        function(x) x$demo_id %||% NA_character_,
+        character(1)
+      ),
+      instruction_id = vapply(
+        trial_history,
+        function(x) x$instruction_id %||% NA_character_,
+        character(1)
+      )
+    )
   } else {
     tibble::tibble()
   }
 
   best_candidate <- if (!is.null(best_full$candidate)) {
     best_full$candidate
-  } else {
+  } else if (!is.null(best_any$candidate)) {
+    cli::cli_warn(
+      c(
+        "No candidate received full evaluation",
+        "i" = "Using best candidate from minibatch evaluations only",
+        "i" = "Consider running with more trials to get full evaluations"
+      ),
+      class = "dsprrr_mipro_fallback_warning"
+    )
     best_any$candidate
+  } else {
+    NULL
   }
 
   list(

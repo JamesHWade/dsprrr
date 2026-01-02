@@ -55,16 +55,17 @@ MIPROv2(
 }
 \description{
 MIPROv2 jointly optimizes instructions and few-shot demonstrations using
- a discrete Bayesian optimization loop with minibatch evaluation.
+a discrete Bayesian optimization loop with minibatch evaluation.
 }
 \examples{
-\dontrun{
- tp <- MIPROv2(
-   metric = metric_exact_match(field = "answer"),
-   auto = "light",
-   max_bootstrapped_demos = 4L
- )
 
- compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+\dontrun{
+tp <- MIPROv2(
+  metric = metric_exact_match(field = "answer"),
+  auto = "light",
+  max_bootstrapped_demos = 4L
+)
+
+compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
 }
 }

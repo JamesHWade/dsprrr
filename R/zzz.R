@@ -5,6 +5,9 @@
   # Register S7 methods for Signature (still S7)
   S7::method(print, Signature) <- print_signature
 
+  # Register print method for MIPROv2
+  S7::method(print, MIPROv2) <- print_miprov2
+
   # Register compile methods for teleprompters (still S7)
   S7::method(compile, list(LabeledFewShot, S7::class_any)) <- function(
     teleprompter,

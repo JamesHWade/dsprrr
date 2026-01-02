@@ -31,7 +31,7 @@
 #' @export
 #'
 #' @examples
-#' 
+#'
 #' \dontrun{
 #' tp <- MIPROv2(
 #'   metric = metric_exact_match(field = "answer"),
@@ -222,6 +222,18 @@ compile_mipro <- function(
     instruction_candidates = instruction_candidates
   )
 
+  if (length(candidate_grid) == 0) {
+    cli::cli_abort(
+      c(
+        "No valid candidate configurations generated",
+        "i" = "Demo candidates: {length(demo_candidates)}",
+        "i" = "Instruction candidates: {length(instruction_candidates)}",
+        "!" = "Check if trainset has sufficient examples for bootstrapping"
+      ),
+      class = "dsprrr_mipro_no_candidates"
+    )
+  }
+
   minibatch_size <- min(settings$minibatch_size, nrow(trainset))
   full_eval_every <- settings$full_eval_every
 
@@ -232,13 +244,22 @@ compile_mipro <- function(
       sample_dataset(
         trainset,
         n = minibatch_size,
-        seed = if (is.null(teleprompter@seed)) NULL else teleprompter@seed + trial_idx
+        seed = if (is.null(teleprompter@seed)) {
+          NULL
+        } else {
+          teleprompter@seed + trial_idx
+        }
       )
     }
 
     compiled <- copy_module(program)
     compiled$demos <- candidate$demos
-    compiled$signature@instructions <- candidate$instructions
+    # Create new signature with updated instructions (S7 objects are immutable)
+    compiled$signature <- Signature(
+      inputs = compiled$signature@inputs,
+      output_type = compiled$signature@output_type,
+      instructions = candidate$instructions
+    )
 
     eval_program(
       compiled,
@@ -268,7 +289,12 @@ compile_mipro <- function(
 
   compiled <- copy_module(program)
   compiled$demos <- best_candidate$demos
-  compiled$signature@instructions <- best_candidate$instructions
+  # Create new signature with updated instructions (S7 objects are immutable)
+  compiled$signature <- Signature(
+    inputs = compiled$signature@inputs,
+    output_type = compiled$signature@output_type,
+    instructions = best_candidate$instructions
+  )
   compiled$state$compiled <- TRUE
   compiled$config$compiled <- TRUE
   compiled$config$teleprompter <- "MIPROv2"
@@ -386,22 +412,40 @@ generate_mipro_demo_candidates <- function(
     }
     for (i in seq_len(n_bootstrap)) {
       bootstrap_tp@seed <- seeds[i]
-      boot_module <- compile_bootstrap(
-        bootstrap_tp,
-        program,
-        trainset,
-        .llm = .llm
+      boot_result <- tryCatch(
+        {
+          compile_bootstrap(
+            bootstrap_tp,
+            program,
+            trainset,
+            .llm = .llm
+          )
+        },
+        error = function(e) {
+          cli::cli_warn(
+            c(
+              "Bootstrap compilation failed for seed {seeds[i]}",
+              "x" = conditionMessage(e),
+              "i" = "This candidate will be skipped"
+            ),
+            class = "dsprrr_mipro_bootstrap_warning"
+          )
+          NULL
+        }
       )
-      candidates[[length(candidates) + 1L]] <- list(
-        id = paste0("bootstrap_", seeds[i]),
-        demos = boot_module$demos,
-        params = list(
+
+      if (!is.null(boot_result) && length(boot_result$demos) > 0) {
+        candidates[[length(candidates) + 1L]] <- list(
           id = paste0("bootstrap_", seeds[i]),
-          type = "bootstrap",
-          seed = seeds[i],
-          n_demos = length(boot_module$demos)
+          demos = boot_result$demos,
+          params = list(
+            id = paste0("bootstrap_", seeds[i]),
+            type = "bootstrap",
+            seed = seeds[i],
+            n_demos = length(boot_result$demos)
+          )
         )
-      )
+      }
     }
   }
 
@@ -488,8 +532,11 @@ summarize_mipro_dataset <- function(trainset, signature) {
 
   paste0(
     "Dataset summary:\n",
-    "Inputs: ", input_preview, "\n",
-    "Output: ", output_preview
+    "Inputs: ",
+    input_preview,
+    "\n",
+    "Output: ",
+    output_preview
   )
 }
 
@@ -517,4 +564,22 @@ expand_mipro_candidates <- function(demo_candidates, instruction_candidates) {
   }
 
   candidates
+}
+
+#' Print method for MIPROv2
+#' @noRd
+print_miprov2 <- function(x, ...) {
+  cli::cli_h3("MIPROv2 Teleprompter")
+  cli::cli_text("{.field auto}: {x@auto %||% 'NULL'}")
+  cli::cli_text("{.field max_bootstrapped_demos}: {x@max_bootstrapped_demos}")
+  cli::cli_text("{.field max_labeled_demos}: {x@max_labeled_demos}")
+  cli::cli_text("{.field seed}: {x@seed %||% 'NULL'}")
+  cli::cli_text("{.field num_threads}: {x@num_threads}")
+  if (!is.null(x@metric)) {
+    cli::cli_text("{.field metric}: <function>")
+  }
+  if (!is.null(x@log_dir)) {
+    cli::cli_text("{.field log_dir}: {x@log_dir}")
+  }
+  invisible(x)
 }
