@@ -145,7 +145,7 @@ EvalResult <- S7::new_class(
     # Per-example data
     examples = S7::new_property(
       S7::class_data.frame,
-      default = tibble::tibble()
+      default = quote(data.frame())
     ),
     # Aggregated summary
     mean_score = S7::new_property(S7::class_numeric, default = NA_real_),
