@@ -91,6 +91,7 @@ Collate:
     'teleprompter.R'
     'teleprompter-bootstrap.R'
     'teleprompter-bootstrap-rs.R'
+    'teleprompter-copro.R'
     'teleprompter-gepa.R'
     'teleprompter-knn.R'
     'teleprompter-mipro.R'

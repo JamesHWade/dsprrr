@@ -84,6 +84,15 @@
     compile_mipro(teleprompter, program, trainset, ...)
   }
 
+  S7::method(compile, list(COPRO, S7::class_any)) <- function(
+    teleprompter,
+    program,
+    trainset,
+    ...
+  ) {
+    compile_copro(teleprompter, program, trainset, ...)
+  }
+
   S7::method(compile, list(Teleprompter, S7::class_any)) <- function(
     teleprompter,
     program,
