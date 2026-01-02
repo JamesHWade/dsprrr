@@ -425,7 +425,7 @@ test_that("reduce_first errors on empty list", {
 
 test_that("reduce_best_by_metric scores outputs", {
   metric <- metric_exact_match(field = "answer")
-  reducer <- reduce_best_by_metric(metric, expected_field = "expected")
+  reducer <- reduce_best_by_metric(metric)
 
   # Set expected value - must be a list with the field since metric extracts it
   attr(reducer, "set_expected")(list(answer = "correct"))
@@ -438,6 +438,122 @@ test_that("reduce_best_by_metric scores outputs", {
 
   result <- reducer(outputs)
   expect_equal(result$answer, "correct")
+})
+
+test_that("reduce_best_by_metric with maximize = FALSE returns lowest score", {
+  # Create a metric that returns numeric scores
+  length_metric <- function(output, expected) {
+    nchar(output$answer)
+  }
+
+  reducer <- reduce_best_by_metric(length_metric, maximize = FALSE)
+  attr(reducer, "set_expected")(list(answer = "ignored"))
+
+  outputs <- list(
+    list(answer = "very long answer"),
+    list(answer = "short"),
+    list(answer = "medium answer")
+  )
+
+  result <- reducer(outputs)
+  expect_equal(result$answer, "short") # Shortest = lowest score
+})
+
+test_that("reduce_best_by_metric warns when no expected value set", {
+  metric <- metric_exact_match(field = "answer")
+  reducer <- reduce_best_by_metric(metric)
+
+  # Don't set expected value
+  outputs <- list(
+    list(answer = "a"),
+    list(answer = "b")
+  )
+
+  expect_warning(
+    result <- reducer(outputs),
+    "No expected value set"
+  )
+  # Should fall back to first output
+  expect_equal(result$answer, "a")
+})
+
+test_that("reduce_best_by_metric warns when metric scoring fails", {
+  # Create a metric that throws an error
+  failing_metric <- function(output, expected) {
+    stop("Metric computation failed")
+  }
+
+  reducer <- reduce_best_by_metric(failing_metric)
+  attr(reducer, "set_expected")(list(answer = "expected"))
+
+  outputs <- list(
+    list(answer = "a"),
+    list(answer = "b")
+  )
+
+  # Should warn for each scoring failure and for all NA scores
+  expect_warning(
+    result <- reducer(outputs),
+    "Metric scoring failed"
+  )
+})
+
+test_that("reduce_best_by_metric warns when all scores are NA", {
+  # Create a metric that returns NA
+  na_metric <- function(output, expected) {
+    NA_real_
+  }
+
+  reducer <- reduce_best_by_metric(na_metric)
+  attr(reducer, "set_expected")(list(answer = "expected"))
+
+  outputs <- list(
+    list(answer = "a"),
+    list(answer = "b")
+  )
+
+  expect_warning(
+    result <- reducer(outputs),
+    "All metric scores are NA"
+  )
+  expect_equal(result$answer, "a") # Falls back to first
+})
+
+test_that("reduce_weighted_vote errors on empty list", {
+  reducer <- reduce_weighted_vote()
+  expect_error(reducer(list()), "empty list")
+})
+
+test_that("reduce_majority with tie_breaker = 'random' works", {
+  reducer <- reduce_majority(tie_breaker = "random")
+
+  outputs <- list(
+    list(answer = "a"),
+    list(answer = "b")
+  )
+
+  # Should return one of the tied values
+  result <- reducer(outputs)
+  expect_true(result$answer %in% c("a", "b"))
+})
+
+test_that("EnsembleModule errors with helpful message when reduce function fails", {
+  mods <- list(
+    create_mock_module("a"),
+    create_mock_module("b")
+  )
+
+  # Use a reduce function that throws an error
+  failing_reduce <- function(outputs, weights = NULL) {
+    stop("Custom reduce error")
+  }
+
+  ens <- ensemble(mods, reduce_fn = failing_reduce)
+
+  expect_error(
+    ens$forward(list(question = "test")),
+    "Reduce function failed"
+  )
 })
 
 # ============================================================================
@@ -515,6 +631,30 @@ test_that("compile_ensemble uses weights from teleprompter", {
   result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
 
   expect_equal(result$weights, c(0.9, 0.8, 0.7))
+})
+
+test_that("compile_ensemble warns when more weights than programs", {
+  mods <- lapply(1:2, function(i) create_mock_module(paste0("a", i)))
+  tp <- Ensemble(weights = c(0.9, 0.8, 0.7)) # 3 weights for 2 programs
+
+  expect_warning(
+    result <- compile(tp, program = NULL, trainset = NULL, programs = mods),
+    "More weights"
+  )
+  # Should truncate to first 2 weights
+  expect_equal(result$weights, c(0.9, 0.8))
+})
+
+test_that("compile_ensemble warns when fewer weights than programs", {
+  mods <- lapply(1:4, function(i) create_mock_module(paste0("a", i)))
+  tp <- Ensemble(weights = c(0.9, 0.8)) # 2 weights for 4 programs
+
+  expect_warning(
+    result <- compile(tp, program = NULL, trainset = NULL, programs = mods),
+    "Fewer weights"
+  )
+  # Should use equal weights (default)
+  expect_equal(result$weights, rep(1, 4))
 })
 
 test_that("compile_ensemble errors without programs", {

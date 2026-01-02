@@ -574,10 +574,10 @@ reduce_first <- function() {
 #'
 #' @description
 #' Creates a reduce function that scores each output using a metric function
-#' and returns the best-scoring output. Requires expected value in inputs.
+#' and returns the best-scoring output. Requires expected value to be set
+#' via the `set_expected` attribute before calling.
 #'
 #' @param metric A metric function created with `metric_*()` functions
-#' @param expected_field Name of the field containing expected value
 #' @param maximize If TRUE (default), return highest-scoring output.
 #'   If FALSE, return lowest-scoring output.
 #'
@@ -590,14 +590,12 @@ reduce_first <- function() {
 #' ens <- ensemble(
 #'   modules,
 #'   reduce_fn = reduce_best_by_metric(
-#'     metric = metric_exact_match(field = "answer"),
-#'     expected_field = "expected"
+#'     metric = metric_exact_match(field = "answer")
 #'   )
 #' )
 #' }
 reduce_best_by_metric <- function(
   metric,
-  expected_field = "expected",
   maximize = TRUE
 ) {
   if (!is.function(metric)) {
@@ -627,14 +625,20 @@ reduce_best_by_metric <- function(
     }
 
     # Score each output
+    n_scoring_errors <- 0
     scores <- vapply(
-      outputs,
-      function(o) {
+      seq_along(outputs),
+      function(i) {
         tryCatch(
           {
-            as.numeric(metric(o, state$expected_value))
+            as.numeric(metric(outputs[[i]], state$expected_value))
           },
           error = function(e) {
+            n_scoring_errors <<- n_scoring_errors + 1
+            cli::cli_warn(c(
+              "Metric scoring failed for output {i}",
+              "x" = e$message
+            ))
             NA_real_
           }
         )
@@ -648,6 +652,11 @@ reduce_best_by_metric <- function(
 
     if (is.na(best_idx) || length(best_idx) == 0) {
       # All scores NA, return first
+      cli::cli_warn(c(
+        "All metric scores are NA in reduce_best_by_metric",
+        "i" = "{n_scoring_errors} scoring error{?s} occurred",
+        "i" = "Falling back to first output"
+      ))
       return(outputs[[1]])
     }
 

@@ -154,12 +154,16 @@ compile_ensemble <- function(
   # Get weights
   weights <- teleprompter@weights
   if (!is.null(weights) && length(weights) != length(programs)) {
-    # Truncate or warn about weight mismatch
+    # Warn about weight mismatch
     if (length(weights) > length(programs)) {
+      cli::cli_warn(c(
+        "More weights ({length(weights)}) than programs ({length(programs)})",
+        "i" = "Truncating weights to match program count"
+      ))
       weights <- weights[seq_along(programs)]
     } else {
       cli::cli_warn(c(
-        "weights length ({length(weights)}) doesn't match programs ({length(programs)})",
+        "Fewer weights ({length(weights)}) than programs ({length(programs)})",
         "i" = "Using equal weights"
       ))
       weights <- NULL

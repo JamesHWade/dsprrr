@@ -4,12 +4,10 @@
 \alias{reduce_best_by_metric}
 \title{Best by Metric Reducer}
 \usage{
-reduce_best_by_metric(metric, expected_field = "expected", maximize = TRUE)
+reduce_best_by_metric(metric, maximize = TRUE)
 }
 \arguments{
 \item{metric}{A metric function created with \verb{metric_*()} functions}
-
-\item{expected_field}{Name of the field containing expected value}
 
 \item{maximize}{If TRUE (default), return highest-scoring output.
 If FALSE, return lowest-scoring output.}
@@ -19,7 +17,8 @@ A reduce function for use with \code{ensemble()}
 }
 \description{
 Creates a reduce function that scores each output using a metric function
-and returns the best-scoring output. Requires expected value in inputs.
+and returns the best-scoring output. Requires expected value to be set
+via the \code{set_expected} attribute before calling.
 }
 \examples{
 \dontrun{
@@ -27,8 +26,7 @@ and returns the best-scoring output. Requires expected value in inputs.
 ens <- ensemble(
   modules,
   reduce_fn = reduce_best_by_metric(
-    metric = metric_exact_match(field = "answer"),
-    expected_field = "expected"
+    metric = metric_exact_match(field = "answer")
   )
 )
 }
