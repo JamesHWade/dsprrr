@@ -426,8 +426,15 @@ gepa_next_generation <- function(
     ranks <- pareto_ranks(scores_matrix)
     crowding <- pareto_crowding_distance(scores_matrix, ranks)
   } else {
-    ranks <- rep(1L, nrow(scores_matrix))
-    crowding <- rep(0, nrow(scores_matrix))
+    # For single-objective: rank by primary score (higher score = lower rank)
+    primary_scores <- scores_matrix[, 1]
+    # Handle NA scores by giving them worst rank
+    primary_scores[is.na(primary_scores)] <- -Inf
+    # Rank: 1 = best (highest score), higher rank = worse
+    ranks <- rank(-primary_scores, ties.method = "min")
+    # Use score as crowding for tiebreaking (higher is better)
+    crowding <- primary_scores
+    crowding[is.infinite(crowding)] <- 0
   }
 
   population <- vector("list", population_size)
