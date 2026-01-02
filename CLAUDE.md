@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL: Feature Branch Workflow
+
+**NEVER commit directly to main.** Before starting ANY implementation work:
+
+```bash
+# 1. ALWAYS create a feature branch FIRST
+git checkout -b feature/<short-description>
+# or: git checkout -b fix/<short-description>
+
+# 2. Then claim the issue and start work
+bd update <id> --status=in_progress
+```
+
+This is mandatory even for small changes. The only commits to main should be merge commits from PRs.
+
 ## Project Overview
 
 `dsprrr` is an R package for building principled, test-driven, and optimizable applications using Large Language Models. It implements the DSP (Declarative Self-improving Language Programs) framework in R, providing a structured programming model where LLM workflows are treated as programs that can be systematically improved.
@@ -405,29 +420,29 @@ When in doubt, prefer beads—persistence you don't need beats lost context.
 
 ## Feature Branch + PR Workflow
 
-### 1. Find and Claim Work
+### 1. Find Work and Create Feature Branch
+
+**⚠️ IMPORTANT: Create the feature branch BEFORE claiming the issue or writing any code.**
 
 ```bash
 bd ready                              # Find available work
 bd show <id>                          # Review issue details
-bd update <id> --status=in_progress   # Claim it
-```
 
-### 2. Create Feature Branch
-
-```bash
+# CREATE BRANCH FIRST - before any code changes!
 git checkout -b feature/<short-description>
 # or: git checkout -b fix/<short-description>
+
+bd update <id> --status=in_progress   # Now claim the work
 ```
 
-### 3. Work and Sync
+### 2. Work and Sync
 
 ```bash
 # Make changes...
 bd sync                               # Sync beads periodically
 ```
 
-### 4. Run Quality Gates
+### 3. Run Quality Gates
 
 ```bash
 # Format ALL code with air (R/ and tests/)
@@ -446,7 +461,7 @@ Rscript -e "devtools::check()"
 Rscript -e "devtools::document(); pkgdown::build_site(preview = FALSE)"
 ```
 
-### 5. Create PR and Close Issue
+### 4. Create PR and Close Issue
 
 When code is complete and ready for review:
 
@@ -461,11 +476,11 @@ gh pr create --title "..." --body "Resolves beads-XXX"
 
 **Important**: Close the beads issue when the *work* is complete, not when the PR is merged. The issue tracks your work; the PR tracks the review/merge process.
 
-### 6. Human Reviews and Merges PR
+### 5. Human Reviews and Merges PR
 
 Agents create PRs but **do not merge them**. Humans review and merge PRs to main.
 
-### 7. After PR Merged (Cleanup)
+### 6. After PR Merged (Cleanup)
 
 ```bash
 git checkout main
