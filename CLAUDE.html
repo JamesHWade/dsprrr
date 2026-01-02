@@ -482,7 +482,7 @@
 <h3 id="id_4-create-pr-and-close-issue">4. Create PR and Close Issue<a class="anchor" aria-label="anchor" href="#id_4-create-pr-and-close-issue"></a></h3>
 <p>When code is complete and ready for review:</p>
 <div class="sourceCode" id="cb22"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a><span class="fu">git</span> add .</span>
-<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description"</span></span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr-xxx)"</span>  <span class="co"># Include beads issue ID!</span></span>
 <span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Close beads issue - work is done</span></span>
 <span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a><span class="ex">bd</span> sync</span>
 <span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
@@ -507,35 +507,44 @@
 <h2 id="session-completion-protocol">Session Completion Protocol<a class="anchor" aria-label="anchor" href="#session-completion-protocol"></a></h2>
 <p><strong>CRITICAL</strong>: Before ending a session, complete ALL steps. Work is NOT complete until <code>git push</code> succeeds.</p>
 <div class="section level3">
-<h3 id="mandatory-checklist">Mandatory Checklist<a class="anchor" aria-label="anchor" href="#mandatory-checklist"></a></h3>
-<div class="sourceCode" id="cb25"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># 1. File issues for remaining work</span></span>
-<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Follow-up task"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"..."</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
+<h3 id="mandatory-checklist-feature-branch-workflow">Mandatory Checklist (Feature Branch Workflow)<a class="anchor" aria-label="anchor" href="#mandatory-checklist-feature-branch-workflow"></a></h3>
+<div class="sourceCode" id="cb25"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># 1. Verify you're on a feature branch (NOT main!)</span></span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">--show-current</span>  <span class="co"># Should NOT be 'main'</span></span>
 <span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a></span>
-<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a><span class="co"># 2. Run quality gates (if code changed)</span></span>
-<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
-<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
-<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
-<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a></span>
-<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a><span class="co"># 3. Update issue status</span></span>
-<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>completed-issues<span class="op">&gt;</span></span>
-<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>in-progress-issues<span class="op">&gt;</span> --status=open  <span class="co"># If not finished</span></span>
-<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a></span>
-<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a><span class="co"># 4. Commit and push</span></span>
-<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a><span class="fu">git</span> add .</span>
-<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"..."</span></span>
-<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a><span class="ex">bd</span> sync</span>
-<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a><span class="fu">git</span> push</span>
-<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a></span>
-<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a><span class="co"># 5. Verify</span></span>
-<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a><span class="fu">git</span> status  <span class="co"># Should show "up to date with origin"</span></span></code></pre></div>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a><span class="co"># 2. File issues for remaining work</span></span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Follow-up task"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"..."</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
+<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a></span>
+<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a><span class="co"># 3. Run quality gates (if code changed)</span></span>
+<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
+<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
+<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
+<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a></span>
+<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a><span class="co"># 4. Update issue status</span></span>
+<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>completed-issues<span class="op">&gt;</span>           <span class="co"># Include reason if helpful</span></span>
+<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>in-progress-issues<span class="op">&gt;</span> --status=open  <span class="co"># If not finished</span></span>
+<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a></span>
+<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a><span class="co"># 5. Commit with beads issue ID</span></span>
+<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr-xxx)"</span>  <span class="co"># Always include issue ID!</span></span>
+<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a><span class="ex">bd</span> sync</span>
+<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
+<span id="cb25-21"><a href="#cb25-21" tabindex="-1"></a></span>
+<span id="cb25-22"><a href="#cb25-22" tabindex="-1"></a><span class="co"># 6. Create PR (if not already created)</span></span>
+<span id="cb25-23"><a href="#cb25-23" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves dsprrr-xxx"</span></span>
+<span id="cb25-24"><a href="#cb25-24" tabindex="-1"></a></span>
+<span id="cb25-25"><a href="#cb25-25" tabindex="-1"></a><span class="co"># 7. Verify</span></span>
+<span id="cb25-26"><a href="#cb25-26" tabindex="-1"></a><span class="fu">git</span> status  <span class="co"># Should show "up to date with origin"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="critical-rules">Critical Rules<a class="anchor" aria-label="anchor" href="#critical-rules"></a></h3>
-<ul><li>Work is NOT complete until <code>git push</code> succeeds</li>
+<ul><li>
+<strong>NEVER commit directly to main</strong> - always use feature branches</li>
+<li>Work is NOT complete until <code>git push</code> succeeds</li>
 <li>NEVER stop before pushing—that leaves work stranded locally</li>
 <li>NEVER say “ready to push when you are”—YOU must push</li>
 <li>If push fails, resolve and retry until it succeeds</li>
 <li>Always run <code>bd sync</code> before ending session</li>
+<li>Always include beads issue ID in commit messages (enables <code>bd doctor</code> to detect orphans)</li>
 </ul></div>
 </div>
 <div class="section level2">

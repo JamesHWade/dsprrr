@@ -542,7 +542,7 @@ When code is complete and ready for review:
 
 ``` bash
 git add .
-git commit -m "feat: description"
+git commit -m "feat: description (dsprrr-xxx)"  # Include beads issue ID!
 bd close <id>                         # Close beads issue - work is done
 bd sync
 git push -u origin HEAD
@@ -577,38 +577,47 @@ usethis::pr_finish()
 **CRITICAL**: Before ending a session, complete ALL steps. Work is NOT
 complete until `git push` succeeds.
 
-### Mandatory Checklist
+### Mandatory Checklist (Feature Branch Workflow)
 
 ``` bash
-# 1. File issues for remaining work
+# 1. Verify you're on a feature branch (NOT main!)
+git branch --show-current  # Should NOT be 'main'
+
+# 2. File issues for remaining work
 bd create "Follow-up task" --description="..." -t task -p 2
 
-# 2. Run quality gates (if code changed)
+# 3. Run quality gates (if code changed)
 air format R/ tests/testthat/
 jarl check R/
 Rscript -e "devtools::check()"
 
-# 3. Update issue status
-bd close <completed-issues>
+# 4. Update issue status
+bd close <completed-issues>           # Include reason if helpful
 bd update <in-progress-issues> --status=open  # If not finished
 
-# 4. Commit and push
+# 5. Commit with beads issue ID
 git add .
-git commit -m "..."
+git commit -m "feat: description (dsprrr-xxx)"  # Always include issue ID!
 bd sync
-git push
+git push -u origin HEAD
 
-# 5. Verify
+# 6. Create PR (if not already created)
+gh pr create --title "..." --body "Resolves dsprrr-xxx"
+
+# 7. Verify
 git status  # Should show "up to date with origin"
 ```
 
 ### Critical Rules
 
+- **NEVER commit directly to main** - always use feature branches
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing—that leaves work stranded locally
 - NEVER say “ready to push when you are”—YOU must push
 - If push fails, resolve and retry until it succeeds
 - Always run `bd sync` before ending session
+- Always include beads issue ID in commit messages (enables `bd doctor`
+  to detect orphans)
 
 ## Parallel Sessions & Worktrees
 
