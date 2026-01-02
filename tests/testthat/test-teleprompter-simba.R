@@ -113,6 +113,72 @@ test_that("SIMBA compile returns unmodified program for empty trainset", {
   expect_identical(result, mod)
 })
 
+test_that("generate_simba_rule handles Chat objects", {
+  # Create a mock Chat object
+  MockChat <- R6::R6Class(
+    "MockChat",
+    inherit = NULL,
+    public = list(
+      chat = function(prompt) {
+        "Generated rule from Chat object"
+      }
+    )
+  )
+  # Set class to include "Chat" so inherits() works
+  mock_chat <- MockChat$new()
+  class(mock_chat) <- c("Chat", class(mock_chat))
+
+  hard_examples <- data.frame(
+    question = "What is 2+2?",
+    answer = "4"
+  )
+
+  result <- dsprrr:::generate_simba_rule(
+    mock_chat,
+    hard_examples,
+    input_names = "question",
+    output_col = "answer"
+  )
+
+  expect_equal(result, "Generated rule from Chat object")
+})
+
+test_that("generate_simba_rule handles plain functions", {
+  prompt_fn <- function(prompt) {
+    "Generated rule from function"
+  }
+
+  hard_examples <- data.frame(
+    question = "What is 2+2?",
+    answer = "4"
+  )
+
+  result <- dsprrr:::generate_simba_rule(
+    prompt_fn,
+    hard_examples,
+    input_names = "question",
+    output_col = "answer"
+  )
+
+  expect_equal(result, "Generated rule from function")
+})
+
+test_that("generate_simba_rule falls back when prompt_model is NULL", {
+  hard_examples <- data.frame(
+    question = "What is 2+2?",
+    answer = "4"
+  )
+
+  result <- dsprrr:::generate_simba_rule(
+    NULL,
+    hard_examples,
+    input_names = "question",
+    output_col = "answer"
+  )
+
+  expect_match(result, "SIMBA rule:")
+})
+
 test_that("SIMBA compile applies rules and demos when improved", {
   # Track call count to simulate improvement after rule is applied
   call_count <- 0L
