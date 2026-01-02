@@ -47,6 +47,18 @@ DSPy-inspired reasoning patterns for improved accuracy
   : MultiChainComparison Module
 - [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md)
   : Create a MultiChainComparison Module
+- [`module-ensemble`](https://jameshwade.github.io/dsprrr/reference/module-ensemble.md)
+  : Ensemble Module for Combining Multiple Modules
+- [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md)
+  : Create an Ensemble Module
+- [`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md)
+  : Majority Vote Reducer
+- [`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md)
+  : Weighted Vote Reducer
+- [`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md)
+  : First Successful Output Reducer
+- [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
+  : Best by Metric Reducer
 
 ## Code Execution Modules
 
@@ -145,6 +157,12 @@ Optimization strategies
   : MIPROv2 Teleprompter
 - [`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md) :
   COPRO Teleprompter
+- [`teleprompter-ensemble`](https://jameshwade.github.io/dsprrr/reference/teleprompter-ensemble.md)
+  : Ensemble Teleprompter
+- [`Ensemble()`](https://jameshwade.github.io/dsprrr/reference/Ensemble.md)
+  : Ensemble Teleprompter
+- [`ensemble_from_programs()`](https://jameshwade.github.io/dsprrr/reference/ensemble_from_programs.md)
+  : Compile Programs into an Ensemble
 
 ## Optimization
 

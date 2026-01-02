@@ -23,6 +23,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/COPRO.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/Ensemble.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/GEPA.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/KNNFewShot.html</loc></url>
@@ -57,6 +58,8 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsp_trainset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsprrr-package.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/ensemble_from_programs.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/ensemble_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/eval_program.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/eval_vignette.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/evaluate.html</loc></url>
@@ -90,6 +93,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_field_match.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_threshold.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-codeact.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/module-ensemble.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-multichain.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-wrapper.html</loc></url>
@@ -129,6 +133,10 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/ragnar_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/reasoning_effort.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/reduce_first.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/reduce_majority.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/refine.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/register_dsprrr_engine.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/register_dsprrr_tool.html</loc></url>
@@ -144,6 +152,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/split_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/stream_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/summarize_traces.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/teleprompter-ensemble.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/temperature.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/top_p.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/tunable_llm_predict.html</loc></url>
