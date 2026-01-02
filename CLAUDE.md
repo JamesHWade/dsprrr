@@ -5,8 +5,11 @@ with code in this repository.
 
 ## ⚠️ CRITICAL: Feature Branch Workflow
 
-**NEVER commit directly to main.** Before starting ANY implementation
-work:
+**NEVER commit directly to main.** The `main` branch is protected—direct
+pushes are rejected by GitHub. The ONLY way to get code into main is
+through a Pull Request.
+
+Before starting ANY implementation work:
 
 ``` bash
 # 1. ALWAYS create a feature branch FIRST

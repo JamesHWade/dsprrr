@@ -60,7 +60,8 @@
 <p>This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.</p>
 <div class="section level2">
 <h2 id="id_️-critical-feature-branch-workflow">⚠️ CRITICAL: Feature Branch Workflow<a class="anchor" aria-label="anchor" href="#id_%EF%B8%8F-critical-feature-branch-workflow"></a></h2>
-<p><strong>NEVER commit directly to main.</strong> Before starting ANY implementation work:</p>
+<p><strong>NEVER commit directly to main.</strong> The <code>main</code> branch is protected—direct pushes are rejected by GitHub. The ONLY way to get code into main is through a Pull Request.</p>
+<p>Before starting ANY implementation work:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># 1. ALWAYS create a feature branch FIRST</span></span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># or: git checkout -b fix/&lt;short-description&gt;</span></span>
