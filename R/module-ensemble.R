@@ -120,6 +120,7 @@ EnsembleModule <- R6::R6Class(
       outputs <- list()
       chats <- list()
       individual_metadata <- list()
+      successful_indices <- integer(0) # Track which modules succeeded
       total_tokens <- 0
       total_cost <- 0
       n_errors <- 0
@@ -143,6 +144,7 @@ EnsembleModule <- R6::R6Class(
         if (!is.null(result)) {
           outputs[[length(outputs) + 1]] <- result$output[[1]]
           chats[[length(chats) + 1]] <- result$chat[[1]]
+          successful_indices <- c(successful_indices, i) # Track this module's index
 
           metadata <- result$metadata[[1]]
           individual_metadata[[length(individual_metadata) + 1]] <- metadata
@@ -164,9 +166,8 @@ EnsembleModule <- R6::R6Class(
         )
       }
 
-      # Get corresponding weights for successful modules
-      # Filter weights based on which modules succeeded
-      successful_weights <- self$weights[seq_along(outputs)]
+      # Get corresponding weights for successful modules using tracked indices
+      successful_weights <- self$weights[successful_indices]
 
       # Apply reduce function
       combined_output <- tryCatch(

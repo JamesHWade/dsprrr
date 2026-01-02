@@ -169,6 +169,58 @@ test_that("EnsembleModule errors when all modules fail", {
   )
 })
 
+test_that("EnsembleModule uses correct weights when middle module fails", {
+  # Bug fix test: weights should correspond to successful modules, not positions
+  # If module 2 fails, we should use weights for modules 1 and 3, not 1 and 2
+
+  mod1 <- create_mock_module("minority") # weight 1
+
+  mod2 <- create_mock_module("should_not_matter") # weight 100 - but will fail
+  mod2$forward <- function(...) stop("Simulated failure")
+  mod3 <- create_mock_module("majority") # weight 10
+
+  # With weights [1, 100, 10], if module 2 fails:
+  # - Correct: minority (weight 1) vs majority (weight 10) -> majority wins
+
+  # - Bug: minority (weight 1) vs majority (weight 100) -> majority wins with wrong weight
+  # To detect the bug, we need outputs where wrong weight assignment changes result
+
+  # Better test: 3 modules with weights [1, 50, 2]
+
+  # Module 1: "a", Module 2: fails, Module 3: "b"
+  # Correct weights: [1, 2] -> "b" should NOT win (weight 2 vs 1 - b wins)
+  # Bug weights: [1, 50] -> "b" wins with weight 50
+
+  # Actually, let's make it clearer:
+  # Weights: [10, 1, 1] - module 1 has high weight
+  # Module 2 fails
+  # Correct: module 1 (weight 10) vs module 3 (weight 1) -> module 1 should win
+  # Bug: module 1 (weight 10) vs module 3 (weight 1) -> still correct in this case
+
+  # Best test: [1, 100, 1] where middle module fails
+  # If bug: successful modules get weights [1, 100] instead of [1, 1]
+  mod1 <- create_mock_module("a") # should have weight 1
+  mod2 <- create_mock_module("ignored")
+  mod2$forward <- function(...) stop("fail")
+  mod3 <- create_mock_module("b") # should have weight 1
+
+  ens <- ensemble(
+    list(mod1, mod2, mod3),
+    reduce_fn = reduce_weighted_vote(),
+    weights = c(1, 100, 1) # middle weight is 100 but module fails
+  )
+
+  # With correct fix: weights are [1, 1] -> tie, "a" wins (first occurrence)
+  # With bug: weights are [1, 100] -> "b" wins with weight 100
+  expect_warning(
+    result <- ens$forward(list(question = "test")),
+    "Module 2 failed"
+  )
+
+  # Should be a tie (both weight 1), so first answer "a" wins
+  expect_equal(result$output[[1]]$answer, "a")
+})
+
 test_that("EnsembleModule get_individual_outputs returns outputs", {
   mods <- lapply(1:3, function(i) create_mock_module(paste0("answer", i)))
   ens <- ensemble(mods)
