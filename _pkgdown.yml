@@ -163,6 +163,7 @@ reference:
     - GridSearchTeleprompter
     - BootstrapFewShot
     - BootstrapFewShotWithRandomSearch
+    - KNNFewShot
 
   - title: Optimization
     desc: Functions for optimizing module performance
