@@ -63,6 +63,15 @@
     compile_simba(teleprompter, program, trainset, ...)
   }
 
+  S7::method(compile, list(GEPA, S7::class_any)) <- function(
+    teleprompter,
+    program,
+    trainset,
+    ...
+  ) {
+    compile_gepa(teleprompter, program, trainset, ...)
+  }
+
   S7::method(compile, list(Teleprompter, S7::class_any)) <- function(
     teleprompter,
     program,
