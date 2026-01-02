@@ -96,7 +96,22 @@ SIMBA <- S7::new_class(
     ),
     prompt_model = S7::new_property(
       S7::class_any,
-      default = NULL
+      default = NULL,
+      validator = function(value) {
+        if (is.null(value)) {
+          return(NULL)
+        }
+        if (is.function(value)) {
+          return(NULL)
+        }
+        if (inherits(value, "Chat")) {
+          return(NULL)
+        }
+        if (is.list(value) && "chat_structured" %in% names(value)) {
+          return(NULL)
+        }
+        "prompt_model must be NULL, a function, a Chat object, or a list with chat_structured method"
+      }
     ),
     seed = S7::new_property(
       S7::class_any,
@@ -163,8 +178,27 @@ compile_simba <- function(
     NULL
   }
 
+  # Save and restore RNG state to avoid side effects
+
   if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {
+    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
+      get(".Random.seed", envir = globalenv())
+    } else {
+      NULL
+    }
     set.seed(teleprompter@seed)
+    on.exit(
+      {
+        if (is.null(old_seed)) {
+          if (exists(".Random.seed", envir = globalenv())) {
+            rm(".Random.seed", envir = globalenv())
+          }
+        } else {
+          assign(".Random.seed", old_seed, envir = globalenv())
+        }
+      },
+      add = TRUE
+    )
   }
 
   input_names <- get_input_names(program$signature)
@@ -235,10 +269,15 @@ compile_simba <- function(
 
     candidate <- copy_module(best_program)
     if (!is.null(rule_text) && nzchar(rule_text)) {
-      candidate$signature@instructions <- paste(
-        candidate$signature@instructions,
-        rule_text,
-        sep = "\n\n"
+      # Create new immutable Signature with updated instructions (don't mutate S7)
+      candidate$signature <- Signature(
+        inputs = candidate$signature@inputs,
+        output_type = candidate$signature@output_type,
+        instructions = paste(
+          candidate$signature@instructions,
+          rule_text,
+          sep = "\n\n"
+        )
       )
     }
 
@@ -330,25 +369,60 @@ simba_variability <- function(
   .llm = NULL
 ) {
   outputs <- vector("list", num_candidates)
+  successful_runs <- 0L
+
   for (i in seq_len(num_candidates)) {
-    results <- run_dataset(
-      program,
-      minibatch,
-      .llm = .llm,
-      .parallel = FALSE,
-      .progress = FALSE,
-      .return_format = "simple"
+    results <- tryCatch(
+      {
+        run_dataset(
+          program,
+          minibatch,
+          .llm = .llm,
+          .parallel = FALSE,
+          .progress = FALSE,
+          .return_format = "simple"
+        )
+      },
+      error = function(e) {
+        cli::cli_warn(
+          c(
+            "SIMBA candidate run {i}/{num_candidates} failed",
+            "x" = conditionMessage(e),
+            "i" = "Continuing with remaining candidates"
+          ),
+          class = "dsprrr_simba_candidate_warning"
+        )
+        NULL
+      }
     )
-    outputs[[i]] <- results$result
+
+    if (!is.null(results)) {
+      outputs[[i]] <- results$result
+      successful_runs <- successful_runs + 1L
+    }
   }
+
+  # Check if we have enough successful candidates
+  if (successful_runs == 0L) {
+    cli::cli_abort(
+      c(
+        "All {num_candidates} SIMBA candidate runs failed",
+        "i" = "Check LLM configuration and network connectivity"
+      ),
+      class = "dsprrr_simba_all_candidates_failed"
+    )
+  }
+
+  # Filter out NULL outputs from failed runs
+  valid_outputs <- Filter(Negate(is.null), outputs)
 
   variability <- vector("list", nrow(minibatch))
   for (i in seq_len(nrow(minibatch))) {
-    predictions <- lapply(outputs, function(x) x[[i]])
+    predictions <- lapply(valid_outputs, function(x) x[[i]])
     normalized <- vapply(predictions, normalize_simba_output, character(1))
-    variation <- if (num_candidates > 1) {
+    variation <- if (successful_runs > 1) {
       freqs <- table(normalized)
-      1 - max(freqs) / num_candidates
+      1 - max(freqs) / successful_runs
     } else {
       0
     }
@@ -378,7 +452,7 @@ simba_variability <- function(
     )
   }
 
-  tibble::bind_rows(variability)
+  do.call(rbind, variability)
 }
 
 select_simba_hard_examples <- function(minibatch, variability, max_examples) {
@@ -410,7 +484,7 @@ generate_simba_rule <- function(
         if (name %in% names(row)) {
           paste0(name, ": ", row[[name]])
         } else {
-          NULL
+          ""
         }
       },
       character(1)
@@ -433,29 +507,62 @@ generate_simba_rule <- function(
   )
 
   rule <- NULL
+  used_fallback <- FALSE
+
   if (is.function(prompt_model)) {
-    rule <- prompt_model(prompt)
-  } else if (is.list(prompt_model) && !is.null(prompt_model$chat_structured)) {
-    response <- prompt_model$chat_structured(
-      prompt,
-      ellmer::type_string()
+    rule <- tryCatch(
+      prompt_model(prompt),
+      error = function(e) {
+        cli::cli_warn(
+          c(
+            "SIMBA prompt_model function failed to generate rule",
+            "x" = conditionMessage(e),
+            "i" = "Falling back to example-based rule"
+          ),
+          class = "dsprrr_simba_rule_warning"
+        )
+        NULL
+      }
     )
-    if (is.character(response)) {
-      rule <- response
-    } else if (is.list(response)) {
-      if ("rule" %in% names(response)) {
-        rule <- response$rule
-      } else {
-        rule <- response[[1]]
+  } else if (is.list(prompt_model) && !is.null(prompt_model$chat_structured)) {
+    response <- tryCatch(
+      prompt_model$chat_structured(prompt, ellmer::type_string()),
+      error = function(e) {
+        cli::cli_warn(
+          c(
+            "SIMBA prompt_model chat_structured call failed",
+            "x" = conditionMessage(e),
+            "i" = "Falling back to example-based rule"
+          ),
+          class = "dsprrr_simba_rule_warning"
+        )
+        NULL
+      }
+    )
+    if (!is.null(response)) {
+      if (is.character(response)) {
+        rule <- response
+      } else if (is.list(response)) {
+        if ("rule" %in% names(response)) {
+          rule <- response$rule
+        } else {
+          rule <- response[[1]]
+        }
       }
     }
   }
 
   if (is.null(rule) || !nzchar(rule)) {
+    used_fallback <- TRUE
     rule <- paste(
       "SIMBA rule:",
       example_lines[1]
     )
+    if (!is.null(prompt_model)) {
+      cli::cli_alert_info(
+        "Using example-based rule (prompt_model returned empty)"
+      )
+    }
   }
 
   as.character(rule)
@@ -474,9 +581,34 @@ normalize_simba_output <- function(output) {
     return(NA_character_)
   }
   if (is.list(output) && !is.data.frame(output)) {
-    return(jsonlite::toJSON(output, auto_unbox = TRUE, null = "null"))
+    return(tryCatch(
+      jsonlite::toJSON(output, auto_unbox = TRUE, null = "null"),
+      error = function(e) {
+        cli::cli_warn(
+          c(
+            "Could not serialize SIMBA output to JSON",
+            "x" = conditionMessage(e),
+            "i" = "Using fallback string representation"
+          ),
+          class = "dsprrr_simba_serialize_warning"
+        )
+        paste0("<non-serializable: ", class(output)[1], ">")
+      }
+    ))
   }
-  as.character(output)
+  tryCatch(
+    as.character(output),
+    error = function(e) {
+      cli::cli_warn(
+        c(
+          "Could not convert SIMBA output to character",
+          "x" = conditionMessage(e)
+        ),
+        class = "dsprrr_simba_convert_warning"
+      )
+      paste0("<unconvertible: ", class(output)[1], ">")
+    }
+  )
 }
 
 simba_safe_metric <- function(metric, prediction, row) {
@@ -488,10 +620,28 @@ simba_safe_metric <- function(metric, prediction, row) {
       } else if (is.numeric(score)) {
         score
       } else {
+        cli::cli_warn(
+          c(
+            "Metric returned unexpected type",
+            "i" = "Expected numeric or logical, got {.cls {class(score)}}",
+            "i" = "Treating as NA"
+          ),
+          class = "dsprrr_simba_metric_type_warning"
+        )
         NA_real_
       }
     },
-    error = function(e) NA_real_
+    error = function(e) {
+      cli::cli_warn(
+        c(
+          "Metric evaluation failed in SIMBA variability calculation",
+          "x" = conditionMessage(e),
+          "i" = "This score will be treated as NA"
+        ),
+        class = "dsprrr_simba_metric_warning"
+      )
+      NA_real_
+    }
   )
 }
 
