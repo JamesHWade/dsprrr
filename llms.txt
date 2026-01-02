@@ -411,6 +411,8 @@ Optimization strategies
   : BootstrapFewShotWithRandomSearch Teleprompter
 - [`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md)
   : KNNFewShot Teleprompter
+- [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
+  SIMBA Teleprompter
 
 ## Optimization
 
@@ -537,6 +539,8 @@ Extract data from structured results
   : Print method for BootstrapFewShot
 - [`print(`*`<BootstrapFewShotWithRandomSearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShotWithRandomSearch.md)
   : Print method for BootstrapFewShotWithRandomSearch
+- [`print(`*`<SIMBA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.SIMBA.md)
+  : Print method for SIMBA
 
 ## Traces
 

@@ -26,6 +26,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/KNNFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/OptimizerControl.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/SIMBA.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/Teleprompter.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/Trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/TrialLog.html</loc></url>
@@ -108,6 +109,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShotWithRandomSearch.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.EvalResult.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/print.SIMBA.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.Trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_batch_result.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.html</loc></url>
