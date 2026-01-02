@@ -36,6 +36,8 @@ navbar:
           href: articles/troubleshooting.html
         - text: "Compilation & Optimization"
           href: articles/compilation-optimization.html
+        - text: "Advanced Optimizer Guide"
+          href: articles/advanced-optimization.html
         - text: "Advanced Reasoning Modules"
           href: articles/advanced-modules.html
         - text: "---"
@@ -71,6 +73,7 @@ articles:
     desc: Learn how to build and optimize LLM applications
     contents:
     - compilation-optimization
+    - advanced-optimization
     - advanced-modules
     - vitals-integration
 
