@@ -233,6 +233,7 @@ reference:
     - print.Trial
     - print.BootstrapFewShot
     - print.BootstrapFewShotWithRandomSearch
+    - print.GEPA
     - print.SIMBA
 
   - title: Traces
