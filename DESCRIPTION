@@ -90,6 +90,7 @@ Collate:
     'teleprompter-bootstrap.R'
     'teleprompter-bootstrap-rs.R'
     'teleprompter-knn.R'
+    'teleprompter-simba.R'
     'traces.R'
     'utils.R'
     'vitals.R'
