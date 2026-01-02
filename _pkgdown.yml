@@ -166,6 +166,7 @@ reference:
     - KNNFewShot
     - SIMBA
     - GEPA
+    - MIPROv2
 
   - title: Optimization
     desc: Functions for optimizing module performance
