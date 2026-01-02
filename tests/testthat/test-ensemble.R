@@ -1,0 +1,581 @@
+# Tests for EnsembleModule and Ensemble teleprompter
+
+# Helper: Create a mock module for testing
+create_mock_module <- function(response = "answer1") {
+  mock_mod <- list(
+    signature = signature("question -> answer"),
+    chat = NULL,
+    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+      tibble::tibble(
+        output = list(list(answer = response)),
+        chat = list(NULL),
+        metadata = list(list(
+          total_tokens = 100,
+          cost = 0.001,
+          model = "mock-model"
+        ))
+      )
+    },
+    reset_copy = function() create_mock_module(response)
+  )
+  class(mock_mod) <- c("MockModule", "Module", "R6")
+  mock_mod
+}
+
+# Create mock module with controlled responses
+create_varied_mock <- function(responses) {
+  idx <- 0
+  mock_mod <- list(
+    signature = signature("question -> answer"),
+    chat = NULL,
+    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+      idx <<- idx + 1
+      response <- responses[[min(idx, length(responses))]]
+      tibble::tibble(
+        output = list(list(answer = response)),
+        chat = list(NULL),
+        metadata = list(list(
+          total_tokens = 100,
+          cost = 0.001,
+          model = "mock-model"
+        ))
+      )
+    },
+    reset_copy = function() create_varied_mock(responses)
+  )
+  class(mock_mod) <- c("MockModule", "Module", "R6")
+  mock_mod
+}
+
+# ============================================================================
+# EnsembleModule Tests
+# ============================================================================
+
+test_that("EnsembleModule class exists and inherits from Module", {
+  expect_true(R6::is.R6Class(EnsembleModule))
+})
+
+test_that("ensemble creates EnsembleModule", {
+  mod1 <- create_mock_module("a")
+  mod2 <- create_mock_module("b")
+
+  ens <- ensemble(list(mod1, mod2))
+
+  expect_s3_class(ens, "EnsembleModule")
+  expect_s3_class(ens, "Module")
+  expect_equal(length(ens$modules), 2)
+})
+
+test_that("ensemble validates modules argument", {
+  expect_error(
+    ensemble(list()),
+    "non-empty list"
+  )
+
+  expect_error(
+    ensemble("not a list"),
+    "non-empty list"
+  )
+
+  expect_error(
+    ensemble(list("not a module")),
+    "must be Module"
+  )
+})
+
+test_that("ensemble uses default reduce_majority", {
+  mod1 <- create_mock_module("a")
+  mod2 <- create_mock_module("a")
+  ens <- ensemble(list(mod1, mod2))
+
+  expect_true(is.function(ens$reduce_fn))
+})
+
+test_that("EnsembleModule forward returns correct structure", {
+  mod1 <- create_mock_module("a")
+  mod2 <- create_mock_module("b")
+
+  ens <- ensemble(list(mod1, mod2))
+  result <- ens$forward(list(question = "test"))
+
+  expect_s3_class(result, "tbl_df")
+  expect_named(result, c("output", "chat", "metadata"))
+  expect_length(result$output, 1)
+  expect_length(result$metadata, 1)
+})
+
+test_that("EnsembleModule runs all modules", {
+  call_counts <- c(0, 0, 0)
+  mods <- lapply(1:3, function(i) {
+    mock <- create_mock_module(paste0("answer", i))
+    orig_forward <- mock$forward
+    mock$forward <- function(batch, .llm = NULL, trace = TRUE, ...) {
+      call_counts[i] <<- call_counts[i] + 1
+      orig_forward(batch, .llm, trace, ...)
+    }
+    mock
+  })
+
+  ens <- ensemble(mods)
+  ens$forward(list(question = "test"))
+
+  expect_equal(call_counts, c(1, 1, 1))
+})
+
+test_that("EnsembleModule metadata includes module counts", {
+  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
+  ens <- ensemble(mods)
+
+  result <- ens$forward(list(question = "test"))
+  meta <- result$metadata[[1]]
+
+  expect_equal(meta$n_modules, 3)
+  expect_equal(meta$n_successful, 3)
+  expect_equal(meta$n_errors, 0)
+  expect_equal(meta$n_llm_calls, 3)
+})
+
+test_that("EnsembleModule handles module errors gracefully", {
+  mod1 <- create_mock_module("a")
+  mod2 <- create_mock_module("b")
+  mod2$forward <- function(...) stop("Simulated failure")
+  mod3 <- create_mock_module("a")
+
+  ens <- ensemble(list(mod1, mod2, mod3))
+
+  expect_warning(
+    result <- ens$forward(list(question = "test")),
+    "Module 2 failed"
+  )
+
+  # Should still succeed with 2 of 3 modules
+  expect_s3_class(result, "tbl_df")
+  expect_equal(result$metadata[[1]]$n_successful, 2)
+  expect_equal(result$metadata[[1]]$n_errors, 1)
+})
+
+test_that("EnsembleModule errors when all modules fail", {
+  mods <- lapply(1:3, function(i) {
+    mock <- create_mock_module("a")
+    mock$forward <- function(...) stop("Fail")
+    mock
+  })
+
+  ens <- ensemble(mods)
+
+  expect_error(
+    suppressWarnings(ens$forward(list(question = "test"))),
+    "All .* modules failed"
+  )
+})
+
+test_that("EnsembleModule get_individual_outputs returns outputs", {
+  mods <- lapply(1:3, function(i) create_mock_module(paste0("answer", i)))
+  ens <- ensemble(mods)
+  ens$forward(list(question = "test"))
+
+  outputs <- ens$get_individual_outputs()
+
+  expect_s3_class(outputs, "tbl_df")
+  expect_equal(nrow(outputs), 3)
+  expect_true("output" %in% names(outputs))
+  expect_true("module" %in% names(outputs))
+})
+
+test_that("EnsembleModule get_individual_outputs all=TRUE works", {
+  mods <- lapply(1:2, function(i) create_mock_module(paste0("a", i)))
+  ens <- ensemble(mods)
+
+  ens$forward(list(question = "test1"))
+  ens$forward(list(question = "test2"))
+
+  outputs <- ens$get_individual_outputs(all = TRUE)
+  expect_equal(nrow(outputs), 4) # 2 runs x 2 modules
+})
+
+test_that("EnsembleModule accepts custom reduce function", {
+  custom_reduce <- function(outputs, weights = NULL) {
+    # Always return the second output
+    outputs[[min(2, length(outputs))]]
+  }
+
+  mods <- list(
+    create_mock_module("first"),
+    create_mock_module("second"),
+    create_mock_module("third")
+  )
+
+  ens <- ensemble(mods, reduce_fn = custom_reduce)
+  result <- ens$forward(list(question = "test"))
+
+  expect_equal(result$output[[1]]$answer, "second")
+})
+
+test_that("EnsembleModule uses weights", {
+  mods <- list(
+    create_mock_module("a"),
+    create_mock_module("b"),
+    create_mock_module("b")
+  )
+
+  ens <- ensemble(mods, weights = c(10, 1, 1))
+
+  # With majority voting, "b" should win (2 votes)
+  # But if we were using weighted voting, "a" would win (10 weight)
+  expect_equal(length(ens$weights), 3)
+  expect_equal(ens$weights, c(10, 1, 1))
+})
+
+test_that("EnsembleModule validates weights length", {
+  mods <- lapply(1:3, function(i) create_mock_module("a"))
+
+  expect_error(
+    ensemble(mods, weights = c(1, 2)),
+    "same length"
+  )
+})
+
+test_that("EnsembleModule reset_copy creates fresh wrapper", {
+  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
+  ens <- ensemble(mods, weights = c(1, 2, 3))
+  ens$forward(list(question = "test"))
+
+  copy <- ens$reset_copy()
+
+  expect_s3_class(copy, "EnsembleModule")
+  expect_equal(length(copy$modules), 3)
+  expect_equal(copy$weights, c(1, 2, 3))
+  expect_length(copy$state$traces, 0)
+})
+
+test_that("EnsembleModule print method works", {
+  mods <- lapply(1:3, function(i) create_mock_module("a"))
+  ens <- ensemble(mods)
+
+  expect_invisible(print(ens))
+})
+
+test_that("EnsembleModule records traces", {
+  mods <- lapply(1:2, function(i) create_mock_module("a"))
+  ens <- ensemble(mods)
+  ens$forward(list(question = "test"), trace = TRUE)
+
+  expect_length(ens$state$traces, 1)
+  trace <- ens$state$traces[[1]]
+  expect_true("individual_outputs" %in% names(trace))
+  expect_true("n_successful" %in% names(trace))
+})
+
+test_that("EnsembleModule with trace=FALSE does not record", {
+  mods <- lapply(1:2, function(i) create_mock_module("a"))
+  ens <- ensemble(mods)
+  ens$forward(list(question = "test"), trace = FALSE)
+
+  expect_length(ens$state$traces, 0)
+})
+
+# ============================================================================
+# Reducer Function Tests
+# ============================================================================
+
+test_that("reduce_majority returns most common output", {
+  reducer <- reduce_majority()
+
+  outputs <- list(
+    list(answer = "a"),
+    list(answer = "b"),
+    list(answer = "a"),
+    list(answer = "a")
+  )
+
+  result <- reducer(outputs)
+  expect_equal(result$answer, "a")
+})
+test_that("reduce_majority handles ties with first", {
+  reducer <- reduce_majority(tie_breaker = "first")
+
+  outputs <- list(
+    list(answer = "a"),
+    list(answer = "b")
+  )
+
+  result <- reducer(outputs)
+  expect_true(result$answer %in% c("a", "b"))
+})
+
+test_that("reduce_majority uses specified field", {
+  reducer <- reduce_majority(field = "sentiment")
+
+  outputs <- list(
+    list(answer = "x", sentiment = "positive"),
+    list(answer = "y", sentiment = "negative"),
+    list(answer = "z", sentiment = "positive")
+  )
+
+  result <- reducer(outputs)
+  expect_equal(result$sentiment, "positive")
+})
+
+test_that("reduce_majority handles single output", {
+  reducer <- reduce_majority()
+  outputs <- list(list(answer = "only_one"))
+
+  result <- reducer(outputs)
+  expect_equal(result$answer, "only_one")
+})
+
+test_that("reduce_majority errors on empty list", {
+  reducer <- reduce_majority()
+  expect_error(reducer(list()), "empty list")
+})
+
+test_that("reduce_weighted_vote uses weights", {
+  reducer <- reduce_weighted_vote()
+
+  outputs <- list(
+    list(answer = "a"),
+    list(answer = "b"),
+    list(answer = "b")
+  )
+
+  # Without weights, "b" wins (2 vs 1)
+  result <- reducer(outputs, weights = NULL)
+  expect_equal(result$answer, "b")
+
+  # With high weight on "a", it should win
+  result2 <- reducer(outputs, weights = c(10, 1, 1))
+  expect_equal(result2$answer, "a")
+})
+
+test_that("reduce_weighted_vote handles single output", {
+  reducer <- reduce_weighted_vote()
+  result <- reducer(list(list(answer = "single")), weights = c(1))
+  expect_equal(result$answer, "single")
+})
+
+test_that("reduce_first returns first output", {
+  reducer <- reduce_first()
+
+  outputs <- list(
+    list(answer = "first"),
+    list(answer = "second"),
+    list(answer = "third")
+  )
+
+  result <- reducer(outputs)
+  expect_equal(result$answer, "first")
+})
+
+test_that("reduce_first errors on empty list", {
+  reducer <- reduce_first()
+  expect_error(reducer(list()), "empty list")
+})
+
+test_that("reduce_best_by_metric scores outputs", {
+  metric <- metric_exact_match(field = "answer")
+  reducer <- reduce_best_by_metric(metric, expected_field = "expected")
+
+  # Set expected value - must be a list with the field since metric extracts it
+  attr(reducer, "set_expected")(list(answer = "correct"))
+
+  outputs <- list(
+    list(answer = "wrong"),
+    list(answer = "correct"),
+    list(answer = "also wrong")
+  )
+
+  result <- reducer(outputs)
+  expect_equal(result$answer, "correct")
+})
+
+# ============================================================================
+# Ensemble Teleprompter Tests
+# ============================================================================
+
+test_that("Ensemble S7 class exists", {
+  expect_true(S7::S7_inherits(Ensemble(), Teleprompter))
+})
+
+test_that("Ensemble creates with default values", {
+  tp <- Ensemble()
+
+  expect_null(tp@reduce_fn)
+  expect_null(tp@size)
+  expect_null(tp@weights)
+})
+
+test_that("Ensemble accepts reduce_fn parameter", {
+  tp <- Ensemble(reduce_fn = reduce_first())
+  expect_true(is.function(tp@reduce_fn))
+})
+
+test_that("Ensemble accepts size parameter", {
+  tp <- Ensemble(size = 3L)
+  expect_equal(tp@size, 3L)
+})
+
+test_that("Ensemble validates size parameter", {
+  expect_error(Ensemble(size = -1))
+  expect_error(Ensemble(size = 0))
+})
+
+test_that("Ensemble accepts weights parameter", {
+  tp <- Ensemble(weights = c(0.9, 0.8, 0.7))
+  expect_equal(tp@weights, c(0.9, 0.8, 0.7))
+})
+
+test_that("compile_ensemble creates EnsembleModule", {
+  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
+  tp <- Ensemble()
+
+  result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
+
+  expect_s3_class(result, "EnsembleModule")
+  expect_equal(length(result$modules), 3)
+  expect_true(result$config$compiled)
+  expect_equal(result$config$teleprompter, "Ensemble")
+})
+
+test_that("compile_ensemble respects size parameter", {
+  mods <- lapply(1:5, function(i) create_mock_module(paste0("a", i)))
+  tp <- Ensemble(size = 3L)
+
+  result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
+
+  expect_equal(length(result$modules), 3)
+})
+
+test_that("compile_ensemble uses reduce_fn from teleprompter", {
+  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
+  tp <- Ensemble(reduce_fn = reduce_first())
+
+  result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
+
+  # Verify the reduce function is reduce_first by checking behavior
+  run_result <- result$forward(list(question = "test"))
+  expect_equal(run_result$output[[1]]$answer, "a1") # First module's output
+})
+
+test_that("compile_ensemble uses weights from teleprompter", {
+  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
+  tp <- Ensemble(weights = c(0.9, 0.8, 0.7))
+
+  result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
+
+  expect_equal(result$weights, c(0.9, 0.8, 0.7))
+})
+
+test_that("compile_ensemble errors without programs", {
+  tp <- Ensemble()
+
+  expect_error(
+    compile(tp, program = NULL, trainset = NULL),
+    "requires a list of modules"
+  )
+})
+
+test_that("compile_ensemble accepts program as list of modules", {
+  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
+  tp <- Ensemble()
+
+  # Pass modules via program argument instead of programs
+
+  result <- compile(tp, program = mods, trainset = NULL)
+
+  expect_s3_class(result, "EnsembleModule")
+  expect_equal(length(result$modules), 3)
+})
+
+test_that("ensemble_from_programs convenience function works", {
+  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
+
+  result <- ensemble_from_programs(mods)
+
+  expect_s3_class(result, "EnsembleModule")
+  expect_equal(length(result$modules), 3)
+})
+
+test_that("ensemble_from_programs accepts all parameters", {
+  mods <- lapply(1:5, function(i) create_mock_module(paste0("a", i)))
+
+  result <- ensemble_from_programs(
+    programs = mods,
+    reduce_fn = reduce_first(),
+    weights = c(0.9, 0.85, 0.8),
+    size = 3L
+  )
+
+  expect_equal(length(result$modules), 3)
+  expect_equal(result$weights, c(0.9, 0.85, 0.8))
+})
+
+# ============================================================================
+# Integration Tests
+# ============================================================================
+
+test_that("ensemble works with real PredictModule", {
+  mod1 <- module(signature("question -> answer: string"))
+  mod2 <- module(signature("question -> answer: string"))
+
+  ens <- ensemble(list(mod1, mod2))
+
+  expect_s3_class(ens, "EnsembleModule")
+  expect_equal(length(ens$modules), 2)
+})
+
+test_that("majority voting selects correct answer in practice", {
+  # 3 modules: 2 return "yes", 1 returns "no"
+  mods <- list(
+    create_mock_module("yes"),
+    create_mock_module("no"),
+    create_mock_module("yes")
+  )
+
+  ens <- ensemble(mods, reduce_fn = reduce_majority())
+  result <- ens$forward(list(question = "test"))
+
+  expect_equal(result$output[[1]]$answer, "yes")
+})
+
+test_that("weighted voting can override majority", {
+  # 2 modules return "minority", 1 returns "majority" with high weight
+  mods <- list(
+    create_mock_module("majority"),
+    create_mock_module("minority"),
+    create_mock_module("minority")
+  )
+
+  # Give majority module very high weight
+  ens <- ensemble(
+    mods,
+    reduce_fn = reduce_weighted_vote(),
+    weights = c(100, 1, 1)
+  )
+  result <- ens$forward(list(question = "test"))
+
+  expect_equal(result$output[[1]]$answer, "majority")
+})
+
+test_that("ensemble accumulates token costs", {
+  mods <- lapply(1:3, function(i) {
+    mock <- create_mock_module("a")
+    mock$forward <- function(batch, .llm = NULL, trace = TRUE, ...) {
+      tibble::tibble(
+        output = list(list(answer = "a")),
+        chat = list(NULL),
+        metadata = list(list(
+          total_tokens = 100,
+          cost = 0.001,
+          model = "mock"
+        ))
+      )
+    }
+    mock
+  })
+
+  ens <- ensemble(mods)
+  result <- ens$forward(list(question = "test"))
+
+  expect_equal(result$metadata[[1]]$total_tokens, 300)
+  expect_equal(result$metadata[[1]]$total_cost, 0.003)
+})

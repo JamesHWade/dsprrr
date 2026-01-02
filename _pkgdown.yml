@@ -113,6 +113,12 @@ reference:
     - as_reward_fn
     - module-multichain
     - multi_chain_comparison
+    - module-ensemble
+    - ensemble_module
+    - reduce_majority
+    - reduce_weighted_vote
+    - reduce_first
+    - reduce_best_by_metric
 
   - title: Code Execution Modules
     desc: Execute LLM-generated R code safely
@@ -168,6 +174,9 @@ reference:
     - GEPA
     - MIPROv2
     - COPRO
+    - teleprompter-ensemble
+    - Ensemble
+    - ensemble_from_programs
 
   - title: Optimization
     desc: Functions for optimizing module performance
