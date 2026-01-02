@@ -22,6 +22,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/GEPA.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/KNNFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.html</loc></url>
@@ -109,6 +110,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShotWithRandomSearch.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.EvalResult.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/print.GEPA.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.SIMBA.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.Trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_batch_result.html</loc></url>

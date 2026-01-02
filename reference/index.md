@@ -139,6 +139,8 @@ Optimization strategies
   : KNNFewShot Teleprompter
 - [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
   SIMBA Teleprompter
+- [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) :
+  GEPA Teleprompter
 
 ## Optimization
 
@@ -265,6 +267,8 @@ Extract data from structured results
   : Print method for BootstrapFewShot
 - [`print(`*`<BootstrapFewShotWithRandomSearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShotWithRandomSearch.md)
   : Print method for BootstrapFewShotWithRandomSearch
+- [`print(`*`<GEPA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.GEPA.md)
+  : Print method for GEPA
 - [`print(`*`<SIMBA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.SIMBA.md)
   : Print method for SIMBA
 
