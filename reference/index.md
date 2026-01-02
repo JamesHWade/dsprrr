@@ -143,6 +143,8 @@ Optimization strategies
   GEPA Teleprompter
 - [`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md)
   : MIPROv2 Teleprompter
+- [`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md) :
+  COPRO Teleprompter
 
 ## Optimization
 
@@ -273,6 +275,8 @@ Extract data from structured results
   : Print method for GEPA
 - [`print(`*`<SIMBA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.SIMBA.md)
   : Print method for SIMBA
+- [`print(`*`<COPRO>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.COPRO.md)
+  : Print method for COPRO
 
 ## Traces
 
