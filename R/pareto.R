@@ -71,6 +71,10 @@ pareto_ranks <- function(scores) {
 
   while (length(remaining) > 0) {
     front <- pareto_frontier(scores[remaining, , drop = FALSE])
+    if (length(front) == 0) {
+      ranks[remaining] <- current_rank
+      break
+    }
     front_indices <- remaining[front]
     ranks[front_indices] <- current_rank
     remaining <- setdiff(remaining, front_indices)

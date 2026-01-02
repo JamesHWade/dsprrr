@@ -108,8 +108,10 @@ GEPA <- S7::new_class(
       S7::class_any,
       default = NULL,
       validator = function(value) {
-        if (!is.null(value) && !is.character(value)) {
-          return("log_dir must be a character string or NULL")
+        if (!is.null(value)) {
+          if (!is.character(value) || length(value) != 1) {
+            return("log_dir must be a single character string or NULL")
+          }
         }
         NULL
       }
@@ -200,7 +202,9 @@ compile_gepa <- function(
 
   for (generation in seq_len(teleprompter@generations)) {
     if (teleprompter@verbose) {
-      cli::cli_alert_info("GEPA generation {generation}/{teleprompter@generations}")
+      cli::cli_alert_info(
+        "GEPA generation {generation}/{teleprompter@generations}"
+      )
     }
 
     records <- vector("list", length(population))
@@ -222,6 +226,13 @@ compile_gepa <- function(
           control = control
         )
 
+        if (!S7::S7_inherits(eval_result, EvalResult)) {
+          cli::cli_abort(c(
+            "eval_program returned invalid result",
+            "i" = "Expected EvalResult, got {.cls {class(eval_result)}}"
+          ))
+        }
+
         scores[m] <- eval_result@mean_score
 
         if (m == 1) {
@@ -235,7 +246,13 @@ compile_gepa <- function(
 
           error_count <- error_count + eval_result@n_errors
           if (error_count > teleprompter@max_errors) {
-            cli::cli_warn("GEPA stopping early due to too many errors")
+            cli::cli_warn(c(
+              "GEPA stopping early: error limit exceeded",
+              "!" = "Errors: {error_count}/{teleprompter@max_errors}",
+              "i" = "Generation: {generation}/{teleprompter@generations}",
+              "i" = "Population members evaluated: {i}/{length(population)}",
+              "i" = "Consider checking LLM configuration or increasing max_errors"
+            ))
             break
           }
         }
@@ -303,13 +320,22 @@ compile_gepa <- function(
       teleprompter@mutation_rate,
       teleprompter@crossover_rate,
       teleprompter@selection,
-      .llm
+      .llm,
+      verbose = teleprompter@verbose
     )
   }
 
   optimized <- copy_module(program)
   if (!is.null(best_record)) {
-    optimized$apply_optimization_params(list(instructions = best_record$instructions))
+    optimized$apply_optimization_params(list(
+      instructions = best_record$instructions
+    ))
+  } else {
+    cli::cli_warn(c(
+      "GEPA optimization failed to produce any valid candidates",
+      "!" = "Returning unmodified program",
+      "i" = "All evaluations may have failed or max_errors was exceeded immediately"
+    ))
   }
 
   final_scores <- if (!is.null(best_record)) {
@@ -351,7 +377,12 @@ compile_gepa <- function(
   optimized
 }
 
-gepa_failed_examples <- function(eval_result, dataset, signature, threshold = NULL) {
+gepa_failed_examples <- function(
+  eval_result,
+  dataset,
+  signature,
+  threshold = NULL
+) {
   threshold <- threshold %||% 1
   input_names <- get_input_names(signature)
   output_col <- find_output_column(dataset, input_names)
@@ -387,7 +418,8 @@ gepa_next_generation <- function(
   mutation_rate,
   crossover_rate,
   selection,
-  .llm
+  .llm,
+  verbose = FALSE
 ) {
   scores_matrix <- do.call(rbind, lapply(records, function(rec) rec$scores))
   if (selection == "pareto" && ncol(scores_matrix) > 1) {
@@ -405,18 +437,19 @@ gepa_next_generation <- function(
     parent2 <- gepa_select_parent(records, ranks, crowding)
 
     child_instructions <- parent1$instructions
-    if (runif(1) < crossover_rate) {
+    if (stats::runif(1) < crossover_rate) {
       child_instructions <- gepa_crossover_instructions(
         parent1$instructions,
         parent2$instructions
       )
     }
 
-    if (runif(1) < mutation_rate) {
+    if (stats::runif(1) < mutation_rate) {
       child_instructions <- gepa_mutate_instruction(
         child_instructions,
         failed_examples = parent1$failed_examples,
-        .llm = .llm
+        .llm = .llm,
+        verbose = verbose
       )
     }
 
@@ -476,23 +509,34 @@ gepa_mutate_instruction <- function(
   .llm = NULL,
   verbose = FALSE
 ) {
-  if (!is.null(.llm) && !is.null(.llm$chat_structured)) {
-    prompt <- gepa_reflection_prompt(instruction, failed_examples)
-    type <- ellmer::type_object(instructions = ellmer::type_string())
+  if (is.null(.llm) || is.null(.llm$chat_structured)) {
+    return(gepa_fallback_mutation(instruction, failed_examples))
+  }
 
-    result <- tryCatch(
-      .llm$chat_structured(prompt, type = type, echo = "none"),
-      error = function(e) {
-        if (verbose) {
-          cli::cli_warn("GEPA reflection failed: {conditionMessage(e)}")
-        }
-        NULL
-      }
-    )
+  prompt <- gepa_reflection_prompt(instruction, failed_examples)
+  type <- ellmer::type_object(instructions = ellmer::type_string())
 
-    if (is.list(result) && !is.null(result$instructions)) {
-      return(result$instructions)
+  result <- tryCatch(
+    .llm$chat_structured(prompt, type = type, echo = "none"),
+    error = function(e) {
+      cli::cli_warn(c(
+        "GEPA reflection LLM call failed, using fallback mutation",
+        "x" = conditionMessage(e),
+        "i" = "This may degrade optimization quality"
+      ))
+      NULL
     }
+  )
+
+  if (is.list(result) && !is.null(result$instructions)) {
+    return(result$instructions)
+  }
+
+  if (verbose) {
+    cli::cli_warn(c(
+      "GEPA reflection returned unexpected format, using fallback mutation",
+      "i" = "Expected object with 'instructions' field"
+    ))
   }
 
   gepa_fallback_mutation(instruction, failed_examples)
@@ -525,20 +569,27 @@ gepa_format_failures <- function(failed_examples) {
     return("(none)")
   }
 
-  lines <- vapply(failed_examples, function(ex) {
-    inputs <- ex$inputs
-    input_text <- paste(
-      names(inputs),
-      vapply(inputs, as.character, character(1)),
-      sep = ": ",
-      collapse = ", "
-    )
-    paste0(
-      "Inputs: ", input_text,
-      " | Expected: ", as.character(ex$expected),
-      " | Predicted: ", as.character(ex$predicted)
-    )
-  }, character(1))
+  lines <- vapply(
+    failed_examples,
+    function(ex) {
+      inputs <- ex$inputs
+      input_text <- paste(
+        names(inputs),
+        vapply(inputs, as.character, character(1)),
+        sep = ": ",
+        collapse = ", "
+      )
+      paste0(
+        "Inputs: ",
+        input_text,
+        " | Expected: ",
+        as.character(ex$expected),
+        " | Predicted: ",
+        as.character(ex$predicted)
+      )
+    },
+    character(1)
+  )
 
   paste(lines, collapse = "\n")
 }
