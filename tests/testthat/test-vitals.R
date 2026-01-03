@@ -588,7 +588,7 @@ test_that("as_vitals_task rejects non-dataframe dataset", {
   )
 })
 
-test_that("as_vitals_task requires input and target columns", {
+test_that("as_vitals_task requires signature inputs and target columns", {
   skip_if_not_installed("vitals")
 
   sig <- Signature(
@@ -607,7 +607,7 @@ test_that("as_vitals_task requires input and target columns", {
     "Missing.*target"
   )
 
-  # Missing input
+  # Missing signature input column
   expect_error(
     as_vitals_task(
       module = mod,
@@ -623,6 +623,43 @@ test_that("as_vitals_task requires input and target columns", {
       dataset = data.frame(other = "test")
     ),
     "Missing"
+  )
+})
+
+test_that("as_vitals_task works with non-standard input column names", {
+  skip_if_not_installed("vitals")
+
+  # Module with "question" input instead of "input"
+  sig <- Signature(
+    inputs = list(input(name = "question", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Answer the question"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Should work with question + target columns
+  dataset <- tibble::tibble(
+    question = c("What is 2+2?", "What is the capital of France?"),
+    target = c("4", "Paris")
+  )
+
+  task <- as_vitals_task(
+    module = mod,
+    dataset = dataset,
+    scorer = vitals::detect_includes()
+  )
+
+  expect_s3_class(task, "Task")
+  samples <- task$get_samples()
+  expect_equal(nrow(samples), 2)
+
+  # Should error if using wrong column name
+  expect_error(
+    as_vitals_task(
+      module = mod,
+      dataset = data.frame(input = "test", target = "test")
+    ),
+    "Missing.*question"
   )
 })
 

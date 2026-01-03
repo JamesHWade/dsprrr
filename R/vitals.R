@@ -12,6 +12,9 @@
 #' @param .parallel Logical; forwarded to [run_dataset()]. Defaults to `FALSE`
 #'   to avoid sharing LLM state across workers.
 #' @param .return_format One of `"structured"` (default) or `"simple"`.
+#' @param .input_column Column name to use for the module's input. Defaults to
+#'   the first input name from the module's signature. Used to map vitals'
+#'   "input" column to the module's expected input column.
 #' @param ... Additional arguments forwarded to [run_dataset()].
 #'
 #' @return A function accepting a data frame of inputs and returning a list with
@@ -22,6 +25,7 @@ as_vitals_solver <- function(
   .llm = NULL,
   .parallel = FALSE,
   .return_format = "structured",
+  .input_column = NULL,
   ...
 ) {
   if (!inherits(module, "Module")) {
@@ -30,9 +34,27 @@ as_vitals_solver <- function(
 
   .return_format <- match.arg(.return_format, c("simple", "structured"))
 
+  # Get signature's first input name if not overridden
+  sig_input_names <- vapply(
+    module$signature@inputs,
+    function(x) x$name,
+    character(1)
+  )
+  first_input_name <- if (length(sig_input_names) > 0) {
+    sig_input_names[[1]]
+  } else {
+    "input"
+  }
+  input_col_name <- .input_column %||% first_input_name
+
   function(inputs, ...) {
     if (!is.data.frame(inputs)) {
-      inputs <- as.data.frame(inputs)
+      # vitals passes just the "input" column values as a vector
+      # Map to the signature's expected input column name
+      inputs <- stats::setNames(
+        data.frame(inputs, stringsAsFactors = FALSE),
+        input_col_name
+      )
     }
 
     results <- run_dataset(
@@ -423,23 +445,48 @@ as_vitals_task <- function(
     ))
   }
 
-  required_cols <- c("input", "target")
+  # Get required input columns from module's signature
+  sig_input_names <- vapply(
+    module$signature@inputs,
+    function(x) x$name,
+    character(1)
+  )
+
+  # Require signature inputs + "target" for scoring
+  required_cols <- c(sig_input_names, "target")
   missing_cols <- setdiff(required_cols, names(dataset))
   if (length(missing_cols) > 0) {
     cli::cli_abort(c(
-      "dataset must have columns 'input' and 'target'",
+      "dataset must have columns matching signature inputs plus 'target'",
+      "i" = "Signature inputs: {.field {sig_input_names}}",
       "x" = "Missing: {.field {missing_cols}}"
     ))
+  }
+
+  # vitals requires an "input" column - map from signature's first input
+  first_input_name <- if (length(sig_input_names) > 0) {
+    sig_input_names[[1]]
+  } else {
+    "input"
+  }
+
+  # Create a copy of dataset with "input" column for vitals
+  vitals_dataset <- dataset
+  if (first_input_name != "input") {
+    # Rename signature's input column to "input" for vitals
+    vitals_dataset$input <- vitals_dataset[[first_input_name]]
   }
 
   # Default scorer
   scorer <- scorer %||% vitals::model_graded_qa()
 
-  # Create solver from module
+  # Create solver from module - pass original column name so solver can map back
+
   solver <- as_vitals_solver(
     module = module,
     .llm = .llm,
     .parallel = .parallel,
+    .input_column = first_input_name,
     ...
   )
 
@@ -452,7 +499,7 @@ as_vitals_task <- function(
   # Create and return the Task
   tryCatch(
     vitals::Task$new(
-      dataset = dataset,
+      dataset = vitals_dataset,
       solver = solver,
       scorer = scorer,
       metrics = metrics,
