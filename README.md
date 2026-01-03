@@ -4,28 +4,40 @@
 # dsprrr <img src="man/figures/logo.png" align="right" width="160" alt="dsprrr hex sticker" />
 
 <!-- badges: start -->
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CRAN status](https://www.r-pkg.org/badges/version/dsprrr)](https://CRAN.R-project.org/package=dsprrr)
+
+[![Lifecycle:
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/dsprrr)](https://CRAN.R-project.org/package=dsprrr)
 [![R-CMD-check](https://github.com/JamesHWade/dsprrr/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JamesHWade/dsprrr/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/JamesHWade/dsprrr/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/dsprrr)
+[![Codecov test
+coverage](https://codecov.io/gh/JamesHWade/dsprrr/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/dsprrr)
 <!-- badges: end -->
 
-dsprrr adds signatures, optimization, and tracing on top of [ellmer](https://ellmer.tidyverse.org). It implements ideas from [DSPy](https://dspy.ai) for R.
+dsprrr adds signatures, optimization, and tracing on top of
+[ellmer](https://ellmer.tidyverse.org). It implements ideas from
+[DSPy](https://dspy.ai) for R.
 
-**The problem:** Hand-tuned prompts are fragile. They break when you switch models, change requirements, or scale up. dsprrr treats prompts as programs that can be systematically improved using your data.
+**The problem:** Hand-tuned prompts are fragile. They break when you
+switch models, change requirements, or scale up. dsprrr treats prompts
+as programs that can be systematically improved using your data.
 
 **Use cases:**
 
-- RAG pipelines where you want to optimize retrieval + generation together
+- RAG pipelines where you want to optimize retrieval + generation
+  together
 - Classification or extraction tasks with labeled examples to learn from
 - Multi-step agents where you need to trace what went wrong
-- Any LLM workflow you want to improve without manually rewriting prompts
+- Any LLM workflow you want to improve without manually rewriting
+  prompts
 
-**When to just use ellmer:** If you have a prompt that works and don't need to optimize it with data. ellmer already tracks conversation history and token costs.
+**When to just use ellmer:** If you have a prompt that works and don’t
+need to optimize it with data. ellmer already tracks conversation
+history and token costs.
 
 ## Installation
 
-```r
+``` r
 # install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
 ```
@@ -36,27 +48,77 @@ pak::pak("JamesHWade/dsprrr")
 
 A compact notation for defining LLM inputs and outputs:
 
-```r
+``` r
 library(dsprrr)
+#> 
+#> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:methods':
+#> 
+#>     signature
 
 # Arrow notation: inputs -> output
 signature("question -> answer")
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • question: Input: question
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Given the fields `question`, produce the fields `answer`.
 
 # Multiple inputs
 signature("context, question -> answer")
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • context: Input: context
+#> • question: Input: question
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Given the fields `context`, `question`, produce the fields `answer`.
 
 # Typed outputs (uses ellmer types under the hood)
 signature("review -> rating: enum('1', '2', '3', '4', '5')")
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • review: Input: review
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Given the fields `review`, produce the fields `rating`.
 
 # With instructions
 signature("text -> summary", instructions = "Maximum 50 words.")
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • text: Input: text
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Maximum 50 words.
 ```
 
 ### Modules
 
 Reusable, stateful wrappers around LLM calls:
 
-```r
+``` r
 library(ellmer)
 
 # Create a module from a signature
@@ -74,13 +136,17 @@ classifier$predict(text = "Terrible experience")
 
 ### Optimization
 
-Automatically improve prompts using training data. dsprrr implements several optimizers from DSPy:
+Automatically improve prompts using training data. dsprrr implements
+several optimizers from DSPy:
 
-- **LabeledFewShot**: Add examples from your training set as demonstrations
-- **MIPROv2**: Joint optimization of instructions and examples using Bayesian search
-- **GEPA**: Reflection-based instruction optimization—sample efficient and often outperforms manual prompts
+- **LabeledFewShot**: Add examples from your training set as
+  demonstrations
+- **MIPROv2**: Joint optimization of instructions and examples using
+  Bayesian search
+- **GEPA**: Reflection-based instruction optimization—sample efficient
+  and often outperforms manual prompts
 
-```r
+``` r
 # Compile with few-shot examples
 optimized <- compile(
   LabeledFewShot(k = 3),
@@ -98,16 +164,18 @@ mod$optimize_grid(
 
 ### Tracing
 
-ellmer tracks individual chat history and costs. dsprrr adds module-level traces across pipelines—useful for debugging multi-step workflows:
+ellmer tracks individual chat history and costs. dsprrr adds
+module-level traces across pipelines—useful for debugging multi-step
+workflows:
 
-```r
+``` r
 mod$trace_summary()
-export_traces(mod, format = "tibble")
+export_traces(mod)
 ```
 
 ## Quick example
 
-```r
+``` r
 library(dsprrr)
 library(ellmer)
 
@@ -131,14 +199,15 @@ result <- run(
 
 ## Module types
 
-| Type | Use case |
-|------|----------|
-| `predict` | Basic text generation |
-| `react` | Tool use (wraps ellmer tools) |
-| `chain_of_thought` | Step-by-step reasoning |
-| `program_of_thought` | Generate and execute R code |
+| Type                 | Use case                                |
+|----------------------|-----------------------------------------|
+| `predict`            | Basic text generation                   |
+| `react`              | Tool use (wraps ellmer tools)           |
+| `chain_of_thought`   | Step-by-step reasoning                  |
+| `multichain`         | Ensemble reasoning with multiple chains |
+| `program_of_thought` | Generate and execute R code             |
 
-```r
+``` r
 # ReAct agent with tools
 agent <- module(
   signature("question -> answer"),
@@ -147,24 +216,24 @@ agent <- module(
 )
 
 # Chain of thought
-cot <- signature("question -> answer") |> with_reasoning()
-mod <- module(cot, type = "predict")
+mod <- module(signature("question -> answer"), type = "chain_of_thought")
 ```
 
 ## ellmer compatibility
 
-dsprrr uses ellmer for all LLM calls. The integration is straightforward:
+dsprrr uses ellmer for all LLM calls. The integration is
+straightforward:
 
-| ellmer | dsprrr equivalent |
-|--------|-------------------|
-| `chat_openai()` | Pass to `run(..., .llm = )` |
-| `type_string()`, `type_enum()` | Used inside signatures |
-| `tool()` | Pass to `module(..., tools = )` |
-| `chat$chat_structured()` | `dsp(chat, signature, ...)` |
+| ellmer                         | dsprrr equivalent               |
+|--------------------------------|---------------------------------|
+| `chat_openai()`                | Pass to `run(..., .llm = )`     |
+| `type_string()`, `type_enum()` | Used inside signatures          |
+| `tool()`                       | Pass to `module(..., tools = )` |
+| `chat$chat_structured()`       | `dsp(chat, signature, ...)`     |
 
 ## Learning more
 
-```r
+``` r
 vignette("getting-started", package = "dsprrr")
 vignette("compilation-optimization", package = "dsprrr")
 
@@ -175,8 +244,11 @@ vignette("llms-txt", package = "dsprrr")        # Generate package docs
 
 ## Status
 
-Experimental. The API may change. See [PLAN.md](PLAN.md) for the roadmap.
+Experimental. The API may change. See [PLAN.md](PLAN.md) for the
+roadmap.
 
 ## Acknowledgments
 
-Built on [ellmer](https://ellmer.tidyverse.org) and [S7](https://rconsortium.github.io/S7/). Inspired by [DSPy](https://github.com/stanfordnlp/dspy).
+Built on [ellmer](https://ellmer.tidyverse.org) and
+[S7](https://rconsortium.github.io/S7/). Inspired by
+[DSPy](https://github.com/stanfordnlp/dspy).

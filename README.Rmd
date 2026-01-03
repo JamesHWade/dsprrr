@@ -114,7 +114,7 @@ ellmer tracks individual chat history and costs. dsprrr adds module-level traces
 
 ```{r tracing, eval=FALSE}
 mod$trace_summary()
-export_traces(mod, format = "tibble")
+export_traces(mod)
 ```
 
 ## Quick example
@@ -148,6 +148,7 @@ result <- run(
 | `predict` | Basic text generation |
 | `react` | Tool use (wraps ellmer tools) |
 | `chain_of_thought` | Step-by-step reasoning |
+| `multichain` | Ensemble reasoning with multiple chains |
 | `program_of_thought` | Generate and execute R code |
 
 ```{r module-types, eval=FALSE}
@@ -159,8 +160,7 @@ agent <- module(
 )
 
 # Chain of thought
-cot <- signature("question -> answer") |> with_reasoning()
-mod <- module(cot, type = "predict")
+mod <- module(signature("question -> answer"), type = "chain_of_thought")
 ```
 
 ## ellmer compatibility
