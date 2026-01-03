@@ -9,18 +9,30 @@ vignette: >
 
 ```{r}
 #| include: false
+# Skip evaluation during R CMD check or CI (cassettes may not match current code)
+in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+            identical(Sys.getenv("NOT_CRAN"), "false") ||
+            !interactive()
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE
+  eval = should_eval
 )
+
+if (should_eval) {
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+  vcr::setup_knitr()
+}
 ```
 
 [llms.txt](https://llmstxt.org/) is a proposed standard for AI-friendly documentation. This tutorial builds a dsprrr pipeline to automatically generate `llms.txt` files for R packages.
 
 *This tutorial is adapted from the [DSPy llms.txt tutorial](https://dspy.ai/tutorials/llms_txt_generation/) by the DSPy team.*
-
-**Note:** This tutorial uses `eval = FALSE` for code chunks since it requires API access. The patterns shown are production-ready—copy them into your own scripts and supply your LLM.
 
 ## Why This Matters Beyond llms.txt
 
@@ -221,14 +233,14 @@ Keep it concise - this is reference documentation for AI systems."
 
 ### Create Modules
 
-Each module wraps a signature. We add `with_reasoning()` to the analysis stages—this asks the LLM to show its work, which improves accuracy for complex analysis tasks. The final `llmstxt` stage just needs to synthesize; no reasoning required.
+Each module wraps a signature. We add `chain_of_thought()` to the analysis stages—this asks the LLM to show its work, which improves accuracy for complex analysis tasks. The final `llmstxt` stage just needs to synthesize; no reasoning required.
 
 ```{r simple-modules}
 create_modules <- function(llm) {
   list(
-    purpose = module(analyze_purpose_sig |> with_reasoning()),
-    structure = module(analyze_structure_sig |> with_reasoning()),
-    examples = module(generate_examples_sig |> with_reasoning()),
+    purpose = module(analyze_purpose_sig |> chain_of_thought()),
+    structure = module(analyze_structure_sig |> chain_of_thought()),
+    examples = module(generate_examples_sig |> chain_of_thought()),
     llmstxt = module(generate_llmstxt_sig),
     llm = llm
   )

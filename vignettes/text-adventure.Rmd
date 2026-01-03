@@ -9,20 +9,25 @@ vignette: >
 
 ```{r}
 #| include: false
+# Skip evaluation during R CMD check or CI (cassettes may not match current code)
+in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+            identical(Sys.getenv("NOT_CRAN"), "false") ||
+            !interactive()
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE
+  eval = should_eval
 )
-```
 
-```{r}
-#| echo: false
-#| eval: true
-#| results: asis
-cat("
-> **Note**: Code in this tutorial requires an OpenAI API key to run. Set `eval = TRUE` and configure your API credentials to execute interactively. The code is tested and functional—`eval = FALSE` keeps the vignette buildable without API access.
-")
+if (should_eval) {
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+  vcr::setup_knitr()
+}
 ```
 
 This tutorial builds a text-based adventure game using dsprrr. The AI handles narrative generation, NPC dialogue, and action resolution while you control the game framework and player state.
@@ -226,14 +231,14 @@ action_sig <- signature(
 
 ### Create Modules
 
-Each signature becomes a module. We wrap them with `with_reasoning()` which adds a "reasoning" field to the output—the model explains its thinking before giving the final answer. This chain-of-thought approach improves output quality, especially for complex decisions like whether an action should succeed.
+Each signature becomes a module. We wrap them with `chain_of_thought()` which adds a "reasoning" field to the output—the model explains its thinking before giving the final answer. This improves output quality, especially for complex decisions like whether an action should succeed.
 
 ```{r simple-modules}
 create_modules <- function(llm) {
   list(
-    scene = module(scene_sig |> with_reasoning()),
-    dialogue = module(dialogue_sig |> with_reasoning()),
-    action = module(action_sig |> with_reasoning()),
+    scene = module(scene_sig |> chain_of_thought()),
+    dialogue = module(dialogue_sig |> chain_of_thought()),
+    action = module(action_sig |> chain_of_thought()),
     llm = llm
   )
 }
