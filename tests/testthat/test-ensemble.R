@@ -83,6 +83,108 @@ test_that("ensemble validates modules argument", {
   )
 })
 
+test_that("ensemble validates signature compatibility", {
+  # Create modules with different input field names
+  mod1 <- module(signature("question -> answer"))
+  mod2 <- module(signature("context, query -> answer"))
+
+  expect_error(
+    ensemble(list(mod1, mod2)),
+    "Incompatible signatures"
+  )
+})
+
+test_that("ensemble allows compatible signatures", {
+  # Create modules with identical signatures
+  mod1 <- module(signature("question -> answer"))
+  mod2 <- module(signature("question -> answer"))
+  mod3 <- module(signature("question -> answer"))
+
+  # Should not error
+  ens <- ensemble(list(mod1, mod2, mod3))
+  expect_s3_class(ens, "EnsembleModule")
+})
+
+test_that("ensemble validates signature compatibility with multiple inputs", {
+  # Create modules with same number of inputs but different names
+  mod1 <- module(signature("context, question -> answer"))
+  mod2 <- module(signature("context, query -> answer")) # 'query' instead of 'question'
+
+  expect_error(
+    ensemble(list(mod1, mod2)),
+    "Incompatible signatures"
+  )
+})
+
+test_that("ensemble validates signature compatibility error message is helpful", {
+  mod1 <- module(signature("question -> answer"))
+  mod2 <- module(signature("text -> summary"))
+
+  expect_error(
+    ensemble(list(mod1, mod2)),
+    "question.*text" # Error message should mention both input fields
+  )
+})
+
+test_that("ensemble allows single module without compatibility check", {
+  # Single module should work (no compatibility check needed)
+  mod1 <- module(signature("question -> answer"))
+
+  ens <- ensemble(list(mod1))
+  expect_s3_class(ens, "EnsembleModule")
+})
+
+test_that("ensemble validates all modules beyond position 2", {
+  # Verify that modules at position 3+ are also validated
+
+  mod1 <- module(signature("question -> answer"))
+  mod2 <- module(signature("question -> answer"))
+  mod3 <- module(signature("different_input -> answer")) # Incompatible
+
+  expect_error(
+    ensemble(list(mod1, mod2, mod3)),
+    "Module 3" # Error message should identify position 3
+  )
+})
+
+test_that("ensemble warns for module with NULL signature", {
+  mod1 <- module(signature("question -> answer"))
+
+  # Create a mock module with NULL signature
+  mod2 <- list(
+    signature = NULL,
+    chat = NULL,
+    forward = function(...) NULL,
+    reset_copy = function() NULL
+  )
+  class(mod2) <- c("MockModule", "Module", "R6")
+
+  # Should warn about NULL signature and then error on incompatibility
+  expect_warning(
+    expect_error(ensemble(list(mod1, mod2)), "Incompatible signatures"),
+    "NULL signature"
+  )
+})
+
+test_that("ensemble warns for module with invalid signature type", {
+  mod1 <- module(signature("question -> answer"))
+
+  # Create a mock module with non-Signature object
+  mod2 <- list(
+    signature = list(inputs = list(list(name = "question"))), # Not a real Signature
+    chat = NULL,
+    forward = function(...) NULL,
+    reset_copy = function() NULL
+  )
+  class(mod2) <- c("MockModule", "Module", "R6")
+
+  # Should warn about invalid signature type
+  expect_warning(
+    expect_error(ensemble(list(mod1, mod2)), "Incompatible signatures"),
+    "not a Signature object"
+  )
+})
+
 test_that("ensemble uses default reduce_majority", {
   mod1 <- create_mock_module("a")
   mod2 <- create_mock_module("a")
