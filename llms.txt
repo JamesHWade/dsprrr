@@ -500,6 +500,12 @@ Evaluation metrics
   : Create a Field Equality Metric
 - [`metric_threshold()`](https://jameshwade.github.io/dsprrr/reference/metric_threshold.md)
   : Create a Threshold Metric
+- [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_model_graded_fact()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_match()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_includes()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_pattern()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  : Pre-built Vitals-backed Metrics
 
 ## Orchestration
 
@@ -589,6 +595,12 @@ Integration with vitals package
   : Convert a dsprrr module into a vitals solver
 - [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
   : Adapt a vitals scorer for use as a dsprrr metric
+- [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_model_graded_fact()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_match()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_includes()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_pattern()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  : Pre-built Vitals-backed Metrics
 
 ## ellmer Integration
 
