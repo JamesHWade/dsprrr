@@ -33,7 +33,7 @@ dsprrr adds signatures, optimization, and tracing on top of [ellmer](https://ell
 - Multi-step agents where you need to trace what went wrong
 - Any LLM workflow you want to improve without manually rewriting prompts
 
-**When to just use ellmer:** If your prompt works and you don't need optimization or tracing, ellmer alone is simpler.
+**When to just use ellmer:** If you have a prompt that works and don't need to optimize it with data. ellmer already tracks conversation history and token costs.
 
 ## Installation
 
@@ -110,7 +110,7 @@ mod$optimize_grid(
 
 ### Tracing
 
-Every LLM call is recorded:
+ellmer tracks individual chat history and costs. dsprrr adds module-level traces across pipelines—useful for debugging multi-step workflows:
 
 ```{r tracing, eval=FALSE}
 mod$trace_summary()
