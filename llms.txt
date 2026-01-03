@@ -687,3 +687,12 @@ Integration with the R ecosystem
   ragnar](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md):
 - [tidymodels
   Integration](https://jameshwade.github.io/dsprrr/articles/tidymodels-integration.md):
+
+### Tutorials
+
+Learn by building
+
+- [Building a Text Adventure
+  Game](https://jameshwade.github.io/dsprrr/articles/text-adventure.md):
+- [Generating llms.txt for R
+  Packages](https://jameshwade.github.io/dsprrr/articles/llms-txt.md):

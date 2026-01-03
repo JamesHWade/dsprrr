@@ -8,13 +8,15 @@ articles:
   cheatsheet: cheatsheet.html
   compilation-optimization: compilation-optimization.html
   getting-started: getting-started.html
+  llms-txt: llms-txt.html
   orchestration: orchestration.html
   rag-workflows: rag-workflows.html
   reasoning-models: reasoning-models.html
+  text-adventure: text-adventure.html
   tidymodels-integration: tidymodels-integration.html
   troubleshooting: troubleshooting.html
   vitals-integration: vitals-integration.html
-last_built: 2026-01-02T18:37Z
+last_built: 2026-01-03T16:44Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles

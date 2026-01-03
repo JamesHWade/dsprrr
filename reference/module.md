@@ -2,8 +2,9 @@
 
 The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
-tool-using modules, "multichain" for multi-chain comparison, and
-"program_of_thought" for code execution modules.
+tool-using modules, "chain_of_thought" for step-by-step reasoning,
+"multichain" for multi-chain comparison, and "program_of_thought" for
+code execution modules.
 
 ## Usage
 
@@ -39,6 +40,8 @@ module(
   - `"predict"` (default): Standard prediction module
 
   - `"react"`: ReAct-style module with tool support
+
+  - `"chain_of_thought"`: Adds step-by-step reasoning to the signature
 
   - `"multichain"`: MultiChainComparison module for ensemble reasoning
 
