@@ -616,12 +616,12 @@ reduce_best_by_metric <- function(
     }
 
     if (is.null(state$expected_value)) {
-      cli::cli_warn(c(
+      cli::cli_abort(c(
         "No expected value set for reduce_best_by_metric",
-        "i" = "Set expected value via set_expected() before calling",
-        "i" = "Falling back to first output"
+        "i" = "This reducer requires an expected value to score outputs",
+        "i" = "Set expected value via {.code attr(reducer, 'set_expected')(value)} before calling",
+        "i" = "If you don't have expected values, use {.fn reduce_majority} or {.fn reduce_first} instead"
       ))
-      return(outputs[[1]])
     }
 
     # Score each output
@@ -651,13 +651,13 @@ reduce_best_by_metric <- function(
     best_idx <- best_fn(scores)
 
     if (is.na(best_idx) || length(best_idx) == 0) {
-      # All scores NA, return first
-      cli::cli_warn(c(
+      cli::cli_abort(c(
         "All metric scores are NA in reduce_best_by_metric",
-        "i" = "{n_scoring_errors} scoring error{?s} occurred",
-        "i" = "Falling back to first output"
+        "x" = "The metric function failed to score any of the {length(outputs)} output{?s}",
+        "i" = "{n_scoring_errors} scoring error{?s} occurred during evaluation",
+        "i" = "Verify that the metric function is compatible with the output format",
+        "i" = "Check that the expected value format matches what the metric expects"
       ))
-      return(outputs[[1]])
     }
 
     outputs[[best_idx]]

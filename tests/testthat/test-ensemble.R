@@ -459,7 +459,7 @@ test_that("reduce_best_by_metric with maximize = FALSE returns lowest score", {
   expect_equal(result$answer, "short") # Shortest = lowest score
 })
 
-test_that("reduce_best_by_metric warns when no expected value set", {
+test_that("reduce_best_by_metric errors when no expected value set", {
   metric <- metric_exact_match(field = "answer")
   reducer <- reduce_best_by_metric(metric)
 
@@ -469,15 +469,13 @@ test_that("reduce_best_by_metric warns when no expected value set", {
     list(answer = "b")
   )
 
-  expect_warning(
-    result <- reducer(outputs),
+  expect_error(
+    reducer(outputs),
     "No expected value set"
   )
-  # Should fall back to first output
-  expect_equal(result$answer, "a")
 })
 
-test_that("reduce_best_by_metric warns when metric scoring fails", {
+test_that("reduce_best_by_metric warns for individual failures then errors when all fail", {
   # Create a metric that throws an error
   failing_metric <- function(output, expected) {
     stop("Metric computation failed")
@@ -491,14 +489,18 @@ test_that("reduce_best_by_metric warns when metric scoring fails", {
     list(answer = "b")
   )
 
-  # Should warn for each scoring failure and for all NA scores
-  expect_warning(
-    result <- reducer(outputs),
-    "Metric scoring failed"
+  # Should warn for each scoring failure, then error when all scores are NA
+
+  expect_error(
+    expect_warning(
+      reducer(outputs),
+      "Metric scoring failed"
+    ),
+    "All metric scores are NA"
   )
 })
 
-test_that("reduce_best_by_metric warns when all scores are NA", {
+test_that("reduce_best_by_metric errors when all scores are NA", {
   # Create a metric that returns NA
   na_metric <- function(output, expected) {
     NA_real_
@@ -512,11 +514,10 @@ test_that("reduce_best_by_metric warns when all scores are NA", {
     list(answer = "b")
   )
 
-  expect_warning(
-    result <- reducer(outputs),
+  expect_error(
+    reducer(outputs),
     "All metric scores are NA"
   )
-  expect_equal(result$answer, "a") # Falls back to first
 })
 
 test_that("reduce_weighted_vote errors on empty list", {
