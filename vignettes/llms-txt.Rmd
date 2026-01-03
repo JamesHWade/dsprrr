@@ -18,6 +18,8 @@ knitr::opts_chunk$set(
 
 [llms.txt](https://llmstxt.org/) is a proposed standard for AI-friendly documentation. This tutorial builds a dsprrr pipeline to automatically generate `llms.txt` files for R packages.
 
+*This tutorial is adapted from the [DSPy llms.txt tutorial](https://dspy.ai/tutorials/llms_txt_generation/) by the DSPy team.*
+
 We'll start with plain lists and functions, then show how S7 adds structure for larger projects.
 
 ## What You'll Build

@@ -18,6 +18,8 @@ knitr::opts_chunk$set(
 
 This tutorial builds a text-based adventure game using dsprrr. The AI handles narrative generation, NPC dialogue, and action resolution while you control the game framework and player state.
 
+*This tutorial is adapted from the [DSPy text adventure tutorial](https://dspy.ai/tutorials/ai_text_game/) by the DSPy team.*
+
 We'll start with the simplest approach—plain lists—then show how S7 adds structure as the project grows.
 
 ## What You'll Build
