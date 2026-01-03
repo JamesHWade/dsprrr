@@ -16,187 +16,334 @@ knitr::opts_chunk$set(
 )
 ```
 
-[llms.txt](https://llmstxt.org/) is a proposed standard for providing LLM-friendly documentation. This tutorial shows how to use dsprrr to automatically generate an `llms.txt` file for any R package.
+[llms.txt](https://llmstxt.org/) is a proposed standard for AI-friendly documentation. This tutorial builds a dsprrr pipeline to automatically generate `llms.txt` files for R packages—useful for helping AI assistants understand your codebase.
+
+## What You'll Build
+
+A multi-stage pipeline that:
+
+1. Gathers package metadata (DESCRIPTION, README, exports)
+2. Analyzes the package's purpose and key concepts
+3. Analyzes the code structure and organization
+4. Generates example usage snippets
+5. Produces a formatted `llms.txt` file
 
 ```{r setup}
 library(dsprrr)
 library(ellmer)
 ```
 
-## The Pipeline
+## Step 1: Define the Signatures
 
-Generating good documentation requires multiple analysis steps:
+Each analysis stage has a clear input/output contract:
 
-1. **Analyze the package** — Extract purpose, key functions, and concepts
-2. **Analyze the structure** — Understand the file organization
-3. **Generate the llms.txt** — Combine everything into the final document
-
-Each step is a separate module, allowing us to optimize them independently.
-
-## Step 1: Package Analysis
-
-First, we analyze the DESCRIPTION and README to understand what the package does:
-```{r analyze-package}
+```{r signatures}
+# Stage 1: Analyze the package's purpose and concepts
 analyze_pkg_sig <- signature(
   inputs = list(
-    input("description", description = "Contents of DESCRIPTION file"),
-    input("readme", description = "Contents of README.md"),
-    input("exported_functions", description = "List of exported function names")
+    input("pkg_name", "Package name"),
+    input("title", "Package title from DESCRIPTION"),
+    input("description_text", "Description field from DESCRIPTION"),
+    input("readme_excerpt", "First 2000 chars of README"),
+    input("exported_functions", "Comma-separated list of exported functions")
   ),
   output_type = type_object(
-    purpose = type_string("One sentence describing what the package does"),
-    key_functions = type_array(
+    purpose = type_string("One sentence: what problem does this package solve?"),
+    key_concepts = type_array(
       type_object(
-        name = type_string(),
-        description = type_string("One sentence")
+        term = type_string("Concept name"),
+        definition = type_string("One sentence definition")
       ),
-      description = "The 5 most important functions"
+      "3-5 core concepts users must understand"
     ),
-    concepts = type_array(type_string(), description = "Key concepts a user should understand"),
-    dependencies = type_array(type_string(), description = "Critical dependencies and why they matter")
+    target_audience = type_string("Who should use this package?"),
+    prerequisites = type_array(type_string(), "Required knowledge or packages")
   ),
-  instructions = "Analyze this R package. Be concise and precise. Focus on what users need to know."
+  instructions = "Analyze this R package to extract its core purpose and concepts.
+Be precise and technical. Focus on what makes this package unique.
+Key concepts should be domain terms or abstractions the package introduces."
 )
 
-analyze_pkg <- analyze_pkg_sig |>
-  with_reasoning() |>
-  module(type = "predict")
-```
-
-## Step 2: Structure Analysis
-
-Understand how the package is organized:
-
-```{r analyze-structure}
+# Stage 2: Analyze code structure
 analyze_structure_sig <- signature(
   inputs = list(
-    input("file_tree", description = "List of files in the package"),
-    input("r_files", description = "Names of files in R/ directory")
+    input("pkg_name", "Package name"),
+    input("r_files", "List of .R files in R/ directory"),
+    input("exported_functions", "Exported function names"),
+    input("has_vignettes", "Whether package has vignettes"),
+    input("dependencies", "Package dependencies from DESCRIPTION")
   ),
   output_type = type_object(
-    organization = type_string("How the code is organized (1-2 sentences)"),
-    entry_points = type_array(type_string(), description = "Main files to start reading"),
-    test_coverage = type_string("Brief note on testing approach")
+    organization = type_string("How is the code organized? (1-2 sentences)"),
+    main_files = type_array(
+      type_object(
+        file = type_string("Filename"),
+        purpose = type_string("What this file contains")
+      ),
+      "3-5 most important files to understand"
+    ),
+    entry_points = type_array(type_string(), "Main functions users should start with"),
+    internal_patterns = type_string("Notable patterns: S3/S4/R6/S7, NSE, etc.")
   ),
-  instructions = "Analyze the package structure. Help someone navigate the codebase."
+  instructions = "Analyze the package structure to help developers navigate it.
+Identify the most important files and entry points. Note any design patterns."
 )
 
-analyze_structure <- analyze_structure_sig |>
-  module(type = "predict")
-```
-
-## Step 3: Generate llms.txt
-
-Combine the analyses into the final document:
-
-```{r generate}
-generate_sig <- signature(
+# Stage 3: Generate usage examples
+generate_examples_sig <- signature(
   inputs = list(
-    input("pkg_name", description = "Package name"),
-    input("purpose", description = "What the package does"),
-    input("key_functions", description = "JSON array of important functions"),
-    input("concepts", description = "Key concepts as comma-separated list"),
-    input("organization", description = "How code is organized"),
-    input("entry_points", description = "Where to start reading")
+    input("pkg_name", "Package name"),
+    input("purpose", "What the package does"),
+    input("entry_points", "Main functions to demonstrate"),
+    input("key_concepts", "Core concepts as JSON")
+  ),
+  output_type = type_object(
+    basic_example = type_string("3-5 line minimal example showing core usage"),
+    intermediate_example = type_string("5-10 line example showing common workflow"),
+    gotchas = type_array(type_string(), "1-3 common mistakes or surprising behaviors")
+  ),
+  instructions = "Generate realistic R code examples for this package.
+Examples must be syntactically valid R. Use realistic variable names.
+The basic example should work standalone. Intermediate can build on it."
+)
+
+# Stage 4: Generate the final llms.txt
+generate_llmstxt_sig <- signature(
+  inputs = list(
+    input("pkg_name", "Package name"),
+    input("purpose", "Package purpose"),
+    input("target_audience", "Who uses this"),
+    input("key_concepts_json", "JSON array of term/definition objects"),
+    input("organization", "Code organization description"),
+    input("entry_points", "Main functions"),
+    input("main_files_json", "JSON array of file/purpose objects"),
+    input("basic_example", "Basic usage example"),
+    input("intermediate_example", "Intermediate example"),
+    input("gotchas", "Common mistakes")
   ),
   output_type = type_string(),
-  instructions = "Generate an llms.txt file following this format:
+  instructions = "Generate a complete llms.txt file with this exact structure:
 
 # {pkg_name}
 
-> {one-line description}
+> {one-line purpose}
 
-## Purpose
-{2-3 sentences on what this package does and why}
+{target_audience}
 
 ## Key Concepts
-{bullet list of concepts}
 
-## Main Functions
-{bullet list with function name and description}
-
-## Code Organization
-{how to navigate the codebase}
+{bulleted list of term: definition}
 
 ## Quick Start
-{3-5 line code example}
 
-Be concise. This is reference documentation for LLMs, not a tutorial."
+```r
+{basic_example}
+```
+
+## Common Workflow
+
+```r
+{intermediate_example}
+```
+
+## Code Organization
+
+{organization}
+
+### Important Files
+
+{bulleted list of file: purpose}
+
+## Entry Points
+
+{bulleted list of main functions with brief description}
+
+## Watch Out For
+
+{bulleted list of gotchas}
+
+Keep it concise. This is reference documentation for AI systems."
 )
-
-generate_llms_txt <- generate_sig |>
-  module(type = "predict")
 ```
 
-## Helper Functions
+## Step 2: The Analysis Pipeline
 
-We need utilities to gather package information:
+Create an R6 class that orchestrates the analysis:
 
-```{r helpers}
-# Read package files
-read_pkg_files <- function(pkg_path = ".") {
-  list(
-    description = readLines(file.path(pkg_path, "DESCRIPTION")) |>
-      paste(collapse = "\n"),
-    readme = if (file.exists(file.path(pkg_path, "README.md"))) {
-      readLines(file.path(pkg_path, "README.md")) |> paste(collapse = "\n")
-    } else "",
-    file_tree = list.files(pkg_path, recursive = TRUE),
-    r_files = list.files(file.path(pkg_path, "R"), pattern = "\\.R$"),
-    exported = tryCatch({
-      ns <- readLines(file.path(pkg_path, "NAMESPACE"))
-      ns[grepl("^export\\(", ns)] |>
-        gsub("export\\((.+)\\)", "\\1", x = _)
-    }, error = function(e) character())
+```{r pipeline}
+PackageAnalyzer <- R6::R6Class("PackageAnalyzer",
+  public = list(
+    analyze_pkg = NULL,
+    analyze_structure = NULL,
+    generate_examples = NULL,
+    generate_llmstxt = NULL,
+    llm = NULL,
+
+    initialize = function(llm) {
+      self$llm <- llm
+
+      # Use chain-of-thought for better analysis
+      self$analyze_pkg <- analyze_pkg_sig |>
+        with_reasoning() |>
+        module(type = "predict")
+
+      self$analyze_structure <- analyze_structure_sig |>
+        with_reasoning() |>
+        module(type = "predict")
+
+      self$generate_examples <- generate_examples_sig |>
+        with_reasoning() |>
+        module(type = "predict")
+
+      self$generate_llmstxt <- generate_llmstxt_sig |>
+        module(type = "predict")
+    },
+
+    analyze = function(pkg_path = ".") {
+      cli::cli_h1("Analyzing package")
+
+      # Gather package info
+      pkg_info <- private$gather_pkg_info(pkg_path)
+      cli::cli_alert_success("Gathered package metadata")
+
+      # Stage 1: Analyze purpose and concepts
+      cli::cli_alert_info("Analyzing purpose and concepts...")
+      pkg_analysis <- run(
+        self$analyze_pkg,
+        pkg_name = pkg_info$name,
+        title = pkg_info$title,
+        description_text = pkg_info$description,
+        readme_excerpt = substr(pkg_info$readme, 1, 2000),
+        exported_functions = paste(pkg_info$exports, collapse = ", "),
+        .llm = self$llm
+      )
+
+      # Stage 2: Analyze structure
+      cli::cli_alert_info("Analyzing code structure...")
+      structure_analysis <- run(
+        self$analyze_structure,
+        pkg_name = pkg_info$name,
+        r_files = paste(pkg_info$r_files, collapse = ", "),
+        exported_functions = paste(pkg_info$exports, collapse = ", "),
+        has_vignettes = pkg_info$has_vignettes,
+        dependencies = paste(pkg_info$deps, collapse = ", "),
+        .llm = self$llm
+      )
+
+      # Stage 3: Generate examples
+      cli::cli_alert_info("Generating usage examples...")
+      examples <- run(
+        self$generate_examples,
+        pkg_name = pkg_info$name,
+        purpose = pkg_analysis$purpose,
+        entry_points = paste(structure_analysis$entry_points, collapse = ", "),
+        key_concepts = jsonlite::toJSON(pkg_analysis$key_concepts, auto_unbox = TRUE),
+        .llm = self$llm
+      )
+
+      # Stage 4: Generate llms.txt
+      cli::cli_alert_info("Generating llms.txt...")
+      llmstxt <- run(
+        self$generate_llmstxt,
+        pkg_name = pkg_info$name,
+        purpose = pkg_analysis$purpose,
+        target_audience = pkg_analysis$target_audience,
+        key_concepts_json = jsonlite::toJSON(pkg_analysis$key_concepts, auto_unbox = TRUE),
+        organization = structure_analysis$organization,
+        entry_points = paste(structure_analysis$entry_points, collapse = ", "),
+        main_files_json = jsonlite::toJSON(structure_analysis$main_files, auto_unbox = TRUE),
+        basic_example = examples$basic_example,
+        intermediate_example = examples$intermediate_example,
+        gotchas = paste(examples$gotchas, collapse = "; "),
+        .llm = self$llm
+      )
+
+      cli::cli_alert_success("Done!")
+
+      list(
+        pkg_info = pkg_info,
+        purpose = pkg_analysis,
+        structure = structure_analysis,
+        examples = examples,
+        llmstxt = llmstxt
+      )
+    }
+  ),
+
+  private = list(
+    gather_pkg_info = function(pkg_path) {
+      # Read DESCRIPTION
+      desc_path <- file.path(pkg_path, "DESCRIPTION")
+      if (!file.exists(desc_path)) {
+        cli::cli_abort("No DESCRIPTION file found at {.path {pkg_path}}")
+      }
+
+      desc <- read.dcf(desc_path)
+      pkg_name <- desc[1, "Package"]
+      title <- desc[1, "Title"]
+      description <- desc[1, "Description"]
+      deps <- strsplit(desc[1, "Imports"] %||% "", ",\\s*")[[1]]
+
+      # Read README
+      readme_path <- file.path(pkg_path, "README.md")
+      readme <- if (file.exists(readme_path)) {
+        paste(readLines(readme_path, warn = FALSE), collapse = "\n")
+      } else {
+        ""
+      }
+
+      # Get R files
+      r_dir <- file.path(pkg_path, "R")
+      r_files <- if (dir.exists(r_dir)) {
+        list.files(r_dir, pattern = "\\.R$", ignore.case = TRUE)
+      } else {
+        character()
+      }
+
+      # Get exports from NAMESPACE
+      ns_path <- file.path(pkg_path, "NAMESPACE")
+      exports <- if (file.exists(ns_path)) {
+        ns_lines <- readLines(ns_path, warn = FALSE)
+        export_lines <- grep("^export\\(", ns_lines, value = TRUE)
+        gsub("export\\((.+)\\)", "\\1", export_lines)
+      } else {
+        character()
+      }
+
+      # Check for vignettes
+      vignette_dir <- file.path(pkg_path, "vignettes")
+      has_vignettes <- dir.exists(vignette_dir) &&
+        length(list.files(vignette_dir, pattern = "\\.(Rmd|qmd)$")) > 0
+
+      list(
+        name = pkg_name,
+        title = title,
+        description = description,
+        readme = readme,
+        r_files = r_files,
+        exports = exports,
+        deps = deps,
+        has_vignettes = has_vignettes
+      )
+    }
   )
-}
+)
 ```
 
-## Running the Pipeline
+## Step 3: Running the Pipeline
 
-Now we can generate llms.txt for any package:
+```{r run}
+# Create analyzer
+analyzer <- PackageAnalyzer$new(llm = chat_openai())
 
-```{r run-pipeline}
-generate_llms_txt_for_pkg <- function(pkg_path = ".", llm = chat_openai()) {
-  # Gather info
-  pkg <- read_pkg_files(pkg_path)
-  pkg_name <- gsub("Package: ", "", grep("^Package:", pkg$description, value = TRUE))
+# Analyze current package
+result <- analyzer$analyze(".")
 
-  # Step 1: Analyze package
-  analysis <- run(
-    analyze_pkg,
-    description = pkg$description,
-    readme = substr(pkg$readme, 1, 4000),  # Truncate long READMEs
-    exported_functions = paste(pkg$exported, collapse = ", "),
-    .llm = llm
-  )
+# View the generated llms.txt
+cat(result$llmstxt)
 
-  # Step 2: Analyze structure
-  structure <- run(
-    analyze_structure,
-    file_tree = paste(pkg$file_tree, collapse = "\n"),
-    r_files = paste(pkg$r_files, collapse = ", "),
-    .llm = llm
-  )
-
-  # Step 3: Generate llms.txt
-  result <- run(
-    generate_llms_txt,
-    pkg_name = pkg_name,
-    purpose = analysis$purpose,
-    key_functions = jsonlite::toJSON(analysis$key_functions, auto_unbox = TRUE),
-    concepts = paste(analysis$concepts, collapse = ", "),
-    organization = structure$organization,
-    entry_points = paste(structure$entry_points, collapse = ", "),
-    .llm = llm
-  )
-
-  result
-}
-
-# Generate for current package
-llms_txt <- generate_llms_txt_for_pkg(".")
-cat(llms_txt)
+# Save to file
+writeLines(result$llmstxt, "llms.txt")
 ```
 
 ## Example Output
@@ -206,102 +353,179 @@ Running this on dsprrr produces:
 ```markdown
 # dsprrr
 
-> DSPy-style LLM programming for R with signatures, optimization, and tracing.
+> DSPy-style LLM programming for R: signatures define I/O, modules encapsulate prompts, optimizers improve them automatically.
 
-## Purpose
-dsprrr extends ellmer with declarative signatures that define LLM input/output
-contracts, modules that encapsulate prompts as reusable components, and
-optimizers that automatically improve prompts using labeled data.
+Data scientists and ML engineers building production LLM applications in R who want systematic prompt optimization rather than manual tuning.
 
 ## Key Concepts
-- Signatures: Declare inputs and outputs with `signature("question -> answer")`
-- Modules: Wrap signatures with configuration and state
-- Optimization: Compile modules with teleprompters like LabeledFewShot
-- Tracing: Every LLM call is recorded for debugging
 
-## Main Functions
-- `signature()`: Define input/output contract
-- `module()`: Create a reusable LLM component
-- `run()`: Execute a module with inputs
-- `compile()`: Optimize a module with a teleprompter
-- `dsp()`: Quick one-liner for Chat objects
-
-## Code Organization
-Core types in signature.R and module-base.R. Module variants (predict, react)
-in separate files. Optimization in teleprompter.R and optimizer-*.R files.
+- **Signature**: Declarative specification of module inputs and outputs using arrow notation (`question -> answer`) or explicit type definitions.
+- **Module**: Reusable, stateful wrapper around an LLM call with configuration (temperature, template) and optimization state (demos, traces).
+- **Teleprompter**: Optimization strategy that compiles modules by adding few-shot examples, refining instructions, or searching hyperparameters.
+- **Trace**: Record of a module execution including inputs, outputs, tokens, and cost for debugging and analysis.
 
 ## Quick Start
+
+```r
 library(dsprrr)
 library(ellmer)
+
 mod <- signature("question -> answer") |> module(type = "predict")
 run(mod, question = "What is R?", .llm = chat_openai())
 ```
 
-## Optimizing the Pipeline
+## Common Workflow
 
-Once you have examples of good llms.txt files, optimize the generator:
+```r
+# Define task
+sig <- signature("context, question -> answer",
+                 instructions = "Answer based only on context.")
+mod <- module(sig, type = "predict")
 
-```{r optimize}
-# Collect examples of well-written llms.txt
-training_data <- dsp_trainset(
-  pkg_name = c("dplyr", "ggplot2"),
-  purpose = c(
-    "A grammar of data manipulation with verbs like filter, select, mutate",
-    "A grammar of graphics for declarative plot creation"
-  ),
-  # ... other fields ...
-  expected_output = c(
-    "# dplyr\n\n> Fast, consistent tools for data manipulation...",
-    "# ggplot2\n\n> Create elegant graphics layer by layer..."
-  )
+# Prepare labeled data
+trainset <- dsp_trainset(
+  context = c("R is for statistics.", "Python is general-purpose."),
+  question = c("What is R for?", "Describe Python."),
+  answer = c("Statistics", "General-purpose programming")
 )
 
-# Optimize with GEPA (when available) or LabeledFewShot
-generate_llms_txt_optimized <- compile(
-  LabeledFewShot(k = 2),
-  generate_llms_txt,
-  trainset = training_data
-)
+# Optimize with few-shot examples
+optimized <- compile(LabeledFewShot(k = 2), mod, trainset = trainset)
+
+# Evaluate
+evaluate(optimized, testset, metric = metric_exact_match())
 ```
 
-## What This Demonstrates
+## Code Organization
 
-This tutorial shows:
+Core abstractions in signature.R (S7) and module-base.R (R6). Module variants (predict, react, multichain) in separate files. Optimization infrastructure in optimizer-*.R and teleprompter.R.
 
-- **Multi-step pipelines**: Breaking complex tasks into focused modules
-- **Structured outputs**: Using `type_object()` for reliable extraction
-- **Chain of thought**: `with_reasoning()` improves analysis quality
-- **Practical utility**: Generate real documentation from code
+### Important Files
 
-The same pipeline pattern works for:
-- API documentation generation
-- Code review summaries
-- Changelog generation
-- Test case generation
+- **signature.R**: S7 Signature class with string parser
+- **module-base.R**: R6 Module base class with forward(), run(), trace methods
+- **module-predict.R**: PredictModule for text generation
+- **teleprompter.R**: LabeledFewShot, GridSearchTeleprompter, GEPA
+- **run.R**: run() and run_dataset() generics
+
+## Entry Points
+
+- `signature()`: Define input/output contract
+- `module()`: Create module from signature
+- `run()`: Execute module with inputs
+- `compile()`: Optimize module with teleprompter
+- `dsp()`: Quick one-liner for Chat objects
+
+## Watch Out For
+
+- Modules are stateful R6 objects—clone before modifying shared instances
+- `run()` requires `.llm` argument unless you've set a default with `set_default_chat()`
+- Signatures use ellmer types internally—complex outputs need `type_object()`
+```
 
 ## Batch Processing
 
 Generate llms.txt for multiple packages:
-```{r batch}
-pkg_paths <- c("~/packages/pkg1", "~/packages/pkg2", "~/packages/pkg3")
 
+```{r batch}
+library(promises)
+library(future)
+plan(multisession, workers = 4)
+
+pkg_paths <- c(
+  "~/projects/pkg1",
+  "~/projects/pkg2",
+  "~/projects/pkg3"
+)
+
+# Analyze in parallel
 results <- lapply(pkg_paths, function(path) {
-  tryCatch(
-    generate_llms_txt_for_pkg(path),
-    error = function(e) paste("Error:", e$message)
-  )
+  future::future({
+    analyzer <- PackageAnalyzer$new(llm = chat_openai())
+    analyzer$analyze(path)
+  })
 })
 
-# Write to files
-Map(function(txt, path) {
-  writeLines(txt, file.path(path, "llms.txt"))
-}, results, pkg_paths)
+# Collect results
+for (i in seq_along(results)) {
+  result <- future::value(results[[i]])
+  output_path <- file.path(pkg_paths[i], "llms.txt")
+  writeLines(result$llmstxt, output_path)
+  cli::cli_alert_success("Wrote {.file {output_path}}")
+}
 ```
 
-## Next Steps
+## Optimization
 
-- Add validation with `metric_contains()` to ensure required sections exist
-- Use `run_async()` for parallel package processing
-- Integrate with pkgdown for automatic generation during site builds
+Improve the generator with examples of high-quality llms.txt files:
 
-See `vignette("compilation-optimization")` for more on optimization strategies.
+```{r optimize}
+# Training data from well-documented packages
+training <- dsp_trainset(
+  pkg_name = c("dplyr", "ggplot2"),
+  purpose = c(
+    "Grammar of data manipulation with composable verbs",
+    "Grammar of graphics for declarative visualization"
+  ),
+  # ... fill in expected outputs for each stage ...
+  expected_llmstxt = c(
+    "# dplyr\n\n> Grammar of data manipulation...",
+    "# ggplot2\n\n> Declarative graphics layer by layer..."
+  )
+)
+
+# Compile with labeled examples
+analyzer$generate_llmstxt <- compile(
+  LabeledFewShot(k = 2),
+  analyzer$generate_llmstxt,
+  trainset = training
+)
+
+# Or use GEPA for instruction optimization (when available)
+# analyzer$generate_llmstxt <- compile(
+#   GEPA(metric = llmstxt_quality_metric),
+#   analyzer$generate_llmstxt,
+#   trainset = training
+# )
+```
+
+## Integration with pkgdown
+
+Add llms.txt generation to your pkgdown build:
+
+```{r pkgdown-hook}
+# In _pkgdown.yml, add a custom article or hook
+# Or create a script in inst/scripts/generate-llmstxt.R
+
+generate_llmstxt_for_pkgdown <- function(pkg_path = ".") {
+  analyzer <- PackageAnalyzer$new(llm = chat_openai())
+  result <- analyzer$analyze(pkg_path)
+
+  # Write to docs/ for pkgdown site
+  docs_dir <- file.path(pkg_path, "docs")
+  if (!dir.exists(docs_dir)) dir.create(docs_dir)
+
+  writeLines(result$llmstxt, file.path(docs_dir, "llms.txt"))
+
+  # Also write to package root
+  writeLines(result$llmstxt, file.path(pkg_path, "llms.txt"))
+
+  invisible(result)
+}
+```
+
+## What This Demonstrates
+
+- **Multi-stage pipelines**: Four modules chained, each building on previous outputs
+- **Structured extraction**: Rich `type_object()` definitions for reliable parsing
+- **Chain of thought**: `with_reasoning()` for better analytical outputs
+- **Practical utility**: Generates real, usable documentation
+- **R6 encapsulation**: Pipeline state managed cleanly
+
+The same pipeline pattern applies to:
+
+- API documentation generation
+- Changelog summarization
+- Code review automation
+- Test case generation
+- Migration guide creation
