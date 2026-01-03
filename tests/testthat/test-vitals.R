@@ -312,17 +312,16 @@ test_that("as_dsprrr_metric handles NULL scorer return", {
   expect_true(is.na(result))
 })
 
-test_that("as_dsprrr_metric handles scorer returning non-data.frame", {
+test_that("as_dsprrr_metric handles vitals-style list return", {
+  # vitals scorers return lists with $score element
   list_scorer <- function(samples) list(score = 1)
 
   metric <- as_dsprrr_metric(list_scorer)
+  result <- metric("prediction", data.frame(target = "t"))
 
-  expect_warning(
-    result <- metric("prediction", data.frame(target = "t")),
-    "vitals scorer returned no results"
-  )
+  # Should handle list return properly
 
-  expect_true(is.na(result))
+  expect_equal(result, 1)
 })
 
 test_that("as_dsprrr_metric preserves numeric precision", {
@@ -358,4 +357,123 @@ test_that("as_dsprrr_metric works with complex predictions", {
     data.frame(target = "t")
   )
   expect_equal(result2, 0)
+})
+
+# --- Pre-built vitals metrics tests ---
+
+test_that("metric_model_graded_qa requires vitals package", {
+  skip_if_not_installed("vitals")
+
+  # Should create a function
+  metric <- metric_model_graded_qa()
+  expect_true(is.function(metric))
+})
+
+test_that("metric_model_graded_fact requires vitals package", {
+  skip_if_not_installed("vitals")
+
+  # Should create a function
+  metric <- metric_model_graded_fact()
+  expect_true(is.function(metric))
+})
+
+test_that("metric_detect_match requires vitals and validates location", {
+  skip_if_not_installed("vitals")
+
+  # Default location "end"
+  metric <- metric_detect_match()
+  expect_true(is.function(metric))
+
+  # Explicit locations
+  metric_begin <- metric_detect_match(location = "begin")
+  expect_true(is.function(metric_begin))
+
+  metric_any <- metric_detect_match(location = "any")
+  expect_true(is.function(metric_any))
+
+  metric_exact <- metric_detect_match(location = "exact")
+  expect_true(is.function(metric_exact))
+
+  # Invalid location should error
+  expect_error(
+    metric_detect_match(location = "invalid"),
+    "should be one of"
+  )
+})
+
+test_that("metric_detect_includes requires vitals package", {
+  skip_if_not_installed("vitals")
+
+  metric <- metric_detect_includes()
+  expect_true(is.function(metric))
+
+  # Case sensitive option
+  metric_cs <- metric_detect_includes(case_sensitive = TRUE)
+  expect_true(is.function(metric_cs))
+})
+
+test_that("metric_detect_pattern requires vitals and pattern", {
+  skip_if_not_installed("vitals")
+
+  metric <- metric_detect_pattern(pattern = "\\d+")
+  expect_true(is.function(metric))
+
+  # With case_sensitive option
+  metric_cs <- metric_detect_pattern(pattern = "foo", case_sensitive = TRUE)
+  expect_true(is.function(metric_cs))
+})
+
+test_that("vitals metrics accept custom column names", {
+  skip_if_not_installed("vitals")
+
+  metric <- metric_detect_match(
+    input_column = "question",
+    target_column = "answer",
+    result_column = "prediction"
+  )
+  expect_true(is.function(metric))
+})
+
+test_that("metric_detect_match scores correctly", {
+  skip_if_not_installed("vitals")
+
+  # Test "end" location - target should be at end of result
+  metric <- metric_detect_match(location = "end")
+
+  # Should score 1 when target at end
+  score <- metric("The capital is Paris", data.frame(target = "Paris"))
+  expect_equal(score, 1)
+
+  # Should score 0 when target not at end
+  score2 <- metric("Paris is the capital", data.frame(target = "Paris"))
+  expect_equal(score2, 0)
+})
+
+test_that("metric_detect_includes scores correctly", {
+  skip_if_not_installed("vitals")
+
+  metric <- metric_detect_includes()
+
+  # Should score 1 when target is included anywhere
+  score <- metric("Paris is the capital", data.frame(target = "Paris"))
+  expect_equal(score, 1)
+
+  # Should score 0 when target not included
+  score2 <- metric("London is the capital", data.frame(target = "Paris"))
+  expect_equal(score2, 0)
+})
+
+test_that("metric_detect_pattern scores correctly", {
+  skip_if_not_installed("vitals")
+
+  # detect_pattern requires capture groups - extracts them and checks against target
+  metric <- metric_detect_pattern(pattern = "([0-9]+)")
+
+  # Should score 1 when captured group matches target
+  score <- metric("The answer is 42", data.frame(target = "42"))
+  expect_equal(score, 1)
+
+  # Should score 0 when captured group doesn't match target
+  score2 <- metric("The answer is 42", data.frame(target = "99"))
+  expect_equal(score2, 0)
 })
