@@ -524,3 +524,201 @@ test_that("metric_detect_pattern scores correctly", {
   score2 <- metric("The answer is 42", data.frame(target = "99"))
   expect_equal(score2, 0)
 })
+
+# --- as_vitals_task tests ---
+
+test_that("as_vitals_task requires vitals package", {
+  skip_if_not_installed("vitals")
+
+  sig <- Signature(
+    inputs = list(input(name = "input", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  dataset <- tibble::tibble(
+    input = c("hello", "world"),
+    target = c("hello", "world")
+  )
+
+  task <- as_vitals_task(
+    module = mod,
+    dataset = dataset,
+    scorer = vitals::detect_includes()
+  )
+
+  expect_s3_class(task, "Task")
+})
+
+test_that("as_vitals_task rejects non-module input", {
+  skip_if_not_installed("vitals")
+
+  dataset <- tibble::tibble(input = "test", target = "test")
+
+  expect_error(
+    as_vitals_task(module = "not a module", dataset = dataset),
+    "requires a dsprrr Module"
+  )
+
+  expect_error(
+    as_vitals_task(module = list(a = 1), dataset = dataset),
+    "requires a dsprrr Module"
+  )
+})
+
+test_that("as_vitals_task rejects non-dataframe dataset", {
+  skip_if_not_installed("vitals")
+
+  sig <- Signature(
+    inputs = list(input(name = "input", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  expect_error(
+    as_vitals_task(module = mod, dataset = "not a dataframe"),
+    "dataset must be a data frame"
+  )
+
+  expect_error(
+    as_vitals_task(module = mod, dataset = list(input = "a", target = "b")),
+    "dataset must be a data frame"
+  )
+})
+
+test_that("as_vitals_task requires signature inputs and target columns", {
+  skip_if_not_installed("vitals")
+
+  sig <- Signature(
+    inputs = list(input(name = "input", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Missing target
+  expect_error(
+    as_vitals_task(
+      module = mod,
+      dataset = data.frame(input = "test")
+    ),
+    "Missing.*target"
+  )
+
+  # Missing signature input column
+  expect_error(
+    as_vitals_task(
+      module = mod,
+      dataset = data.frame(target = "test")
+    ),
+    "Missing.*input"
+  )
+
+  # Missing both
+  expect_error(
+    as_vitals_task(
+      module = mod,
+      dataset = data.frame(other = "test")
+    ),
+    "Missing"
+  )
+})
+
+test_that("as_vitals_task works with non-standard input column names", {
+  skip_if_not_installed("vitals")
+
+  # Module with "question" input instead of "input"
+  sig <- Signature(
+    inputs = list(input(name = "question", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Answer the question"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Should work with question + target columns
+  dataset <- tibble::tibble(
+    question = c("What is 2+2?", "What is the capital of France?"),
+    target = c("4", "Paris")
+  )
+
+  task <- as_vitals_task(
+    module = mod,
+    dataset = dataset,
+    scorer = vitals::detect_includes()
+  )
+
+  expect_s3_class(task, "Task")
+  samples <- task$get_samples()
+  expect_equal(nrow(samples), 2)
+
+  # Should error if using wrong column name
+  expect_error(
+    as_vitals_task(
+      module = mod,
+      dataset = data.frame(input = "test", target = "test")
+    ),
+    "Missing.*question"
+  )
+})
+
+test_that("as_vitals_task accepts custom parameters", {
+  skip_if_not_installed("vitals")
+
+  sig <- Signature(
+    inputs = list(input(name = "input", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  dataset <- tibble::tibble(
+    input = c("hello", "world"),
+    target = c("hello", "world")
+  )
+
+  # Create task with custom epochs and name
+  task <- as_vitals_task(
+    module = mod,
+    dataset = dataset,
+    scorer = vitals::detect_includes(),
+    name = "custom_name",
+    epochs = 3L
+  )
+
+  expect_s3_class(task, "Task")
+
+  # Verify Task configuration was passed through correctly
+  # Access private fields to verify configuration
+  task_private <- task$.__enclos_env__$private
+  expect_equal(task_private$epochs, 3L)
+
+  # Verify dataset was passed through
+  samples <- task$get_samples()
+  expect_equal(nrow(samples), 2)
+})
+
+test_that("as_vitals_task uses default scorer when not provided", {
+  skip_if_not_installed("vitals")
+
+  sig <- Signature(
+    inputs = list(input(name = "input", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  dataset <- tibble::tibble(
+    input = c("hello"),
+    target = c("hello")
+  )
+
+  # Should not error when scorer is NULL (uses default)
+  task <- as_vitals_task(
+    module = mod,
+    dataset = dataset
+  )
+
+  expect_s3_class(task, "Task")
+})
