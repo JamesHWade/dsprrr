@@ -15,7 +15,8 @@ knitr::opts_chunk$set(
   eval = FALSE
 )
 ```
-This tutorial builds a complete text-based adventure game using dsprrr. The AI handles narrative generation, NPC dialogue, and action resolution while you control the game framework and player state.
+
+This tutorial builds a complete text-based adventure game using dsprrr and S7. The AI handles narrative generation, NPC dialogue, and action resolution while you control the game framework and player state.
 
 ## What You'll Build
 
@@ -28,444 +29,531 @@ This tutorial builds a complete text-based adventure game using dsprrr. The AI h
 ```{r setup}
 library(dsprrr)
 library(ellmer)
-library(R6)
+library(S7)
 library(cli)
 ```
 
-## Step 1: Game Data Structures
+## Step 1: S7 Classes for Game State
 
-First, define the player and game context using R6 classes:
+Define immutable, typed game state using S7:
 
-```{r player-class}
-Player <- R6::R6Class("Player",
-  public = list(
-    name = NULL,
-    health = 100L,
-    level = 1L,
-    experience = 0L,
-    inventory = character(),
-    skills = list(
+```{r s7-classes}
+# Player class with typed properties and validation
+Player <- new_class("Player",
+ properties = list(
+    name = class_character,
+    health = new_property(class_integer, default = 100L),
+    level = new_property(class_integer, default = 1L),
+    experience = new_property(class_integer, default = 0L),
+    inventory = new_property(class_character, default = character()),
+    skills = new_property(class_list, default = list(
       strength = 10L,
       intelligence = 10L,
       charisma = 10L,
       stealth = 10L
-    ),
+    ))
+  ),
+  validator = function(self) {
+    if (self@health < 0L) return("health cannot be negative")
+    if (self@health > 100L) return("health cannot exceed 100")
+    if (self@level < 1L) return("level must be at least 1")
+    NULL
+  }
+)
 
-    initialize = function(name, skills = NULL) {
-      self$name <- name
-      if (!is.null(skills)) self$skills <- skills
-    },
-
-    add_item = function(item) {
-      self$inventory <- c(self$inventory, item)
-      cli::cli_alert_success("Added {.val {item}} to inventory!")
-    },
-
-    remove_item = function(item) {
-      if (item %in% self$inventory) {
-        self$inventory <- setdiff(self$inventory, item)
-        return(TRUE)
-      }
-      FALSE
-    },
-
-    gain_experience = function(amount) {
-      self$experience <- self$experience + amount
-      old_level <- self$level
-      self$level <- 1L + (self$experience %/% 100L)
-      if (self$level > old_level) {
-        cli::cli_alert_success("Level up! You are now level {self$level}!")
-      }
-    },
-
-    take_damage = function(amount) {
-      self$health <- max(0L, self$health - amount)
-      cli::cli_alert_danger("You took {amount} damage! Health: {self$health}/100")
-    },
-
-    heal = function(amount) {
-      self$health <- min(100L, self$health + amount)
-      cli::cli_alert_success("Healed {amount} HP! Health: {self$health}/100")
-    }
+# Game context tracks world state
+GameContext <- new_class("GameContext",
+  properties = list(
+    location = new_property(class_character, default = "Village Square"),
+    story_progress = new_property(class_integer, default = 0L),
+    visited = new_property(class_character, default = character()),
+    npcs_met = new_property(class_character, default = character()),
+    recent_actions = new_property(class_character, default = character()),
+    flags = new_property(class_list, default = list())
   )
 )
 
-GameContext <- R6::R6Class("GameContext",
-  public = list(
-    current_location = "Village Square",
-    story_progress = 0L,
-    visited_locations = character(),
-    npcs_met = character(),
-    completed_quests = character(),
-    recent_actions = character(),
-    game_flags = list(),
-
-    add_flag = function(flag, value = TRUE) {
-      self$game_flags[[flag]] <- value
-    },
-
-    has_flag = function(flag) {
-      isTRUE(self$game_flags[[flag]])
-    },
-
-    record_action = function(action) {
-      self$recent_actions <- c(tail(self$recent_actions, 4), action)
-    }
+# Bundle everything into game state
+GameState <- new_class("GameState",
+  properties = list(
+    player = Player,
+    context = GameContext,
+    running = new_property(class_logical, default = TRUE)
   )
 )
 ```
 
-## Step 2: AI Signatures
+## Step 2: S7 Generics for State Transitions
+
+Define pure functions that return modified state:
+
+```{r s7-generics}
+# Player state transitions
+add_item <- new_generic("add_item", "player")
+method(add_item, Player) <- function(player, item) {
+  player@inventory <- c(player@inventory, item)
+  cli_alert_success("Added {.val {item}} to inventory!")
+ player
+}
+
+remove_item <- new_generic("remove_item", "player")
+method(remove_item, Player) <- function(player, item) {
+  if (item %in% player@inventory) {
+    player@inventory <- setdiff(player@inventory, item)
+    cli_alert_warning("Removed {.val {item}} from inventory")
+  }
+ player
+}
+
+take_damage <- new_generic("take_damage", "player")
+method(take_damage, Player) <- function(player, amount) {
+  player@health <- max(0L, player@health - as.integer(amount))
+  cli_alert_danger("Took {amount} damage! HP: {player@health}/100")
+  player
+}
+
+heal <- new_generic("heal", "player")
+method(heal, Player) <- function(player, amount) {
+  player@health <- min(100L, player@health + as.integer(amount))
+  cli_alert_success("Healed {amount} HP! HP: {player@health}/100")
+  player
+}
+
+gain_xp <- new_generic("gain_xp", "player")
+method(gain_xp, Player) <- function(player, amount) {
+  player@experience <- player@experience + as.integer(amount)
+  new_level <- 1L + (player@experience %/% 100L)
+  if (new_level > player@level) {
+    cli_alert_success("Level up! Now level {new_level}!")
+    player@level <- new_level
+  }
+  player
+}
+
+is_alive <- new_generic("is_alive", "player")
+method(is_alive, Player) <- function(player) {
+  player@health > 0L
+}
+
+# Context state transitions
+record_action <- new_generic("record_action", "context")
+method(record_action, GameContext) <- function(context, action) {
+  context@recent_actions <- c(tail(context@recent_actions, 4L), action)
+  context
+}
+
+visit_location <- new_generic("visit_location", "context")
+method(visit_location, GameContext) <- function(context, location) {
+  context@visited <- unique(c(context@visited, context@location))
+  context@location <- location
+  context@story_progress <- context@story_progress + 1L
+  cli_alert_info("Traveled to {.strong {location}}")
+  context
+}
+
+meet_npc <- new_generic("meet_npc", "context")
+method(meet_npc, GameContext) <- function(context, npc) {
+  context@npcs_met <- unique(c(context@npcs_met, npc))
+  context
+}
+
+set_flag <- new_generic("set_flag", "context")
+method(set_flag, GameContext) <- function(context, flag, value = TRUE) {
+  context@flags[[flag]] <- value
+  context
+}
+
+has_flag <- new_generic("has_flag", "context")
+method(has_flag, GameContext) <- function(context, flag) {
+  isTRUE(context@flags[[flag]])
+}
+```
+
+## Step 3: Print Methods
+
+```{r print-methods}
+method(print, Player) <- function(x, ...) {
+  cli_h3("{x@name}")
+  cli_text("Level {x@level} | HP: {x@health}/100 | XP: {x@experience}")
+  cli_text(
+    "STR:{x@skills$strength} INT:{x@skills$intelligence} ",
+    "CHA:{x@skills$charisma} STL:{x@skills$stealth}"
+  )
+  if (length(x@inventory) > 0) {
+    cli_text("Inventory: {.val {x@inventory}}")
+  }
+  invisible(x)
+}
+
+method(print, GameState) <- function(x, ...) {
+  cli_rule("{.emph MYSTIC REALM ADVENTURE}")
+  print(x@player)
+  cli_rule()
+  invisible(x)
+}
+```
+
+## Step 4: AI Signatures
 
 Define clear input/output contracts for each AI task:
 
 ```{r signatures}
-# Scene generation: describe where we are and what's possible
 scene_sig <- signature(
   inputs = list(
     input("location", "Current location name"),
-    input("player_info", "Player stats and inventory summary"),
-    input("story_progress", "Current story progress level (0-10)"),
+    input("player_info", "Player stats summary"),
+    input("story_progress", "Story progress 0-10"),
     input("recent_actions", "Last few player actions"),
-    input("visited_before", "Whether player has visited this location")
+    input("visited_before", "Whether location was visited")
   ),
   output_type = type_object(
-    description = type_string("2-3 sentence vivid scene description"),
+    description = type_string("2-3 sentence scene description"),
     actions = type_array(type_string(), "4-6 possible actions"),
-    npcs = type_array(type_string(), "NPCs present (empty if none)"),
-    items = type_array(type_string(), "Visible/discoverable items"),
+    npcs = type_array(type_string(), "NPCs present"),
+    items = type_array(type_string(), "Visible items"),
     atmosphere = type_enum(c("peaceful", "tense", "mysterious", "dangerous"))
   ),
   instructions = "You are a game master for a fantasy text adventure.
-Create immersive scenes with interesting choices. Vary the options based on
-location and story progress. Include at least one NPC interaction and one
-exploration option when appropriate. If the player has visited before,
-acknowledge familiarity but note any changes."
+Create immersive scenes with interesting choices. Include NPC interactions
+and exploration options. If visited before, note familiarity."
 )
 
-# NPC dialogue: handle conversations
 dialogue_sig <- signature(
   inputs = list(
-    input("npc_name", "Name of the NPC"),
-    input("npc_role", "NPC's role (merchant, elder, guard, etc.)"),
-    input("player_says", "What the player said or did"),
-    input("relationship", "Previous interactions (new/friendly/hostile)"),
-    input("context", "Current story context and location")
+    input("npc_name", "NPC name"),
+    input("npc_role", "NPC role and personality"),
+    input("player_says", "Player's action or words"),
+    input("relationship", "new or returning"),
+    input("context", "Location and story context")
   ),
   output_type = type_object(
-    response = type_string("NPC's spoken dialogue (1-3 sentences)"),
-    action = type_string("Physical action or gesture the NPC makes"),
-    mood = type_enum(c("friendly", "neutral", "suspicious", "hostile", "fearful")),
+    response = type_string("NPC dialogue (1-3 sentences)"),
+    action = type_string("Physical gesture or action"),
+    mood = type_enum(c("friendly", "neutral", "suspicious", "hostile")),
     offers_quest = type_boolean(),
-    quest_hint = type_string("Brief quest description if offered, else empty"),
-    reveals_info = type_string("Important lore or hints revealed, else empty"),
-    gives_item = type_string("Item given to player, else 'none'")
+    quest_hint = type_string("Quest description if offered"),
+    reveals_info = type_string("Lore revealed"),
+    gives_item = type_string("Item given, or 'none'")
   ),
   instructions = "You are an NPC in a fantasy RPG. Stay in character.
-Merchants want to trade, elders share wisdom, guards are dutiful.
-Build relationships over multiple interactions. Offer quests that
-fit the story. Reveal information gradually to maintain mystery."
+Build relationships over interactions. Reveal information gradually."
 )
 
-# Action resolution: determine outcomes
 action_sig <- signature(
   inputs = list(
-    input("action", "What the player is attempting"),
-    input("relevant_skill", "Which skill applies (strength/intelligence/charisma/stealth)"),
-    input("skill_value", "Player's skill value (10 is average, 15+ is skilled)"),
-    input("difficulty", "How hard is this (easy/medium/hard/very_hard)"),
-    input("context", "Relevant circumstances that might help or hinder"),
-    input("has_useful_item", "Whether player has an item that could help")
+    input("action", "What player attempts"),
+    input("relevant_skill", "Which skill applies"),
+    input("skill_value", "Player's skill value"),
+    input("difficulty", "easy/medium/hard/very_hard"),
+    input("context", "Relevant circumstances"),
+    input("has_useful_item", "Whether player has helpful item")
   ),
   output_type = type_object(
     success = type_boolean(),
-    outcome = type_string("2-3 sentence description of what happened"),
-    damage_taken = type_integer("Damage to player (0 if none)"),
-    item_gained = type_string("Item found/earned, else 'none'"),
-    item_lost = type_string("Item consumed/lost, else 'none'"),
-    experience = type_integer("XP earned (0-25 based on difficulty)"),
-    unlocks = type_string("New location or story element unlocked, else 'none'"),
-    consequence = type_string("Lasting effect on game state, else 'none'")
+    outcome = type_string("2-3 sentence result"),
+    damage_taken = type_integer("Damage to player"),
+    item_gained = type_string("Item earned, or 'none'"),
+    item_lost = type_string("Item lost, or 'none'"),
+    experience = type_integer("XP earned 0-25"),
+    unlocks = type_string("New location/element unlocked"),
+    consequence = type_string("Lasting effect on game")
   ),
-  instructions = "Resolve actions fairly but dramatically. Higher skills improve
-odds but don't guarantee success. Create interesting failures that advance
-the story. Hard actions should have bigger rewards. Useful items can
-turn failures into successes or reduce negative outcomes."
+  instructions = "Resolve actions fairly but dramatically. Higher skills
+improve odds. Create interesting failures. Useful items help."
 )
 ```
 
-## Step 3: Game AI Module
+## Step 5: Module Container
 
-Create an R6 class that wraps the AI modules:
+Use a simple list for modules (they're already dsprrr objects):
 
-```{r game-ai}
-GameAI <- R6::R6Class("GameAI",
-  public = list(
-    scene_mod = NULL,
-    dialogue_mod = NULL,
-    action_mod = NULL,
-    llm = NULL,
-
-    initialize = function(llm) {
-      self$llm <- llm
-
-      # Use chain-of-thought for better reasoning
-      self$scene_mod <- scene_sig |>
-        with_reasoning() |>
-        module(type = "predict")
-
-      self$dialogue_mod <- dialogue_sig |>
-        with_reasoning() |>
-        module(type = "predict")
-
-      self$action_mod <- action_sig |>
-        with_reasoning() |>
-        module(type = "predict")
-    },
-
-    generate_scene = function(player, context) {
-      player_info <- sprintf(
-        "Level %d %s | HP: %d/100 | STR:%d INT:%d CHA:%d STL:%d | Items: %s",
-        player$level, player$name, player$health,
-        player$skills$strength, player$skills$intelligence,
-        player$skills$charisma, player$skills$stealth,
-        if (length(player$inventory) > 0)
-          paste(player$inventory, collapse = ", ") else "none"
-      )
-
-      run(
-        self$scene_mod,
-        location = context$current_location,
-        player_info = player_info,
-        story_progress = as.character(context$story_progress),
-        recent_actions = paste(context$recent_actions, collapse = " -> "),
-        visited_before = context$current_location %in% context$visited_locations,
-        .llm = self$llm
-      )
-    },
-
-    handle_dialogue = function(npc_name, npc_role, player_says, context) {
-      relationship <- if (npc_name %in% context$npcs_met) "returning" else "new"
-
-      run(
-        self$dialogue_mod,
-        npc_name = npc_name,
-        npc_role = npc_role,
-        player_says = player_says,
-        relationship = relationship,
-        context = sprintf("Location: %s, Story progress: %d/10",
-                         context$current_location, context$story_progress),
-        .llm = self$llm
-      )
-    },
-
-    resolve_action = function(action, player, context, difficulty = "medium") {
-      # Determine relevant skill
-      skill <- if (grepl("fight|attack|break|force", action, ignore.case = TRUE)) {
-        "strength"
-      } else if (grepl("sneak|hide|steal|pick", action, ignore.case = TRUE)) {
-        "stealth"
-      } else if (grepl("persuade|convince|talk|charm", action, ignore.case = TRUE)) {
-        "charisma"
-      } else {
-        "intelligence"
-      }
-
-      # Check for useful items
-      useful_items <- c("rope", "torch", "lockpick", "sword", "potion", "map", "key")
-      has_useful <- any(tolower(player$inventory) %in% useful_items)
-
-      run(
-        self$action_mod,
-        action = action,
-        relevant_skill = skill,
-        skill_value = as.character(player$skills[[skill]]),
-        difficulty = difficulty,
-        context = sprintf("Location: %s, %s",
-                         context$current_location,
-                         paste(tail(context$recent_actions, 2), collapse = ", ")),
-        has_useful_item = has_useful,
-        .llm = self$llm
-      )
-    }
+```{r modules}
+create_modules <- function(llm) {
+  list(
+    scene = scene_sig |> with_reasoning() |> module(type = "predict"),
+    dialogue = dialogue_sig |> with_reasoning() |> module(type = "predict"),
+    action = action_sig |> with_reasoning() |> module(type = "predict"),
+    llm = llm
   )
-)
+}
 ```
 
-## Step 4: Display Functions
+## Step 6: Pure Functions for Game Logic
 
-Create a nice console UI using cli:
-
-```{r display}
-display_header <- function() {
-  cli::cli_h1("{.emph MYSTIC REALM ADVENTURE}")
-  cli::cli_rule()
+```{r game-logic}
+# Format player info for AI
+player_summary <- function(player) {
+ sprintf(
+    "Level %d %s | HP:%d | STR:%d INT:%d CHA:%d STL:%d | Items: %s",
+    player@level, player@name, player@health,
+    player@skills$strength, player@skills$intelligence,
+    player@skills$charisma, player@skills$stealth,
+    if (length(player@inventory) > 0)
+      paste(player@inventory, collapse = ", ")
+    else "none"
+  )
 }
 
-display_status <- function(player) {
-  cli::cli_div(theme = list(span.stat = list(color = "cyan")))
-  cli::cli_text("{.strong {player$name}} | Level {player$level} | XP: {player$experience}")
-  cli::cli_text("HP: {.stat {player$health}/100} | STR:{.stat {player$skills$strength}} INT:{.stat {player$skills$intelligence}} CHA:{.stat {player$skills$charisma}} STL:{.stat {player$skills$stealth}}")
-  if (length(player$inventory) > 0) {
-    cli::cli_text("Inventory: {.val {player$inventory}}")
-  }
-  cli::cli_end()
-  cli::cli_rule()
+# Detect which skill applies to an action
+detect_skill <- function(action) {
+  action_lower <- tolower(action)
+  if (grepl("fight|attack|break|force|lift", action_lower)) "strength"
+  else if (grepl("sneak|hide|steal|pick|shadow", action_lower)) "stealth"
+  else if (grepl("persuade|convince|charm|talk|negotiate", action_lower)) "charisma"
+  else "intelligence"
+}
+
+# Detect action difficulty
+detect_difficulty <- function(action) {
+  action_lower <- tolower(action)
+  if (grepl("fight|battle|defeat|dangerous", action_lower)) "hard"
+  else if (grepl("look|examine|rest|wait", action_lower)) "easy"
+  else "medium"
+}
+
+# Check for useful items
+has_useful_item <- function(player) {
+  useful <- c("torch", "rope", "sword", "key", "map", "potion", "lockpick")
+  any(tolower(player@inventory) %in% useful)
+}
+
+# NPC role lookup
+npc_role <- function(npc_name) {
+  roles <- list(
+    "Village Elder" = "wise leader who knows ancient lore",
+    "Merchant" = "trader interested in rare items",
+    "Guard" = "dutiful protector, suspicious of strangers",
+    "Mysterious Stranger" = "hooded figure with unknown motives",
+    "Blacksmith" = "crafts weapons, appreciates quality materials",
+    "Healer" = "kind herbalist who restores health",
+    "Thief" = "cunning rogue with secret knowledge"
+  )
+  roles[[npc_name]] %||% "mysterious character"
+}
+```
+
+## Step 7: Scene Generation
+
+```{r generate-scene}
+generate_scene <- function(game, modules) {
+  run(
+    modules$scene,
+    location = game@context@location,
+    player_info = player_summary(game@player),
+    story_progress = as.character(game@context@story_progress),
+    recent_actions = paste(game@context@recent_actions, collapse = " -> "),
+    visited_before = game@context@location %in% game@context@visited,
+    .llm = modules$llm
+  )
 }
 
 display_scene <- function(scene, context) {
-  # Atmosphere indicator
-  atmo_emoji <- switch(scene$atmosphere,
-    peaceful = "\U0001F343",    # leaf
-    tense = "\U0001F441",       # eye
-    mysterious = "\U0001F319",  # moon
-    dangerous = "\U0001F525"    # fire
+  # Atmosphere emoji
+  emoji <- switch(scene$atmosphere,
+    peaceful = "\U0001F343",
+    tense = "\U0001F441",
+    mysterious = "\U0001F319",
+    dangerous = "\U0001F525"
   )
 
-  cli::cli_h2("{atmo_emoji} {context$current_location}")
-  cli::cli_text(scene$description)
+  cli_h2("{emoji} {context@location}")
+  cli_text(scene$description)
   cat("\n")
 
   if (length(scene$npcs) > 0 && !identical(scene$npcs, "")) {
-    cli::cli_text("{.strong NPCs:} {.val {scene$npcs}}")
+    cli_text("{.strong NPCs:} {.val {scene$npcs}}")
   }
   if (length(scene$items) > 0 && !identical(scene$items, "")) {
-    cli::cli_text("{.strong Items:} {.emph {scene$items}}")
+    cli_text("{.strong Items:} {.emph {scene$items}}")
   }
   cat("\n")
 
-  # Display actions as numbered list
-  cli::cli_h3("What do you do?")
-  actions <- c(scene$actions, "Check inventory", "Save game", "Quit")
-  for (i in seq_along(actions)) {
-    cli::cli_text("{i}. {actions[i]}")
+  # Numbered action list
+  cli_h3("What do you do?")
+  all_actions <- c(scene$actions, "Check inventory", "Save game", "Quit")
+  for (i in seq_along(all_actions)) {
+    cli_text("{i}. {all_actions[i]}")
   }
   cat("\n")
 
-  actions
-}
-
-display_dialogue <- function(npc_name, response) {
-  cat("\n")
-  cli::cli_alert_info("{.strong {npc_name}}: \"{response$response}\"")
-  if (nzchar(response$action)) {
-    cli::cli_text("{.emph ({response$action})}")
-  }
-  if (response$offers_quest && nzchar(response$quest_hint)) {
-    cli::cli_alert_warning("Quest available: {response$quest_hint}")
-  }
-  if (nzchar(response$reveals_info)) {
-    cli::cli_alert("You learned: {response$reveals_info}")
-  }
-  if (response$gives_item != "none") {
-    cli::cli_alert_success("Received: {.val {response$gives_item}}")
-  }
-  cat("\n")
-}
-
-display_action_result <- function(result, player) {
-  cat("\n")
-  if (result$success) {
-    cli::cli_alert_success(result$outcome)
-  } else {
-    cli::cli_alert_danger(result$outcome)
-  }
-
-  if (result$damage_taken > 0) {
-    player$take_damage(result$damage_taken)
-  }
-  if (result$item_gained != "none") {
-    player$add_item(result$item_gained)
-  }
-  if (result$item_lost != "none") {
-    player$remove_item(result$item_lost)
-    cli::cli_alert_warning("Lost: {.val {result$item_lost}}")
-  }
-  if (result$experience > 0) {
-    player$gain_experience(result$experience)
-    cli::cli_alert_info("+{result$experience} XP")
-  }
-  if (nzchar(result$unlocks) && result$unlocks != "none") {
-    cli::cli_alert_success("Unlocked: {.val {result$unlocks}}")
-  }
-  cat("\n")
+  all_actions
 }
 ```
 
-## Step 5: Save/Load System
+## Step 8: Dialogue Handling
+
+```{r dialogue}
+handle_dialogue <- function(game, npc, action, modules) {
+  relationship <- if (npc %in% game@context@npcs_met) "returning" else "new"
+
+  response <- run(
+    modules$dialogue,
+    npc_name = npc,
+    npc_role = npc_role(npc),
+    player_says = action,
+    relationship = relationship,
+    context = sprintf("Location: %s, Progress: %d/10",
+                      game@context@location, game@context@story_progress),
+    .llm = modules$llm
+  )
+
+  # Display
+  cat("\n")
+  cli_alert_info("{.strong {npc}}: \"{response$response}\"")
+  if (nzchar(response$action)) cli_text("{.emph ({response$action})}")
+  if (response$offers_quest && nzchar(response$quest_hint)) {
+    cli_alert_warning("Quest available: {response$quest_hint}")
+  }
+  if (nzchar(response$reveals_info)) {
+    cli_alert("You learned: {response$reveals_info}")
+  }
+  cat("\n")
+
+  # Update state immutably
+  game@context <- meet_npc(game@context, npc)
+
+  if (response$gives_item != "none" && nzchar(response$gives_item)) {
+    game@player <- add_item(game@player, response$gives_item)
+  }
+
+  game
+}
+```
+
+## Step 9: Action Resolution
+
+```{r action-resolution}
+resolve_action <- function(game, action, modules) {
+  skill <- detect_skill(action)
+
+  result <- run(
+    modules$action,
+    action = action,
+    relevant_skill = skill,
+    skill_value = as.character(game@player@skills[[skill]]),
+    difficulty = detect_difficulty(action),
+    context = game@context@location,
+    has_useful_item = has_useful_item(game@player),
+    .llm = modules$llm
+  )
+
+  # Display result
+  cat("\n")
+  if (result$success) {
+    cli_alert_success(result$outcome)
+  } else {
+    cli_alert_danger(result$outcome)
+  }
+
+  # Apply state changes immutably using pipes
+  if (result$damage_taken > 0) {
+    game@player <- take_damage(game@player, result$damage_taken)
+  }
+  if (result$item_gained != "none" && nzchar(result$item_gained)) {
+    game@player <- add_item(game@player, result$item_gained)
+  }
+  if (result$item_lost != "none" && nzchar(result$item_lost)) {
+    game@player <- remove_item(game@player, result$item_lost)
+  }
+  if (result$experience > 0) {
+    game@player <- gain_xp(game@player, result$experience)
+    cli_alert_info("+{result$experience} XP")
+  }
+  if (nzchar(result$unlocks) && result$unlocks != "none") {
+    cli_alert_success("Unlocked: {.val {result$unlocks}}")
+  }
+
+  # Handle movement
+  if (grepl("go|travel|enter|head", action, ignore.case = TRUE) && result$success) {
+    destination <- if (nzchar(result$unlocks) && result$unlocks != "none") {
+      result$unlocks
+    } else {
+      sub(".*(?:go to|enter|head to) (?:the )?", "", action, ignore.case = TRUE)
+    }
+    if (nzchar(destination) && destination != action) {
+      game@context <- visit_location(game@context, tools::toTitleCase(destination))
+    }
+  }
+
+  cat("\n")
+  game
+}
+```
+
+## Step 10: Save/Load with S7
 
 ```{r save-load}
-save_game <- function(player, context, filename = "savegame.json") {
+save_game <- function(game, filename = "savegame.json") {
   save_data <- list(
     player = list(
-      name = player$name,
-      health = player$health,
-      level = player$level,
-      experience = player$experience,
-      inventory = player$inventory,
-      skills = player$skills
+      name = game@player@name,
+      health = game@player@health,
+      level = game@player@level,
+      experience = game@player@experience,
+      inventory = as.list(game@player@inventory),
+      skills = game@player@skills
     ),
     context = list(
-      current_location = context$current_location,
-      story_progress = context$story_progress,
-      visited_locations = context$visited_locations,
-      npcs_met = context$npcs_met,
-      completed_quests = context$completed_quests,
-      game_flags = context$game_flags
+      location = game@context@location,
+      story_progress = game@context@story_progress,
+      visited = as.list(game@context@visited),
+      npcs_met = as.list(game@context@npcs_met),
+      flags = game@context@flags
     )
   )
   jsonlite::write_json(save_data, filename, auto_unbox = TRUE, pretty = TRUE)
-  cli::cli_alert_success("Game saved to {.file {filename}}")
+  cli_alert_success("Saved to {.file {filename}}")
+  game
 }
 
 load_game <- function(filename = "savegame.json") {
   if (!file.exists(filename)) {
-    cli::cli_alert_danger("Save file not found: {.file {filename}}")
+    cli_alert_danger("Save file not found: {.file {filename}}")
     return(NULL)
   }
 
-  save_data <- jsonlite::read_json(filename)
+  data <- jsonlite::read_json(filename)
 
-  player <- Player$new(
-    name = save_data$player$name,
-    skills = save_data$player$skills
+  player <- Player(
+    name = data$player$name,
+    health = as.integer(data$player$health),
+    level = as.integer(data$player$level),
+    experience = as.integer(data$player$experience),
+    inventory = as.character(unlist(data$player$inventory) %||% character()),
+    skills = lapply(data$player$skills, as.integer)
   )
-  player$health <- save_data$player$health
-  player$level <- save_data$player$level
-  player$experience <- save_data$player$experience
-  player$inventory <- unlist(save_data$player$inventory) %||% character()
 
- context <- GameContext$new()
-  context$current_location <- save_data$context$current_location
-  context$story_progress <- save_data$context$story_progress
-  context$visited_locations <- unlist(save_data$context$visited_locations) %||% character()
-  context$npcs_met <- unlist(save_data$context$npcs_met) %||% character()
-  context$completed_quests <- unlist(save_data$context$completed_quests) %||% character()
-  context$game_flags <- save_data$context$game_flags
+  context <- GameContext(
+    location = data$context$location,
+    story_progress = as.integer(data$context$story_progress),
+    visited = as.character(unlist(data$context$visited) %||% character()),
+    npcs_met = as.character(unlist(data$context$npcs_met) %||% character()),
+    flags = data$context$flags %||% list()
+  )
 
-  cli::cli_alert_success("Game loaded!")
-  list(player = player, context = context)
+  cli_alert_success("Loaded from {.file {filename}}")
+  GameState(player = player, context = context)
 }
 ```
 
-## Step 6: Character Creation
+## Step 11: Character Creation
 
 ```{r character-creation}
 create_character <- function() {
-  display_header()
-  cli::cli_h2("Character Creation")
+  cli_h1("{.emph MYSTIC REALM ADVENTURE}")
+  cli_h2("Character Creation")
 
   name <- readline("Enter your character's name: ")
 
-  cli::cli_text("\nYou have {.strong 10 bonus points} to distribute among skills.")
-  cli::cli_text("Base skills start at 10.\n")
+  cli_text("\nYou have {.strong 10 bonus points} to distribute.")
+  cli_text("Base skills start at 10.\n")
 
   skills <- list(strength = 10L, intelligence = 10L, charisma = 10L, stealth = 10L)
   points <- 10L
 
   for (skill in names(skills)) {
-    if (points > 0) {
-      cli::cli_text("Points remaining: {.val {points}}")
+    if (points > 0L) {
+      cli_text("Points remaining: {.val {points}}")
       input <- readline(sprintf("Add to %s (0-%d): ", skill, points))
       add <- min(points, max(0L, as.integer(input) %||% 0L))
       skills[[skill]] <- skills[[skill]] + add
@@ -473,181 +561,115 @@ create_character <- function() {
     }
   }
 
-  player <- Player$new(name = name, skills = skills)
+  player <- Player(name = name, skills = skills)
 
-  cli::cli_alert_success("\nWelcome to Mystic Realm, {.strong {name}}!")
-  cli::cli_text("Your adventure begins...\n")
+  cli_alert_success("\nWelcome, {.strong {name}}!")
+  cli_text("Your adventure begins...\n")
 
-  player
+  GameState(player = player, context = GameContext())
 }
 ```
 
-## Step 7: Main Game Loop
+## Step 12: Main Game Loop
 
 ```{r game-loop}
-# NPC role database
-npc_roles <- list(
-  "Village Elder" = "wise leader who knows ancient lore",
-  "Merchant" = "trader interested in rare items and gold",
-  "Guard" = "dutiful protector, suspicious of strangers",
-  "Mysterious Stranger" = "hooded figure with unknown motives",
-  "Blacksmith" = "crafts weapons and armor, appreciates quality materials",
-  "Healer" = "kind herbalist who can restore health",
-  "Thief" = "cunning rogue with information about hidden things"
-)
-
 play_game <- function(llm = chat_openai()) {
-  # Initialize
-  ai <- GameAI$new(llm)
-  player <- create_character()
-  context <- GameContext$new()
+  modules <- create_modules(llm)
+  game <- create_character()
 
-  playing <- TRUE
+  repeat {
+    print(game)
 
-  while (playing && player$health > 0) {
-    # Clear screen (optional)
-    # cat("\014")
+    # Generate and display scene
+    scene <- generate_scene(game, modules)
+    actions <- display_scene(scene, game@context)
 
-    display_header()
-    display_status(player)
-
-    # Generate scene
-    scene <- ai$generate_scene(player, context)
-    actions <- display_scene(scene, context)
-
-    # Get player input
+    # Get player choice
     choice <- as.integer(readline("Choose (number): "))
 
     if (is.na(choice) || choice < 1 || choice > length(actions)) {
-      cli::cli_alert_warning("Invalid choice, try again.")
+      cli_alert_warning("Invalid choice")
       next
     }
 
     chosen <- actions[choice]
-    context$record_action(chosen)
+    game@context <- record_action(game@context, chosen)
 
     # Handle special actions
     if (chosen == "Check inventory") {
-      if (length(player$inventory) == 0) {
-        cli::cli_alert_info("Your inventory is empty.")
+      if (length(game@player@inventory) == 0) {
+        cli_alert_info("Your inventory is empty.")
       } else {
-        cli::cli_h3("Inventory")
-        for (item in player$inventory) {
-          cli::cli_li("{item}")
-        }
+        cli_h3("Inventory")
+        for (item in game@player@inventory) cli_li("{item}")
       }
-      readline("Press Enter to continue...")
+      readline("Press Enter...")
       next
     }
 
     if (chosen == "Save game") {
-      save_game(player, context)
-      readline("Press Enter to continue...")
+      game <- save_game(game)
+      readline("Press Enter...")
       next
     }
 
     if (chosen == "Quit") {
-      if (readline("Save before quitting? (y/n): ") == "y") {
-        save_game(player, context)
+      if (readline("Save first? (y/n): ") == "y") {
+        game <- save_game(game)
       }
-      playing <- FALSE
-      next
+      game@running <- FALSE
+      break
     }
 
-    # Check if talking to NPC
+    # Check for NPC interaction
     npc_target <- NULL
     for (npc in scene$npcs) {
-      if (grepl(tolower(npc), tolower(chosen), fixed = TRUE) ||
-          grepl("talk|speak|approach", tolower(chosen))) {
+      if (grepl(tolower(npc), tolower(chosen), fixed = TRUE)) {
         npc_target <- npc
         break
       }
     }
 
     if (!is.null(npc_target)) {
-      # Handle NPC dialogue
-      role <- npc_roles[[npc_target]] %||% "mysterious character"
-      response <- ai$handle_dialogue(npc_target, role, chosen, context)
-      display_dialogue(npc_target, response)
-
-      # Track NPC meeting
-      if (!(npc_target %in% context$npcs_met)) {
-        context$npcs_met <- c(context$npcs_met, npc_target)
-      }
-
-      # Handle item gift
-      if (response$gives_item != "none") {
-        player$add_item(response$gives_item)
-      }
+      game <- handle_dialogue(game, npc_target, chosen, modules)
     } else {
-      # Resolve action
-      # Determine difficulty based on action
-      difficulty <- if (grepl("fight|battle|defeat", chosen, ignore.case = TRUE)) {
-        "hard"
-      } else if (grepl("sneak|steal|pick lock", chosen, ignore.case = TRUE)) {
-        "medium"
-      } else if (grepl("look|examine|search", chosen, ignore.case = TRUE)) {
-        "easy"
-      } else {
-        "medium"
-      }
-
-      result <- ai$resolve_action(chosen, player, context, difficulty)
-      display_action_result(result, player)
-
-      # Handle location changes
-      if (grepl("go|travel|enter|head", chosen, ignore.case = TRUE)) {
-        # Extract new location from action or unlock
-        new_loc <- if (nzchar(result$unlocks) && result$unlocks != "none") {
-          result$unlocks
-        } else {
-          # Try to extract from action
-          sub(".*(?:go to|enter|head to) (?:the )?", "", chosen, ignore.case = TRUE)
-        }
-        if (nzchar(new_loc) && new_loc != chosen) {
-          context$visited_locations <- c(context$visited_locations, context$current_location)
-          context$current_location <- tools::toTitleCase(new_loc)
-          context$story_progress <- context$story_progress + 1L
-          cli::cli_alert_info("Traveled to {.strong {context$current_location}}")
-        }
-      }
+      game <- resolve_action(game, chosen, modules)
     }
 
-    readline("Press Enter to continue...")
+    # Check for death
+    if (!is_alive(game@player)) {
+      cli_h1("GAME OVER")
+      cli_text("You have fallen...")
+      break
+    }
+
+    readline("Press Enter...")
   }
 
-  # Game over
-  if (player$health <= 0) {
-    cli::cli_h1("GAME OVER")
-    cli::cli_text("You have fallen in your quest...")
-  } else {
-    cli::cli_text("Thanks for playing!")
-  }
+  cli_text("Thanks for playing!")
+  invisible(game)
 }
 ```
 
-## Playing the Game
+## Running the Game
 
 ```{r play}
-# Start a new game
+# New game
 play_game(llm = chat_openai())
 
-# Or load a saved game
-# saved <- load_game()
-# if (!is.null(saved)) {
-#   player <- saved$player
-#   context <- saved$context
-#   # Continue playing...
-# }
+# Load saved game
+# game <- load_game()
+# if (!is.null(game)) play_game_from(game, chat_openai())
 ```
 
 ## Example Session
 
 ```
-─ MYSTIC REALM ADVENTURE ──────────────────────────────
+── MYSTIC REALM ADVENTURE ─────────────────────────────
 
-Aria | Level 1 | XP: 0
-HP: 100/100 | STR:12 INT:14 CHA:12 STL:12
+── Aria ──
+Level 1 | HP: 100/100 | XP: 0
+STR:12 INT:14 CHA:12 STL:12
 Inventory: torch
 ────────────────────────────────────────────────────────
 
@@ -655,9 +677,7 @@ Inventory: torch
 
 The morning sun warms the cobblestones of Willowbrook's
 central square. A weathered fountain burbles beside a
-massive oak tree, its branches heavy with age. Merchants
-call out their wares while villagers hurry about their
-business.
+massive oak, its branches heavy with age.
 
 NPCs: Village Elder, Merchant
 Items: strange medallion, fresh bread
@@ -666,52 +686,31 @@ Items: strange medallion, fresh bread
 
 1. Approach the Village Elder
 2. Browse the merchant's wares
-3. Examine the strange medallion by the fountain
+3. Examine the strange medallion
 4. Head toward the forest path
-5. Rest on the bench under the oak
+5. Rest on the bench
 6. Check inventory
 7. Save game
 8. Quit
 
 Choose (number): 1
 
-ℹ Village Elder: "Ah, a new face in Willowbrook. I sense
-  purpose in your step, young one. Perhaps you seek the
-  ancient ruins north of here?"
-  (The elder strokes his long white beard thoughtfully)
+ℹ Village Elder: "Ah, a new face. I sense purpose in
+  your step, young one. Perhaps you seek the ancient
+  ruins north of here?"
+  (strokes his long white beard)
 ! Quest available: Investigate the Northern Ruins
-ℹ You learned: The ruins are said to hold a powerful
-  artifact, but none who entered have returned.
+ℹ You learned: None who entered the ruins have returned.
 
-Press Enter to continue...
-```
-
-## Optimization
-
-Once you've collected examples of good AI responses, optimize the modules:
-
-```{r optimize}
-# Example training data for scene generation
-scene_training <- dsp_trainset(
-  location = c("Dark Forest", "Ancient Ruins"),
-  # ... other inputs ...
-  description = c(
-    "Twisted trees block out the sun, their branches like grasping fingers...",
-    "Crumbling stone pillars rise from the mist, covered in glowing runes..."
-  )
-  # ... other outputs ...
-)
-
-# Compile with GEPA for better instructions (when available)
-# ai$scene_mod <- compile(GEPA(metric = my_metric), ai$scene_mod, scene_training)
+Press Enter...
 ```
 
 ## What This Demonstrates
 
-- **Module composition**: Three specialized AI modules working together
-- **Chain of thought**: `with_reasoning()` for better narrative decisions
-- **State management**: R6 classes for mutable game state
-- **Structured outputs**: Rich type definitions ensure consistent responses
-- **Interactive systems**: Dynamic AI responses to player choices
+- **S7 for state**: Typed properties, validation, immutable updates
+- **Generics for transitions**: `add_item()`, `take_damage()`, etc.
+- **Composition over inheritance**: Simple lists for module collections
+- **Pipe-friendly**: State flows through pure functions
+- **dsprrr integration**: Signatures, modules, `with_reasoning()`
 
-The same patterns apply to chatbots, interactive assistants, customer support, and any system with multi-turn AI interactions.
+The same patterns work for chatbots, customer support systems, and any stateful AI application.
