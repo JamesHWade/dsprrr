@@ -274,6 +274,7 @@ reference:
     desc: Integration with vitals package
     contents:
     - as_vitals_solver
+    - as_vitals_task
     - as_dsprrr_metric
     - metric_model_graded_qa
     - metric_model_graded_fact

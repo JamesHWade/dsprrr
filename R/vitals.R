@@ -340,3 +340,123 @@ metric_detect_pattern <- function(
     result_column = result_column
   )
 }
+
+#' Create a vitals Task from a dsprrr module
+#'
+#' @description
+#' Convenience function that builds a vitals [vitals::Task] from a dsprrr
+#' module and dataset. This makes it trivial to evaluate dsprrr modules
+#' using vitals infrastructure without manual solver wrapping.
+#'
+#' @param module A DSPrrr module (e.g., created via [module()]).
+#' @param dataset A tibble/data frame with columns `input` and `target`.
+#'   The `input` column contains prompts and `target` contains expected
+#'   values or grading guidance.
+#' @param scorer A vitals scorer function (e.g., `vitals::model_graded_qa()`,
+#'   `vitals::detect_match()`). Defaults to `vitals::model_graded_qa()`.
+#' @param .llm Optional ellmer chat object for the solver. When `NULL`,
+#'   each invocation will create a fresh default client.
+#' @param name Optional name for the task. Defaults to the dataset name.
+#' @param epochs Number of times to repeat each sample for statistical
+#'   significance. Defaults to 1L.
+#' @param metrics Optional named list of metric functions. Each function
+#'   takes a vector of scores and returns a single numeric value.
+#' @param dir Directory for evaluation logs. Defaults to `vitals::vitals_log_dir()`.
+#' @param .parallel Logical; whether to run solver in parallel. Defaults to FALSE.
+#' @param ... Additional arguments passed to [as_vitals_solver()].
+#'
+#' @return A vitals [vitals::Task] object ready for evaluation.
+#'
+#' @details
+#' The returned Task object can be evaluated by calling its `$eval()` method,
+#' which runs the solver, scores results, computes metrics, and logs output.
+#' Use `$view()` to see results interactively.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Create a simple QA module
+#' mod <- module(signature("question -> answer"))
+#'
+#' # Prepare test dataset
+#' test_data <- tibble::tibble(
+#'   input = c("What is 2+2?", "What is the capital of France?"),
+#'   target = c("4", "Paris")
+#' )
+#'
+#' # Create task with string detection scorer
+#' task <- as_vitals_task(
+#'   module = mod,
+#'   dataset = test_data,
+#'   scorer = vitals::detect_includes(),
+#'   .llm = ellmer::chat_openai()
+#' )
+#'
+#' # Run evaluation and view results
+#' task
+#' }
+as_vitals_task <- function(
+  module,
+  dataset,
+  scorer = NULL,
+  .llm = NULL,
+  name = NULL,
+  epochs = 1L,
+  metrics = NULL,
+  dir = NULL,
+  .parallel = FALSE,
+  ...
+) {
+  rlang::check_installed("vitals", reason = "for Task creation")
+
+  if (!inherits(module, "Module")) {
+    cli::cli_abort(c(
+      "as_vitals_task() requires a dsprrr Module",
+      "x" = "Got: {.cls {class(module)[1]}}"
+    ))
+  }
+
+  if (!is.data.frame(dataset)) {
+    cli::cli_abort(c(
+      "dataset must be a data frame or tibble",
+      "x" = "Got: {.cls {class(dataset)[1]}}"
+    ))
+  }
+
+  required_cols <- c("input", "target")
+  missing_cols <- setdiff(required_cols, names(dataset))
+  if (length(missing_cols) > 0) {
+    cli::cli_abort(c(
+      "dataset must have columns 'input' and 'target'",
+      "x" = "Missing: {.field {missing_cols}}"
+    ))
+  }
+
+  # Default scorer
+  scorer <- scorer %||% vitals::model_graded_qa()
+
+  # Create solver from module
+  solver <- as_vitals_solver(
+    module = module,
+    .llm = .llm,
+    .parallel = .parallel,
+    ...
+  )
+
+  # Use default name if not provided
+  name <- name %||% deparse(substitute(dataset))
+
+  # Use default log directory if not provided
+  dir <- dir %||% vitals::vitals_log_dir()
+
+  # Create and return the Task
+  vitals::Task$new(
+    dataset = dataset,
+    solver = solver,
+    scorer = scorer,
+    metrics = metrics,
+    epochs = epochs,
+    name = name,
+    dir = dir
+  )
+}
