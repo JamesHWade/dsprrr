@@ -9,6 +9,7 @@ as_vitals_solver(
   .llm = NULL,
   .parallel = FALSE,
   .return_format = "structured",
+  .input_column = NULL,
   ...
 )
 }
@@ -22,6 +23,10 @@ create a fresh default client.}
 to avoid sharing LLM state across workers.}
 
 \item{.return_format}{One of \code{"structured"} (default) or \code{"simple"}.}
+
+\item{.input_column}{Column name to use for the module's input. Defaults to
+the first input name from the module's signature. Used to map vitals'
+"input" column to the module's expected input column.}
 
 \item{...}{Additional arguments forwarded to \code{\link[=run_dataset]{run_dataset()}}.}
 }
