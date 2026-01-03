@@ -402,6 +402,77 @@ test_that("EnsembleModule reset_copy creates fresh wrapper", {
   expect_length(copy$state$traces, 0)
 })
 
+test_that("EnsembleModule apply_optimization_params forwards to all modules", {
+  # Create real modules that have apply_optimization_params
+  mod1 <- module(signature("question -> answer"))
+  mod2 <- module(signature("question -> answer"))
+  mod3 <- module(signature("question -> answer"))
+
+  ens <- ensemble(list(mod1, mod2, mod3))
+
+  # Apply params - should forward to all child modules
+  params <- list(instructions = "Be concise", temperature = 0.5)
+  result <- ens$apply_optimization_params(params)
+
+  # Should return self invisibly
+
+  expect_identical(result, ens)
+
+  # All child modules should have received the params
+  for (mod in ens$modules) {
+    # PredictModule stores instructions in signature
+    expect_equal(mod$signature@instructions, "Be concise")
+  }
+})
+
+test_that("EnsembleModule forward accepts dataframe batch input", {
+  mod1 <- create_mock_module("a")
+  mod2 <- create_mock_module("b")
+
+  ens <- ensemble(list(mod1, mod2))
+
+  # Create a dataframe input (as run_dataset would provide)
+  batch_df <- data.frame(question = "test question", stringsAsFactors = FALSE)
+
+  # Should work with dataframe input
+  result <- ens$forward(batch_df)
+
+  expect_s3_class(result, "tbl_df")
+  expect_named(result, c("output", "chat", "metadata"))
+  expect_length(result$output, 1)
+})
+
+test_that("EnsembleModule forward handles single-row dataframe correctly", {
+  # Use a module that captures its input to verify conversion
+  captured_inputs <- list()
+
+  mod1 <- create_mock_module("a")
+  orig_forward <- mod1$forward
+  mod1$forward <- function(batch, .llm = NULL, trace = TRUE, ...) {
+    captured_inputs <<- append(captured_inputs, list(batch))
+    orig_forward(batch, .llm, trace, ...)
+  }
+
+  mod2 <- create_mock_module("b")
+
+  ens <- ensemble(list(mod1, mod2))
+
+  # Dataframe with one row
+  batch_df <- data.frame(
+    question = "what is 2+2?",
+    context = "math",
+    stringsAsFactors = FALSE
+  )
+
+  ens$forward(batch_df)
+
+  # The module should have received a list with the input fields
+  expect_true(length(captured_inputs) > 0)
+  first_input <- captured_inputs[[1]]
+  expect_true("question" %in% names(first_input))
+  expect_true("context" %in% names(first_input))
+})
+
 test_that("EnsembleModule print method works", {
   mods <- lapply(1:3, function(i) create_mock_module("a"))
   ens <- ensemble(mods)
