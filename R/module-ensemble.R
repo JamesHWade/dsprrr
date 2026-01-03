@@ -70,7 +70,9 @@ EnsembleModule <- R6::R6Class(
         }
       }
 
-      # All modules must have compatible signatures
+      # Validate signature compatibility across all modules
+      validate_signature_compatibility(modules)
+
       # Use the first module's signature as the ensemble signature
       sig <- modules[[1]]$signature
 
@@ -395,6 +397,61 @@ ensemble <- function(
     reduce_fn = reduce_fn,
     weights = weights,
     ...
+  )
+}
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+#' Validate signature compatibility across modules
+#'
+#' @param modules List of modules to validate
+#' @return NULL invisibly (throws error if incompatible)
+#' @noRd
+validate_signature_compatibility <- function(modules) {
+  if (length(modules) < 2) {
+    return(invisible(NULL))
+  }
+
+  # Extract input field names from first module's signature
+  reference_sig <- modules[[1]]$signature
+  reference_inputs <- get_signature_input_names(reference_sig)
+
+  # Compare all other modules to the reference
+
+  for (i in seq_along(modules)[-1]) {
+    current_sig <- modules[[i]]$signature
+    current_inputs <- get_signature_input_names(current_sig)
+
+    # Check input field names match exactly
+    if (!identical(reference_inputs, current_inputs)) {
+      cli::cli_abort(c(
+        "Incompatible signatures in EnsembleModule",
+        "x" = "Module 1 expects inputs: {.field {reference_inputs}}",
+        "x" = "Module {i} expects inputs: {.field {current_inputs}}",
+        "i" = "All modules must have the same input field names"
+      ))
+    }
+  }
+
+  invisible(NULL)
+}
+
+#' Extract input field names from a signature
+#'
+#' @param sig A Signature object
+#' @return Character vector of input field names
+#' @noRd
+get_signature_input_names <- function(sig) {
+  if (is.null(sig) || !S7::S7_inherits(sig, Signature)) {
+    return(character(0))
+  }
+
+  vapply(
+    sig@inputs,
+    function(inp) inp$name %||% "",
+    character(1)
   )
 }
 
