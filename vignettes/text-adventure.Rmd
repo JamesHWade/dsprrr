@@ -16,7 +16,9 @@ knitr::opts_chunk$set(
 )
 ```
 
-This tutorial builds a complete text-based adventure game using dsprrr and S7. The AI handles narrative generation, NPC dialogue, and action resolution while you control the game framework and player state.
+This tutorial builds a text-based adventure game using dsprrr. The AI handles narrative generation, NPC dialogue, and action resolution while you control the game framework and player state.
+
+We'll start with the simplest approach—plain lists—then show how S7 adds structure as the project grows.
 
 ## What You'll Build
 
@@ -29,18 +31,333 @@ This tutorial builds a complete text-based adventure game using dsprrr and S7. T
 ```{r setup}
 library(dsprrr)
 library(ellmer)
-library(S7)
 library(cli)
 ```
 
-## Step 1: S7 Classes for Game State
+## Part 1: The Simple Approach
 
-Define immutable, typed game state using S7:
+For most R projects, plain lists and functions are all you need.
+
+### Game State as Lists
+
+```{r simple-state}
+# Player is just a list
+create_player <- function(name) {
+  list(
+    name = name,
+    health = 100L,
+    level = 1L,
+    experience = 0L,
+    inventory = character(),
+    skills = list(
+      strength = 10L,
+      intelligence = 10L,
+      charisma = 10L,
+      stealth = 10L
+    )
+  )
+}
+
+# Game context is also a list
+create_context <- function() {
+  list(
+    location = "Village Square",
+    story_progress = 0L,
+    visited = character(),
+    npcs_met = character(),
+    recent_actions = character()
+  )
+}
+
+# Bundle into game state
+create_game <- function(player) {
+  list(
+    player = player,
+    context = create_context(),
+    running = TRUE
+  )
+}
+```
+
+### Helper Functions
+
+```{r simple-helpers}
+# Modify player state
+add_item <- function(player, item) {
+  player$inventory <- c(player$inventory, item)
+  cli_alert_success("Added {.val {item}} to inventory!")
+  player
+}
+
+take_damage <- function(player, amount) {
+  player$health <- max(0L, player$health - amount)
+  cli_alert_danger("Took {amount} damage! HP: {player$health}/100")
+  player
+}
+
+heal <- function(player, amount) {
+  player$health <- min(100L, player$health + amount)
+  cli_alert_success("Healed {amount} HP! HP: {player$health}/100")
+  player
+}
+
+gain_xp <- function(player, amount) {
+  player$experience <- player$experience + amount
+  new_level <- 1L + (player$experience %/% 100L)
+  if (new_level > player$level) {
+    cli_alert_success("Level up! Now level {new_level}!")
+    player$level <- new_level
+  }
+  player
+}
+
+is_alive <- function(player) {
+  player$health > 0L
+}
+
+# Modify context
+visit_location <- function(context, location) {
+  context$visited <- unique(c(context$visited, context$location))
+  context$location <- location
+  context$story_progress <- context$story_progress + 1L
+  cli_alert_info("Traveled to {.strong {location}}")
+  context
+}
+
+record_action <- function(context, action) {
+  context$recent_actions <- c(tail(context$recent_actions, 4L), action)
+  context
+}
+```
+
+### AI Signatures
+
+This is where dsprrr comes in—define clear contracts for each AI task:
+
+```{r simple-signatures}
+scene_sig <- signature(
+  inputs = list(
+    input("location", "Current location name"),
+    input("player_info", "Player stats summary"),
+    input("story_progress", "Story progress 0-10"),
+    input("recent_actions", "Last few player actions"),
+    input("visited_before", "Whether location was visited")
+  ),
+  output_type = type_object(
+    description = type_string("2-3 sentence scene description"),
+    actions = type_array(type_string(), "4-6 possible actions"),
+    npcs = type_array(type_string(), "NPCs present"),
+    items = type_array(type_string(), "Visible items"),
+    atmosphere = type_enum(c("peaceful", "tense", "mysterious", "dangerous"))
+  ),
+  instructions = "You are a game master for a fantasy text adventure.
+Create immersive scenes with interesting choices."
+)
+
+dialogue_sig <- signature(
+  inputs = list(
+    input("npc_name", "NPC name"),
+    input("npc_role", "NPC role and personality"),
+    input("player_says", "Player's action or words"),
+    input("relationship", "new or returning"),
+    input("context", "Location and story context")
+  ),
+  output_type = type_object(
+    response = type_string("NPC dialogue (1-3 sentences)"),
+    mood = type_enum(c("friendly", "neutral", "suspicious", "hostile")),
+    gives_item = type_string("Item given, or 'none'")
+  ),
+  instructions = "You are an NPC in a fantasy RPG. Stay in character."
+)
+
+action_sig <- signature(
+  inputs = list(
+    input("action", "What player attempts"),
+    input("relevant_skill", "Which skill applies"),
+    input("skill_value", "Player's skill value"),
+    input("difficulty", "easy/medium/hard"),
+    input("context", "Relevant circumstances")
+  ),
+  output_type = type_object(
+    success = type_boolean(),
+    outcome = type_string("2-3 sentence result"),
+    damage_taken = type_integer("Damage to player"),
+    item_gained = type_string("Item earned, or 'none'"),
+    experience = type_integer("XP earned 0-25")
+  ),
+  instructions = "Resolve actions fairly but dramatically."
+)
+```
+
+### Create Modules
+
+```{r simple-modules}
+create_modules <- function(llm) {
+  list(
+    scene = scene_sig |> with_reasoning() |> module(type = "predict"),
+    dialogue = dialogue_sig |> with_reasoning() |> module(type = "predict"),
+    action = action_sig |> with_reasoning() |> module(type = "predict"),
+    llm = llm
+  )
+}
+```
+
+### Game Logic
+
+```{r simple-logic}
+player_summary <- function(player) {
+  sprintf(
+    "Level %d %s | HP:%d | STR:%d INT:%d CHA:%d STL:%d | Items: %s",
+    player$level, player$name, player$health,
+    player$skills$strength, player$skills$intelligence,
+    player$skills$charisma, player$skills$stealth,
+    if (length(player$inventory) > 0)
+      paste(player$inventory, collapse = ", ")
+    else "none"
+  )
+}
+
+detect_skill <- function(action) {
+  action_lower <- tolower(action)
+  if (grepl("fight|attack|force", action_lower)) "strength"
+  else if (grepl("sneak|hide|steal", action_lower)) "stealth"
+  else if (grepl("persuade|convince|charm", action_lower)) "charisma"
+  else "intelligence"
+}
+
+generate_scene <- function(game, modules) {
+  run(
+    modules$scene,
+    location = game$context$location,
+    player_info = player_summary(game$player),
+    story_progress = as.character(game$context$story_progress),
+    recent_actions = paste(game$context$recent_actions, collapse = " -> "),
+    visited_before = game$context$location %in% game$context$visited,
+    .llm = modules$llm
+  )
+}
+
+resolve_action <- function(game, action, modules) {
+  skill <- detect_skill(action)
+
+  result <- run(
+    modules$action,
+    action = action,
+    relevant_skill = skill,
+    skill_value = as.character(game$player$skills[[skill]]),
+    difficulty = "medium",
+    context = game$context$location,
+    .llm = modules$llm
+  )
+
+  # Apply effects
+  if (result$damage_taken > 0) {
+    game$player <- take_damage(game$player, result$damage_taken)
+  }
+  if (result$item_gained != "none" && nzchar(result$item_gained)) {
+    game$player <- add_item(game$player, result$item_gained)
+  }
+  if (result$experience > 0) {
+    game$player <- gain_xp(game$player, result$experience)
+  }
+
+  if (result$success) {
+    cli_alert_success(result$outcome)
+  } else {
+    cli_alert_danger(result$outcome)
+  }
+
+  game
+}
+```
+
+### Save/Load
+
+```{r simple-save}
+save_game <- function(game, filename = "savegame.json") {
+  jsonlite::write_json(game, filename, auto_unbox = TRUE, pretty = TRUE)
+  cli_alert_success("Saved to {.file {filename}}")
+  game
+}
+
+load_game <- function(filename = "savegame.json") {
+  if (!file.exists(filename)) {
+    cli_alert_danger("Save file not found")
+    return(NULL)
+  }
+  game <- jsonlite::read_json(filename, simplifyVector = TRUE)
+  cli_alert_success("Loaded from {.file {filename}}")
+  game
+}
+```
+
+### Minimal Game Loop
+
+```{r simple-loop}
+play_game <- function(llm = chat_openai()) {
+  modules <- create_modules(llm)
+
+  name <- readline("Character name: ")
+  game <- create_game(create_player(name))
+
+  repeat {
+    scene <- generate_scene(game, modules)
+
+    cli_h2("{game$context$location}")
+    cli_text(scene$description)
+    cat("\n")
+
+    actions <- c(scene$actions, "Save", "Quit")
+    for (i in seq_along(actions)) {
+      cli_text("{i}. {actions[i]}")
+    }
+
+    choice <- as.integer(readline("Choose: "))
+    chosen <- actions[choice]
+
+    if (chosen == "Save") {
+      game <- save_game(game)
+      next
+    }
+    if (chosen == "Quit") break
+
+    game$context <- record_action(game$context, chosen)
+    game <- resolve_action(game, chosen, modules)
+
+    if (!is_alive(game$player)) {
+      cli_h1("GAME OVER")
+      break
+    }
+  }
+
+  invisible(game)
+}
+```
+
+**This works.** For a quick prototype or personal project, you're done.
+
+---
+
+## Part 2: Adding Structure with S7
+
+As projects grow, plain lists show their limits:
+
+- No validation (what if health goes negative?)
+- No documentation (which fields exist?)
+- No type safety (is `level` an integer or character?)
+- Hard to extend (adding new player types?)
+
+S7 solves these while staying functional:
+
+```{r s7-setup}
+library(S7)
+```
+
+### S7 Classes for Game State
 
 ```{r s7-classes}
-# Player class with typed properties and validation
 Player <- new_class("Player",
- properties = list(
+  properties = list(
     name = class_character,
     health = new_property(class_integer, default = 100L),
     level = new_property(class_integer, default = 1L),
@@ -61,7 +378,6 @@ Player <- new_class("Player",
   }
 )
 
-# Game context tracks world state
 GameContext <- new_class("GameContext",
   properties = list(
     location = new_property(class_character, default = "Village Square"),
@@ -73,7 +389,6 @@ GameContext <- new_class("GameContext",
   )
 )
 
-# Bundle everything into game state
 GameState <- new_class("GameState",
   properties = list(
     player = Player,
@@ -83,26 +398,22 @@ GameState <- new_class("GameState",
 )
 ```
 
-## Step 2: S7 Generics for State Transitions
+Now you get:
+- **Validation**: `Player(name = "X", health = -10L)` throws an error
+- **Documentation**: Properties are self-describing
+- **Type safety**: Can't accidentally assign wrong types
+- **Tooling**: IDE autocomplete works with `@` slots
 
-Define pure functions that return modified state:
+### S7 Generics for State Transitions
+
+Instead of plain functions, use generics for extensibility:
 
 ```{r s7-generics}
-# Player state transitions
 add_item <- new_generic("add_item", "player")
 method(add_item, Player) <- function(player, item) {
   player@inventory <- c(player@inventory, item)
   cli_alert_success("Added {.val {item}} to inventory!")
- player
-}
-
-remove_item <- new_generic("remove_item", "player")
-method(remove_item, Player) <- function(player, item) {
-  if (item %in% player@inventory) {
-    player@inventory <- setdiff(player@inventory, item)
-    cli_alert_warning("Removed {.val {item}} from inventory")
-  }
- player
+  player
 }
 
 take_damage <- new_generic("take_damage", "player")
@@ -135,19 +446,18 @@ method(is_alive, Player) <- function(player) {
   player@health > 0L
 }
 
-# Context state transitions
-record_action <- new_generic("record_action", "context")
-method(record_action, GameContext) <- function(context, action) {
-  context@recent_actions <- c(tail(context@recent_actions, 4L), action)
-  context
-}
-
 visit_location <- new_generic("visit_location", "context")
 method(visit_location, GameContext) <- function(context, location) {
   context@visited <- unique(c(context@visited, context@location))
   context@location <- location
   context@story_progress <- context@story_progress + 1L
   cli_alert_info("Traveled to {.strong {location}}")
+  context
+}
+
+record_action <- new_generic("record_action", "context")
+method(record_action, GameContext) <- function(context, action) {
+  context@recent_actions <- c(tail(context@recent_actions, 4L), action)
   context
 }
 
@@ -169,9 +479,9 @@ method(has_flag, GameContext) <- function(context, flag) {
 }
 ```
 
-## Step 3: Print Methods
+### Print Methods
 
-```{r print-methods}
+```{r s7-print}
 method(print, Player) <- function(x, ...) {
   cli_h3("{x@name}")
   cli_text("Level {x@level} | HP: {x@health}/100 | XP: {x@experience}")
@@ -193,11 +503,11 @@ method(print, GameState) <- function(x, ...) {
 }
 ```
 
-## Step 4: AI Signatures
+### Richer Signatures
 
-Define clear input/output contracts for each AI task:
+With more structure, we can add richer AI interactions:
 
-```{r signatures}
+```{r s7-signatures}
 scene_sig <- signature(
   inputs = list(
     input("location", "Current location name"),
@@ -263,27 +573,11 @@ improve odds. Create interesting failures. Useful items help."
 )
 ```
 
-## Step 5: Module Container
+### Full Game Functions
 
-Use a simple list for modules (they're already dsprrr objects):
-
-```{r modules}
-create_modules <- function(llm) {
-  list(
-    scene = scene_sig |> with_reasoning() |> module(type = "predict"),
-    dialogue = dialogue_sig |> with_reasoning() |> module(type = "predict"),
-    action = action_sig |> with_reasoning() |> module(type = "predict"),
-    llm = llm
-  )
-}
-```
-
-## Step 6: Pure Functions for Game Logic
-
-```{r game-logic}
-# Format player info for AI
+```{r s7-game-functions}
 player_summary <- function(player) {
- sprintf(
+  sprintf(
     "Level %d %s | HP:%d | STR:%d INT:%d CHA:%d STL:%d | Items: %s",
     player@level, player@name, player@health,
     player@skills$strength, player@skills$intelligence,
@@ -294,7 +588,6 @@ player_summary <- function(player) {
   )
 }
 
-# Detect which skill applies to an action
 detect_skill <- function(action) {
   action_lower <- tolower(action)
   if (grepl("fight|attack|break|force|lift", action_lower)) "strength"
@@ -303,7 +596,6 @@ detect_skill <- function(action) {
   else "intelligence"
 }
 
-# Detect action difficulty
 detect_difficulty <- function(action) {
   action_lower <- tolower(action)
   if (grepl("fight|battle|defeat|dangerous", action_lower)) "hard"
@@ -311,13 +603,11 @@ detect_difficulty <- function(action) {
   else "medium"
 }
 
-# Check for useful items
 has_useful_item <- function(player) {
   useful <- c("torch", "rope", "sword", "key", "map", "potion", "lockpick")
   any(tolower(player@inventory) %in% useful)
 }
 
-# NPC role lookup
 npc_role <- function(npc_name) {
   roles <- list(
     "Village Elder" = "wise leader who knows ancient lore",
@@ -325,16 +615,15 @@ npc_role <- function(npc_name) {
     "Guard" = "dutiful protector, suspicious of strangers",
     "Mysterious Stranger" = "hooded figure with unknown motives",
     "Blacksmith" = "crafts weapons, appreciates quality materials",
-    "Healer" = "kind herbalist who restores health",
-    "Thief" = "cunning rogue with secret knowledge"
+    "Healer" = "kind herbalist who restores health"
   )
   roles[[npc_name]] %||% "mysterious character"
 }
 ```
 
-## Step 7: Scene Generation
+### Scene and Dialogue Handling
 
-```{r generate-scene}
+```{r s7-scene-dialogue}
 generate_scene <- function(game, modules) {
   run(
     modules$scene,
@@ -348,7 +637,6 @@ generate_scene <- function(game, modules) {
 }
 
 display_scene <- function(scene, context) {
-  # Atmosphere emoji
   emoji <- switch(scene$atmosphere,
     peaceful = "\U0001F343",
     tense = "\U0001F441",
@@ -368,7 +656,6 @@ display_scene <- function(scene, context) {
   }
   cat("\n")
 
-  # Numbered action list
   cli_h3("What do you do?")
   all_actions <- c(scene$actions, "Check inventory", "Save game", "Quit")
   for (i in seq_along(all_actions)) {
@@ -378,11 +665,7 @@ display_scene <- function(scene, context) {
 
   all_actions
 }
-```
 
-## Step 8: Dialogue Handling
-
-```{r dialogue}
 handle_dialogue <- function(game, npc, action, modules) {
   relationship <- if (npc %in% game@context@npcs_met) "returning" else "new"
 
@@ -397,7 +680,6 @@ handle_dialogue <- function(game, npc, action, modules) {
     .llm = modules$llm
   )
 
-  # Display
   cat("\n")
   cli_alert_info("{.strong {npc}}: \"{response$response}\"")
   if (nzchar(response$action)) cli_text("{.emph ({response$action})}")
@@ -409,7 +691,6 @@ handle_dialogue <- function(game, npc, action, modules) {
   }
   cat("\n")
 
-  # Update state immutably
   game@context <- meet_npc(game@context, npc)
 
   if (response$gives_item != "none" && nzchar(response$gives_item)) {
@@ -420,9 +701,9 @@ handle_dialogue <- function(game, npc, action, modules) {
 }
 ```
 
-## Step 9: Action Resolution
+### Action Resolution
 
-```{r action-resolution}
+```{r s7-actions}
 resolve_action <- function(game, action, modules) {
   skill <- detect_skill(action)
 
@@ -437,7 +718,6 @@ resolve_action <- function(game, action, modules) {
     .llm = modules$llm
   )
 
-  # Display result
   cat("\n")
   if (result$success) {
     cli_alert_success(result$outcome)
@@ -445,15 +725,11 @@ resolve_action <- function(game, action, modules) {
     cli_alert_danger(result$outcome)
   }
 
-  # Apply state changes immutably using pipes
   if (result$damage_taken > 0) {
     game@player <- take_damage(game@player, result$damage_taken)
   }
   if (result$item_gained != "none" && nzchar(result$item_gained)) {
     game@player <- add_item(game@player, result$item_gained)
-  }
-  if (result$item_lost != "none" && nzchar(result$item_lost)) {
-    game@player <- remove_item(game@player, result$item_lost)
   }
   if (result$experience > 0) {
     game@player <- gain_xp(game@player, result$experience)
@@ -463,7 +739,6 @@ resolve_action <- function(game, action, modules) {
     cli_alert_success("Unlocked: {.val {result$unlocks}}")
   }
 
-  # Handle movement
   if (grepl("go|travel|enter|head", action, ignore.case = TRUE) && result$success) {
     destination <- if (nzchar(result$unlocks) && result$unlocks != "none") {
       result$unlocks
@@ -480,9 +755,9 @@ resolve_action <- function(game, action, modules) {
 }
 ```
 
-## Step 10: Save/Load with S7
+### Save/Load with S7
 
-```{r save-load}
+```{r s7-save-load}
 save_game <- function(game, filename = "savegame.json") {
   save_data <- list(
     player = list(
@@ -536,9 +811,9 @@ load_game <- function(filename = "savegame.json") {
 }
 ```
 
-## Step 11: Character Creation
+### Character Creation
 
-```{r character-creation}
+```{r s7-character}
 create_character <- function() {
   cli_h1("{.emph MYSTIC REALM ADVENTURE}")
   cli_h2("Character Creation")
@@ -570,9 +845,9 @@ create_character <- function() {
 }
 ```
 
-## Step 12: Main Game Loop
+### Full Game Loop
 
-```{r game-loop}
+```{r s7-game-loop}
 play_game <- function(llm = chat_openai()) {
   modules <- create_modules(llm)
   game <- create_character()
@@ -580,11 +855,9 @@ play_game <- function(llm = chat_openai()) {
   repeat {
     print(game)
 
-    # Generate and display scene
     scene <- generate_scene(game, modules)
     actions <- display_scene(scene, game@context)
 
-    # Get player choice
     choice <- as.integer(readline("Choose (number): "))
 
     if (is.na(choice) || choice < 1 || choice > length(actions)) {
@@ -595,7 +868,6 @@ play_game <- function(llm = chat_openai()) {
     chosen <- actions[choice]
     game@context <- record_action(game@context, chosen)
 
-    # Handle special actions
     if (chosen == "Check inventory") {
       if (length(game@player@inventory) == 0) {
         cli_alert_info("Your inventory is empty.")
@@ -621,7 +893,6 @@ play_game <- function(llm = chat_openai()) {
       break
     }
 
-    # Check for NPC interaction
     npc_target <- NULL
     for (npc in scene$npcs) {
       if (grepl(tolower(npc), tolower(chosen), fixed = TRUE)) {
@@ -636,7 +907,6 @@ play_game <- function(llm = chat_openai()) {
       game <- resolve_action(game, chosen, modules)
     }
 
-    # Check for death
     if (!is_alive(game@player)) {
       cli_h1("GAME OVER")
       cli_text("You have fallen...")
@@ -651,66 +921,11 @@ play_game <- function(llm = chat_openai()) {
 }
 ```
 
-## Running the Game
+## When to Use Which
 
-```{r play}
-# New game
-play_game(llm = chat_openai())
+| Approach | Use When |
+|----------|----------|
+| **Plain lists** | Prototypes, scripts, personal projects |
+| **S7 classes** | Shared code, packages, complex state, need validation |
 
-# Load saved game
-# game <- load_game()
-# if (!is.null(game)) play_game_from(game, chat_openai())
-```
-
-## Example Session
-
-```
-── MYSTIC REALM ADVENTURE ─────────────────────────────
-
-── Aria ──
-Level 1 | HP: 100/100 | XP: 0
-STR:12 INT:14 CHA:12 STL:12
-Inventory: torch
-────────────────────────────────────────────────────────
-
-── 🍃 Village Square ──
-
-The morning sun warms the cobblestones of Willowbrook's
-central square. A weathered fountain burbles beside a
-massive oak, its branches heavy with age.
-
-NPCs: Village Elder, Merchant
-Items: strange medallion, fresh bread
-
-── What do you do? ──
-
-1. Approach the Village Elder
-2. Browse the merchant's wares
-3. Examine the strange medallion
-4. Head toward the forest path
-5. Rest on the bench
-6. Check inventory
-7. Save game
-8. Quit
-
-Choose (number): 1
-
-ℹ Village Elder: "Ah, a new face. I sense purpose in
-  your step, young one. Perhaps you seek the ancient
-  ruins north of here?"
-  (strokes his long white beard)
-! Quest available: Investigate the Northern Ruins
-ℹ You learned: None who entered the ruins have returned.
-
-Press Enter...
-```
-
-## What This Demonstrates
-
-- **S7 for state**: Typed properties, validation, immutable updates
-- **Generics for transitions**: `add_item()`, `take_damage()`, etc.
-- **Composition over inheritance**: Simple lists for module collections
-- **Pipe-friendly**: State flows through pure functions
-- **dsprrr integration**: Signatures, modules, `with_reasoning()`
-
-The same patterns work for chatbots, customer support systems, and any stateful AI application.
+Both work with dsprrr. The AI signatures and modules are the same—only the state management differs.
