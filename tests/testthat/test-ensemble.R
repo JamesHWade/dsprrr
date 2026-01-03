@@ -22,31 +22,6 @@ create_mock_module <- function(response = "answer1") {
   mock_mod
 }
 
-# Create mock module with controlled responses
-create_varied_mock <- function(responses) {
-  idx <- 0
-  mock_mod <- list(
-    signature = signature("question -> answer"),
-    chat = NULL,
-    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-      idx <<- idx + 1
-      response <- responses[[min(idx, length(responses))]]
-      tibble::tibble(
-        output = list(list(answer = response)),
-        chat = list(NULL),
-        metadata = list(list(
-          total_tokens = 100,
-          cost = 0.001,
-          model = "mock-model"
-        ))
-      )
-    },
-    reset_copy = function() create_varied_mock(responses)
-  )
-  class(mock_mod) <- c("MockModule", "Module", "R6")
-  mock_mod
-}
-
 # ============================================================================
 # EnsembleModule Tests
 # ============================================================================
@@ -247,7 +222,7 @@ test_that("EnsembleModule handles module errors gracefully", {
 
   expect_warning(
     result <- ens$forward(list(question = "test")),
-    "Module 2 failed"
+    "Module 2.*failed"
   )
 
   # Should still succeed with 2 of 3 modules
@@ -316,7 +291,7 @@ test_that("EnsembleModule uses correct weights when middle module fails", {
   # With bug: weights are [1, 100] -> "b" wins with weight 100
   expect_warning(
     result <- ens$forward(list(question = "test")),
-    "Module 2 failed"
+    "Module 2.*failed"
   )
 
   # Should be a tie (both weight 1), so first answer "a" wins
@@ -849,16 +824,15 @@ test_that("compile_ensemble warns when more weights than programs", {
   expect_equal(result$weights, c(0.9, 0.8))
 })
 
-test_that("compile_ensemble warns when fewer weights than programs", {
+test_that("compile_ensemble errors when fewer weights than programs", {
   mods <- lapply(1:4, function(i) create_mock_module(paste0("a", i)))
   tp <- Ensemble(weights = c(0.9, 0.8)) # 2 weights for 4 programs
 
-  expect_warning(
-    result <- compile(tp, program = NULL, trainset = NULL, programs = mods),
+  # Should error since user explicitly provided weights but count is wrong
+  expect_error(
+    compile(tp, program = NULL, trainset = NULL, programs = mods),
     "Fewer weights"
   )
-  # Should use equal weights (default)
-  expect_equal(result$weights, rep(1, 4))
 })
 
 test_that("compile_ensemble errors without programs", {

@@ -162,11 +162,10 @@ compile_ensemble <- function(
       ))
       weights <- weights[seq_along(programs)]
     } else {
-      cli::cli_warn(c(
+      cli::cli_abort(c(
         "Fewer weights ({length(weights)}) than programs ({length(programs)})",
-        "i" = "Using equal weights"
+        "i" = "Provide exactly one weight per program, or omit weights entirely"
       ))
-      weights <- NULL
     }
   }
 
