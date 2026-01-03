@@ -319,6 +319,8 @@ Integration with vitals package
 
 - [`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
   : Convert a dsprrr module into a vitals solver
+- [`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md)
+  : Create a vitals Task from a dsprrr module
 - [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
   : Adapt a vitals scorer for use as a dsprrr metric
 - [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)

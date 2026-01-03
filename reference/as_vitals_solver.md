@@ -14,6 +14,7 @@ as_vitals_solver(
   .llm = NULL,
   .parallel = FALSE,
   .return_format = "structured",
+  .input_column = NULL,
   ...
 )
 ```
@@ -39,6 +40,12 @@ as_vitals_solver(
 - .return_format:
 
   One of `"structured"` (default) or `"simple"`.
+
+- .input_column:
+
+  Column name to use for the module's input. Defaults to the first input
+  name from the module's signature. Used to map vitals' "input" column
+  to the module's expected input column.
 
 - ...:
 
