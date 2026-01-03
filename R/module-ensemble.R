@@ -135,8 +135,9 @@ EnsembleModule <- R6::R6Class(
           },
           error = function(e) {
             n_errors <<- n_errors + 1
+            mod_class <- class(self$modules[[i]])[1]
             cli::cli_warn(c(
-              "Module {i} failed in Ensemble",
+              "Module {i} ({.cls {mod_class}}) failed in Ensemble",
               "x" = e$message
             ))
             NULL
