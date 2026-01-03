@@ -19,6 +19,7 @@
 ^vitals$
 ^dspy$
 ^\.claude$
+^\.beads$
 ^examples$
 ^getting-started\.md$
 ^gh-issue.*\.md$
