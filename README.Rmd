@@ -22,12 +22,18 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/dsprrr/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/dsprrr)
 <!-- badges: end -->
 
-dsprrr adds signatures, optimization, and tracing on top of [ellmer](https://ellmer.tidyverse.org). It's an R implementation of ideas from [DSPy](https://github.com/stanfordnlp/dspy).
+dsprrr adds signatures, optimization, and tracing on top of [ellmer](https://ellmer.tidyverse.org). It implements ideas from [DSPy](https://dspy.ai) for R.
 
-**When to use dsprrr vs ellmer directly:**
+**The problem:** Hand-tuned prompts are fragile. They break when you switch models, change requirements, or scale up. dsprrr treats prompts as programs that can be systematically improved using your data.
 
-- Use **ellmer** when you have a prompt that works and just need to call an LLM
-- Use **dsprrr** when you want to systematically improve prompts using labeled data, or when you need to trace and debug LLM calls across a pipeline
+**Use cases:**
+
+- RAG pipelines where you want to optimize retrieval + generation together
+- Classification or extraction tasks with labeled examples to learn from
+- Multi-step agents where you need to trace what went wrong
+- Any LLM workflow you want to improve without manually rewriting prompts
+
+**When to just use ellmer:** If your prompt works and you don't need optimization or tracing, ellmer alone is simpler.
 
 ## Installation
 
@@ -80,7 +86,11 @@ classifier$predict(text = "Terrible experience")
 
 ### Optimization
 
-Automatically improve prompts using training data:
+Automatically improve prompts using training data. dsprrr implements several optimizers from DSPy:
+
+- **LabeledFewShot**: Add examples from your training set as demonstrations
+- **MIPROv2**: Joint optimization of instructions and examples using Bayesian search
+- **GEPA**: Reflection-based instruction optimization—sample efficient and often outperforms manual prompts
 
 ```{r optimization, eval=FALSE}
 # Compile with few-shot examples
