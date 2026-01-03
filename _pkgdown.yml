@@ -275,6 +275,11 @@ reference:
     contents:
     - as_vitals_solver
     - as_dsprrr_metric
+    - metric_model_graded_qa
+    - metric_model_graded_fact
+    - metric_detect_match
+    - metric_detect_includes
+    - metric_detect_pattern
 
   - title: ellmer Integration
     desc: Deep integration with ellmer
