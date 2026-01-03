@@ -411,38 +411,29 @@ test_that("EnsembleModule apply_optimization_params forwards to all modules", {
   ens <- ensemble(list(mod1, mod2, mod3))
 
   # Apply params - should forward to all child modules
-  params <- list(instructions = "Be concise", temperature = 0.5)
+  # Test all parameter types that PredictModule accepts
+  params <- list(
+    instructions = "Be concise",
+    template = "Q: {question}\nA:",
+    prompt_style = "structured"
+  )
   result <- ens$apply_optimization_params(params)
 
   # Should return self invisibly
-
   expect_identical(result, ens)
 
-  # All child modules should have received the params
+  # All child modules should have received all the params
   for (mod in ens$modules) {
     # PredictModule stores instructions in signature
     expect_equal(mod$signature@instructions, "Be concise")
+    # Template is stored directly on module
+    expect_equal(mod$template, "Q: {question}\nA:")
+    # prompt_style is stored in config
+    expect_equal(mod$config$prompt_style, "structured")
   }
 })
 
-test_that("EnsembleModule forward accepts dataframe batch input", {
-  mod1 <- create_mock_module("a")
-  mod2 <- create_mock_module("b")
-
-  ens <- ensemble(list(mod1, mod2))
-
-  # Create a dataframe input (as run_dataset would provide)
-  batch_df <- data.frame(question = "test question", stringsAsFactors = FALSE)
-
-  # Should work with dataframe input
-  result <- ens$forward(batch_df)
-
-  expect_s3_class(result, "tbl_df")
-  expect_named(result, c("output", "chat", "metadata"))
-  expect_length(result$output, 1)
-})
-
-test_that("EnsembleModule forward handles single-row dataframe correctly", {
+test_that("EnsembleModule forward handles dataframe batch input", {
   # Use a module that captures its input to verify conversion
   captured_inputs <- list()
 
@@ -457,20 +448,59 @@ test_that("EnsembleModule forward handles single-row dataframe correctly", {
 
   ens <- ensemble(list(mod1, mod2))
 
-  # Dataframe with one row
+  # Dataframe with multiple columns (as run_dataset would provide)
   batch_df <- data.frame(
     question = "what is 2+2?",
     context = "math",
     stringsAsFactors = FALSE
   )
 
-  ens$forward(batch_df)
+  result <- ens$forward(batch_df)
 
-  # The module should have received a list with the input fields
+  # Should return proper output structure
+  expect_s3_class(result, "tbl_df")
+  expect_named(result, c("output", "chat", "metadata"))
+  expect_length(result$output, 1)
+
+  # The module should have received a list with all input fields preserved
   expect_true(length(captured_inputs) > 0)
   first_input <- captured_inputs[[1]]
   expect_true("question" %in% names(first_input))
   expect_true("context" %in% names(first_input))
+})
+
+test_that("EnsembleModule forward processes only first row of multi-row dataframe", {
+  # EnsembleModule processes one example at a time (via run_dataset loop)
+  # When given a multi-row dataframe, it takes only the first row
+  captured_inputs <- list()
+
+  mod1 <- create_mock_module("a")
+  orig_forward <- mod1$forward
+  mod1$forward <- function(batch, .llm = NULL, trace = TRUE, ...) {
+    captured_inputs <<- append(captured_inputs, list(batch))
+    orig_forward(batch, .llm, trace, ...)
+  }
+
+  ens <- ensemble(list(mod1))
+
+  # Multi-row dataframe
+  batch_df <- data.frame(
+    question = c("q1", "q2", "q3"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- ens$forward(batch_df)
+
+  # Should return single result (first row only)
+  expect_length(result$output, 1)
+
+  # Module should have received only the first row's data
+  expect_true(length(captured_inputs) > 0)
+  first_input <- captured_inputs[[1]]
+
+  # The input should contain only the first question
+  # (dataframe row converted to list)
+  expect_true("question" %in% names(first_input))
 })
 
 test_that("EnsembleModule print method works", {
