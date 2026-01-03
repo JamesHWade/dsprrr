@@ -319,9 +319,56 @@ test_that("as_dsprrr_metric handles vitals-style list return", {
   metric <- as_dsprrr_metric(list_scorer)
   result <- metric("prediction", data.frame(target = "t"))
 
-  # Should handle list return properly
-
   expect_equal(result, 1)
+})
+
+test_that("as_dsprrr_metric handles factor scores", {
+  # vitals uses ordered factors with levels I < P < C
+  correct_factor <- function(samples) {
+    list(score = factor("C", levels = c("I", "P", "C"), ordered = TRUE))
+  }
+  metric_c <- as_dsprrr_metric(correct_factor)
+  expect_equal(metric_c("p", data.frame()), 1)
+
+  incorrect_factor <- function(samples) {
+    list(score = factor("I", levels = c("I", "P", "C"), ordered = TRUE))
+  }
+  metric_i <- as_dsprrr_metric(incorrect_factor)
+  expect_equal(metric_i("p", data.frame()), 0)
+
+  partial_factor <- function(samples) {
+    list(score = factor("P", levels = c("I", "P", "C"), ordered = TRUE))
+  }
+  metric_p <- as_dsprrr_metric(partial_factor)
+  expect_equal(metric_p("p", data.frame()), 0.5)
+})
+
+test_that("as_dsprrr_metric handles partial credit scores", {
+  # Test "P" shorthand
+  p_scorer <- function(samples) tibble::tibble(score = "P")
+  metric_p <- as_dsprrr_metric(p_scorer)
+  expect_equal(metric_p("p", data.frame()), 0.5)
+
+  # Test "partial" full word
+  partial_scorer <- function(samples) tibble::tibble(score = "partial")
+  metric_partial <- as_dsprrr_metric(partial_scorer)
+  expect_equal(metric_partial("p", data.frame()), 0.5)
+
+  # Test case insensitive
+  upper_partial <- function(samples) tibble::tibble(score = "PARTIAL")
+  metric_upper <- as_dsprrr_metric(upper_partial)
+  expect_equal(metric_upper("p", data.frame()), 0.5)
+})
+
+test_that("as_dsprrr_metric warns on list return without score element", {
+  no_score_scorer <- function(samples) list(explanation = "good answer")
+  metric <- as_dsprrr_metric(no_score_scorer)
+
+  expect_warning(
+    result <- metric("prediction", data.frame(target = "t")),
+    "vitals scorer returned no score"
+  )
+  expect_true(is.na(result))
 })
 
 test_that("as_dsprrr_metric preserves numeric precision", {
