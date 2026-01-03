@@ -419,7 +419,6 @@ validate_signature_compatibility <- function(modules) {
   reference_inputs <- get_signature_input_names(reference_sig)
 
   # Compare all other modules to the reference
-
   for (i in seq_along(modules)[-1]) {
     current_sig <- modules[[i]]$signature
     current_inputs <- get_signature_input_names(current_sig)
@@ -440,11 +439,26 @@ validate_signature_compatibility <- function(modules) {
 
 #' Extract input field names from a signature
 #'
-#' @param sig A Signature object
-#' @return Character vector of input field names
+#' @param sig A Signature object, or NULL. Non-Signature values return
+#'   an empty character vector with a warning.
+#' @return Character vector of input field names. Returns `character(0)` if
+#'   `sig` is NULL or not a Signature object.
 #' @noRd
 get_signature_input_names <- function(sig) {
-  if (is.null(sig) || !S7::S7_inherits(sig, Signature)) {
+  if (is.null(sig)) {
+    cli::cli_warn(c(
+      "Module has NULL signature",
+      "i" = "This may indicate a corrupted module state"
+    ))
+    return(character(0))
+  }
+
+  if (!S7::S7_inherits(sig, Signature)) {
+    cli::cli_warn(c(
+      "Module signature is not a Signature object",
+      "x" = "Got: {.cls {class(sig)[1]}}",
+      "i" = "This may indicate a corrupted module state"
+    ))
     return(character(0))
   }
 
