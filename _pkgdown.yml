@@ -56,6 +56,12 @@ navbar:
           href: articles/rag-workflows.html
         - text: "tidymodels Integration"
           href: articles/tidymodels-integration.html
+        - text: "---"
+        - text: "Tutorials"
+        - text: "Text Adventure Game"
+          href: articles/text-adventure.html
+        - text: "Generating llms.txt"
+          href: articles/llms-txt.html
 
 logo:
   file: man/figures/logo.png
@@ -89,6 +95,12 @@ articles:
     - advanced-ellmer
     - rag-workflows
     - tidymodels-integration
+
+  - title: Tutorials
+    desc: Learn by building
+    contents:
+    - text-adventure
+    - llms-txt
 
 reference:
   - title: Core Functions

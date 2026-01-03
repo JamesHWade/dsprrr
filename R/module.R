@@ -3,13 +3,15 @@
 #' @description
 #' The primary function for creating executable LLM modules. Supports
 #' "predict" for standard structured prediction, "react" for ReAct-style
-#' tool-using modules, "multichain" for multi-chain comparison, and
-#' "program_of_thought" for code execution modules.
+#' tool-using modules, "chain_of_thought" for step-by-step reasoning,
+#' "multichain" for multi-chain comparison, and "program_of_thought" for
+#' code execution modules.
 #'
 #' @param signature A Signature object defining the module's interface
 #' @param type Character string specifying the module type:
 #'   - `"predict"` (default): Standard prediction module
 #'   - `"react"`: ReAct-style module with tool support
+#'   - `"chain_of_thought"`: Adds step-by-step reasoning to the signature
 #'   - `"multichain"`: MultiChainComparison module for ensemble reasoning
 #'   - `"program_of_thought"`: Code execution module (requires runner)
 #'   - `"codeact"`: Hybrid agent with tools + code execution (requires runner)
@@ -116,7 +118,14 @@ module <- function(
   # Validate type
   type <- match.arg(
     type,
-    c("predict", "react", "multichain", "program_of_thought", "codeact")
+    c(
+      "predict",
+      "react",
+      "chain_of_thought",
+      "multichain",
+      "program_of_thought",
+      "codeact"
+    )
   )
 
   # Create the appropriate R6 module based on type
@@ -133,6 +142,13 @@ module <- function(
       signature = signature,
       tools = tools %||% list(),
       max_iterations = max_iterations,
+      template = template,
+      demos = demos,
+      config = config,
+      chat = chat
+    ),
+    chain_of_thought = PredictModule$new(
+      signature = with_reasoning(signature),
       template = template,
       demos = demos,
       config = config,

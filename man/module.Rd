@@ -28,6 +28,7 @@ module(
 \itemize{
 \item \code{"predict"} (default): Standard prediction module
 \item \code{"react"}: ReAct-style module with tool support
+\item \code{"chain_of_thought"}: Adds step-by-step reasoning to the signature
 \item \code{"multichain"}: MultiChainComparison module for ensemble reasoning
 \item \code{"program_of_thought"}: Code execution module (requires runner)
 \item \code{"codeact"}: Hybrid agent with tools + code execution (requires runner)
@@ -68,8 +69,9 @@ A module object (R6) that can be executed with \code{run()}
 \description{
 The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
-tool-using modules, "multichain" for multi-chain comparison, and
-"program_of_thought" for code execution modules.
+tool-using modules, "chain_of_thought" for step-by-step reasoning,
+"multichain" for multi-chain comparison, and "program_of_thought" for
+code execution modules.
 }
 \examples{
 # Create a simple prediction module
