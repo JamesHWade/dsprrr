@@ -450,13 +450,25 @@ as_vitals_task <- function(
   dir <- dir %||% vitals::vitals_log_dir()
 
   # Create and return the Task
-  vitals::Task$new(
-    dataset = dataset,
-    solver = solver,
-    scorer = scorer,
-    metrics = metrics,
-    epochs = epochs,
-    name = name,
-    dir = dir
+  tryCatch(
+    vitals::Task$new(
+      dataset = dataset,
+      solver = solver,
+      scorer = scorer,
+      metrics = metrics,
+      epochs = epochs,
+      name = name,
+      dir = dir
+    ),
+    error = function(e) {
+      cli::cli_abort(
+        c(
+          "Failed to create vitals Task",
+          "i" = "Check that your scorer and module are compatible",
+          "x" = conditionMessage(e)
+        ),
+        parent = e
+      )
+    }
   )
 }

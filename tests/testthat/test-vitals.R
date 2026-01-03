@@ -637,8 +637,8 @@ test_that("as_vitals_task accepts custom parameters", {
   mod <- module(signature = sig, type = "predict")
 
   dataset <- tibble::tibble(
-    input = c("hello"),
-    target = c("hello")
+    input = c("hello", "world"),
+    target = c("hello", "world")
   )
 
   # Create task with custom epochs and name
@@ -651,6 +651,15 @@ test_that("as_vitals_task accepts custom parameters", {
   )
 
   expect_s3_class(task, "Task")
+
+  # Verify Task configuration was passed through correctly
+  # Access private fields to verify configuration
+  task_private <- task$.__enclos_env__$private
+  expect_equal(task_private$epochs, 3L)
+
+  # Verify dataset was passed through
+  samples <- task$get_samples()
+  expect_equal(nrow(samples), 2)
 })
 
 test_that("as_vitals_task uses default scorer when not provided", {
