@@ -9,7 +9,6 @@ NULL
 # Global variables used by standalone purrr functions and tibble
 # These are defined in import-standalone-purrr.R (from rlang)
 utils::globalVariables(c(
-
   "as_function",
   "global_env",
   "is_logical",
