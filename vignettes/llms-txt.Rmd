@@ -1,0 +1,307 @@
+---
+title: "Generating llms.txt for R Packages"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Generating llms.txt for R Packages}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+[llms.txt](https://llmstxt.org/) is a proposed standard for providing LLM-friendly documentation. This tutorial shows how to use dsprrr to automatically generate an `llms.txt` file for any R package.
+
+```{r setup}
+library(dsprrr)
+library(ellmer)
+```
+
+## The Pipeline
+
+Generating good documentation requires multiple analysis steps:
+
+1. **Analyze the package** — Extract purpose, key functions, and concepts
+2. **Analyze the structure** — Understand the file organization
+3. **Generate the llms.txt** — Combine everything into the final document
+
+Each step is a separate module, allowing us to optimize them independently.
+
+## Step 1: Package Analysis
+
+First, we analyze the DESCRIPTION and README to understand what the package does:
+```{r analyze-package}
+analyze_pkg_sig <- signature(
+  inputs = list(
+    input("description", description = "Contents of DESCRIPTION file"),
+    input("readme", description = "Contents of README.md"),
+    input("exported_functions", description = "List of exported function names")
+  ),
+  output_type = type_object(
+    purpose = type_string("One sentence describing what the package does"),
+    key_functions = type_array(
+      type_object(
+        name = type_string(),
+        description = type_string("One sentence")
+      ),
+      description = "The 5 most important functions"
+    ),
+    concepts = type_array(type_string(), description = "Key concepts a user should understand"),
+    dependencies = type_array(type_string(), description = "Critical dependencies and why they matter")
+  ),
+  instructions = "Analyze this R package. Be concise and precise. Focus on what users need to know."
+)
+
+analyze_pkg <- analyze_pkg_sig |>
+  with_reasoning() |>
+  module(type = "predict")
+```
+
+## Step 2: Structure Analysis
+
+Understand how the package is organized:
+
+```{r analyze-structure}
+analyze_structure_sig <- signature(
+  inputs = list(
+    input("file_tree", description = "List of files in the package"),
+    input("r_files", description = "Names of files in R/ directory")
+  ),
+  output_type = type_object(
+    organization = type_string("How the code is organized (1-2 sentences)"),
+    entry_points = type_array(type_string(), description = "Main files to start reading"),
+    test_coverage = type_string("Brief note on testing approach")
+  ),
+  instructions = "Analyze the package structure. Help someone navigate the codebase."
+)
+
+analyze_structure <- analyze_structure_sig |>
+  module(type = "predict")
+```
+
+## Step 3: Generate llms.txt
+
+Combine the analyses into the final document:
+
+```{r generate}
+generate_sig <- signature(
+  inputs = list(
+    input("pkg_name", description = "Package name"),
+    input("purpose", description = "What the package does"),
+    input("key_functions", description = "JSON array of important functions"),
+    input("concepts", description = "Key concepts as comma-separated list"),
+    input("organization", description = "How code is organized"),
+    input("entry_points", description = "Where to start reading")
+  ),
+  output_type = type_string(),
+  instructions = "Generate an llms.txt file following this format:
+
+# {pkg_name}
+
+> {one-line description}
+
+## Purpose
+{2-3 sentences on what this package does and why}
+
+## Key Concepts
+{bullet list of concepts}
+
+## Main Functions
+{bullet list with function name and description}
+
+## Code Organization
+{how to navigate the codebase}
+
+## Quick Start
+{3-5 line code example}
+
+Be concise. This is reference documentation for LLMs, not a tutorial."
+)
+
+generate_llms_txt <- generate_sig |>
+  module(type = "predict")
+```
+
+## Helper Functions
+
+We need utilities to gather package information:
+
+```{r helpers}
+# Read package files
+read_pkg_files <- function(pkg_path = ".") {
+  list(
+    description = readLines(file.path(pkg_path, "DESCRIPTION")) |>
+      paste(collapse = "\n"),
+    readme = if (file.exists(file.path(pkg_path, "README.md"))) {
+      readLines(file.path(pkg_path, "README.md")) |> paste(collapse = "\n")
+    } else "",
+    file_tree = list.files(pkg_path, recursive = TRUE),
+    r_files = list.files(file.path(pkg_path, "R"), pattern = "\\.R$"),
+    exported = tryCatch({
+      ns <- readLines(file.path(pkg_path, "NAMESPACE"))
+      ns[grepl("^export\\(", ns)] |>
+        gsub("export\\((.+)\\)", "\\1", x = _)
+    }, error = function(e) character())
+  )
+}
+```
+
+## Running the Pipeline
+
+Now we can generate llms.txt for any package:
+
+```{r run-pipeline}
+generate_llms_txt_for_pkg <- function(pkg_path = ".", llm = chat_openai()) {
+  # Gather info
+  pkg <- read_pkg_files(pkg_path)
+  pkg_name <- gsub("Package: ", "", grep("^Package:", pkg$description, value = TRUE))
+
+  # Step 1: Analyze package
+  analysis <- run(
+    analyze_pkg,
+    description = pkg$description,
+    readme = substr(pkg$readme, 1, 4000),  # Truncate long READMEs
+    exported_functions = paste(pkg$exported, collapse = ", "),
+    .llm = llm
+  )
+
+  # Step 2: Analyze structure
+  structure <- run(
+    analyze_structure,
+    file_tree = paste(pkg$file_tree, collapse = "\n"),
+    r_files = paste(pkg$r_files, collapse = ", "),
+    .llm = llm
+  )
+
+  # Step 3: Generate llms.txt
+  result <- run(
+    generate_llms_txt,
+    pkg_name = pkg_name,
+    purpose = analysis$purpose,
+    key_functions = jsonlite::toJSON(analysis$key_functions, auto_unbox = TRUE),
+    concepts = paste(analysis$concepts, collapse = ", "),
+    organization = structure$organization,
+    entry_points = paste(structure$entry_points, collapse = ", "),
+    .llm = llm
+  )
+
+  result
+}
+
+# Generate for current package
+llms_txt <- generate_llms_txt_for_pkg(".")
+cat(llms_txt)
+```
+
+## Example Output
+
+Running this on dsprrr produces:
+
+```markdown
+# dsprrr
+
+> DSPy-style LLM programming for R with signatures, optimization, and tracing.
+
+## Purpose
+dsprrr extends ellmer with declarative signatures that define LLM input/output
+contracts, modules that encapsulate prompts as reusable components, and
+optimizers that automatically improve prompts using labeled data.
+
+## Key Concepts
+- Signatures: Declare inputs and outputs with `signature("question -> answer")`
+- Modules: Wrap signatures with configuration and state
+- Optimization: Compile modules with teleprompters like LabeledFewShot
+- Tracing: Every LLM call is recorded for debugging
+
+## Main Functions
+- `signature()`: Define input/output contract
+- `module()`: Create a reusable LLM component
+- `run()`: Execute a module with inputs
+- `compile()`: Optimize a module with a teleprompter
+- `dsp()`: Quick one-liner for Chat objects
+
+## Code Organization
+Core types in signature.R and module-base.R. Module variants (predict, react)
+in separate files. Optimization in teleprompter.R and optimizer-*.R files.
+
+## Quick Start
+library(dsprrr)
+library(ellmer)
+mod <- signature("question -> answer") |> module(type = "predict")
+run(mod, question = "What is R?", .llm = chat_openai())
+```
+
+## Optimizing the Pipeline
+
+Once you have examples of good llms.txt files, optimize the generator:
+
+```{r optimize}
+# Collect examples of well-written llms.txt
+training_data <- dsp_trainset(
+  pkg_name = c("dplyr", "ggplot2"),
+  purpose = c(
+    "A grammar of data manipulation with verbs like filter, select, mutate",
+    "A grammar of graphics for declarative plot creation"
+  ),
+  # ... other fields ...
+  expected_output = c(
+    "# dplyr\n\n> Fast, consistent tools for data manipulation...",
+    "# ggplot2\n\n> Create elegant graphics layer by layer..."
+  )
+)
+
+# Optimize with GEPA (when available) or LabeledFewShot
+generate_llms_txt_optimized <- compile(
+  LabeledFewShot(k = 2),
+  generate_llms_txt,
+  trainset = training_data
+)
+```
+
+## What This Demonstrates
+
+This tutorial shows:
+
+- **Multi-step pipelines**: Breaking complex tasks into focused modules
+- **Structured outputs**: Using `type_object()` for reliable extraction
+- **Chain of thought**: `with_reasoning()` improves analysis quality
+- **Practical utility**: Generate real documentation from code
+
+The same pipeline pattern works for:
+- API documentation generation
+- Code review summaries
+- Changelog generation
+- Test case generation
+
+## Batch Processing
+
+Generate llms.txt for multiple packages:
+```{r batch}
+pkg_paths <- c("~/packages/pkg1", "~/packages/pkg2", "~/packages/pkg3")
+
+results <- lapply(pkg_paths, function(path) {
+  tryCatch(
+    generate_llms_txt_for_pkg(path),
+    error = function(e) paste("Error:", e$message)
+  )
+})
+
+# Write to files
+Map(function(txt, path) {
+  writeLines(txt, file.path(path, "llms.txt"))
+}, results, pkg_paths)
+```
+
+## Next Steps
+
+- Add validation with `metric_contains()` to ensure required sections exist
+- Use `run_async()` for parallel package processing
+- Integrate with pkgdown for automatic generation during site builds
+
+See `vignette("compilation-optimization")` for more on optimization strategies.

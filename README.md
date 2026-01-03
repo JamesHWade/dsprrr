@@ -167,6 +167,10 @@ dsprrr uses ellmer for all LLM calls. The integration is straightforward:
 ```r
 vignette("getting-started", package = "dsprrr")
 vignette("compilation-optimization", package = "dsprrr")
+
+# Tutorials
+vignette("text-adventure", package = "dsprrr")  # Build an AI game master
+vignette("llms-txt", package = "dsprrr")        # Generate package docs
 ```
 
 ## Status

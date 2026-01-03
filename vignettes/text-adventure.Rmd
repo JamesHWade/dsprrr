@@ -1,0 +1,261 @@
+---
+title: "Building a Text Adventure Game"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Building a Text Adventure Game}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This tutorial builds a text-based adventure game to demonstrate how dsprrr modules compose into interactive systems. You'll create an AI game master that generates scenes, handles dialogue, and resolves player actions.
+
+```{r setup}
+library(dsprrr)
+library(ellmer)
+```
+
+## The Game Structure
+
+We'll build three modules that work together:
+
+1. **SceneGenerator** — Describes the current location and available actions
+2. **DialogueHandler** — Manages NPC conversations
+3. **ActionResolver** — Determines outcomes of player choices
+
+## Defining the Signatures
+
+Each module needs a clear input/output contract:
+
+```{r signatures}
+# Scene generation: where are we and what can we do?
+scene_sig <- signature(
+
+  "location, inventory, history -> description, actions, npcs_present",
+  instructions = "You are a game master for a fantasy text adventure.
+Describe the scene vividly but concisely (2-3 sentences).
+List 3-5 possible actions as a comma-separated string.
+List any NPCs present by name, or 'none' if empty."
+)
+
+# Dialogue: talking to NPCs
+dialogue_sig <- signature(
+  "npc_name, player_says, context -> npc_response, mood, gives_item",
+  instructions = "You are an NPC in a fantasy game.
+Respond in character (1-2 sentences).
+Mood should be: friendly, neutral, suspicious, or hostile.
+gives_item should be 'none' or the name of an item if the NPC gives something."
+)
+
+# Action resolution: what happens when the player does something?
+action_sig <- signature(
+  "action, location, inventory, difficulty -> success: boolean, outcome, inventory_change",
+  instructions = "Resolve the player's action.
+Be fair but create drama. Not everything should succeed.
+outcome is a 1-2 sentence description of what happens.
+inventory_change is 'none', '+item_name' to add, or '-item_name' to remove."
+)
+```
+
+## Creating the Modules
+
+Wrap each signature in a module with chain-of-thought reasoning for better decisions:
+
+```{r modules}
+# Add reasoning to make better narrative choices
+scene_mod <- scene_sig |>
+  with_reasoning() |>
+  module(type = "predict")
+
+dialogue_mod <- dialogue_sig |>
+  with_reasoning() |>
+  module(type = "predict")
+
+action_mod <- action_sig |>
+  with_reasoning() |>
+  module(type = "predict")
+```
+
+## Game State
+
+Track the player's progress with a simple list:
+```{r state}
+new_game <- function() {
+  list(
+    location = "village_square",
+    inventory = c("torch", "bread"),
+    history = "You arrived at the village seeking the ancient artifact.",
+    visited = character(),
+    npcs_met = character()
+  )
+}
+
+game <- new_game()
+```
+
+## The Game Loop
+
+Now wire it together into a playable game:
+```{r game-loop}
+play_turn <- function(game, player_input, llm) {
+  # Generate the current scene
+  scene <- run(
+    scene_mod,
+    location = game$location,
+    inventory = paste(game$inventory, collapse = ", "),
+    history = game$history,
+    .llm = llm
+  )
+
+  cat("\n", scene$description, "\n\n")
+  cat("You can: ", scene$actions, "\n")
+  if (scene$npcs_present != "none") {
+    cat("You see: ", scene$npcs_present, "\n")
+  }
+  cat("Inventory: ", paste(game$inventory, collapse = ", "), "\n\n")
+
+ # Handle player input
+  if (grepl("^talk ", player_input, ignore.case = TRUE)) {
+    npc <- sub("^talk ", "", player_input, ignore.case = TRUE)
+    response <- run(
+      dialogue_mod,
+      npc_name = npc,
+      player_says = "Hello",
+      context = paste("Location:", game$location, "- History:", game$history),
+      .llm = llm
+    )
+    cat("\n", npc, " says: \"", response$npc_response, "\"\n", sep = "")
+    if (response$gives_item != "none") {
+      game$inventory <- c(game$inventory, response$gives_item)
+      cat("(Received: ", response$gives_item, ")\n", sep = "")
+    }
+  } else {
+    # Resolve the action
+    result <- run(
+      action_mod,
+      action = player_input,
+      location = game$location,
+      inventory = paste(game$inventory, collapse = ", "),
+      difficulty = "medium",
+      .llm = llm
+    )
+
+    if (result$success) {
+      cat("\nSuccess! ", result$outcome, "\n")
+    } else {
+      cat("\nFailed. ", result$outcome, "\n")
+    }
+
+    # Update inventory
+    if (result$inventory_change != "none") {
+      if (grepl("^\\+", result$inventory_change)) {
+        item <- sub("^\\+", "", result$inventory_change)
+        game$inventory <- c(game$inventory, item)
+        cat("(Added to inventory: ", item, ")\n", sep = "")
+      } else if (grepl("^-", result$inventory_change)) {
+        item <- sub("^-", "", result$inventory_change)
+        game$inventory <- setdiff(game$inventory, item)
+        cat("(Removed from inventory: ", item, ")\n", sep = "")
+      }
+    }
+  }
+
+  # Update history
+  game$history <- paste(game$history, player_input, sep = " -> ")
+
+  game
+}
+```
+
+## Playing the Game
+
+```{r play}
+llm <- chat_openai()  # or chat_anthropic(), chat_google_gemini()
+
+game <- new_game()
+
+# Play a few turns
+game <- play_turn(game, "look around", llm)
+game <- play_turn(game, "talk to merchant", llm)
+game <- play_turn(game, "go to the forest", llm)
+game <- play_turn(game, "search for tracks", llm)
+```
+
+Example output:
+
+```
+The village square bustles with morning activity. A weathered merchant
+tends his cart of curious goods, while the path north leads to a dark forest.
+
+You can: look around, talk to merchant, examine cart, go to forest, rest
+You see: merchant
+Inventory: torch, bread
+
+> talk to merchant
+
+merchant says: "Ah, a traveler! Looking for the artifact too, eh?
+Take this map—you'll need it in the forest."
+(Received: old_map)
+
+> go to forest
+
+Success! You follow the winding path into the forest. The trees grow thick
+and the light dims. Your torch flickers.
+```
+
+## Adding Optimization
+
+Once you have labeled examples of good game responses, optimize the modules:
+
+```{r optimize}
+# Collect some example scenes you like
+training_scenes <- dsp_trainset(
+  location = c("forest_clearing", "dungeon_entrance"),
+  inventory = c("torch, sword", "torch, rope, key"),
+  history = c("Fought wolves in the forest", "Found the hidden dungeon"),
+  description = c(
+    "Moonlight filters through ancient oaks into a peaceful clearing. A moss-covered stone altar stands at the center.",
+    "A massive iron door blocks your path, its surface covered in strange runes that seem to pulse with faint light."
+  ),
+  actions = c(
+    "examine altar, rest, continue north, search undergrowth, climb tree",
+    "try the key, read runes, search for another entrance, knock, go back"
+  ),
+  npcs_present = c("none", "none")
+)
+
+# Compile with few-shot examples
+scene_mod_optimized <- compile(
+  LabeledFewShot(k = 2),
+  scene_mod,
+  trainset = training_scenes
+)
+```
+
+## What This Demonstrates
+
+This game showcases several dsprrr patterns:
+
+- **Signature composition**: Three modules with distinct responsibilities
+- **Chain of thought**: `with_reasoning()` helps the LLM make better narrative decisions
+- **State management**: Game state flows through modules without coupling them
+- **Interactive systems**: Modules respond to dynamic user input
+
+The same patterns apply to chatbots, interactive assistants, and any system where LLM outputs feed back into subsequent calls.
+
+## Next Steps
+
+- Add location transitions with a `locations` map
+- Implement combat with health tracking
+- Use `optimize_grid()` to tune temperature for more creative vs consistent responses
+- Add tool use for dice rolls: `module(type = "react", tools = list(roll_dice))`
+
+See `vignette("advanced-modules")` for more module patterns.
