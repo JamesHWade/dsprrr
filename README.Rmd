@@ -8,7 +8,6 @@ output: github_document
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
@@ -23,16 +22,12 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/dsprrr/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/dsprrr)
 <!-- badges: end -->
 
-**dsprrr** brings the power of [DSPy](https://github.com/stanfordnlp/dspy) to R, providing a framework for building **principled, test-driven, and optimizable** LLM applications. If you know [ellmer](https://ellmer.tidyverse.org), you already know dsprrr — it extends ellmer's patterns with signatures, optimization, and tracing.
+dsprrr adds signatures, optimization, and tracing on top of [ellmer](https://ellmer.tidyverse.org). It's an R implementation of ideas from [DSPy](https://github.com/stanfordnlp/dspy).
 
-## The Idea: From Prompts to Programs
+**When to use dsprrr vs ellmer directly:**
 
-Instead of wrestling with prompt strings, dsprrr lets you:
-
-- **Declare** what you want using expressive signatures
-- **Compose** modules into complex pipelines
-- **Optimize** prompts automatically using your data
-- **Trace** every LLM call for debugging and analysis
+- Use **ellmer** when you have a prompt that works and just need to call an LLM
+- Use **dsprrr** when you want to systematically improve prompts using labeled data, or when you need to trace and debug LLM calls across a pipeline
 
 ## Installation
 
@@ -41,341 +36,145 @@ Instead of wrestling with prompt strings, dsprrr lets you:
 pak::pak("JamesHWade/dsprrr")
 ```
 
-## Quick Start: Three Ways to Use dsprrr
+## What dsprrr adds
 
-### 1. Chat-First (ellmer users start here)
+### Signatures
 
-If you're coming from ellmer, `dsp()` feels familiar — it's like `chat$chat_structured()` but with signatures:
-
-```{r chat-first, eval=FALSE}
-library(dsprrr)
-library(ellmer)
-
-# Create a Chat as usual
-chat <- chat_openai()
-
-# Use dsp() for structured LLM calls with signatures
-chat |> dsp("question -> answer", question = "What is 2+2?")
-#> "4"
-
-# Signatures define both input AND output structure
-chat |> dsp(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')",
-  text = "I love this package!"
-)
-#> "positive"
-
-# Even simpler — auto-detect Chat from API keys
-dsp("question -> answer", question = "What is the capital of France?
-#> "Paris"
-```
-
-### 2. Module-Based (for reusable components)
-
-When you need to reuse a configuration or optimize it later:
-
-```{r module-based, eval=FALSE}
-# Convert Chat to a reusable module
-classifier <- chat_openai() |>
-  as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
-
-# Use it multiple times
-classifier$predict(text = "Great product!")
-#> "positive"
-
-classifier$predict(text = "Terrible experience")
-#> "negative"
-
-# Batch processing
-classifier$predict(text = c("Love it!", "Hate it!", "It's okay"))
-#> c("positive", "negative", "neutral")
-
-# tidymodels-style interface
-predict(classifier, new_data = tibble(text = c("Amazing!", "Awful")))
-```
-
-### 3. Full DSPy-Style (for optimization workflows)
-
-For systematic prompt optimization:
-
-```{r dspy-style, eval=FALSE}
-# Define signature and module
-sig <- signature("context, question -> answer")
-mod <- module(sig, type = "predict")
-
-# Prepare training data
-trainset <- dsp_trainset(
-
-  context = c("R is a language for statistics.", "Python is versatile."),
-  question = c("What is R for?", "Describe Python."),
-  answer = c("Statistics", "Versatile programming")
-)
-
-# Optimize with few-shot examples
-optimized <- compile_module(
-  program = mod,
-  teleprompter = LabeledFewShot(k = 2),
-  trainset = trainset
-)
-
-# Run optimized module
-optimized |> run(
-  context = "dsprrr brings DSPy to R.",
-  question = "What does dsprrr do?"
-)
-```
-
-## Key Features
-
-### Signatures: Declarative LLM Interfaces
+A compact notation for defining LLM inputs and outputs:
 
 ```{r signatures-demo}
 library(dsprrr)
 
-# String notation — concise and expressive
-signature("text -> sentiment")
-signature("context, question -> answer: string")
+# Arrow notation: inputs -> output
+signature("question -> answer")
+
+# Multiple inputs
+signature("context, question -> answer")
+
+# Typed outputs (uses ellmer types under the hood)
 signature("review -> rating: enum('1', '2', '3', '4', '5')")
 
 # With instructions
-signature(
- "text -> summary",
-  instructions = "Be concise. Maximum 50 words."
-)
+signature("text -> summary", instructions = "Maximum 50 words.")
 ```
 
-### Tool Support with ReactModule
+### Modules
 
-```{r react-module, eval=FALSE}
-# Create tools using ellmer
-search_tool <- ellmer::tool(
-  function(query) search_api(query),
-  name = "search",
-  description = "Search for information",
-  arguments = list(query = ellmer::type_string())
-)
+Reusable, stateful wrappers around LLM calls:
 
-# Create a ReAct-style module with tools
-agent <- signature("question -> answer") |>
-  module(type = "react", tools = list(search_tool))
+```{r modules, eval=FALSE}
+library(ellmer)
 
-# The module automatically uses tools as needed
-agent$predict(question = "What's the weather in NYC?")
+# Create a module from a signature
+mod <- module(signature("text -> sentiment"), type = "predict")
+
+# Run it
+run(mod, text = "This is great!", .llm = chat_openai())
+
+# Or convert an existing Chat
+classifier <- chat_openai() |>
+  as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
+
+classifier$predict(text = "Terrible experience")
 ```
 
-### Code Execution Modules
+### Optimization
 
-For tasks requiring exact computation, dsprrr can generate and execute R code:
-
-```{r code-execution, eval=FALSE}
-# Create a code runner (required for security - explicit opt-in)
-runner <- r_code_runner(timeout = 30)
-
-# ProgramOfThought: LLM generates code, R executes it
-pot <- program_of_thought("question -> answer", runner = runner)
-result <- run(pot, question = "What is the sum of primes under 100?", .llm = llm)
-
-# CodeAct: Hybrid agent with both tools AND code execution
-agent <- code_act(
-
-  "question -> answer",
-  tools = list(search = search_tool),
-
-  runner = runner
-)
-result <- run(agent, question = "What is 10% of France's population?", .llm = llm)
-```
-
-**Security**: Code execution uses subprocess isolation via `callr` with timeouts, output limits, and dangerous pattern blocking. For production with untrusted inputs, use OS-level sandboxing.
-
-### Streaming Support
-
-```{r streaming, eval=FALSE}
-mod <- signature("topic -> story") |> module(type = "predict")
-
-# Stream with callback
-mod$stream(topic = "a robot learning to paint", callback = cat)
-
-# Or get a generator for manual consumption
-gen <- mod$stream(topic = "space exploration")
-coro::loop(for (chunk in gen) {
-  cat(chunk)
-})
-```
-
-### Async Operations
-
-```{r async, eval=FALSE}
-# Run multiple modules in parallel
-promises <- list(
-  run_async(mod1, question = "Q1"),
-  run_async(mod2, question = "Q2"),
-  run_async(mod3, question = "Q3")
-)
-
-# Wait for all results
-results <- promises::promise_all(.list = promises)
-```
-
-### Automatic Optimization
+Automatically improve prompts using training data:
 
 ```{r optimization, eval=FALSE}
-# Grid search over configurations
-mod$optimize_grid(
-  devset = training_data,
-  metric = metric_exact_match(),
-  parameters = list(
-    temperature = c(0.1, 0.5, 1.0),
-    prompt_style = c("concise", "detailed")
-  )
+# Compile with few-shot examples
+optimized <- compile(
+  LabeledFewShot(k = 3),
+  mod,
+  trainset = my_labeled_data
 )
 
-# Check results
-module_trials(mod)
-module_metrics(mod)
+# Grid search over parameters
+mod$optimize_grid(
+  devset = dev_data,
+  metric = metric_exact_match(),
+  parameters = list(temperature = c(0.1, 0.5, 1.0))
+)
 ```
 
-### Comprehensive Metrics
+### Tracing
 
-```{r metrics-demo, eval=FALSE}
-# Built-in metrics
-metric_exact_match(field = "answer")
-metric_f1(field = "summary")
-metric_contains("positive", ignore_case = TRUE)
-
-# Custom metrics
-metric_custom(function(pred, exp) {
-  nchar(pred) <= 100  # Conciseness check
-}, name = "length_limit")
-
-# Threshold wrappers
-metric_threshold(metric_f1(), threshold = 0.8)
-```
-
-### Deep ellmer Integration
-
-dsprrr is designed to work seamlessly with ellmer:
-
-| ellmer | dsprrr | Relationship |
-|--------|--------|--------------|
-| `Chat` (R6) | `Module` (R6) | Module wraps Chat |
-| `type_*()` (S7) | `Signature` (S7) | Signature contains types |
-| `chat$chat_structured()` | `chat \|> dsp(sig)` | Same pattern, richer schema |
-| `ToolDef` | ReactModule tools | Direct compatibility |
-| `content_image_*()` | Multimodal inputs | Works directly |
-
-## Production Features
-
-### Tracing and Debugging
+Every LLM call is recorded:
 
 ```{r tracing, eval=FALSE}
-# Every call is traced
-result <- mod$predict(text = "Hello")
-
-# Access traces
 mod$trace_summary()
 export_traces(mod, format = "tibble")
-
-# Get the last trace
-get_last_trace()
 ```
 
-### Module Persistence
+## Quick example
 
-```{r persistence, eval=FALSE}
-# Save optimized module configuration
-pin_module_config(mod, board, "my-classifier")
+```{r quick-example, eval=FALSE}
+library(dsprrr)
+library(ellmer)
 
-# Restore later
-mod <- restore_module_config(board, "my-classifier")
+# Define what you want
+sig <- signature(
+  "context, question -> answer",
+  instructions = "Answer based only on the given context."
+)
+
+# Create a module
+mod <- module(sig, type = "predict")
+
+# Run it
+result <- run(
+  mod,
+  context = "R is a programming language for statistical computing.",
+  question = "What is R used for?",
+  .llm = chat_openai()
+)
 ```
 
-### vitals Integration
+## Module types
 
-```{r vitals, eval=FALSE}
-library(vitals)
+| Type | Use case |
+|------|----------|
+| `predict` | Basic text generation |
+| `react` | Tool use (wraps ellmer tools) |
+| `chain_of_thought` | Step-by-step reasoning |
+| `program_of_thought` | Generate and execute R code |
 
-# Use dsprrr modules as vitals solvers
-solver <- as_vitals_solver(mod)
+```{r module-types, eval=FALSE}
+# ReAct agent with tools
+agent <- module(
+  signature("question -> answer"),
+  type = "react",
+  tools = list(my_search_tool)
+)
 
-# Or adapt vitals scorers for dsprrr
-metric <- as_dsprrr_metric(model_graded_qa())
+# Chain of thought
+cot <- signature("question -> answer") |> with_reasoning()
+mod <- module(cot, type = "predict")
 ```
 
-## Architecture
+## ellmer compatibility
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        User API                             │
-│  dsp() ──► as_module() ──► module() ──► run()/predict()    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                      Module Layer                           │
-│  PredictModule ◄── ReactModule (tools)                     │
-│       │           ProgramOfThought ◄── CodeAct (tools+code)│
-│       └── Signature (S7) + Chat (R6) + State               │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                    Optimization Layer                       │
-│  Teleprompters: LabeledFewShot, GridSearchTeleprompter     │
-│  Metrics: exact_match, f1, contains, custom                │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                      ellmer Layer                           │
-│  chat_openai(), chat_claude(), chat_google_gemini()        │
-│  type_string(), type_enum(), type_object()                 │
-└─────────────────────────────────────────────────────────────┘
-```
+dsprrr uses ellmer for all LLM calls. The integration is straightforward:
 
-## Roadmap
+| ellmer | dsprrr equivalent |
+|--------|-------------------|
+| `chat_openai()` | Pass to `run(..., .llm = )` |
+| `type_string()`, `type_enum()` | Used inside signatures |
+| `tool()` | Pass to `module(..., tools = )` |
+| `chat$chat_structured()` | `dsp(chat, signature, ...)` |
 
-### Completed
-
-- **Core Framework**: Signatures, Modules, run/predict
-- **Chat-Centric API**: `dsp()`, `as_module()`, default Chat
-- **Optimization**: Teleprompters, grid search, metrics
-- **Tool Support**: ReactModule with ellmer tools
-- **Code Execution**: ProgramOfThought and CodeAct modules with safe R code execution
-- **Advanced Reasoning**: ChainOfThought, BestOfN, Refine, MultiChainComparison
-- **Streaming & Async**: `stream()`, `run_async()`, `stream_async()`
-- **ellmer Integration**: Full compatibility with Chat, types, tools
-- **vitals Integration**: Bidirectional solver/metric adapters
-
-### In Progress
-
-- Advanced teleprompters (MIPRO, GEPA)
-- Cost tracking and token budgets
-
-### Future
-
-- Multi-agent orchestration
-- Caching with pins
-- API deployment with vetiver
-
-## Getting Help
+## Learning more
 
 ```r
-# View the getting started guide
 vignette("getting-started", package = "dsprrr")
-
-# Optimization workflows
 vignette("compilation-optimization", package = "dsprrr")
-
-# Production patterns
-vignette("orchestration", package = "dsprrr")
 ```
 
-## Contributing
+## Status
 
-We welcome contributions! Please see our [contribution guidelines](.github/CONTRIBUTING.md).
-
-## License
-
-MIT
+Experimental. The API may change. See [PLAN.md](PLAN.md) for the roadmap.
 
 ## Acknowledgments
 
-Inspired by [DSPy](https://github.com/stanfordnlp/dspy) from Stanford NLP. Built on [ellmer](https://ellmer.tidyverse.org) and [S7](https://rconsortium.github.io/S7/).
+Built on [ellmer](https://ellmer.tidyverse.org) and [S7](https://rconsortium.github.io/S7/). Inspired by [DSPy](https://github.com/stanfordnlp/dspy).
