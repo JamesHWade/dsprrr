@@ -1,8 +1,38 @@
 # Building a Text Adventure Game
 
+> **Note**: Code in this tutorial requires an OpenAI API key to run. Set
+> `eval = TRUE` and configure your API credentials to execute
+> interactively. The code is tested and functional—`eval = FALSE` keeps
+> the vignette buildable without API access.
+
 This tutorial builds a text-based adventure game using dsprrr. The AI
 handles narrative generation, NPC dialogue, and action resolution while
 you control the game framework and player state.
+
+## Why This Matters Beyond Games
+
+The patterns in this tutorial directly apply to production AI systems:
+
+- **Customer service agents**: Like NPCs, they maintain conversation
+  context, respond appropriately to user mood, and escalate when needed.
+  The `dialogue_sig` pattern—tracking relationship history, detecting
+  sentiment, and generating contextual responses—is exactly how you’d
+  build an intelligent support bot.
+
+- **Interactive documentation**: Imagine a technical assistant that
+  remembers what you’ve tried, suggests next steps based on your skill
+  level, and adapts explanations to your context. That’s the `scene_sig`
+  pattern: generate options based on user state and history.
+
+- **Workflow orchestration**: The action resolution system—evaluating
+  whether an action succeeds based on context, applying consequences,
+  and updating state—maps directly to approval workflows, form
+  validation, and multi-step processes.
+
+The game framing makes these patterns concrete and testable. Once you
+understand how to build a coherent NPC that remembers past
+conversations, building a customer service agent that does the same is
+straightforward.
 
 *This tutorial is adapted from the [DSPy text adventure
 tutorial](https://dspy.ai/tutorials/ai_text_game/) by the DSPy team.*
@@ -122,7 +152,18 @@ record_action <- function(context, action) {
 
 ### AI Signatures
 
-This is where dsprrr comes in—define clear contracts for each AI task:
+This is where dsprrr comes in—define clear contracts for each AI task.
+Instead of writing prompt strings, we declare what information goes in
+and what structure comes out. This separation matters: when you want to
+improve the AI’s scene descriptions, you tweak the signature’s
+instructions rather than hunting through string templates.
+
+Each signature serves a distinct purpose in the game loop:
+
+**Scene generation** takes the current game state and produces a rich
+description with available actions. Notice the `atmosphere`
+enum—constraining outputs to specific values makes downstream logic
+predictable.
 
 ``` r
 scene_sig <- signature(
@@ -143,7 +184,14 @@ scene_sig <- signature(
   instructions = "You are a game master for a fantasy text adventure.
 Create immersive scenes with interesting choices."
 )
+```
 
+**NPC dialogue** handles conversations. The `relationship` input (“new”
+or “returning”) lets the AI adjust tone—a merchant who recognizes you
+might offer better prices. The structured output ensures we can
+programmatically handle items changing hands.
+
+``` r
 dialogue_sig <- signature(
   inputs = list(
     input("npc_name", "NPC name"),
@@ -159,7 +207,15 @@ dialogue_sig <- signature(
   ),
   instructions = "You are an NPC in a fantasy RPG. Stay in character."
 )
+```
 
+**Action resolution** determines outcomes. Rather than rolling dice, we
+give the AI context (skill level, difficulty) and let it generate both
+the success/failure boolean and a narrative explanation. The structured
+output (`damage_taken`, `item_gained`, `experience`) lets us update game
+state automatically.
+
+``` r
 action_sig <- signature(
   inputs = list(
     input("action", "What player attempts"),
@@ -181,18 +237,30 @@ action_sig <- signature(
 
 ### Create Modules
 
+Each signature becomes a module. We wrap them with
+[`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md)
+which adds a “reasoning” field to the output—the model explains its
+thinking before giving the final answer. This chain-of-thought approach
+improves output quality, especially for complex decisions like whether
+an action should succeed.
+
 ``` r
 create_modules <- function(llm) {
   list(
-    scene = scene_sig |> with_reasoning() |> module(type = "predict"),
-    dialogue = dialogue_sig |> with_reasoning() |> module(type = "predict"),
-    action = action_sig |> with_reasoning() |> module(type = "predict"),
+    scene = module(scene_sig |> with_reasoning()),
+    dialogue = module(dialogue_sig |> with_reasoning()),
+    action = module(action_sig |> with_reasoning()),
     llm = llm
   )
 }
 ```
 
 ### Game Logic
+
+The core pattern: take game state, generate AI content, apply effects,
+repeat. Each function handles one concern—`player_summary` formats state
+for the AI, `detect_skill` maps player intent to game mechanics, and the
+`generate_*`/`resolve_*` functions orchestrate LLM calls.
 
 ``` r
 player_summary <- function(player) {

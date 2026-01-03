@@ -98,13 +98,47 @@
 
     
     
+<blockquote>
+<p><strong>Note</strong>: Code in this tutorial requires an OpenAI API
+key to run. Set <code>eval = TRUE</code> and configure your API
+credentials to execute interactively. The code is tested and
+functional—<code>eval = FALSE</code> keeps the vignette buildable
+without API access.</p>
+</blockquote>
 <p>This tutorial builds a text-based adventure game using dsprrr. The AI
 handles narrative generation, NPC dialogue, and action resolution while
 you control the game framework and player state.</p>
+<div class="section level2">
+<h2 id="why-this-matters-beyond-games">Why This Matters Beyond Games<a class="anchor" aria-label="anchor" href="#why-this-matters-beyond-games"></a>
+</h2>
+<p>The patterns in this tutorial directly apply to production AI
+systems:</p>
+<ul>
+<li><p><strong>Customer service agents</strong>: Like NPCs, they
+maintain conversation context, respond appropriately to user mood, and
+escalate when needed. The <code>dialogue_sig</code> pattern—tracking
+relationship history, detecting sentiment, and generating contextual
+responses—is exactly how you’d build an intelligent support
+bot.</p></li>
+<li><p><strong>Interactive documentation</strong>: Imagine a technical
+assistant that remembers what you’ve tried, suggests next steps based on
+your skill level, and adapts explanations to your context. That’s the
+<code>scene_sig</code> pattern: generate options based on user state and
+history.</p></li>
+<li><p><strong>Workflow orchestration</strong>: The action resolution
+system—evaluating whether an action succeeds based on context, applying
+consequences, and updating state—maps directly to approval workflows,
+form validation, and multi-step processes.</p></li>
+</ul>
+<p>The game framing makes these patterns concrete and testable. Once you
+understand how to build a coherent NPC that remembers past
+conversations, building a customer service agent that does the same is
+straightforward.</p>
 <p><em>This tutorial is adapted from the <a href="https://dspy.ai/tutorials/ai_text_game/" class="external-link">DSPy text adventure
 tutorial</a> by the DSPy team.</em></p>
 <p>We’ll start with the simplest approach—plain lists—then show how S7
 adds structure as the project grows.</p>
+</div>
 <div class="section level2">
 <h2 id="what-youll-build">What You’ll Build<a class="anchor" aria-label="anchor" href="#what-youll-build"></a>
 </h2>
@@ -220,7 +254,15 @@ adds structure as the project grows.</p>
 <h3 id="ai-signatures">AI Signatures<a class="anchor" aria-label="anchor" href="#ai-signatures"></a>
 </h3>
 <p>This is where dsprrr comes in—define clear contracts for each AI
-task:</p>
+task. Instead of writing prompt strings, we declare what information
+goes in and what structure comes out. This separation matters: when you
+want to improve the AI’s scene descriptions, you tweak the signature’s
+instructions rather than hunting through string templates.</p>
+<p>Each signature serves a distinct purpose in the game loop:</p>
+<p><strong>Scene generation</strong> takes the current game state and
+produces a rich description with available actions. Notice the
+<code>atmosphere</code> enum—constraining outputs to specific values
+makes downstream logic predictable.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scene_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -239,9 +281,14 @@ task:</p>
 <span>  <span class="op">)</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"You are a game master for a fantasy text adventure.</span></span>
 <span><span class="st">Create immersive scenes with interesting choices."</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">dialogue_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><strong>NPC dialogue</strong> handles conversations. The
+<code>relationship</code> input (“new” or “returning”) lets the AI
+adjust tone—a merchant who recognizes you might offer better prices. The
+structured output ensures we can programmatically handle items changing
+hands.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dialogue_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"npc_name"</span>, <span class="st">"NPC name"</span><span class="op">)</span>,</span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"npc_role"</span>, <span class="st">"NPC role and personality"</span><span class="op">)</span>,</span>
@@ -255,9 +302,15 @@ task:</p>
 <span>    gives_item <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Item given, or 'none'"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"You are an NPC in a fantasy RPG. Stay in character."</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">action_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><strong>Action resolution</strong> determines outcomes. Rather than
+rolling dice, we give the AI context (skill level, difficulty) and let
+it generate both the success/failure boolean and a narrative
+explanation. The structured output (<code>damage_taken</code>,
+<code>item_gained</code>, <code>experience</code>) lets us update game
+state automatically.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">action_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"action"</span>, <span class="st">"What player attempts"</span><span class="op">)</span>,</span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"relevant_skill"</span>, <span class="st">"Which skill applies"</span><span class="op">)</span>,</span>
@@ -278,12 +331,17 @@ task:</p>
 <div class="section level3">
 <h3 id="create-modules">Create Modules<a class="anchor" aria-label="anchor" href="#create-modules"></a>
 </h3>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<p>Each signature becomes a module. We wrap them with
+<code><a href="../reference/with_reasoning.html">with_reasoning()</a></code> which adds a “reasoning” field to the
+output—the model explains its thinking before giving the final answer.
+This chain-of-thought approach improves output quality, especially for
+complex decisions like whether an action should succeed.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_modules</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">llm</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    scene <span class="op">=</span> <span class="va">scene_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
-<span>    dialogue <span class="op">=</span> <span class="va">dialogue_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
-<span>    action <span class="op">=</span> <span class="va">action_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
+<span>    scene <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">scene_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    dialogue <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">dialogue_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    action <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">action_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    llm <span class="op">=</span> <span class="va">llm</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
@@ -291,7 +349,13 @@ task:</p>
 <div class="section level3">
 <h3 id="game-logic">Game Logic<a class="anchor" aria-label="anchor" href="#game-logic"></a>
 </h3>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<p>The core pattern: take game state, generate AI content, apply
+effects, repeat. Each function handles one
+concern—<code>player_summary</code> formats state for the AI,
+<code>detect_skill</code> maps player intent to game mechanics, and the
+<code>generate_*</code>/<code>resolve_*</code> functions orchestrate LLM
+calls.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">player_summary</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">player</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Level %d %s | HP:%d | STR:%d INT:%d CHA:%d STL:%d | Items: %s"</span>,</span>
@@ -360,7 +424,7 @@ task:</p>
 <div class="section level3">
 <h3 id="saveload">Save/Load<a class="anchor" aria-label="anchor" href="#saveload"></a>
 </h3>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">save_game</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">game</span>, <span class="va">filename</span> <span class="op">=</span> <span class="st">"savegame.json"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/read_json.html" class="external-link">write_json</a></span><span class="op">(</span><span class="va">game</span>, <span class="va">filename</span>, auto_unbox <span class="op">=</span> <span class="cn">TRUE</span>, pretty <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_success</a></span><span class="op">(</span><span class="st">"Saved to {.file {filename}}"</span><span class="op">)</span></span>
@@ -380,7 +444,7 @@ task:</p>
 <div class="section level3">
 <h3 id="minimal-game-loop">Minimal Game Loop<a class="anchor" aria-label="anchor" href="#minimal-game-loop"></a>
 </h3>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">play_game</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">modules</span> <span class="op">&lt;-</span> <span class="fu">create_modules</span><span class="op">(</span><span class="va">llm</span><span class="op">)</span></span>
 <span></span>
@@ -435,12 +499,12 @@ project, you’re done.</p>
 <li>Hard to extend (adding new player types?)</li>
 </ul>
 <p>S7 solves these while staying functional:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rconsortium.github.io/S7/" class="external-link">S7</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="s7-classes-for-game-state">S7 Classes for Game State<a class="anchor" aria-label="anchor" href="#s7-classes-for-game-state"></a>
 </h3>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">Player</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"Player"</span>,</span>
 <span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    name <span class="op">=</span> <span class="va">class_character</span>,</span>
@@ -492,7 +556,7 @@ slots</p>
 <h3 id="s7-generics-for-state-transitions">S7 Generics for State Transitions<a class="anchor" aria-label="anchor" href="#s7-generics-for-state-transitions"></a>
 </h3>
 <p>Instead of plain functions, use generics for extensibility:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">add_item</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_generic.html" class="external-link">new_generic</a></span><span class="op">(</span><span class="st">"add_item"</span>, <span class="st">"player"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/method.html" class="external-link">method</a></span><span class="op">(</span><span class="va">add_item</span>, <span class="va">Player</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">player</span>, <span class="va">item</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">player</span><span class="op">@</span><span class="va">inventory</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">player</span><span class="op">@</span><span class="va">inventory</span>, <span class="va">item</span><span class="op">)</span></span>
@@ -565,7 +629,7 @@ slots</p>
 <div class="section level3">
 <h3 id="print-methods">Print Methods<a class="anchor" aria-label="anchor" href="#print-methods"></a>
 </h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/method.html" class="external-link">method</a></span><span class="op">(</span><span class="va">print</span>, <span class="va">Player</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h3</a></span><span class="op">(</span><span class="st">"{x@name}"</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">"Level {x@level} | HP: {x@health}/100 | XP: {x@experience}"</span><span class="op">)</span></span>
@@ -590,7 +654,7 @@ slots</p>
 <h3 id="richer-signatures">Richer Signatures<a class="anchor" aria-label="anchor" href="#richer-signatures"></a>
 </h3>
 <p>With more structure, we can add richer AI interactions:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scene_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"location"</span>, <span class="st">"Current location name"</span><span class="op">)</span>,</span>
@@ -658,7 +722,7 @@ slots</p>
 <div class="section level3">
 <h3 id="full-game-functions">Full Game Functions<a class="anchor" aria-label="anchor" href="#full-game-functions"></a>
 </h3>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">player_summary</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">player</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Level %d %s | HP:%d | STR:%d INT:%d CHA:%d STL:%d | Items: %s"</span>,</span>
@@ -706,7 +770,7 @@ slots</p>
 <div class="section level3">
 <h3 id="scene-and-dialogue-handling">Scene and Dialogue Handling<a class="anchor" aria-label="anchor" href="#scene-and-dialogue-handling"></a>
 </h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">generate_scene</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">game</span>, <span class="va">modules</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>    <span class="va">modules</span><span class="op">$</span><span class="va">scene</span>,</span>
@@ -786,7 +850,7 @@ slots</p>
 <div class="section level3">
 <h3 id="action-resolution">Action Resolution<a class="anchor" aria-label="anchor" href="#action-resolution"></a>
 </h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">resolve_action</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">game</span>, <span class="va">action</span>, <span class="va">modules</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">skill</span> <span class="op">&lt;-</span> <span class="fu">detect_skill</span><span class="op">(</span><span class="va">action</span><span class="op">)</span></span>
 <span></span>
@@ -840,7 +904,7 @@ slots</p>
 <div class="section level3">
 <h3 id="saveload-with-s7">Save/Load with S7<a class="anchor" aria-label="anchor" href="#saveload-with-s7"></a>
 </h3>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">save_game</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">game</span>, <span class="va">filename</span> <span class="op">=</span> <span class="st">"savegame.json"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">save_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    player <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -896,7 +960,7 @@ slots</p>
 <div class="section level3">
 <h3 id="character-creation">Character Creation<a class="anchor" aria-label="anchor" href="#character-creation"></a>
 </h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_character</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h1</a></span><span class="op">(</span><span class="st">"{.emph MYSTIC REALM ADVENTURE}"</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h2</a></span><span class="op">(</span><span class="st">"Character Creation"</span><span class="op">)</span></span>
@@ -930,7 +994,7 @@ slots</p>
 <div class="section level3">
 <h3 id="full-game-loop">Full Game Loop<a class="anchor" aria-label="anchor" href="#full-game-loop"></a>
 </h3>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">play_game</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">modules</span> <span class="op">&lt;-</span> <span class="fu">create_modules</span><span class="op">(</span><span class="va">llm</span><span class="op">)</span></span>
 <span>  <span class="va">game</span> <span class="op">&lt;-</span> <span class="fu">create_character</span><span class="op">(</span><span class="op">)</span></span>
