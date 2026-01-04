@@ -713,3 +713,20 @@ dsprrr's advanced modules bring battle-tested patterns from DSPy to R:
 - Add **BestOfN** when you need reliability
 - Use **ProgramOfThought** for exact computation (math, statistics)
 - Use **CodeAct** when you need tools AND code execution together
+
+## Further Reading
+
+**Tutorials:**
+- [Improving with Examples](tutorial-improve-with-demos.html) — Learn few-shot prompting
+- [Finding Best Configuration](tutorial-optimize-your-module.html) — Grid search optimization
+
+**How-to Guides:**
+- [Compile & Optimize](compilation-optimization.html) — Full optimization workflow with advanced modules
+- [Build RAG Pipelines](rag-workflows.html) — Use modules in retrieval workflows
+
+**Concepts:**
+- [Understanding Signatures & Modules](concepts-signatures-modules.html) — S7 vs R6 design choices
+- [How Optimization Works](concepts-optimization-theory.html) — Teleprompter theory
+
+**Reference:**
+- [Quick Reference](cheatsheet.html) — Syntax and patterns at a glance

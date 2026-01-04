@@ -1244,11 +1244,21 @@ The compilation framework makes your LLM programs:
 - **More portable** across different LLMs and use cases
 - **More efficient** by finding the best prompts automatically
 
-## Next Steps
+## Further Reading
 
-- Experiment with different metrics for your use case
-- Try both teleprompters to see which works better
-- Build a library of optimized modules for common tasks
-- Share your optimization patterns with the dsprrr community
+**Tutorials:**
+- [Improving with Examples](tutorial-improve-with-demos.html) — Learn few-shot prompting step by step
+- [Finding Best Configuration](tutorial-optimize-your-module.html) — Hands-on grid search tutorial
+- [Taking to Production](tutorial-deploy-to-production.html) — Deploy optimized modules
 
-Remember: Let dsprrr handle the prompt engineering while you focus on building great applications!
+**How-to Guides:**
+- [Advanced Optimizer Guide](advanced-optimization.html) — BootstrapFewShot, COPRO, MIPROv2, and more
+- [Evaluate with Vitals](vitals-recipes.html) — Integration with vitals package
+
+**Concepts:**
+- [How Optimization Works](concepts-optimization-theory.html) — Theory behind teleprompters
+- [Why Metrics Matter](concepts-why-metrics-matter.html) — Choosing the right metric
+- [Understanding Signatures & Modules](concepts-signatures-modules.html) — S7 vs R6 design choices
+
+**Reference:**
+- [Quick Reference](cheatsheet.html) — Metrics, signature syntax, and module types

@@ -670,10 +670,19 @@ session_cost()  # Total cost so far
 | `GEPA` | Multi-objective | High (100+) | High |
 | `Ensemble` | Combines modules | N/A | Varies |
 
-## Next Steps
+## Further Reading
 
-- Start with `LabeledFewShot` or `BootstrapFewShot` for quick wins
-- Graduate to `COPRO` or `MIPROv2` for production optimization
-- Use `Ensemble` to combine your best models
-- See `vignette("compilation-optimization")` for basic optimization concepts
-- See `vignette("vitals-integration")` for evaluation with vitals package
+**Tutorials:**
+- [Finding Best Configuration](tutorial-optimize-your-module.html) — Hands-on grid search
+- [Taking to Production](tutorial-deploy-to-production.html) — Deploy optimized modules
+
+**How-to Guides:**
+- [Compile & Optimize](compilation-optimization.html) — Basic optimization concepts
+- [Evaluate with Vitals](vitals-recipes.html) — Integration with vitals package
+
+**Concepts:**
+- [How Optimization Works](concepts-optimization-theory.html) — Theory behind teleprompters
+- [Why Metrics Matter](concepts-why-metrics-matter.html) — Choosing the right metric
+
+**Reference:**
+- [Quick Reference](cheatsheet.html) — Metrics and teleprompter syntax
