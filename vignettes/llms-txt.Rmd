@@ -10,9 +10,13 @@ vignette: >
 ```{r}
 #| include: false
 # Skip evaluation during R CMD check or CI (cassettes may not match current code)
-in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
-            identical(Sys.getenv("NOT_CRAN"), "false") ||
-            !interactive()
+# VITALS_SHOULD_EVAL can override for cassette recording
+force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+in_check <- !force_eval && (
+  nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+  identical(Sys.getenv("NOT_CRAN"), "false") ||
+  !interactive()
+)
 
 should_eval <- !in_check && dsprrr:::eval_vignette()
 
@@ -233,14 +237,14 @@ Keep it concise - this is reference documentation for AI systems."
 
 ### Create Modules
 
-Each module wraps a signature. We add `chain_of_thought()` to the analysis stages—this asks the LLM to show its work, which improves accuracy for complex analysis tasks. The final `llmstxt` stage just needs to synthesize; no reasoning required.
+Each module wraps a signature. We use `type = "chain_of_thought"` for the analysis stages—this asks the LLM to show its work, which improves accuracy for complex analysis tasks. The final `llmstxt` stage just needs to synthesize; no reasoning required.
 
 ```{r simple-modules}
 create_modules <- function(llm) {
   list(
-    purpose = module(analyze_purpose_sig |> chain_of_thought()),
-    structure = module(analyze_structure_sig |> chain_of_thought()),
-    examples = module(generate_examples_sig |> chain_of_thought()),
+    purpose = module(analyze_purpose_sig, type = "chain_of_thought"),
+    structure = module(analyze_structure_sig, type = "chain_of_thought"),
+    examples = module(generate_examples_sig, type = "chain_of_thought"),
     llmstxt = module(generate_llmstxt_sig),
     llm = llm
   )
@@ -328,12 +332,13 @@ analyze_package <- function(pkg_path = ".", llm = chat_openai()) {
 ### Use It
 
 ```{r simple-use}
-# Analyze and print
-result <- analyze_package(".")
-cat(result$llmstxt)
+#| cassette: simple-use
+# Find package root (works from vignettes/ or project root)
+pkg_root <- if (file.exists("DESCRIPTION")) "." else ".."
 
-# Write to file
-writeLines(result$llmstxt, "llms.txt")
+# Analyze and print
+result <- analyze_package(pkg_root)
+cat(result$llmstxt)
 ```
 
 **This works.** For a one-off script, you're done.
@@ -638,20 +643,18 @@ preview_llmstxt <- function(pkg_path = ".", llm = chat_openai()) {
 ### Running It
 
 ```{r s7-run}
+#| cassette: s7-run
+# Find package root (works from vignettes/ or project root)
+pkg_root <- if (file.exists("DESCRIPTION")) "." else ".."
+
 # Analyze current package
-result <- analyze_package(".")
+result <- analyze_package(pkg_root)
 
 # View the analysis (uses print method)
 print(result)
 
 # See the generated llms.txt
 cat(result@llmstxt)
-
-# Write to file
-writeLines(result@llmstxt, "llms.txt")
-
-# Or use convenience function
-generate_llmstxt_file(".", output = "llms.txt")
 ```
 
 ## Example Output

@@ -10,9 +10,13 @@ vignette: >
 ```{r}
 #| include: false
 # Skip evaluation during R CMD check or CI (cassettes may not match current code)
-in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
-            identical(Sys.getenv("NOT_CRAN"), "false") ||
-            !interactive()
+# VITALS_SHOULD_EVAL can override for cassette recording
+force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+in_check <- !force_eval && (
+  nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+  identical(Sys.getenv("NOT_CRAN"), "false") ||
+  !interactive()
+)
 
 should_eval <- !in_check && dsprrr:::eval_vignette()
 
@@ -231,14 +235,14 @@ action_sig <- signature(
 
 ### Create Modules
 
-Each signature becomes a module. We wrap them with `chain_of_thought()` which adds a "reasoning" field to the output—the model explains its thinking before giving the final answer. This improves output quality, especially for complex decisions like whether an action should succeed.
+Each signature becomes a module. We use `type = "chain_of_thought"` which adds a "reasoning" field to the output—the model explains its thinking before giving the final answer. This improves output quality, especially for complex decisions like whether an action should succeed.
 
 ```{r simple-modules}
 create_modules <- function(llm) {
   list(
-    scene = module(scene_sig |> chain_of_thought()),
-    dialogue = module(dialogue_sig |> chain_of_thought()),
-    action = module(action_sig |> chain_of_thought()),
+    scene = module(scene_sig, type = "chain_of_thought"),
+    dialogue = module(dialogue_sig, type = "chain_of_thought"),
+    action = module(action_sig, type = "chain_of_thought"),
     llm = llm
   )
 }
