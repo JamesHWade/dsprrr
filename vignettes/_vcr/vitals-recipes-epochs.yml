@@ -1,0 +1,1253 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f594a82a606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:28 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '349'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=hORhkxI1OL35T1jnf2Ili.Yzaly7Iu68PfVWYz6apM8-1767490108-1.0.1.1-xwenaenIgDqQbF1DDj_dH9cvf4tAk6ocTrNI7dL6YbKWZGmXWXish47_GwtWiumgHGumz1GudXzTXNxtu8Z757c2ULfQA24VKbn5jq2rRt4;
+        path=/; expires=Sun, 04-Jan-26 01:58:28 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=iWcocQbf27Pv2Glavxr4MuMC956ZCJE6YOBqYvUc5BM-1767490108043-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '351'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9988'
+      x-ratelimit-remaining-tokens: '199913'
+      x-ratelimit-reset-requests: 1m36.653s
+      x-ratelimit-reset-tokens: 26ms
+      x-request-id: req_9db3e7ba7b7241abbb1bcf4560f5a5f1
+    body:
+      string: |-
+        {
+          "id": "resp_0db8a51264171dfb016959c23bac3c819fad339a5a7341dff8",
+          "object": "response",
+          "created_at": 1767490107,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490108,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0db8a51264171dfb016959c23bf298819f9e7e89e05da7353b",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"tech\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 68,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 74
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:28
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f598ebea606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:28 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '366'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=8154fMV38P0vc9LmrmHnQY.fIHrRNE3M0v8A8QdY_2c-1767490108-1.0.1.1-u31AIC7LqTzmk6VEvBClD1TNGiVyVKWHnsuNA8erCtx7M0sWsEx1rCu7N758ARQPTWxurlq.ChTmj9YGyYm0cKsHrJ2uyjEwtU_fUciqqbI;
+        path=/; expires=Sun, 04-Jan-26 01:58:28 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=ceXM7MeueNzu9uTTSKW5gEJLIkJCP2GXxjJLNx_ailo-1767490108741-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '369'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9988'
+      x-ratelimit-remaining-tokens: '199876'
+      x-ratelimit-reset-requests: 1m35.948s
+      x-ratelimit-reset-tokens: 37ms
+      x-request-id: req_c65fa81b00924fd6a3da0c50fe31330a
+    body:
+      string: |-
+        {
+          "id": "resp_020201fcc329c88e016959c23c5b7881a190321745d8b17364",
+          "object": "response",
+          "created_at": 1767490108,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490108,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_020201fcc329c88e016959c23ca5cc81a19612db0c659e4af0",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"tech\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 105,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 111
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:28
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f59f9a09606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:29 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '356'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=3MOj25bfjM_o22EWlyHvjUsW5PeOa6Sc1582UoidPd0-1767490109-1.0.1.1-FVkFYLUWJ9QWD5fhfhuU.0xw5A.kfb8uO7sDkUQ3fTQkztA9_0VSBTwoPZPMp6wlWmUQUV_CJZlOdHuV7LE4WTtKKVqcGXjTfn0RMJC7Eto;
+        path=/; expires=Sun, 04-Jan-26 01:58:29 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=hYY2uQ6S3fZ6WrzaYKG_iX3MdM_offPf.c7b4YjfNg4-1767490109804-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '359'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9988'
+      x-ratelimit-remaining-tokens: '199839'
+      x-ratelimit-reset-requests: 1m43.509s
+      x-ratelimit-reset-tokens: 48ms
+      x-request-id: req_5008058a586147838bf6b56c4e317760
+    body:
+      string: |-
+        {
+          "id": "resp_07f4031978157eaa016959c23d6e9c81948b9eaeb82e5eb6d2",
+          "object": "response",
+          "created_at": 1767490109,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490109,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_07f4031978157eaa016959c23daee881948132d36c007c79c6",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"tech\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 142,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 148
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:29
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5a4df08606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:30 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '338'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=owMPZiuG.xZE_ZlmU72M90Z.SSqqQZGTGrlKFYXMi.w-1767490110-1.0.1.1-SkiXy8KmVVUoNYB4n6qToC5yv6yMNKlPJs7n31GHNbAODgtPhsrcpNghe9CB5kfqJv7KZusBQq5Yc4vV5Ioi5.dPlJjM6JpyfQhVyz43RN0;
+        path=/; expires=Sun, 04-Jan-26 01:58:30 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=TdacXaSAUy4sdBJ6uWdAOjWX0Ao7t.PhqqVD4QF38Vw-1767490110640-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '341'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9987'
+      x-ratelimit-remaining-tokens: '199804'
+      x-ratelimit-reset-requests: 1m51.304s
+      x-ratelimit-reset-tokens: 58ms
+      x-request-id: req_e39807da5d7d4fea884542a0a14e7ce9
+    body:
+      string: |-
+        {
+          "id": "resp_0f94ca613c1233fc016959c23e48bc819cae8c96f561a16833",
+          "object": "response",
+          "created_at": 1767490110,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490110,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0f94ca613c1233fc016959c23e86b4819cb3b9c7763764ac5e",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"sports\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 177,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 183
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:30
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5a88ab8606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:31 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '308'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=KgYZu1wm24744EnkHE_o.7rlSMkYx97_6YH0DCO8WuQ-1767490111-1.0.1.1-DZSQ5LO6IgBL7coAhIPYaa84S3JBPvKYUecfn3wrRIosvGLzC58LFlqkRRPhCcTOXoSiydTJHG1ehQ5.XUCmhE496BCD9oT9HcLljeSQhSc;
+        path=/; expires=Sun, 04-Jan-26 01:58:31 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=PejA1c_78HnntwMDDV9pY02oMmsBYy9ehQxLTZTSI90-1767490111186-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '312'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9986'
+      x-ratelimit-remaining-tokens: '199769'
+      x-ratelimit-reset-requests: 1m59.372s
+      x-ratelimit-reset-tokens: 69ms
+      x-request-id: req_7e4a52f8074d4b13914e5f53b2e74375
+    body:
+      string: |-
+        {
+          "id": "resp_01926e16569c8e37016959c23edc6c81a282a4fd049e3eb216",
+          "object": "response",
+          "created_at": 1767490110,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490111,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_01926e16569c8e37016959c23f176881a2a01959beddb8ff96",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"sports\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 212,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 218
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:31
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5ac9ead606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:32 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '578'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=5yKcJ9YvzHpFzTGPvPNgxEEtJquFEl0AVo9Cd5jaKk4-1767490112-1.0.1.1-EJtIeRDlFaXzpO.vHaNiPReaM2lT0bwA8ylD.xYEtuCIqe_8.YdHTdf2IZ.ycI9Dfr.F6bTuUtq7yZjKK5j8Luxe6GNY405P_9tD7fpnQwk;
+        path=/; expires=Sun, 04-Jan-26 01:58:32 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=FJv_1gbMTEN3ZgKqVwB8ElMDvHEopPa3Akhun7sTerM-1767490112116-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '580'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9985'
+      x-ratelimit-remaining-tokens: '199734'
+      x-ratelimit-reset-requests: 2m7.346s
+      x-ratelimit-reset-tokens: 79ms
+      x-request-id: req_32c4c1eb8fac46cfaba274d1182b62c0
+    body:
+      string: |-
+        {
+          "id": "resp_065a54fda6f92bcc016959c23f852c8190bd157478377326b0",
+          "object": "response",
+          "created_at": 1767490111,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490112,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_065a54fda6f92bcc016959c23fe7d88190aba4dfa94247ae98",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"sports\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 247,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 253
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:32
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Senate passes new bill"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5b28c20606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:32 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '518'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=n5W66KuW5znMaxFNp2qQvJw4ACN4C2_wCoZ72e7HkQ8-1767490112-1.0.1.1-HWnyXOuDa.nwxIFBCqUrCGPB84tM77LYGUdwso0qdqulL.UPMa2DUYrODbP7S0uRlaCveC9p2sU8ExBjHf2YPtDGayT1cxfUup34CR0uGmA;
+        path=/; expires=Sun, 04-Jan-26 01:58:32 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=f.UfKx5o6M.RmuIxDCPRywGeYczAOmtCgA1W7rJERrE-1767490112960-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '522'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9984'
+      x-ratelimit-remaining-tokens: '199698'
+      x-ratelimit-reset-requests: 2m15.064s
+      x-ratelimit-reset-tokens: 90ms
+      x-request-id: req_50239869b56596d3a07d9a2c56674800
+    body:
+      string: |-
+        {
+          "id": "resp_05ce7ce1da87f993016959c24071348195a8ca3b67d20e4f1e",
+          "object": "response",
+          "created_at": 1767490112,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490112,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_05ce7ce1da87f993016959c240c5508195887f5219235a576e",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"politics\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 283,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 7,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 290
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:33
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Senate passes new bill"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"politics\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Senate passes new bill"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5b7b8ad606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:33 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '440'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=n2lnQQyH5fEnbAC.aTdK.ECIuFQnV.Vg1aSq_owwv0Y-1767490113-1.0.1.1-n9lJoFCxLufLSh77L61V8m4wLuQLkbkYI8GOAZl_Cd6B8K0XmeB2EbLDQrKRtR8la41CpWXKCclhJASebMeWP8qLuSLqIK_.pplAG2jIJbo;
+        path=/; expires=Sun, 04-Jan-26 01:58:33 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=zL.5Q.mp1GOKYNdR5LHZELb_YYrC7vF.c8BKsoAhF9M-1767490113738-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '443'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9983'
+      x-ratelimit-remaining-tokens: '199661'
+      x-ratelimit-reset-requests: 2m22.858s
+      x-ratelimit-reset-tokens: 101ms
+      x-request-id: req_fdcb53c6e00347929a1018b0d57953f8
+    body:
+      string: |-
+        {
+          "id": "resp_0ff8c6bf76e57348016959c241481481a28da6e384b85aa4cf",
+          "object": "response",
+          "created_at": 1767490113,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490113,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0ff8c6bf76e57348016959c2419e2881a296d57e923f936833",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"politics\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 320,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 7,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 327
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:33
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        New iPhone released today"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"tech\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Lakers win championship"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"sports\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Senate passes new bill"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"politics\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Senate passes new bill"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"politics\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Senate passes new bill"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["tech","sports","politics"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5bd3d36606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:34 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '529'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=cDIp3fLrtpagGcs67r0RNG4_NV7aHwoZEpMsjo8mRVg-1767490114-1.0.1.1-Gk7PMEv4J0H57KneDZ1rreTGiOX4WC3UfuP.85O6xFG7.0F9eXTdry1oKsH9EnWTgo.2jvJT14C8zYTprsQKhTzcRC9BpnEK9X5K1CEhnJw;
+        path=/; expires=Sun, 04-Jan-26 01:58:34 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=lgf1b7ARNVY7NeTU_RZoyqKKL6NZv_4HuEYedGjEZcA-1767490114711-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '532'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9981'
+      x-ratelimit-remaining-tokens: '199624'
+      x-ratelimit-reset-requests: 2m39.242s
+      x-ratelimit-reset-tokens: 112ms
+      x-request-id: req_cbba8dffddd84f90af479c1fbf55f1ef
+    body:
+      string: |-
+        {
+          "id": "resp_02546f4f0ed6a929016959c2422a64819dab4478426f106808",
+          "object": "response",
+          "created_at": 1767490114,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490114,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_02546f4f0ed6a929016959c2429cbc819d801f74f7f1a739dc",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"politics\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "tech",
+                      "sports",
+                      "politics"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 357,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 7,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 364
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:34
+recorded_with: VCR-vcr/2.1.0

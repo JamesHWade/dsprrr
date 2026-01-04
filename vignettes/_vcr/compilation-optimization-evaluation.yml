@@ -1,0 +1,418 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
+        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping.","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Sun, 04 Jan 2026 02:32:14 GMT
+      content-type: application/json
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '28000'
+      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:16Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:14Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:13Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '36000'
+      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:14Z'
+      request-id: req_011CWmZ64QZRAADKF3XVtE2j
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      server: cloudflare
+      x-envoy-upstream-service-time: '2107'
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      content-encoding: gzip
+      cf-ray: 9b8752f37e6610a1-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_0132xDs3dhr7Xk9SLQyNWFGA","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01VJD7sZ3nX1y4KSxwicJjXo","name":"_structured_tool_call","input":{"data":{"category":"complaint","priority":"normal","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":975,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2026-01-04 02:32:14
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
+        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Sun, 04 Jan 2026 02:32:16 GMT
+      content-type: application/json
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '28000'
+      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:20Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:16Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:15Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '36000'
+      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:16Z'
+      request-id: req_011CWmZ6EwZvSg95vnEssNCz
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      server: cloudflare
+      x-envoy-upstream-service-time: '1879'
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      content-encoding: gzip
+      cf-ray: 9b875302ed9610a1-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_014M8B9MXyQ74MmLAFztCBcB","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_014D9VfgxJdDrJzftxoGDkME","name":"_structured_tool_call","input":{"data":{"category":"inquiry","priority":"normal","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":1047,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":1047,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2026-01-04 02:32:16
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
+        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
+        Thank you!","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Sun, 04 Jan 2026 02:32:19 GMT
+      content-type: application/json
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '28000'
+      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:22Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:19Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:18Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '36000'
+      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:19Z'
+      request-id: req_011CWmZ6QMN7oTpZHhKWGk4M
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      server: cloudflare
+      x-envoy-upstream-service-time: '2796'
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      content-encoding: gzip
+      cf-ray: 9b8753109a1e10a1-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_017JcJys2VxjYYVbTKtvMM9H","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01CYNHhxs1bwM3qVWUE3CFLD","name":"_structured_tool_call","input":{"data":{"category":"feedback","priority":"low","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":101,"cache_read_input_tokens":1047,"cache_creation":{"ephemeral_5m_input_tokens":101,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2026-01-04 02:32:19
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
+        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
+        Thank you!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping.","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Sun, 04 Jan 2026 02:32:22 GMT
+      content-type: application/json
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:22Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:23Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:22Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:22Z'
+      request-id: req_011CWmZ6eEnfhfVCT22qaeHT
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      server: cloudflare
+      x-envoy-upstream-service-time: '2733'
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      content-encoding: gzip
+      cf-ray: 9b875324fc6710a1-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01Dc3twHGE6kMNtGjH8HQocV","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_018Z1Bjbw6xjiW1JJE8yXnzb","name":"_structured_tool_call","input":{"data":{"category":"complaint","priority":"normal","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":98,"cache_read_input_tokens":1148,"cache_creation":{"ephemeral_5m_input_tokens":98,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2026-01-04 02:32:22
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
+        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
+        Thank you!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Sun, 04 Jan 2026 02:32:25 GMT
+      content-type: application/json
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:25Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:25Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:24Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:25Z'
+      request-id: req_011CWmZ6suKAQt7aihDoxXhf
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      server: cloudflare
+      x-envoy-upstream-service-time: '2119'
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      content-encoding: gzip
+      cf-ray: 9b875338ee7c10a1-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01CNHeb24kdvZXg452eDCgov","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_011ybZfF5ZTWcXfU8oKTh2Gh","name":"_structured_tool_call","input":{"data":{"category":"inquiry","priority":"normal","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":98,"cache_read_input_tokens":1246,"cache_creation":{"ephemeral_5m_input_tokens":98,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2026-01-04 02:32:25
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
+        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
+        Thank you!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: The package was damaged during
+        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
+        Thank you!","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Sun, 04 Jan 2026 02:32:28 GMT
+      content-type: application/json
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:27Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:28Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:28Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:27Z'
+      request-id: req_011CWmZ74rd3nJGiC5FRhkAM
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      server: cloudflare
+      x-envoy-upstream-service-time: '2255'
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      content-encoding: gzip
+      cf-ray: 9b875348fd6210a1-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_011zGERpCk88g6uHcUk8tsRQ","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01FNttfcLWFxbuVBwb8vUwmX","name":"_structured_tool_call","input":{"data":{"category":"feedback","priority":"low","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":101,"cache_read_input_tokens":1344,"cache_creation":{"ephemeral_5m_input_tokens":101,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2026-01-04 02:32:28
+recorded_with: VCR-vcr/2.1.0

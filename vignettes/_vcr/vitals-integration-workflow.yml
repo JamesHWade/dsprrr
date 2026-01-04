@@ -1,0 +1,261 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\nExample 1:\nquestion:
+        What is 2 + 2?\nOutput: 4\n\nExample 2:\nquestion: What is the capital of
+        France?\nOutput: Paris\n\n\n# Input: question\nquestion: What is the capital
+        of Spain?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b874b300a69344d-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:26:54 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '729'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=ccpp_MvZot0quPB_5xxCxU5xooTSUCkRmhA_8_2f2fk-1767493614-1.0.1.1-tkHVMTkbNqBAF1O2.QBOkg_qXBrW_5U4j_9foEW7LZOua22.HW2DbCjM._kkojn1YGdImKGtIiyJWU7GGJHU8ikbQIs8sBSffYz8CYEKris;
+        path=/; expires=Sun, 04-Jan-26 02:56:54 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=VKtLItM0.IQfhqrnJ2XzwfVWoAHpdG5G2GaZ_2fO1TY-1767493614858-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '733'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9995'
+      x-ratelimit-remaining-tokens: '199883'
+      x-ratelimit-reset-requests: 35.248s
+      x-ratelimit-reset-tokens: 35ms
+      x-request-id: req_8d6484ffadc844aaa9574401dbc44649
+    body:
+      string: |-
+        {
+          "id": "resp_04f8b0ae43eacb9c016959cfee1e308192a22f17755d59241d",
+          "object": "response",
+          "created_at": 1767493614,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493614,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_04f8b0ae43eacb9c016959cfeec4dc8192a883b322ed21f005",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"Madrid\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 98,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 104
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:26:54
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\nExample 1:\nquestion:
+        What is 2 + 2?\nOutput: 4\n\nExample 2:\nquestion: What is the capital of
+        France?\nOutput: Paris\n\n\n# Input: question\nquestion: What is the capital
+        of Spain?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"Madrid\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\nExample 1:\nquestion:
+        What is 2 + 2?\nOutput: 4\n\nExample 2:\nquestion: What is the capital of
+        France?\nOutput: Paris\n\n\n# Input: question\nquestion: What is 3 + 3?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b874b365a0c344d-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:26:55 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '541'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=Wu0R1jC.U.xb7G.9l1TKK7aOJuNI09nBYkO.7eGjbN0-1767493615-1.0.1.1-D1sYSEKRwE24o72iH4gM7M9NhL_C6Ww.76jIgDQ13aMxc.BxMR49.DYxIy7sTRIcdsz86g96qR0r_XvZ2IyBOnhlWEnM93NQLXuAhvGoObM;
+        path=/; expires=Sun, 04-Jan-26 02:56:55 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=.RWo89tImGlqP8n66OwwJbTGKHRcmTcNwvUqH_UwzpY-1767493615693-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '544'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9994'
+      x-ratelimit-remaining-tokens: '199807'
+      x-ratelimit-reset-requests: 51.53s
+      x-ratelimit-reset-tokens: 57ms
+      x-request-id: req_806275d27e2c4c9fad002280184644ca
+    body:
+      string: |-
+        {
+          "id": "resp_09b52d6238e15da6016959cfef22148192a9a9e56eae2fc691",
+          "object": "response",
+          "created_at": 1767493615,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493615,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_09b52d6238e15da6016959cfef932c8192b931a35c8518b3b7",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"6\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 174,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 180
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:26:55
+recorded_with: VCR-vcr/2.1.0

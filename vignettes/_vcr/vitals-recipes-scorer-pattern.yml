@@ -1,0 +1,257 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `task`, produce the fields `code`.\n\n# Input: task\ntask: Write
+        a function to add two numbers"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"code":{"type":"string","description":""}},"required":["code"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f34b69b15da7-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:26:54 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '874'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=7oUe3j7MvOUMHzDueDS0obl9J8kqrGmWe54eWXZpDKM-1767490014-1.0.1.1-Ibwqsiunm.MX0VKdr3HtTlGx4OJD7gmjkF7s416JtvXSu33C8FqUqUt328EHHzZWwxHNdhZGJrbYn70uDzZhpY2pjrw5zuyKxh7SZNUcEho;
+        path=/; expires=Sun, 04-Jan-26 01:56:54 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=lNYSgTILtMDJ_z2IjTeKGzgtEDakhF0VX2LlXsyIY00-1767490014900-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '876'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9999'
+      x-ratelimit-remaining-tokens: '199919'
+      x-ratelimit-reset-requests: 8.64s
+      x-ratelimit-reset-tokens: 24ms
+      x-request-id: req_1e671fc48b734bdda633c2e03deb30cd
+    body:
+      string: |-
+        {
+          "id": "resp_013bdc6abb56b448016959c1de05e48196bb03defbca33ee6f",
+          "object": "response",
+          "created_at": 1767490014,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490014,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_013bdc6abb56b448016959c1de8e248196a99bb323d282c265",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"code\":\"def add_numbers(a, b):\\n    return a + b\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 62,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 19,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 81
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:26:54
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `task`, produce the fields `code`.\n\n# Input: task\ntask: Write
+        a function to add two numbers"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"code\":\"def
+        add_numbers(a, b):\\n    return a + b\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `task`, produce the fields `code`.\n\n# Input: task\ntask: Create
+        a loop that prints 1 to 5"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"code":{"type":"string","description":""}},"required":["code"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f3526a9d5da7-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:26:55 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '704'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=33aG7IXT6H06tUTSRoqviDXgci_b9wxVNtjammBEMZA-1767490015-1.0.1.1-67cyyrtaS1jWV2tQ1LBHY2pxMWKGRrwxM9ve9KV.a.grmQ8kFSHHhbklwZp6EfnnZ3XKpkv4Hq8CdtAjN8v0TyCGxPtEwhGZOWo.EvUQLMs;
+        path=/; expires=Sun, 04-Jan-26 01:56:55 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=JOu2O_LAMtn79OeEpCjOxEHJhlk_LtiQl8fsz_bj5vc-1767490015866-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '707'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9998'
+      x-ratelimit-remaining-tokens: '199864'
+      x-ratelimit-reset-requests: 16.364s
+      x-ratelimit-reset-tokens: 40ms
+      x-request-id: req_05d9958368574305bcfc2ff6de3bd7a4
+    body:
+      string: |-
+        {
+          "id": "resp_0a8eed3a9985e164016959c1df26dc819488f65d3723b46b6c",
+          "object": "response",
+          "created_at": 1767490015,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490015,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0a8eed3a9985e164016959c1df70f881949afba121752d4fd4",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"code\":\"for i in range(1, 6):\\n    print(i)\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 117,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 21,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 138
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:26:55
+recorded_with: VCR-vcr/2.1.0

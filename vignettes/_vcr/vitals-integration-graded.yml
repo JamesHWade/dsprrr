@@ -1,0 +1,261 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `topic`, produce the fields `explanation`. Think through your reasoning
+        step by step before providing the answer.\n\nInput:\ntopic: Why is the sky
+        blue?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
+        Let''s think step by step in order to produce the explanation."},"explanation":{"type":"string","description":""}},"required":["reasoning","explanation"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b874b3b7e08344d-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:26:59 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '3979'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=Zdp0H2pbRC6At6kEJi1Iola5BxV.b2PbGL3yHHsNSCc-1767493619-1.0.1.1-gaQkBTe2_ClmKOn00SSdzhWdl7U3.fvkW9YV2lKcjDh1Dy9HR_Txnt8Exfjq3sGmOxHNi8uO21thjPXLJYhMBND.jYBWdh7I_mohn7upGBo;
+        path=/; expires=Sun, 04-Jan-26 02:56:59 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=vCyw154lQO.cyYVPst202Im3sgxw9CdGoRC1irY7pwE-1767493619932-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '3982'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9994'
+      x-ratelimit-remaining-tokens: '199884'
+      x-ratelimit-reset-requests: 50.67s
+      x-ratelimit-reset-tokens: 34ms
+      x-request-id: req_14d6c624d1c444a09c1927abb4f81727
+    body:
+      string: |-
+        {
+          "id": "resp_0770ec0caf352950016959cfeff42481958a597b9fc239a83b",
+          "object": "response",
+          "created_at": 1767493615,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493619,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0770ec0caf352950016959cff084d8819585ae089a1121583a",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"reasoning\":\"1. The sky appears blue due to a phenomenon called Rayleigh scattering. \\n2. When sunlight enters the Earth's atmosphere, it collides with air molecules.\\n3. Sunlight is made up of different colors, each with different wavelengths; blue light has a shorter wavelength compared to other colors like red or yellow.\\n4. Because blue light waves are shorter, they are scattered in all directions by the air molecules more than the longer wavelengths.\\n5. As a result, when we look up at the sky during the day, we see more of the scattered blue light than any other color. \\n6. This is why the sky generally appears blue during the daytime.\",\"explanation\":\"The sky is blue because of Rayleigh scattering, where shorter blue wavelengths of sunlight are scattered in all directions by air molecules in the atmosphere.\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "reasoning": {
+                    "type": "string",
+                    "description": "Reasoning: Let's think step by step in order to produce the explanation."
+                  },
+                  "explanation": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "reasoning",
+                  "explanation"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 97,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 175,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 272
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:26:59
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"You
+        are assessing a submitted answer on a given task based on a criterion.\n[BEGIN
+        DATA]\n***\n[Task]: Why is the sky blue?\n***\n[Submission]: list(reasoning
+        = \"1. The sky appears blue due to a phenomenon called Rayleigh scattering.
+        \\n2. When sunlight enters the Earth''s atmosphere, it collides with air molecules.\\n3.
+        Sunlight is made up of different colors, each with different wavelengths;
+        blue light has a shorter wavelength compared to other colors like red or yellow.\\n4.
+        Because blue light waves are shorter, they are scattered in all directions
+        by the air molecules more than the longer wavelengths.\\n5. As a result, when
+        we look up at the sky during the day, we see more of the scattered blue light
+        than any other color. \\n6. This is why the sky generally appears blue during
+        the daytime.\", \n    explanation = \"The sky is blue because of Rayleigh
+        scattering, where shorter blue wavelengths of sunlight are scattered in all
+        directions by air molecules in the atmosphere.\")\n***\n[Criterion]: Light
+        scattering in atmosphere\n***\n[END DATA]\nDoes the submission meet the criterion?\nAfter
+        assessing the submitted answer, reply with ''GRADE: $LETTER'' where\nLETTER
+        is one of C or I.\nPlease choose ONE option: either ''C'' for correct answers,
+        \nor ''I'' for incorrect answers.\nFirst explain your reasoning, then end
+        with GRADE: $LETTER.\nDo not format the grading string and do not include
+        any punctuation or\nexposition after it."}]}],"model":"gpt-4o-mini","stream":false,"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b874b577824344d-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:27:02 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2087'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=TTBZLGpAEInenyBygSBZQjBYrpUT.1vKxgqDZzCoXuE-1767493622-1.0.1.1-1IsKyq26fHooBBmIhCkZxUpmbljWjU5Njv6OlhjKouxzaCCAYTXqsEUm5c5Roaq73W_q1OB8.IghxWlIYho7PYj781MOxy1LA9OlkZ7A5cI;
+        path=/; expires=Sun, 04-Jan-26 02:57:02 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=lJSgcRjIBJYUx6T.15jfm_DnAHzUTAHztGiURxpIbH0-1767493622543-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2091'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9992'
+      x-ratelimit-remaining-tokens: '199665'
+      x-ratelimit-reset-requests: 1m3.66s
+      x-ratelimit-reset-tokens: 100ms
+      x-request-id: req_55c54e01bfe74637a2024a158d5c17e3
+    body:
+      string: |-
+        {
+          "id": "resp_0312de6d26f66bb0016959cff4734c81969907f01587794df0",
+          "object": "response",
+          "created_at": 1767493620,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493622,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0312de6d26f66bb0016959cff4dbe48196848df7c9a0892c2b",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "The submission adequately explains why the sky appears blue by detailing the process of Rayleigh scattering and how shorter wavelengths of light, particularly blue, are more likely to be scattered by air molecules in the atmosphere. It thoroughly addresses the criterion regarding light scattering, clearly linking the phenomenon to the blue color perceived in the sky.\n\nSince the submission accurately incorporates and explains the relevant concept of light scattering in the atmosphere, it meets the criterion successfully.\n\nGRADE: C"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 316,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 89,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 405
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:27:02
+recorded_with: VCR-vcr/2.1.0

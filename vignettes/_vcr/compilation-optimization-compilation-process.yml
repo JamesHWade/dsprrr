@@ -1,0 +1,504 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\nInput:\nemail: Hi, I''m wondering if you ship to Canada?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8752d1baf1c365-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:32:07 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '724'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=FFpFM5.5__7sF9y6bHgVoEF_WgCLV4ARf_sJXG6mN4w-1767493927-1.0.1.1-X_oFnnAn2_u9k1uTFM6mSRz9ucATFXq5LY0eAcyvoqHpkZ8u0ANHvPIWteJxwsRevp4l0UTF9Cl3qSMf2T8qYqDzp1.iISM1SHXbIWBpKTQ;
+        path=/; expires=Sun, 04-Jan-26 03:02:07 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=.ASZ1xasOw3tYEvcNrwcrxd8JS_6Jfses6rpbAvlU1U-1767493927454-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '727'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9991'
+      x-ratelimit-remaining-tokens: '199836'
+      x-ratelimit-reset-requests: 1m15.652s
+      x-ratelimit-reset-tokens: 49ms
+      x-request-id: req_c0e80065aa944d188c0419f4b0f5b2de
+    body:
+      string: |-
+        {
+          "id": "resp_0f7af289acb86b68016959d126b7bc8191b52aa05004263a15",
+          "object": "response",
+          "created_at": 1767493926,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493927,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0f7af289acb86b68016959d1272780819188b885149f51350d",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 145,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 16,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 161
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:32:07
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Classify
+        customer emails by category and priority. . Consider customer satisfaction
+        and relationship.\n\nExample 1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited
+        time offer!!!\nOutput: spam\n\nExample 2:\nemail: Just wanted to say your
+        customer service is excellent.\nOutput: feedback\n\n\nInput:\nemail: Hi, I''m
+        wondering if you ship to Canada?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8752d8a810116f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:32:08 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '541'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=tkUPA4kSWEAOKOviA6pC_F.89_AOuaRSk1IdWOq1T58-1767493928-1.0.1.1-iMmOpx3OfzqIZi2BOA9IjMIJMW9CopPVcbJQuFqhPVkzZpgzpTgbVi6PZqNKrcMd6wDBhPS_ix.pYaZT584Sy5eeEaMMIPkTWc.KkyjU3oM;
+        path=/; expires=Sun, 04-Jan-26 03:02:08 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=65JKwZst0LBXDxWa9l89JqLPkiqd5uwHJRosdBycGck-1767493928389-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '544'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9990'
+      x-ratelimit-remaining-tokens: '199835'
+      x-ratelimit-reset-requests: 1m23.174s
+      x-ratelimit-reset-tokens: 49ms
+      x-request-id: req_8472c5b173a948b6a59144b204b2bb8a
+    body:
+      string: |-
+        {
+          "id": "resp_0ef44ba82110ebb1016959d127d3fc81929126aa5c4a6721bc",
+          "object": "response",
+          "created_at": 1767493927,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493928,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0ef44ba82110ebb1016959d128121081929dfc5bb3279ff697",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 146,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 16,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 162
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:32:08
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Classify
+        customer emails by category and priority. . Analyze linguistic patterns and
+        intent markers.\n\nExample 1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited
+        time offer!!!\nOutput: spam\n\nExample 2:\nemail: Just wanted to say your
+        customer service is excellent.\nOutput: feedback\n\n\nInput:\nemail: Hi, I''m
+        wondering if you ship to Canada?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8752dedd15116f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:32:09 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '478'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=Vhbs5nKzJbcFnwuHvpU03_OLYdsFfkKKPlDQ1mmQyf4-1767493929-1.0.1.1-q9m03MZ27Qkf7Qi7IW5PkK6dv4oUz0as2jqollKlFANs0HraRz79RI_LG.tRQgU5IFFMFLJRqtosazU7gxTroO6VhCqkea.z52XRYbOy1OI;
+        path=/; expires=Sun, 04-Jan-26 03:02:09 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=bu_dtSXEpJL401Yup8AuVoIVBGuy10ZgM9nxgHiXB_o-1767493929319-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '481'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9988'
+      x-ratelimit-remaining-tokens: '199834'
+      x-ratelimit-reset-requests: 1m39.477s
+      x-ratelimit-reset-tokens: 49ms
+      x-request-id: req_22322d998a0a456b9bca95c20095f21f
+    body:
+      string: |-
+        {
+          "id": "resp_0f7ae783ec9e7772016959d128d16481a29b7fae75c931454d",
+          "object": "response",
+          "created_at": 1767493928,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493929,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0f7ae783ec9e7772016959d1290db081a2aac04c56dc0b2f49",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 147,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 16,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 163
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:32:09
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        customer emails by category and priority. . Use professional business judgment.\n\nExample
+        1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
+        2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
+        feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
+        is unacceptable!","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Sun, 04 Jan 2026 02:32:11 GMT
+      content-type: application/json
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '29000'
+      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:13Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:12Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '49'
+      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:10Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '37000'
+      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:12Z'
+      request-id: req_011CWmZ5sK4aJV6yUq57BGPs
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      server: cloudflare
+      x-envoy-upstream-service-time: '2174'
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      content-encoding: gzip
+      cf-ray: 9b8752e34f9710a1-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_019Vr9VzjN8MptACCrui5CBf","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01BF1dAJzKePJPqXLBX1sJ5X","name":"_structured_tool_call","input":{"data":{"category":"complaint","priority":"urgent","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":877,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
+  recorded_at: 2026-01-04 02:32:11
+recorded_with: VCR-vcr/2.1.0

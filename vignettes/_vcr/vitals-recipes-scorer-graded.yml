@@ -1,0 +1,538 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `topic`, produce the fields `explanation`. Think through your reasoning
+        step by step before providing the answer.\n\n# Input: topic\ntopic: Why is
+        the sky blue?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
+        Let''s think step by step in order to produce the explanation."},"explanation":{"type":"string","description":""}},"required":["reasoning","explanation"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f16e8874e15b-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:25:44 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '6609'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=kvvIZG9XGgK5mSpwvMJdyKpCx.QdFN.H7G.ABTcUn8k-1767489944-1.0.1.1-DsLTOFdrpkaS9PFHIWBL4DG7gmr2uxCTufugqGKpARrMLm3fz5uTviYXeEC3FqL9nwRSrm5.10aGqJvmv6YJXriB37knbf5u7Bhdhts_lgM;
+        path=/; expires=Sun, 04-Jan-26 01:55:44 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=vS0pSNFUyzCtz0fbPrgRAagZUf9lMoiUimAtb2puAA0-1767489944349-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '6612'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9998'
+      x-ratelimit-remaining-tokens: '199881'
+      x-ratelimit-reset-requests: 15.187s
+      x-ratelimit-reset-tokens: 35ms
+      x-request-id: req_e02cf29dd7d34a338b75a6c0aa3278e4
+    body:
+      string: |-
+        {
+          "id": "resp_0c38eb866536beed016959c191bb18819281f9e406de0a986d",
+          "object": "response",
+          "created_at": 1767489937,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767489944,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0c38eb866536beed016959c1920668819295bfb96377855036",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"reasoning\":\"To explain why the sky is blue, we need to delve into the concepts of light, atmosphere, and scattering. Sunlight is made up of many colors, which can be seen in a rainbow. When sunlight enters Earth's atmosphere, it interacts with air molecules. The blue light waves are shorter and are scattered in all directions more than other colors because they vibrate at a higher frequency. This scattering causes the sky to appear predominantly blue to our eyes during the day. Additionally, when the sun is lower in the sky, such as during sunrise or sunset, the light has to pass through more atmosphere, scattering the blue light and allowing red and orange wavelengths to dominate, which is why the sky appears more reddish during those times.\",\"explanation\":\"The sky appears blue because the shorter, blue wavelengths of sunlight are scattered in all directions by the gases and particles in the Earth's atmosphere, a phenomenon known as Rayleigh scattering.\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "reasoning": {
+                    "type": "string",
+                    "description": "Reasoning: Let's think step by step in order to produce the explanation."
+                  },
+                  "explanation": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "reasoning",
+                  "explanation"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 100,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 189,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 289
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:25:44
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `topic`, produce the fields `explanation`. Think through your reasoning
+        step by step before providing the answer.\n\n# Input: topic\ntopic: Why is
+        the sky blue?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"To
+        explain why the sky is blue, we need to delve into the concepts of light,
+        atmosphere, and scattering. Sunlight is made up of many colors, which can
+        be seen in a rainbow. When sunlight enters Earth''s atmosphere, it interacts
+        with air molecules. The blue light waves are shorter and are scattered in
+        all directions more than other colors because they vibrate at a higher frequency.
+        This scattering causes the sky to appear predominantly blue to our eyes during
+        the day. Additionally, when the sun is lower in the sky, such as during sunrise
+        or sunset, the light has to pass through more atmosphere, scattering the blue
+        light and allowing red and orange wavelengths to dominate, which is why the
+        sky appears more reddish during those times.\",\"explanation\":\"The sky appears
+        blue because the shorter, blue wavelengths of sunlight are scattered in all
+        directions by the gases and particles in the Earth''s atmosphere, a phenomenon
+        known as Rayleigh scattering.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `topic`, produce the fields `explanation`. Think through your reasoning
+        step by step before providing the answer.\n\n# Input: topic\ntopic: How do
+        plants make food?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
+        Let''s think step by step in order to produce the explanation."},"explanation":{"type":"string","description":""}},"required":["reasoning","explanation"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f1996e55e15b-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:25:48 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '3639'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=OMCUD40rmAJXPTivgs_ijWtc31wv9007vrLNpEn6PbE-1767489948-1.0.1.1-9cHjDKpbh1pFC4BkNpHLdQwJgJ5ykp5YA9bvCPi_7ihwVA0Ec0QRTgvn3badmp0fzRwO_D_MULhOwlpNpby9gIAuf6Guef79CNtIl9Uiqg0;
+        path=/; expires=Sun, 04-Jan-26 01:55:48 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=U.xWVEcFknUYm81nsWqdV_34ssuGfYj0FMQlUJiQs0Y-1767489948267-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '3644'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9998'
+      x-ratelimit-remaining-tokens: '199647'
+      x-ratelimit-reset-requests: 16.96s
+      x-ratelimit-reset-tokens: 105ms
+      x-request-id: req_3418e42306914b7090b046d44da9a763
+    body:
+      string: |-
+        {
+          "id": "resp_08c91eca99b486b0016959c19898c08197bed2d429419f9618",
+          "object": "response",
+          "created_at": 1767489944,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767489948,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_08c91eca99b486b0016959c198d8e08197b92035aa2b3136ad",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"reasoning\":\"To understand how plants make food, we need to consider the process of photosynthesis. This occurs primarily in the leaves of plants, where chlorophyll, the green pigment, captures sunlight. Plants take in carbon dioxide from the air through tiny openings called stomata and absorb water from the soil through their roots. Using the energy from sunlight, chlorophyll converts carbon dioxide and water into glucose (a type of sugar) and oxygen. The glucose serves as food for the plant, providing energy for growth and development, while the oxygen is released as a byproduct into the atmosphere. This process can be summarized by the equation: 6CO2 + 6H2O + light energy \u2192 C6H12O6 + 6O2.\",\"explanation\":\"Plants make food through photosynthesis, a process that converts sunlight, water, and carbon dioxide into glucose (food) and oxygen.\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "reasoning": {
+                    "type": "string",
+                    "description": "Reasoning: Let's think step by step in order to produce the explanation."
+                  },
+                  "explanation": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "reasoning",
+                  "explanation"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 334,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 184,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 518
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:25:48
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"You
+        are assessing a submitted answer on a given task based on a criterion.\n[BEGIN
+        DATA]\n***\n[Task]: Why is the sky blue?\n***\n[Submission]: list(reasoning
+        = \"To explain why the sky is blue, we need to delve into the concepts of
+        light, atmosphere, and scattering. Sunlight is made up of many colors, which
+        can be seen in a rainbow. When sunlight enters Earth''s atmosphere, it interacts
+        with air molecules. The blue light waves are shorter and are scattered in
+        all directions more than other colors because they vibrate at a higher frequency.
+        This scattering causes the sky to appear predominantly blue to our eyes during
+        the day. Additionally, when the sun is lower in the sky, such as during sunrise
+        or sunset, the light has to pass through more atmosphere, scattering the blue
+        light and allowing red and orange wavelengths to dominate, which is why the
+        sky appears more reddish during those times.\", \n    explanation = \"The
+        sky appears blue because the shorter, blue wavelengths of sunlight are scattered
+        in all directions by the gases and particles in the Earth''s atmosphere, a
+        phenomenon known as Rayleigh scattering.\")\n***\n[Criterion]: Light scattering
+        in atmosphere\n***\n[END DATA]\nDoes the submission meet the criterion?\nAfter
+        assessing the submitted answer, reply with ''GRADE: $LETTER'' where\nLETTER
+        is one of C or I.\nPlease choose ONE option: either ''C'' for correct answers,
+        \nor ''I'' for incorrect answers.\nFirst explain your reasoning, then end
+        with GRADE: $LETTER.\nDo not format the grading string and do not include
+        any punctuation or\nexposition after it."}]}],"model":"gpt-4o-mini","stream":false,"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f1b2dc4fe15b-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:25:51 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2731'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=0VO8CqRIADfuSLEwb0gN4c4.YKqLEI7Ja741yIcEh4g-1767489951-1.0.1.1-II_x1Cwdy3UHFavalhy6Den4EIbSO4rcd2Ta9jyZmasFrX6XwVhdMvyaBXLMWBFGeEBgMiDS1wXoSqCY1ILt82pXgE61PTnfmIv9vdDSDsg;
+        path=/; expires=Sun, 04-Jan-26 01:55:51 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=zm4l9Bg0oxkFzWR6Y1jCjRg.Zmyz0Dg5fNv.mmjikIo-1767489951403-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2734'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9997'
+      x-ratelimit-remaining-tokens: '199651'
+      x-ratelimit-reset-requests: 21.295s
+      x-ratelimit-reset-tokens: 104ms
+      x-request-id: req_de00545fdaa740458926c9a1f66dde8d
+    body:
+      string: |-
+        {
+          "id": "resp_0fa621ef94998de9016959c19cabdc8194adad49d93b479086",
+          "object": "response",
+          "created_at": 1767489948,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767489951,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0fa621ef94998de9016959c19d2c10819487497417ac827f71",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "The submitted answer effectively addresses the criterion by providing a clear explanation of light scattering in the atmosphere. It describes how sunlight interacts with air molecules and specifically emphasizes the scattering of shorter blue wavelengths, which is a key concept in understanding why the sky appears blue. The mention of Rayleigh scattering and the distinction made for sunrise and sunset further enhances the explanation, making it comprehensive and relevant to the criterion.\n\nGRADE: C"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 330,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 82,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 412
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:25:51
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"You
+        are assessing a submitted answer on a given task based on a criterion.\n[BEGIN
+        DATA]\n***\n[Task]: How do plants make food?\n***\n[Submission]: list(reasoning
+        = \"To understand how plants make food, we need to consider the process of
+        photosynthesis. This occurs primarily in the leaves of plants, where chlorophyll,
+        the green pigment, captures sunlight. Plants take in carbon dioxide from the
+        air through tiny openings called stomata and absorb water from the soil through
+        their roots. Using the energy from sunlight, chlorophyll converts carbon dioxide
+        and water into glucose (a type of sugar) and oxygen. The glucose serves as
+        food for the plant, providing energy for growth and development, while the
+        oxygen is released as a byproduct into the atmosphere. This process can be
+        summarized by the equation: 6CO2 + 6H2O + light energy → C6H12O6 + 6O2.\",
+        \n    explanation = \"Plants make food through photosynthesis, a process that
+        converts sunlight, water, and carbon dioxide into glucose (food) and oxygen.\")\n***\n[Criterion]:
+        Photosynthesis using sunlight\n***\n[END DATA]\nDoes the submission meet the
+        criterion?\nAfter assessing the submitted answer, reply with ''GRADE: $LETTER''
+        where\nLETTER is one of C or I.\nPlease choose ONE option: either ''C'' for
+        correct answers, \nor ''I'' for incorrect answers.\nFirst explain your reasoning,
+        then end with GRADE: $LETTER.\nDo not format the grading string and do not
+        include any punctuation or\nexposition after it."}]}],"model":"gpt-4o-mini","stream":false,"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f1c53c5ae15b-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:25:53 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1592'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=FDKns6tOc_.CinZGvnyiWjBav.5XmTNFMmsLdhnwtL8-1767489953-1.0.1.1-ra7Slx7CDfdPREjw69NCbJd3WGJa2cLf5USxCrfWVvyFQV2JK98EK9xKjukyJO7sIsFF5a4vZ6C0I.QeZv3EseAPnagAjMACf_ap.vYMLwo;
+        path=/; expires=Sun, 04-Jan-26 01:55:53 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Q7tVfYttA5wyVIRSzeyHFRyHPwNEjEPN.NNsOLZ9LO0-1767489953200-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1596'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9996'
+      x-ratelimit-remaining-tokens: '199656'
+      x-ratelimit-reset-requests: 26.978s
+      x-ratelimit-reset-tokens: 103ms
+      x-request-id: req_bd44984f5398487cb70befad9b8d3853
+    body:
+      string: |-
+        {
+          "id": "resp_0641d578cf353f6d016959c19f992c81a1bc63e939789cda71",
+          "object": "response",
+          "created_at": 1767489951,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767489953,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0641d578cf353f6d016959c1a020ac81a182aa0f796234a552",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "The submission accurately describes the process of photosynthesis, highlighting the role of sunlight, chlorophyll, carbon dioxide, and water in producing glucose and oxygen. It correctly identifies that sunlight is a key energy source in this process. Since the response effectively explains how plants make food through photosynthesis using sunlight, it meets the criterion.\n\nGRADE: C"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 325,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 68,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 393
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:25:53
+recorded_with: VCR-vcr/2.1.0

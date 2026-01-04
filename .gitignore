@@ -15,8 +15,7 @@ vignettes/*.R
 /doc/
 /Meta/
 
-# vcr cassettes (contain API responses)
-vignettes/_vcr/*.yml
+# vcr cassettes for tests (contain API responses)
 tests/testthat/_vcr/*.yml
 gh-issue-advanced-modules.md
 settings.local.json
