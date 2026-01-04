@@ -11,6 +11,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/advanced-optimization.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/cheatsheet.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/getting-started.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/llms-txt.html</loc></url>
@@ -20,6 +21,12 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/text-adventure.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/tidymodels-integration.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/troubleshooting.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/vitals-integration.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/vitals-recipes.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/authors.html</loc></url>
