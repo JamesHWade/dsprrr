@@ -11,8 +11,7 @@ vignette: >
 #| include: false
 # Skip evaluation during R CMD check or CI (cassettes may not match current code)
 in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
-            identical(Sys.getenv("NOT_CRAN"), "false") ||
-            !interactive()
+            identical(Sys.getenv("NOT_CRAN"), "false")
 
 should_eval <- !in_check && dsprrr:::eval_vignette()
 

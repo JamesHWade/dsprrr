@@ -1,0 +1,1033 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\n# Input: question\nquestion:
+        If a train travels 60 mph for 2 hours, how far does it go?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f510886b606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:08 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2098'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=4bZmV2x3ablb4gcubRCWbEA.JrZJVVoibUeOxWbBnjg-1767490088-1.0.1.1-zKuQCozhwpNHNIrDqzj6uSqKWWD4BkfrsL9MsBeTUyExGoetxItq1zcQk7sLzFnSZ9syG1GLKHUAHkhklzD4sNehSRaVVVCxDQeCp1045Hk;
+        path=/; expires=Sun, 04-Jan-26 01:58:08 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=lGiesmDuB47XTf3.QYHH4n72v6C4Y8qPLeR1AnxLDuo-1767490088673-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2101'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9994'
+      x-ratelimit-remaining-tokens: '199908'
+      x-ratelimit-reset-requests: 48.383s
+      x-ratelimit-reset-tokens: 27ms
+      x-request-id: req_ebe736389cca4dbd905e16825b7d01f4
+    body:
+      string: |-
+        {
+          "id": "resp_01fba99c333ac633016959c22690b081a28e5ccf7df569118e",
+          "object": "response",
+          "created_at": 1767490086,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490088,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_01fba99c333ac633016959c227373081a2959f4016fc7582dd",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"To find the distance traveled by the train, you can use the formula: Distance = Speed \u00d7 Time. \\n\\nHere, the speed is 60 mph and the time is 2 hours. \\n\\nDistance = 60 mph \u00d7 2 hours = 120 miles.\\n\\nSo, the train goes 120 miles.\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 73,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 73,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 146
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:08
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\n# Input: question\nquestion:
+        If a train travels 60 mph for 2 hours, how far does it go?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"To
+        find the distance traveled by the train, you can use the formula: Distance
+        = Speed × Time. \\n\\nHere, the speed is 60 mph and the time is 2 hours. \\n\\nDistance
+        = 60 mph × 2 hours = 120 miles.\\n\\nSo, the train goes 120 miles.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\n# Input: question\nquestion:
+        What is 15% of 80?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f51fb891606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:10 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1488'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=5qazos_CCc_9cSuq3Nb8IQy697EUA2cOh1b5AVfucn0-1767490090-1.0.1.1-9yjn2ABd31Qnz2xQUv67MIg6JktaOXuXE.FHZXjYWfgvWUwrX44JWam57Rq6fQvwmCSCyKsw8WV2klI8U7I_isZjQjrZoTwUSmFNRNqUenY;
+        path=/; expires=Sun, 04-Jan-26 01:58:10 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=giU0HwdrvsF_hOCe2i.6SAm8korrukzuf9KK95AU0X0-1767490090445-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1491'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9993'
+      x-ratelimit-remaining-tokens: '199800'
+      x-ratelimit-reset-requests: 54.879s
+      x-ratelimit-reset-tokens: 60ms
+      x-request-id: req_1a1d4441ae5a4931a761010402322861
+    body:
+      string: |-
+        {
+          "id": "resp_0a19c76570e3f2b5016959c228f4f08193944abce3ace99284",
+          "object": "response",
+          "created_at": 1767490088,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490090,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0a19c76570e3f2b5016959c2292fbc81938fc867116e3144ab",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"To calculate 15% of 80, you can use the formula: \\n\\n15% of 80 = (15/100) \u00d7 80.\\n\\nCalculating this gives: \\n(0.15) \u00d7 80 = 12.\\n\\nSo, 15% of 80 is 12.\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 181,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 73,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 254
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:10
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"You
+        are assessing a submitted answer on a given task based on a criterion.\n[BEGIN
+        DATA]\n***\n[Task]: If a train travels 60 mph for 2 hours, how far does it
+        go?\n***\n[Submission]: list(answer = \"To find the distance traveled by the
+        train, you can use the formula: Distance = Speed × Time. \\n\\nHere, the speed
+        is 60 mph and the time is 2 hours. \\n\\nDistance = 60 mph × 2 hours = 120
+        miles.\\n\\nSo, the train goes 120 miles.\")\n***\n[Criterion]: 120 miles\n***\n[END
+        DATA]\nDoes the submission meet the criterion?\nAfter assessing the submitted
+        answer, reply with ''GRADE: $LETTER'' where\nLETTER is one of C or I.\nPlease
+        choose ONE option: either ''C'' for correct answers, \nor ''I'' for incorrect
+        answers.\nFirst explain your reasoning, then end with GRADE: $LETTER.\nDo
+        not format the grading string and do not include any punctuation or\nexposition
+        after it."}]}],"model":"gpt-4o-mini","stream":false,"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f52a9c2e606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:12 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1316'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=WJxdIogrRGKv20CdT8AraRknvIywOpnaUiWwKjopxuI-1767490092-1.0.1.1-tCwzLAagi7N_VwEU0zM8k0elCzY2.ThRYTMPPf5PIop0utjYQ7ud9Ju0RVyYelX6Jt2blIcEYhfJyHQ.nJy73dSE47AfvFeojDk9jeCAi6c;
+        path=/; expires=Sun, 04-Jan-26 01:58:12 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=OTAHPhGTNz0Dy0WJuCmuiG6jKKNxerKH3gahRTK6wps-1767490092033-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1320'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9991'
+      x-ratelimit-remaining-tokens: '199758'
+      x-ratelimit-reset-requests: 1m10.41s
+      x-ratelimit-reset-tokens: 72ms
+      x-request-id: req_f6886c2fe2b2411ca5eb9fde38b755d6
+    body:
+      string: |-
+        {
+          "id": "resp_083fab31bffc7bfc016959c22ab2b4819696aa0b83241e81da",
+          "object": "response",
+          "created_at": 1767490090,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490091,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_083fab31bffc7bfc016959c22b09c081969bb3ea6ceb5dab9a",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "The submitted answer correctly applies the formula for distance (Distance = Speed \u00d7 Time) using the provided speed of 60 mph and time of 2 hours. The calculation results in 120 miles, which matches the criterion exactly. Therefore, the submission meets the criterion.\n\nGRADE: C"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 223,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 57,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 280
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:12
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"You
+        are assessing a submitted answer on a given task based on a criterion.\n[BEGIN
+        DATA]\n***\n[Task]: What is 15% of 80?\n***\n[Submission]: list(answer = \"To
+        calculate 15% of 80, you can use the formula: \\n\\n15% of 80 = (15/100) ×
+        80.\\n\\nCalculating this gives: \\n(0.15) × 80 = 12.\\n\\nSo, 15% of 80 is
+        12.\")\n***\n[Criterion]: 12\n***\n[END DATA]\nDoes the submission meet the
+        criterion?\nAfter assessing the submitted answer, reply with ''GRADE: $LETTER''
+        where\nLETTER is one of C or I.\nPlease choose ONE option: either ''C'' for
+        correct answers, \nor ''I'' for incorrect answers.\nFirst explain your reasoning,
+        then end with GRADE: $LETTER.\nDo not format the grading string and do not
+        include any punctuation or\nexposition after it."}]}],"model":"gpt-4o-mini","stream":false,"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5342d68606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:13 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1204'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=OnCq97hYMCULkPR.T5KrwnnGWQ12Yk9AMuSVGnnrFP4-1767490093-1.0.1.1-OqqNYB37PEcFLcwyi59hc7GTikB3uodH_YbCSjbTCfmpWM5VkmmfMRuQEu879b8deJKOfJodMDovqpxXj_ecywEA1eaojFmJ5TGbjKOrflY;
+        path=/; expires=Sun, 04-Jan-26 01:58:13 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=W5SyEHgRlNC.mCI87lN6kDEe8lTxkDB5ojCZF_bV_10-1767490093434-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1206'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9993'
+      x-ratelimit-remaining-tokens: '199768'
+      x-ratelimit-reset-requests: 1m0.263s
+      x-ratelimit-reset-tokens: 69ms
+      x-request-id: req_7a6b8d2b59cc41faacd3e402f39091fe
+    body:
+      string: |-
+        {
+          "id": "resp_0288ecab12973ba1016959c22c380881a2b5215033c0ea0a01",
+          "object": "response",
+          "created_at": 1767490092,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490093,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0288ecab12973ba1016959c22c7c4881a2889a1e71be600f39",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "The submitted answer correctly explains how to calculate 15% of 80 and arrives at the correct final answer of 12. Since the criterion is to determine if the answer is 12, and the submission successfully identifies that, it meets the required criterion.\n\nGRADE: C"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 213,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 55,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 268
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:13
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\n# Input: question\nquestion:
+        If a train travels 60 mph for 2 hours, how far does it go?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"To
+        find the distance traveled by the train, you can use the formula: Distance
+        = Speed × Time. \\n\\nHere, the speed is 60 mph and the time is 2 hours. \\n\\nDistance
+        = 60 mph × 2 hours = 120 miles.\\n\\nSo, the train goes 120 miles.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\n# Input: question\nquestion:
+        What is 15% of 80?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"To
+        calculate 15% of 80, you can use the formula: \\n\\n15% of 80 = (15/100) ×
+        80.\\n\\nCalculating this gives: \\n(0.15) × 80 = 12.\\n\\nSo, 15% of 80 is
+        12.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given the
+        fields `question`, produce the fields `answer`. Think through your reasoning
+        step by step before providing the answer.\n\n# Input: question\nquestion:
+        If a train travels 60 mph for 2 hours, how far does it go?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
+        Let''s think step by step in order to produce the answer."},"answer":{"type":"string","description":""}},"required":["reasoning","answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f53d5e05606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:16 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2955'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=CaspbgX5XaKIlyvgiZp5K5IQBZh_SJS8LYZRu5ubihA-1767490096-1.0.1.1-HxbS3yaZjeGqkHVmI0phJ8AS5cW4BbLdl8VHu4Z4NQcwyzBGJ2.9BnmymJSkEojzT1rDbWpoH_43yH4OdVs8uiO8ot4lvwP3ywm28BkIlR4;
+        path=/; expires=Sun, 04-Jan-26 01:58:16 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=zanZHiPyuaUqm3.djugPZS7FmKhKw4PMirX4OcM3Or8-1767490096724-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2958'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9991'
+      x-ratelimit-remaining-tokens: '199646'
+      x-ratelimit-reset-requests: 1m15.985s
+      x-ratelimit-reset-tokens: 106ms
+      x-request-id: req_226747502dcb43edbe1e8b60ec37fa4b
+    body:
+      string: |-
+        {
+          "id": "resp_007431509cb1f5b6016959c22dbf7081939c6b422e69d61d1f",
+          "object": "response",
+          "created_at": 1767490093,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490096,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_007431509cb1f5b6016959c22e20408193aa4311ce321a5cb6",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"reasoning\":\"To calculate the distance traveled by the train, we can use the formula for distance, which is: \\n\\nDistance = Speed \u00d7 Time. \\n\\n1. First, identify the speed of the train, which is given as 60 miles per hour (mph).\\n2. Next, identify the time the train travels, which is 2 hours.\\n3. Multiply the speed (60 mph) by the time (2 hours):\\n   \\n   Distance = 60 mph \u00d7 2 hours = 120 miles.\\n\\nThus, we find that the train travels 120 miles in 2 hours.\",\"answer\":\"120 miles\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "reasoning": {
+                    "type": "string",
+                    "description": "Reasoning: Let's think step by step in order to produce the answer."
+                  },
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "reasoning",
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 335,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 138,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 473
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:16
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\n# Input: question\nquestion:
+        If a train travels 60 mph for 2 hours, how far does it go?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"To
+        find the distance traveled by the train, you can use the formula: Distance
+        = Speed × Time. \\n\\nHere, the speed is 60 mph and the time is 2 hours. \\n\\nDistance
+        = 60 mph × 2 hours = 120 miles.\\n\\nSo, the train goes 120 miles.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\n# Input: question\nquestion:
+        What is 15% of 80?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"To
+        calculate 15% of 80, you can use the formula: \\n\\n15% of 80 = (15/100) ×
+        80.\\n\\nCalculating this gives: \\n(0.15) × 80 = 12.\\n\\nSo, 15% of 80 is
+        12.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given the
+        fields `question`, produce the fields `answer`. Think through your reasoning
+        step by step before providing the answer.\n\n# Input: question\nquestion:
+        If a train travels 60 mph for 2 hours, how far does it go?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"To
+        calculate the distance traveled by the train, we can use the formula for distance,
+        which is: \\n\\nDistance = Speed × Time. \\n\\n1. First, identify the speed
+        of the train, which is given as 60 miles per hour (mph).\\n2. Next, identify
+        the time the train travels, which is 2 hours.\\n3. Multiply the speed (60
+        mph) by the time (2 hours):\\n   \\n   Distance = 60 mph × 2 hours = 120 miles.\\n\\nThus,
+        we find that the train travels 120 miles in 2 hours.\",\"answer\":\"120 miles\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`. Think through your reasoning
+        step by step before providing the answer.\n\n# Input: question\nquestion:
+        What is 15% of 80?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
+        Let''s think step by step in order to produce the answer."},"answer":{"type":"string","description":""}},"required":["reasoning","answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5521837606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:21 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '4098'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=KpAMxuMC77Ix2eMuR3RQ1A3oENlX9ZPdYKxjF6mX_TY-1767490101-1.0.1.1-_HD84UM8g72hJZjfx_MbGV7wlDUiBE3.zrZC7LK4Rrnf7_k_OMLxdu7YDWNcXC7SyHrJuYWlAgTNTAa_oBIyNtlASlHjuRmcQV_7RU1CRpY;
+        path=/; expires=Sun, 04-Jan-26 01:58:21 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=24bTxawBaopg.vXys9OiEoWYP8bVcJ8S0BW3d7CEvSk-1767490101142-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '4101'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9990'
+      x-ratelimit-remaining-tokens: '199461'
+      x-ratelimit-reset-requests: 1m21.355s
+      x-ratelimit-reset-tokens: 161ms
+      x-request-id: req_01edf2448a9b4589aa0449090ede826e
+    body:
+      string: |-
+        {
+          "id": "resp_07fcee0217082fc6016959c231089c819691c9dc0c0c22a94b",
+          "object": "response",
+          "created_at": 1767490097,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490101,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_07fcee0217082fc6016959c2317cf08196ad6a2d38a3c1d486",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"reasoning\":\"To find 15% of 80, we need to follow these steps:\\n\\n1. Understand what 'percent' means: 15% means 15 out of every 100. This can be expressed as a fraction: 15% = 15/100.\\n2. To find 15% of 80, we multiply 80 by the fraction 15/100:\\n   \\n   Calculation: 80 \u00d7 (15/100).\\n3. Simplifying the calculation:\\n   \\n   80 \u00d7 15 = 1200.\\n4. Now, divide 1200 by 100 to find 15% of 80:\\n   \\n   1200 \u00f7 100 = 12.\\n\\nThus, 15% of 80 is 12.\",\"answer\":\"12\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "reasoning": {
+                    "type": "string",
+                    "description": "Reasoning: Let's think step by step in order to produce the answer."
+                  },
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "reasoning",
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 520,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 178,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 698
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:21
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"You
+        are assessing a submitted answer on a given task based on a criterion.\n[BEGIN
+        DATA]\n***\n[Task]: If a train travels 60 mph for 2 hours, how far does it
+        go?\n***\n[Submission]: list(reasoning = \"To calculate the distance traveled
+        by the train, we can use the formula for distance, which is: \\n\\nDistance
+        = Speed × Time. \\n\\n1. First, identify the speed of the train, which is
+        given as 60 miles per hour (mph).\\n2. Next, identify the time the train travels,
+        which is 2 hours.\\n3. Multiply the speed (60 mph) by the time (2 hours):\\n   \\n   Distance
+        = 60 mph × 2 hours = 120 miles.\\n\\nThus, we find that the train travels
+        120 miles in 2 hours.\", answer = \"120 miles\")\n***\n[Criterion]: 120 miles\n***\n[END
+        DATA]\nDoes the submission meet the criterion?\nAfter assessing the submitted
+        answer, reply with ''GRADE: $LETTER'' where\nLETTER is one of C or I.\nPlease
+        choose ONE option: either ''C'' for correct answers, \nor ''I'' for incorrect
+        answers.\nFirst explain your reasoning, then end with GRADE: $LETTER.\nDo
+        not format the grading string and do not include any punctuation or\nexposition
+        after it."}]}],"model":"gpt-4o-mini","stream":false,"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5701d70606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:23 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1273'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=MjkZAfAiWbRrDXfTQflBbrx1tqVWgdLVsiUJ42quUP4-1767490103-1.0.1.1-r_WCE9z8s456HXI09bgrFEfKqkXLTIPz2KgCx79Kdt2Spxcq.HkZSgN5XQYYOJkaZYQaUG9WTVMlQBQA69Rb797OAuZix6TRYf8o4AddNF8;
+        path=/; expires=Sun, 04-Jan-26 01:58:23 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=4llOQjeepPhQ97Po5KvqwSSy8aXqGv2lUOyO2dWlzKc-1767490103121-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1276'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9990'
+      x-ratelimit-remaining-tokens: '199691'
+      x-ratelimit-reset-requests: 1m25.215s
+      x-ratelimit-reset-tokens: 92ms
+      x-request-id: req_c626dd5cb22e44228846d3a30d41e161
+    body:
+      string: |-
+        {
+          "id": "resp_051dc592089e3527016959c235d65081a281ae23a3464c6fd8",
+          "object": "response",
+          "created_at": 1767490101,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490103,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_051dc592089e3527016959c236100881a2a856549b8080eb20",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "The submitted answer correctly calculates the distance traveled by the train using the formula Distance = Speed \u00d7 Time. The reasoning is clearly laid out, and the final calculation of 60 mph multiplied by 2 hours yields 120 miles. Since the answer provided matches the criterion exactly, the submission meets the requirement for correctness.\n\nGRADE: C"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 290,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 66,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 356
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:23
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"You
+        are assessing a submitted answer on a given task based on a criterion.\n[BEGIN
+        DATA]\n***\n[Task]: What is 15% of 80?\n***\n[Submission]: list(reasoning
+        = \"To find 15% of 80, we need to follow these steps:\\n\\n1. Understand what
+        ''percent'' means: 15% means 15 out of every 100. This can be expressed as
+        a fraction: 15% = 15/100.\\n2. To find 15% of 80, we multiply 80 by the fraction
+        15/100:\\n   \\n   Calculation: 80 × (15/100).\\n3. Simplifying the calculation:\\n   \\n   80
+        × 15 = 1200.\\n4. Now, divide 1200 by 100 to find 15% of 80:\\n   \\n   1200
+        ÷ 100 = 12.\\n\\nThus, 15% of 80 is 12.\", answer = \"12\")\n***\n[Criterion]:
+        12\n***\n[END DATA]\nDoes the submission meet the criterion?\nAfter assessing
+        the submitted answer, reply with ''GRADE: $LETTER'' where\nLETTER is one of
+        C or I.\nPlease choose ONE option: either ''C'' for correct answers, \nor
+        ''I'' for incorrect answers.\nFirst explain your reasoning, then end with
+        GRADE: $LETTER.\nDo not format the grading string and do not include any punctuation
+        or\nexposition after it."}]}],"model":"gpt-4o-mini","stream":false,"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86f5796e92606f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:28:27 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '3707'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=mtpawRv0fYRuErcOdJU.P0I0qELRhusZs5aipu0Lx60-1767490107-1.0.1.1-4IhKg5LLHQNmZENuqorW71qSbJsDp3XWWnnI2d3KUyZFzQspNj1l34vXR.ami3Pankf..IWOmjZeVRIqQTA2KkE7Grm2rjrD.dVuULesqFQ;
+        path=/; expires=Sun, 04-Jan-26 01:58:27 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=JPTHIjfEvxWgF8CF_eM1UbXaTDMEtWqFHb60cNzmGJ8-1767490107027-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '3711'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9989'
+      x-ratelimit-remaining-tokens: '199661'
+      x-ratelimit-reset-requests: 1m32.368s
+      x-ratelimit-reset-tokens: 101ms
+      x-request-id: req_6f0264f4f0e7403ab807c2775c827819
+    body:
+      string: |-
+        {
+          "id": "resp_08c919e2ac24322b016959c2374f40819da7f0c526065b0a94",
+          "object": "response",
+          "created_at": 1767490103,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767490107,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_08c919e2ac24322b016959c2379e40819da4302ffc0268bb11",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "The submission explains the process of calculating 15% of 80, but it contains an error in the final calculation. The steps indicate that multiplying 80 by 15 gives 1200, which is correct, but the interpretation is flawed. Dividing 1200 by 100 correctly gives 12, which may seem correct at first glance; however, the actual calculation should yield 12, but the interpretation of the multiplication is misleading.\n\nTo clarify, multiplying 80 by 0.15 (or the fraction 15/100) directly gives 12, meaning the answer and explanation contain some confusion regarding the operations, although the final answer is correct.\n\nUpon review, since the submitted answer ultimately provides the correct numerical response, it aligns with the criterion of having the answer as \"12\".\n\nTherefore, the final assessment of the submission is correct.\n\nGRADE: C"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 320,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 175,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 495
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:28:27
+recorded_with: VCR-vcr/2.1.0

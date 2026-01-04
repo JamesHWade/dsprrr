@@ -1,0 +1,401 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Great product!"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b874b16de57344d-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:26:50 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '428'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=k7THmfA2.ioLD.p1iCWnxNy_RSJqSErWPrmqQ_BN0.Q-1767493610-1.0.1.1-InvHzFOxoDEg.94e8fC8m2kZC3RMO2DRZii.nvdvPk9mkcMBMkji_I6e_jW0CqkkKV.HHtr0zHK1sHkeY6T2tsqoL2RIkvRzi0T0tAfAQ58;
+        path=/; expires=Sun, 04-Jan-26 02:56:50 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=gYWRvnJUmEWCRIIUZ0BYMKmTTrx8Ik3H9.VsTrrJK.g-1767493610527-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '431'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9997'
+      x-ratelimit-remaining-tokens: '199916'
+      x-ratelimit-reset-requests: 22.237s
+      x-ratelimit-reset-tokens: 25ms
+      x-request-id: req_20385df428174c3fb2c55ba47ed735f1
+    body:
+      string: |-
+        {
+          "id": "resp_0447191d8922e57f016959cfea171481a0972a178cfd98422a",
+          "object": "response",
+          "created_at": 1767493610,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493610,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0447191d8922e57f016959cfea71b481a093b0db0ca53b31d7",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"positive\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 65,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 71
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:26:50
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Great product!"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Waste of money"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b874b1b38e5344d-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:26:52 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '958'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=2mhhAhptrvITydIJ29nrknswXIKAyQmpsFr7.SmXl9Y-1767493612-1.0.1.1-870C4QDAYt8RHF8BCRzjtZXcRYeoU7JZHK_dylM0Lleo39jNR1EaMR8oiBntaZQXTaEOkj1YciaC7NItwY8t7em_PyMgojbYfueHBIf9i_Y;
+        path=/; expires=Sun, 04-Jan-26 02:56:52 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=8zpOoYIRWM5ClfGJz4m4timrvUjjbZ4hW2kK6oj0PkU-1767493612156-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '961'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9996'
+      x-ratelimit-remaining-tokens: '199881'
+      x-ratelimit-reset-requests: 29.552s
+      x-ratelimit-reset-tokens: 35ms
+      x-request-id: req_526477877f2445429eb6bdc5f04b691f
+    body:
+      string: |-
+        {
+          "id": "resp_0abb2c442a649354016959cfeb2dbc8195aa33d932927ea0d6",
+          "object": "response",
+          "created_at": 1767493611,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493612,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0abb2c442a649354016959cfebfa508195b20337801ff60851",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"negative\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 100,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 106
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:26:52
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Great product!"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        Waste of money"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"negative\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `text`, produce the fields `category`.\n\n# Input: text\ntext:
+        It''s okay"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["category"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b874b25aa2e344d-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:26:53 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '898'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=QYfw0l1BXhGxaz.rM0kfyQypu64c0SPA.mwzQqChQsk-1767493613-1.0.1.1-NaTUI83BbeQgBAC_u5_n5Ui9A6Hp7g7sla38dknUE8aYPdphMcmQYROFrWXvqKDxMna9w_3.F7.3KQ7DXbwjFgBzxwy8wtyGFl.nzXBW0zQ;
+        path=/; expires=Sun, 04-Jan-26 02:56:53 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=1YCuxeGfE9v1eIh4qEqfe6JG0OPwLWuoQMIFPX2_5n8-1767493613732-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '901'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9995'
+      x-ratelimit-remaining-tokens: '199847'
+      x-ratelimit-reset-requests: 36.529s
+      x-ratelimit-reset-tokens: 45ms
+      x-request-id: req_bb623fc1de894d6fa759214ac887e917
+    body:
+      string: |-
+        {
+          "id": "resp_0b3ff75bd312e75f016959cfecd2e081919a97ddb6fc1ad068",
+          "object": "response",
+          "created_at": 1767493612,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493613,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0b3ff75bd312e75f016959cfeda74481918b605dd97110176d",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"neutral\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 134,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 140
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:26:53
+recorded_with: VCR-vcr/2.1.0

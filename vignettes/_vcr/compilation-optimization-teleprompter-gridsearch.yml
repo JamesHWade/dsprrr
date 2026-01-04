@@ -1,0 +1,575 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        The R language was created by Ross Ihaka and Robert Gentleman in 1992.\nquestion:
+        Who created R?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8752b3ac58c365-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:32:02 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '342'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=VKdRzGWRCmEgsMSvnq3EkBCLD3l_x5FiVe_8aHa_RRY-1767493922-1.0.1.1-s21OEP9vfy0b834IFVca_yJAgraAGsGy2HrLCjdfLge3GYNt2ad4FoX1pLqCAQUzT.SwLQ6B_F80VrQblzs3HLSl6EPpY0LpoZlaAMpkVxk;
+        path=/; expires=Sun, 04-Jan-26 03:02:02 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=jhHqoYxMqWZucSN2_CcyBoa6BmQPHZ073I5lZq9WIXs-1767493922258-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '346'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9997'
+      x-ratelimit-remaining-tokens: '199821'
+      x-ratelimit-reset-requests: 19.977s
+      x-ratelimit-reset-tokens: 53ms
+      x-request-id: req_301903e69e9f41c0bf451831cf8bdc92
+    body:
+      string: |-
+        {
+          "id": "resp_06777be2c1846f5e016959d121e8a4819fb5563c0c15d5444e",
+          "object": "response",
+          "created_at": 1767493921,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493922,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_06777be2c1846f5e016959d1221b84819fa3552a88294d31ef",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"Ross Ihaka and Robert Gentleman\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 160,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 11,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 171
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:32:02
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Provide a
+        detailed answer with context.\n\nExample 1:\ncontext: Python was created by
+        Guido van Rossum and first released in 1991.\nquestion: When was Python released?\nOutput:
+        1991\n\nExample 2:\ncontext: JavaScript was created by Brendan Eich in just
+        10 days in 1995.\nquestion: How long did it take to create JavaScript?\nOutput:
+        10 days\n\n\nInput:\ncontext: The R language was created by Ross Ihaka and
+        Robert Gentleman in 1992.\nquestion: Who created R?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8752b85d21116f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:32:03 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '511'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=VzsEx0HOatCLrPQ1EIKZPXYBrayV5jaem4OSeBWE8ts-1767493923-1.0.1.1-eDhiLZH6WETbH0tQFfl01F7Xd0VOtdIbmRj7mK9T_ty3qRN0hEC3cQEUTGpbOOI9EiuuRrVxdnIFxo7MZ8eh1Y6v4Uo8Sy4bxgtqjRAOFVA;
+        path=/; expires=Sun, 04-Jan-26 03:02:03 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=KFlqgd2XWWXXaaCjbgEOo.VALOYW06NL8GuSJ3Nvwg4-1767493923219-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '515'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9996'
+      x-ratelimit-remaining-tokens: '199819'
+      x-ratelimit-reset-requests: 27.863s
+      x-ratelimit-reset-tokens: 54ms
+      x-request-id: req_341dab22a90e4ce69ed8759890d5f98f
+    body:
+      string: |-
+        {
+          "id": "resp_01b3205cf94a8a39016959d122aadc81a38f60420e70438063",
+          "object": "response",
+          "created_at": 1767493922,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493923,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_01b3205cf94a8a39016959d123095c81a3a841dd9cdf29e058",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"Ross Ihaka and Robert Gentleman\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 162,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 11,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 173
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:32:03
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Analyze the
+        context carefully before answering.\n\nExample 1:\ncontext: Python was created
+        by Guido van Rossum and first released in 1991.\nquestion: When was Python
+        released?\nOutput: 1991\n\nExample 2:\ncontext: JavaScript was created by
+        Brendan Eich in just 10 days in 1995.\nquestion: How long did it take to create
+        JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext: The R language was created
+        by Ross Ihaka and Robert Gentleman in 1992.\nquestion: Who created R?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8752bce8a7116f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:32:04 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '737'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=9UH.oMcSnv9e1LK.6FZNlkv.nSVjYdcIg8W57W676gA-1767493924-1.0.1.1-.p5B5FC.fTPq2GAVeXig9jDbhKVNp_FFGGe_97tgQcxONhX63UnbLjTi_lZqoPVCpRiPp1zPLp3JitltKmZYRLtbF782rdc7LK0C_4N7G8M;
+        path=/; expires=Sun, 04-Jan-26 03:02:04 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=5WTMIPYFV70kQIZQoEM0zQLg74i0GIYKuYGix5oTIrs-1767493924129-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '745'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9996'
+      x-ratelimit-remaining-tokens: '199819'
+      x-ratelimit-reset-requests: 27.118s
+      x-ratelimit-reset-tokens: 54ms
+      x-request-id: req_8f0523202bb44af696f86ef0513683de
+    body:
+      string: |-
+        {
+          "id": "resp_082101d17bad97e3016959d123649881978573029408b8f59c",
+          "object": "response",
+          "created_at": 1767493923,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493924,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_082101d17bad97e3016959d123dabc8197a27bfaf8f1bae5a8",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"Ross Ihaka and Robert Gentleman\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 162,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 11,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 173
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:32:04
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Think step-by-step:
+        1) Understand context 2) Identify relevant info 3) Answer.\n\nExample 1:\ncontext:
+        Python was created by Guido van Rossum and first released in 1991.\nquestion:
+        When was Python released?\nOutput: 1991\n\nExample 2:\ncontext: JavaScript
+        was created by Brendan Eich in just 10 days in 1995.\nquestion: How long did
+        it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext: The R
+        language was created by Ross Ihaka and Robert Gentleman in 1992.\nquestion:
+        Who created R?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8752c2ad70116f-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 02:32:04 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '346'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=mUYAUq7NsG4NddJXT99TGV_8LPVo7SjeStZyFWaYuBo-1767493924-1.0.1.1-6HklIuXlUhtD_c6K.2A43wymE8LIEphpUJnBkuuNR_ZRZADyLuWQPaGlotJ1awBTxEkD3Wp6ZQjGwx_oAVemC266ZE1gAOllh7x9.ycXz80;
+        path=/; expires=Sun, 04-Jan-26 03:02:04 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=8LUFzaKow890s8GZ.2g.VC3ibwLdlFxnG5FX2OyFRDQ-1767493924665-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '350'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9993'
+      x-ratelimit-remaining-tokens: '199805'
+      x-ratelimit-reset-requests: 52.142s
+      x-ratelimit-reset-tokens: 58ms
+      x-request-id: req_fbbb90c16d28457d92d80bce048756c0
+    body:
+      string: |-
+        {
+          "id": "resp_02d091946628643f016959d1244ffc819286adabba74ab5561",
+          "object": "response",
+          "created_at": 1767493924,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767493924,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_02d091946628643f016959d124822881928fef89022972709c",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"Ross Ihaka and Robert Gentleman\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 176,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 11,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 187
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 02:32:04
+- request:
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
+        product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
+        It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
+        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
+        1:\ncontext: Python was created by Guido van Rossum and first released in
+        1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
+        JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
+        How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
+        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+  response:
+    status: 200
+    headers:
+      date: Sun, 04 Jan 2026 02:32:07 GMT
+      content-type: application/json
+      anthropic-ratelimit-input-tokens-limit: '30000'
+      anthropic-ratelimit-input-tokens-remaining: '30000'
+      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:07Z'
+      anthropic-ratelimit-output-tokens-limit: '8000'
+      anthropic-ratelimit-output-tokens-remaining: '8000'
+      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:07Z'
+      anthropic-ratelimit-requests-limit: '50'
+      anthropic-ratelimit-requests-remaining: '48'
+      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:06Z'
+      anthropic-ratelimit-tokens-limit: '38000'
+      anthropic-ratelimit-tokens-remaining: '38000'
+      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:07Z'
+      request-id: req_011CWmZ5XgMr3MAg8PMhb5SD
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
+      server: cloudflare
+      x-envoy-upstream-service-time: '2401'
+      cf-cache-status: DYNAMIC
+      x-robots-tag: none
+      content-encoding: gzip
+      cf-ray: 9b8752c69cdb10a1-ORD
+    body:
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_0125UCePP1tUXMUFNENQThR6","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01WAg3EtF3yBjfnY17cp1Gxc","name":"_structured_tool_call","input":{"data":{"answer":"Yukihiro
+        Matsumoto"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":707,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":45,"service_tier":"standard"}}'
+  recorded_at: 2026-01-04 02:32:07
+recorded_with: VCR-vcr/2.1.0

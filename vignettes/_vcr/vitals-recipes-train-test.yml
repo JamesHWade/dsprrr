@@ -1,0 +1,263 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\nExample 1:\nquestion:
+        What is the largest planet?\nOutput: Jupiter\n\nExample 2:\nquestion: What
+        color is the sky?\nOutput: Blue\n\n\n# Input: question\nquestion: Who wrote
+        Romeo and Juliet?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86eccb198a80ba-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:22:28 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '387'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=5RFT72gMlI4FXUvGyjlOQRrbEWGE6_p_cR0kaaNiris-1767489748-1.0.1.1-jsnmvSwDBJl0nkoTgr6gLbnUvKTkWfRN7mqTRJqVdHMc4CmgHL8a0I5bJRb_FIZnv4trt8lUtKIY7O8Vztbf_bpGWi8.BGWDC1Hlik8Cgiw;
+        path=/; expires=Sun, 04-Jan-26 01:52:28 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=oxW0MiDhtaS45PSm7yWEPFEHglGj9aAfEq60PEK1Zoo-1767489748151-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '390'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9997'
+      x-ratelimit-remaining-tokens: '199888'
+      x-ratelimit-reset-requests: 23.728s
+      x-ratelimit-reset-tokens: 33ms
+      x-request-id: req_314373c7691d40d0b70fdc4b17f2b2fa
+    body:
+      string: |-
+        {
+          "id": "resp_07176349c10a2c76016959c0d3bcb0819dbeaf268aae17025c",
+          "object": "response",
+          "created_at": 1767489747,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767489748,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_07176349c10a2c76016959c0d4009c819d87251c6637acc587",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"William Shakespeare\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 93,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 7,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 100
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:22:28
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+    body:
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\nExample 1:\nquestion:
+        What is the largest planet?\nOutput: Jupiter\n\nExample 2:\nquestion: What
+        color is the sky?\nOutput: Blue\n\n\n# Input: question\nquestion: Who wrote
+        Romeo and Juliet?"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"William
+        Shakespeare\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
+        the fields `question`, produce the fields `answer`.\n\nExample 1:\nquestion:
+        What is the largest planet?\nOutput: Jupiter\n\nExample 2:\nquestion: What
+        color is the sky?\nOutput: Blue\n\n\n# Input: question\nquestion: What is
+        2 + 2?"}]}],"model":"gpt-4o-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"answer":{"type":"string","description":""}},"required":["answer"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b86ecd05b1380ba-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 01:22:29 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '426'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=1MqjV4y1NMe8J_Y6BnfHCKw1Cp3mEFVAjY.82yD43Jw-1767489749-1.0.1.1-DBSrupE34HQkLmz4xBaHV3UY31eQeVmU4ut0cQUp1aQA7BJYsvGocgZC.nW3SyLrm8lbfUwBtYTqwQVQ9B3xp5JHO4VmzHzXS_ZlVJGCwug;
+        path=/; expires=Sun, 04-Jan-26 01:52:29 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=.z_vdLa81DEVLZODcF1RXwiiXK1yqWsbHR.X2wkq_Z4-1767489749031-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '429'
+      x-ratelimit-limit-requests: '10000'
+      x-ratelimit-limit-tokens: '200000'
+      x-ratelimit-remaining-requests: '9996'
+      x-ratelimit-remaining-tokens: '199815'
+      x-ratelimit-reset-requests: 31.521s
+      x-ratelimit-reset-tokens: 55ms
+      x-request-id: req_5e5db65015c540828fe0226e9457698b
+    body:
+      string: |-
+        {
+          "id": "resp_0a5a8d7d0cfea93c016959c0d494ec819f9ae26569388edd32",
+          "object": "response",
+          "created_at": 1767489748,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767489748,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-mini-2024-07-18",
+          "output": [
+            {
+              "id": "msg_0a5a8d7d0cfea93c016959c0d4ef68819f8ce462d27cfa26a7",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"answer\":\"4\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "answer"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 166,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 6,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 172
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 01:22:29
+recorded_with: VCR-vcr/2.1.0
