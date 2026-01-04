@@ -1,0 +1,360 @@
+---
+title: "Tutorial 6: Taking to Production"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tutorial 6: Taking to Production}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+in_check <- !force_eval && (
+  nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+  identical(Sys.getenv("NOT_CRAN"), "false")
+)
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = should_eval
+)
+
+if (should_eval) {
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
+  vcr::setup_knitr()
+}
+```
+
+You've built and optimized a module through Tutorials 1-5. Now what? You need to:
+- Save the optimized configuration
+- Load it in production
+- Track what happens in deployment
+- Monitor for issues
+
+This tutorial shows you how.
+
+**Time**: 30-35 minutes
+
+## What You'll Build
+
+A production-ready module with:
+- Persistent configuration (survives R restarts)
+- Execution traces for debugging
+- Validation before deployment
+
+## Prerequisites
+
+- Completed [Tutorial 5](tutorial-optimize-your-module.html)
+- `OPENAI_API_KEY` set in your environment
+
+```{r setup}
+library(dsprrr)
+library(ellmer)
+library(pins)
+library(tibble)
+
+chat <- chat_openai()
+```
+
+## Step 1: Create an Optimized Module
+
+Let's start with a trained classifier:
+
+```{r create-optimized}
+#| cassette: true
+sig <- signature(
+  "review -> sentiment: enum('positive', 'negative', 'neutral')",
+  instructions = "Classify the sentiment of this product review."
+)
+
+trainset <- dsp_trainset(
+  review = c(
+    "Love it!", "Hate it!", "It's okay.",
+    "Amazing!", "Terrible!", "Meh.",
+    "Best ever!", "Worst purchase!", "Fine I guess."
+  ),
+  sentiment = c(
+    "positive", "negative", "neutral",
+    "positive", "negative", "neutral",
+    "positive", "negative", "neutral"
+  )
+)
+
+# Optimize
+classifier <- compile_module(
+  program = module(sig, type = "predict"),
+  teleprompter = LabeledFewShot(k = 3L),
+  trainset = trainset
+)
+
+# Verify it works
+run(classifier, review = "This product is fantastic!", .llm = chat)
+```
+
+## Step 2: Save Configuration with Pins
+
+The `pins` package provides persistent storage. Save your module configuration:
+
+```{r save-config}
+# Create a local board (folder on disk)
+board <- board_folder(tempdir())
+
+# Save the module configuration
+pin_module_config(board, "sentiment-classifier", classifier)
+```
+
+Your optimized configuration—including demos, parameters, and instructions—is now saved.
+
+## Step 3: List Saved Modules
+
+See what's stored:
+
+```{r list-pins}
+board |> pin_list()
+
+# Get metadata
+board |> pin_meta("sentiment-classifier")
+```
+
+## Step 4: Restore in a New Session
+
+Imagine you restart R or deploy to a different machine:
+
+```{r restore-config}
+#| cassette: true
+# Later, in a new session...
+config <- pins::pin_read(board, "sentiment-classifier")
+restored <- restore_module_config(config)
+
+# It works immediately
+run(restored, review = "Worst product ever!", .llm = chat)
+```
+
+The restored module has all the optimization work preserved.
+
+## Step 5: Version Your Modules
+
+Pins automatically version your saves:
+
+```{r versioning}
+# Make some changes
+improved <- compile_module(
+  program = restored,
+  teleprompter = LabeledFewShot(k = 4L),  # Try more examples
+  trainset = trainset
+)
+
+# Save again - creates new version
+pin_module_config(board, "sentiment-classifier", improved)
+
+# List versions
+board |> pin_versions("sentiment-classifier")
+```
+
+## Step 6: Roll Back to Previous Version
+
+If a new version performs worse:
+
+```{r rollback}
+# Get specific version
+versions <- board |> pin_versions("sentiment-classifier")
+
+# Restore the first version
+if (nrow(versions) > 1) {
+  config <- pins::pin_read(board, "sentiment-classifier", version = versions$version[1])
+  original <- restore_module_config(config)
+}
+```
+
+## Step 7: Save Execution Traces
+
+Track what your module does in production:
+
+```{r save-traces}
+#| eval: false
+# Run some predictions
+run(classifier, review = "Great product!", .llm = chat)
+run(classifier, review = "Not worth the money.", .llm = chat)
+run(classifier, review = "Does the job.", .llm = chat)
+
+# Save traces for analysis
+pin_trace(board, "sentiment-traces", classifier)
+```
+
+## Step 8: Analyze Traces
+
+Load and examine traces:
+
+```{r analyze-traces}
+#| eval: false
+# Export as tibble
+traces <- export_traces(classifier, format = "tibble")
+traces
+
+# Summary statistics
+classifier$trace_summary()
+```
+
+Traces include:
+- Input/output for each call
+- Token usage
+- Latency
+- Errors (if any)
+
+## Step 9: Validate Before Deployment
+
+Use `validate_workflow()` to check everything is ready:
+```{r validate}
+# Check module is properly configured
+validation <- validate_workflow(
+  module = classifier,
+  board = board
+)
+
+validation
+```
+
+This checks:
+- Module is a valid DSPrrr module
+- Signature has inputs defined
+- Board is accessible (if provided)
+
+## Step 10: Production Patterns
+
+Here's a complete production workflow:
+
+```{r production-workflow, eval=FALSE}
+# === DEVELOPMENT ===
+# 1. Build and optimize
+dev_module <- module(sig, type = "predict")
+dev_module$optimize_grid(
+  devset = trainset,
+  metric = metric_exact_match(field = "sentiment"),
+  parameters = list(temperature = c(0, 0.3, 0.7))
+)
+
+# 2. Compile with best settings + demos
+optimized <- compile_module(
+  program = dev_module,
+  teleprompter = LabeledFewShot(k = 3L),
+  trainset = trainset
+)
+
+# 3. Evaluate on test data
+evaluate(optimized, testset, metric = metric_exact_match(field = "sentiment"))
+
+# 4. Save if good enough
+prod_board <- board_s3("my-bucket")  # Or board_connect(), board_folder()
+pin_module_config(prod_board, "sentiment-v1", optimized)
+
+# === PRODUCTION ===
+# 1. Load the saved configuration
+prod_module <- restore_module_config(prod_board, "sentiment-v1")
+
+# 2. Use it
+result <- run(prod_module, review = customer_review, .llm = chat_openai())
+
+# 3. Periodically save traces for monitoring
+pin_trace(prod_board, "sentiment-traces", prod_module)
+```
+
+## Step 11: Different Storage Backends
+
+Pins supports multiple backends:
+
+```{r backends, eval=FALSE}
+# Local folder
+board_folder("path/to/folder")
+
+# Posit Connect
+board_connect()
+
+# AWS S3
+board_s3("bucket-name")
+
+# Azure
+board_azure("container-name")
+
+# Google Cloud
+board_gcs("bucket-name")
+```
+
+Choose based on your deployment environment.
+
+## Step 12: Monitoring in Production
+
+Set up regular checks:
+
+```{r monitoring, eval=FALSE}
+# Daily: Check trace summary
+module$trace_summary()
+
+# Weekly: Evaluate on held-out samples
+evaluate(module, weekly_sample, metric = metric_exact_match())
+
+# Monthly: Compare to baseline
+# If accuracy drops, investigate or retrain
+```
+
+## What You Learned
+
+In this tutorial, you:
+
+1. Saved module configurations with `pin_module_config()`
+2. Restored modules with `restore_module_config()`
+3. Used versioning for safe updates
+4. Rolled back to previous versions
+5. Saved and analyzed execution traces
+6. Validated modules before deployment
+7. Learned production workflow patterns
+
+## The Production Checklist
+
+Before deploying:
+
+- [ ] Module is optimized on representative data
+- [ ] Evaluated on held-out test data
+- [ ] Configuration saved to persistent storage
+- [ ] Versioning enabled for rollback
+- [ ] Trace logging configured
+- [ ] Monitoring plan in place
+
+## Where to Go From Here
+
+Congratulations! You've completed the core tutorial sequence. You now know how to:
+- Make structured LLM calls
+- Build reusable modules
+- Extract complex data
+- Improve with examples
+- Optimize parameters
+- Deploy to production
+
+### Advanced Tutorials
+
+Build complete applications:
+- **[Text Adventure Game](text-adventure.html)** — Interactive AI with state management
+- **[Generate llms.txt](llms-txt.html)** — Multi-stage documentation pipeline
+
+### How-To Guides
+
+Solve specific problems:
+- **[Build RAG Pipelines](rag-workflows.html)** — Retrieval-augmented generation
+- **[Evaluate with Vitals](vitals-integration.html)** — Rigorous evaluation
+- **[Production Orchestration](orchestration.html)** — targets and Quarto integration
+
+### Concepts
+
+Understand the "why":
+- **[The DSPy Philosophy](concepts-dspy-philosophy.html)** — Programs, not prompts
+- **[How Optimization Works](concepts-optimization-theory.html)** — Teleprompter theory

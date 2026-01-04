@@ -1,0 +1,139 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8c8b98deebf159-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 17:44:41 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '786'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=aStx0Cc2evRxtKyJGCYCxcI31QcCJU_Ph0v.TvGlUB4-1767548681-1.0.1.1-IlwgoSh3.RUq9L_DXUyFLj3HwoWIlkwzyCC5KIIHqtSgQ4.DTVziALHqAC8touPpAe2cVjCG8GLxBK7Xmw4lGl1zuDyOuv7YwTx4RfHReWs;
+        path=/; expires=Sun, 04-Jan-26 18:14:41 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=_7Xtucs3LyrwRCFqxAq2qZc_ZxPJrBOd.2nb1iGMkg0-1767548681987-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '789'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29992'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 16ms
+      x-request-id: req_8d5ad4e141f443d7b6f1eacb3a5183b4
+    body:
+      string: |-
+        {
+          "id": "resp_001bde41c49ebaf101695aa70930e0819ea586592c081f1d9b",
+          "object": "response",
+          "created_at": 1767548681,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767548681,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_001bde41c49ebaf101695aa709b174819e9221a6f9267fa6a6",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"sentiment\":\"positive\",\"stars\":4,\"summary\":\"Powerful and easy-to-clean blender, but a bit loud.\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "sentiment": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  },
+                  "stars": {
+                    "type": "integer",
+                    "description": ""
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "sentiment",
+                  "stars",
+                  "summary"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 215,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 27,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 242
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 17:44:42
+recorded_with: VCR-vcr/2.1.0

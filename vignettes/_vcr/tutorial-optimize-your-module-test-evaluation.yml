@@ -1,0 +1,332 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8ca256f9ae10d0-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 18:00:13 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '620'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=OohaZaMRppAmNpEBlJNvItWcd_XRDe0bVy8VXfzM9Kk-1767549613-1.0.1.1-0QLC695ogzrJTh3iASFDzp9bi5aKbmSeJQSrQB815GRqil1PpzzB.ZE4q1R8Bu5ai43FOo5LppnzVV0gS6gly9VXvgwGkUtxQzd5X.agvoA;
+        path=/; expires=Sun, 04-Jan-26 18:30:13 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=8XwoGi_ZmCwJLogMR.1xsxDJAVXjawKhr04RCmtTtUw-1767549613315-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '624'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_d1746d685faf40fca6db14ec021bf58f
+    body:
+      string: |-
+        {
+          "id": "resp_038dfc290b5f0dc501695aaaacb30c81a096ffd5c4c1a4db82",
+          "object": "response",
+          "created_at": 1767549612,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767549613,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_038dfc290b5f0dc501695aaaad189081a0964749ee1c5d2d1f",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"sentiment\":\"positive\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "sentiment": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  }
+                },
+                "required": [
+                  "sentiment"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 3890,
+            "input_tokens_details": {
+              "cached_tokens": 3584
+            },
+            "output_tokens": 7,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 3897
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 18:00:13
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8ca26bab6710d0-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 18:00:16 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '463'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=KCXRNJBD8JmeZXI0VenOcWVmQrcoVif6CdHgHa2kxYQ-1767549616-1.0.1.1-FBJobbEJdCbm8CZ6eE6b3XKd1tc.wsw9eMDH9zuH9DkaH.TVZcU3kGluOrKTl7bklrQGzC_law3NyxDeitm8DIVjh80Gp4IzMfHZj6wY9lY;
+        path=/; expires=Sun, 04-Jan-26 18:30:16 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=PdsuQLPe7KUoClIyoyFguU8pgoSu5CQ8kKaQPTjrZ6E-1767549616494-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '466'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_08d331537a9844d188d49d92e770a1d5
+    body:
+      string: |-
+        {
+          "id": "resp_0ea66632115be68301695aaab006c0819fb05e975cfbbb1f4e",
+          "object": "response",
+          "created_at": 1767549616,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767549616,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_0ea66632115be68301695aaab05b64819faab59c48571e0ad7",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"sentiment\":\"negative\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "sentiment": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  }
+                },
+                "required": [
+                  "sentiment"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 3971,
+            "input_tokens_details": {
+              "cached_tokens": 3840
+            },
+            "output_tokens": 7,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 3978
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 18:00:16
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 429
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8ca291cb8310d0-ORD
+      content-length: '352'
+      content-type: application/json
+      date: Sun, 04 Jan 2026 18:00:22 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '225'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=23CS0OTC7CHp9BZa89RkfOFJWiyhXC1x.kucfssYJoE-1767549622-1.0.1.1-h3cNCpFRjGCuUr3ZANTbin9l8v3jFLlPSUzuRA23VneWepswqwX510cWvPhRFn_e_FeRMvmVMwBb5kyhytYj6kg.bbFFIxVTXskMU0h.DkY;
+        path=/; expires=Sun, 04-Jan-26 18:30:22 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=0.Z5OztQ6gm8jdllUWlF8yfHljp9E8zhtQu2.Asd72E-1767549622331-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '231'
+      x-request-id: req_21c08157b62347c3859ae79980a91b12
+    body:
+      string: |-
+        {
+          "error": {
+            "message": "Rate limit reached for gpt-4.1 in organization org-mShKuFJrdihlXnXKm8kzf1PX on tokens per min (TPM): Limit 30000, Used 28629, Requested 4070. Please try again in 5.398s. Visit https://platform.openai.com/account/rate-limits to learn more.",
+            "type": "tokens",
+            "param": null,
+            "code": "rate_limit_exceeded"
+          }
+        }
+  recorded_at: 2026-01-04 18:00:22
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 429
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8ca2b03f2910d0-ORD
+      content-length: '351'
+      content-type: application/json
+      date: Sun, 04 Jan 2026 18:00:27 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '169'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=kPW5443tlCY24OzvrrSD3wlB9jUxfneLTTLFNSyiDR8-1767549627-1.0.1.1-E114pEMoblpCwdbLPWh7hz20YdGc1XP.HxhEkI2b4uqbRqdMQP41msjpGQWADdU91FKxvIDdE_m5ZzqwwZAyvf3LLGPJxniPF81HK102R.c;
+        path=/; expires=Sun, 04-Jan-26 18:30:27 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=9WvLWqCwOwTbDYAlMru.t.6DmJjKrgauKYonqzlGoQ4-1767549627136-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '175'
+      x-request-id: req_70634226fee948e0b498a155fe8d2055
+    body:
+      string: |-
+        {
+          "error": {
+            "message": "Rate limit reached for gpt-4.1 in organization org-mShKuFJrdihlXnXKm8kzf1PX on tokens per min (TPM): Limit 30000, Used 26220, Requested 4071. Please try again in 582ms. Visit https://platform.openai.com/account/rate-limits to learn more.",
+            "type": "tokens",
+            "param": null,
+            "code": "rate_limit_exceeded"
+          }
+        }
+  recorded_at: 2026-01-04 18:00:27
+recorded_with: VCR-vcr/2.1.0

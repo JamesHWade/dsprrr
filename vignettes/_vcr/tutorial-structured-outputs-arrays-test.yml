@@ -1,0 +1,146 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8c8ba61b24f159-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 17:44:44 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '998'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=JjERwfNMOwS0SpAx09ponpoUh51CS_tYTu9HOP6AzPE-1767548684-1.0.1.1-Nqhi1RZMyBR1zkmjrjpvjoI1O1uIN96V7cTx2qpT3aPUgzVE8PsCm4BhXwqSt4pb_Pq1Sz7N0wiVX5X5dQ1Kb9.1jsmVmDvjwxlafSXZZDk;
+        path=/; expires=Sun, 04-Jan-26 18:14:44 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=BYgEZqwxGPVewKSMh6vS01A4ZTD11SHx3PSir5m2_qE-1767548684270-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1000'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29979'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 42ms
+      x-request-id: req_8449ac2bd28e48e9b9cd277e47e2898a
+    body:
+      string: |-
+        {
+          "id": "resp_08ac5c20a11f78d301695aa70b3fe081a3bea624ce7dcc3466",
+          "object": "response",
+          "created_at": 1767548683,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767548684,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_08ac5c20a11f78d301695aa70b744081a3b56b210e15a593ba",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"people\":[\"Tim Cook\",\"President Biden\",\"Janet Yellen\",\"Gina Raimondo\"],\"organizations\":[\"Apple\",\"White House\",\"Treasury\",\"Commerce\"],\"locations\":[\"United States\"]}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "people": {
+                    "type": "array",
+                    "description": "Names of people mentioned",
+                    "items": {
+                      "type": "string",
+                      "description": ""
+                    }
+                  },
+                  "organizations": {
+                    "type": "array",
+                    "description": "Organizations mentioned",
+                    "items": {
+                      "type": "string",
+                      "description": ""
+                    }
+                  },
+                  "locations": {
+                    "type": "array",
+                    "description": "Places mentioned",
+                    "items": {
+                      "type": "string",
+                      "description": ""
+                    }
+                  }
+                },
+                "required": [
+                  "people",
+                  "organizations",
+                  "locations"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 458,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 40,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 498
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 17:44:44
+recorded_with: VCR-vcr/2.1.0
