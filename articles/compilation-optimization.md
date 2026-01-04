@@ -16,6 +16,11 @@ This vignette covers: - **Metrics**: How to evaluate LLM outputs -
 
 ``` r
 library(dsprrr)
+#> 
+#> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:methods':
+#> 
+#>     signature
 library(ellmer)
 
 # Configure Claude (Anthropic's Sonnet model)
@@ -23,6 +28,11 @@ llm <- chat_claude(
   api_key = Sys.getenv("ANTHROPIC_API_KEY"),
   model = "claude-sonnet-4-20250514"
 )
+#> Warning: The `api_key` argument of `chat_anthropic()` is deprecated as of ellmer 0.4.0.
+#> ℹ Please use the `credentials` argument instead.
+#> This warning is displayed once every 8 hours.
+#> Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+#> generated.
 ```
 
 ## Quick tour: optimizing a module with `optimize_grid()`
@@ -56,15 +66,44 @@ exact_sentiment <- function(prediction, expected_row) {
 
 optimize_grid(
   sentiment_module,
-  devset = dev_reviews,
+  data = dev_reviews,
   metric = exact_sentiment,
   parameters = list(prompt_style = c("baseline", "energetic")),
   .llm = llm,
   control = list(progress = FALSE)
 )
+#> 
+#> ── PredictModule ──
+#> 
+#> ── Signature
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • review: Input: review
+#> 
+#> ── Output
+#> Type: <ellmer::TypeObject>
+#> 
+#> ── Instructions
+#> Respond with the sentiment label only.
+#> 
+#> ── Template
+#> Review: {review}
+#> Sentiment:
+#> 
+#> ── Compilation Status
+#> ✔ Compiled
+#> Best score: 1
 
 sentiment_module$state$trials[, c("trial_id", "score", "n_evaluated")]
+#> # A tibble: 2 × 3
+#>   trial_id score n_evaluated
+#>      <int> <dbl>       <int>
+#> 1        1     1           1
+#> 2        2     1           1
 sentiment_module$state$best_score
+#> [1] 1
 ```
 
 If you do have tidymodels installed, you can also describe the search
@@ -255,11 +294,14 @@ metric <- metric_exact_match()
 
 # Test the metric
 metric("positive", "positive") # TRUE
+#> [1] TRUE
 metric("positive", "negative") # FALSE
+#> [1] FALSE
 
 # Case-insensitive matching
 metric_ignore_case <- metric_exact_match(ignore_case = TRUE)
 metric_ignore_case("Positive", "positive") # TRUE
+#> [1] TRUE
 
 # Extract specific field from structured output
 metric_field <- metric_exact_match(field = "sentiment")
@@ -267,6 +309,7 @@ metric_field(
   list(sentiment = "positive", confidence = 0.9),
   list(sentiment = "positive", confidence = 0.8)
 ) # TRUE - only compares sentiment field
+#> [1] TRUE
 ```
 
 #### F1 Score
@@ -283,6 +326,7 @@ score <- metric_f1_basic(
   "Paris is the capital city of France"
 )
 print(score) # ~0.67 (good overlap but not perfect)
+#> [1] 0.9230769
 
 # With field extraction
 metric_f1_field <- metric_f1(field = "answer")
@@ -300,12 +344,16 @@ Check if output contains specific patterns:
 # Check for substring
 metric_has_positive <- metric_contains("positive", ignore_case = TRUE)
 metric_has_positive("The result is POSITIVE", NULL) # TRUE
+#> [1] TRUE
 metric_has_positive("The result is negative", NULL) # FALSE
+#> [1] FALSE
 
 # Regular expression patterns
 metric_has_number <- metric_contains("\\d+", fixed = FALSE)
 metric_has_number("The answer is 42", NULL) # TRUE
+#> [1] TRUE
 metric_has_number("No numbers here", NULL) # FALSE
+#> [1] FALSE
 
 # Check specific field
 metric_field_contains <- metric_contains("urgent", field = "priority")
@@ -313,6 +361,7 @@ metric_field_contains(
   list(priority = "urgent - needs immediate attention"),
   NULL
 ) # TRUE
+#> [1] TRUE
 ```
 
 ### Custom Metrics
@@ -384,6 +433,7 @@ metric_all <- metric_field_match(
 pred <- list(sentiment = "positive", confidence = "high", extra = "ignored")
 exp <- list(sentiment = "positive", confidence = "high", other = "data")
 metric_all(pred, exp) # TRUE - both fields match
+#> [1] TRUE
 
 # Check if any field matches
 metric_any <- metric_field_match(
@@ -439,12 +489,32 @@ optimized_classifier <- compile_module(
 
 # The optimized module now includes demonstrations
 print(optimized_classifier$demos) # Shows the 2 selected examples
+#> [[1]]
+#> [[1]]$inputs
+#> [[1]]$inputs$text
+#> [1] "This product is amazing! Best purchase ever!"
+#> 
+#> 
+#> [[1]]$output
+#> [1] "positive"
+#> 
+#> 
+#> [[2]]
+#> [[2]]$inputs
+#> [[2]]$inputs$text
+#> [1] "It's okay, nothing special but works."
+#> 
+#> 
+#> [[2]]$output
+#> [1] "neutral"
 
 # Use the optimized classifier
 result <- optimized_classifier |>
   run(text = "This is fantastic!", .llm = llm)
 
 print(result) # "positive"
+#> $sentiment
+#> [1] "positive"
 ```
 
 ### GridSearchTeleprompter
@@ -506,8 +576,12 @@ optimized_qa <- compile_module(
 
 # Check which variant performed best
 print(optimized_qa$config$best_variant) # e.g., "analytical"
+#> [1] "concise"
 print(optimized_qa$config$best_score) # e.g., 0.85
+#> [1] 1
 print(optimized_qa$config$all_scores) # Scores for all variants
+#>      concise     detailed   analytical step_by_step 
+#>            1            1            1            1
 
 # Use the optimized module
 answer <- optimized_qa |>
@@ -578,6 +652,9 @@ optimized_simple <- compile_module(
   teleprompter = simple_optimizer,
   trainset = email_trainset
 )
+#> Warning: Multiple potential output columns found
+#> ℹ Using: category
+#> ℹ Other columns: priority and needs_response
 
 # Option B: Grid search with custom variants
 email_variants <- data.frame(
@@ -602,6 +679,9 @@ optimized_grid <- compile_module(
   teleprompter = grid_optimizer,
   trainset = email_trainset
 )
+#> Warning: Multiple potential output columns found
+#> ℹ Using: category
+#> ℹ Other columns: priority and needs_response
 
 # Step 4: Use the optimized module
 new_email <- "I've been waiting for 2 hours on hold! This is unacceptable!"
@@ -609,8 +689,11 @@ result <- optimized_grid |>
   run(email = new_email, .llm = llm)
 
 print(result$category) # "complaint"
+#> [1] "complaint"
 print(result$priority) # "urgent"
+#> [1] "urgent"
 print(result$needs_response) # TRUE
+#> [1] TRUE
 ```
 
 ## Part 4: Evaluation Framework
@@ -648,17 +731,23 @@ category_metric <- metric_exact_match(field = "category")
 
 results <- evaluate_dsp(
   module = optimized_grid,
-  dataset = test_emails,
+  data = test_emails,
   metric = category_metric,
   .llm = llm,
   verbose = TRUE
 )
+#> ✔ Evaluated 3/3 examples
+#> ℹ Mean score: 1
 
 # Examine results
 print(results$mean_score) # e.g., 0.67 (2/3 correct)
+#> [1] 1
 print(results$scores) # Individual scores per example
+#> [1] 1 1 1
 print(results$n_evaluated) # 3
+#> [1] 3
 print(results$n_errors) # 0 (no runtime errors)
+#> [1] 0
 
 # Evaluate multiple aspects
 multi_metric <- metric_field_match(
@@ -668,13 +757,16 @@ multi_metric <- metric_field_match(
 
 full_results <- evaluate_dsp(
   module = optimized_grid,
-  dataset = test_emails,
+  data = test_emails,
   metric = multi_metric,
   .llm = llm,
   verbose = TRUE
 )
+#> ✔ Evaluated 3/3 examples
+#> ℹ Mean score: 0.333
 
 print(full_results$mean_score) # Lower, as all fields must match
+#> [1] 0.3333333
 ```
 
 ## Part 5: Complete Workflow Example
@@ -794,7 +886,7 @@ for (k in c(1L, 2L, 3L, 4L)) {
   # Evaluate on validation set
   eval_result <- evaluate_dsp(
     module = optimized,
-    dataset = doc_trainset, # In practice, use separate validation set
+    data = doc_trainset, # In practice, use separate validation set
     metric = wrapped_metric,
     .llm = llm,
     verbose = FALSE
@@ -802,8 +894,31 @@ for (k in c(1L, 2L, 3L, 4L)) {
 
   results_by_k[[paste0("k_", k)]] <- eval_result$mean_score
 }
+#> Warning: Multiple potential output columns found
+#> ℹ Using: summary
+#> ℹ Other columns: topics, sentiment, key_facts, and recommendation
+#> Multiple potential output columns found
+#> ℹ Using: summary
+#> ℹ Other columns: topics, sentiment, key_facts, and recommendation
+#> Multiple potential output columns found
+#> ℹ Using: summary
+#> ℹ Other columns: topics, sentiment, key_facts, and recommendation
+#> Multiple potential output columns found
+#> ℹ Using: summary
+#> ℹ Other columns: topics, sentiment, key_facts, and recommendation
 
 print(results_by_k) # See which k works best
+#> $k_1
+#> [1] 0.8204392
+#> 
+#> $k_2
+#> [1] 0.8467905
+#> 
+#> $k_3
+#> [1] 0.8655405
+#> 
+#> $k_4
+#> [1] 0.9
 
 # Strategy B: Grid search over different instruction styles
 instruction_variants <- data.frame(
@@ -832,6 +947,9 @@ best_analyzer <- compile_module(
   teleprompter = grid_optimizer,
   trainset = doc_trainset
 )
+#> Warning: Multiple potential output columns found
+#> ℹ Using: summary
+#> ℹ Other columns: topics, sentiment, key_facts, and recommendation
 
 # 5. Use the optimized analyzer
 new_document <- "
@@ -845,9 +963,14 @@ analysis <- best_analyzer |>
   run(document = new_document, .llm = llm)
 
 print(analysis$summary)
+#> [1] "Merger proposal projects $5M annual cost savings with promising synergies but faces significant cultural integration challenges, requiring 6-8 months for regulatory approval and careful change management."
 print(analysis$topics)
+#> [1] "merger synergies"     "cost savings"         "cultural integration"
+#> [4] "regulatory approval"  "change management"
 print(analysis$sentiment) # Likely "mixed"
+#> [1] "mixed"
 print(analysis$recommendation) # Likely "review"
+#> [1] "review"
 ```
 
 ## Part 6: Advanced Patterns and Best Practices
@@ -888,7 +1011,7 @@ optimized_module <- compile_module(
 # Evaluate on validation set
 val_results <- evaluate_dsp(
   module = optimized_module,
-  dataset = splits$val,
+  data = splits$val,
   metric = wrapped_metric,
   .llm = llm
 )
@@ -1124,6 +1247,9 @@ check_diversity <- function(trainset, field) {
 }
 
 check_diversity(trainset, "sentiment")
+#> values
+#> negative  neutral positive 
+#>        1        1        1
 
 # Balance classes if needed
 balance_trainset <- function(data, label_col, max_per_class = NULL) {

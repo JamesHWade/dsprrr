@@ -147,6 +147,11 @@ structure for larger projects.</p>
 </ol>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cli.r-lib.org" class="external-link">cli</a></span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -255,6 +260,13 @@ stage:</p>
 <span>  instructions <span class="op">=</span> <span class="st">"Analyze this R package to extract its core purpose.</span></span>
 <span><span class="st">Be precise and technical. Focus on what makes it unique."</span></span>
 <span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'package name', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'package title from description', defaulting to</span></span>
+<span><span class="co">#&gt; string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'description from description', defaulting to</span></span>
+<span><span class="co">#&gt; string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'first 2000 chars of readme', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'comma-separated exports', defaulting to string</span></span>
 <span></span>
 <span><span class="co"># Stage 2: Analyze structure</span></span>
 <span><span class="va">analyze_structure_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
@@ -280,6 +292,12 @@ stage:</p>
 <span>  instructions <span class="op">=</span> <span class="st">"Analyze package structure to help developers navigate it.</span></span>
 <span><span class="st">Identify important files and entry points."</span></span>
 <span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'package name', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'r files in r/ directory', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'exported function names', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'whether package has vignettes', defaulting to</span></span>
+<span><span class="co">#&gt; string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'package dependencies', defaulting to string</span></span>
 <span></span>
 <span><span class="co"># Stage 3: Generate examples</span></span>
 <span><span class="va">generate_examples_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
@@ -297,6 +315,10 @@ stage:</p>
 <span>  instructions <span class="op">=</span> <span class="st">"Generate realistic R code examples.</span></span>
 <span><span class="st">Examples must be syntactically valid R."</span></span>
 <span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'package name', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'what the package does', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'main functions', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'core concepts as json', defaulting to string</span></span>
 <span></span>
 <span><span class="co"># Stage 4: Generate final llms.txt</span></span>
 <span><span class="va">generate_llmstxt_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
@@ -317,7 +339,18 @@ stage:</p>
 <span><span class="st"># {pkg_name}, Key Concepts, Quick Start, Common Workflow,</span></span>
 <span><span class="st">Code Organization, Entry Points, Watch Out For.</span></span>
 <span><span class="st">Keep it concise - this is reference documentation for AI systems."</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'package name', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'package purpose', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'who uses this', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'json of term/definition pairs', defaulting to</span></span>
+<span><span class="co">#&gt; string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'code organization', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'main functions', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'json of file/purpose pairs', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'basic usage example', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'intermediate example', defaulting to string</span></span>
+<span><span class="co">#&gt; Warning: Unknown type 'common mistakes', defaulting to string</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="create-modules">Create Modules<a class="anchor" aria-label="anchor" href="#create-modules"></a>
@@ -427,7 +460,112 @@ know its shape.</p>
 <span></span>
 <span><span class="co"># Analyze and print</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_root</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Analyzing package</span> <span style="color: #00BBBB;">───────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Gathered metadata for <span style="color: #0000BB;">dsprrr</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Analyzing purpose...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Analyzing structure...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Generating examples...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Generating llms.txt...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Done!</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">llmstxt</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">#&gt; # dsprrr</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; A framework for principled, test-driven, and automatically optimized LLM workflows in R. Built for R programmers and data scientists who need systematic, composable, and data-driven improvement of prompt pipelines. Inspired by the DSPy framework.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Key Concepts</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - **Declarative Signatures**: Compact, type-safe notation for defining LLM inputs/outputs, enabling systematic validation and programming.</span></span>
+<span><span class="co">#&gt; - **Composable Modules**: Reusable, optimizable blocks that compose LLM programs; modules can be chained and managed independently.</span></span>
+<span><span class="co">#&gt; - **Automatic Prompt Optimization**: Data-driven searching and tuning of prompts, removing brittle prompt engineering.</span></span>
+<span><span class="co">#&gt; - **Test-driven LLM Programming**: Evaluate and improve workflows with labeled examples and metrics for reliable iteration.</span></span>
+<span><span class="co">#&gt; - **Tidyverse Integration**: Native compatibility with R data science pipelines (e.g., tibbles, purrr, dplyr).</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Quick Start</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ```r</span></span>
+<span><span class="co">#&gt; library(dsprrr)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Define a signature for a simple Q&amp;A program (declarative I/O)</span></span>
+<span><span class="co">#&gt; sig &lt;- signature("question -&gt; answer")</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Inspect the signature</span></span>
+<span><span class="co">#&gt; print(sig)</span></span>
+<span><span class="co">#&gt; ```</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Common Workflow</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ```r</span></span>
+<span><span class="co">#&gt; library(dsprrr)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Labeled data for evaluation</span></span>
+<span><span class="co">#&gt; examples &lt;- tibble::tibble(</span></span>
+<span><span class="co">#&gt;   question = c("What is the capital of France?", "2+2?"),</span></span>
+<span><span class="co">#&gt;   answer = c("Paris", "4")</span></span>
+<span><span class="co">#&gt; )</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Create a composable module</span></span>
+<span><span class="co">#&gt; mod &lt;- module(</span></span>
+<span><span class="co">#&gt;   signature = signature("question -&gt; answer"),</span></span>
+<span><span class="co">#&gt;   template = "Q: {question}\nA:"</span></span>
+<span><span class="co">#&gt; )</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # (Optional) Compile for optimization</span></span>
+<span><span class="co">#&gt; dsp_mod &lt;- compile(mod)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Run on new input</span></span>
+<span><span class="co">#&gt; y_pred &lt;- run(dsp_mod, tibble::tibble(question = "What is the capital of Germany?"))</span></span>
+<span><span class="co">#&gt; print(y_pred)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Evaluate against ground truth</span></span>
+<span><span class="co">#&gt; evaluate(dsp_mod, examples)</span></span>
+<span><span class="co">#&gt; ```</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Code Organization</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - **signature.R**: Core signature objects and I/O schema logic.</span></span>
+<span><span class="co">#&gt; - **module.R**: Composable modules—base class and interface.</span></span>
+<span><span class="co">#&gt; - **teleprompter.R**: Prompt optimization and dynamic tuning logic.</span></span>
+<span><span class="co">#&gt; - **optimize.R**: Optimization (grid search, systematic scoring, improvement).</span></span>
+<span><span class="co">#&gt; - **run.R**: High-level program/workflow execution coordination.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Other files: utilities, orchestration, integration, and tracing.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Entry Points</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - `signature`: Declare LLM input/output schemas.</span></span>
+<span><span class="co">#&gt; - `module`: Construct composable program modules.</span></span>
+<span><span class="co">#&gt; - `teleprompter`: Optimize prompt templates.</span></span>
+<span><span class="co">#&gt; - `compile`: Prepare and optimize modules/programs for execution.</span></span>
+<span><span class="co">#&gt; - `run`: Execute on new data.</span></span>
+<span><span class="co">#&gt; - `evaluate`: Test predictions against labeled ground truth.</span></span>
+<span><span class="co">#&gt; - `dsp`: Experimental pipeline orchestration (DSPy-style).</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Watch Out For</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - **Signature strictness**: Inputs/outputs must match declared signature exactly; errors otherwise.</span></span>
+<span><span class="co">#&gt; - **Object model**: Modules, teleprompters, etc., are S7 objects (not lists/functions)—interact via their methods.</span></span>
+<span><span class="co">#&gt; - **Template variables**: Template fields must match those declared in signatures (e.g., `{question}`).</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span></code></pre>
 <p><strong>This works.</strong> For a one-off script, you’re done.</p>
 <hr>
 </div>
@@ -453,12 +591,12 @@ error-prone. Typos in field names silently return
 </ul>
 <p>S7 gives you typed containers that catch these problems at
 construction time:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rconsortium.github.io/S7/" class="external-link">S7</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="s7-classes-for-results">S7 Classes for Results<a class="anchor" aria-label="anchor" href="#s7-classes-for-results"></a>
 </h3>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Package metadata</span></span>
 <span><span class="va">PackageInfo</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"PackageInfo"</span>,</span>
 <span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -521,7 +659,7 @@ slots</p>
 <div class="section level3">
 <h3 id="print-methods">Print Methods<a class="anchor" aria-label="anchor" href="#print-methods"></a>
 </h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/method.html" class="external-link">method</a></span><span class="op">(</span><span class="va">print</span>, <span class="va">PackageInfo</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h3</a></span><span class="op">(</span><span class="st">"Package: {x@name}"</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">"{x@title}"</span><span class="op">)</span></span>
@@ -540,7 +678,7 @@ slots</p>
 <div class="section level3">
 <h3 id="updated-gather-function">Updated Gather Function<a class="anchor" aria-label="anchor" href="#updated-gather-function"></a>
 </h3>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gather_package_info</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">desc_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"DESCRIPTION"</span><span class="op">)</span></span>
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">desc_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -604,7 +742,7 @@ over the simple approach: if the LLM returns incomplete data (missing
 <code>purpose</code>, for example), the <code>PurposeAnalysis()</code>
 constructor fails immediately with a clear error. No silent
 <code>NULL</code> propagation:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">analyze_purpose</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">modules</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Analyzing purpose and concepts..."</span><span class="op">)</span></span>
 <span></span>
@@ -688,7 +826,7 @@ constructor fails immediately with a clear error. No silent
 <div class="section level3">
 <h3 id="main-function">Main Function<a class="anchor" aria-label="anchor" href="#main-function"></a>
 </h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">analyze_package</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h1</a></span><span class="op">(</span><span class="st">"Analyzing package"</span><span class="op">)</span></span>
 <span></span>
@@ -723,7 +861,7 @@ constructor fails immediately with a clear error. No silent
 <p>Finally, we wrap everything in user-friendly functions. These hide
 the complexity while preserving access to the full
 <code>AnalysisResult</code> for users who need it:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">generate_llmstxt_file</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span>, <span class="va">output</span> <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_path</span>, <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
@@ -743,55 +881,172 @@ the complexity while preserving access to the full
 <div class="section level3">
 <h3 id="running-it">Running It<a class="anchor" aria-label="anchor" href="#running-it"></a>
 </h3>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Find package root (works from vignettes/ or project root)</span></span>
 <span><span class="va">pkg_root</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="st">"DESCRIPTION"</span><span class="op">)</span><span class="op">)</span> <span class="st">"."</span> <span class="kw">else</span> <span class="st">".."</span></span>
 <span></span>
 <span><span class="co"># Analyze current package</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_root</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">Analyzing package</span> <span style="color: #00BBBB;">───────────────────────────────────────────────────────────</span></span></span>
+<span><span class="co">#&gt; Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Gathered metadata for <span style="color: #0000BB;">dsprrr</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Package: dsprrr </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Declarative Self-Improving Language Programs for R</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; 119 exports, 49 R files</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Analyzing purpose and concepts...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Analyzing code structure...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Generating usage examples...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Generating llms.txt...</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Done!</span></span>
 <span></span>
 <span><span class="co"># View the analysis (uses print method)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Analysis: dsprrr</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Purpose:</span> Provides a principled, declarative, and optimizable framework for</span></span>
+<span><span class="co">#&gt; building and systematically improving LLM-powered applications in R, using</span></span>
+<span><span class="co">#&gt; programmatic workflows that integrate deeply with tidyverse.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Audience:</span> R developers and data scientists building LLM-driven applications who</span></span>
+<span><span class="co">#&gt; require structured, scalable, and optimizable workflows—especially those using</span></span>
+<span><span class="co">#&gt; the tidyverse.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Entry points:</span> <span style="color: #0000BB;">"Teleprompter"</span>, <span style="color: #0000BB;">"module"</span>, <span style="color: #0000BB;">"signature"</span>, <span style="color: #0000BB;">"run"</span>, <span style="color: #0000BB;">"evaluate"</span>, and</span></span>
+<span><span class="co">#&gt; <span style="color: #0000BB;">"optimize_grid"</span></span></span>
 <span></span>
 <span><span class="co"># See the generated llms.txt</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">@</span><span class="va">llmstxt</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">#&gt; # dsprrr</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; **Purpose:**</span></span>
+<span><span class="co">#&gt; Provides a principled, declarative, and optimizable framework for building and systematically improving LLM-powered applications in R, using programmatic workflows that integrate deeply with tidyverse.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; **Target Audience:**</span></span>
+<span><span class="co">#&gt; R developers and data scientists building LLM-driven applications who require structured, scalable, and optimizable workflows—especially those using the tidyverse.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Key Concepts</span></span>
+<span><span class="co">#&gt; - **Declarative Signatures:** Compact, structured notation for specifying LLM input/output, used for workflow definition and validation.</span></span>
+<span><span class="co">#&gt; - **Optimizable Modules:** Composable workflow units for LLM processing, supporting evaluation and data-driven improvement.</span></span>
+<span><span class="co">#&gt; - **Automatic Prompt Optimization:** Empirical optimization of prompts and workflows using built-in algorithms and strategies.</span></span>
+<span><span class="co">#&gt; - **Tracing and Debugging:** Native tools for recording, inspecting, and analyzing LLM process steps and errors.</span></span>
+<span><span class="co">#&gt; - **Tidyverse Integration:** Designed for seamless compatibility with tidyverse idioms (e.g., tibble, pipes, functional programming).</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Quick Start</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ```r</span></span>
+<span><span class="co">#&gt; library(dsprrr)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Create a simple declarative signature for a QA task</span></span>
+<span><span class="co">#&gt; sig &lt;- signature("question -&gt; answer")</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Create a module using the signature</span></span>
+<span><span class="co">#&gt; qa_mod &lt;- module(signature = sig, description = "Simple QA module")</span></span>
+<span><span class="co">#&gt; ```</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Common Workflow</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ```r</span></span>
+<span><span class="co">#&gt; library(dsprrr)</span></span>
+<span><span class="co">#&gt; library(tibble)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Sample QA dataset</span></span>
+<span><span class="co">#&gt; data &lt;- tibble(</span></span>
+<span><span class="co">#&gt;   question = c("What is the capital of France?", "What is 2+2?"),</span></span>
+<span><span class="co">#&gt;   answer = c("Paris", "4")</span></span>
+<span><span class="co">#&gt; )</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Build a teleprompter for few-shot prompting</span></span>
+<span><span class="co">#&gt; tp &lt;- Teleprompter(signature = signature("question -&gt; answer"),</span></span>
+<span><span class="co">#&gt;                    examples = data)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Run the teleprompter on a new question</span></span>
+<span><span class="co">#&gt; result &lt;- run(tp, list(question = "What is the largest planet?"))</span></span>
+<span><span class="co">#&gt; print(result)</span></span>
+<span><span class="co">#&gt; ```</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Code Organization</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Code is organized into modular components:</span></span>
+<span><span class="co">#&gt; - **Signatures:** Definition and parsing (`signature.R`)</span></span>
+<span><span class="co">#&gt; - **Modules:** Composable workflow units (`module.R`)</span></span>
+<span><span class="co">#&gt; - **Teleprompters:** Prompting strategies (`teleprompter.R`, `teleprompter-*.R`)</span></span>
+<span><span class="co">#&gt; - **Optimizers:** Logic for workflow/prompt improvement (`optimize.R`)</span></span>
+<span><span class="co">#&gt; - **Evaluation:** Metrics and scoring (`evaluate.R`)</span></span>
+<span><span class="co">#&gt; - **Tracing:** Logging and debugging utilities (`traces.R`)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Each major area is isolated for easy extension and navigation.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Entry Points</span></span>
+<span><span class="co">#&gt; - `Teleprompter`: Build advanced and few-shot prompting workflows</span></span>
+<span><span class="co">#&gt; - `module`: Create and compose workflow modules</span></span>
+<span><span class="co">#&gt; - `signature`: Define structured I/O contracts for workflows</span></span>
+<span><span class="co">#&gt; - `run`: Execute a module or teleprompter on data</span></span>
+<span><span class="co">#&gt; - `evaluate`: Quantitatively score workflow outputs</span></span>
+<span><span class="co">#&gt; - `optimize_grid`: Systematically optimize modules/workflows</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Watch Out For</span></span>
+<span><span class="co">#&gt; - **Signature Matching:** Signatures must exactly match your data fields; mismatches cause errors.</span></span>
+<span><span class="co">#&gt; - **Proper Signature Objects:** Modules and teleprompters require valid signature objects, not just character strings.</span></span>
+<span><span class="co">#&gt; - **Data Format:** Example data must follow the signature's format and match expected input/output columns.</span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
 <h2 id="example-output">Example Output<a class="anchor" aria-label="anchor" href="#example-output"></a>
 </h2>
 <p>Running on dsprrr produces:</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="fu"># dsprrr</span></span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a></span>
-<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="at">&gt; DSPy-style LLM programming for R: signatures define I/O, modules</span></span>
-<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="at">&gt; encapsulate prompts, optimizers improve them automatically.</span></span>
-<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a></span>
-<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>Data scientists and ML engineers building production LLM applications</span>
-<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>who want systematic prompt optimization rather than manual tuning.</span>
-<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a></span>
-<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="fu">## Key Concepts</span></span>
-<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a></span>
-<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="ss">- </span>**Signature**: Declarative specification of module inputs and outputs</span>
-<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>  using arrow notation (<span class="in">`question -&gt; answer`</span>) or explicit types.</span>
-<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="ss">- </span>**Module**: Reusable, stateful wrapper around an LLM call with</span>
-<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>  configuration and optimization state.</span>
-<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a><span class="ss">- </span>**Teleprompter**: Optimization strategy that compiles modules by</span>
-<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>  adding few-shot examples or refining instructions.</span>
-<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="ss">- </span>**Trace**: Record of module execution for debugging and analysis.</span>
-<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a></span>
-<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="fu">## Quick Start</span></span>
-<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a></span>
-<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="fu">library</span>(dsprrr)</span>
-<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a><span class="fu">library</span>(ellmer)</span>
-<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a></span>
-<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">signature</span>(<span class="st">"question -&gt; answer"</span>) <span class="sc">|&gt;</span> <span class="fu">module</span>(<span class="at">type =</span> <span class="st">"predict"</span>)</span>
-<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="fu">run</span>(mod, <span class="at">question =</span> <span class="st">"What is R?"</span>, <span class="at">.llm =</span> <span class="fu">chat_openai</span>())</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="fu"># dsprrr</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a><span class="at">&gt; DSPy-style LLM programming for R: signatures define I/O, modules</span></span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a><span class="at">&gt; encapsulate prompts, optimizers improve them automatically.</span></span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>Data scientists and ML engineers building production LLM applications</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>who want systematic prompt optimization rather than manual tuning.</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="fu">## Key Concepts</span></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a><span class="ss">- </span>**Signature**: Declarative specification of module inputs and outputs</span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a>  using arrow notation (<span class="in">`question -&gt; answer`</span>) or explicit types.</span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a><span class="ss">- </span>**Module**: Reusable, stateful wrapper around an LLM call with</span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a>  configuration and optimization state.</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a><span class="ss">- </span>**Teleprompter**: Optimization strategy that compiles modules by</span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a>  adding few-shot examples or refining instructions.</span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a><span class="ss">- </span>**Trace**: Record of module execution for debugging and analysis.</span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a></span>
+<span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a><span class="fu">## Quick Start</span></span>
+<span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="in">```r</span></span>
+<span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a><span class="fu">library</span>(dsprrr)</span>
+<span id="cb17-23"><a href="#cb17-23" tabindex="-1"></a><span class="fu">library</span>(ellmer)</span>
+<span id="cb17-24"><a href="#cb17-24" tabindex="-1"></a></span>
+<span id="cb17-25"><a href="#cb17-25" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">signature</span>(<span class="st">"question -&gt; answer"</span>) <span class="sc">|&gt;</span> <span class="fu">module</span>(<span class="at">type =</span> <span class="st">"predict"</span>)</span>
+<span id="cb17-26"><a href="#cb17-26" tabindex="-1"></a><span class="fu">run</span>(mod, <span class="at">question =</span> <span class="st">"What is R?"</span>, <span class="at">.llm =</span> <span class="fu">chat_openai</span>())</span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="common-workflow">Common Workflow<a class="anchor" aria-label="anchor" href="#common-workflow"></a>
 </h2>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span>,</span>
 <span>                 instructions <span class="op">=</span> <span class="st">"Answer based only on context."</span><span class="op">)</span></span>
 <span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
