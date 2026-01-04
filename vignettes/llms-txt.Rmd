@@ -9,16 +9,48 @@ vignette: >
 
 ```{r}
 #| include: false
+# Skip evaluation during R CMD check or CI (cassettes may not match current code)
+# VITALS_SHOULD_EVAL can override for cassette recording
+force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+in_check <- !force_eval && (
+  nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+  identical(Sys.getenv("NOT_CRAN"), "false") ||
+  !interactive()
+)
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE
+  eval = should_eval
 )
+
+if (should_eval) {
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+  vcr::setup_knitr()
+}
 ```
 
 [llms.txt](https://llmstxt.org/) is a proposed standard for AI-friendly documentation. This tutorial builds a dsprrr pipeline to automatically generate `llms.txt` files for R packages.
 
 *This tutorial is adapted from the [DSPy llms.txt tutorial](https://dspy.ai/tutorials/llms_txt_generation/) by the DSPy team.*
+
+## Why This Matters Beyond llms.txt
+
+The multi-stage pipeline you'll build here is a blueprint for many real-world AI workflows:
+
+- **API documentation generation**: The same pattern—gather metadata, analyze structure, generate prose—applies to any documentation task. Replace R packages with REST APIs, GraphQL schemas, or database tables.
+
+- **Code review automation**: Each stage (understand purpose → analyze structure → identify issues) maps directly to how a code review agent works. The typed S7 results ensure review findings don't get lost between stages.
+
+- **Migration guide creation**: When upgrading dependencies or refactoring APIs, you need the same capabilities: understand what exists, identify patterns, generate actionable guidance.
+
+- **Knowledge base construction**: The pipeline extracts structured knowledge from unstructured sources. Swap packages for internal wikis, Slack channels, or support tickets.
+
+The key insight is **staged analysis with typed handoffs**. Each LLM call has a focused job. S7 classes ensure intermediate results are validated before the next stage sees them. This is more reliable than asking one prompt to do everything.
 
 We'll start with plain lists and functions, then show how S7 adds structure for larger projects.
 
@@ -109,7 +141,9 @@ gather_package_info <- function(pkg_path = ".") {
 
 ### Define Signatures
 
-Here's where dsprrr comes in—each analysis stage has a clear contract:
+Here's where dsprrr comes in—each analysis stage has a clear contract. Signatures define *what* each stage needs and *what* it produces. This separation matters: when a stage fails or produces poor output, you know exactly where to look.
+
+Notice how we use `type_object()` and `type_array()` to define structured outputs. The LLM returns JSON matching this schema, which we can then pass reliably to the next stage:
 
 ```{r simple-signatures}
 # Stage 1: Analyze purpose
@@ -203,19 +237,23 @@ Keep it concise - this is reference documentation for AI systems."
 
 ### Create Modules
 
+Each module wraps a signature. We use `type = "chain_of_thought"` for the analysis stages—this asks the LLM to show its work, which improves accuracy for complex analysis tasks. The final `llmstxt` stage just needs to synthesize; no reasoning required.
+
 ```{r simple-modules}
 create_modules <- function(llm) {
   list(
-    purpose = analyze_purpose_sig |> with_reasoning() |> module(type = "predict"),
-    structure = analyze_structure_sig |> with_reasoning() |> module(type = "predict"),
-    examples = generate_examples_sig |> with_reasoning() |> module(type = "predict"),
-    llmstxt = generate_llmstxt_sig |> module(type = "predict"),
+    purpose = module(analyze_purpose_sig, type = "chain_of_thought"),
+    structure = module(analyze_structure_sig, type = "chain_of_thought"),
+    examples = module(generate_examples_sig, type = "chain_of_thought"),
+    llmstxt = module(generate_llmstxt_sig),
     llm = llm
   )
 }
 ```
 
 ### Run the Pipeline
+
+The pipeline chains stages together. Each stage's output feeds the next. This is where the structured signatures pay off—we can confidently pass `purpose$key_concepts` to the examples stage because we know its shape.
 
 ```{r simple-pipeline}
 analyze_package <- function(pkg_path = ".", llm = chat_openai()) {
@@ -294,12 +332,13 @@ analyze_package <- function(pkg_path = ".", llm = chat_openai()) {
 ### Use It
 
 ```{r simple-use}
-# Analyze and print
-result <- analyze_package(".")
-cat(result$llmstxt)
+#| cassette: simple-use
+# Find package root (works from vignettes/ or project root)
+pkg_root <- if (file.exists("DESCRIPTION")) "." else ".."
 
-# Write to file
-writeLines(result$llmstxt, "llms.txt")
+# Analyze and print
+result <- analyze_package(pkg_root)
+cat(result$llmstxt)
 ```
 
 **This works.** For a one-off script, you're done.
@@ -308,13 +347,13 @@ writeLines(result$llmstxt, "llms.txt")
 
 ## Part 2: Adding Structure with S7
 
-As pipelines grow, plain lists show their limits:
+The simple approach works for scripts. But as pipelines grow—more stages, more developers, production use—plain lists show their limits:
 
-- No validation (what if a required field is missing?)
-- No documentation (what fields does each result have?)
-- Hard to compose (passing results between stages is error-prone)
+- **No validation**: What if a stage returns `NULL` for a required field? You won't find out until three stages later when something breaks mysteriously.
+- **No documentation**: What fields does each result have? You'll need to trace through the code.
+- **Hard to compose**: Passing results between stages is error-prone. Typos in field names silently return `NULL`.
 
-S7 gives you typed containers:
+S7 gives you typed containers that catch these problems at construction time:
 
 ```{r s7-setup}
 library(S7)
@@ -463,7 +502,7 @@ gather_package_info <- function(pkg_path = ".") {
 
 ### Stage Functions
 
-Each stage returns a typed S7 object:
+Each stage returns a typed S7 object. This is the key improvement over the simple approach: if the LLM returns incomplete data (missing `purpose`, for example), the `PurposeAnalysis()` constructor fails immediately with a clear error. No silent `NULL` propagation:
 
 ```{r s7-stages}
 analyze_purpose <- function(pkg_info, modules) {
@@ -581,6 +620,8 @@ analyze_package <- function(pkg_path = ".", llm = chat_openai()) {
 
 ### Convenience Functions
 
+Finally, we wrap everything in user-friendly functions. These hide the complexity while preserving access to the full `AnalysisResult` for users who need it:
+
 ```{r s7-convenience}
 generate_llmstxt_file <- function(pkg_path = ".", output = NULL, llm = chat_openai()) {
   result <- analyze_package(pkg_path, llm)
@@ -602,20 +643,18 @@ preview_llmstxt <- function(pkg_path = ".", llm = chat_openai()) {
 ### Running It
 
 ```{r s7-run}
+#| cassette: s7-run
+# Find package root (works from vignettes/ or project root)
+pkg_root <- if (file.exists("DESCRIPTION")) "." else ".."
+
 # Analyze current package
-result <- analyze_package(".")
+result <- analyze_package(pkg_root)
 
 # View the analysis (uses print method)
 print(result)
 
 # See the generated llms.txt
 cat(result@llmstxt)
-
-# Write to file
-writeLines(result@llmstxt, "llms.txt")
-
-# Or use convenience function
-generate_llmstxt_file(".", output = "llms.txt")
 ```
 
 ## Example Output
@@ -703,12 +742,16 @@ Module variants in separate files. Optimization in teleprompter.R.
 | **Plain lists** | One-off scripts, quick prototypes |
 | **S7 classes** | Reusable pipelines, packages, need validation |
 
-## Other Applications
+## Adapting This Pattern
 
-The same pipeline pattern works for:
+The staged pipeline pattern adapts to many documentation and analysis tasks:
 
-- API documentation generation
-- Changelog summarization
-- Code review automation
-- Test case generation
-- Migration guide creation
+| Application | Gather Stage | Analysis Stages | Output Stage |
+|------------|--------------|-----------------|--------------|
+| **API docs** | Parse OpenAPI spec | Analyze endpoints, group by resource | Generate markdown reference |
+| **Changelogs** | Parse git commits, issues | Categorize changes, identify breaking | Generate release notes |
+| **Code review** | Diff files, parse AST | Check style, find bugs, assess complexity | Generate review comments |
+| **Test generation** | Parse function signatures | Identify edge cases, dependencies | Generate test cases |
+| **Migration guides** | Diff API versions | Identify breaking changes, patterns | Generate upgrade steps |
+
+The key is the same: define clear signatures for each stage, use structured outputs to pass data between stages, and let S7 classes enforce the contracts.
