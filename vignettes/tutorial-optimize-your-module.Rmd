@@ -1,0 +1,338 @@
+---
+title: "Tutorial 5: Finding the Best Configuration"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tutorial 5: Finding the Best Configuration}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+in_check <- !force_eval && (
+  nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+  identical(Sys.getenv("NOT_CRAN"), "false")
+)
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = should_eval
+)
+
+if (should_eval) {
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+  vcr::setup_knitr()
+}
+```
+
+In [Tutorial 4](tutorial-improve-with-demos.html), you improved your module with examples. But there are many other knobs to tune: temperature, instructions, prompt templates. How do you find the best combination?
+
+The answer: **let dsprrr search for you**.
+
+**Time**: 30-35 minutes
+
+## What You'll Build
+
+An optimized module that automatically finds the best configuration through grid search.
+
+## Prerequisites
+
+- Completed [Tutorial 4](tutorial-improve-with-demos.html)
+- `OPENAI_API_KEY` set in your environment
+
+```{r setup}
+library(dsprrr)
+library(ellmer)
+library(tibble)
+
+chat <- chat_openai()
+```
+
+## Step 1: Set Up the Problem
+
+Let's build a sentiment analyzer and optimize it:
+
+```{r setup-problem}
+sig <- signature(
+  "review -> sentiment: enum('positive', 'negative', 'neutral')",
+  instructions = "Classify the sentiment of this product review."
+)
+
+classifier <- module(sig, type = "predict")
+```
+
+Create training and test data:
+
+```{r create-data}
+# Training data for optimization
+trainset <- dsp_trainset(
+  review = c(
+    "Absolutely love this product! Best purchase ever.",
+    "Complete waste of money. Broke after one day.",
+    "It's okay. Does what it says.",
+    "Exceeded all my expectations!",
+    "Terrible quality. Very disappointed.",
+    "Nothing special, but it works.",
+    "Amazing! Would buy again.",
+    "Don't bother. Total junk.",
+    "Decent for the price.",
+    "Fantastic quality and fast shipping!"
+  ),
+  sentiment = c(
+    "positive", "negative", "neutral",
+    "positive", "negative", "neutral",
+    "positive", "negative", "neutral",
+    "positive"
+  )
+)
+
+# Held-out test data (never used for optimization)
+testset <- dsp_trainset(
+  review = c(
+    "Great value for money!",
+    "Stopped working after a week.",
+    "Average product, average price.",
+    "Couldn't be happier with this purchase!"
+  ),
+  sentiment = c("positive", "negative", "neutral", "positive")
+)
+```
+
+## Step 2: Grid Search Over Temperature
+
+Temperature controls randomness. Lower = more deterministic, higher = more creative. Let's find the best value:
+
+```{r grid-search-temp}
+classifier$optimize_grid(
+  devset = trainset,
+  metric = metric_exact_match(field = "sentiment"),
+  parameters = list(
+    temperature = c(0.0, 0.3, 0.7, 1.0)
+  ),
+  .llm = chat
+)
+```
+
+## Step 3: View Optimization Results
+
+See what happened:
+
+```{r view-trials}
+# All trials
+module_trials(classifier)
+```
+
+Get the summary:
+
+```{r view-metrics}
+# Metrics summary
+module_metrics(classifier)
+```
+
+Check the best configuration:
+
+```{r best-config}
+# Best score achieved
+classifier$state$best_score
+
+# Best parameters
+classifier$state$best_params
+```
+
+## Step 4: The Module Remembers
+
+After optimization, the module automatically uses the best configuration:
+
+```{r use-optimized}
+# This uses the best temperature found
+run(classifier, review = "This product changed my life!", .llm = chat)
+```
+
+## Step 5: Grid Search Over Instructions
+
+Instructions matter a lot. Let's test different phrasings:
+
+```{r grid-instructions}
+# Reset to try different parameters
+classifier2 <- module(sig, type = "predict")
+
+classifier2$optimize_grid(
+  devset = trainset,
+  metric = metric_exact_match(field = "sentiment"),
+  parameters = list(
+    instructions_suffix = c(
+      "",
+      " Be brief.",
+      " Consider the overall tone.",
+      " Focus on the customer's satisfaction level."
+    )
+  ),
+  .llm = chat
+)
+
+module_trials(classifier2)
+```
+
+The `instructions_suffix` is appended to your base instructions.
+
+## Step 6: Multi-Parameter Grid Search
+
+Search over multiple parameters at once:
+
+```{r multi-param-grid}
+classifier3 <- module(sig, type = "predict")
+
+classifier3$optimize_grid(
+  devset = trainset,
+  metric = metric_exact_match(field = "sentiment"),
+  parameters = list(
+    temperature = c(0.0, 0.5),
+    instructions_suffix = c("", " Be decisive.")
+  ),
+  .llm = chat
+)
+
+module_trials(classifier3)
+```
+
+This tests all combinations: 2 temperatures × 2 instruction variants = 4 total configurations.
+
+## Step 7: Using GridSearchTeleprompter
+
+For more control, use `GridSearchTeleprompter` with explicit variants:
+
+```{r grid-teleprompter}
+variants <- tibble(
+  id = c("concise", "analytical", "empathetic"),
+  instructions_suffix = c(
+    " Respond with just the sentiment.",
+    " Analyze the language carefully before deciding.",
+    " Consider how the customer is feeling."
+  )
+)
+
+teleprompter <- GridSearchTeleprompter(
+  variants = variants,
+  metric = metric_exact_match(field = "sentiment"),
+  k = 2  # Number of few-shot examples to include
+)
+
+optimized <- compile_module(
+  program = module(sig, type = "predict"),
+  teleprompter = teleprompter,
+  trainset = trainset,
+  .llm = chat
+)
+```
+
+This combines instruction optimization with few-shot example selection.
+
+## Step 8: Evaluate on Held-Out Test Data
+
+Always test on data the optimizer never saw:
+
+```{r test-evaluation}
+# Evaluate the optimized module on test data
+test_results <- evaluate(
+  optimized,
+  testset,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = chat
+)
+
+test_results
+```
+Compare to baseline:
+
+```{r baseline-comparison}
+baseline <- module(sig, type = "predict")
+
+baseline_results <- evaluate(
+  baseline,
+  testset,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = chat
+)
+
+cat("Baseline test accuracy:", scales::percent(baseline_results$mean_score), "\n")
+cat("Optimized test accuracy:", scales::percent(test_results$mean_score), "\n")
+```
+
+## Step 9: Different Metrics for Different Tasks
+
+Not all tasks use exact match. dsprrr provides several metrics:
+
+```{r other-metrics}
+# For text generation - token overlap
+metric_f1()
+
+# Check if output contains a string
+metric_contains("error", ignore_case = TRUE)
+
+# Custom logic
+metric_custom(function(prediction, expected) {
+  # Return TRUE/FALSE or 0-1 score
+  nchar(prediction) < 100
+}, name = "concise")
+
+# Threshold wrapper
+metric_threshold(metric_f1(), threshold = 0.8)
+```
+
+## Step 10: Tracking Costs
+
+Optimization uses LLM calls. Track the cost:
+
+```{r track-costs}
+# After optimization
+classifier$trace_summary()
+
+# Total session cost
+session_cost()
+```
+
+## What You Learned
+
+In this tutorial, you:
+
+1. Used `optimize_grid()` to search over parameters
+2. Viewed results with `module_trials()` and `module_metrics()`
+3. Searched over temperature and instructions
+4. Combined parameters in multi-dimensional grids
+5. Used `GridSearchTeleprompter` for instruction + demo optimization
+6. Evaluated on held-out test data
+7. Explored different metrics
+8. Tracked optimization costs
+
+## The Optimization Mindset
+
+Key principles:
+
+1. **Measure first**: Know your baseline before optimizing
+2. **Use held-out data**: Never test on training data
+3. **Start simple**: Try temperature before complex instruction variants
+4. **Watch costs**: Grid search multiplies LLM calls
+5. **Diminishing returns**: Often 80% of improvement comes from first optimization
+
+## When to Use Each Approach
+
+| Approach | Best For |
+|----------|----------|
+| `optimize_grid()` | Quick parameter sweeps |
+| `LabeledFewShot` | Adding examples from data |
+| `GridSearchTeleprompter` | Instruction + example optimization |
+| Manual tuning | Initial exploration |
+
+## Next Steps
+
+Your module is optimized. Now how do you save it and deploy it? Continue to:
+
+- **[Tutorial 6: Taking to Production](tutorial-deploy-to-production.html)** — Save and deploy modules
+- **[Quick Reference](cheatsheet.html)** — All teleprompters and parameters
+- **[How Optimization Works](concepts-optimization-theory.html)** — Theory behind the search

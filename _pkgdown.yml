@@ -19,91 +19,118 @@ home:
 
 navbar:
   structure:
-    left: [intro, reference, articles]
+    left: [intro, tutorials, howto, concepts, reference]
     right: [search, lightswitch, github]
   components:
     intro:
       text: Get Started
       href: articles/getting-started.html
-    articles:
-      text: Learn
+    tutorials:
+      text: Tutorials
       menu:
-        - text: "Getting Started"
-          href: articles/getting-started.html
-        - text: "Quick Reference"
-          href: articles/cheatsheet.html
+        - text: "Learning Path"
+        - text: "1. Your First LLM Call"
+          href: articles/tutorial-hello-world.html
+        - text: "2. Building a Classifier"
+          href: articles/tutorial-build-classifier.html
+        - text: "3. Structured Outputs"
+          href: articles/tutorial-structured-outputs.html
+        - text: "4. Improving with Examples"
+          href: articles/tutorial-improve-with-demos.html
+        - text: "5. Optimization"
+          href: articles/tutorial-optimize-your-module.html
+        - text: "6. Production"
+          href: articles/tutorial-deploy-to-production.html
+        - text: "---"
+        - text: "Advanced Tutorials"
+        - text: "Build an AI Game Master"
+          href: articles/text-adventure.html
+        - text: "Generate Package Docs"
+          href: articles/llms-txt.html
+    howto:
+      text: How-to Guides
+      menu:
         - text: "Troubleshooting"
           href: articles/troubleshooting.html
-        - text: "Compilation & Optimization"
+        - text: "Compile & Optimize"
           href: articles/compilation-optimization.html
-        - text: "Advanced Optimizer Guide"
-          href: articles/advanced-optimization.html
-        - text: "Advanced Reasoning Modules"
-          href: articles/advanced-modules.html
-        - text: "---"
-        - text: "Integrations"
-        - text: "Vitals Integration"
-          href: articles/vitals-integration.html
-        - text: "Vitals Recipes"
+        - text: "Evaluate with Vitals"
           href: articles/vitals-recipes.html
-        - text: "Production Orchestration"
+        - text: "Build RAG Pipelines"
+          href: articles/rag-workflows.html
+        - text: "Deploy to Production"
           href: articles/orchestration.html
         - text: "---"
-        - text: "Ecosystem"
-        - text: "Reasoning Models"
-          href: articles/reasoning-models.html
+        - text: "Integrations"
+        - text: "Vitals Package"
+          href: articles/vitals-integration.html
+        - text: "tidymodels"
+          href: articles/tidymodels-integration.html
         - text: "Advanced ellmer"
           href: articles/advanced-ellmer.html
-        - text: "RAG Workflows"
-          href: articles/rag-workflows.html
-        - text: "tidymodels Integration"
-          href: articles/tidymodels-integration.html
+    concepts:
+      text: Concepts
+      menu:
+        - text: "The DSPy Philosophy"
+          href: articles/concepts-dspy-philosophy.html
         - text: "---"
-        - text: "Tutorials"
-        - text: "Text Adventure Game"
-          href: articles/text-adventure.html
-        - text: "Generating llms.txt"
-          href: articles/llms-txt.html
+        - text: "Deep Dives"
+        - text: "Advanced Reasoning"
+          href: articles/advanced-modules.html
+        - text: "Advanced Optimization"
+          href: articles/advanced-optimization.html
+        - text: "Reasoning Models"
+          href: articles/reasoning-models.html
+    reference:
+      text: Reference
+      menu:
+        - text: "Quick Reference"
+          href: articles/cheatsheet.html
+        - text: "API Documentation"
+          href: reference/index.html
 
 logo:
   file: man/figures/logo.png
   alt: dsprrr hex sticker
 
 articles:
-  - title: Getting Started
-    navbar: ~
+  - title: Tutorials
+    desc: Learn dsprrr step by step
     contents:
     - getting-started
-    - cheatsheet
-    - troubleshooting
-
-  - title: Core Workflows
-    desc: Learn how to build and optimize LLM applications
-    contents:
-    - compilation-optimization
-    - advanced-optimization
-    - advanced-modules
-    - vitals-integration
-    - vitals-recipes
-
-  - title: Production
-    desc: Deploy and orchestrate LLM workflows
-    contents:
-    - orchestration
-
-  - title: Ecosystem
-    desc: Integration with the R ecosystem
-    contents:
-    - reasoning-models
-    - advanced-ellmer
-    - rag-workflows
-    - tidymodels-integration
-
-  - title: Tutorials
-    desc: Learn by building
-    contents:
+    - tutorial-hello-world
+    - tutorial-build-classifier
+    - tutorial-structured-outputs
+    - tutorial-improve-with-demos
+    - tutorial-optimize-your-module
+    - tutorial-deploy-to-production
     - text-adventure
     - llms-txt
+
+  - title: How-to Guides
+    desc: Solve specific problems
+    contents:
+    - troubleshooting
+    - compilation-optimization
+    - vitals-recipes
+    - rag-workflows
+    - orchestration
+    - vitals-integration
+    - tidymodels-integration
+    - advanced-ellmer
+
+  - title: Concepts
+    desc: Understand the philosophy and design
+    contents:
+    - concepts-dspy-philosophy
+    - advanced-modules
+    - advanced-optimization
+    - reasoning-models
+
+  - title: Reference
+    desc: Quick lookup
+    contents:
+    - cheatsheet
 
 reference:
   - title: Core Functions
