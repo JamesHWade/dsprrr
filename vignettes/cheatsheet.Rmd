@@ -76,6 +76,37 @@ dsprrr_sitrep()
 #>   Model: gpt-4o-mini
 ```
 
+### Default Chat Management
+
+```{r default-chat}
+#| eval: false
+# Set a specific Chat as default
+set_default_chat(chat_openai(model = "gpt-4o"))
+
+# Get the current default Chat
+chat <- get_default_chat()
+
+# Clear the default (requires explicit .llm in calls)
+clear_default_chat()
+```
+
+---
+
+## API Quick Reference
+
+| Function | Purpose | Returns |
+|----------|---------|---------|
+| `dsp()` | One-off structured LLM call | Output value(s) |
+| `as_module()` | Create reusable module from Chat | Module object |
+| `signature()` | Define input/output schema | Signature object |
+| `module()` | Create module with full control | Module object |
+| `run()` | Execute module on single input | tibble with output |
+| `run_dataset()` | Execute on data frame | tibble with outputs |
+| `evaluate()` | Compute metrics on test data | Evaluation result |
+| `compile()` | Optimize with teleprompter | Compiled module |
+| `get_last_prompt()` | Inspect last prompt sent | Prompt text |
+| `get_last_trace()` | Get trace from last `dsp()` call | Trace object |
+
 ---
 
 ## Signature Notation
@@ -289,6 +320,17 @@ What are you measuring?
 └─ Custom logic → metric_custom(my_scorer_fn)
     └─ Domain-specific evaluation
 ```
+
+### Metric by Task Type
+
+| Task | Recommended Metric | Why |
+|------|-------------------|-----|
+| Classification | `metric_exact_match()` | Answer must be exactly right |
+| Extraction | `metric_exact_match(field = "...")` | Extract specific field |
+| Generation | `metric_f1()` | Partial credit for overlap |
+| Yes/No questions | `metric_exact_match(ignore_case = TRUE)` | "Yes" = "yes" |
+| Contains keyword | `metric_contains()` | Answer includes key info |
+| Complex evaluation | Custom function | Domain-specific logic |
 
 ### Running Evaluation
 
