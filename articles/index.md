@@ -53,6 +53,8 @@ Understand the philosophy and design
   Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md):
 - [How Prompt Optimization
   Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md):
+- [Why Metrics Drive Better LLM
+  Applications](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md):
 - [Advanced Reasoning
   Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
 - [Advanced Optimizer

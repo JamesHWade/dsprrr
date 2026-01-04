@@ -450,13 +450,10 @@ selection.</p>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Processing 2/4 |  50% | ETA:  1s</span></span>
 <span><span class="co">#&gt; Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many</span></span>
 <span><span class="co">#&gt; Requests.</span></span>
 <span><span class="co">#&gt; Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many</span></span>
 <span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Processing 4/4 | 100% | ETA:  0s</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Warning: Metric evaluation failed for row 3</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
 <span><span class="co">#&gt; Warning: Metric evaluation failed for row 4</span></span>
@@ -500,7 +497,7 @@ selection.</p>
 <span><span class="co">#&gt; $metadata</span></span>
 <span><span class="co">#&gt; $metadata[[1]]</span></span>
 <span><span class="co">#&gt; $metadata[[1]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 555.7878</span></span>
+<span><span class="co">#&gt; [1] 555.4943</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 168</span></span>
@@ -512,7 +509,7 @@ selection.</p>
 <span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-04 20:26:00 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-04 23:30:19 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
@@ -520,7 +517,7 @@ selection.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]</span></span>
 <span><span class="co">#&gt; $metadata[[2]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 539.7959</span></span>
+<span><span class="co">#&gt; [1] 530.2579</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 175</span></span>
@@ -532,7 +529,7 @@ selection.</p>
 <span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-04 20:26:01 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-04 23:30:19 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 2</span></span>
@@ -639,8 +636,8 @@ selection.</p>
 <span><span class="co">#&gt;     f1 &lt;- 2 * precision * recall/(precision + recall)</span></span>
 <span><span class="co">#&gt;     f1</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x5617deadca20&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x5617deaddfd8&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x5641ab81b528&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x5641ada99220&gt;</span></span>
 <span></span>
 <span><span class="co"># Check if output contains a string</span></span>
 <span><span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"error"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -660,8 +657,8 @@ selection.</p>
 <span><span class="co">#&gt;         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)</span></span>
 <span><span class="co">#&gt;     }</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x5617df5aae28&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x5617df5ad838&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x5641aec04238&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x5641aec02e18&gt;</span></span>
 <span></span>
 <span><span class="co"># Custom logic</span></span>
 <span><span class="fu"><a href="../reference/metric_custom.html">metric_custom</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
@@ -689,8 +686,8 @@ selection.</p>
 <span><span class="co">#&gt;             x = e$message), parent = e)</span></span>
 <span><span class="co">#&gt;     })</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x5617dfd8f498&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x5617dd4a92e0&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x5641abd17fa0&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x5641a8a04458&gt;</span></span>
 <span></span>
 <span><span class="co"># Threshold wrapper</span></span>
 <span><span class="fu"><a href="../reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
@@ -705,8 +702,8 @@ selection.</p>
 <span><span class="co">#&gt;         `&lt;=` = score &lt;= threshold)</span></span>
 <span><span class="co">#&gt;     result</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x5617dd010810&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x5617dd013728&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;bytecode: 0x5641a86aa168&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x5641a86ad160&gt;</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-10-tracking-costs">Step 10: Tracking Costs<a class="anchor" aria-label="anchor" href="#step-10-tracking-costs"></a>
