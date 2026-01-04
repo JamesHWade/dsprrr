@@ -105,6 +105,11 @@
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="configure-default-llm">Configure Default LLM<a class="anchor" aria-label="anchor" href="#configure-default-llm"></a>
@@ -304,29 +309,34 @@
 </h3>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># With explicit Chat</span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
 <span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; "4"</span></span>
-<span></span>
-<span><span class="co"># With auto-detected Chat (uses configured default)</span></span>
+<span><span class="co">#&gt; [1] "4"</span></span></code></pre></div>
+<p>The auto-detected form (when you have a default Chat configured):</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># With auto-detected Chat (uses configured default)</span></span>
 <span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="reusable-as_module-for-repeated-use">Reusable: <code>as_module()</code> for Repeated Use<a class="anchor" aria-label="anchor" href="#reusable-as_module-for-repeated-use"></a>
 </h3>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create from Chat</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Use repeatedly</span></span>
 <span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Love it!"</span><span class="op">)</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Hate it!"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "positive"</span></span>
+<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Hate it!"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "negative"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="full-control-signature-module">Full Control: <code>signature()</code> + <code>module()</code><a class="anchor" aria-label="anchor" href="#full-control-signature-module"></a>
 </h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># For optimization and complex configurations</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span></span>
 <span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
@@ -377,7 +387,7 @@
 <div class="section level3">
 <h3 id="single-execution">Single Execution<a class="anchor" aria-label="anchor" href="#single-execution"></a>
 </h3>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Using run()</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"What is R?"</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -387,7 +397,7 @@
 <div class="section level3">
 <h3 id="batch-processing">Batch Processing<a class="anchor" aria-label="anchor" href="#batch-processing"></a>
 </h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Vector inputs</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="va">mod</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great!"</span>, <span class="st">"Awful!"</span>, <span class="st">"Meh"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -401,7 +411,7 @@
 <div class="section level3">
 <h3 id="show-prompt">Show Prompt<a class="anchor" aria-label="anchor" href="#show-prompt"></a>
 </h3>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># See the prompt being sent</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"Test"</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .show_prompt <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <hr>
@@ -469,7 +479,7 @@
 <div class="section level3">
 <h3 id="running-evaluation">Running Evaluation<a class="anchor" aria-label="anchor" href="#running-evaluation"></a>
 </h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Basic evaluation</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">testset</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">mean_score</span></span>
@@ -490,7 +500,7 @@
 <div class="section level3">
 <h3 id="grid-search">Grid Search<a class="anchor" aria-label="anchor" href="#grid-search"></a>
 </h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Search over parameters</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
 <span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
@@ -509,7 +519,7 @@
 <div class="section level3">
 <h3 id="teleprompters">Teleprompters<a class="anchor" aria-label="anchor" href="#teleprompters"></a>
 </h3>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Few-shot learning</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
@@ -529,7 +539,7 @@
 <div class="section level3">
 <h3 id="inspect-last-call">Inspect Last Call<a class="anchor" aria-label="anchor" href="#inspect-last-call"></a>
 </h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Get the last prompt sent</span></span>
 <span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── Last Prompt ──</span></span>
@@ -541,7 +551,7 @@
 <div class="section level3">
 <h3 id="prompt-history">Prompt History<a class="anchor" aria-label="anchor" href="#prompt-history"></a>
 </h3>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># View recent prompts</span></span>
 <span><span class="fu"><a href="../reference/inspect_history.html">inspect_history</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span></span>
@@ -551,7 +561,7 @@
 <div class="section level3">
 <h3 id="module-inspection">Module Inspection<a class="anchor" aria-label="anchor" href="#module-inspection"></a>
 </h3>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Detailed module state</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">inspect</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -561,7 +571,7 @@
 <div class="section level3">
 <h3 id="traces">Traces<a class="anchor" aria-label="anchor" href="#traces"></a>
 </h3>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Get all traces from a module</span></span>
 <span><span class="va">traces</span> <span class="op">&lt;-</span> <span class="va">mod</span><span class="op">$</span><span class="fu">get_traces</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -582,7 +592,7 @@
 <div class="section level3">
 <h3 id="saverestore-configuration">Save/Restore Configuration<a class="anchor" aria-label="anchor" href="#saverestore-configuration"></a>
 </h3>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Save optimized config to pins board</span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">board</span>, <span class="st">"my-classifier-v1"</span><span class="op">)</span></span>
 <span></span>
@@ -592,7 +602,7 @@
 <div class="section level3">
 <h3 id="vitals-integration">Vitals Integration<a class="anchor" aria-label="anchor" href="#vitals-integration"></a>
 </h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Convert module to vitals solver</span></span>
 <span><span class="va">solver</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_vitals_solver.html">as_vitals_solver</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
 <span></span>
@@ -606,7 +616,7 @@
 <div class="section level3">
 <h3 id="project-template">Project Template<a class="anchor" aria-label="anchor" href="#project-template"></a>
 </h3>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create production-ready project structure</span></span>
 <span><span class="fu"><a href="../reference/use_dsprrr_template.html">use_dsprrr_template</a></span><span class="op">(</span><span class="st">"my_project"</span><span class="op">)</span></span>
 <span></span>
@@ -621,7 +631,7 @@
 <div class="section level3">
 <h3 id="rag-retrieval-augmented-generation">RAG (Retrieval-Augmented Generation)<a class="anchor" aria-label="anchor" href="#rag-retrieval-augmented-generation"></a>
 </h3>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"context, question -&gt; answer"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Answer based only on the provided context."</span></span>
@@ -638,7 +648,7 @@
 <div class="section level3">
 <h3 id="classification">Classification<a class="anchor" aria-label="anchor" href="#classification"></a>
 </h3>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; label: enum('spam', 'not_spam')"</span><span class="op">)</span></span>
 <span></span>
@@ -647,7 +657,7 @@
 <div class="section level3">
 <h3 id="extraction">Extraction<a class="anchor" aria-label="anchor" href="#extraction"></a>
 </h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">extractor</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; entities: list[string], summary: string"</span><span class="op">)</span></span>
 <span></span>
@@ -658,7 +668,7 @@
 <div class="section level3">
 <h3 id="chain-of-thought-via-instructions">Chain of Thought (via instructions)<a class="anchor" aria-label="anchor" href="#chain-of-thought-via-instructions"></a>
 </h3>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"problem -&gt; answer"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Think step by step. Show your reasoning before the final answer."</span></span>
