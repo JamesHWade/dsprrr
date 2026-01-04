@@ -176,14 +176,28 @@ dsprrr uses ellmer for all LLM calls. The integration is straightforward:
 
 ## Learning more
 
-```r
-vignette("getting-started", package = "dsprrr")
-vignette("compilation-optimization", package = "dsprrr")
+**Start here:**
+- [Getting Started](https://jameshwade.github.io/dsprrr/articles/getting-started.html) — Choose your learning path
 
-# Tutorials
-vignette("text-adventure", package = "dsprrr")  # Build an AI game master
-vignette("llms-txt", package = "dsprrr")        # Generate package docs
-```
+**Tutorial sequence** (learn step by step):
+1. [Your First LLM Call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.html)
+2. [Building a Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.html)
+3. [Structured Outputs](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.html)
+4. [Improving with Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.html)
+5. [Optimization](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.html)
+6. [Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.html)
+
+**How-to guides:**
+- [Compile & Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html)
+- [Build RAG Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.html)
+
+**Concepts:**
+- [The DSPy Philosophy](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.html)
+- [How Optimization Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.html)
+
+**Reference:**
+- [Quick Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.html)
+- [API Documentation](https://jameshwade.github.io/dsprrr/reference/index.html)
 
 ## Status
 
