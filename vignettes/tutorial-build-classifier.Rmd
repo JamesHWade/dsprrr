@@ -1,0 +1,255 @@
+---
+title: "Tutorial 2: Building a Reusable Classifier"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tutorial 2: Building a Reusable Classifier}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+in_check <- !force_eval && (
+  nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+  identical(Sys.getenv("NOT_CRAN"), "false")
+)
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = should_eval
+)
+
+if (should_eval) {
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+  vcr::setup_knitr()
+}
+```
+
+In [Tutorial 1](tutorial-hello-world.html), you made one-off LLM calls with `dsp()`. But what if you need to classify hundreds of texts? Creating a new call each time is tedious and slow.
+
+In this tutorial, you'll build a **reusable module**—a classifier you can use over and over.
+
+**Time**: 20-25 minutes
+
+## What You'll Build
+
+A sentiment classifier that:
+- Processes single texts or batches
+- Remembers its configuration
+- Can be saved and reused
+
+## Prerequisites
+
+- Completed [Tutorial 1](tutorial-hello-world.html)
+- `OPENAI_API_KEY` set in your environment
+
+```{r setup}
+library(dsprrr)
+library(ellmer)
+```
+
+## Step 1: The Problem with `dsp()`
+
+In Tutorial 1, you classified sentiment like this:
+
+```{r dsp-repeated, eval=FALSE}
+chat <- chat_openai()
+chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Great!")
+chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Awful")
+chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Meh")
+```
+
+This works, but you're repeating the signature every time. If you want to change the signature, you have to change it everywhere.
+
+## Step 2: Create a Reusable Module
+
+The `as_module()` function wraps a signature into a reusable object:
+
+```{r create-module}
+chat <- chat_openai()
+
+classifier <- chat |>
+  as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
+
+classifier
+```
+
+Now `classifier` is an object you can use repeatedly.
+
+## Step 3: Classify Single Texts
+
+Use the `$predict()` method to classify:
+
+```{r predict-single}
+classifier$predict(text = "I absolutely loved this movie!")
+```
+
+Try a few more:
+
+```{r predict-more}
+classifier$predict(text = "This was a complete waste of time.")
+
+classifier$predict(text = "It was okay, I guess.")
+
+classifier$predict(text = "The service was terrible but the food was amazing.")
+```
+
+## Step 4: Batch Processing
+
+Here's where modules shine. Process multiple texts at once by passing a vector:
+
+```{r batch-vector}
+reviews <- c(
+  "Best purchase I've ever made!",
+  "Broke after one day. Total garbage.",
+  "Does what it says. Nothing special.",
+  "Exceeded all my expectations!",
+  "Would not recommend to anyone."
+)
+
+classifier$predict(text = reviews)
+```
+
+All five classifications came back in a single call. Much more efficient than five separate calls.
+
+## Step 5: The Full Control Approach
+
+`as_module()` is convenient, but sometimes you need more control. The `signature()` + `module()` approach gives you that:
+
+```{r full-control}
+# Define the signature separately
+sig <- signature(
+  "text -> sentiment: enum('positive', 'negative', 'neutral')",
+  instructions = "Classify the overall sentiment. If mixed, choose the dominant emotion."
+)
+
+sig
+```
+
+Now create a module from the signature:
+
+```{r create-module-full}
+classifier2 <- module(sig, type = "predict")
+
+classifier2
+```
+
+## Step 6: Running with `run()`
+
+With the full control approach, use `run()` to execute:
+
+```{r run-single}
+run(classifier2, text = "This is fantastic!", .llm = chat)
+```
+
+Notice you pass the chat object via `.llm`. This gives you flexibility—you can use different LLMs for different calls.
+
+Batch processing works the same way:
+
+```{r run-batch}
+run(
+  classifier2,
+  text = c("Love it!", "Hate it!", "It's fine"),
+  .llm = chat
+)
+```
+
+## Step 7: Working with Data Frames
+
+Real data often comes in data frames. Use `run_dataset()`:
+
+```{r dataset-processing}
+library(tibble)
+
+reviews_df <- tibble(
+  id = 1:4,
+  text = c(
+    "Absolutely wonderful experience!",
+    "Never buying from them again.",
+    "Solid product, fair price.",
+    "Changed my life for the better."
+  )
+)
+
+results <- run_dataset(classifier2, reviews_df, .llm = chat)
+results
+```
+
+The results include your original columns plus the classification.
+
+## Step 8: Adding Descriptions
+
+Make your inputs more informative with descriptions:
+
+```{r with-descriptions}
+sig <- signature(
+  inputs = list(
+    input("review_text", description = "Customer review to classify")
+  ),
+  output_type = type_enum(values = c("positive", "negative", "neutral")),
+  instructions = "Classify the customer sentiment."
+)
+
+detailed_classifier <- module(sig, type = "predict")
+
+run(
+  detailed_classifier,
+  review_text = "Five stars! Would buy again!",
+  .llm = chat
+)
+```
+
+Descriptions help the LLM understand what it's working with.
+
+## Step 9: Checking Your Work
+
+Modules track their calls. See what happened:
+
+```{r trace-summary}
+classifier2$trace_summary()
+```
+
+This shows you how many calls were made and the token costs.
+
+## What You Learned
+
+In this tutorial, you:
+
+1. Created reusable modules with `as_module()`
+2. Used `$predict()` for single and batch processing
+3. Built modules with full control using `signature()` + `module()`
+4. Processed data frames with `run_dataset()`
+5. Added input descriptions for clarity
+6. Checked your work with `trace_summary()`
+
+## When to Use Each Approach
+
+| Approach | Best For |
+|----------|----------|
+| `dsp()` | Quick one-off calls, exploration |
+| `as_module()` | Simple reusable modules, prototyping |
+| `signature()` + `module()` | Production code, optimization workflows |
+
+## The Module Advantage
+
+Why bother with modules when `dsp()` works?
+
+1. **Reusability**: Define once, use everywhere
+2. **Efficiency**: Batch processing reduces API calls
+3. **Configuration**: Change settings in one place
+4. **Optimization**: Modules can be improved with training data (covered in [Tutorial 4](tutorial-improve-with-demos.html))
+5. **Tracing**: Track what happened for debugging
+
+## Next Steps
+
+Your classifier works, but can it handle more complex outputs? Continue to:
+
+- **[Tutorial 3: Extracting Structured Data](tutorial-structured-outputs.html)** — Get multiple fields and nested structures
+- **[Quick Reference](cheatsheet.html)** — Module types and methods
+- **[Understanding Signatures & Modules](concepts-signatures-modules.html)** — Why S7 for signatures, R6 for modules
