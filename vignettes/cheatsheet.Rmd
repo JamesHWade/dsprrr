@@ -28,6 +28,14 @@ if (should_eval) {
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }
+
+  # Configure vcr to match only on method + uri (not body)
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
+
   vcr::setup_knitr()
 }
 ```
@@ -150,7 +158,7 @@ sig <- signature(
 ```{r dsp-quick}
 #| cassette: true
 # With explicit Chat
-chat <- chat_openai(model = "gpt-4o-mini")
+chat <- chat_openai(model = "gpt-5-mini")
 chat |> dsp("question -> answer", question = "What is 2+2?")
 ```
 
@@ -167,7 +175,7 @@ dsp("question -> answer", question = "What is 2+2?")
 ```{r as-module}
 #| cassette: true
 # Create from Chat
-classifier <- chat_openai(model = "gpt-4o-mini") |>
+classifier <- chat_openai(model = "gpt-5-mini") |>
   as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 # Use repeatedly
