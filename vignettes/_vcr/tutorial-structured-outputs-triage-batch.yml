@@ -1,0 +1,455 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8c8bbf8fd1f159-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 17:44:47 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '585'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=4DUJhteau004t8TPBaR6uGa8GI2CSHnnVZwEAfvBt8Q-1767548687-1.0.1.1-H6BG9boldC2eYDQCgGDRNKNRtFHQ.tuPCckBx4EJDrfT1rR1p_mDf9afrdU50Jv7Im3MIHHt1WVnFHKYVg9yJ6MVNszZV8X.IK0jVJG3qEo;
+        path=/; expires=Sun, 04-Jan-26 18:14:47 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=XoOOwSc4CMYA.U8L0bnzBMZA.hHxfmP26tPOeZJqamQ-1767548687931-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '589'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29980'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 40ms
+      x-request-id: req_a34132dd24b846e79bf95be25c3af96b
+    body:
+      string: |-
+        {
+          "id": "resp_041a1a590d640c5701695aa70f527481939749d4e52e9ed745",
+          "object": "response",
+          "created_at": 1767548687,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767548687,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_041a1a590d640c5701695aa70f8e5081938c2a8c3faecf79b2",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"meeting\",\"summary\":\"Meeting scheduled for tomorrow at 3pm to discuss Q1 results; confirmation of attendance requested.\",\"action_required\":true,\"suggested_response\":\"reply_now\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "Email category",
+                    "enum": [
+                      "meeting",
+                      "task",
+                      "fyi",
+                      "urgent",
+                      "spam"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "One-sentence summary"
+                  },
+                  "action_required": {
+                    "type": "boolean",
+                    "description": ""
+                  },
+                  "suggested_response": {
+                    "type": "string",
+                    "description": "Recommended action",
+                    "enum": [
+                      "reply_now",
+                      "reply_later",
+                      "forward",
+                      "archive",
+                      "delete"
+                    ]
+                  }
+                },
+                "required": [
+                  "category",
+                  "summary",
+                  "action_required",
+                  "suggested_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 721,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 39,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 760
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 17:44:47
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8c8bc4cde4f159-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 17:44:48 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '527'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=FMxMIDdI.REAl0d.0mVhYq6uDR861ZeNAkxW9Eepj1k-1767548688-1.0.1.1-8RMmBFdeyUjLIqdXgPVI3fqhrQFksHKM03DEjID2Q920nKvkZZPzy4s0wuRVww8bKppVdw2gIBiT2fGRlca5YsGg5MtaKc9rFXwfg8eni4I;
+        path=/; expires=Sun, 04-Jan-26 18:14:48 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Hn3GeIgtGpQGerVLvTyRUS2B4aTcJNOmPrSfCXsb3Vk-1767548688684-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '531'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29990'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 20ms
+      x-request-id: req_88a77d7aa8584b11a7789bb380c318cc
+    body:
+      string: |-
+        {
+          "id": "resp_05cbfb40dd03685501695aa710299c8197b9ba9213e245c939",
+          "object": "response",
+          "created_at": 1767548688,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767548688,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_05cbfb40dd03685501695aa71062c481978354aa72236ccb80",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"fyi\",\"summary\":\"Office closure on Monday due to the holiday.\",\"action_required\":false,\"suggested_response\":\"archive\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "Email category",
+                    "enum": [
+                      "meeting",
+                      "task",
+                      "fyi",
+                      "urgent",
+                      "spam"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "One-sentence summary"
+                  },
+                  "action_required": {
+                    "type": "boolean",
+                    "description": ""
+                  },
+                  "suggested_response": {
+                    "type": "string",
+                    "description": "Recommended action",
+                    "enum": [
+                      "reply_now",
+                      "reply_later",
+                      "forward",
+                      "archive",
+                      "delete"
+                    ]
+                  }
+                },
+                "required": [
+                  "category",
+                  "summary",
+                  "action_required",
+                  "suggested_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 797,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 29,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 826
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 17:44:48
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8c8bca0ad1f159-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 17:44:49 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '402'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=Zb5uZqMHmvEAKqYK_J3WV7dGwPNc8432E7FsT.Bfmhs-1767548689-1.0.1.1-zAaW2uyxSs3rbOKP2B7uIXDCJQ0ynmjIkbu_o.rjgVo2GLRvAIx.S4t2YQMt4YodyuTue_FTsjMj862apk9vvAbuIjE8El.lIOysLPeKw0g;
+        path=/; expires=Sun, 04-Jan-26 18:14:49 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=R.oMCdO3h26VrKBTxqLwdFiaqTZt0JbWb5UAMtdYjfQ-1767548689424-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '405'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29987'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 26ms
+      x-request-id: req_de6c6360a4e04a41bc0050fe9a00f23d
+    body:
+      string: |-
+        {
+          "id": "resp_00c67e63b7aa82bf01695aa71100f881948c62a67d8d34d07d",
+          "object": "response",
+          "created_at": 1767548689,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767548689,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_00c67e63b7aa82bf01695aa7112ed08194949a31018f9f822a",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"urgent\",\"summary\":\"Server is down and immediate assistance is needed to restore services.\",\"action_required\":true,\"suggested_response\":\"reply_now\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "Email category",
+                    "enum": [
+                      "meeting",
+                      "task",
+                      "fyi",
+                      "urgent",
+                      "spam"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "One-sentence summary"
+                  },
+                  "action_required": {
+                    "type": "boolean",
+                    "description": ""
+                  },
+                  "suggested_response": {
+                    "type": "string",
+                    "description": "Recommended action",
+                    "enum": [
+                      "reply_now",
+                      "reply_later",
+                      "forward",
+                      "archive",
+                      "delete"
+                    ]
+                  }
+                },
+                "required": [
+                  "category",
+                  "summary",
+                  "action_required",
+                  "suggested_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 863,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 32,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 895
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 17:44:49
+recorded_with: VCR-vcr/2.1.0

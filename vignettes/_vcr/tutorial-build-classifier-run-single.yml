@@ -1,0 +1,129 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8c8a8b296a2322-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 17:43:58 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '382'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=3FQAyVFvt9oNbpW_8wI8OKJaVBbjeJ9ZtCINWA6jiE0-1767548638-1.0.1.1-2NayCmT__oriUCvmIX35iCoOk7jkuZ743NIIlmHD2tZ.VhZpBEvSnVPBM4pMnaRdskXmDZpVGGlkVLCOh4Y.aWrgg1W7XEyQadlJVZD9c1s;
+        path=/; expires=Sun, 04-Jan-26 18:13:58 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=pfg122qf9Vuyc2Fxjlj8pZY81kIS41UXSkqDT4NxCdM-1767548638387-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '384'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_16e84f1f529c4a56a08ad79b5ba76558
+    body:
+      string: |-
+        {
+          "id": "resp_0a4f6f7fe43c6dcf01695aa6ddfbb88194b2d8987d3a2a5e35",
+          "object": "response",
+          "created_at": 1767548638,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767548638,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_0a4f6f7fe43c6dcf01695aa6de22e08194855af70a4a63200f",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"sentiment\":\"positive\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "sentiment": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  }
+                },
+                "required": [
+                  "sentiment"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 411,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 7,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 418
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 17:43:58
+recorded_with: VCR-vcr/2.1.0

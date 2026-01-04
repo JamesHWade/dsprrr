@@ -27,6 +27,11 @@ if (should_eval) {
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
   vcr::setup_knitr()
 }
 ```
@@ -70,6 +75,7 @@ classifier <- module(sig, type = "predict")
 Test it:
 
 ```{r baseline-test}
+#| cassette: true
 run(classifier, ticket = "My package hasn't arrived yet", .llm = chat)
 
 run(classifier, ticket = "I was charged twice for my order", .llm = chat)
@@ -121,6 +127,7 @@ The `dsp_trainset()` function creates a properly formatted tibble where input co
 Before improving, let's measure current performance:
 
 ```{r baseline-accuracy}
+#| cassette: true
 baseline_results <- run_dataset(classifier, trainset, .llm = chat)
 baseline_results
 ```
@@ -166,6 +173,7 @@ Each demo has `inputs` (a list of input values) and `output` (a list of expected
 Test the improved classifier:
 
 ```{r test-with-demos}
+#| cassette: true
 run(classifier_with_demos, ticket = "I need a receipt for my purchase", .llm = chat)
 
 run(classifier_with_demos, ticket = "The button doesn't respond when clicked", .llm = chat)
@@ -176,6 +184,7 @@ run(classifier_with_demos, ticket = "The button doesn't respond when clicked", .
 Run on the same test set:
 
 ```{r improved-accuracy}
+#| cassette: true
 improved_results <- run_dataset(classifier_with_demos, trainset, .llm = chat)
 
 correct_improved <- sum(improved_results$category == trainset$category)
@@ -192,7 +201,7 @@ Manually picking demos is tedious. The `LabeledFewShot` teleprompter automatical
 
 ```{r labeled-fewshot}
 # Create a teleprompter that selects 3 examples
-teleprompter <- LabeledFewShot(k = 3)
+teleprompter <- LabeledFewShot(k = 3L)
 
 # Compile the module with the teleprompter
 compiled <- compile_module(
@@ -218,6 +227,7 @@ compiled$config$demos
 Let's see how each version performs:
 
 ```{r final-comparison}
+#| cassette: true
 # Run all three on the test set
 results_baseline <- run_dataset(classifier, trainset, .llm = chat)
 results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
@@ -241,6 +251,7 @@ comparison
 dsprrr provides metrics for common evaluation tasks. Use `metric_exact_match()` for classification:
 
 ```{r builtin-metrics}
+#| cassette: true
 metric <- metric_exact_match(field = "category")
 
 # Evaluate the compiled module
@@ -259,9 +270,10 @@ The `evaluate()` function returns detailed results including:
 More examples aren't always better. Let's compare:
 
 ```{r vary-k}
+#| cassette: true
 results <- list()
 
-for (k in c(1, 2, 3, 4, 5)) {
+for (k in c(1L, 2L, 3L, 4L, 5L)) {
   tp <- LabeledFewShot(k = k)
   compiled_k <- compile_module(classifier, tp, trainset)
 

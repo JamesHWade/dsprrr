@@ -27,6 +27,11 @@ if (should_eval) {
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
   vcr::setup_knitr()
 }
 ```
@@ -109,8 +114,9 @@ testset <- dsp_trainset(
 Temperature controls randomness. Lower = more deterministic, higher = more creative. Let's find the best value:
 
 ```{r grid-search-temp}
+#| cassette: true
 classifier$optimize_grid(
-  devset = trainset,
+  data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
     temperature = c(0.0, 0.3, 0.7, 1.0)
@@ -150,6 +156,7 @@ classifier$state$best_params
 After optimization, the module automatically uses the best configuration:
 
 ```{r use-optimized}
+#| cassette: true
 # This uses the best temperature found
 run(classifier, review = "This product changed my life!", .llm = chat)
 ```
@@ -159,11 +166,12 @@ run(classifier, review = "This product changed my life!", .llm = chat)
 Instructions matter a lot. Let's test different phrasings:
 
 ```{r grid-instructions}
+#| cassette: true
 # Reset to try different parameters
 classifier2 <- module(sig, type = "predict")
 
 classifier2$optimize_grid(
-  devset = trainset,
+  data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
     instructions_suffix = c(
@@ -186,10 +194,11 @@ The `instructions_suffix` is appended to your base instructions.
 Search over multiple parameters at once:
 
 ```{r multi-param-grid}
+#| cassette: true
 classifier3 <- module(sig, type = "predict")
 
 classifier3$optimize_grid(
-  devset = trainset,
+  data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
     temperature = c(0.0, 0.5),
@@ -208,6 +217,7 @@ This tests all combinations: 2 temperatures × 2 instruction variants = 4 total 
 For more control, use `GridSearchTeleprompter` with explicit variants:
 
 ```{r grid-teleprompter}
+#| cassette: true
 variants <- tibble(
   id = c("concise", "analytical", "empathetic"),
   instructions_suffix = c(
@@ -220,7 +230,7 @@ variants <- tibble(
 teleprompter <- GridSearchTeleprompter(
   variants = variants,
   metric = metric_exact_match(field = "sentiment"),
-  k = 2  # Number of few-shot examples to include
+  k = 2L  # Number of few-shot examples to include
 )
 
 optimized <- compile_module(
@@ -238,6 +248,7 @@ This combines instruction optimization with few-shot example selection.
 Always test on data the optimizer never saw:
 
 ```{r test-evaluation}
+#| cassette: true
 # Evaluate the optimized module on test data
 test_results <- evaluate(
   optimized,
@@ -251,6 +262,7 @@ test_results
 Compare to baseline:
 
 ```{r baseline-comparison}
+#| cassette: true
 baseline <- module(sig, type = "predict")
 
 baseline_results <- evaluate(
@@ -290,6 +302,7 @@ metric_threshold(metric_f1(), threshold = 0.8)
 Optimization uses LLM calls. Track the cost:
 
 ```{r track-costs}
+#| eval: false
 # After optimization
 classifier$trace_summary()
 

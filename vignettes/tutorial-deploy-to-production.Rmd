@@ -27,6 +27,11 @@ if (should_eval) {
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
   vcr::setup_knitr()
 }
 ```
@@ -67,6 +72,7 @@ chat <- chat_openai()
 Let's start with a trained classifier:
 
 ```{r create-optimized}
+#| cassette: true
 sig <- signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral')",
   instructions = "Classify the sentiment of this product review."
@@ -88,7 +94,7 @@ trainset <- dsp_trainset(
 # Optimize
 classifier <- compile_module(
   program = module(sig, type = "predict"),
-  teleprompter = LabeledFewShot(k = 3),
+  teleprompter = LabeledFewShot(k = 3L),
   trainset = trainset
 )
 
@@ -105,7 +111,7 @@ The `pins` package provides persistent storage. Save your module configuration:
 board <- board_folder(tempdir())
 
 # Save the module configuration
-pin_module_config(classifier, board, "sentiment-classifier")
+pin_module_config(board, "sentiment-classifier", classifier)
 ```
 
 Your optimized configuration—including demos, parameters, and instructions—is now saved.
@@ -126,8 +132,10 @@ board |> pin_meta("sentiment-classifier")
 Imagine you restart R or deploy to a different machine:
 
 ```{r restore-config}
+#| cassette: true
 # Later, in a new session...
-restored <- restore_module_config(board, "sentiment-classifier")
+config <- pins::pin_read(board, "sentiment-classifier")
+restored <- restore_module_config(config)
 
 # It works immediately
 run(restored, review = "Worst product ever!", .llm = chat)
@@ -143,12 +151,12 @@ Pins automatically version your saves:
 # Make some changes
 improved <- compile_module(
   program = restored,
-  teleprompter = LabeledFewShot(k = 4),  # Try more examples
+  teleprompter = LabeledFewShot(k = 4L),  # Try more examples
   trainset = trainset
 )
 
 # Save again - creates new version
-pin_module_config(improved, board, "sentiment-classifier")
+pin_module_config(board, "sentiment-classifier", improved)
 
 # List versions
 board |> pin_versions("sentiment-classifier")
@@ -164,11 +172,8 @@ versions <- board |> pin_versions("sentiment-classifier")
 
 # Restore the first version
 if (nrow(versions) > 1) {
-  original <- restore_module_config(
-    board,
-    "sentiment-classifier",
-    version = versions$version[1]
-  )
+  config <- pins::pin_read(board, "sentiment-classifier", version = versions$version[1])
+  original <- restore_module_config(config)
 }
 ```
 
@@ -177,13 +182,14 @@ if (nrow(versions) > 1) {
 Track what your module does in production:
 
 ```{r save-traces}
+#| eval: false
 # Run some predictions
 run(classifier, review = "Great product!", .llm = chat)
 run(classifier, review = "Not worth the money.", .llm = chat)
 run(classifier, review = "Does the job.", .llm = chat)
 
 # Save traces for analysis
-pin_trace(classifier, board, "sentiment-traces")
+pin_trace(board, "sentiment-traces", classifier)
 ```
 
 ## Step 8: Analyze Traces
@@ -191,6 +197,7 @@ pin_trace(classifier, board, "sentiment-traces")
 Load and examine traces:
 
 ```{r analyze-traces}
+#| eval: false
 # Export as tibble
 traces <- export_traces(classifier, format = "tibble")
 traces
@@ -212,17 +219,16 @@ Use `validate_workflow()` to check everything is ready:
 # Check module is properly configured
 validation <- validate_workflow(
   module = classifier,
-  board = board,
-  pin_name = "sentiment-classifier"
+  board = board
 )
 
 validation
 ```
 
 This checks:
-- Module has been optimized
-- Configuration is saved
-- Signature is valid
+- Module is a valid DSPrrr module
+- Signature has inputs defined
+- Board is accessible (if provided)
 
 ## Step 10: Production Patterns
 
@@ -241,7 +247,7 @@ dev_module$optimize_grid(
 # 2. Compile with best settings + demos
 optimized <- compile_module(
   program = dev_module,
-  teleprompter = LabeledFewShot(k = 3),
+  teleprompter = LabeledFewShot(k = 3L),
   trainset = trainset
 )
 
@@ -250,7 +256,7 @@ evaluate(optimized, testset, metric = metric_exact_match(field = "sentiment"))
 
 # 4. Save if good enough
 prod_board <- board_s3("my-bucket")  # Or board_connect(), board_folder()
-pin_module_config(optimized, prod_board, "sentiment-v1")
+pin_module_config(prod_board, "sentiment-v1", optimized)
 
 # === PRODUCTION ===
 # 1. Load the saved configuration
@@ -260,7 +266,7 @@ prod_module <- restore_module_config(prod_board, "sentiment-v1")
 result <- run(prod_module, review = customer_review, .llm = chat_openai())
 
 # 3. Periodically save traces for monitoring
-pin_trace(prod_module, prod_board, "sentiment-traces")
+pin_trace(prod_board, "sentiment-traces", prod_module)
 ```
 
 ## Step 11: Different Storage Backends

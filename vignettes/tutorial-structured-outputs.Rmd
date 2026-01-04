@@ -27,6 +27,11 @@ if (should_eval) {
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
   vcr::setup_knitr()
 }
 ```
@@ -59,6 +64,7 @@ chat <- chat_openai()
 So far you've seen single outputs like `-> answer` or `-> sentiment`. Add more outputs with commas:
 
 ```{r multiple-outputs}
+#| cassette: true
 sig <- signature("text -> sentiment, confidence: number")
 
 extractor <- module(sig, type = "predict")
@@ -71,6 +77,7 @@ You get back both `sentiment` and `confidence` in a structured result.
 Try another:
 
 ```{r multiple-outputs-2}
+#| cassette: true
 run(extractor, text = "It was okay, nothing special.", .llm = chat)
 ```
 
@@ -81,6 +88,7 @@ Notice the confidence is lower for ambiguous text.
 Add types to each output field:
 
 ```{r typed-multiple}
+#| cassette: true
 sig <- signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral'), stars: int, summary: string"
 )
@@ -121,6 +129,7 @@ article_analyzer <- module(sig, type = "predict")
 Test it with a news snippet:
 
 ```{r type-object-test}
+#| cassette: true
 article <- "
 Scientists at MIT announced a breakthrough in solar panel efficiency today.
 The new panels can convert 47% of sunlight to electricity, nearly double
@@ -155,6 +164,7 @@ entity_extractor <- module(sig, type = "predict")
 Test with a news article:
 
 ```{r arrays-test}
+#| cassette: true
 news <- "
 Apple CEO Tim Cook met with President Biden at the White House yesterday
 to discuss manufacturing jobs. Cook announced that Apple will invest
@@ -201,6 +211,7 @@ email_parser <- module(sig, type = "predict")
 Test with an email:
 
 ```{r nested-test}
+#| cassette: true
 email <- "
 From: Sarah Johnson <sarah.johnson@techcorp.com>
 Subject: Q4 Budget Review - Action Required
@@ -259,6 +270,7 @@ triage <- module(sig, type = "predict")
 Process a batch of emails:
 
 ```{r triage-batch}
+#| cassette: true
 emails <- tibble(
   id = 1:3,
   email = c(
@@ -277,17 +289,17 @@ results
 Some fields might not always be present. Make them nullable:
 
 ```{r optional-fields}
+#| eval: false
 sig <- signature(
   inputs = list(
     input("text", description = "Text that may mention a date")
   ),
   output_type = type_object(
     has_date = type_boolean(),
-    date = type_string("Date in YYYY-MM-DD format, or null if no date mentioned") |>
-      (\(x) { x$nullable <- TRUE; x })(),
+    date = type_string("Date in YYYY-MM-DD format, or null if no date mentioned"),
     confidence = type_number()
   ),
-  instructions = "Extract date information if present."
+  instructions = "Extract date information if present. Set date to empty string if no date."
 )
 
 date_extractor <- module(sig, type = "predict")

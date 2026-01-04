@@ -27,6 +27,11 @@ if (should_eval) {
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
   vcr::setup_knitr()
 }
 ```
@@ -74,6 +79,7 @@ This creates a chat object you'll use for all your LLM calls.
 Let's ask a simple question using `dsp()`:
 
 ```{r first-call}
+#| cassette: true
 chat |> dsp("question -> answer", question = "What is the capital of France?")
 ```
 
@@ -87,6 +93,7 @@ You should see `"Paris"` returned. Let's break down what happened:
 
 The same signature works for any question:
 ```{r more-questions}
+#| cassette: true
 chat |> dsp("question -> answer", question = "What is 7 * 8?")
 
 chat |> dsp("question -> answer", question = "Who wrote Romeo and Juliet?")
@@ -101,6 +108,7 @@ So far, answers have been strings. But what if you want a number or a specific c
 ### Getting a Number
 
 ```{r number-output}
+#| cassette: true
 chat |> dsp(
   "math_problem -> result: number",
   math_problem = "What is 15% of 200?"
@@ -112,6 +120,7 @@ The `: number` after `result` tells dsprrr you want a numeric value, not a strin
 ### Getting a Choice (Enum)
 
 ```{r enum-output}
+#| cassette: true
 chat |> dsp(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   text = "I absolutely loved this movie!"
@@ -121,6 +130,7 @@ chat |> dsp(
 The LLM must pick from exactly those three options. Try changing the text to see different results:
 
 ```{r enum-variations}
+#| cassette: true
 chat |> dsp(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   text = "This was a complete waste of time."
@@ -135,6 +145,7 @@ chat |> dsp(
 ### Getting True/False
 
 ```{r bool-output}
+#| cassette: true
 chat |> dsp(
   "statement -> is_true: bool",
   statement = "The Earth orbits the Sun."
@@ -151,6 +162,7 @@ chat |> dsp(
 Signatures can have multiple inputs. Separate them with commas:
 
 ```{r multiple-inputs}
+#| cassette: true
 chat |> dsp(
   "context, question -> answer",
   context = "R was created in 1993 by Ross Ihaka and Robert Gentleman at the University of Auckland.",
@@ -161,6 +173,7 @@ chat |> dsp(
 Now the LLM uses your context to answer the question:
 
 ```{r context-example}
+#| cassette: true
 chat |> dsp(
   "context, question -> answer",
   context = "The bakery opens at 7am and closes at 6pm. They sell croissants for $3 each.",
@@ -173,6 +186,7 @@ chat |> dsp(
 You can guide the LLM's behavior with instructions:
 
 ```{r with-instructions}
+#| cassette: true
 chat |> dsp(
   signature("question -> answer", instructions = "Answer in exactly one word."),
   question = "What color is the sky on a clear day?"

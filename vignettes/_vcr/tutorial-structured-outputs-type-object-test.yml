@@ -1,0 +1,139 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8c8ba03a62f159-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 17:44:43 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '671'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=HyyngQuzuSqB4tU_5ulxHz8RoNymbrecZ2q5xkCuG7I-1767548683-1.0.1.1-wZKYrlDg2vpXtD88TCTqotcaJLGrRIPtSIwi4.d1SbXcmsXkT.cKUEgWCYe1aUuxS0PEDBz4rEBTFLLkzcMjZAJwikar8cmQg9bJ7Xu9lSQ;
+        path=/; expires=Sun, 04-Jan-26 18:14:43 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=5Rec8UhOqOCrGL1KaJMD8bVIgRQijsxL9avoL4Dr0dA-1767548683012-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '674'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29994'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 12ms
+      x-request-id: req_96b4866198504a3a8d1f828d7514d624
+    body:
+      string: |-
+        {
+          "id": "resp_0bba236bdfca1ff301695aa70a519081a1b94d7e862684ace4",
+          "object": "response",
+          "created_at": 1767548682,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767548682,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_0bba236bdfca1ff301695aa70a947881a19264d73ac1ac0dd3",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"headline\":\"MIT Scientists Achieve Breakthrough in Solar Panel Efficiency\",\"sentiment\":\"positive\",\"word_count\":54}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "headline": {
+                    "type": "string",
+                    "description": "A concise headline"
+                  },
+                  "sentiment": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  },
+                  "word_count": {
+                    "type": "integer",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "headline",
+                  "sentiment",
+                  "word_count"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 325,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 25,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 350
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 17:44:43
+recorded_with: VCR-vcr/2.1.0

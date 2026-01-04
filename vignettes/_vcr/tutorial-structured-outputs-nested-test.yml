@@ -1,0 +1,169 @@
+http_interactions:
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8c8baf1b87f159-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Sun, 04 Jan 2026 17:44:46 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2079'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=uQ4mSZSTs2SAdMpfLexcV731KIwf.RKDYpPnviNYbKk-1767548686-1.0.1.1-.ah3lyGde_AkBwBpNlAZDmX8qFP1l3TvRgGfBCmc.mtSh0pQD3W.G1r2hM3iRgoSuLprP_Un0nzG31iTZ78KAEwF3doOJUu.43GiWxoLJXk;
+        path=/; expires=Sun, 04-Jan-26 18:14:46 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=6OBvloV6NkeU_gwRP93fgHRTd.sJ1lsUBh4C5QsqGKs-1767548686802-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2103'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '29948'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 104ms
+      x-request-id: req_fe9ff2f6ad0f4c95a88e03d6563a3b65
+    body:
+      string: |-
+        {
+          "id": "resp_025d0428ca52cfd401695aa70cc8cc81a396c9bd13d5b8452a",
+          "object": "response",
+          "created_at": 1767548684,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767548686,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4.1-2025-04-14",
+          "output": [
+            {
+              "id": "msg_025d0428ca52cfd401695aa70d648481a384eadcd7bc14fe95",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"sender\":{\"name\":\"Sarah Johnson\",\"email\":\"sarah.johnson@techcorp.com\"},\"subject\":\"Q4 Budget Review - Action Required\",\"priority\":\"urgent\",\"action_items\":[\"Review the attached Q4 budget proposal by Friday\",\"Confirm department allocations\",\"Identify any cost-saving opportunities\",\"Submit final numbers to finance\"],\"requires_response\":true}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "sender": {
+                    "type": "object",
+                    "description": "",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": ""
+                      },
+                      "email": {
+                        "type": "string",
+                        "description": ""
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "email"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": ""
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "low",
+                      "normal",
+                      "high",
+                      "urgent"
+                    ]
+                  },
+                  "action_items": {
+                    "type": "array",
+                    "description": "",
+                    "items": {
+                      "type": "string",
+                      "description": ""
+                    }
+                  },
+                  "requires_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "sender",
+                  "subject",
+                  "priority",
+                  "action_items",
+                  "requires_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 623,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 71,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 694
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-04 17:44:46
+recorded_with: VCR-vcr/2.1.0

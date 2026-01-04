@@ -27,6 +27,11 @@ if (should_eval) {
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
   vcr::setup_knitr()
 }
 ```
@@ -87,12 +92,14 @@ Now `classifier` is an object you can use repeatedly.
 Use the `$predict()` method to classify:
 
 ```{r predict-single}
+#| cassette: true
 classifier$predict(text = "I absolutely loved this movie!")
 ```
 
 Try a few more:
 
 ```{r predict-more}
+#| cassette: true
 classifier$predict(text = "This was a complete waste of time.")
 
 classifier$predict(text = "It was okay, I guess.")
@@ -105,6 +112,7 @@ classifier$predict(text = "The service was terrible but the food was amazing.")
 Here's where modules shine. Process multiple texts at once by passing a vector:
 
 ```{r batch-vector}
+#| cassette: true
 reviews <- c(
   "Best purchase I've ever made!",
   "Broke after one day. Total garbage.",
@@ -145,6 +153,7 @@ classifier2
 With the full control approach, use `run()` to execute:
 
 ```{r run-single}
+#| cassette: true
 run(classifier2, text = "This is fantastic!", .llm = chat)
 ```
 
@@ -153,6 +162,7 @@ Notice you pass the chat object via `.llm`. This gives you flexibility—you can
 Batch processing works the same way:
 
 ```{r run-batch}
+#| cassette: true
 run(
   classifier2,
   text = c("Love it!", "Hate it!", "It's fine"),
@@ -165,6 +175,7 @@ run(
 Real data often comes in data frames. Use `run_dataset()`:
 
 ```{r dataset-processing}
+#| cassette: true
 library(tibble)
 
 reviews_df <- tibble(
@@ -188,6 +199,7 @@ The results include your original columns plus the classification.
 Make your inputs more informative with descriptions:
 
 ```{r with-descriptions}
+#| cassette: true
 sig <- signature(
   inputs = list(
     input("review_text", description = "Customer review to classify")
@@ -212,6 +224,7 @@ Descriptions help the LLM understand what it's working with.
 Modules track their calls. See what happened:
 
 ```{r trace-summary}
+#| eval: false
 classifier2$trace_summary()
 ```
 
