@@ -259,7 +259,7 @@ Let’s see how each version performs:
 ``` r
 # Run all three on the test set
 results_baseline <- run_dataset(classifier, trainset, .llm = chat)
-#> Processing 8/10 |  80% | ETA:  1s
+#> Processing 5/10 |  50% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
@@ -271,11 +271,10 @@ results_compiled <- run_dataset(compiled, trainset, .llm = chat)
 #> Requests.
 #> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
 #> Requests.
+#> Processing 5/10 |  50% | ETA:  2s
 #> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 6/10 |  60% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
-#> 
 
 # Calculate accuracies
 acc_baseline <- mean(results_baseline$category == trainset$category)
@@ -309,7 +308,7 @@ metric <- metric_exact_match(field = "category")
 eval_result <- evaluate(compiled, trainset, metric = metric, .llm = chat)
 #> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 4/10 |  40% | ETA:  2s
+#> Processing 3/10 |  30% | ETA:  3s
 #> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Warning: Failed to process item 6: LLM call failed: HTTP 500 Internal
@@ -393,7 +392,7 @@ eval_result
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 340.9958
+#> [1] 350.821
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 272
@@ -405,7 +404,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-04 19:49:37 UTC"
+#> [1] "2026-01-04 20:24:36 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -427,7 +426,7 @@ eval_result
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 342.9081
+#> [1] 354.2278
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 269
@@ -439,7 +438,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-04 19:49:38 UTC"
+#> [1] "2026-01-04 20:24:37 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -447,7 +446,7 @@ eval_result
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 361.336
+#> [1] 362.1635
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 272
@@ -459,7 +458,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-04 19:49:38 UTC"
+#> [1] "2026-01-04 20:24:38 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -495,7 +494,7 @@ eval_result
 #> 
 #> $metadata[[7]]
 #> $metadata[[7]]$latency_ms
-#> [1] 356.9522
+#> [1] 363.3134
 #> 
 #> $metadata[[7]]$prompt_length
 #> [1] 262
@@ -507,7 +506,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[7]]$timestamp
-#> [1] "2026-01-04 19:49:40 UTC"
+#> [1] "2026-01-04 20:24:39 UTC"
 #> 
 #> $metadata[[7]]$batch_index
 #> [1] 7
@@ -515,7 +514,7 @@ eval_result
 #> 
 #> $metadata[[8]]
 #> $metadata[[8]]$latency_ms
-#> [1] 361.8469
+#> [1] 367.6076
 #> 
 #> $metadata[[8]]$prompt_length
 #> [1] 270
@@ -527,7 +526,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[8]]$timestamp
-#> [1] "2026-01-04 19:49:40 UTC"
+#> [1] "2026-01-04 20:24:39 UTC"
 #> 
 #> $metadata[[8]]$batch_index
 #> [1] 8
@@ -535,7 +534,7 @@ eval_result
 #> 
 #> $metadata[[9]]
 #> $metadata[[9]]$latency_ms
-#> [1] 363.8382
+#> [1] 370.11
 #> 
 #> $metadata[[9]]$prompt_length
 #> [1] 269
@@ -547,7 +546,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[9]]$timestamp
-#> [1] "2026-01-04 19:49:40 UTC"
+#> [1] "2026-01-04 20:24:39 UTC"
 #> 
 #> $metadata[[9]]$batch_index
 #> [1] 9
@@ -615,12 +614,11 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
 #> Requests.
 #> Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 3/10 |  30% | ETA:  3s
 #> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 8/10 |  80% | ETA:  1s
+#> Processing 7/10 |  70% | ETA:  1s
 #> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Processing 10/10 | 100% | ETA:  0s
@@ -639,9 +637,9 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
 #> Requests.
 #> Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many
 #> Requests.
+#> Processing 3/10 |  30% | ETA:  3s
 #> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 5/10 |  50% | ETA:  2s
 #> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
@@ -659,14 +657,13 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
 #> ✖ Cannot extract field from non-list object
 #> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 3/10 |  30% | ETA:  3s
 #> Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
 #> Requests.
+#> Processing 6/10 |  60% | ETA:  2s
 #> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 9/10 |  90% | ETA:  0s
 #> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Processing 10/10 | 100% | ETA:  0s
@@ -682,13 +679,14 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
 #> ✖ Cannot extract field from non-list object
 #> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
 #> Requests.
+#> Processing 3/10 |  30% | ETA:  3s
 #> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 5/10 |  50% | ETA:  2s
 #> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many
 #> Requests.
+#> Processing 9/10 |  90% | ETA:  0s
 #> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Processing 10/10 | 100% | ETA:  0s
@@ -706,12 +704,11 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
 #> Requests.
 #> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 2/10 |  20% | ETA:  4s
 #> Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many
 #> Requests.
+#> Processing 5/10 |  50% | ETA:  2s
 #> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 7/10 |  70% | ETA:  1s
 #> Warning: Failed to process item 8: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
