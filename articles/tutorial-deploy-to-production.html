@@ -73,6 +73,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
 <li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
@@ -204,7 +205,7 @@ module configuration:</p>
 <span></span>
 <span><span class="co"># Save the module configuration</span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260104T193010Z-56242'</span></span>
+<span><span class="co">#&gt; Creating new version '20260104T194912Z-f2d52'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned module configuration: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Module type: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
@@ -224,21 +225,21 @@ instructions—is now saved.</p>
 <span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_meta.html" class="external-link">pin_meta</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; List of 13</span></span>
 <span><span class="co">#&gt;  $ file       : chr "sentiment-classifier.rds"</span></span>
-<span><span class="co">#&gt;  $ file_size  : 'fs_bytes' int 596</span></span>
-<span><span class="co">#&gt;  $ pin_hash   : chr "56242dcf38618e4e"</span></span>
+<span><span class="co">#&gt;  $ file_size  : 'fs_bytes' int 593</span></span>
+<span><span class="co">#&gt;  $ pin_hash   : chr "f2d52f8e4f29725d"</span></span>
 <span><span class="co">#&gt;  $ type       : chr "rds"</span></span>
 <span><span class="co">#&gt;  $ title      : chr "sentiment-classifier: a pinned list"</span></span>
 <span><span class="co">#&gt;  $ description: chr "dsprrr module config: sentiment-classifier"</span></span>
 <span><span class="co">#&gt;  $ tags       : NULL</span></span>
 <span><span class="co">#&gt;  $ urls       : NULL</span></span>
-<span><span class="co">#&gt;  $ created    : POSIXct[1:1], format: "2026-01-04 19:30:10"</span></span>
+<span><span class="co">#&gt;  $ created    : POSIXct[1:1], format: "2026-01-04 19:49:12"</span></span>
 <span><span class="co">#&gt;  $ api_version: int 1</span></span>
 <span><span class="co">#&gt;  $ user       : list()</span></span>
 <span><span class="co">#&gt;  $ name       : chr "sentiment-classifier"</span></span>
 <span><span class="co">#&gt;  $ local      :List of 3</span></span>
-<span><span class="co">#&gt;   ..$ dir    : 'fs_path' chr "/tmp/RtmptQiFgN/sentiment-classifier/20260104T193010Z-56242"</span></span>
+<span><span class="co">#&gt;   ..$ dir    : 'fs_path' chr "/tmp/RtmpBZ5AoF/sentiment-classifier/20260104T194912Z-f2d52"</span></span>
 <span><span class="co">#&gt;   ..$ url    : NULL</span></span>
-<span><span class="co">#&gt;   ..$ version: chr "20260104T193010Z-56242"</span></span></code></pre></div>
+<span><span class="co">#&gt;   ..$ version: chr "20260104T194912Z-f2d52"</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-restore-in-a-new-session">Step 4: Restore in a New Session<a class="anchor" aria-label="anchor" href="#step-4-restore-in-a-new-session"></a>
@@ -274,7 +275,7 @@ instructions—is now saved.</p>
 <span></span>
 <span><span class="co"># Save again - creates new version</span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">improved</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260104T193011Z-c1b5a'</span></span>
+<span><span class="co">#&gt; Creating new version '20260104T194913Z-3a3ca'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned module configuration: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Module type: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
@@ -285,8 +286,8 @@ instructions—is now saved.</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 3</span></span></span>
 <span><span class="co">#&gt;   version                created             hash </span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dttm&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 20260104T193010Z-56242 2026-01-04 <span style="color: #949494;">19:30:10</span> 56242</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 20260104T193011Z-c1b5a 2026-01-04 <span style="color: #949494;">19:30:11</span> c1b5a</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 20260104T194912Z-f2d52 2026-01-04 <span style="color: #949494;">19:49:12</span> f2d52</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 20260104T194913Z-3a3ca 2026-01-04 <span style="color: #949494;">19:49:13</span> 3a3ca</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-6-roll-back-to-previous-version">Step 6: Roll Back to Previous Version<a class="anchor" aria-label="anchor" href="#step-6-roll-back-to-previous-version"></a>
