@@ -9,11 +9,35 @@ vignette: >
 
 ```{r}
 #| include: false
+# Skip evaluation during R CMD check or CI (cassettes may not match current code)
+# This prevents build failures when VCR cassettes are stale
+in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+            identical(Sys.getenv("NOT_CRAN"), "false")
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE
+  eval = should_eval
 )
+
+# Only set up VCR if we're actually evaluating
+if (should_eval) {
+  # Ensure no cassettes are left over from previous vignettes
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+
+  # Configure vcr to match only on method + uri (not body)
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
+
+  vcr::setup_knitr()
+}
 ```
 
 A quick reference for common dsprrr operations.
@@ -28,6 +52,7 @@ library(ellmer)
 ### Configure Default LLM
 
 ```{r configure}
+#| eval: false
 # Auto-detect from environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
 dsp_configure()
 
@@ -42,6 +67,7 @@ dsp_configure(provider = "openai", model = "gpt-4o", temperature = 0.7)
 ### Check Configuration Status
 
 ```{r sitrep}
+#| eval: false
 dsprrr_sitrep()
 #> dsprrr Configuration
 #> ────────────────────────────────────────
@@ -130,11 +156,16 @@ sig <- signature(
 ### Quick: `dsp()` for One-Off Calls
 
 ```{r dsp-quick}
+#| cassette: true
 # With explicit Chat
-chat <- chat_openai()
+chat <- chat_openai(model = "gpt-5-mini")
 chat |> dsp("question -> answer", question = "What is 2+2?")
-#> "4"
+```
 
+The auto-detected form (when you have a default Chat configured):
+
+```{r dsp-auto}
+#| eval: false
 # With auto-detected Chat (uses configured default)
 dsp("question -> answer", question = "What is 2+2?")
 ```
@@ -142,8 +173,9 @@ dsp("question -> answer", question = "What is 2+2?")
 ### Reusable: `as_module()` for Repeated Use
 
 ```{r as-module}
+#| cassette: true
 # Create from Chat
-classifier <- chat_openai() |>
+classifier <- chat_openai(model = "gpt-5-mini") |>
   as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 # Use repeatedly
@@ -191,6 +223,7 @@ What do you need?
 ### Single Execution
 
 ```{r run-single}
+#| eval: false
 # Using run()
 result <- run(mod, question = "What is R?", .llm = chat_openai())
 
@@ -201,6 +234,7 @@ result <- mod$predict(question = "What is R?")
 ### Batch Processing
 
 ```{r run-batch}
+#| eval: false
 # Vector inputs
 results <- mod$predict(text = c("Great!", "Awful!", "Meh"))
 
@@ -215,6 +249,7 @@ results <- run_dataset(mod, dataset, .llm = llm)
 ### Show Prompt
 
 ```{r show-prompt}
+#| eval: false
 # See the prompt being sent
 result <- run(mod, question = "Test", .llm = llm, .show_prompt = TRUE)
 ```
@@ -258,6 +293,7 @@ What are you measuring?
 ### Running Evaluation
 
 ```{r evaluate}
+#| eval: false
 # Basic evaluation
 result <- evaluate(mod, testset, metric = metric_exact_match(), .llm = llm)
 result$mean_score
@@ -278,6 +314,7 @@ result <- evaluate_dsp(
 ### Grid Search
 
 ```{r grid-search}
+#| eval: false
 # Search over parameters
 mod$optimize_grid(
   devset = train_data,
@@ -297,6 +334,7 @@ module_metrics(mod)
 ### Teleprompters
 
 ```{r teleprompters}
+#| eval: false
 # Few-shot learning
 tp <- LabeledFewShot(k = 4L, metric = metric_exact_match())
 compiled <- compile(tp, mod, trainset, .llm = llm)
@@ -316,6 +354,7 @@ compiled <- compile(tp, mod, trainset, .llm = llm)
 ### Inspect Last Call
 
 ```{r last-prompt}
+#| eval: false
 # Get the last prompt sent
 get_last_prompt()
 #> ── Last Prompt ──
@@ -328,6 +367,7 @@ get_last_prompt()
 ### Prompt History
 
 ```{r history}
+#| eval: false
 # View recent prompts
 inspect_history(n = 5)
 
@@ -338,6 +378,7 @@ clear_prompt_history()
 ### Module Inspection
 
 ```{r mod-inspect}
+#| eval: false
 # Detailed module state
 mod$inspect()
 
@@ -348,6 +389,7 @@ get_last_trace()
 ### Traces
 
 ```{r traces}
+#| eval: false
 # Get all traces from a module
 traces <- mod$get_traces()
 
@@ -368,6 +410,7 @@ clear_traces(mod)
 ### Save/Restore Configuration
 
 ```{r persistence}
+#| eval: false
 # Save optimized config to pins board
 pin_module_config(mod, board, "my-classifier-v1")
 
@@ -378,6 +421,7 @@ mod <- restore_module_config(board, "my-classifier-v1", .llm = llm)
 ### Vitals Integration
 
 ```{r vitals}
+#| eval: false
 # Convert module to vitals solver
 solver <- as_vitals_solver(mod)
 
@@ -392,6 +436,7 @@ my_metric <- as_dsprrr_metric(vitals_scorer)
 ### Project Template
 
 ```{r template}
+#| eval: false
 # Create production-ready project structure
 use_dsprrr_template("my_project")
 
@@ -405,6 +450,7 @@ validate_workflow("workflow.yml")
 ### RAG (Retrieval-Augmented Generation)
 
 ```{r rag}
+#| eval: false
 sig <- signature(
   "context, question -> answer",
   instructions = "Answer based only on the provided context."
@@ -422,6 +468,7 @@ result <- run(mod,
 ### Classification
 
 ```{r classification}
+#| eval: false
 classifier <- chat_openai() |>
   as_module("text -> label: enum('spam', 'not_spam')")
 
@@ -431,6 +478,7 @@ labels <- classifier$predict(text = emails)
 ### Extraction
 
 ```{r extraction}
+#| eval: false
 extractor <- chat_openai() |>
   as_module("text -> entities: list[string], summary: string")
 
