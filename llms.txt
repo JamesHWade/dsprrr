@@ -681,6 +681,8 @@ Learn how to build and optimize LLM applications
   Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
 - [Integration with
   vitals](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md):
+- [Vitals Integration
+  Recipes](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md):
 
 ### Production
 
