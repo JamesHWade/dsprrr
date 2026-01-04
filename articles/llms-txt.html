@@ -103,8 +103,35 @@ for AI-friendly documentation. This tutorial builds a dsprrr pipeline to
 automatically generate <code>llms.txt</code> files for R packages.</p>
 <p><em>This tutorial is adapted from the <a href="https://dspy.ai/tutorials/llms_txt_generation/" class="external-link">DSPy llms.txt
 tutorial</a> by the DSPy team.</em></p>
+<div class="section level2">
+<h2 id="why-this-matters-beyond-llms-txt">Why This Matters Beyond llms.txt<a class="anchor" aria-label="anchor" href="#why-this-matters-beyond-llms-txt"></a>
+</h2>
+<p>The multi-stage pipeline you’ll build here is a blueprint for many
+real-world AI workflows:</p>
+<ul>
+<li><p><strong>API documentation generation</strong>: The same
+pattern—gather metadata, analyze structure, generate prose—applies to
+any documentation task. Replace R packages with REST APIs, GraphQL
+schemas, or database tables.</p></li>
+<li><p><strong>Code review automation</strong>: Each stage (understand
+purpose → analyze structure → identify issues) maps directly to how a
+code review agent works. The typed S7 results ensure review findings
+don’t get lost between stages.</p></li>
+<li><p><strong>Migration guide creation</strong>: When upgrading
+dependencies or refactoring APIs, you need the same capabilities:
+understand what exists, identify patterns, generate actionable
+guidance.</p></li>
+<li><p><strong>Knowledge base construction</strong>: The pipeline
+extracts structured knowledge from unstructured sources. Swap packages
+for internal wikis, Slack channels, or support tickets.</p></li>
+</ul>
+<p>The key insight is <strong>staged analysis with typed
+handoffs</strong>. Each LLM call has a focused job. S7 classes ensure
+intermediate results are validated before the next stage sees them. This
+is more reliable than asking one prompt to do everything.</p>
 <p>We’ll start with plain lists and functions, then show how S7 adds
 structure for larger projects.</p>
+</div>
 <div class="section level2">
 <h2 id="what-youll-build">What You’ll Build<a class="anchor" aria-label="anchor" href="#what-youll-build"></a>
 </h2>
@@ -195,7 +222,13 @@ structure for larger projects.</p>
 <h3 id="define-signatures">Define Signatures<a class="anchor" aria-label="anchor" href="#define-signatures"></a>
 </h3>
 <p>Here’s where dsprrr comes in—each analysis stage has a clear
-contract:</p>
+contract. Signatures define <em>what</em> each stage needs and
+<em>what</em> it produces. This separation matters: when a stage fails
+or produces poor output, you know exactly where to look.</p>
+<p>Notice how we use <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code> and
+<code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array()</a></code> to define structured outputs. The LLM returns
+JSON matching this schema, which we can then pass reliably to the next
+stage:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Stage 1: Analyze purpose</span></span>
 <span><span class="va">analyze_purpose_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
@@ -288,13 +321,18 @@ contract:</p>
 <div class="section level3">
 <h3 id="create-modules">Create Modules<a class="anchor" aria-label="anchor" href="#create-modules"></a>
 </h3>
+<p>Each module wraps a signature. We use
+<code>type = "chain_of_thought"</code> for the analysis stages—this asks
+the LLM to show its work, which improves accuracy for complex analysis
+tasks. The final <code>llmstxt</code> stage just needs to synthesize; no
+reasoning required.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_modules</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">llm</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    purpose <span class="op">=</span> <span class="va">analyze_purpose_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
-<span>    structure <span class="op">=</span> <span class="va">analyze_structure_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
-<span>    examples <span class="op">=</span> <span class="va">generate_examples_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
-<span>    llmstxt <span class="op">=</span> <span class="va">generate_llmstxt_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
+<span>    purpose <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">analyze_purpose_sig</span>, type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span>,</span>
+<span>    structure <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">analyze_structure_sig</span>, type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span>,</span>
+<span>    examples <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">generate_examples_sig</span>, type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span>,</span>
+<span>    llmstxt <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">generate_llmstxt_sig</span><span class="op">)</span>,</span>
 <span>    llm <span class="op">=</span> <span class="va">llm</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
@@ -302,6 +340,10 @@ contract:</p>
 <div class="section level3">
 <h3 id="run-the-pipeline">Run the Pipeline<a class="anchor" aria-label="anchor" href="#run-the-pipeline"></a>
 </h3>
+<p>The pipeline chains stages together. Each stage’s output feeds the
+next. This is where the structured signatures pay off—we can confidently
+pass <code>purpose$key_concepts</code> to the examples stage because we
+know its shape.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">analyze_package</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h1</a></span><span class="op">(</span><span class="st">"Analyzing package"</span><span class="op">)</span></span>
@@ -379,12 +421,12 @@ contract:</p>
 <h3 id="use-it">Use It<a class="anchor" aria-label="anchor" href="#use-it"></a>
 </h3>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Analyze and print</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="st">"."</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">llmstxt</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Find package root (works from vignettes/ or project root)</span></span>
+<span><span class="va">pkg_root</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="st">"DESCRIPTION"</span><span class="op">)</span><span class="op">)</span> <span class="st">"."</span> <span class="kw">else</span> <span class="st">".."</span></span>
 <span></span>
-<span><span class="co"># Write to file</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">llmstxt</span>, <span class="st">"llms.txt"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Analyze and print</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_root</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">llmstxt</span><span class="op">)</span></span></code></pre></div>
 <p><strong>This works.</strong> For a one-off script, you’re done.</p>
 <hr>
 </div>
@@ -392,13 +434,24 @@ contract:</p>
 <div class="section level2">
 <h2 id="part-2-adding-structure-with-s7">Part 2: Adding Structure with S7<a class="anchor" aria-label="anchor" href="#part-2-adding-structure-with-s7"></a>
 </h2>
-<p>As pipelines grow, plain lists show their limits:</p>
+<p>The simple approach works for scripts. But as pipelines grow—more
+stages, more developers, production use—plain lists show their
+limits:</p>
 <ul>
-<li>No validation (what if a required field is missing?)</li>
-<li>No documentation (what fields does each result have?)</li>
-<li>Hard to compose (passing results between stages is error-prone)</li>
+<li>
+<strong>No validation</strong>: What if a stage returns
+<code>NULL</code> for a required field? You won’t find out until three
+stages later when something breaks mysteriously.</li>
+<li>
+<strong>No documentation</strong>: What fields does each result
+have? You’ll need to trace through the code.</li>
+<li>
+<strong>Hard to compose</strong>: Passing results between stages is
+error-prone. Typos in field names silently return
+<code>NULL</code>.</li>
 </ul>
-<p>S7 gives you typed containers:</p>
+<p>S7 gives you typed containers that catch these problems at
+construction time:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rconsortium.github.io/S7/" class="external-link">S7</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
@@ -545,7 +598,11 @@ slots</p>
 <div class="section level3">
 <h3 id="stage-functions">Stage Functions<a class="anchor" aria-label="anchor" href="#stage-functions"></a>
 </h3>
-<p>Each stage returns a typed S7 object:</p>
+<p>Each stage returns a typed S7 object. This is the key improvement
+over the simple approach: if the LLM returns incomplete data (missing
+<code>purpose</code>, for example), the <code>PurposeAnalysis()</code>
+constructor fails immediately with a clear error. No silent
+<code>NULL</code> propagation:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">analyze_purpose</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">modules</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Analyzing purpose and concepts..."</span><span class="op">)</span></span>
@@ -662,6 +719,9 @@ slots</p>
 <div class="section level3">
 <h3 id="convenience-functions">Convenience Functions<a class="anchor" aria-label="anchor" href="#convenience-functions"></a>
 </h3>
+<p>Finally, we wrap everything in user-friendly functions. These hide
+the complexity while preserving access to the full
+<code>AnalysisResult</code> for users who need it:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">generate_llmstxt_file</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span>, <span class="va">output</span> <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_path</span>, <span class="va">llm</span><span class="op">)</span></span>
@@ -683,20 +743,17 @@ slots</p>
 <h3 id="running-it">Running It<a class="anchor" aria-label="anchor" href="#running-it"></a>
 </h3>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Analyze current package</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="st">"."</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Find package root (works from vignettes/ or project root)</span></span>
+<span><span class="va">pkg_root</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="st">"DESCRIPTION"</span><span class="op">)</span><span class="op">)</span> <span class="st">"."</span> <span class="kw">else</span> <span class="st">".."</span></span>
+<span></span>
+<span><span class="co"># Analyze current package</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_root</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># View the analysis (uses print method)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># See the generated llms.txt</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">@</span><span class="va">llmstxt</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Write to file</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="va">result</span><span class="op">@</span><span class="va">llmstxt</span>, <span class="st">"llms.txt"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Or use convenience function</span></span>
-<span><span class="fu">generate_llmstxt_file</span><span class="op">(</span><span class="st">"."</span>, output <span class="op">=</span> <span class="st">"llms.txt"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">@</span><span class="va">llmstxt</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -820,16 +877,59 @@ generation</li>
 </table>
 </div>
 <div class="section level2">
-<h2 id="other-applications">Other Applications<a class="anchor" aria-label="anchor" href="#other-applications"></a>
+<h2 id="adapting-this-pattern">Adapting This Pattern<a class="anchor" aria-label="anchor" href="#adapting-this-pattern"></a>
 </h2>
-<p>The same pipeline pattern works for:</p>
-<ul>
-<li>API documentation generation</li>
-<li>Changelog summarization</li>
-<li>Code review automation</li>
-<li>Test case generation</li>
-<li>Migration guide creation</li>
-</ul>
+<p>The staged pipeline pattern adapts to many documentation and analysis
+tasks:</p>
+<table style="width:100%;" class="table">
+<colgroup>
+<col width="21%">
+<col width="24%">
+<col width="29%">
+<col width="24%">
+</colgroup>
+<thead><tr class="header">
+<th>Application</th>
+<th>Gather Stage</th>
+<th>Analysis Stages</th>
+<th>Output Stage</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><strong>API docs</strong></td>
+<td>Parse OpenAPI spec</td>
+<td>Analyze endpoints, group by resource</td>
+<td>Generate markdown reference</td>
+</tr>
+<tr class="even">
+<td><strong>Changelogs</strong></td>
+<td>Parse git commits, issues</td>
+<td>Categorize changes, identify breaking</td>
+<td>Generate release notes</td>
+</tr>
+<tr class="odd">
+<td><strong>Code review</strong></td>
+<td>Diff files, parse AST</td>
+<td>Check style, find bugs, assess complexity</td>
+<td>Generate review comments</td>
+</tr>
+<tr class="even">
+<td><strong>Test generation</strong></td>
+<td>Parse function signatures</td>
+<td>Identify edge cases, dependencies</td>
+<td>Generate test cases</td>
+</tr>
+<tr class="odd">
+<td><strong>Migration guides</strong></td>
+<td>Diff API versions</td>
+<td>Identify breaking changes, patterns</td>
+<td>Generate upgrade steps</td>
+</tr>
+</tbody>
+</table>
+<p>The key is the same: define clear signatures for each stage, use
+structured outputs to pass data between stages, and let S7 classes
+enforce the contracts.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

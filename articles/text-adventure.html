@@ -98,13 +98,6 @@
 
     
     
-<blockquote>
-<p><strong>Note</strong>: Code in this tutorial requires an OpenAI API
-key to run. Set <code>eval = TRUE</code> and configure your API
-credentials to execute interactively. The code is tested and
-functional—<code>eval = FALSE</code> keeps the vignette buildable
-without API access.</p>
-</blockquote>
 <p>This tutorial builds a text-based adventure game using dsprrr. The AI
 handles narrative generation, NPC dialogue, and action resolution while
 you control the game framework and player state.</p>
@@ -331,17 +324,17 @@ state automatically.</p>
 <div class="section level3">
 <h3 id="create-modules">Create Modules<a class="anchor" aria-label="anchor" href="#create-modules"></a>
 </h3>
-<p>Each signature becomes a module. We wrap them with
-<code><a href="../reference/with_reasoning.html">with_reasoning()</a></code> which adds a “reasoning” field to the
-output—the model explains its thinking before giving the final answer.
-This chain-of-thought approach improves output quality, especially for
-complex decisions like whether an action should succeed.</p>
+<p>Each signature becomes a module. We use
+<code>type = "chain_of_thought"</code> which adds a “reasoning” field to
+the output—the model explains its thinking before giving the final
+answer. This improves output quality, especially for complex decisions
+like whether an action should succeed.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_modules</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">llm</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    scene <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">scene_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    dialogue <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">dialogue_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    action <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">action_sig</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    scene <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">scene_sig</span>, type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span>,</span>
+<span>    dialogue <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">dialogue_sig</span>, type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span>,</span>
+<span>    action <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">action_sig</span>, type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span>,</span>
 <span>    llm <span class="op">=</span> <span class="va">llm</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>

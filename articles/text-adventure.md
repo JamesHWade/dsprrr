@@ -1,10 +1,5 @@
 # Building a Text Adventure Game
 
-> **Note**: Code in this tutorial requires an OpenAI API key to run. Set
-> `eval = TRUE` and configure your API credentials to execute
-> interactively. The code is tested and functional—`eval = FALSE` keeps
-> the vignette buildable without API access.
-
 This tutorial builds a text-based adventure game using dsprrr. The AI
 handles narrative generation, NPC dialogue, and action resolution while
 you control the game framework and player state.
@@ -237,19 +232,17 @@ action_sig <- signature(
 
 ### Create Modules
 
-Each signature becomes a module. We wrap them with
-[`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md)
+Each signature becomes a module. We use `type = "chain_of_thought"`
 which adds a “reasoning” field to the output—the model explains its
-thinking before giving the final answer. This chain-of-thought approach
-improves output quality, especially for complex decisions like whether
-an action should succeed.
+thinking before giving the final answer. This improves output quality,
+especially for complex decisions like whether an action should succeed.
 
 ``` r
 create_modules <- function(llm) {
   list(
-    scene = module(scene_sig |> with_reasoning()),
-    dialogue = module(dialogue_sig |> with_reasoning()),
-    action = module(action_sig |> with_reasoning()),
+    scene = module(scene_sig, type = "chain_of_thought"),
+    dialogue = module(dialogue_sig, type = "chain_of_thought"),
+    action = module(action_sig, type = "chain_of_thought"),
     llm = llm
   )
 }
