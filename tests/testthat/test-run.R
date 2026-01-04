@@ -627,6 +627,7 @@ test_that("run_batch_sequential handles errors per item", {
 test_that("parallel execution works with mock factory", {
   skip_on_cran()
   skip_if_not_installed("mirai")
+  skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
 
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
