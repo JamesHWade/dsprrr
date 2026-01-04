@@ -67,6 +67,8 @@ task <- as_vitals_task(
   module = classifier,
   dataset = test_data,
   scorer = detect_match(),
+  name = "sentiment",
+  dir = tempdir(),
   .llm = chat_openai(model = "gpt-4o-mini")
 )
 
@@ -74,7 +76,7 @@ task <- as_vitals_task(
 task$eval()
 
 # 5. View results
-task$scores
+task$get_samples()
 ```
 
 That's it! The `as_vitals_task()` helper handles the integration details.
@@ -118,7 +120,7 @@ qa_module <- signature("question -> answer") |>
 
 # Optimize with few-shot examples from training set
 optimized <- compile(
-  LabeledFewShot(k = 2),
+  LabeledFewShot(k = 2L),
   qa_module,
   trainset = trainset
 )
@@ -128,13 +130,15 @@ eval_task <- as_vitals_task(
   module = optimized,
   dataset = testset,
   scorer = detect_match(),
+  name = "qa-test",
+  dir = tempdir(),
   .llm = chat_openai(model = "gpt-4o-mini")
 )
 
 eval_task$eval()
 
 # Compare performance
-cat("Test accuracy:", mean(eval_task$scores$score == "C"), "\n")
+cat("Test accuracy:", mean(eval_task$get_samples()$score == "C"), "\n")
 ```
 
 ## Recipe 3: Using Different Vitals Scorers
@@ -157,11 +161,13 @@ task <- as_vitals_task(
     target = c("35", "1945")
   ),
   scorer = detect_match(),
+  name = "factual-qa",
+  dir = tempdir(),
   .llm = chat_openai(model = "gpt-4o-mini")
 )
 
 task$eval()
-task$scores
+task$get_samples()
 ```
 
 ### Model-Graded QA (model_graded_qa)
@@ -184,16 +190,18 @@ task <- as_vitals_task(
     )
   ),
   scorer = model_graded_qa(),
+  name = "explanations",
+  dir = tempdir(),
   .llm = chat_openai(model = "gpt-4o-mini")
 )
 
 task$eval()
-task$scores
+task$get_samples()
 ```
 
-### Pattern Match (match)
+### Substring Match (detect_includes)
 
-Best for checking specific patterns in output:
+Best for checking if specific text appears anywhere in output:
 
 ```{r scorer-pattern}
 #| cassette: scorer-pattern
@@ -207,14 +215,16 @@ task <- as_vitals_task(
       "Write a function to add two numbers",
       "Create a loop that prints 1 to 5"
     ),
-    target = c("function", "for|while")
+    target = c("function", "for")
   ),
-  scorer = match(location = "any"),
+  scorer = detect_includes(),
+  name = "code-gen",
+  dir = tempdir(),
   .llm = chat_openai(model = "gpt-4o-mini")
 )
 
 task$eval()
-task$scores
+task$get_samples()
 ```
 
 ## Recipe 4: Analyzing Evaluation Results
@@ -243,13 +253,15 @@ task <- as_vitals_task(
   module = sentiment,
   dataset = dataset,
   scorer = detect_match(),
+  name = "sentiment-analysis",
+  dir = tempdir(),
   .llm = chat_openai(model = "gpt-4o-mini")
 )
 
 task$eval()
 
 # Get detailed scores
-scores <- task$scores
+scores <- task$get_samples()
 
 # Find failures
 failures <- scores[scores$score == "I", ]
@@ -306,11 +318,13 @@ for (name in c("basic", "cot")) {
     module = mod,
     dataset = test_data,
     scorer = model_graded_qa(),
+    name = paste0("math-", name),
+    dir = tempdir(),
     .llm = llm
   )
   task$eval()
 
-  results[[name]] <- mean(task$scores$score == "C")
+  results[[name]] <- mean(task$get_samples()$score == "C")
 }
 
 # Compare
@@ -343,14 +357,16 @@ task <- as_vitals_task(
   module = classifier,
   dataset = test_data,
   scorer = detect_match(),
-  epochs = 3,
+  name = "news-classification",
+  epochs = 3L,
+  dir = tempdir(),
   .llm = chat_openai(model = "gpt-4o-mini")
 )
 
 task$eval()
 
 # Aggregate scores across epochs
-scores <- task$scores
+scores <- task$get_samples()
 cat("Total evaluations:", nrow(scores), "(3 epochs x", nrow(test_data), "examples)\n")
 cat("Overall accuracy:", scales::percent(mean(scores$score == "C")), "\n")
 ```
