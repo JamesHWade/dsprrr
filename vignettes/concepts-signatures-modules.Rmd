@@ -1,0 +1,450 @@
+---
+title: "Understanding Signatures and Modules"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Understanding Signatures and Modules}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This article explains the design of dsprrr's two core abstractions: **Signatures** and **Modules**. Understanding why they work the way they do helps you use them effectively and extend them when needed.
+
+## The Two-Object Architecture
+
+dsprrr uses two fundamentally different object systems:
+
+| Component | Object System | Mutability | Purpose |
+|-----------|--------------|------------|---------|
+| Signature | S7 | Immutable | Define *what* the module does |
+| Module | R6 | Mutable | Manage *how* it executes |
+
+This isn't arbitrary. Each choice solves specific problems that arise when building LLM applications.
+
+## Signatures: Immutable Contracts
+
+A Signature is an S7 class with three properties:
+
+```{r}
+Signature <- S7::new_class(
+  "Signature",
+  properties = list(
+    inputs = S7::new_property(S7::class_list),
+    output_type = S7::new_property(S7::class_any),
+    instructions = S7::new_property(S7::class_character)
+  )
+)
+```
+
+### Why S7?
+
+S7 provides **validated, immutable** objects. Once you create a signature, it doesn't change:
+
+```{r}
+sig <- signature("question -> answer")
+
+# This would error - S7 objects are immutable
+sig@inputs <- list()  # Error!
+```
+
+This matters for optimization. When you tune a module's prompts, the *interface* stays constant while the *implementation* varies. If signatures could mutate mid-optimization, you couldn't trust your evaluation results.
+
+### Why Immutability Matters
+
+Consider what happens during optimization:
+
+```{r}
+mod$optimize_grid(
+  devset = train_data,
+  metric = metric_exact_match(),
+  parameters = list(temperature = c(0, 0.3, 0.7))
+)
+```
+
+The optimizer creates copies of the module, varies parameters, and evaluates each configuration. If the signature were mutable, a bug in one trial could corrupt all subsequent trials. Immutability guarantees isolation.
+
+This is the same reason functional programming prefers immutable data: you can reason about state because state doesn't silently change.
+
+### The Type System
+
+Signatures use ellmer's type system for outputs:
+
+```{r}
+# Simple string output
+signature("text -> summary: string")
+
+# Classification with fixed options
+signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+
+# Structured output
+signature(
+  inputs = list(input("article")),
+  output_type = ellmer::type_object(
+    headline = ellmer::type_string(),
+    summary = ellmer::type_string(),
+    keywords = ellmer::type_array(items = ellmer::type_string())
+  )
+)
+```
+
+Why ellmer types instead of R's type system? Because LLMs need schemas they can follow. When dsprrr sends a request to the LLM, it includes a JSON Schema derived from the ellmer type. The LLM constrains its output to match that schema.
+
+This is **structured output**: the LLM returns valid JSON matching your specification, not free-form text you have to parse.
+
+### DSPy-Style String Notation
+
+The string parser provides a concise syntax:
+
+```{r}
+# These are equivalent
+signature("context, question -> answer: string")
+
+signature(
+  inputs = list(
+    input("context"),
+    input("question")
+  ),
+  output_type = ellmer::type_string()
+)
+```
+
+The string notation is:
+- **Concise**: One line instead of many
+- **Readable**: `context, question -> answer` is self-documenting
+- **DSPy-compatible**: Familiar to Python DSPy users
+
+Use string notation for simple cases. Use explicit notation when you need:
+- Input descriptions
+- Complex output types
+- Custom validators
+
+## Modules: Stateful Execution
+
+Modules are R6 classes that wrap signatures with execution logic:
+
+```{r}
+Module <- R6::R6Class(
+  "Module",
+  public = list(
+    signature = NULL,  # Immutable S7 reference
+    config = NULL,     # Mutable configuration
+    state = NULL,      # Mutable runtime state (traces, trials)
+    chat = NULL,       # Optional ellmer Chat
+
+    forward = function(batch, .llm = NULL) { ... },
+    optimize_grid = function(data, metric, ...) { ... },
+    reset = function(hard = FALSE) { ... }
+  )
+)
+```
+
+### Why R6?
+
+R6 provides **reference semantics**: the object's state changes in place. This is essential for:
+
+1. **Accumulating traces**: Each call adds to the trace history
+2. **Storing optimization results**: The best configuration persists
+3. **Managing LLM connections**: Chat objects maintain conversation state
+
+With S3/S4/S7, you'd need to return modified copies from every function:
+
+```{r}
+# Without reference semantics (hypothetical)
+result <- run(mod, question = "What is 2+2?", .llm = llm)
+mod <- result$updated_module  # Have to remember to capture this!
+```
+
+With R6, the module updates itself:
+
+```{r}
+# With reference semantics (actual API)
+result <- run(mod, question = "What is 2+2?", .llm = llm)
+# mod is already updated with new traces
+```
+
+### The Signature-Module Relationship
+
+A module **references** a signature but doesn't own it:
+
+```{r}
+sig <- signature("question -> answer")
+mod1 <- module(sig, type = "predict")
+mod2 <- module(sig, type = "predict")
+
+# Both modules share the same signature
+identical(mod1$signature, mod2$signature)  # TRUE
+```
+
+This reflects the conceptual relationship: the signature is the *interface* (what inputs and outputs look like), while the module is the *implementation* (how to generate outputs from inputs).
+
+You can have multiple modules with the same signature but different configurations:
+
+```{r}
+sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+
+# Same interface, different implementations
+fast_classifier <- module(sig, type = "predict")
+fast_classifier$config$temperature <- 0
+
+careful_classifier <- module(sig, type = "predict")
+careful_classifier$config$temperature <- 0.7
+```
+
+### State Management
+
+Modules maintain rich state:
+
+```{r}
+mod$state <- list(
+  traces = list(),           # Execution history
+  cache = list(),            # Optional result caching
+  compiled = FALSE,          # Optimization status
+  optimization_history = list(),
+  trials = tibble::tibble(), # Grid search results
+  best_score = NULL,
+  best_params = NULL,
+  best_trial = NULL
+)
+```
+
+**Traces** record every LLM call: inputs, outputs, latency, tokens, cost. This enables:
+- Debugging: What prompt did the module actually send?
+- Monitoring: How much are LLM calls costing?
+- Analysis: Which inputs cause failures?
+
+```{r}
+# After running the module
+mod$get_traces()
+#> # A tibble: 10 x 8
+#>    timestamp           latency_ms input_tokens output_tokens ...
+```
+
+**Compilation status** tracks whether the module has been optimized. A "compiled" module has found optimal parameters through grid search or teleprompter optimization:
+
+```{r}
+mod$is_compiled()
+#> [1] FALSE
+
+mod$optimize_grid(devset, metric_exact_match())
+
+mod$is_compiled()
+#> [1] TRUE
+```
+
+### The `forward()` Method
+
+Every module implements `forward()`:
+
+```{r}
+forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+  # 1. Build prompt from inputs and configuration
+  prompt <- private$build_prompt(batch)
+
+  # 2. Call LLM with structured output
+  result <- llm$chat_structured(prompt, self$signature@output_type)
+
+  # 3. Record trace if requested
+  if (trace) {
+    self$state$traces <- append(self$state$traces, list(trace_info))
+  }
+
+  # 4. Return tibble with output, chat, metadata
+  tibble::tibble(
+    output = list(result),
+    chat = list(chat_object),
+    metadata = list(metadata)
+  )
+}
+```
+
+The `forward()` method is the core execution path. Everything else (`run()`, `predict()`, `run_dataset()`) eventually calls `forward()`.
+
+## Module Types
+
+dsprrr provides specialized module types via the `type` parameter:
+
+```{r}
+module(sig, type = "predict")      # Basic text generation
+module(sig, type = "react")        # ReAct-style agents with tools
+module(sig, type = "best_of_n")    # Ensemble with reward function
+module(sig, type = "refine")       # Iterative refinement
+module(sig, type = "multichain")   # Multi-path reasoning
+```
+
+Each type is an R6 subclass that extends the base Module:
+
+### PredictModule
+
+The workhorse for most tasks. Generates a prompt from a template, calls the LLM, returns structured output.
+
+```{r}
+PredictModule <- R6::R6Class(
+  "PredictModule",
+  inherit = Module,
+  public = list(
+    template = NULL,  # glue template for prompt construction
+    demos = NULL,     # Few-shot examples
+
+    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+      # Build prompt using template and demos
+      # Call LLM with signature's output_type
+      # Return results
+    }
+  )
+)
+```
+
+### Wrapper Modules
+
+Some modules wrap other modules to add capabilities:
+
+```{r}
+# BestOfN: Run base module N times, pick best via reward function
+best_mod <- BestOfNModule$new(
+  base_module = mod,
+  n = 3,
+  reward_fn = function(input, output) {
+    # Return numeric score
+  }
+)
+
+# RefineModule: Run base module, then refine with feedback
+refine_mod <- RefineModule$new(
+  base_module = mod,
+  max_iterations = 3,
+  refinement_prompt = "Improve this response: {previous_output}"
+)
+```
+
+Wrappers compose because they maintain the same interface: input → output. You can wrap a wrapper:
+
+```{r}
+# BestOfN over Refine: 3 parallel refinement chains, pick best
+robust_mod <- BestOfNModule$new(
+  base_module = RefineModule$new(base_module = simple_mod),
+  n = 3
+)
+```
+
+## Copying and Independence
+
+Modules need independent copies for optimization. The `copy()` method handles this:
+
+```{r}
+original <- module(sig, type = "predict")
+original$config$temperature <- 0.5
+original$state$traces <- list(trace1, trace2)
+
+# Create independent copy
+copied <- original$copy(deep = TRUE)
+
+# Copies have same config but independent state
+copied$config$temperature  # 0.5
+copied$state$traces        # Empty list - state is reset
+
+# Modifications don't affect original
+copied$config$temperature <- 0.9
+original$config$temperature  # Still 0.5
+```
+
+The `deep = TRUE` argument ensures nested structures are also copied. This is critical during grid search, where each candidate configuration needs complete isolation.
+
+## Design Rationale Summary
+
+| Design Choice | Problem It Solves |
+|--------------|-------------------|
+| S7 for Signatures | Immutability enables safe optimization |
+| R6 for Modules | Reference semantics for stateful execution |
+| ellmer types | Structured output via JSON Schema |
+| Signature-Module separation | Interface vs implementation |
+| Trace accumulation | Debugging, monitoring, analysis |
+| `copy(deep=TRUE)` | Isolated candidates during optimization |
+
+## Practical Implications
+
+### When to Create New Signatures
+
+Create a new signature when:
+- The **inputs** change (different data your module needs)
+- The **output structure** changes (different shape of results)
+- The **task** changes (classification vs generation vs extraction)
+
+Don't create a new signature when:
+- You want different **prompt wording** (use configuration)
+- You want different **temperature** (use configuration)
+- You want different **demos** (use `mod$demos`)
+
+### When to Create New Modules
+
+Create a new module when:
+- You need **independent state** (parallel optimization)
+- You want to **preserve a configuration** (before vs after optimization)
+- Different **execution contexts** (dev vs prod)
+
+Use the same module when:
+- **Sequential calls** in a workflow
+- **Accumulating traces** for analysis
+- The same logical "agent" in your application
+
+### Extending the System
+
+To create a custom module type:
+
+```{r}
+MyModule <- R6::R6Class(
+  "MyModule",
+  inherit = Module,
+  public = list(
+    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+      # Your custom execution logic
+      # Must return tibble with output, chat, metadata columns
+    }
+  )
+)
+```
+
+The key contract: `forward()` takes a batch of inputs and returns a tibble. Honor this contract and your module works with `run()`, `run_dataset()`, `evaluate()`, and `optimize_grid()`.
+
+## Connection to Optimization
+
+The two-object architecture enables optimization:
+
+1. **Signature defines the evaluation target**: What inputs and outputs look like
+2. **Module provides the search space**: Configuration parameters to vary
+3. **Immutability ensures isolation**: Each trial is independent
+4. **State enables tracking**: Traces record what happened
+
+When you call `optimize_grid()`:
+
+```{r}
+mod$optimize_grid(
+  devset = train_data,
+  metric = metric_exact_match(),
+  parameters = list(temperature = c(0, 0.3, 0.7))
+)
+```
+
+The optimizer:
+1. Creates `copy(deep = TRUE)` for each candidate
+2. Varies config parameters per the grid
+3. Runs each copy's `forward()` on the devset
+4. Computes metrics from (signature-defined) outputs
+5. Updates the original module with best config
+6. Records all trials in `state$trials`
+
+The architecture makes this workflow clean and reliable.
+
+## Further Reading
+
+- **[The DSPy Philosophy](concepts-dspy-philosophy.html)** - Why treat prompts as programs
+- **[How Optimization Works](concepts-optimization-theory.html)** - Theory behind teleprompters
+- **[Tutorial: Optimize Your Module](tutorial-optimize-your-module.html)** - Hands-on optimization
+- **[Advanced Module Types](advanced-modules.html)** - BestOfN, Refine, ReAct

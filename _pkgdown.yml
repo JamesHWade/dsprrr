@@ -73,6 +73,8 @@ navbar:
       menu:
         - text: "The DSPy Philosophy"
           href: articles/concepts-dspy-philosophy.html
+        - text: "Signatures & Modules"
+          href: articles/concepts-signatures-modules.html
         - text: "---"
         - text: "Deep Dives"
         - text: "Advanced Reasoning"
@@ -123,6 +125,7 @@ articles:
     desc: Understand the philosophy and design
     contents:
     - concepts-dspy-philosophy
+    - concepts-signatures-modules
     - advanced-modules
     - advanced-optimization
     - reasoning-models
