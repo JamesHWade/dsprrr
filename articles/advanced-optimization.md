@@ -676,14 +676,26 @@ session_cost()  # Total cost so far
 | `GEPA`                             | Multi-objective      | High (100+)  | High         |
 | `Ensemble`                         | Combines modules     | N/A          | Varies       |
 
-## Next Steps
+## Further Reading
 
-- Start with `LabeledFewShot` or `BootstrapFewShot` for quick wins
-- Graduate to `COPRO` or `MIPROv2` for production optimization
-- Use `Ensemble` to combine your best models
-- See
-  [`vignette("compilation-optimization")`](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
-  for basic optimization concepts
-- See
-  [`vignette("vitals-integration")`](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md)
-  for evaluation with vitals package
+**Tutorials:** - [Finding Best
+Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
+— Hands-on grid search - [Taking to
+Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md)
+— Deploy optimized modules
+
+**How-to Guides:** - [Compile &
+Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
+— Basic optimization concepts - [Evaluate with
+Vitals](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md)
+— Integration with vitals package
+
+**Concepts:** - [How Optimization
+Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)
+— Theory behind teleprompters - [Why Metrics
+Matter](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md)
+— Choosing the right metric
+
+**Reference:** - [Quick
+Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md) —
+Metrics and teleprompter syntax

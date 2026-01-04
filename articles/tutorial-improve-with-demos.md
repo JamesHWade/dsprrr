@@ -259,7 +259,7 @@ Let’s see how each version performs:
 ``` r
 # Run all three on the test set
 results_baseline <- run_dataset(classifier, trainset, .llm = chat)
-#> Processing 9/10 |  90% | ETA:  0s
+#> Processing 8/10 |  80% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
@@ -393,7 +393,7 @@ eval_result
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 342.5198
+#> [1] 340.4865
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 272
@@ -405,7 +405,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-04 23:28:57 UTC"
+#> [1] "2026-01-04 23:35:22 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -427,7 +427,7 @@ eval_result
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 344.2647
+#> [1] 344.4567
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 269
@@ -439,7 +439,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-04 23:28:58 UTC"
+#> [1] "2026-01-04 23:35:22 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -447,7 +447,7 @@ eval_result
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 357.5184
+#> [1] 362.1502
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 272
@@ -459,7 +459,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-04 23:28:58 UTC"
+#> [1] "2026-01-04 23:35:23 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -495,7 +495,7 @@ eval_result
 #> 
 #> $metadata[[7]]
 #> $metadata[[7]]$latency_ms
-#> [1] 356.7481
+#> [1] 356.4551
 #> 
 #> $metadata[[7]]$prompt_length
 #> [1] 262
@@ -507,7 +507,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[7]]$timestamp
-#> [1] "2026-01-04 23:28:59 UTC"
+#> [1] "2026-01-04 23:35:24 UTC"
 #> 
 #> $metadata[[7]]$batch_index
 #> [1] 7
@@ -515,7 +515,7 @@ eval_result
 #> 
 #> $metadata[[8]]
 #> $metadata[[8]]$latency_ms
-#> [1] 362.2262
+#> [1] 361.9165
 #> 
 #> $metadata[[8]]$prompt_length
 #> [1] 270
@@ -527,7 +527,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[8]]$timestamp
-#> [1] "2026-01-04 23:29:00 UTC"
+#> [1] "2026-01-04 23:35:24 UTC"
 #> 
 #> $metadata[[8]]$batch_index
 #> [1] 8
@@ -535,7 +535,7 @@ eval_result
 #> 
 #> $metadata[[9]]
 #> $metadata[[9]]$latency_ms
-#> [1] 364.1438
+#> [1] 365.828
 #> 
 #> $metadata[[9]]$prompt_length
 #> [1] 269
@@ -547,7 +547,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[9]]$timestamp
-#> [1] "2026-01-04 23:29:00 UTC"
+#> [1] "2026-01-04 23:35:25 UTC"
 #> 
 #> $metadata[[9]]$batch_index
 #> [1] 9
@@ -620,9 +620,9 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
 #> Requests.
 #> Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 8/10 |  80% | ETA:  1s
 #> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
 #> Requests.
+#> Processing 9/10 |  90% | ETA:  0s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 #> Warning: Metric evaluation failed for row 1
@@ -711,9 +711,9 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
 #> Requests.
 #> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 7/10 |  70% | ETA:  1s
 #> Warning: Failed to process item 8: LLM call failed: HTTP 429 Too Many
 #> Requests.
+#> Processing 8/10 |  80% | ETA:  1s
 #> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Processing 10/10 | 100% | ETA:  0s

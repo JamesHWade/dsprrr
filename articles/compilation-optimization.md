@@ -1351,12 +1351,30 @@ through systematic optimization - **More maintainable** by separating
 logic from prompt tuning - **More portable** across different LLMs and
 use cases - **More efficient** by finding the best prompts automatically
 
-## Next Steps
+## Further Reading
 
-- Experiment with different metrics for your use case
-- Try both teleprompters to see which works better
-- Build a library of optimized modules for common tasks
-- Share your optimization patterns with the dsprrr community
+**Tutorials:** - [Improving with
+Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
+— Learn few-shot prompting step by step - [Finding Best
+Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
+— Hands-on grid search tutorial - [Taking to
+Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md)
+— Deploy optimized modules
 
-Remember: Let dsprrr handle the prompt engineering while you focus on
-building great applications!
+**How-to Guides:** - [Advanced Optimizer
+Guide](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md)
+— BootstrapFewShot, COPRO, MIPROv2, and more - [Evaluate with
+Vitals](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md)
+— Integration with vitals package
+
+**Concepts:** - [How Optimization
+Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)
+— Theory behind teleprompters - [Why Metrics
+Matter](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md)
+— Choosing the right metric - [Understanding Signatures &
+Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)
+— S7 vs R6 design choices
+
+**Reference:** - [Quick
+Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md) —
+Metrics, signature syntax, and module types

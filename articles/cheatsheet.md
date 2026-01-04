@@ -39,6 +39,36 @@ dsprrr_sitrep()
 #>   Model: gpt-4o-mini
 ```
 
+### Default Chat Management
+
+``` r
+# Set a specific Chat as default
+set_default_chat(chat_openai(model = "gpt-4o"))
+
+# Get the current default Chat
+chat <- get_default_chat()
+
+# Clear the default (requires explicit .llm in calls)
+clear_default_chat()
+```
+
+------------------------------------------------------------------------
+
+## API Quick Reference
+
+| Function                                                                                | Purpose                                                                                  | Returns             |
+|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|---------------------|
+| [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md)                         | One-off structured LLM call                                                              | Output value(s)     |
+| [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)             | Create reusable module from Chat                                                         | Module object       |
+| [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)             | Define input/output schema                                                               | Signature object    |
+| [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)                   | Create module with full control                                                          | Module object       |
+| [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)                         | Execute module on single input                                                           | tibble with output  |
+| [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)         | Execute on data frame                                                                    | tibble with outputs |
+| [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)               | Compute metrics on test data                                                             | Evaluation result   |
+| [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)                 | Optimize with teleprompter                                                               | Compiled module     |
+| [`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md) | Inspect last prompt sent                                                                 | Prompt text         |
+| [`get_last_trace()`](https://jameshwade.github.io/dsprrr/reference/get_last_trace.md)   | Get trace from last [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) call | Trace object        |
+
 ------------------------------------------------------------------------
 
 ## Signature Notation
@@ -246,6 +276,17 @@ result <- run(mod, question = "Test", .llm = llm, .show_prompt = TRUE)
     │
     └─ Custom logic → metric_custom(my_scorer_fn)
         └─ Domain-specific evaluation
+
+### Metric by Task Type
+
+| Task               | Recommended Metric                                                                            | Why                          |
+|--------------------|-----------------------------------------------------------------------------------------------|------------------------------|
+| Classification     | [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md) | Answer must be exactly right |
+| Extraction         | `metric_exact_match(field = "...")`                                                           | Extract specific field       |
+| Generation         | [`metric_f1()`](https://jameshwade.github.io/dsprrr/reference/metric_f1.md)                   | Partial credit for overlap   |
+| Yes/No questions   | `metric_exact_match(ignore_case = TRUE)`                                                      | “Yes” = “yes”                |
+| Contains keyword   | [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md)       | Answer includes key info     |
+| Complex evaluation | Custom function                                                                               | Domain-specific logic        |
 
 ### Running Evaluation
 

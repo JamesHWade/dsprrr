@@ -718,3 +718,27 @@ dsprrr’s advanced modules bring battle-tested patterns from DSPy to R:
 reasoning tasks - Add **BestOfN** when you need reliability - Use
 **ProgramOfThought** for exact computation (math, statistics) - Use
 **CodeAct** when you need tools AND code execution together
+
+## Further Reading
+
+**Tutorials:** - [Improving with
+Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
+— Learn few-shot prompting - [Finding Best
+Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
+— Grid search optimization
+
+**How-to Guides:** - [Compile &
+Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
+— Full optimization workflow with advanced modules - [Build RAG
+Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md)
+— Use modules in retrieval workflows
+
+**Concepts:** - [Understanding Signatures &
+Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)
+— S7 vs R6 design choices - [How Optimization
+Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)
+— Teleprompter theory
+
+**Reference:** - [Quick
+Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md) —
+Syntax and patterns at a glance
