@@ -14,8 +14,7 @@ vignette: >
 force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
 in_check <- !force_eval && (
   nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
-  identical(Sys.getenv("NOT_CRAN"), "false") ||
-  !interactive()
+  identical(Sys.getenv("NOT_CRAN"), "false")
 )
 
 should_eval <- !in_check && dsprrr:::eval_vignette()
@@ -235,7 +234,9 @@ After running evaluation, dig into the results:
 #| cassette: analyzing
 
 # Run an evaluation
-sentiment <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |>
+sentiment <- signature(
+  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+) |>
   module()
 
 dataset <- tibble(
@@ -339,7 +340,9 @@ Run multiple evaluation passes for more reliable metrics:
 ```{r epochs}
 #| cassette: epochs
 
-classifier <- signature("text -> category: enum('tech', 'sports', 'politics')") |>
+classifier <- signature(
+  "text -> category: enum('tech', 'sports', 'politics')"
+) |>
   module()
 
 # Small dataset - need multiple epochs for confidence
@@ -367,7 +370,13 @@ task$eval()
 
 # Aggregate scores across epochs
 scores <- task$get_samples()
-cat("Total evaluations:", nrow(scores), "(3 epochs x", nrow(test_data), "examples)\n")
+cat(
+  "Total evaluations:",
+  nrow(scores),
+  "(3 epochs x",
+  nrow(test_data),
+  "examples)\n"
+)
 cat("Overall accuracy:", scales::percent(mean(scores$score == "C")), "\n")
 ```
 
@@ -391,7 +400,7 @@ evaluate_module <- function(module, dataset, llm, scorer = detect_match()) {
   results <- tibble(
     input = dataset$input,
     target = dataset$target,
-    prediction = predictions[[1]]  # First output column
+    prediction = predictions[[1]] # First output column
   )
 
   # Score

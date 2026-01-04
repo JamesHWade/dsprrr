@@ -12,8 +12,7 @@ vignette: >
 # Skip evaluation during R CMD check or CI (cassettes may not match current code)
 # This prevents build failures when VCR cassettes are stale
 in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
-            identical(Sys.getenv("NOT_CRAN"), "false") ||
-            !interactive()
+            identical(Sys.getenv("NOT_CRAN"), "false")
 
 should_eval <- !in_check && dsprrr:::eval_vignette()
 
@@ -64,6 +63,7 @@ values (defined either as a simple named list or via tidymodels `dials`
 parameters) and records the results in `module$state$trials`.
 
 ```{r optimize-grid-quick}
+#| cassette: true
 sig_quick <- signature("review -> sentiment: string",
   instructions = "Respond with the sentiment label only."
 )
@@ -85,7 +85,7 @@ exact_sentiment <- function(prediction, expected_row) {
 
 optimize_grid(
   sentiment_module,
-  devset = dev_reviews,
+  data = dev_reviews,
   metric = exact_sentiment,
   parameters = list(prompt_style = c("baseline", "energetic")),
   .llm = llm,
@@ -669,7 +669,7 @@ category_metric <- metric_exact_match(field = "category")
 
 results <- evaluate_dsp(
   module = optimized_grid,
-  dataset = test_emails,
+  data = test_emails,
   metric = category_metric,
   .llm = llm,
   verbose = TRUE
@@ -689,7 +689,7 @@ multi_metric <- metric_field_match(
 
 full_results <- evaluate_dsp(
   module = optimized_grid,
-  dataset = test_emails,
+  data = test_emails,
   metric = multi_metric,
   .llm = llm,
   verbose = TRUE
@@ -816,7 +816,7 @@ for (k in c(1L, 2L, 3L, 4L)) {
   # Evaluate on validation set
   eval_result <- evaluate_dsp(
     module = optimized,
-    dataset = doc_trainset, # In practice, use separate validation set
+    data = doc_trainset, # In practice, use separate validation set
     metric = wrapped_metric,
     .llm = llm,
     verbose = FALSE
@@ -910,7 +910,7 @@ optimized_module <- compile_module(
 # Evaluate on validation set
 val_results <- evaluate_dsp(
   module = optimized_module,
-  dataset = splits$val,
+  data = splits$val,
   metric = wrapped_metric,
   .llm = llm
 )
