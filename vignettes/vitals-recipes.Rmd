@@ -1,0 +1,418 @@
+---
+title: "Vitals Integration Recipes"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vitals Integration Recipes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+# Skip evaluation during R CMD check or CI (cassettes may not match current code)
+# VITALS_SHOULD_EVAL can override for cassette recording
+force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+in_check <- !force_eval && (
+  nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+  identical(Sys.getenv("NOT_CRAN"), "false") ||
+  !interactive()
+)
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = should_eval
+)
+
+if (should_eval) {
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+  vcr::setup_knitr()
+}
+```
+
+This vignette provides practical recipes for integrating dsprrr modules with vitals evaluation. Each recipe is self-contained and demonstrates a specific pattern.
+
+```{r setup}
+library(dsprrr)
+library(vitals)
+library(ellmer)
+library(tibble)
+```
+
+## Recipe 1: Quick Start
+
+The fastest way to evaluate a dsprrr module with vitals:
+```{r quick-start}
+#| cassette: quick-start
+
+# 1. Create a simple module
+classifier <- signature("input -> label: enum('positive', 'negative')") |>
+  module()
+
+# 2. Prepare test data (vitals expects 'input' and 'target' columns)
+test_data <- tibble(
+  input = c(
+    "I love this product!",
+    "Terrible experience, waste of money"
+  ),
+  target = c("positive", "negative")
+)
+
+# 3. Create a vitals Task with dsprrr's helper
+task <- as_vitals_task(
+  module = classifier,
+  dataset = test_data,
+  scorer = detect_match(),
+  .llm = chat_openai(model = "gpt-4o-mini")
+)
+
+# 4. Run evaluation
+task$eval()
+
+# 5. View results
+task$scores
+```
+
+That's it! The `as_vitals_task()` helper handles the integration details.
+
+## Recipe 2: Train-Test Split Workflow
+
+A common pattern: optimize on training data, evaluate on held-out test data.
+
+```{r train-test}
+#| cassette: train-test
+
+# Full dataset with ground truth
+qa_data <- tibble(
+  question = c(
+    "What is the capital of France?",
+    "Who wrote Romeo and Juliet?",
+    "What is 2 + 2?",
+    "What color is the sky?",
+    "Who painted the Mona Lisa?",
+    "What is the largest planet?"
+  ),
+  target = c(
+    "Paris",
+    "Shakespeare",
+    "4",
+    "Blue",
+    "Leonardo da Vinci",
+    "Jupiter"
+  )
+)
+
+# Split into train/test
+set.seed(42)
+train_idx <- sample(nrow(qa_data), 4)
+trainset <- qa_data[train_idx, ]
+testset <- qa_data[-train_idx, ]
+
+# Create and optimize module
+qa_module <- signature("question -> answer") |>
+  module()
+
+# Optimize with few-shot examples from training set
+optimized <- compile(
+  LabeledFewShot(k = 2),
+  qa_module,
+  trainset = trainset
+)
+
+# Evaluate on held-out test set
+eval_task <- as_vitals_task(
+  module = optimized,
+  dataset = testset,
+  scorer = detect_match(),
+  .llm = chat_openai(model = "gpt-4o-mini")
+)
+
+eval_task$eval()
+
+# Compare performance
+cat("Test accuracy:", mean(eval_task$scores$score == "C"), "\n")
+```
+
+## Recipe 3: Using Different Vitals Scorers
+
+Vitals provides several scorers for different use cases:
+
+### Exact Match (detect_match)
+
+Best for factual questions with precise answers:
+
+```{r scorer-exact}
+#| cassette: scorer-exact
+
+factual <- signature("question -> answer") |> module()
+
+task <- as_vitals_task(
+  module = factual,
+  dataset = tibble(
+    question = c("What is 5 * 7?", "What year did WWII end?"),
+    target = c("35", "1945")
+  ),
+  scorer = detect_match(),
+  .llm = chat_openai(model = "gpt-4o-mini")
+)
+
+task$eval()
+task$scores
+```
+
+### Model-Graded QA (model_graded_qa)
+
+Best for open-ended questions where multiple phrasings are correct:
+
+```{r scorer-graded}
+#| cassette: scorer-graded
+
+explainer <- signature("topic -> explanation") |>
+  module(type = "chain_of_thought")
+
+task <- as_vitals_task(
+  module = explainer,
+  dataset = tibble(
+    topic = c("Why is the sky blue?", "How do plants make food?"),
+    target = c(
+      "Light scattering in atmosphere",
+      "Photosynthesis using sunlight"
+    )
+  ),
+  scorer = model_graded_qa(),
+  .llm = chat_openai(model = "gpt-4o-mini")
+)
+
+task$eval()
+task$scores
+```
+
+### Pattern Match (match)
+
+Best for checking specific patterns in output:
+
+```{r scorer-pattern}
+#| cassette: scorer-pattern
+
+coder <- signature("task -> code") |> module()
+
+task <- as_vitals_task(
+  module = coder,
+  dataset = tibble(
+    task = c(
+      "Write a function to add two numbers",
+      "Create a loop that prints 1 to 5"
+    ),
+    target = c("function", "for|while")
+  ),
+  scorer = match(location = "any"),
+  .llm = chat_openai(model = "gpt-4o-mini")
+)
+
+task$eval()
+task$scores
+```
+
+## Recipe 4: Analyzing Evaluation Results
+
+After running evaluation, dig into the results:
+
+```{r analyzing}
+#| cassette: analyzing
+
+# Run an evaluation
+sentiment <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |>
+  module()
+
+dataset <- tibble(
+  text = c(
+    "Best purchase ever!",
+    "Complete garbage",
+    "It's okay I guess",
+    "Amazing quality!",
+    "Never buying again"
+  ),
+  target = c("positive", "negative", "neutral", "positive", "negative")
+)
+
+task <- as_vitals_task(
+  module = sentiment,
+  dataset = dataset,
+  scorer = detect_match(),
+  .llm = chat_openai(model = "gpt-4o-mini")
+)
+
+task$eval()
+
+# Get detailed scores
+scores <- task$scores
+
+# Find failures
+failures <- scores[scores$score == "I", ]
+cat("Failed on", nrow(failures), "of", nrow(scores), "examples\n")
+
+# Examine what went wrong
+if (nrow(failures) > 0) {
+  cat("\nFailure analysis:\n")
+  for (i in seq_len(nrow(failures))) {
+    cat("Input:", failures$input[i], "\n")
+    cat("Expected:", failures$target[i], "\n")
+    cat("Got:", failures$answer[i], "\n\n")
+  }
+}
+
+# Calculate accuracy
+accuracy <- mean(scores$score == "C")
+cat("Overall accuracy:", scales::percent(accuracy), "\n")
+```
+
+## Recipe 5: Comparing Module Variants
+
+Test different module configurations side-by-side:
+
+```{r comparing}
+#| cassette: comparing
+
+# Same signature, different approaches
+sig <- signature("question -> answer")
+
+# Variant 1: Basic prediction
+basic <- module(sig)
+
+# Variant 2: Chain-of-thought reasoning
+cot <- module(sig, type = "chain_of_thought")
+
+# Test dataset
+test_data <- tibble(
+  question = c(
+    "If a train travels 60 mph for 2 hours, how far does it go?",
+    "What is 15% of 80?"
+  ),
+  target = c("120 miles", "12")
+)
+
+llm <- chat_openai(model = "gpt-4o-mini")
+
+# Evaluate both
+results <- list()
+for (name in c("basic", "cot")) {
+  mod <- if (name == "basic") basic else cot
+
+  task <- as_vitals_task(
+    module = mod,
+    dataset = test_data,
+    scorer = model_graded_qa(),
+    .llm = llm
+  )
+  task$eval()
+
+  results[[name]] <- mean(task$scores$score == "C")
+}
+
+# Compare
+cat("Basic accuracy:", scales::percent(results$basic), "\n")
+cat("CoT accuracy:", scales::percent(results$cot), "\n")
+```
+
+## Recipe 6: Multiple Epochs for Confidence
+
+Run multiple evaluation passes for more reliable metrics:
+
+```{r epochs}
+#| cassette: epochs
+
+classifier <- signature("text -> category: enum('tech', 'sports', 'politics')") |>
+  module()
+
+# Small dataset - need multiple epochs for confidence
+test_data <- tibble(
+  text = c(
+    "New iPhone released today",
+    "Lakers win championship",
+    "Senate passes new bill"
+  ),
+  target = c("tech", "sports", "politics")
+)
+
+# Run 3 epochs (each example evaluated 3 times)
+task <- as_vitals_task(
+  module = classifier,
+  dataset = test_data,
+  scorer = detect_match(),
+  epochs = 3,
+  .llm = chat_openai(model = "gpt-4o-mini")
+)
+
+task$eval()
+
+# Aggregate scores across epochs
+scores <- task$scores
+cat("Total evaluations:", nrow(scores), "(3 epochs x", nrow(test_data), "examples)\n")
+cat("Overall accuracy:", scales::percent(mean(scores$score == "C")), "\n")
+```
+
+## Recipe 7: Custom Evaluation Pipeline
+
+For complex evaluation logic, build a custom pipeline:
+
+```{r custom-pipeline}
+#| eval: false
+
+# Custom evaluation function
+evaluate_module <- function(module, dataset, llm, scorer = detect_match()) {
+  # Run predictions
+  predictions <- run(
+    module,
+    !!!as.list(dataset[, -which(names(dataset) == "target")]),
+    .llm = llm
+  )
+
+  # Combine with targets
+  results <- tibble(
+    input = dataset$input,
+    target = dataset$target,
+    prediction = predictions[[1]]  # First output column
+  )
+
+  # Score
+  results$correct <- results$prediction == results$target
+
+  # Summary
+  list(
+    accuracy = mean(results$correct),
+    n = nrow(results),
+    failures = results[!results$correct, ],
+    all = results
+  )
+}
+
+# Use it
+results <- evaluate_module(
+  module = sentiment_module,
+  dataset = test_data,
+  llm = chat_openai()
+)
+
+cat("Accuracy:", scales::percent(results$accuracy), "\n")
+cat("Failures:", nrow(results$failures), "\n")
+```
+
+## Summary
+
+These recipes cover the most common integration patterns:
+
+| Recipe | Use When |
+|--------|----------|
+| Quick Start | Getting started, simple evaluation |
+| Train-Test Split | Validating optimization results |
+| Different Scorers | Matching scorer to task type |
+| Analyzing Results | Understanding failures |
+| Comparing Variants | A/B testing modules |
+| Multiple Epochs | Small datasets, need confidence |
+| Custom Pipeline | Complex evaluation logic |
+
+For more details on the underlying APIs, see `vignette("vitals-integration")`.

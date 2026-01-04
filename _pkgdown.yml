@@ -44,6 +44,8 @@ navbar:
         - text: "Integrations"
         - text: "Vitals Integration"
           href: articles/vitals-integration.html
+        - text: "Vitals Recipes"
+          href: articles/vitals-recipes.html
         - text: "Production Orchestration"
           href: articles/orchestration.html
         - text: "---"
@@ -82,6 +84,7 @@ articles:
     - advanced-optimization
     - advanced-modules
     - vitals-integration
+    - vitals-recipes
 
   - title: Production
     desc: Deploy and orchestrate LLM workflows
