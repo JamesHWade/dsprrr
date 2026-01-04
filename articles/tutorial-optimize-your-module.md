@@ -322,9 +322,9 @@ optimized <- compile_module(
 #> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.
 #> Metric evaluation failed for row 2
 #> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 2
+#> Optimizing 2/3 | Score: 0.0000
+#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.
+#> Metric evaluation failed for row 2
 #> ✖ Cannot extract field from non-list object
 #> Optimizing 3/3 | Score: 0.0000
 ```
@@ -343,13 +343,10 @@ test_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
-#> Processing 2/4 |  50% | ETA:  1s
 #> Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many
 #> Requests.
 #> Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many
 #> Requests.
-#> Processing 4/4 | 100% | ETA:  0s
-#> 
 #> Warning: Metric evaluation failed for row 3
 #> ✖ Cannot extract field from non-list object
 #> Warning: Metric evaluation failed for row 4
@@ -393,7 +390,7 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 562.8781
+#> [1] 581.7175
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 168
@@ -405,7 +402,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-04 18:29:12 UTC"
+#> [1] "2026-01-04 19:15:31 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -413,7 +410,7 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 545.4125
+#> [1] 533.36
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 175
@@ -425,7 +422,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-04 18:29:12 UTC"
+#> [1] "2026-01-04 19:15:31 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -536,8 +533,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x564d28849a70>
-#> <environment: 0x564d2884afb8>
+#> <bytecode: 0x559db15ca8e0>
+#> <environment: 0x559dad9e3118>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -557,8 +554,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x564d249eb790>
-#> <environment: 0x564d249ea338>
+#> <bytecode: 0x559db3000570>
+#> <environment: 0x559db485f7d0>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -586,8 +583,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x564d270a7268>
-#> <environment: 0x564d2559f010>
+#> <bytecode: 0x559db3be51b8>
+#> <environment: 0x559daac6ad78>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -602,8 +599,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x564d20dc14f0>
-#> <environment: 0x564d25c4f5b8>
+#> <bytecode: 0x559dadd984a0>
+#> <environment: 0x559db07c56e8>
 ```
 
 ## Step 10: Tracking Costs

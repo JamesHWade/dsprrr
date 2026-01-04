@@ -72,6 +72,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
 <li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
@@ -165,10 +166,10 @@ demonstrates a specific pattern.</p>
 <span><span class="co"># 4. Run evaluation</span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[884ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[838ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[73ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[72ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># 5. View results</span></span>
@@ -237,10 +238,10 @@ test data.</p>
 <span></span>
 <span><span class="va">eval_task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[355ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[338ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[58ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[54ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># Compare performance</span></span>
@@ -272,10 +273,10 @@ test data.</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[342ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[333ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[56ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[54ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 10</span></span></span>
@@ -311,10 +312,10 @@ correct:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[359ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[348ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[329ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[323ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 10</span></span></span>
@@ -348,10 +349,10 @@ correct:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[349ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[336ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[57ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[54ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 10</span></span></span>
@@ -395,10 +396,10 @@ correct:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[867ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[839ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[127ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[121ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># Get detailed scores</span></span>
@@ -467,16 +468,16 @@ correct:</p>
 <span>  <span class="va">results</span><span class="op">[[</span><span class="va">name</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[339ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[206ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[349ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[215ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[356ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[233ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[218ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># Compare</span></span>
@@ -518,10 +519,10 @@ correct:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.7s]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.6s]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[264ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[251ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># Aggregate scores across epochs</span></span>

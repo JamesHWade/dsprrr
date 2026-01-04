@@ -8,6 +8,7 @@ articles:
   cheatsheet: cheatsheet.html
   compilation-optimization: compilation-optimization.html
   concepts-dspy-philosophy: concepts-dspy-philosophy.html
+  concepts-signatures-modules: concepts-signatures-modules.html
   getting-started: getting-started.html
   llms-txt: llms-txt.html
   orchestration: orchestration.html
@@ -24,7 +25,7 @@ articles:
   tutorial-structured-outputs: tutorial-structured-outputs.html
   vitals-integration: vitals-integration.html
   vitals-recipes: vitals-recipes.html
-last_built: 2026-01-04T18:25Z
+last_built: 2026-01-04T19:11Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles

@@ -72,6 +72,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
 <li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
@@ -428,9 +429,9 @@ explicit variants:</p>
 <span><span class="co">#&gt; Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.</span></span>
 <span><span class="co">#&gt; Metric evaluation failed for row 2</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 2</span></span>
+<span><span class="co">#&gt; Optimizing 2/3 | Score: 0.0000</span></span>
+<span><span class="co">#&gt; Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.</span></span>
+<span><span class="co">#&gt; Metric evaluation failed for row 2</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
 <span><span class="co">#&gt; Optimizing 3/3 | Score: 0.0000</span></span></code></pre></div>
 <p>This combines instruction optimization with few-shot example
@@ -448,13 +449,10 @@ selection.</p>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Processing 2/4 |  50% | ETA:  1s</span></span>
 <span><span class="co">#&gt; Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many</span></span>
 <span><span class="co">#&gt; Requests.</span></span>
 <span><span class="co">#&gt; Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many</span></span>
 <span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Processing 4/4 | 100% | ETA:  0s</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Warning: Metric evaluation failed for row 3</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
 <span><span class="co">#&gt; Warning: Metric evaluation failed for row 4</span></span>
@@ -498,7 +496,7 @@ selection.</p>
 <span><span class="co">#&gt; $metadata</span></span>
 <span><span class="co">#&gt; $metadata[[1]]</span></span>
 <span><span class="co">#&gt; $metadata[[1]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 562.8781</span></span>
+<span><span class="co">#&gt; [1] 581.7175</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 168</span></span>
@@ -510,7 +508,7 @@ selection.</p>
 <span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-04 18:29:12 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-04 19:15:31 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
@@ -518,7 +516,7 @@ selection.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]</span></span>
 <span><span class="co">#&gt; $metadata[[2]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 545.4125</span></span>
+<span><span class="co">#&gt; [1] 533.36</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 175</span></span>
@@ -530,7 +528,7 @@ selection.</p>
 <span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-04 18:29:12 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-04 19:15:31 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 2</span></span>
@@ -637,8 +635,8 @@ selection.</p>
 <span><span class="co">#&gt;     f1 &lt;- 2 * precision * recall/(precision + recall)</span></span>
 <span><span class="co">#&gt;     f1</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x564d28849a70&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x564d2884afb8&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x559db15ca8e0&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x559dad9e3118&gt;</span></span>
 <span></span>
 <span><span class="co"># Check if output contains a string</span></span>
 <span><span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"error"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -658,8 +656,8 @@ selection.</p>
 <span><span class="co">#&gt;         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)</span></span>
 <span><span class="co">#&gt;     }</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x564d249eb790&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x564d249ea338&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x559db3000570&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x559db485f7d0&gt;</span></span>
 <span></span>
 <span><span class="co"># Custom logic</span></span>
 <span><span class="fu"><a href="../reference/metric_custom.html">metric_custom</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
@@ -687,8 +685,8 @@ selection.</p>
 <span><span class="co">#&gt;             x = e$message), parent = e)</span></span>
 <span><span class="co">#&gt;     })</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x564d270a7268&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x564d2559f010&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x559db3be51b8&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x559daac6ad78&gt;</span></span>
 <span></span>
 <span><span class="co"># Threshold wrapper</span></span>
 <span><span class="fu"><a href="../reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
@@ -703,8 +701,8 @@ selection.</p>
 <span><span class="co">#&gt;         `&lt;=` = score &lt;= threshold)</span></span>
 <span><span class="co">#&gt;     result</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x564d20dc14f0&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x564d25c4f5b8&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;bytecode: 0x559dadd984a0&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x559db07c56e8&gt;</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-10-tracking-costs">Step 10: Tracking Costs<a class="anchor" aria-label="anchor" href="#step-10-tracking-costs"></a>

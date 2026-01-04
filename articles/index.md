@@ -49,6 +49,8 @@ Understand the philosophy and design
 
 - [The DSPy Philosophy: Programs, Not
   Prompts](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.md):
+- [Understanding Signatures and
+  Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md):
 - [Advanced Reasoning
   Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
 - [Advanced Optimizer
