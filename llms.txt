@@ -595,6 +595,14 @@ Integration with vitals package
   : Convert a dsprrr module into a vitals solver
 - [`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md)
   : Create a vitals Task from a dsprrr module
+- [`as_vitals_cost()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_cost.md)
+  : Convert dsprrr cost data to vitals format
+- [`as_vitals_samples()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_samples.md)
+  : Convert dsprrr traces to vitals samples format
+- [`as_dsprrr_traces()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_traces.md)
+  : Convert vitals samples to dsprrr traces format
+- [`summarize_traces_df()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces_df.md)
+  : Summarize a traces data frame
 - [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
   : Adapt a vitals scorer for use as a dsprrr metric
 - [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)

@@ -50,9 +50,12 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/TrialLog.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/accessors.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/as_dsprrr_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_reward_fn.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/as_vitals_cost.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/as_vitals_samples.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_vitals_task.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/async.html</loc></url>
@@ -167,6 +170,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/split_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/stream_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/summarize_traces.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/summarize_traces_df.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/teleprompter-ensemble.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/temperature.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/top_p.html</loc></url>

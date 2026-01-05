@@ -321,80 +321,47 @@ which automatically names cassettes based on chunk labels. Set
 
 ## Implementation Status
 
-### Completed (Milestone A & B)
+### Completed (Milestones A-D)
 
-- R6 Module base class with `forward()`,
-  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
-  `reset()`, trace methods
-- PredictModule subclass with template and demo support
-- ReactModule subclass with tool support (ReAct-style agents)
-- S7 Signature with DSPy-style string parsing
-- ellmer integration via `chat_structured()`
-- Chat-centric API:
-  [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md),
-  [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md),
-  default Chat management
-- Streaming support: `mod$stream()` with callbacks or generators
-- Async support:
-  [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
-  [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
-  with promises
-- vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)
-- Grid search optimization with tidymodels parameter support
-- LabeledFewShot and GridSearchTeleprompter
-- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md),
-  [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md),
-  and
-  [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
-  helpers
-- Module persistence:
-  [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),
-  [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
+**Module Types (11):** - PredictModule, ReactModule,
+ProgramOfThoughtModule, CodeActModule - RAGModule,
+MultiChainComparisonModule, EnsembleModule - BestOfNModule,
+RefineModule, KNNFewShotModule - ChainOfThought via signature transforms
+([`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md))
 
-### Completed (Milestone C - Advanced Module Types)
+**Teleprompters (10):** - LabeledFewShot, BootstrapFewShot,
+BootstrapFewShotWithRandomSearch - MIPROv2, SIMBA, GEPA, COPRO,
+KNNFewShot, Ensemble, GridSearch
 
-- ChainOfThought via signature transforms
-  ([`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
-  [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md))
-- BestOfN wrapper module with reward functions
-- Refine wrapper module with feedback loop
-- MultiChainComparison module for ensemble reasoning
-- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
-  factory support for `type = "multichain"`
-- Utility functions:
-  [`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md),
-  [`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md),
-  [`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
+**Infrastructure:** - R6 Module base class with `forward()`,
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
+`reset()`, trace methods - S7 Signature with DSPy-style string parsing -
+ellmer integration via `chat_structured()` - Async support:
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
+[`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
+with promises - vitals bridges (`as_vitals_solver`,
+`as_dsprrr_metric`) - Optimizer infrastructure: `OptimizerControl`,
+`EvalResult`, `CostSummary`, `Trial`, `TrialLog` - Module persistence:
+[`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md) -
+ragnar integration for RAG
 
-### Completed (Milestone D - Optimizer Infrastructure)
+### Planned (Milestones E-H)
 
-- `OptimizerControl` (S7): Configuration for optimizer behavior (seed,
-  max_trials, max_errors, etc.)
-- `EvalResult` (S7): Evaluation result container with per-example and
-  aggregated statistics
-- `CostSummary` (S7): Cumulative cost tracking across optimizer trials
-- `Trial` (S7): Single optimization trial record with metadata and
-  results
-- `TrialLog` (R6): Collection of trials with JSONL persistence support
-- [`eval_program()`](https://jameshwade.github.io/dsprrr/reference/eval_program.md):
-  Standard evaluation function for optimizers
-- [`sample_dataset()`](https://jameshwade.github.io/dsprrr/reference/sample_dataset.md)
-  /
-  [`split_dataset()`](https://jameshwade.github.io/dsprrr/reference/split_dataset.md):
-  Deterministic sampling with RNG state preservation
-- `check_budget()`: Budget stopping condition checker
-- [`write_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/write_trials_jsonl.md)
-  /
-  [`read_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.md):
-  JSONL persistence with error handling
+**E - Caching & LM Configuration (dsprrr-mqo, dsprrr-1y9):** -
+Multi-tier caching (memory → disk → provider) - `configure_dsprrr()` /
+`with_lm()` for global LM config
 
-### Planned
+**F - Ecosystem Integration:** - shinychat integration, MLflow
+observability
 
-- DSPy-inspired optimizers: BootstrapFewShot,
-  BootstrapFewShotWithRandomSearch, KNNFewShot
-- Advanced teleprompters: COPRO, MIPROv2, SIMBA, GEPA
-- Ensemble optimizer combining multiple strategies
-- ProgramOfThought (code generation + execution)
+**G - DSPy 3.0+ Parity (dsprrr-9df, dsprrr-7r4, dsprrr-a3z,
+dsprrr-deh):** - TypedPredictor equivalent, PEP 604 union types -
+`tune_bayes()` integration, ParallelModule, Embedder abstraction
+
+**H - Production Efficiency (dsprrr-1u0):** - BootstrapFinetune (model
+distillation)
 
 ## Coding Conventions
 

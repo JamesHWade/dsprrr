@@ -322,64 +322,18 @@
 <div class="section level2">
 <h2 id="implementation-status">Implementation Status<a class="anchor" aria-label="anchor" href="#implementation-status"></a></h2>
 <div class="section level3">
-<h3 id="completed-milestone-a--b">Completed (Milestone A &amp; B)<a class="anchor" aria-label="anchor" href="#completed-milestone-a--b"></a></h3>
-<ul><li>R6 Module base class with <code>forward()</code>, <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>, <code>reset()</code>, trace methods</li>
-<li>PredictModule subclass with template and demo support</li>
-<li>ReactModule subclass with tool support (ReAct-style agents)</li>
-<li>S7 Signature with DSPy-style string parsing</li>
-<li>ellmer integration via <code>chat_structured()</code>
-</li>
-<li>Chat-centric API: <code><a href="reference/dsp.html">dsp()</a></code>, <code><a href="reference/as_module.html">as_module()</a></code>, default Chat management</li>
-<li>Streaming support: <code>mod$stream()</code> with callbacks or generators</li>
-<li>Async support: <code><a href="reference/run_async.html">run_async()</a></code>, <code><a href="reference/stream_async.html">stream_async()</a></code> with promises</li>
-<li>vitals bridges (<code>as_vitals_solver</code>, <code>as_dsprrr_metric</code>)</li>
-<li>Grid search optimization with tidymodels parameter support</li>
-<li>LabeledFewShot and GridSearchTeleprompter</li>
-<li>
-<code><a href="reference/module_parameters.html">module_parameters()</a></code>, <code><a href="reference/module_trials.html">module_trials()</a></code>, and <code><a href="reference/module_metrics.html">module_metrics()</a></code> helpers</li>
-<li>Module persistence: <code><a href="reference/pin_module_config.html">pin_module_config()</a></code>, <code><a href="reference/restore_module_config.html">restore_module_config()</a></code>
-</li>
-</ul></div>
+<h3 id="completed-milestones-a-d">Completed (Milestones A-D)<a class="anchor" aria-label="anchor" href="#completed-milestones-a-d"></a></h3>
+<p><strong>Module Types (11):</strong> - PredictModule, ReactModule, ProgramOfThoughtModule, CodeActModule - RAGModule, MultiChainComparisonModule, EnsembleModule - BestOfNModule, RefineModule, KNNFewShotModule - ChainOfThought via signature transforms (<code><a href="reference/with_reasoning.html">with_reasoning()</a></code>, <code><a href="reference/chain_of_thought.html">chain_of_thought()</a></code>)</p>
+<p><strong>Teleprompters (10):</strong> - LabeledFewShot, BootstrapFewShot, BootstrapFewShotWithRandomSearch - MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, Ensemble, GridSearch</p>
+<p><strong>Infrastructure:</strong> - R6 Module base class with <code>forward()</code>, <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>, <code>reset()</code>, trace methods - S7 Signature with DSPy-style string parsing - ellmer integration via <code>chat_structured()</code> - Async support: <code><a href="reference/run_async.html">run_async()</a></code>, <code><a href="reference/stream_async.html">stream_async()</a></code> with promises - vitals bridges (<code>as_vitals_solver</code>, <code>as_dsprrr_metric</code>) - Optimizer infrastructure: <code>OptimizerControl</code>, <code>EvalResult</code>, <code>CostSummary</code>, <code>Trial</code>, <code>TrialLog</code> - Module persistence: <code><a href="reference/pin_module_config.html">pin_module_config()</a></code>, <code><a href="reference/restore_module_config.html">restore_module_config()</a></code> - ragnar integration for RAG</p>
+</div>
 <div class="section level3">
-<h3 id="completed-milestone-c---advanced-module-types">Completed (Milestone C - Advanced Module Types)<a class="anchor" aria-label="anchor" href="#completed-milestone-c---advanced-module-types"></a></h3>
-<ul><li>ChainOfThought via signature transforms (<code><a href="reference/with_reasoning.html">with_reasoning()</a></code>, <code><a href="reference/chain_of_thought.html">chain_of_thought()</a></code>)</li>
-<li>BestOfN wrapper module with reward functions</li>
-<li>Refine wrapper module with feedback loop</li>
-<li>MultiChainComparison module for ensemble reasoning</li>
-<li>
-<code><a href="reference/module.html">module()</a></code> factory support for <code>type = "multichain"</code>
-</li>
-<li>Utility functions: <code><a href="reference/as_reward_fn.html">as_reward_fn()</a></code>, <code><a href="reference/has_reasoning.html">has_reasoning()</a></code>, <code><a href="reference/without_reasoning.html">without_reasoning()</a></code>
-</li>
-</ul></div>
-<div class="section level3">
-<h3 id="completed-milestone-d---optimizer-infrastructure">Completed (Milestone D - Optimizer Infrastructure)<a class="anchor" aria-label="anchor" href="#completed-milestone-d---optimizer-infrastructure"></a></h3>
-<ul><li>
-<code>OptimizerControl</code> (S7): Configuration for optimizer behavior (seed, max_trials, max_errors, etc.)</li>
-<li>
-<code>EvalResult</code> (S7): Evaluation result container with per-example and aggregated statistics</li>
-<li>
-<code>CostSummary</code> (S7): Cumulative cost tracking across optimizer trials</li>
-<li>
-<code>Trial</code> (S7): Single optimization trial record with metadata and results</li>
-<li>
-<code>TrialLog</code> (R6): Collection of trials with JSONL persistence support</li>
-<li>
-<code><a href="reference/eval_program.html">eval_program()</a></code>: Standard evaluation function for optimizers</li>
-<li>
-<code><a href="reference/sample_dataset.html">sample_dataset()</a></code> / <code><a href="reference/split_dataset.html">split_dataset()</a></code>: Deterministic sampling with RNG state preservation</li>
-<li>
-<code>check_budget()</code>: Budget stopping condition checker</li>
-<li>
-<code><a href="reference/write_trials_jsonl.html">write_trials_jsonl()</a></code> / <code><a href="reference/read_trials_jsonl.html">read_trials_jsonl()</a></code>: JSONL persistence with error handling</li>
-</ul></div>
-<div class="section level3">
-<h3 id="planned">Planned<a class="anchor" aria-label="anchor" href="#planned"></a></h3>
-<ul><li>DSPy-inspired optimizers: BootstrapFewShot, BootstrapFewShotWithRandomSearch, KNNFewShot</li>
-<li>Advanced teleprompters: COPRO, MIPROv2, SIMBA, GEPA</li>
-<li>Ensemble optimizer combining multiple strategies</li>
-<li>ProgramOfThought (code generation + execution)</li>
-</ul></div>
+<h3 id="planned-milestones-e-h">Planned (Milestones E-H)<a class="anchor" aria-label="anchor" href="#planned-milestones-e-h"></a></h3>
+<p><strong>E - Caching &amp; LM Configuration (dsprrr-mqo, dsprrr-1y9):</strong> - Multi-tier caching (memory → disk → provider) - <code>configure_dsprrr()</code> / <code>with_lm()</code> for global LM config</p>
+<p><strong>F - Ecosystem Integration:</strong> - shinychat integration, MLflow observability</p>
+<p><strong>G - DSPy 3.0+ Parity (dsprrr-9df, dsprrr-7r4, dsprrr-a3z, dsprrr-deh):</strong> - TypedPredictor equivalent, PEP 604 union types - <code>tune_bayes()</code> integration, ParallelModule, Embedder abstraction</p>
+<p><strong>H - Production Efficiency (dsprrr-1u0):</strong> - BootstrapFinetune (model distillation)</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="coding-conventions">Coding Conventions<a class="anchor" aria-label="anchor" href="#coding-conventions"></a></h2>

@@ -390,7 +390,7 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 545.4419
+#> [1] 529.9621
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 168
@@ -402,7 +402,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-04 23:36:43 UTC"
+#> [1] "2026-01-05 02:10:33 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -410,7 +410,7 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 527.0586
+#> [1] 526.592
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 175
@@ -422,7 +422,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-04 23:36:43 UTC"
+#> [1] "2026-01-05 02:10:34 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -533,8 +533,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x5595d802c1a0>
-#> <environment: 0x5595d6c49c50>
+#> <bytecode: 0x55cf1bbb2010>
+#> <environment: 0x55cf1a0e6910>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -554,8 +554,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x5595db661fe0>
-#> <environment: 0x5595db6649f0>
+#> <bytecode: 0x55cf1a0e3550>
+#> <environment: 0x55cf1a0e2050>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -583,8 +583,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x5595d81b7b70>
-#> <environment: 0x5595dade0228>
+#> <bytecode: 0x55cf1d9dcf28>
+#> <environment: 0x55cf1ba03b10>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -599,8 +599,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x5595da0222e0>
-#> <environment: 0x5595da0252d8>
+#> <bytecode: 0x55cf1f0722c8>
+#> <environment: 0x55cf1f071490>
 ```
 
 ## Step 10: Tracking Costs

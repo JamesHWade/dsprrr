@@ -501,17 +501,17 @@ know its shape.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">llmstxt</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">#&gt; # dsprrr</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; A framework for principled, test-driven, and automatically optimized LLM workflows in R. Built for R programmers and data scientists who need systematic, composable, and data-driven improvement of prompt pipelines. Inspired by the DSPy framework.</span></span>
+<span><span class="co">#&gt; Declarative, test-driven, and optimizable LLM workflows for R. Designed for robust, scalable, and maintainable AI-powered applications.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ## Key Concepts</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; - **Declarative Signatures**: Compact, type-safe notation for defining LLM inputs/outputs, enabling systematic validation and programming.</span></span>
-<span><span class="co">#&gt; - **Composable Modules**: Reusable, optimizable blocks that compose LLM programs; modules can be chained and managed independently.</span></span>
-<span><span class="co">#&gt; - **Automatic Prompt Optimization**: Data-driven searching and tuning of prompts, removing brittle prompt engineering.</span></span>
-<span><span class="co">#&gt; - **Test-driven LLM Programming**: Evaluate and improve workflows with labeled examples and metrics for reliable iteration.</span></span>
-<span><span class="co">#&gt; - **Tidyverse Integration**: Native compatibility with R data science pipelines (e.g., tibbles, purrr, dplyr).</span></span>
+<span><span class="co">#&gt; - **Declarative Signatures**: Compact notation for defining LLM input/output formats, enabling strict type alignment and validation.</span></span>
+<span><span class="co">#&gt; - **Composable Modules**: LLM programs are built from interchangeable, testable units, facilitating robust and extensible workflows.</span></span>
+<span><span class="co">#&gt; - **Prompt Optimization**: Automated fine-tuning of workflow components using supervised data, rather than relying on static, hand-crafted prompts.</span></span>
+<span><span class="co">#&gt; - **Workflow Tracing**: Built-in tools for step-by-step debugging and performance profiling at each stage of a workflow.</span></span>
+<span><span class="co">#&gt; - **tidyverse Integration**: Works seamlessly with tidyverse idioms/data types for modern R pipelines.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -519,12 +519,15 @@ know its shape.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ```r</span></span>
 <span><span class="co">#&gt; library(dsprrr)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Define a signature for a simple Q&amp;A program (declarative I/O)</span></span>
+<span><span class="co">#&gt; # Define the input/output signature for an LLM function</span></span>
 <span><span class="co">#&gt; sig &lt;- signature("question -&gt; answer")</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Inspect the signature</span></span>
-<span><span class="co">#&gt; print(sig)</span></span>
+<span><span class="co">#&gt; # Create a simple program (chain-of-thought question answering module)</span></span>
+<span><span class="co">#&gt; qa_module &lt;- module(signature = sig)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Run the module on an example question</span></span>
+<span><span class="co">#&gt; result &lt;- run(qa_module, list(question = "What is the capital of France?"))</span></span>
+<span><span class="co">#&gt; print(result$answer)</span></span>
 <span><span class="co">#&gt; ```</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
@@ -533,63 +536,61 @@ know its shape.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ```r</span></span>
 <span><span class="co">#&gt; library(dsprrr)</span></span>
+<span><span class="co">#&gt; library(tibble)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Labeled data for evaluation</span></span>
-<span><span class="co">#&gt; examples &lt;- tibble::tibble(</span></span>
-<span><span class="co">#&gt;   question = c("What is the capital of France?", "2+2?"),</span></span>
-<span><span class="co">#&gt;   answer = c("Paris", "4")</span></span>
+<span><span class="co">#&gt; # Define dataset</span></span>
+<span><span class="co">#&gt; qa_data &lt;- tibble(</span></span>
+<span><span class="co">#&gt;   question = c("What is the capital of Germany?", "Who wrote '1984'?"),</span></span>
+<span><span class="co">#&gt;   answer = c("Berlin", "George Orwell")</span></span>
 <span><span class="co">#&gt; )</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Create a composable module</span></span>
-<span><span class="co">#&gt; mod &lt;- module(</span></span>
-<span><span class="co">#&gt;   signature = signature("question -&gt; answer"),</span></span>
-<span><span class="co">#&gt;   template = "Q: {question}\nA:"</span></span>
-<span><span class="co">#&gt; )</span></span>
+<span><span class="co">#&gt; # Define a signature for the LLM-powered QA task</span></span>
+<span><span class="co">#&gt; sig &lt;- signature("question -&gt; answer")</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # (Optional) Compile for optimization</span></span>
-<span><span class="co">#&gt; dsp_mod &lt;- compile(mod)</span></span>
+<span><span class="co">#&gt; # Create and optimize a teleprompter module with grid search</span></span>
+<span><span class="co">#&gt; qa_tp &lt;- teleprompter(signature = sig)</span></span>
+<span><span class="co">#&gt; opt_results &lt;- optimize_grid(module = qa_tp, data = qa_data)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Run on new input</span></span>
-<span><span class="co">#&gt; y_pred &lt;- run(dsp_mod, tibble::tibble(question = "What is the capital of Germany?"))</span></span>
-<span><span class="co">#&gt; print(y_pred)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Evaluate against ground truth</span></span>
-<span><span class="co">#&gt; evaluate(dsp_mod, examples)</span></span>
+<span><span class="co">#&gt; # Evaluate optimized module</span></span>
+<span><span class="co">#&gt; eval_out &lt;- evaluate(opt_results$module, qa_data)</span></span>
+<span><span class="co">#&gt; print(eval_out)</span></span>
 <span><span class="co">#&gt; ```</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ## Code Organization</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; - **signature.R**: Core signature objects and I/O schema logic.</span></span>
-<span><span class="co">#&gt; - **module.R**: Composable modules—base class and interface.</span></span>
-<span><span class="co">#&gt; - **teleprompter.R**: Prompt optimization and dynamic tuning logic.</span></span>
-<span><span class="co">#&gt; - **optimize.R**: Optimization (grid search, systematic scoring, improvement).</span></span>
-<span><span class="co">#&gt; - **run.R**: High-level program/workflow execution coordination.</span></span>
+<span><span class="co">#&gt; Core abstractions are separated into modular files:</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Other files: utilities, orchestration, integration, and tracing.</span></span>
+<span><span class="co">#&gt; - **signature.R**: Parsing and handling declarative input/output signatures.</span></span>
+<span><span class="co">#&gt; - **module.R**: Defining, composing, and managing LLM modules/workflows.</span></span>
+<span><span class="co">#&gt; - **teleprompter.R**: Optimization and smart prompting strategies.</span></span>
+<span><span class="co">#&gt; - **optimize.R**: Optimization drivers for data-driven prompt/module refinement.</span></span>
+<span><span class="co">#&gt; - **traces.R**: Recording execution details for robust debugging/testing.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Additional utility and glue files support extensibility and workflow management.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ## Entry Points</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; - `signature`: Declare LLM input/output schemas.</span></span>
-<span><span class="co">#&gt; - `module`: Construct composable program modules.</span></span>
-<span><span class="co">#&gt; - `teleprompter`: Optimize prompt templates.</span></span>
-<span><span class="co">#&gt; - `compile`: Prepare and optimize modules/programs for execution.</span></span>
-<span><span class="co">#&gt; - `run`: Execute on new data.</span></span>
-<span><span class="co">#&gt; - `evaluate`: Test predictions against labeled ground truth.</span></span>
-<span><span class="co">#&gt; - `dsp`: Experimental pipeline orchestration (DSPy-style).</span></span>
+<span><span class="co">#&gt; Most workflows use these functions:</span></span>
+<span><span class="co">#&gt; - `signature()`</span></span>
+<span><span class="co">#&gt; - `module()`</span></span>
+<span><span class="co">#&gt; - `teleprompter()`</span></span>
+<span><span class="co">#&gt; - `compile()`</span></span>
+<span><span class="co">#&gt; - `evaluate()`</span></span>
+<span><span class="co">#&gt; - `run()`</span></span>
+<span><span class="co">#&gt; - `optimize_grid()`</span></span>
+<span><span class="co">#&gt; - `dsp()`</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ## Watch Out For</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; - **Signature strictness**: Inputs/outputs must match declared signature exactly; errors otherwise.</span></span>
-<span><span class="co">#&gt; - **Object model**: Modules, teleprompters, etc., are S7 objects (not lists/functions)—interact via their methods.</span></span>
-<span><span class="co">#&gt; - **Template variables**: Template fields must match those declared in signatures (e.g., `{question}`).</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ---</span></span></code></pre>
+<span><span class="co">#&gt; - **Signature Alignment**: Input/output names must match everywhere (signature, data, and modules).</span></span>
+<span><span class="co">#&gt; - **Structured Inputs**: Use named lists or tibbles matching your signatures, not plain strings.</span></span>
+<span><span class="co">#&gt; - **LLM Provider Hooks**: Set up your LLM provider (e.g., OpenAI key); missing configuration causes run() errors or blank outputs.</span></span></code></pre>
 <p><strong>This works.</strong> For a one-off script, you’re done.</p>
 <hr>
 </div>
@@ -922,7 +923,7 @@ the complexity while preserving access to the full
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Declarative Self-Improving Language Programs for R</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; 119 exports, 49 R files</span></span>
+<span><span class="co">#&gt; 123 exports, 49 R files</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Analyzing purpose and concepts...</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -939,101 +940,109 @@ the complexity while preserving access to the full
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── <span style="font-weight: bold;">Analysis: dsprrr</span> ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="font-weight: bold;">Purpose:</span> Provides a principled, declarative, and optimizable framework for</span></span>
-<span><span class="co">#&gt; building and systematically improving LLM-powered applications in R, using</span></span>
-<span><span class="co">#&gt; programmatic workflows that integrate deeply with tidyverse.</span></span>
-<span><span class="co">#&gt; <span style="font-weight: bold;">Audience:</span> R developers and data scientists building LLM-driven applications who</span></span>
-<span><span class="co">#&gt; require structured, scalable, and optimizable workflows—especially those using</span></span>
-<span><span class="co">#&gt; the tidyverse.</span></span>
-<span><span class="co">#&gt; <span style="font-weight: bold;">Entry points:</span> <span style="color: #0000BB;">"Teleprompter"</span>, <span style="color: #0000BB;">"module"</span>, <span style="color: #0000BB;">"signature"</span>, <span style="color: #0000BB;">"run"</span>, <span style="color: #0000BB;">"evaluate"</span>, and</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">"optimize_grid"</span></span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Purpose:</span> Provides a framework for building, optimizing, and debugging</span></span>
+<span><span class="co">#&gt; structured LLM workflows in R using declarative, data-driven programming,</span></span>
+<span><span class="co">#&gt; making prompt engineering systematic and improvable.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Audience:</span> R developers and data scientists who want robust, scalable, and</span></span>
+<span><span class="co">#&gt; testable LLM workflows, especially those familiar with the tidyverse and</span></span>
+<span><span class="co">#&gt; seeking more than basic prompt chaining.</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Entry points:</span> <span style="color: #0000BB;">"signature"</span>, <span style="color: #0000BB;">"module"</span>, <span style="color: #0000BB;">"compile"</span>, <span style="color: #0000BB;">"optimize_grid"</span>, <span style="color: #0000BB;">"run"</span>, and</span></span>
+<span><span class="co">#&gt; <span style="color: #0000BB;">"evaluate"</span></span></span>
 <span></span>
 <span><span class="co"># See the generated llms.txt</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">@</span><span class="va">llmstxt</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">#&gt; # dsprrr</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; **Purpose:**</span></span>
-<span><span class="co">#&gt; Provides a principled, declarative, and optimizable framework for building and systematically improving LLM-powered applications in R, using programmatic workflows that integrate deeply with tidyverse.</span></span>
+<span><span class="co">#&gt; **Purpose:** Provides a framework for building, optimizing, and debugging structured LLM workflows in R using declarative, data-driven programming, making prompt engineering systematic and improvable.</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; **Target Audience:**</span></span>
-<span><span class="co">#&gt; R developers and data scientists building LLM-driven applications who require structured, scalable, and optimizable workflows—especially those using the tidyverse.</span></span>
+<span><span class="co">#&gt; **Target Audience:** R developers and data scientists who want robust, scalable, and testable LLM workflows, especially those familiar with the tidyverse and seeking more than basic prompt chaining.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Key Concepts</span></span>
-<span><span class="co">#&gt; - **Declarative Signatures:** Compact, structured notation for specifying LLM input/output, used for workflow definition and validation.</span></span>
-<span><span class="co">#&gt; - **Optimizable Modules:** Composable workflow units for LLM processing, supporting evaluation and data-driven improvement.</span></span>
-<span><span class="co">#&gt; - **Automatic Prompt Optimization:** Empirical optimization of prompts and workflows using built-in algorithms and strategies.</span></span>
-<span><span class="co">#&gt; - **Tracing and Debugging:** Native tools for recording, inspecting, and analyzing LLM process steps and errors.</span></span>
-<span><span class="co">#&gt; - **Tidyverse Integration:** Designed for seamless compatibility with tidyverse idioms (e.g., tibble, pipes, functional programming).</span></span>
+<span><span class="co">#&gt; ## Key Concepts</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - **Declarative Signatures:** Define LLM tasks concisely by specifying inputs and expected outputs (e.g., `"question -&gt; answer"`).</span></span>
+<span><span class="co">#&gt; - **Modular LLM Workflows:** Build and combine LLM processes as modules, allowing systematic improvement and reuse.</span></span>
+<span><span class="co">#&gt; - **Automatic Prompt Optimization:** Use labeled data to optimize prompts and workflows instead of manually tweaking prompts.</span></span>
+<span><span class="co">#&gt; - **Tracing and Evaluation:** Record, analyze, and debug LLM decisions using built-in trace and evaluation tools.</span></span>
+<span><span class="co">#&gt; - **tidyverse Integration:** Designed to work seamlessly with tidyverse data structures and idioms for convenience and interoperability.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Quick Start</span></span>
+<span><span class="co">#&gt; ## Quick Start</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ```r</span></span>
 <span><span class="co">#&gt; library(dsprrr)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Create a simple declarative signature for a QA task</span></span>
+<span><span class="co">#&gt; # Define a minimal signature: input is a 'question', output is an 'answer'</span></span>
 <span><span class="co">#&gt; sig &lt;- signature("question -&gt; answer")</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Create a module using the signature</span></span>
-<span><span class="co">#&gt; qa_mod &lt;- module(signature = sig, description = "Simple QA module")</span></span>
+<span><span class="co">#&gt; # Use 'run' to execute with an LLM (assuming LLM provider/account configured)</span></span>
+<span><span class="co">#&gt; run(sig, question = "What is the capital of France?")</span></span>
+<span><span class="co">#&gt; #&gt; $answer</span></span>
+<span><span class="co">#&gt; #&gt; [1] "Paris"</span></span>
 <span><span class="co">#&gt; ```</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Common Workflow</span></span>
+<span><span class="co">#&gt; ## Common Workflow</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ```r</span></span>
 <span><span class="co">#&gt; library(dsprrr)</span></span>
 <span><span class="co">#&gt; library(tibble)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Sample QA dataset</span></span>
-<span><span class="co">#&gt; data &lt;- tibble(</span></span>
-<span><span class="co">#&gt;   question = c("What is the capital of France?", "What is 2+2?"),</span></span>
-<span><span class="co">#&gt;   answer = c("Paris", "4")</span></span>
+<span><span class="co">#&gt; # Sample labeled data for optimization and eval</span></span>
+<span><span class="co">#&gt; df &lt;- tibble::tibble(</span></span>
+<span><span class="co">#&gt;   question = c("What is the capital of France?", "Who wrote '1984'?"),</span></span>
+<span><span class="co">#&gt;   answer = c("Paris", "George Orwell")</span></span>
 <span><span class="co">#&gt; )</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Build a teleprompter for few-shot prompting</span></span>
-<span><span class="co">#&gt; tp &lt;- Teleprompter(signature = signature("question -&gt; answer"),</span></span>
-<span><span class="co">#&gt;                    examples = data)</span></span>
+<span><span class="co">#&gt; # Step 1: Declare the signature and module</span></span>
+<span><span class="co">#&gt; sig &lt;- signature("question -&gt; answer")</span></span>
+<span><span class="co">#&gt; mod &lt;- module(signature = sig, task = "qa_simple")</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Run the teleprompter on a new question</span></span>
-<span><span class="co">#&gt; result &lt;- run(tp, list(question = "What is the largest planet?"))</span></span>
-<span><span class="co">#&gt; print(result)</span></span>
+<span><span class="co">#&gt; # Step 2: Compile the program and optimize (e.g., grid search over prompt params)</span></span>
+<span><span class="co">#&gt; prog &lt;- compile(mod)</span></span>
+<span><span class="co">#&gt; opt_prog &lt;- optimize_grid(prog, dataset = df, metric = metric_exact_match)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Step 3: Evaluate and inspect</span></span>
+<span><span class="co">#&gt; results &lt;- evaluate(opt_prog, dataset = df)</span></span>
+<span><span class="co">#&gt; print(results)</span></span>
+<span><span class="co">#&gt; traces &lt;- traces(opt_prog)</span></span>
+<span><span class="co">#&gt; print(traces)</span></span>
 <span><span class="co">#&gt; ```</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Code Organization</span></span>
+<span><span class="co">#&gt; ## Code Organization</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Code is organized into modular components:</span></span>
-<span><span class="co">#&gt; - **Signatures:** Definition and parsing (`signature.R`)</span></span>
-<span><span class="co">#&gt; - **Modules:** Composable workflow units (`module.R`)</span></span>
-<span><span class="co">#&gt; - **Teleprompters:** Prompting strategies (`teleprompter.R`, `teleprompter-*.R`)</span></span>
-<span><span class="co">#&gt; - **Optimizers:** Logic for workflow/prompt improvement (`optimize.R`)</span></span>
-<span><span class="co">#&gt; - **Evaluation:** Metrics and scoring (`evaluate.R`)</span></span>
-<span><span class="co">#&gt; - **Tracing:** Logging and debugging utilities (`traces.R`)</span></span>
+<span><span class="co">#&gt; - **signature.R:** Defines the DSL and logic for LLM task signatures (input/output specification).</span></span>
+<span><span class="co">#&gt; - **module.R:** Core API for constructing and composing LLM modules; base class for other module types.</span></span>
+<span><span class="co">#&gt; - **compile.R:** Functions to build, validate, and optimize workflows from modules and signatures.</span></span>
+<span><span class="co">#&gt; - **optimize.R:** Implements automatic prompt/workflow optimization and hyperparameter search logic.</span></span>
+<span><span class="co">#&gt; - **run.R:** Execution engine for running workflows on data, handling orchestration and parallelism.</span></span>
+<span><span class="co">#&gt; - **traces.R:** Recording, exporting, and analysis of traces and telemetry from workflow executions.</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Each major area is isolated for easy extension and navigation.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ---</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Entry Points</span></span>
-<span><span class="co">#&gt; - `Teleprompter`: Build advanced and few-shot prompting workflows</span></span>
-<span><span class="co">#&gt; - `module`: Create and compose workflow modules</span></span>
-<span><span class="co">#&gt; - `signature`: Define structured I/O contracts for workflows</span></span>
-<span><span class="co">#&gt; - `run`: Execute a module or teleprompter on data</span></span>
-<span><span class="co">#&gt; - `evaluate`: Quantitatively score workflow outputs</span></span>
-<span><span class="co">#&gt; - `optimize_grid`: Systematically optimize modules/workflows</span></span>
+<span><span class="co">#&gt; Modules and adapters (teleprompter-, optimizer-, module-* files) implement specific strategies and workflow archetypes.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; # Watch Out For</span></span>
-<span><span class="co">#&gt; - **Signature Matching:** Signatures must exactly match your data fields; mismatches cause errors.</span></span>
-<span><span class="co">#&gt; - **Proper Signature Objects:** Modules and teleprompters require valid signature objects, not just character strings.</span></span>
-<span><span class="co">#&gt; - **Data Format:** Example data must follow the signature's format and match expected input/output columns.</span></span></code></pre>
+<span><span class="co">#&gt; ## Entry Points</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - `signature`: Define structured task signatures</span></span>
+<span><span class="co">#&gt; - `module`: Create LLM modules using signatures</span></span>
+<span><span class="co">#&gt; - `compile`: Assemble and validate workflows</span></span>
+<span><span class="co">#&gt; - `optimize_grid`: Data-driven prompt/hyperparameter search</span></span>
+<span><span class="co">#&gt; - `run`: Execute workflows on input data</span></span>
+<span><span class="co">#&gt; - `evaluate`: Assess performance and review traces</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ---</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Watch Out For</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - **Missing Signatures:** Omitting a signature for modules/tasks will cause errors or ambiguous input/output.</span></span>
+<span><span class="co">#&gt; - **Data Format:** Supply training/evaluation data as `tibble` or tidyverse-compatible structures; using base `data.frame` may cause subtle bugs.</span></span>
+<span><span class="co">#&gt; - **Optimization Needs Data:** Optimization and evaluation tools require labeled data. Without examples, systematic improvement isn't possible.</span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
