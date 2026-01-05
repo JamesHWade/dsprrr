@@ -363,6 +363,199 @@ metric_detect_pattern <- function(
   )
 }
 
+#' Convert dsprrr cost data to vitals format
+#'
+#' @description
+#' Converts dsprrr cost summaries, trace data, or session costs into a
+#' tibble matching the format returned by vitals [vitals::Task]`$get_cost()`.
+#' This enables consistent cost reporting across dsprrr and vitals workflows.
+#'
+#' @param x A dsprrr cost object. Can be:
+#'   - A `dsprrr_cost_summary` (from [get_cost()])
+#'   - A `dsprrr_session_cost` (from [session_cost()])
+#'   - A tibble of traces (from [export_traces()])
+#'   - A `dsprrr_evaluation` result (from [evaluate()])
+#' @param source Character string identifying the source of costs.
+#'   Defaults to `"solver"` to match vitals convention.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A tibble with columns matching vitals cost format:
+#'   - `source`: Character, either "solver" or "scorer"
+#'   - `provider`: Character, the API provider name
+#'   - `model`: Character, the model name
+#'   - `input`: Integer, input token count
+#'   - `output`: Integer, output token count
+#'   - `price`: Character, formatted cost string (e.g., "$0.01")
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # From session cost
+#' as_vitals_cost(session_cost())
+#'
+#' # From evaluation result
+#' eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
+#' as_vitals_cost(eval_result)
+#'
+#' # From module traces
+#' traces <- export_traces(my_module)
+#' as_vitals_cost(traces)
+#' }
+as_vitals_cost <- function(x, source = "solver", ...) {
+  UseMethod("as_vitals_cost")
+}
+
+#' @export
+as_vitals_cost.dsprrr_session_cost <- function(x, source = "solver", ...) {
+  if (nrow(x$by_model) == 0) {
+    return(tibble::tibble(
+      source = character(0),
+      provider = character(0),
+      model = character(0),
+      input = integer(0),
+      output = integer(0),
+      price = character(0)
+    ))
+  }
+
+  tibble::tibble(
+    source = rep(source, nrow(x$by_model)),
+    provider = vapply(
+      x$by_model$model,
+      infer_provider_from_model,
+      character(1)
+    ),
+    model = x$by_model$model,
+    input = as.integer(x$by_model$tokens_in),
+    output = as.integer(x$by_model$tokens_out),
+    price = vapply(
+      x$by_model$cost,
+      format_price,
+      character(1)
+    )
+  )
+}
+
+#' @export
+as_vitals_cost.dsprrr_cost_summary <- function(x, source = "solver", ...) {
+  # Cost summary doesn't have per-model breakdown, aggregate to single row
+  if (nrow(x$costs) == 0 || x$total == 0) {
+    return(tibble::tibble(
+      source = character(0),
+      provider = character(0),
+      model = character(0),
+      input = integer(0),
+      output = integer(0),
+      price = character(0)
+    ))
+  }
+
+  tibble::tibble(
+    source = source,
+    provider = "unknown",
+    model = "unknown",
+    input = NA_integer_,
+    output = NA_integer_,
+    price = format_price(x$total)
+  )
+}
+
+#' @export
+as_vitals_cost.dsprrr_evaluation <- function(x, source = "solver", ...) {
+  cost_summary <- get_cost(x)
+  as_vitals_cost(cost_summary, source = source, ...)
+}
+
+#' @export
+as_vitals_cost.data.frame <- function(x, source = "solver", ...) {
+  # Assume this is a traces tibble from export_traces()
+  required_cols <- c("model", "input_tokens", "output_tokens", "cost")
+  if (!all(required_cols %in% names(x))) {
+    cli::cli_abort(c(
+      "Data frame must have trace columns",
+      "i" = "Required: {.field {required_cols}}",
+      "x" = "Missing: {.field {setdiff(required_cols, names(x))}}"
+    ))
+  }
+
+  if (nrow(x) == 0) {
+    return(tibble::tibble(
+      source = character(0),
+      provider = character(0),
+      model = character(0),
+      input = integer(0),
+      output = integer(0),
+      price = character(0)
+    ))
+  }
+
+  # Aggregate by model
+  models <- unique(x$model)
+
+  tibble::tibble(
+    source = rep(source, length(models)),
+    provider = vapply(models, infer_provider_from_model, character(1)),
+    model = models,
+    input = vapply(
+      models,
+      function(m) as.integer(sum(x$input_tokens[x$model == m], na.rm = TRUE)),
+      integer(1)
+    ),
+    output = vapply(
+      models,
+      function(m) as.integer(sum(x$output_tokens[x$model == m], na.rm = TRUE)),
+      integer(1)
+    ),
+    price = vapply(
+      models,
+      function(m) format_price(sum(x$cost[x$model == m], na.rm = TRUE)),
+      character(1)
+    )
+  )
+}
+
+#' @export
+as_vitals_cost.default <- function(x, source = "solver", ...) {
+  cli::cli_abort(c(
+    "Cannot convert {.cls {class(x)[1]}} to vitals cost format",
+    "i" = "Expected: dsprrr_session_cost, dsprrr_cost_summary, dsprrr_evaluation, or traces data frame"
+  ))
+}
+
+#' Format price as string
+#' @noRd
+format_price <- function(cost) {
+  if (is.na(cost) || cost == 0) {
+    return("$0.00")
+  }
+  sprintf("$%.2f", cost)
+}
+
+#' Infer provider from model name
+#' @noRd
+infer_provider_from_model <- function(model) {
+  if (is.na(model) || model == "unknown") {
+    return("unknown")
+  }
+
+  model_lower <- tolower(model)
+
+  if (grepl("^gpt|^o1|^o3|^text-|^davinci|^curie|^babbage|^ada", model_lower)) {
+    return("OpenAI")
+  }
+  if (grepl("^claude", model_lower)) {
+    return("Anthropic")
+  }
+  if (grepl("^gemini|^palm", model_lower)) {
+    return("Google")
+  }
+  if (grepl("^llama|^mistral|^mixtral", model_lower)) {
+    return("Meta/Mistral")
+  }
+
+  "unknown"
+}
+
 #' Create a vitals Task from a dsprrr module
 #'
 #' @description
