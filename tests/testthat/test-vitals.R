@@ -722,3 +722,256 @@ test_that("as_vitals_task uses default scorer when not provided", {
 
   expect_s3_class(task, "Task")
 })
+
+# --- as_vitals_cost tests ---
+
+test_that("as_vitals_cost converts session_cost to vitals format", {
+  # Create a mock session cost object
+  mock_session_cost <- structure(
+    list(
+      n_calls = 5L,
+      tokens_in = 1000L,
+      tokens_out = 500L,
+      total_tokens = 1500L,
+      cost = 0.05,
+      by_model = tibble::tibble(
+        model = c("gpt-4o-mini", "claude-3-5-sonnet-latest"),
+        n_calls = c(3L, 2L),
+        tokens_in = c(600L, 400L),
+        tokens_out = c(300L, 200L),
+        cost = c(0.02, 0.03)
+      )
+    ),
+    class = "dsprrr_session_cost"
+  )
+
+  result <- as_vitals_cost(mock_session_cost)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 2)
+  expect_equal(
+    names(result),
+    c("source", "provider", "model", "input", "output", "price")
+  )
+
+  # Check providers are inferred correctly
+  expect_equal(
+    unname(result$provider[result$model == "gpt-4o-mini"]),
+    "OpenAI"
+  )
+  expect_equal(
+    unname(result$provider[result$model == "claude-3-5-sonnet-latest"]),
+    "Anthropic"
+  )
+
+  # Check price formatting
+  expect_equal(result$price[1], "$0.02")
+  expect_equal(result$price[2], "$0.03")
+
+  # Check default source
+  expect_equal(unique(result$source), "solver")
+})
+
+test_that("as_vitals_cost respects source parameter", {
+  mock_session_cost <- structure(
+    list(
+      n_calls = 1L,
+      tokens_in = 100L,
+      tokens_out = 50L,
+      total_tokens = 150L,
+      cost = 0.01,
+      by_model = tibble::tibble(
+        model = "gpt-4o-mini",
+        n_calls = 1L,
+        tokens_in = 100L,
+        tokens_out = 50L,
+        cost = 0.01
+      )
+    ),
+    class = "dsprrr_session_cost"
+  )
+
+  result <- as_vitals_cost(mock_session_cost, source = "scorer")
+
+  expect_equal(result$source, "scorer")
+})
+
+test_that("as_vitals_cost handles empty session_cost", {
+  empty_session_cost <- structure(
+    list(
+      n_calls = 0L,
+      tokens_in = 0L,
+      tokens_out = 0L,
+      total_tokens = 0L,
+      cost = 0,
+      by_model = tibble::tibble(
+        model = character(0),
+        n_calls = integer(0),
+        tokens_in = integer(0),
+        tokens_out = integer(0),
+        cost = numeric(0)
+      )
+    ),
+    class = "dsprrr_session_cost"
+  )
+
+  result <- as_vitals_cost(empty_session_cost)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 0)
+  expect_equal(
+    names(result),
+    c("source", "provider", "model", "input", "output", "price")
+  )
+})
+
+test_that("as_vitals_cost converts cost_summary to vitals format", {
+  mock_cost_summary <- structure(
+    list(
+      costs = tibble::tibble(
+        index = 1:3,
+        cost = c(0.01, 0.02, 0.03)
+      ),
+      total = 0.06,
+      n_missing = 0L
+    ),
+    class = "dsprrr_cost_summary"
+  )
+
+  result <- as_vitals_cost(mock_cost_summary)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 1) # Aggregated to single row
+  expect_equal(result$price, "$0.06")
+  expect_equal(result$model, "unknown") # No model info in cost_summary
+})
+
+test_that("as_vitals_cost handles empty cost_summary", {
+  empty_cost_summary <- structure(
+    list(
+      costs = tibble::tibble(
+        index = integer(0),
+        cost = numeric(0)
+      ),
+      total = 0,
+      n_missing = 0L
+    ),
+    class = "dsprrr_cost_summary"
+  )
+
+  result <- as_vitals_cost(empty_cost_summary)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 0)
+})
+
+test_that("as_vitals_cost converts traces data.frame to vitals format", {
+  mock_traces <- tibble::tibble(
+    timestamp = Sys.time() - c(0, 1, 2),
+    latency_ms = c(100, 150, 200),
+    model = c("gpt-4o-mini", "gpt-4o-mini", "claude-3-5-sonnet-latest"),
+    input_tokens = c(100L, 200L, 150L),
+    output_tokens = c(50L, 100L, 75L),
+    cost = c(0.01, 0.02, 0.03)
+  )
+
+  result <- as_vitals_cost(mock_traces)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 2) # Aggregated by model
+  expect_equal(
+    names(result),
+    c("source", "provider", "model", "input", "output", "price")
+  )
+
+  # Check aggregation
+  openai_row <- result[result$model == "gpt-4o-mini", ]
+  expect_equal(unname(openai_row$input), 300L) # 100 + 200
+  expect_equal(unname(openai_row$output), 150L) # 50 + 100
+  expect_equal(unname(openai_row$price), "$0.03") # 0.01 + 0.02
+})
+
+test_that("as_vitals_cost errors on data.frame without required columns", {
+  bad_df <- tibble::tibble(
+    timestamp = Sys.time(),
+    latency_ms = 100
+  )
+
+  expect_error(
+    as_vitals_cost(bad_df),
+    "Data frame must have trace columns"
+  )
+})
+
+test_that("as_vitals_cost handles empty data.frame", {
+  empty_traces <- tibble::tibble(
+    model = character(0),
+    input_tokens = integer(0),
+    output_tokens = integer(0),
+    cost = numeric(0)
+  )
+
+  result <- as_vitals_cost(empty_traces)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 0)
+})
+
+test_that("as_vitals_cost errors on unsupported types", {
+  expect_error(
+    as_vitals_cost("not a cost object"),
+    "Cannot convert"
+  )
+
+  expect_error(
+    as_vitals_cost(123),
+    "Cannot convert"
+  )
+
+  expect_error(
+    as_vitals_cost(list(a = 1)),
+    "Cannot convert"
+  )
+})
+
+test_that("infer_provider_from_model identifies OpenAI models", {
+  expect_equal(dsprrr:::infer_provider_from_model("gpt-4o"), "OpenAI")
+  expect_equal(dsprrr:::infer_provider_from_model("gpt-4o-mini"), "OpenAI")
+  expect_equal(dsprrr:::infer_provider_from_model("gpt-3.5-turbo"), "OpenAI")
+  expect_equal(dsprrr:::infer_provider_from_model("o1-preview"), "OpenAI")
+  expect_equal(dsprrr:::infer_provider_from_model("o3-mini"), "OpenAI")
+  expect_equal(dsprrr:::infer_provider_from_model("text-davinci-003"), "OpenAI")
+})
+
+test_that("infer_provider_from_model identifies Anthropic models", {
+  expect_equal(
+    dsprrr:::infer_provider_from_model("claude-3-5-sonnet-latest"),
+    "Anthropic"
+  )
+  expect_equal(dsprrr:::infer_provider_from_model("claude-3-opus"), "Anthropic")
+  expect_equal(dsprrr:::infer_provider_from_model("claude-2"), "Anthropic")
+})
+
+test_that("infer_provider_from_model identifies Google models", {
+  expect_equal(dsprrr:::infer_provider_from_model("gemini-pro"), "Google")
+  expect_equal(dsprrr:::infer_provider_from_model("gemini-1.5-flash"), "Google")
+  expect_equal(dsprrr:::infer_provider_from_model("palm-2"), "Google")
+})
+
+test_that("infer_provider_from_model handles unknown models", {
+  expect_equal(dsprrr:::infer_provider_from_model("unknown-model"), "unknown")
+  expect_equal(
+    dsprrr:::infer_provider_from_model("some-custom-model"),
+    "unknown"
+  )
+  expect_equal(dsprrr:::infer_provider_from_model("unknown"), "unknown")
+  expect_equal(dsprrr:::infer_provider_from_model(NA), "unknown")
+})
+
+test_that("format_price formats correctly", {
+  expect_equal(dsprrr:::format_price(0.01), "$0.01")
+  expect_equal(dsprrr:::format_price(1.5), "$1.50")
+  expect_equal(dsprrr:::format_price(0), "$0.00")
+  expect_equal(dsprrr:::format_price(NA), "$0.00")
+  expect_equal(dsprrr:::format_price(0.1234), "$0.12") # Rounds to 2 decimals
+})
