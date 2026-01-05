@@ -975,3 +975,296 @@ test_that("format_price formats correctly", {
   expect_equal(dsprrr:::format_price(NA), "$0.00")
   expect_equal(dsprrr:::format_price(0.1234), "$0.12") # Rounds to 2 decimals
 })
+# --- as_vitals_samples tests ---
+
+test_that("as_vitals_samples converts traces to vitals format", {
+  mock_traces <- tibble::tibble(
+    timestamp = Sys.time() - c(0, 1, 2),
+    latency_ms = c(100, 150, 200),
+    model = c("gpt-4o-mini", "gpt-4o-mini", "claude-3-5-sonnet"),
+    input_tokens = c(100L, 200L, 150L),
+    output_tokens = c(50L, 100L, 75L),
+    total_tokens = c(150L, 300L, 225L),
+    cost = c(0.01, 0.02, 0.03),
+    prompt_length = c(50L, 100L, 75L),
+    prompt = c("Hello world", "How are you?", "What is AI?"),
+    output = list("Hi!", "I'm good!", "Artificial intelligence")
+  )
+
+  result <- as_vitals_samples(mock_traces)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 3)
+  expect_equal(
+    names(result),
+    c("id", "input", "result", "solver_metadata", "model", "epoch")
+  )
+
+  # Check IDs
+  expect_equal(result$id, c("trace_0001", "trace_0002", "trace_0003"))
+
+  # Check inputs come from prompt field
+  expect_equal(result$input, mock_traces$prompt)
+
+  # Check results are lists
+  expect_true(is.list(result$result))
+  expect_equal(result$result[[1]], "Hi!")
+
+  # Check solver_metadata contains trace fields
+  expect_true(is.list(result$solver_metadata[[1]]))
+  expect_equal(result$solver_metadata[[1]]$latency_ms, 100)
+  expect_equal(result$solver_metadata[[1]]$input_tokens, 100L)
+
+  # Check epoch is always 1
+  expect_equal(unique(result$epoch), 1L)
+})
+
+test_that("as_vitals_samples handles empty traces", {
+  empty_traces <- tibble::tibble(
+    timestamp = as.POSIXct(character(0)),
+    latency_ms = numeric(0),
+    model = character(0),
+    input_tokens = integer(0),
+    output_tokens = integer(0),
+    cost = numeric(0)
+  )
+
+  result <- as_vitals_samples(empty_traces)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 0)
+  expect_equal(
+    names(result),
+    c("id", "input", "result", "solver_metadata", "model", "epoch")
+  )
+})
+
+test_that("as_vitals_samples respects input_column parameter", {
+  mock_traces <- tibble::tibble(
+    timestamp = Sys.time(),
+    latency_ms = 100,
+    model = "gpt-4o-mini",
+    input_tokens = 50L,
+    output_tokens = 25L,
+    cost = 0.01,
+    custom_input = "My custom input"
+  )
+
+  result <- as_vitals_samples(mock_traces, input_column = "custom_input")
+
+  expect_equal(result$input, "My custom input")
+})
+
+test_that("as_vitals_samples includes chat objects when requested", {
+  mock_chat <- structure(list(), class = "Chat")
+
+  mock_traces <- tibble::tibble(
+    timestamp = Sys.time(),
+    latency_ms = 100,
+    model = "gpt-4o-mini",
+    input_tokens = 50L,
+    output_tokens = 25L,
+    cost = 0.01,
+    solver_chat = list(mock_chat)
+  )
+
+  result_no_chats <- as_vitals_samples(mock_traces, include_chats = FALSE)
+  expect_false("solver_chat" %in% names(result_no_chats))
+
+  result_with_chats <- as_vitals_samples(mock_traces, include_chats = TRUE)
+  expect_true("solver_chat" %in% names(result_with_chats))
+})
+
+test_that("as_vitals_samples errors on non-dataframe input", {
+  expect_error(
+    as_vitals_samples("not a data frame"),
+    "traces must be a data frame"
+  )
+
+  expect_error(
+    as_vitals_samples(list(a = 1)),
+    "traces must be a data frame"
+  )
+})
+
+# --- as_dsprrr_traces tests ---
+
+test_that("as_dsprrr_traces converts vitals samples to traces format", {
+  mock_samples <- tibble::tibble(
+    id = c("sample_1", "sample_2"),
+    input = c("Hello", "World"),
+    result = list("Hi there!", "Hello World!"),
+    solver_metadata = list(
+      list(
+        latency_ms = 100,
+        input_tokens = 50L,
+        output_tokens = 25L,
+        cost = 0.01
+      ),
+      list(
+        latency_ms = 150,
+        input_tokens = 75L,
+        output_tokens = 40L,
+        cost = 0.02
+      )
+    ),
+    model = c("gpt-4o-mini", "claude-3-5-sonnet")
+  )
+
+  result <- as_dsprrr_traces(mock_samples)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 2)
+
+  # Check expected columns
+  expect_true("timestamp" %in% names(result))
+  expect_true("latency_ms" %in% names(result))
+  expect_true("input_tokens" %in% names(result))
+  expect_true("output_tokens" %in% names(result))
+  expect_true("total_tokens" %in% names(result))
+  expect_true("cost" %in% names(result))
+  expect_true("model" %in% names(result))
+  expect_true("prompt" %in% names(result))
+  expect_true("output" %in% names(result))
+
+  # Check values extracted from metadata
+  expect_equal(result$latency_ms, c(100, 150))
+  expect_equal(result$input_tokens, c(50L, 75L))
+  expect_equal(result$output_tokens, c(25L, 40L))
+  expect_equal(result$cost, c(0.01, 0.02))
+
+  # Check total_tokens calculated
+  expect_equal(result$total_tokens, c(75L, 115L))
+
+  # Check prompt comes from input
+  expect_equal(result$prompt, c("Hello", "World"))
+})
+
+test_that("as_dsprrr_traces handles empty samples", {
+  empty_samples <- tibble::tibble(
+    id = character(0),
+    input = character(0),
+    result = list(),
+    solver_metadata = list()
+  )
+
+  result <- as_dsprrr_traces(empty_samples)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 0)
+  expect_true("timestamp" %in% names(result))
+  expect_true("latency_ms" %in% names(result))
+})
+
+test_that("as_dsprrr_traces respects include_prompts and include_outputs", {
+  mock_samples <- tibble::tibble(
+    id = "sample_1",
+    input = "Hello",
+    result = list("Hi!"),
+    solver_metadata = list(list(latency_ms = 100))
+  )
+
+  result_no_prompts <- as_dsprrr_traces(mock_samples, include_prompts = FALSE)
+  expect_false("prompt" %in% names(result_no_prompts))
+
+  result_no_outputs <- as_dsprrr_traces(mock_samples, include_outputs = FALSE)
+  expect_false("output" %in% names(result_no_outputs))
+
+  result_full <- as_dsprrr_traces(mock_samples)
+  expect_true("prompt" %in% names(result_full))
+  expect_true("output" %in% names(result_full))
+})
+
+test_that("as_dsprrr_traces errors on non-dataframe input", {
+  expect_error(
+    as_dsprrr_traces("not a data frame"),
+    "samples must be a data frame"
+  )
+})
+
+# --- summarize_traces_df tests ---
+
+test_that("summarize_traces_df provides summary statistics", {
+  mock_traces <- tibble::tibble(
+    timestamp = Sys.time() - c(0, 1, 2),
+    latency_ms = c(100, 150, 200),
+    model = c("gpt-4o-mini", "gpt-4o-mini", "claude-3-5-sonnet"),
+    input_tokens = c(100L, 200L, 150L),
+    output_tokens = c(50L, 100L, 75L),
+    total_tokens = c(150L, 300L, 225L),
+    cost = c(0.01, 0.02, 0.03)
+  )
+
+  result <- summarize_traces_df(mock_traces)
+
+  expect_s3_class(result, "dsprrr_trace_summary")
+  expect_equal(result$n_traces, 3L)
+  expect_equal(result$total_tokens, 675L)
+  expect_equal(result$total_input_tokens, 450L)
+  expect_equal(result$total_output_tokens, 225L)
+  expect_equal(result$total_cost, 0.06)
+  expect_equal(result$total_latency_ms, 450)
+  expect_equal(result$avg_latency_ms, 150)
+
+  # Check model usage
+  expect_equal(nrow(result$model_usage), 2)
+})
+
+test_that("summarize_traces_df handles empty traces", {
+  empty_traces <- tibble::tibble(
+    timestamp = as.POSIXct(character(0)),
+    latency_ms = numeric(0),
+    input_tokens = integer(0),
+    output_tokens = integer(0),
+    total_tokens = integer(0),
+    cost = numeric(0)
+  )
+
+  result <- summarize_traces_df(empty_traces)
+
+  expect_s3_class(result, "dsprrr_trace_summary")
+  expect_equal(result$n_traces, 0L)
+  expect_equal(result$total_tokens, 0L)
+  expect_true(is.na(result$avg_latency_ms))
+})
+
+test_that("summarize_traces_df errors on non-dataframe input", {
+  expect_error(
+    summarize_traces_df("not a data frame"),
+    "traces must be a data frame"
+  )
+})
+
+# --- Round-trip conversion tests ---
+
+test_that("traces survive round-trip conversion", {
+  # Create original traces
+  original_traces <- tibble::tibble(
+    timestamp = Sys.time() - c(0, 1),
+    latency_ms = c(100, 150),
+    model = c("gpt-4o-mini", "claude-3-5-sonnet"),
+    input_tokens = c(100L, 150L),
+    output_tokens = c(50L, 75L),
+    total_tokens = c(150L, 225L),
+    cost = c(0.01, 0.02),
+    prompt_length = c(10L, 15L),
+    prompt = c("Hello", "World"),
+    output = list("Hi!", "Bye!")
+  )
+
+  # Convert to vitals samples
+  samples <- as_vitals_samples(original_traces)
+  expect_equal(nrow(samples), 2)
+
+  # Convert back to traces
+  recovered_traces <- as_dsprrr_traces(samples)
+  expect_equal(nrow(recovered_traces), 2)
+
+  # Check key fields preserved
+  expect_equal(recovered_traces$model, original_traces$model)
+  expect_equal(recovered_traces$latency_ms, original_traces$latency_ms)
+  expect_equal(recovered_traces$input_tokens, original_traces$input_tokens)
+  expect_equal(recovered_traces$output_tokens, original_traces$output_tokens)
+  expect_equal(recovered_traces$cost, original_traces$cost)
+  expect_equal(recovered_traces$prompt, original_traces$prompt)
+})

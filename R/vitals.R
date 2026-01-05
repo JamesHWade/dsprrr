@@ -712,3 +712,362 @@ as_vitals_task <- function(
     }
   )
 }
+
+#' Convert dsprrr traces to vitals samples format
+#'
+#' @description
+#' Converts dsprrr module traces to a tibble format compatible with vitals
+#' `Task$get_samples()` output. This enables viewing dsprrr traces in
+#' vitals' Inspect viewer or combining with vitals samples using `vitals_bind()`.
+#'
+#' @param traces A traces tibble from [export_traces()] or module `$get_traces()`.
+#' @param input_column Column name containing the input prompts. If `NULL`,
+#'   attempts to extract from the prompt field.
+#' @param include_chats Logical; if `TRUE` and solver_chat column exists,
+#'   include chat objects. Defaults to `FALSE`.
+#'
+#' @return A tibble with columns matching vitals samples format:
+#'   - `id`: Unique identifier for each trace
+#'   - `input`: Input prompt text
+#'   - `result`: Model output
+#'   - `solver_metadata`: List column with trace metadata (latency, tokens, cost)
+#'   - `model`: Model name used
+#'   - `epoch`: Always 1 (dsprrr doesn't use epochs)
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Export traces from a module and convert
+#' traces <- export_traces(my_module, include_outputs = TRUE)
+#' samples <- as_vitals_samples(traces)
+#'
+#' # Use with vitals_bind for combined analysis
+#' vitals::vitals_bind(
+#'   task1 = task1,
+#'   dsprrr = samples
+#' )
+#' }
+as_vitals_samples <- function(
+  traces,
+  input_column = NULL,
+  include_chats = FALSE
+) {
+  if (!is.data.frame(traces)) {
+    cli::cli_abort(c(
+      "traces must be a data frame",
+      "x" = "Got: {.cls {class(traces)[1]}}"
+    ))
+  }
+
+  if (nrow(traces) == 0) {
+    return(tibble::tibble(
+      id = character(0),
+      input = character(0),
+      result = list(),
+      solver_metadata = list(),
+      model = character(0),
+      epoch = integer(0)
+    ))
+  }
+
+  # Generate IDs
+  n <- nrow(traces)
+  ids <- sprintf("trace_%04d", seq_len(n))
+
+  # Extract input from prompt field if not specified
+  inputs <- if (!is.null(input_column) && input_column %in% names(traces)) {
+    traces[[input_column]]
+  } else if ("prompt" %in% names(traces)) {
+    traces$prompt
+  } else {
+    rep(NA_character_, n)
+  }
+
+  # Extract results from output field if present
+  results <- if ("output" %in% names(traces)) {
+    as.list(traces$output)
+  } else {
+    replicate(n, NULL, simplify = FALSE)
+  }
+
+  # Build solver_metadata from trace fields
+  solver_metadata <- lapply(seq_len(n), function(i) {
+    meta <- list()
+    if ("latency_ms" %in% names(traces)) {
+      meta$latency_ms <- traces$latency_ms[i]
+    }
+    if ("input_tokens" %in% names(traces)) {
+      meta$input_tokens <- traces$input_tokens[i]
+    }
+    if ("output_tokens" %in% names(traces)) {
+      meta$output_tokens <- traces$output_tokens[i]
+    }
+    if ("total_tokens" %in% names(traces)) {
+      meta$total_tokens <- traces$total_tokens[i]
+    }
+    if ("cost" %in% names(traces)) {
+      meta$cost <- traces$cost[i]
+    }
+    if ("timestamp" %in% names(traces)) {
+      meta$timestamp <- traces$timestamp[i]
+    }
+    meta
+  })
+
+  # Build result tibble
+  result <- tibble::tibble(
+    id = ids,
+    input = inputs,
+    result = results,
+    solver_metadata = solver_metadata,
+    model = if ("model" %in% names(traces)) traces$model else NA_character_,
+    epoch = rep(1L, n)
+  )
+
+  # Optionally include chat objects if present
+  if (include_chats && "solver_chat" %in% names(traces)) {
+    result$solver_chat <- traces$solver_chat
+  }
+
+  result
+}
+
+#' Convert vitals samples to dsprrr traces format
+#'
+#' @description
+#' Converts vitals samples tibble (from `Task$get_samples()` or `vitals_bind()`)
+#' to dsprrr traces format for use with dsprrr analysis functions like
+#' [summarize_traces()].
+#'
+#' @param samples A tibble from `Task$get_samples()` or `vitals_bind()`.
+#' @param include_prompts Logical; whether to extract prompts from input column.
+#'   Defaults to `TRUE`.
+#' @param include_outputs Logical; whether to extract outputs from result column.
+#'   Defaults to `TRUE`.
+#'
+#' @return A tibble with dsprrr trace columns:
+#'   - `timestamp`: Extracted from metadata or set to current time
+#'   - `latency_ms`: Extracted from metadata or NA
+#'   - `input_tokens`: Extracted from metadata or NA
+#'   - `output_tokens`: Extracted from metadata or NA
+#'   - `total_tokens`: Calculated or extracted from metadata
+#'   - `cost`: Extracted from metadata or NA
+#'   - `model`: Model name if available
+#'   - `prompt_length`: Character length of prompt
+#'   - `prompt`: Input text (if include_prompts = TRUE)
+#'   - `output`: Result (if include_outputs = TRUE)
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Get samples from a vitals task
+#' samples <- task$get_samples()
+#'
+#' # Convert to dsprrr traces format
+#' traces <- as_dsprrr_traces(samples)
+#'
+#' # Use dsprrr analysis functions
+#' summary <- summarize_traces_df(traces)
+#' }
+as_dsprrr_traces <- function(
+  samples,
+  include_prompts = TRUE,
+  include_outputs = TRUE
+) {
+  if (!is.data.frame(samples)) {
+    cli::cli_abort(c(
+      "samples must be a data frame",
+      "x" = "Got: {.cls {class(samples)[1]}}"
+    ))
+  }
+
+  if (nrow(samples) == 0) {
+    result <- tibble::tibble(
+      timestamp = as.POSIXct(character(0)),
+      latency_ms = numeric(0),
+      input_tokens = integer(0),
+      output_tokens = integer(0),
+      total_tokens = integer(0),
+      cost = numeric(0),
+      model = character(0),
+      prompt_length = integer(0)
+    )
+    if (include_prompts) {
+      result$prompt <- character(0)
+    }
+    if (include_outputs) {
+      result$output <- list()
+    }
+    return(result)
+  }
+
+  n <- nrow(samples)
+
+  # Extract metadata from solver_metadata or metadata column
+  metadata_col <- if ("solver_metadata" %in% names(samples)) {
+    samples$solver_metadata
+  } else if ("metadata" %in% names(samples)) {
+    samples$metadata
+  } else {
+    replicate(n, list(), simplify = FALSE)
+  }
+
+  # Extract values from metadata
+  extract_meta <- function(field, default = NA) {
+    vapply(
+      metadata_col,
+      function(m) {
+        if (is.list(m) && field %in% names(m)) {
+          m[[field]]
+        } else {
+          default
+        }
+      },
+      FUN.VALUE = default
+    )
+  }
+
+  # Build base trace tibble
+  result <- tibble::tibble(
+    timestamp = as.POSIXct(
+      extract_meta("timestamp", NA_real_),
+      origin = "1970-01-01"
+    ),
+    latency_ms = as.numeric(extract_meta("latency_ms", NA_real_)),
+    input_tokens = as.integer(extract_meta("input_tokens", NA_integer_)),
+    output_tokens = as.integer(extract_meta("output_tokens", NA_integer_)),
+    total_tokens = NA_integer_,
+    cost = as.numeric(extract_meta("cost", NA_real_)),
+    model = if ("model" %in% names(samples)) {
+      samples$model
+    } else {
+      NA_character_
+    },
+    prompt_length = NA_integer_
+  )
+
+  # Calculate total_tokens
+  result$total_tokens <- ifelse(
+    !is.na(result$input_tokens) & !is.na(result$output_tokens),
+    result$input_tokens + result$output_tokens,
+    as.integer(extract_meta("total_tokens", NA_integer_))
+  )
+
+  # Replace NA timestamps with current time
+  # Use vectorized replacement instead of ifelse() to preserve POSIXct class
+  na_timestamps <- is.na(result$timestamp)
+  if (any(na_timestamps)) {
+    result$timestamp[na_timestamps] <- Sys.time()
+  }
+
+  # Add prompts if requested
+  if (include_prompts && "input" %in% names(samples)) {
+    result$prompt <- as.character(samples$input)
+    result$prompt_length <- nchar(result$prompt)
+  }
+
+  # Add outputs if requested
+  if (include_outputs && "result" %in% names(samples)) {
+    result$output <- as.list(samples$result)
+  }
+
+  result
+}
+
+#' Summarize a traces data frame
+#'
+#' @description
+#' Provides summary statistics for a traces data frame. This is a standalone
+#' version of [summarize_traces()] that works on a data frame rather than
+#' requiring a Module object. Useful for analyzing converted vitals samples.
+#'
+#' @param traces A traces tibble (from [export_traces()], [as_dsprrr_traces()],
+#'   or module `$get_traces()`).
+#'
+#' @return A list with:
+#'   - `n_traces`: Number of traces
+#'   - `total_tokens`: Total tokens used across all traces
+#'   - `total_input_tokens`: Total input tokens
+#'   - `total_output_tokens`: Total output tokens
+#'   - `total_cost`: Total cost in USD
+#'   - `total_latency_ms`: Sum of latencies
+#'   - `avg_latency_ms`: Average latency per request
+#'   - `avg_tokens_per_request`: Average tokens per request
+#'   - `model_usage`: Data frame with per-model breakdown
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Analyze traces from vitals samples
+#' traces <- as_dsprrr_traces(task$get_samples())
+#' summary <- summarize_traces_df(traces)
+#' print(summary)
+#' }
+summarize_traces_df <- function(traces) {
+  if (!is.data.frame(traces)) {
+    cli::cli_abort("traces must be a data frame")
+  }
+
+  n <- nrow(traces)
+  if (n == 0) {
+    return(structure(
+      list(
+        n_traces = 0L,
+        total_tokens = 0L,
+        total_input_tokens = 0L,
+        total_output_tokens = 0L,
+        total_cost = 0,
+        total_latency_ms = 0,
+        avg_latency_ms = NA_real_,
+        avg_tokens_per_request = NA_real_,
+        model_usage = data.frame(model = character(0), n_requests = integer(0))
+      ),
+      class = "dsprrr_trace_summary"
+    ))
+  }
+
+  total_input <- sum(traces$input_tokens, na.rm = TRUE)
+  total_output <- sum(traces$output_tokens, na.rm = TRUE)
+  total_tokens <- sum(traces$total_tokens, na.rm = TRUE)
+  if (total_tokens == 0) {
+    total_tokens <- total_input + total_output
+  }
+
+  total_latency <- sum(traces$latency_ms, na.rm = TRUE)
+  total_cost <- sum(traces$cost, na.rm = TRUE)
+
+  # Model usage breakdown
+  if ("model" %in% names(traces)) {
+    model_counts <- table(traces$model)
+    model_usage <- data.frame(
+      model = names(model_counts),
+      n_requests = as.integer(model_counts)
+    )
+  } else {
+    model_usage <- data.frame(model = character(0), n_requests = integer(0))
+  }
+
+  structure(
+    list(
+      n_traces = n,
+      total_tokens = total_tokens,
+      total_input_tokens = total_input,
+      total_output_tokens = total_output,
+      total_cost = total_cost,
+      total_latency_ms = total_latency,
+      avg_latency_ms = total_latency / n,
+      avg_tokens_per_request = total_tokens / n,
+      token_breakdown = list(
+        input = total_input,
+        output = total_output,
+        ratio = if (total_input > 0) {
+          round(total_output / total_input, 2)
+        } else {
+          NA
+        }
+      ),
+      model_usage = model_usage
+    ),
+    class = "dsprrr_trace_summary"
+  )
+}

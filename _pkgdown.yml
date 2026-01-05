@@ -313,6 +313,9 @@ reference:
     - as_vitals_solver
     - as_vitals_task
     - as_vitals_cost
+    - as_vitals_samples
+    - as_dsprrr_traces
+    - summarize_traces_df
     - as_dsprrr_metric
     - metric_model_graded_qa
     - metric_model_graded_fact
