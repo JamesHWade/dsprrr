@@ -294,45 +294,43 @@ Vignettes use `vcr::setup_knitr()` which automatically names cassettes based on 
 
 ## Implementation Status
 
-### Completed (Milestone A & B)
+### Completed (Milestones A-D)
+
+**Module Types (11):**
+- PredictModule, ReactModule, ProgramOfThoughtModule, CodeActModule
+- RAGModule, MultiChainComparisonModule, EnsembleModule
+- BestOfNModule, RefineModule, KNNFewShotModule
+- ChainOfThought via signature transforms (`with_reasoning()`, `chain_of_thought()`)
+
+**Teleprompters (10):**
+- LabeledFewShot, BootstrapFewShot, BootstrapFewShotWithRandomSearch
+- MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, Ensemble, GridSearch
+
+**Infrastructure:**
 - R6 Module base class with `forward()`, `optimize_grid()`, `reset()`, trace methods
-- PredictModule subclass with template and demo support
-- ReactModule subclass with tool support (ReAct-style agents)
 - S7 Signature with DSPy-style string parsing
 - ellmer integration via `chat_structured()`
-- Chat-centric API: `dsp()`, `as_module()`, default Chat management
-- Streaming support: `mod$stream()` with callbacks or generators
 - Async support: `run_async()`, `stream_async()` with promises
 - vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)
-- Grid search optimization with tidymodels parameter support
-- LabeledFewShot and GridSearchTeleprompter
-- `module_parameters()`, `module_trials()`, and `module_metrics()` helpers
+- Optimizer infrastructure: `OptimizerControl`, `EvalResult`, `CostSummary`, `Trial`, `TrialLog`
 - Module persistence: `pin_module_config()`, `restore_module_config()`
+- ragnar integration for RAG
 
-### Completed (Milestone C - Advanced Module Types)
-- ChainOfThought via signature transforms (`with_reasoning()`, `chain_of_thought()`)
-- BestOfN wrapper module with reward functions
-- Refine wrapper module with feedback loop
-- MultiChainComparison module for ensemble reasoning
-- `module()` factory support for `type = "multichain"`
-- Utility functions: `as_reward_fn()`, `has_reasoning()`, `without_reasoning()`
+### Planned (Milestones E-H)
 
-### Completed (Milestone D - Optimizer Infrastructure)
-- `OptimizerControl` (S7): Configuration for optimizer behavior (seed, max_trials, max_errors, etc.)
-- `EvalResult` (S7): Evaluation result container with per-example and aggregated statistics
-- `CostSummary` (S7): Cumulative cost tracking across optimizer trials
-- `Trial` (S7): Single optimization trial record with metadata and results
-- `TrialLog` (R6): Collection of trials with JSONL persistence support
-- `eval_program()`: Standard evaluation function for optimizers
-- `sample_dataset()` / `split_dataset()`: Deterministic sampling with RNG state preservation
-- `check_budget()`: Budget stopping condition checker
-- `write_trials_jsonl()` / `read_trials_jsonl()`: JSONL persistence with error handling
+**E - Caching & LM Configuration (dsprrr-mqo, dsprrr-1y9):**
+- Multi-tier caching (memory → disk → provider)
+- `configure_dsprrr()` / `with_lm()` for global LM config
 
-### Planned
-- DSPy-inspired optimizers: BootstrapFewShot, BootstrapFewShotWithRandomSearch, KNNFewShot
-- Advanced teleprompters: COPRO, MIPROv2, SIMBA, GEPA
-- Ensemble optimizer combining multiple strategies
-- ProgramOfThought (code generation + execution)
+**F - Ecosystem Integration:**
+- shinychat integration, MLflow observability
+
+**G - DSPy 3.0+ Parity (dsprrr-9df, dsprrr-7r4, dsprrr-a3z, dsprrr-deh):**
+- TypedPredictor equivalent, PEP 604 union types
+- `tune_bayes()` integration, ParallelModule, Embedder abstraction
+
+**H - Production Efficiency (dsprrr-1u0):**
+- BootstrapFinetune (model distillation)
 
 ## Coding Conventions
 
