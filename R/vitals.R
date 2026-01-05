@@ -761,12 +761,11 @@ as_dsprrr_traces <- function(
   )
 
   # Replace NA timestamps with current time
-  result$timestamp <- ifelse(
-    is.na(result$timestamp),
-    Sys.time(),
-    result$timestamp
-  )
-  result$timestamp <- as.POSIXct(result$timestamp, origin = "1970-01-01")
+  # Use vectorized replacement instead of ifelse() to preserve POSIXct class
+  na_timestamps <- is.na(result$timestamp)
+  if (any(na_timestamps)) {
+    result$timestamp[na_timestamps] <- Sys.time()
+  }
 
   # Add prompts if requested
   if (include_prompts && "input" %in% names(samples)) {
