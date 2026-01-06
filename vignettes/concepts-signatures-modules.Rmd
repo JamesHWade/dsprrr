@@ -117,6 +117,7 @@ signature(
 ```
 
 The string notation is:
+
 - **Concise**: One line instead of many
 - **Readable**: `context, question -> answer` is self-documenting
 - **DSPy-compatible**: Familiar to Python DSPy users
@@ -390,6 +391,7 @@ Create a new module when:
 - Different **execution contexts** (dev vs prod)
 
 Use the same module when:
+
 - **Sequential calls** in a workflow
 - **Accumulating traces** for analysis
 - The same logical "agent" in your application
@@ -433,6 +435,7 @@ mod$optimize_grid(
 ```
 
 The optimizer:
+
 1. Creates `copy(deep = TRUE)` for each candidate
 2. Varies config parameters per the grid
 3. Runs each copy's `forward()` on the devset

@@ -37,6 +37,7 @@ if (should_eval) {
 One of dsprrr's most powerful features is **automatic prompt optimization**. Instead of manually tweaking prompts and examples, you can let dsprrr systematically optimize your LLM programs using your training data and evaluation metrics.
 
 This vignette covers:
+
 - **Metrics**: How to evaluate LLM outputs
 - **Teleprompters**: Optimization strategies for improving programs
 - **Compilation**: The process of optimizing your modules
@@ -1239,6 +1240,7 @@ Key takeaways:
 - Consider ensemble methods for critical applications
 
 The compilation framework makes your LLM programs:
+
 - **More accurate** through systematic optimization
 - **More maintainable** by separating logic from prompt tuning
 - **More portable** across different LLMs and use cases

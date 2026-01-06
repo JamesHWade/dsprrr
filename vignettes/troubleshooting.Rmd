@@ -465,6 +465,7 @@ mod <- as_module("question -> answer")
 ```
 
 ### "Unknown module type"
+
 **Error:**
 ```
 Error: Unknown module type: 'chain'

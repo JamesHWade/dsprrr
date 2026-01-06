@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 
 ## Introduction
 Building LLM applications in development is one thing; running them reliably in production is another. This vignette covers dsprrr's orchestration features that help you:
+
 - **Persist** module configurations and traces across sessions
 - **Orchestrate** complex pipelines with targets
 - **Report** on experiments with Quarto

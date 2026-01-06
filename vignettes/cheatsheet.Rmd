@@ -213,6 +213,7 @@ classifier <- chat_openai(model = "gpt-5-mini") |>
 classifier$predict(text = "Love it!")
 classifier$predict(text = "Hate it!")
 ```
+
 ### Full Control: `signature()` + `module()`
 
 ```{r full-module}
@@ -487,6 +488,7 @@ validate_workflow("workflow.yml")
 ```
 
 ---
+
 ## Common Patterns
 
 ### RAG (Retrieval-Augmented Generation)

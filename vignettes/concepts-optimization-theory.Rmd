@@ -139,6 +139,7 @@ compiled <- compile(tp, mod, trainset)
 ```
 
 **How it works**:
+
 1. Sample k examples from training data
 2. Format as demonstrations
 3. Add to module
@@ -167,6 +168,7 @@ compiled <- compile(tp, mod, trainset)
 ```
 
 **How it works**:
+
 1. Start with labeled examples as initial demos
 2. Run teacher model on remaining training examples
 3. Score each prediction with your metric
@@ -203,6 +205,7 @@ compiled <- compile(tp, mod, trainset)
 ```
 
 **How it works**:
+
 1. Define a grid of parameter configurations
 2. Evaluate each on a validation set
 3. Select the best-performing configuration
@@ -230,6 +233,7 @@ compiled <- compile(tp, mod, trainset)
 ```
 
 **How it works**:
+
 1. Generate multiple demo configurations via bootstrapping
 2. Create candidate programs with different demo subsets
 3. Evaluate all candidates
@@ -254,6 +258,7 @@ compiled <- compile(tp, mod, trainset)
 ```
 
 **How it works**:
+
 1. Embed all training examples
 2. Cluster by semantic similarity
 3. Select diverse representatives from clusters
@@ -281,6 +286,7 @@ compiled <- compile(tp, mod, trainset)
 ```
 
 **How it works**:
+
 1. At compile time: embed all training examples
 2. At runtime: find k nearest neighbors to the input
 3. Use those neighbors as demonstrations
@@ -307,6 +313,7 @@ compiled <- compile(tp, mod, trainset)
 ```
 
 **How it works**:
+
 1. Generate breadth instruction candidates
 2. Evaluate each on training data
 3. Take top performers, ask LLM to improve them
@@ -436,6 +443,7 @@ Use cheaper models during optimization, then evaluate final config on your targe
 ### Validation Strategy
 
 Split your data:
+
 - **Training set**: Used to generate demos
 - **Validation set**: Used to evaluate candidates during optimization
 - **Test set**: Used to evaluate final model (never touched during optimization)
