@@ -80,9 +80,11 @@ A module wraps a signature with executable logic:
 mod <- module(signature("text -> sentiment"), type = "predict")
 ```
 
-Modules are: - **Stateful**: They remember their configuration, demos,
-and traces - **Composable**: You can chain modules together -
-**Optimizable**: Their parameters can be tuned automatically
+Modules are:
+
+- **Stateful**: They remember their configuration, demos, and traces
+- **Composable**: You can chain modules together
+- **Optimizable**: Their parameters can be tuned automatically
 
 Think of modules like functions in programming. A function has: - A
 signature (input types → output types) - Implementation (the code) -
@@ -112,9 +114,11 @@ mod$optimize_grid(
 The optimizer: - Tries each configuration - Measures performance against
 your metric - Keeps the best one
 
-This works because: 1. LLMs are sensitive to prompt wording (small
-changes → big effects) 2. The search space is navigable (parameters are
-mostly continuous) 3. Evaluation is cheap compared to training
+This works because:
+
+1.  LLMs are sensitive to prompt wording (small changes → big effects)
+2.  The search space is navigable (parameters are mostly continuous)
+3.  Evaluation is cheap compared to training
 
 **Why this matters**: Human intuition about prompts is unreliable.
 Systematic search finds configurations humans wouldn’t try. And unlike
@@ -225,13 +229,23 @@ dsprrr is this shift for LLM applications in R.
 
 If you accept this philosophy, your workflow changes:
 
-**Before (prompt engineering)**: 1. Write prompt 2. Try examples
-manually 3. Tweak wording 4. Deploy when it “feels right” 5. Hope it
-keeps working
+**Before (prompt engineering)**:
 
-**After (prompt programming)**: 1. Define signature 2. Create labeled
-dataset 3. Define metric 4. Optimize 5. Evaluate on held-out data 6.
-Deploy with confidence 7. Monitor with traces
+1.  Write prompt
+2.  Try examples manually
+3.  Tweak wording
+4.  Deploy when it “feels right”
+5.  Hope it keeps working
+
+**After (prompt programming)**:
+
+1.  Define signature
+2.  Create labeled dataset
+3.  Define metric
+4.  Optimize
+5.  Evaluate on held-out data
+6.  Deploy with confidence
+7.  Monitor with traces
 
 The second workflow is: - Reproducible (anyone can re-run the
 optimization) - Measurable (you have metrics, not vibes) - Maintainable

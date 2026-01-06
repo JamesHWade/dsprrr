@@ -153,9 +153,11 @@ result$n_evaluated   # 3
 result$n_errors      # 0
 ```
 
-This single function call: 1. Runs your module on every example 2.
-Applies your metric to each prediction 3. Aggregates results into
-actionable statistics
+This single function call:
+
+1.  Runs your module on every example
+2.  Applies your metric to each prediction
+3.  Aggregates results into actionable statistics
 
 ## Metric-Driven Development
 
@@ -353,10 +355,13 @@ Metric-driven development takes more upfront effort: - Collecting
 labeled data - Choosing appropriate metrics - Maintaining train/val/test
 splits
 
-But it pays off: - **Confidence**: You know when things work -
-**Progress**: You can measure improvement - **Debugging**: You can
-identify failure modes - **Automation**: Optimization becomes possible -
-**Communication**: Share concrete numbers, not vibes
+But it pays off:
+
+- **Confidence**: You know when things work
+- **Progress**: You can measure improvement
+- **Debugging**: You can identify failure modes
+- **Automation**: Optimization becomes possible
+- **Communication**: Share concrete numbers, not vibes
 
 ## Further Reading
 

@@ -130,13 +130,23 @@
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p>dsprrr provides advanced module types inspired by <a href="https://dspy.ai/" class="external-link">DSPy</a> that implement sophisticated reasoning
-patterns. These modules go beyond simple prompt-response to enable: -
-<strong>Step-by-step reasoning</strong> with ChainOfThought -
-<strong>Multiple attempts</strong> with BestOfN - <strong>Iterative
-refinement</strong> with Refine - <strong>Ensemble reasoning</strong>
-with MultiChainComparison - <strong>Exact computation</strong> with
-ProgramOfThought (code generation) - <strong>Hybrid agents</strong> with
-CodeAct (tools + code execution)</p>
+patterns. These modules go beyond simple prompt-response to enable:</p>
+<ul>
+<li>
+<strong>Step-by-step reasoning</strong> with ChainOfThought</li>
+<li>
+<strong>Multiple attempts</strong> with BestOfN</li>
+<li>
+<strong>Iterative refinement</strong> with Refine</li>
+<li>
+<strong>Ensemble reasoning</strong> with MultiChainComparison</li>
+<li>
+<strong>Exact computation</strong> with ProgramOfThought (code
+generation)</li>
+<li>
+<strong>Hybrid agents</strong> with CodeAct (tools + code
+execution)</li>
+</ul>
 <p>Each pattern addresses different challenges in LLM reliability and
 output quality.</p>
 </div>
@@ -781,12 +791,20 @@ that the LLM can call:</p>
 <div class="section level3">
 <h3 id="token-usage">Token Usage<a class="anchor" aria-label="anchor" href="#token-usage"></a>
 </h3>
-<p>Advanced modules use more tokens than simple prediction: -
-<strong>ChainOfThought</strong>: ~1.5-2x tokens (reasoning + answer) -
+<p>Advanced modules use more tokens than simple prediction:</p>
+<ul>
+<li>
+<strong>ChainOfThought</strong>: ~1.5-2x tokens (reasoning +
+answer)</li>
+<li>
 <strong>BestOfN(N=3)</strong>: Up to 3x tokens (worst case, no early
-stopping) - <strong>Refine(N=3)</strong>: Up to 3x tokens plus feedback
-overhead - <strong>MCC(M=3)</strong>: ~4x tokens (M chains + 1
-comparison)</p>
+stopping)</li>
+<li>
+<strong>Refine(N=3)</strong>: Up to 3x tokens plus feedback
+overhead</li>
+<li>
+<strong>MCC(M=3)</strong>: ~4x tokens (M chains + 1 comparison)</li>
+</ul>
 </div>
 <div class="section level3">
 <h3 id="cost-tracking">Cost Tracking<a class="anchor" aria-label="anchor" href="#cost-tracking"></a>

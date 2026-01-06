@@ -9,12 +9,14 @@ library(ellmer)
 
 dsprrr provides advanced module types inspired by
 [DSPy](https://dspy.ai/) that implement sophisticated reasoning
-patterns. These modules go beyond simple prompt-response to enable: -
-**Step-by-step reasoning** with ChainOfThought - **Multiple attempts**
-with BestOfN - **Iterative refinement** with Refine - **Ensemble
-reasoning** with MultiChainComparison - **Exact computation** with
-ProgramOfThought (code generation) - **Hybrid agents** with CodeAct
-(tools + code execution)
+patterns. These modules go beyond simple prompt-response to enable:
+
+- **Step-by-step reasoning** with ChainOfThought
+- **Multiple attempts** with BestOfN
+- **Iterative refinement** with Refine
+- **Ensemble reasoning** with MultiChainComparison
+- **Exact computation** with ProgramOfThought (code generation)
+- **Hybrid agents** with CodeAct (tools + code execution)
 
 Each pattern addresses different challenges in LLM reliability and
 output quality.
@@ -675,11 +677,12 @@ compiled <- compile(tp, wrapper, trainset)
 
 ### Token Usage
 
-Advanced modules use more tokens than simple prediction: -
-**ChainOfThought**: ~1.5-2x tokens (reasoning + answer) -
-**BestOfN(N=3)**: Up to 3x tokens (worst case, no early stopping) -
-**Refine(N=3)**: Up to 3x tokens plus feedback overhead - **MCC(M=3)**:
-~4x tokens (M chains + 1 comparison)
+Advanced modules use more tokens than simple prediction:
+
+- **ChainOfThought**: ~1.5-2x tokens (reasoning + answer)
+- **BestOfN(N=3)**: Up to 3x tokens (worst case, no early stopping)
+- **Refine(N=3)**: Up to 3x tokens plus feedback overhead
+- **MCC(M=3)**: ~4x tokens (M chains + 1 comparison)
 
 ### Cost Tracking
 

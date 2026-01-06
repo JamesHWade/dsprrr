@@ -4,10 +4,12 @@
 
 Building LLM applications in development is one thing; running them
 reliably in production is another. This vignette covers dsprrr’s
-orchestration features that help you: - **Persist** module
-configurations and traces across sessions - **Orchestrate** complex
-pipelines with targets - **Report** on experiments with Quarto -
-**Validate** workflows before expensive LLM operations
+orchestration features that help you:
+
+- **Persist** module configurations and traces across sessions
+- **Orchestrate** complex pipelines with targets
+- **Report** on experiments with Quarto
+- **Validate** workflows before expensive LLM operations
 
 These features integrate with the broader R ecosystem:
 

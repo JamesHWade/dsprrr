@@ -115,9 +115,11 @@ signature(
 )
 ```
 
-The string notation is: - **Concise**: One line instead of many -
-**Readable**: `context, question -> answer` is self-documenting -
-**DSPy-compatible**: Familiar to Python DSPy users
+The string notation is:
+
+- **Concise**: One line instead of many
+- **Readable**: `context, question -> answer` is self-documenting
+- **DSPy-compatible**: Familiar to Python DSPy users
 
 Use string notation for simple cases. Use explicit notation when you
 need: - Input descriptions - Complex output types - Custom validators
@@ -399,9 +401,11 @@ Create a new module when: - You need **independent state** (parallel
 optimization) - You want to **preserve a configuration** (before vs
 after optimization) - Different **execution contexts** (dev vs prod)
 
-Use the same module when: - **Sequential calls** in a workflow -
-**Accumulating traces** for analysis - The same logical “agent” in your
-application
+Use the same module when:
+
+- **Sequential calls** in a workflow
+- **Accumulating traces** for analysis
+- The same logical “agent” in your application
 
 ### Extending the System
 
@@ -450,11 +454,14 @@ mod$optimize_grid(
 )
 ```
 
-The optimizer: 1. Creates `copy(deep = TRUE)` for each candidate 2.
-Varies config parameters per the grid 3. Runs each copy’s `forward()` on
-the devset 4. Computes metrics from (signature-defined) outputs 5.
-Updates the original module with best config 6. Records all trials in
-`state$trials`
+The optimizer:
+
+1.  Creates `copy(deep = TRUE)` for each candidate
+2.  Varies config parameters per the grid
+3.  Runs each copy’s `forward()` on the devset
+4.  Computes metrics from (signature-defined) outputs
+5.  Updates the original module with best config
+6.  Records all trials in `state$trials`
 
 The architecture makes this workflow clean and reliable.
 

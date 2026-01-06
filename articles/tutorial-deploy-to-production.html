@@ -205,7 +205,7 @@ module configuration:</p>
 <span></span>
 <span><span class="co"># Save the module configuration</span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260105T020848Z-333b0'</span></span>
+<span><span class="co">#&gt; Creating new version '20260106T170826Z-18a46'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned module configuration: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Module type: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
@@ -225,21 +225,21 @@ instructions—is now saved.</p>
 <span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_meta.html" class="external-link">pin_meta</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; List of 13</span></span>
 <span><span class="co">#&gt;  $ file       : chr "sentiment-classifier.rds"</span></span>
-<span><span class="co">#&gt;  $ file_size  : 'fs_bytes' int 593</span></span>
-<span><span class="co">#&gt;  $ pin_hash   : chr "333b0e427bb8f86c"</span></span>
+<span><span class="co">#&gt;  $ file_size  : 'fs_bytes' int 591</span></span>
+<span><span class="co">#&gt;  $ pin_hash   : chr "18a469643098f640"</span></span>
 <span><span class="co">#&gt;  $ type       : chr "rds"</span></span>
 <span><span class="co">#&gt;  $ title      : chr "sentiment-classifier: a pinned list"</span></span>
 <span><span class="co">#&gt;  $ description: chr "dsprrr module config: sentiment-classifier"</span></span>
 <span><span class="co">#&gt;  $ tags       : NULL</span></span>
 <span><span class="co">#&gt;  $ urls       : NULL</span></span>
-<span><span class="co">#&gt;  $ created    : POSIXct[1:1], format: "2026-01-05 02:08:48"</span></span>
+<span><span class="co">#&gt;  $ created    : POSIXct[1:1], format: "2026-01-06 17:08:26"</span></span>
 <span><span class="co">#&gt;  $ api_version: int 1</span></span>
 <span><span class="co">#&gt;  $ user       : list()</span></span>
 <span><span class="co">#&gt;  $ name       : chr "sentiment-classifier"</span></span>
 <span><span class="co">#&gt;  $ local      :List of 3</span></span>
-<span><span class="co">#&gt;   ..$ dir    : 'fs_path' chr "/tmp/Rtmp5fXvA3/sentiment-classifier/20260105T020848Z-333b0"</span></span>
+<span><span class="co">#&gt;   ..$ dir    : 'fs_path' chr "/tmp/RtmpzpHwSW/sentiment-classifier/20260106T170826Z-18a46"</span></span>
 <span><span class="co">#&gt;   ..$ url    : NULL</span></span>
-<span><span class="co">#&gt;   ..$ version: chr "20260105T020848Z-333b0"</span></span></code></pre></div>
+<span><span class="co">#&gt;   ..$ version: chr "20260106T170826Z-18a46"</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-restore-in-a-new-session">Step 4: Restore in a New Session<a class="anchor" aria-label="anchor" href="#step-4-restore-in-a-new-session"></a>
@@ -275,7 +275,7 @@ instructions—is now saved.</p>
 <span></span>
 <span><span class="co"># Save again - creates new version</span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">improved</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260105T020848Z-8495d'</span></span>
+<span><span class="co">#&gt; Creating new version '20260106T170827Z-49ea4'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned module configuration: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Module type: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
@@ -286,8 +286,8 @@ instructions—is now saved.</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 3</span></span></span>
 <span><span class="co">#&gt;   version                created             hash </span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dttm&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 20260105T020848Z-333b0 2026-01-05 <span style="color: #949494;">02:08:48</span> 333b0</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 20260105T020848Z-8495d 2026-01-05 <span style="color: #949494;">02:08:48</span> 8495d</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 20260106T170826Z-18a46 2026-01-06 <span style="color: #949494;">17:08:26</span> 18a46</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 20260106T170827Z-49ea4 2026-01-06 <span style="color: #949494;">17:08:27</span> 49ea4</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-6-roll-back-to-previous-version">Step 6: Roll Back to Previous Version<a class="anchor" aria-label="anchor" href="#step-6-roll-back-to-previous-version"></a>
@@ -501,24 +501,44 @@ Deploy to production</p>
 <div class="section level3">
 <h3 id="advanced-tutorials">Advanced Tutorials<a class="anchor" aria-label="anchor" href="#advanced-tutorials"></a>
 </h3>
-<p>Build complete applications: - <strong><a href="text-adventure.html">Text Adventure Game</a></strong> —
-Interactive AI with state management - <strong><a href="llms-txt.html">Generate llms.txt</a></strong> — Multi-stage
-documentation pipeline</p>
+<p>Build complete applications:</p>
+<ul>
+<li>
+<strong><a href="text-adventure.html">Text Adventure
+Game</a></strong> — Interactive AI with state management</li>
+<li>
+<strong><a href="llms-txt.html">Generate llms.txt</a></strong> —
+Multi-stage documentation pipeline</li>
+</ul>
 </div>
 <div class="section level3">
 <h3 id="how-to-guides">How-To Guides<a class="anchor" aria-label="anchor" href="#how-to-guides"></a>
 </h3>
-<p>Solve specific problems: - <strong><a href="rag-workflows.html">Build
-RAG Pipelines</a></strong> — Retrieval-augmented generation - <strong><a href="vitals-integration.html">Evaluate with Vitals</a></strong> —
-Rigorous evaluation - <strong><a href="orchestration.html">Production
-Orchestration</a></strong> — targets and Quarto integration</p>
+<p>Solve specific problems:</p>
+<ul>
+<li>
+<strong><a href="rag-workflows.html">Build RAG
+Pipelines</a></strong> — Retrieval-augmented generation</li>
+<li>
+<strong><a href="vitals-integration.html">Evaluate with
+Vitals</a></strong> — Rigorous evaluation</li>
+<li>
+<strong><a href="orchestration.html">Production
+Orchestration</a></strong> — targets and Quarto integration</li>
+</ul>
 </div>
 <div class="section level3">
 <h3 id="concepts">Concepts<a class="anchor" aria-label="anchor" href="#concepts"></a>
 </h3>
-<p>Understand the “why”: - <strong><a href="concepts-dspy-philosophy.html">The DSPy Philosophy</a></strong> —
-Programs, not prompts - <strong><a href="concepts-optimization-theory.html">How Optimization
-Works</a></strong> — Teleprompter theory</p>
+<p>Understand the “why”:</p>
+<ul>
+<li>
+<strong><a href="concepts-dspy-philosophy.html">The DSPy
+Philosophy</a></strong> — Programs, not prompts</li>
+<li>
+<strong><a href="concepts-optimization-theory.html">How Optimization
+Works</a></strong> — Teleprompter theory</li>
+</ul>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

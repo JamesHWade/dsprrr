@@ -213,8 +213,10 @@ ens <- ensemble(
 ## KNNFewShot
 
 Selects demonstrations dynamically based on similarity to the input
-query. Uses embeddings to find the most relevant examples. **Best for:**
-Tasks where example relevance varies significantly by query.
+query. Uses embeddings to find the most relevant examples.
+
+**Best for:** Tasks where example relevance varies significantly by
+query.
 
 ``` r
 tp <- KNNFewShot(

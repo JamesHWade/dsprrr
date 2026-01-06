@@ -560,9 +560,12 @@ AnalysisResult <- new_class("AnalysisResult",
 )
 ```
 
-Now you get: - **Type checking**: Can’t create a `PurposeAnalysis`
-without a `purpose` - **Documentation**: Class definitions show what
-fields exist - **IDE support**: Autocomplete works with `@` slots
+Now you get:
+
+- **Type checking**: Can’t create a `PurposeAnalysis` without a
+  `purpose`
+- **Documentation**: Class definitions show what fields exist
+- **IDE support**: Autocomplete works with `@` slots
 
 ### Print Methods
 

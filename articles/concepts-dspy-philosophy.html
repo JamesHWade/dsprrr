@@ -196,10 +196,17 @@ signature stays the same.</p>
 <p>A module wraps a signature with executable logic:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span></code></pre></div>
-<p>Modules are: - <strong>Stateful</strong>: They remember their
-configuration, demos, and traces - <strong>Composable</strong>: You can
-chain modules together - <strong>Optimizable</strong>: Their parameters
-can be tuned automatically</p>
+<p>Modules are:</p>
+<ul>
+<li>
+<strong>Stateful</strong>: They remember their configuration, demos,
+and traces</li>
+<li>
+<strong>Composable</strong>: You can chain modules together</li>
+<li>
+<strong>Optimizable</strong>: Their parameters can be tuned
+automatically</li>
+</ul>
 <p>Think of modules like functions in programming. A function has: - A
 signature (input types → output types) - Implementation (the code) -
 State (closure variables)</p>
@@ -223,9 +230,14 @@ metric and let the optimizer search:</p>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The optimizer: - Tries each configuration - Measures performance
 against your metric - Keeps the best one</p>
-<p>This works because: 1. LLMs are sensitive to prompt wording (small
-changes → big effects) 2. The search space is navigable (parameters are
-mostly continuous) 3. Evaluation is cheap compared to training</p>
+<p>This works because:</p>
+<ol style="list-style-type: decimal">
+<li>LLMs are sensitive to prompt wording (small changes → big
+effects)</li>
+<li>The search space is navigable (parameters are mostly
+continuous)</li>
+<li>Evaluation is cheap compared to training</li>
+</ol>
 <p><strong>Why this matters</strong>: Human intuition about prompts is
 unreliable. Systematic search finds configurations humans wouldn’t try.
 And unlike manual tuning, optimization is reproducible.</p>
@@ -346,12 +358,24 @@ intuition - Improves reproducibility</p>
 <h2 id="practical-implications">Practical Implications<a class="anchor" aria-label="anchor" href="#practical-implications"></a>
 </h2>
 <p>If you accept this philosophy, your workflow changes:</p>
-<p><strong>Before (prompt engineering)</strong>: 1. Write prompt 2. Try
-examples manually 3. Tweak wording 4. Deploy when it “feels right” 5.
-Hope it keeps working</p>
-<p><strong>After (prompt programming)</strong>: 1. Define signature 2.
-Create labeled dataset 3. Define metric 4. Optimize 5. Evaluate on
-held-out data 6. Deploy with confidence 7. Monitor with traces</p>
+<p><strong>Before (prompt engineering)</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>Write prompt</li>
+<li>Try examples manually</li>
+<li>Tweak wording</li>
+<li>Deploy when it “feels right”</li>
+<li>Hope it keeps working</li>
+</ol>
+<p><strong>After (prompt programming)</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>Define signature</li>
+<li>Create labeled dataset</li>
+<li>Define metric</li>
+<li>Optimize</li>
+<li>Evaluate on held-out data</li>
+<li>Deploy with confidence</li>
+<li>Monitor with traces</li>
+</ol>
 <p>The second workflow is: - Reproducible (anyone can re-run the
 optimization) - Measurable (you have metrics, not vibes) - Maintainable
 (change the data, re-optimize) - Debuggable (traces show what

@@ -275,9 +275,12 @@ dataset and computes metrics:</p>
 <span><span class="va">result</span><span class="op">$</span><span class="va">predictions</span>   <span class="co"># What the model actually said</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">n_evaluated</span>   <span class="co"># 3</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">n_errors</span>      <span class="co"># 0</span></span></code></pre></div>
-<p>This single function call: 1. Runs your module on every example 2.
-Applies your metric to each prediction 3. Aggregates results into
-actionable statistics</p>
+<p>This single function call:</p>
+<ol style="list-style-type: decimal">
+<li>Runs your module on every example</li>
+<li>Applies your metric to each prediction</li>
+<li>Aggregates results into actionable statistics</li>
+</ol>
 </div>
 <div class="section level2">
 <h2 id="metric-driven-development">Metric-Driven Development<a class="anchor" aria-label="anchor" href="#metric-driven-development"></a>
@@ -501,11 +504,20 @@ overfit, not how well you’ll generalize.</p>
 <p>Metric-driven development takes more upfront effort: - Collecting
 labeled data - Choosing appropriate metrics - Maintaining train/val/test
 splits</p>
-<p>But it pays off: - <strong>Confidence</strong>: You know when things
-work - <strong>Progress</strong>: You can measure improvement -
-<strong>Debugging</strong>: You can identify failure modes -
-<strong>Automation</strong>: Optimization becomes possible -
-<strong>Communication</strong>: Share concrete numbers, not vibes</p>
+<p>But it pays off:</p>
+<ul>
+<li>
+<strong>Confidence</strong>: You know when things work</li>
+<li>
+<strong>Progress</strong>: You can measure improvement</li>
+<li>
+<strong>Debugging</strong>: You can identify failure modes</li>
+<li>
+<strong>Automation</strong>: Optimization becomes possible</li>
+<li>
+<strong>Communication</strong>: Share concrete numbers, not
+vibes</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>

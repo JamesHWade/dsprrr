@@ -128,8 +128,11 @@ tp <- LabeledFewShot(k = 4L)
 compiled <- compile(tp, mod, trainset)
 ```
 
-**How it works**: 1. Sample k examples from training data 2. Format as
-demonstrations 3. Add to module
+**How it works**:
+
+1.  Sample k examples from training data
+2.  Format as demonstrations
+3.  Add to module
 
 **When to use**: - Quick baseline - When you have high-quality labeled
 data - When the task is straightforward
@@ -150,10 +153,13 @@ tp <- BootstrapFewShot(
 compiled <- compile(tp, mod, trainset)
 ```
 
-**How it works**: 1. Start with labeled examples as initial demos 2. Run
-teacher model on remaining training examples 3. Score each prediction
-with your metric 4. Keep predictions that score above threshold as new
-demos 5. Optionally repeat for multiple rounds
+**How it works**:
+
+1.  Start with labeled examples as initial demos
+2.  Run teacher model on remaining training examples
+3.  Score each prediction with your metric
+4.  Keep predictions that score above threshold as new demos
+5.  Optionally repeat for multiple rounds
 
 **Why this works**: The model generates outputs in its own “voice”.
 Demonstrations that match the model’s natural output style are more
@@ -184,9 +190,11 @@ tp <- GridSearchTeleprompter(
 compiled <- compile(tp, mod, trainset)
 ```
 
-**How it works**: 1. Define a grid of parameter configurations 2.
-Evaluate each on a validation set 3. Select the best-performing
-configuration
+**How it works**:
+
+1.  Define a grid of parameter configurations
+2.  Evaluate each on a validation set
+3.  Select the best-performing configuration
 
 **When to use**: - When you have specific hypotheses to test - When the
 search space is small - When you need interpretable results
@@ -207,9 +215,12 @@ tp <- BootstrapFewShotWithRandomSearch(
 compiled <- compile(tp, mod, trainset)
 ```
 
-**How it works**: 1. Generate multiple demo configurations via
-bootstrapping 2. Create candidate programs with different demo subsets
-3. Evaluate all candidates 4. Return the best performer
+**How it works**:
+
+1.  Generate multiple demo configurations via bootstrapping
+2.  Create candidate programs with different demo subsets
+3.  Evaluate all candidates
+4.  Return the best performer
 
 **When to use**: - When BootstrapFewShot alone isn’t enough - When you
 want to explore demo combinations - When you have compute budget for
@@ -228,9 +239,12 @@ tp <- SIMBA(
 compiled <- compile(tp, mod, trainset)
 ```
 
-**How it works**: 1. Embed all training examples 2. Cluster by semantic
-similarity 3. Select diverse representatives from clusters 4. Use as
-demonstrations
+**How it works**:
+
+1.  Embed all training examples
+2.  Cluster by semantic similarity
+3.  Select diverse representatives from clusters
+4.  Use as demonstrations
 
 **Why this works**: Coverage matters more than quantity. A diverse set
 of demos shows the model the range of possible inputs and appropriate
@@ -252,9 +266,11 @@ tp <- KNNFewShot(
 compiled <- compile(tp, mod, trainset)
 ```
 
-**How it works**: 1. At compile time: embed all training examples 2. At
-runtime: find k nearest neighbors to the input 3. Use those neighbors as
-demonstrations
+**How it works**:
+
+1.  At compile time: embed all training examples
+2.  At runtime: find k nearest neighbors to the input
+3.  Use those neighbors as demonstrations
 
 **Why this works**: Relevant examples are more helpful than random ones.
 If the input is about sports, sports-related demos are more useful than
@@ -277,9 +293,12 @@ tp <- COPRO(
 compiled <- compile(tp, mod, trainset)
 ```
 
-**How it works**: 1. Generate breadth instruction candidates 2. Evaluate
-each on training data 3. Take top performers, ask LLM to improve them 4.
-Repeat for depth iterations
+**How it works**:
+
+1.  Generate breadth instruction candidates
+2.  Evaluate each on training data
+3.  Take top performers, ask LLM to improve them
+4.  Repeat for depth iterations
 
 **Why this works**: LLMs are good at understanding what makes
 instructions effective. They can propose refinements humans wouldn’t
@@ -409,10 +428,12 @@ your target model.
 
 ### Validation Strategy
 
-Split your data: - **Training set**: Used to generate demos -
-**Validation set**: Used to evaluate candidates during optimization -
-**Test set**: Used to evaluate final model (never touched during
-optimization)
+Split your data:
+
+- **Training set**: Used to generate demos
+- **Validation set**: Used to evaluate candidates during optimization
+- **Test set**: Used to evaluate final model (never touched during
+  optimization)
 
 ``` r
 # Good practice

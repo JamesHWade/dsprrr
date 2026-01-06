@@ -2,8 +2,9 @@
 
 In this tutorial, you’ll make your first structured LLM call with
 dsprrr. By the end, you’ll be able to ask questions, get typed
-responses, and understand why signatures are powerful. **Time**: 10-15
-minutes
+responses, and understand why signatures are powerful.
+
+**Time**: 10-15 minutes
 
 ## What You’ll Build
 

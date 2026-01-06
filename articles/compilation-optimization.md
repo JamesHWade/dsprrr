@@ -7,10 +7,12 @@ optimization**. Instead of manually tweaking prompts and examples, you
 can let dsprrr systematically optimize your LLM programs using your
 training data and evaluation metrics.
 
-This vignette covers: - **Metrics**: How to evaluate LLM outputs -
-**Teleprompters**: Optimization strategies for improving programs -
-**Compilation**: The process of optimizing your modules -
-**Evaluation**: Systematic testing of optimized programs
+This vignette covers:
+
+- **Metrics**: How to evaluate LLM outputs
+- **Teleprompters**: Optimization strategies for improving programs
+- **Compilation**: The process of optimizing your modules
+- **Evaluation**: Systematic testing of optimized programs
 
 ## Setup
 
@@ -1346,10 +1348,12 @@ Key takeaways:
 - Create custom metrics tailored to your specific task
 - Consider ensemble methods for critical applications
 
-The compilation framework makes your LLM programs: - **More accurate**
-through systematic optimization - **More maintainable** by separating
-logic from prompt tuning - **More portable** across different LLMs and
-use cases - **More efficient** by finding the best prompts automatically
+The compilation framework makes your LLM programs:
+
+- **More accurate** through systematic optimization
+- **More maintainable** by separating logic from prompt tuning
+- **More portable** across different LLMs and use cases
+- **More efficient** by finding the best prompts automatically
 
 ## Further Reading
 

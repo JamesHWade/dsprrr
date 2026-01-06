@@ -264,8 +264,12 @@ DSPy). Each teleprompter implements a different search strategy.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>: 1. Sample k examples from training
-data 2. Format as demonstrations 3. Add to module</p>
+<p><strong>How it works</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>Sample k examples from training data</li>
+<li>Format as demonstrations</li>
+<li>Add to module</li>
+</ol>
 <p><strong>When to use</strong>: - Quick baseline - When you have
 high-quality labeled data - When the task is straightforward</p>
 <p><strong>Limitations</strong>: - Doesn’t optimize demo selection -
@@ -283,11 +287,14 @@ ones:</p>
 <span> max_labeled_demos <span class="op">=</span> <span class="fl">8L</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>: 1. Start with labeled examples as
-initial demos 2. Run teacher model on remaining training examples 3.
-Score each prediction with your metric 4. Keep predictions that score
-above threshold as new demos 5. Optionally repeat for multiple
-rounds</p>
+<p><strong>How it works</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>Start with labeled examples as initial demos</li>
+<li>Run teacher model on remaining training examples</li>
+<li>Score each prediction with your metric</li>
+<li>Keep predictions that score above threshold as new demos</li>
+<li>Optionally repeat for multiple rounds</li>
+</ol>
 <p><strong>Why this works</strong>: The model generates outputs in its
 own “voice”. Demonstrations that match the model’s natural output style
 are more effective than human-written examples.</p>
@@ -314,9 +321,12 @@ learn its own format</p>
 <span> variants <span class="op">=</span> <span class="va">variants</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>: 1. Define a grid of parameter
-configurations 2. Evaluate each on a validation set 3. Select the
-best-performing configuration</p>
+<p><strong>How it works</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>Define a grid of parameter configurations</li>
+<li>Evaluate each on a validation set</li>
+<li>Select the best-performing configuration</li>
+</ol>
 <p><strong>When to use</strong>: - When you have specific hypotheses to
 test - When the search space is small - When you need interpretable
 results</p>
@@ -334,10 +344,13 @@ miss optimal combinations not in grid</p>
 <span> max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>: 1. Generate multiple demo
-configurations via bootstrapping 2. Create candidate programs with
-different demo subsets 3. Evaluate all candidates 4. Return the best
-performer</p>
+<p><strong>How it works</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>Generate multiple demo configurations via bootstrapping</li>
+<li>Create candidate programs with different demo subsets</li>
+<li>Evaluate all candidates</li>
+<li>Return the best performer</li>
+</ol>
 <p><strong>When to use</strong>: - When BootstrapFewShot alone isn’t
 enough - When you want to explore demo combinations - When you have
 compute budget for more trials</p>
@@ -353,9 +366,13 @@ compute budget for more trials</p>
 <span> embed_fn <span class="op">=</span> <span class="fu"><a href="https://ragnar.tidyverse.org/reference/embed_ollama.html" class="external-link">embed_openai</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>: 1. Embed all training examples 2.
-Cluster by semantic similarity 3. Select diverse representatives from
-clusters 4. Use as demonstrations</p>
+<p><strong>How it works</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>Embed all training examples</li>
+<li>Cluster by semantic similarity</li>
+<li>Select diverse representatives from clusters</li>
+<li>Use as demonstrations</li>
+</ol>
 <p><strong>Why this works</strong>: Coverage matters more than quantity.
 A diverse set of demos shows the model the range of possible inputs and
 appropriate outputs.</p>
@@ -374,9 +391,12 @@ input space</p>
 <span> embed_fn <span class="op">=</span> <span class="fu"><a href="https://ragnar.tidyverse.org/reference/embed_ollama.html" class="external-link">embed_openai</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>: 1. At compile time: embed all training
-examples 2. At runtime: find k nearest neighbors to the input 3. Use
-those neighbors as demonstrations</p>
+<p><strong>How it works</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>At compile time: embed all training examples</li>
+<li>At runtime: find k nearest neighbors to the input</li>
+<li>Use those neighbors as demonstrations</li>
+</ol>
 <p><strong>Why this works</strong>: Relevant examples are more helpful
 than random ones. If the input is about sports, sports-related demos are
 more useful than cooking demos.</p>
@@ -395,9 +415,13 @@ at inference</p>
 <span> depth <span class="op">=</span> <span class="fl">3L</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>: 1. Generate breadth instruction
-candidates 2. Evaluate each on training data 3. Take top performers, ask
-LLM to improve them 4. Repeat for depth iterations</p>
+<p><strong>How it works</strong>:</p>
+<ol style="list-style-type: decimal">
+<li>Generate breadth instruction candidates</li>
+<li>Evaluate each on training data</li>
+<li>Take top performers, ask LLM to improve them</li>
+<li>Repeat for depth iterations</li>
+</ol>
 <p><strong>Why this works</strong>: LLMs are good at understanding what
 makes instructions effective. They can propose refinements humans
 wouldn’t think of.</p>
@@ -566,10 +590,17 @@ your target model.</p>
 <div class="section level3">
 <h3 id="validation-strategy">Validation Strategy<a class="anchor" aria-label="anchor" href="#validation-strategy"></a>
 </h3>
-<p>Split your data: - <strong>Training set</strong>: Used to generate
-demos - <strong>Validation set</strong>: Used to evaluate candidates
-during optimization - <strong>Test set</strong>: Used to evaluate final
-model (never touched during optimization)</p>
+<p>Split your data:</p>
+<ul>
+<li>
+<strong>Training set</strong>: Used to generate demos</li>
+<li>
+<strong>Validation set</strong>: Used to evaluate candidates during
+optimization</li>
+<li>
+<strong>Test set</strong>: Used to evaluate final model (never
+touched during optimization)</li>
+</ul>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Good practice</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>

@@ -449,10 +449,12 @@ GameState <- new_class("GameState",
 )
 ```
 
-Now you get: - **Validation**: `Player(name = "X", health = -10L)`
-throws an error - **Documentation**: Properties are self-describing -
-**Type safety**: Can’t accidentally assign wrong types - **Tooling**:
-IDE autocomplete works with `@` slots
+Now you get:
+
+- **Validation**: `Player(name = "X", health = -10L)` throws an error
+- **Documentation**: Properties are self-describing
+- **Type safety**: Can’t accidentally assign wrong types
+- **Tooling**: IDE autocomplete works with `@` slots
 
 ### S7 Generics for State Transitions
 

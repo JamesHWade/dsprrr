@@ -24,49 +24,66 @@ and type validation. No prompt engineering required.
 ### New to dsprrr?
 
 Start with the **tutorial sequence**—hands-on lessons that build on each
-other: 1. [Your First LLM
-Call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md)
-— Make structured calls with
-[`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) (10 min)
-2. [Building a
-Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md)
-— Create reusable modules (20 min) 3. [Extracting Structured
-Data](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md)
-— Multi-field outputs (25 min) 4. [Improving with
-Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
-— Few-shot learning (25 min) 5. [Finding Best
-Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
-— Grid search (30 min) 6. [Taking to
-Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md)
-— Save and deploy (30 min)
+other:
+
+1.  [Your First LLM
+    Call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md)
+    — Make structured calls with
+    [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) (10
+    min)
+2.  [Building a
+    Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md)
+    — Create reusable modules (20 min)
+3.  [Extracting Structured
+    Data](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md)
+    — Multi-field outputs (25 min)
+4.  [Improving with
+    Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
+    — Few-shot learning (25 min)
+5.  [Finding Best
+    Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
+    — Grid search (30 min)
+6.  [Taking to
+    Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md)
+    — Save and deploy (30 min)
 
 ### Already know the basics?
 
-Jump to what you need: - **[Quick
-Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md)**
-— Signature syntax, module types, metrics -
-**[Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md)**
-— Fix common issues
+Jump to what you need:
+
+- **[Quick
+  Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md)**
+  — Signature syntax, module types, metrics
+- **[Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md)**
+  — Fix common issues
 
 ### Want to understand the “why”?
 
-Read the conceptual guides: - **[The DSPy
-Philosophy](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.md)**
-— Programs, not prompts - **[Understanding Signatures &
-Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)**
-— Why S7 and R6 - **[How Optimization
-Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)**
-— Teleprompter theory
+Read the conceptual guides:
+
+- **[The DSPy
+  Philosophy](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.md)**
+  — Programs, not prompts
+- **[Understanding Signatures &
+  Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)**
+  — Why S7 and R6
+- **[How Optimization
+  Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)**
+  — Teleprompter theory
 
 ### Building something specific?
 
-Check the how-to guides: - **[Compile &
-Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)**
-— Full optimization workflow - **[Build RAG
-Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md)**
-— Retrieval-augmented generation - **[Deploy to
-Production](https://jameshwade.github.io/dsprrr/articles/orchestration.md)**
-— pins, targets, and Quarto
+Check the how-to guides:
+
+- **[Compile &
+  Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)**
+  — Full optimization workflow
+- **[Build RAG
+  Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md)**
+  — Retrieval-augmented generation
+- **[Deploy to
+  Production](https://jameshwade.github.io/dsprrr/articles/orchestration.md)**
+  — pins, targets, and Quarto
 
 ## 5-Minute Taste
 

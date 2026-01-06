@@ -245,10 +245,16 @@ parse.</p>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The string notation is: - <strong>Concise</strong>: One line instead
-of many - <strong>Readable</strong>:
-<code>context, question -&gt; answer</code> is self-documenting -
-<strong>DSPy-compatible</strong>: Familiar to Python DSPy users</p>
+<p>The string notation is:</p>
+<ul>
+<li>
+<strong>Concise</strong>: One line instead of many</li>
+<li>
+<strong>Readable</strong>:
+<code>context, question -&gt; answer</code> is self-documenting</li>
+<li>
+<strong>DSPy-compatible</strong>: Familiar to Python DSPy users</li>
+</ul>
 <p>Use string notation for simple cases. Use explicit notation when you
 need: - Input descriptions - Complex output types - Custom
 validators</p>
@@ -539,9 +545,14 @@ extraction)</p>
 state</strong> (parallel optimization) - You want to <strong>preserve a
 configuration</strong> (before vs after optimization) - Different
 <strong>execution contexts</strong> (dev vs prod)</p>
-<p>Use the same module when: - <strong>Sequential calls</strong> in a
-workflow - <strong>Accumulating traces</strong> for analysis - The same
-logical “agent” in your application</p>
+<p>Use the same module when:</p>
+<ul>
+<li>
+<strong>Sequential calls</strong> in a workflow</li>
+<li>
+<strong>Accumulating traces</strong> for analysis</li>
+<li>The same logical “agent” in your application</li>
+</ul>
 </div>
 <div class="section level3">
 <h3 id="extending-the-system">Extending the System<a class="anchor" aria-label="anchor" href="#extending-the-system"></a>
@@ -589,11 +600,16 @@ happened</li>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The optimizer: 1. Creates <code>copy(deep = TRUE)</code> for each
-candidate 2. Varies config parameters per the grid 3. Runs each copy’s
-<code>forward()</code> on the devset 4. Computes metrics from
-(signature-defined) outputs 5. Updates the original module with best
-config 6. Records all trials in <code>state$trials</code></p>
+<p>The optimizer:</p>
+<ol style="list-style-type: decimal">
+<li>Creates <code>copy(deep = TRUE)</code> for each candidate</li>
+<li>Varies config parameters per the grid</li>
+<li>Runs each copy’s <code>forward()</code> on the devset</li>
+<li>Computes metrics from (signature-defined) outputs</li>
+<li>Updates the original module with best config</li>
+<li>Records all trials in <code>state$trials</code>
+</li>
+</ol>
 <p>The architecture makes this workflow clean and reliable.</p>
 </div>
 <div class="section level2">

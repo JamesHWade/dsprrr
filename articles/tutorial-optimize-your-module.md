@@ -322,9 +322,9 @@ optimized <- compile_module(
 #> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.
 #> Metric evaluation failed for row 2
 #> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 2
+#> Optimizing 2/3 | Score: 0.0000
+#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.
+#> Metric evaluation failed for row 2
 #> ✖ Cannot extract field from non-list object
 #> Optimizing 3/3 | Score: 0.0000
 ```
@@ -390,7 +390,7 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 529.9621
+#> [1] 534.7588
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 168
@@ -402,7 +402,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-05 02:10:33 UTC"
+#> [1] "2026-01-06 17:10:13 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -410,7 +410,7 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 526.592
+#> [1] 531.7335
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 175
@@ -422,7 +422,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-05 02:10:34 UTC"
+#> [1] "2026-01-06 17:10:13 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -533,8 +533,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x55cf1bbb2010>
-#> <environment: 0x55cf1a0e6910>
+#> <bytecode: 0x5638136fc080>
+#> <environment: 0x56381ce6f9a8>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -554,8 +554,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x55cf1a0e3550>
-#> <environment: 0x55cf1a0e2050>
+#> <bytecode: 0x56381c3160a0>
+#> <environment: 0x56381d3c2640>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -583,8 +583,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x55cf1d9dcf28>
-#> <environment: 0x55cf1ba03b10>
+#> <bytecode: 0x563815a7e6d8>
+#> <environment: 0x5638169feff0>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -599,8 +599,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x55cf1f0722c8>
-#> <environment: 0x55cf1f071490>
+#> <bytecode: 0x5638175fbfb8>
+#> <environment: 0x56381aa613a0>
 ```
 
 ## Step 10: Tracking Costs

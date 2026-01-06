@@ -223,19 +223,24 @@ tryCatch(
 
 ## Summary
 
-Key integration points with ellmer: 1. **Parallel processing**: Choose
-between mirai (multi-process) or ellmer native (async HTTP) 2. **Tool
-integration**: Convert modules to ellmer tools with
-[`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
-3. **Cost tracking**: Use
-[`get_cost()`](https://jameshwade.github.io/dsprrr/reference/get_cost.md),
-[`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/get_tokens.md),
-and
-[`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)
-for usage tracking 4. **Chat management**: Use
-[`set_default_chat()`](https://jameshwade.github.io/dsprrr/reference/set_default_chat.md)
-for session-wide defaults 5. **Multimodal**: Pass ellmer Content objects
-for images, PDFs, etc. 6. **Streaming**: Use `stream()` or
-[`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
-for long-form generation 7. **Error handling**: Benefit from ellmer’s
-automatic retries and dsprrr’s context-rich errors
+Key integration points with ellmer:
+
+1.  **Parallel processing**: Choose between mirai (multi-process) or
+    ellmer native (async HTTP)
+2.  **Tool integration**: Convert modules to ellmer tools with
+    [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
+3.  **Cost tracking**: Use
+    [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/get_cost.md),
+    [`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/get_tokens.md),
+    and
+    [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)
+    for usage tracking
+4.  **Chat management**: Use
+    [`set_default_chat()`](https://jameshwade.github.io/dsprrr/reference/set_default_chat.md)
+    for session-wide defaults
+5.  **Multimodal**: Pass ellmer Content objects for images, PDFs, etc.
+6.  **Streaming**: Use `stream()` or
+    [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
+    for long-form generation
+7.  **Error handling**: Benefit from ellmer’s automatic retries and
+    dsprrr’s context-rich errors
