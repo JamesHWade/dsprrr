@@ -32,8 +32,7 @@ library(dsprrr)
 library(ellmer)
 library(tibble)
 
-chat <- chat_openai()
-#> Using model = "gpt-4.1".
+chat <- chat_openai(model = "gpt-5-mini")
 ```
 
 ## Step 1: The Problem
@@ -125,9 +124,6 @@ Before improving, let’s measure current performance:
 
 ``` r
 baseline_results <- run_dataset(classifier, trainset, .llm = chat)
-#> Processing 5/10 |  50% | ETA:  1s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
 baseline_results
 #> # A tibble: 10 × 3
 #>    ticket                                category  result   
@@ -259,21 +255,15 @@ Let’s see how each version performs:
 ``` r
 # Run all three on the test set
 results_baseline <- run_dataset(classifier, trainset, .llm = chat)
-#> Processing 8/10 |  80% | ETA:  1s
+#> Processing 5/10 |  50% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
-#> Processing 7/10 |  70% | ETA:  1s
-#> Warning: Found 2 JSON responses, using the first.
+#> Processing 4/10 |  40% | ETA:  2s
 #> Processing 10/10 | 100% | ETA:  0s
+#> 
 results_compiled <- run_dataset(compiled, trainset, .llm = chat)
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 6/10 |  60% | ETA:  1s
+#> Processing 3/10 |  30% | ETA:  3s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 
@@ -307,32 +297,16 @@ metric <- metric_exact_match(field = "category")
 
 # Evaluate the compiled module
 eval_result <- evaluate(compiled, trainset, metric = metric, .llm = chat)
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 4/10 |  40% | ETA:  2s
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 6: LLM call failed: HTTP 500 Internal
-#> Server Error.
-#> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
-#> Requests.
+#> Processing 7/10 |  70% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
-#> Warning: Metric evaluation failed for row 2
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 5
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 6
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 10
-#> ✖ Cannot extract field from non-list object
 
 eval_result
 #> $mean_score
 #> [1] 1
 #> 
 #> $scores
-#>  [1]  1 NA  1  1 NA NA  1  1  1 NA
+#>  [1] 1 1 1 1 1 1 1 1 1 1
 #> 
 #> $predictions
 #> $predictions[[1]]
@@ -341,7 +315,9 @@ eval_result
 #> 
 #> 
 #> $predictions[[2]]
-#> [1] NA
+#> $predictions[[2]]$category
+#> [1] "billing"
+#> 
 #> 
 #> $predictions[[3]]
 #> $predictions[[3]]$category
@@ -354,10 +330,14 @@ eval_result
 #> 
 #> 
 #> $predictions[[5]]
-#> [1] NA
+#> $predictions[[5]]$category
+#> [1] "shipping"
+#> 
 #> 
 #> $predictions[[6]]
-#> [1] NA
+#> $predictions[[6]]$category
+#> [1] "shipping"
+#> 
 #> 
 #> $predictions[[7]]
 #> $predictions[[7]]$category
@@ -375,25 +355,24 @@ eval_result
 #> 
 #> 
 #> $predictions[[10]]
-#> [1] NA
+#> $predictions[[10]]$category
+#> [1] "general"
+#> 
 #> 
 #> 
 #> $n_evaluated
-#> [1] 6
+#> [1] 10
 #> 
 #> $n_errors
-#> [1] 4
+#> [1] 0
 #> 
 #> $errors
-#> [1] "Cannot extract field from non-list object"
-#> [2] "Cannot extract field from non-list object"
-#> [3] "Cannot extract field from non-list object"
-#> [4] "Cannot extract field from non-list object"
+#> character(0)
 #> 
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 343.107
+#> [1] 416.4193
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 272
@@ -405,29 +384,35 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-06 17:08:51 UTC"
+#> [1] "2026-01-06 23:35:14 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
 #> 
 #> 
 #> $metadata[[2]]
-#> $metadata[[2]]$error
-#> [1] "LLM call failed: HTTP 429 Too Many Requests."
+#> $metadata[[2]]$latency_ms
+#> [1] 421.3676
 #> 
-#> $metadata[[2]]$batch_index
-#> [1] 2
-#> 
-#> $metadata[[2]]$instructions
-#> [1] "Classify the customer support ticket."
+#> $metadata[[2]]$prompt_length
+#> [1] 269
 #> 
 #> $metadata[[2]]$prompt
 #> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: How do I update my payment method?"
 #> 
+#> $metadata[[2]]$instructions
+#> [1] "Classify the customer support ticket."
+#> 
+#> $metadata[[2]]$timestamp
+#> [1] "2026-01-06 23:35:15 UTC"
+#> 
+#> $metadata[[2]]$batch_index
+#> [1] 2
+#> 
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 359.7071
+#> [1] 425.5915
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 269
@@ -439,7 +424,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-06 17:08:52 UTC"
+#> [1] "2026-01-06 23:35:15 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -447,7 +432,7 @@ eval_result
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 355.3643
+#> [1] 433.8508
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 272
@@ -459,43 +444,55 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-06 17:08:53 UTC"
+#> [1] "2026-01-06 23:35:15 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
 #> 
 #> 
 #> $metadata[[5]]
-#> $metadata[[5]]$error
-#> [1] "LLM call failed: HTTP 429 Too Many Requests."
+#> $metadata[[5]]$latency_ms
+#> [1] 447.2001
 #> 
-#> $metadata[[5]]$batch_index
-#> [1] 5
-#> 
-#> $metadata[[5]]$instructions
-#> [1] "Classify the customer support ticket."
+#> $metadata[[5]]$prompt_length
+#> [1] 259
 #> 
 #> $metadata[[5]]$prompt
 #> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: When will my order ship?"
 #> 
+#> $metadata[[5]]$instructions
+#> [1] "Classify the customer support ticket."
+#> 
+#> $metadata[[5]]$timestamp
+#> [1] "2026-01-06 23:35:16 UTC"
+#> 
+#> $metadata[[5]]$batch_index
+#> [1] 5
+#> 
 #> 
 #> $metadata[[6]]
-#> $metadata[[6]]$error
-#> [1] "LLM call failed: HTTP 500 Internal Server Error."
+#> $metadata[[6]]$latency_ms
+#> [1] 447.1359
 #> 
-#> $metadata[[6]]$batch_index
-#> [1] 6
-#> 
-#> $metadata[[6]]$instructions
-#> [1] "Classify the customer support ticket."
+#> $metadata[[6]]$prompt_length
+#> [1] 268
 #> 
 #> $metadata[[6]]$prompt
 #> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: Can I change my delivery address?"
 #> 
+#> $metadata[[6]]$instructions
+#> [1] "Classify the customer support ticket."
+#> 
+#> $metadata[[6]]$timestamp
+#> [1] "2026-01-06 23:35:16 UTC"
+#> 
+#> $metadata[[6]]$batch_index
+#> [1] 6
+#> 
 #> 
 #> $metadata[[7]]
 #> $metadata[[7]]$latency_ms
-#> [1] 356.4837
+#> [1] 444.7258
 #> 
 #> $metadata[[7]]$prompt_length
 #> [1] 262
@@ -507,7 +504,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[7]]$timestamp
-#> [1] "2026-01-06 17:08:54 UTC"
+#> [1] "2026-01-06 23:35:17 UTC"
 #> 
 #> $metadata[[7]]$batch_index
 #> [1] 7
@@ -515,7 +512,7 @@ eval_result
 #> 
 #> $metadata[[8]]
 #> $metadata[[8]]$latency_ms
-#> [1] 361.8603
+#> [1] 456.6994
 #> 
 #> $metadata[[8]]$prompt_length
 #> [1] 270
@@ -527,7 +524,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[8]]$timestamp
-#> [1] "2026-01-06 17:08:54 UTC"
+#> [1] "2026-01-06 23:35:17 UTC"
 #> 
 #> $metadata[[8]]$batch_index
 #> [1] 8
@@ -535,7 +532,7 @@ eval_result
 #> 
 #> $metadata[[9]]
 #> $metadata[[9]]$latency_ms
-#> [1] 365.2017
+#> [1] 459.7585
 #> 
 #> $metadata[[9]]$prompt_length
 #> [1] 269
@@ -547,24 +544,30 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[9]]$timestamp
-#> [1] "2026-01-06 17:08:54 UTC"
+#> [1] "2026-01-06 23:35:18 UTC"
 #> 
 #> $metadata[[9]]$batch_index
 #> [1] 9
 #> 
 #> 
 #> $metadata[[10]]
-#> $metadata[[10]]$error
-#> [1] "LLM call failed: HTTP 429 Too Many Requests."
+#> $metadata[[10]]$latency_ms
+#> [1] 600.2336
 #> 
-#> $metadata[[10]]$batch_index
-#> [1] 10
+#> $metadata[[10]]$prompt_length
+#> [1] 264
+#> 
+#> $metadata[[10]]$prompt
+#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: What are your business hours?"
 #> 
 #> $metadata[[10]]$instructions
 #> [1] "Classify the customer support ticket."
 #> 
-#> $metadata[[10]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: What are your business hours?"
+#> $metadata[[10]]$timestamp
+#> [1] "2026-01-06 23:35:18 UTC"
+#> 
+#> $metadata[[10]]$batch_index
+#> [1] 10
 #> 
 #> 
 #> 
@@ -573,15 +576,15 @@ eval_result
 #>    ticket                              category result       .metadata    .chat 
 #>    <chr>                               <chr>    <list>       <list>       <list>
 #>  1 I was charged twice for the same i… billing  <named list> <named list> <Chat>
-#>  2 How do I update my payment method?  billing  <lgl [1]>    <named list> <Chat>
+#>  2 How do I update my payment method?  billing  <named list> <named list> <Chat>
 #>  3 The website won't load on my phone  technic… <named list> <named list> <Chat>
 #>  4 My password reset email never arri… technic… <named list> <named list> <Chat>
-#>  5 When will my order ship?            shipping <lgl [1]>    <named list> <Chat>
-#>  6 Can I change my delivery address?   shipping <lgl [1]>    <named list> <Chat>
+#>  5 When will my order ship?            shipping <named list> <named list> <Chat>
+#>  6 Can I change my delivery address?   shipping <named list> <named list> <Chat>
 #>  7 The product arrived damaged         shipping <named list> <named list> <Chat>
 #>  8 I need a refund for my subscription billing  <named list> <named list> <Chat>
 #>  9 How do I contact customer service?  general  <named list> <named list> <Chat>
-#> 10 What are your business hours?       general  <lgl [1]>    <named list> <Chat>
+#> 10 What are your business hours?       general  <named list> <named list> <Chat>
 #> 
 #> attr(,"class")
 #> [1] "dsprrr_evaluation"
@@ -611,124 +614,24 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
     accuracy = eval_k$mean_score
   )
 }
-#> Warning: Failed to process item 1: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many
-#> Requests.
 #> Processing 3/10 |  30% | ETA:  3s
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 8/10 |  80% | ETA:  1s
-#> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
-#> Requests.
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
-#> Warning: Metric evaluation failed for row 1
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 3
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 5
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 7
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 9
-#> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 1: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 5/10 |  50% | ETA:  2s
-#> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
-#> Requests.
+#> Processing 6/10 |  60% | ETA:  2s
 #> Processing 10/10 | 100% | ETA:  0s
-#> Warning: Metric evaluation failed for row 1
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 3
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 5
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 9
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 10
-#> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 3/10 |  30% | ETA:  3s
-#> Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 9/10 |  90% | ETA:  0s
-#> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
-#> Requests.
+#> 
+#> Processing 2/10 |  20% | ETA:  5s
+#> Processing 6/10 |  60% | ETA:  2s
 #> Processing 10/10 | 100% | ETA:  0s
-#> Warning: Metric evaluation failed for row 2
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 4
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 6
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 9
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 10
-#> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 5/10 |  50% | ETA:  2s
-#> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
-#> Requests.
+#> 
+#> Processing 2/10 |  20% | ETA:  5s
+#> Processing 6/10 |  60% | ETA:  3s
 #> Processing 10/10 | 100% | ETA:  0s
-#> Warning: Metric evaluation failed for row 2
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 5
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 6
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 7
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 10
-#> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 1: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 2/10 |  20% | ETA:  4s
-#> Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Processing 7/10 |  70% | ETA:  1s
-#> Warning: Failed to process item 8: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
-#> Requests.
+#> 
+#> Processing 2/10 |  20% | ETA:  5s
+#> Processing 6/10 |  60% | ETA:  3s
 #> Processing 10/10 | 100% | ETA:  0s
-#> Warning: Metric evaluation failed for row 1
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 2
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 4
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 6
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 8
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 10
-#> ✖ Cannot extract field from non-list object
+#> 
 
 do.call(rbind, results)
 #> # A tibble: 5 × 2

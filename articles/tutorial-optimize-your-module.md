@@ -31,8 +31,7 @@ library(dsprrr)
 library(ellmer)
 library(tibble)
 
-chat <- chat_openai()
-#> Using model = "gpt-4.1".
+chat <- chat_openai(model = "gpt-5-mini")
 ```
 
 ## Step 1: Set Up the Problem
@@ -99,7 +98,6 @@ classifier$optimize_grid(
   ),
   .llm = chat
 )
-#> Warning: Found 2 JSON responses, using the first.
 ```
 
 ## Step 3: View Optimization Results
@@ -112,7 +110,7 @@ module_trials(classifier)
 #> # A tibble: 1 × 7
 #>   n_trials best_trial best_score mean_score std_error best_params      trials  
 #>      <int>      <int>      <dbl>      <dbl>     <dbl> <list>           <list>  
-#> 1        4          1          1          1         0 <named list [1]> <tibble>
+#> 1        4          1        0.9      0.875     0.025 <named list [1]> <tibble>
 ```
 
 Get the summary:
@@ -123,10 +121,10 @@ module_metrics(classifier)
 #> # A tibble: 4 × 10
 #>   trial_id score mean_score median_score std_dev n_evaluated n_errors
 #>      <int> <dbl>      <dbl>        <dbl>   <dbl>       <int>    <int>
-#> 1        1     1          1            1       0          10        0
-#> 2        2     1          1            1       0          10        0
-#> 3        3     1          1            1       0          10        0
-#> 4        4     1          1            1       0          10        0
+#> 1        1   0.9        0.9            1   0.316          10        0
+#> 2        2   0.9        0.9            1   0.316          10        0
+#> 3        3   0.9        0.9            1   0.316          10        0
+#> 4        4   0.8        0.8            1   0.422          10        0
 #> # ℹ 3 more variables: params <list>, scores <list>, yardstick <list>
 ```
 
@@ -135,7 +133,7 @@ Check the best configuration:
 ``` r
 # Best score achieved
 classifier$state$best_score
-#> [1] 1
+#> [1] 0.9
 
 # Best parameters
 classifier$state$best_params
@@ -185,18 +183,12 @@ classifier2$optimize_grid(
   ),
   .llm = chat
 )
-#> Warning: Found 2 JSON responses, using the first.
-#> Found 2 JSON responses, using the first.
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 5
-#> ✖ Cannot extract field from non-list object
 
 module_trials(classifier2)
 #> # A tibble: 1 × 7
 #>   n_trials best_trial best_score mean_score std_error best_params      trials  
 #>      <int>      <int>      <dbl>      <dbl>     <dbl> <list>           <list>  
-#> 1        4          1          1          1         0 <named list [1]> <tibble>
+#> 1        4          1        0.9        0.9         0 <named list [1]> <tibble>
 ```
 
 The `instructions_suffix` is appended to your base instructions.
@@ -217,72 +209,12 @@ classifier3$optimize_grid(
   ),
   .llm = chat
 )
-#> Warning: Failed to process item 1: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 1
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 7
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 10
-#> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 4
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 5
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 9
-#> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 3
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 5
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 7
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 9
-#> ✖ Cannot extract field from non-list object
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 2
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 5
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 6
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 9
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 10
-#> ✖ Cannot extract field from non-list object
 
 module_trials(classifier3)
 #> # A tibble: 1 × 7
 #>   n_trials best_trial best_score mean_score std_error best_params      trials  
 #>      <int>      <int>      <dbl>      <dbl>     <dbl> <list>           <list>  
-#> 1        4          1          1          1         0 <named list [2]> <tibble>
+#> 1        4          1        0.9        0.9         0 <named list [2]> <tibble>
 ```
 
 This tests all combinations: 2 temperatures × 2 instruction variants = 4
@@ -314,19 +246,9 @@ optimized <- compile_module(
   trainset = trainset,
   .llm = chat
 )
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 2
-#> ✖ Cannot extract field from non-list object
-#> Optimizing 1/3 | Score: 0.0000
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.
-#> Metric evaluation failed for row 2
-#> ✖ Cannot extract field from non-list object
-#> Optimizing 2/3 | Score: 0.0000
-#> Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.
-#> Metric evaluation failed for row 2
-#> ✖ Cannot extract field from non-list object
-#> Optimizing 3/3 | Score: 0.0000
+#> Optimizing 1/3 | Score: 0.5000
+#> Optimizing 2/3 | Score: 0.5000
+#> Optimizing 3/3 | Score: 0.5000
 ```
 
 This combines instruction optimization with few-shot example selection.
@@ -343,21 +265,16 @@ test_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
-#> Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Metric evaluation failed for row 3
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 4
-#> ✖ Cannot extract field from non-list object
+#> Processing 2/4 |  50% | ETA:  1s
+#> Processing 4/4 | 100% | ETA:  0s
+#> 
 
 test_results
 #> $mean_score
 #> [1] 1
 #> 
 #> $scores
-#> [1]  1  1 NA NA
+#> [1] 1 1 1 1
 #> 
 #> $predictions
 #> $predictions[[1]]
@@ -371,26 +288,29 @@ test_results
 #> 
 #> 
 #> $predictions[[3]]
-#> [1] NA
+#> $predictions[[3]]$sentiment
+#> [1] "neutral"
+#> 
 #> 
 #> $predictions[[4]]
-#> [1] NA
+#> $predictions[[4]]$sentiment
+#> [1] "positive"
+#> 
 #> 
 #> 
 #> $n_evaluated
-#> [1] 2
+#> [1] 4
 #> 
 #> $n_errors
-#> [1] 2
+#> [1] 0
 #> 
 #> $errors
-#> [1] "Cannot extract field from non-list object"
-#> [2] "Cannot extract field from non-list object"
+#> character(0)
 #> 
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 534.7588
+#> [1] 719.8486
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 168
@@ -402,7 +322,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-06 17:10:13 UTC"
+#> [1] "2026-01-06 23:36:49 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -410,7 +330,7 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 531.7335
+#> [1] 716.6395
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 175
@@ -422,38 +342,50 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-06 17:10:13 UTC"
+#> [1] "2026-01-06 23:36:49 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
 #> 
 #> 
 #> $metadata[[3]]
-#> $metadata[[3]]$error
-#> [1] "LLM call failed: HTTP 429 Too Many Requests."
+#> $metadata[[3]]$latency_ms
+#> [1] 727.8569
 #> 
-#> $metadata[[3]]$batch_index
-#> [1] 3
-#> 
-#> $metadata[[3]]$instructions
-#> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
+#> $metadata[[3]]$prompt_length
+#> [1] 177
 #> 
 #> $metadata[[3]]$prompt
 #> [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Average product, average price."
 #> 
+#> $metadata[[3]]$instructions
+#> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
+#> 
+#> $metadata[[3]]$timestamp
+#> [1] "2026-01-06 23:36:50 UTC"
+#> 
+#> $metadata[[3]]$batch_index
+#> [1] 3
+#> 
 #> 
 #> $metadata[[4]]
-#> $metadata[[4]]$error
-#> [1] "LLM call failed: HTTP 429 Too Many Requests."
+#> $metadata[[4]]$latency_ms
+#> [1] 724.196
 #> 
-#> $metadata[[4]]$batch_index
-#> [1] 4
+#> $metadata[[4]]$prompt_length
+#> [1] 185
+#> 
+#> $metadata[[4]]$prompt
+#> [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"
 #> 
 #> $metadata[[4]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
-#> $metadata[[4]]$prompt
-#> [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"
+#> $metadata[[4]]$timestamp
+#> [1] "2026-01-06 23:36:51 UTC"
+#> 
+#> $metadata[[4]]$batch_index
+#> [1] 4
 #> 
 #> 
 #> 
@@ -463,8 +395,8 @@ test_results
 #>   <chr>                               <chr>     <list>       <list>       <list>
 #> 1 Great value for money!              positive  <named list> <named list> <Chat>
 #> 2 Stopped working after a week.       negative  <named list> <named list> <Chat>
-#> 3 Average product, average price.     neutral   <lgl [1]>    <named list> <Chat>
-#> 4 Couldn't be happier with this purc… positive  <lgl [1]>    <named list> <Chat>
+#> 3 Average product, average price.     neutral   <named list> <named list> <Chat>
+#> 4 Couldn't be happier with this purc… positive  <named list> <named list> <Chat>
 #> 
 #> attr(,"class")
 #> [1] "dsprrr_evaluation"
@@ -482,16 +414,8 @@ baseline_results <- evaluate(
   .llm = chat
 )
 #> Processing 2/4 |  50% | ETA:  1s
-#> Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many
-#> Requests.
-#> Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many
-#> Requests.
 #> Processing 4/4 | 100% | ETA:  0s
 #> 
-#> Warning: Metric evaluation failed for row 3
-#> ✖ Cannot extract field from non-list object
-#> Warning: Metric evaluation failed for row 4
-#> ✖ Cannot extract field from non-list object
 
 cat("Baseline test accuracy:", scales::percent(baseline_results$mean_score), "\n")
 #> Baseline test accuracy: 100%
@@ -533,8 +457,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x5638136fc080>
-#> <environment: 0x56381ce6f9a8>
+#> <bytecode: 0x55f51f629230>
+#> <environment: 0x55f51f628420>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -554,8 +478,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x56381c3160a0>
-#> <environment: 0x56381d3c2640>
+#> <bytecode: 0x55f51f4d2f40>
+#> <environment: 0x55f51f4cc840>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -583,8 +507,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x563815a7e6d8>
-#> <environment: 0x5638169feff0>
+#> <bytecode: 0x55f51f33b688>
+#> <environment: 0x55f51f307538>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -599,8 +523,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x5638175fbfb8>
-#> <environment: 0x56381aa613a0>
+#> <bytecode: 0x55f51f13dae8>
+#> <environment: 0x55f51f137110>
 ```
 
 ## Step 10: Tracking Costs

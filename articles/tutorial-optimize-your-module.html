@@ -155,8 +155,7 @@ through grid search.</p>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span></span></code></pre></div>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-1-set-up-the-problem">Step 1: Set Up the Problem<a class="anchor" aria-label="anchor" href="#step-1-set-up-the-problem"></a>
@@ -217,8 +216,7 @@ more creative. Let’s find the best value:</p>
 <span>    temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span>, <span class="fl">1.0</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Found 2 JSON responses, using the first.</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-3-view-optimization-results">Step 3: View Optimization Results<a class="anchor" aria-label="anchor" href="#step-3-view-optimization-results"></a>
@@ -230,7 +228,7 @@ more creative. Let’s find the best value:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 7</span></span></span>
 <span><span class="co">#&gt;   n_trials best_trial best_score mean_score std_error best_params      trials  </span></span>
 <span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1          1          1         0 <span style="color: #949494;">&lt;named list [1]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1        0.9      0.875     0.025 <span style="color: #949494;">&lt;named list [1]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
 <p>Get the summary:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Metrics summary</span></span>
@@ -238,16 +236,16 @@ more creative. Let’s find the best value:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 10</span></span></span>
 <span><span class="co">#&gt;   trial_id score mean_score median_score std_dev n_evaluated n_errors</span></span>
 <span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        1     1          1            1       0          10        0</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>        2     1          1            1       0          10        0</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>        3     1          1            1       0          10        0</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>        4     1          1            1       0          10        0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        1   0.9        0.9            1   0.316          10        0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>        2   0.9        0.9            1   0.316          10        0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>        3   0.9        0.9            1   0.316          10        0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>        4   0.8        0.8            1   0.422          10        0</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 3 more variables: params &lt;list&gt;, scores &lt;list&gt;, yardstick &lt;list&gt;</span></span></span></code></pre></div>
 <p>Check the best configuration:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Best score achieved</span></span>
 <span><span class="va">classifier</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_score</span></span>
-<span><span class="co">#&gt; [1] 1</span></span>
+<span><span class="co">#&gt; [1] 0.9</span></span>
 <span></span>
 <span><span class="co"># Best parameters</span></span>
 <span><span class="va">classifier</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_params</span></span>
@@ -295,18 +293,12 @@ configuration:</p>
 <span>  <span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Found 2 JSON responses, using the first.</span></span>
-<span><span class="co">#&gt; Found 2 JSON responses, using the first.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 5</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 7</span></span></span>
 <span><span class="co">#&gt;   n_trials best_trial best_score mean_score std_error best_params      trials  </span></span>
 <span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1          1          1         0 <span style="color: #949494;">&lt;named list [1]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1        0.9        0.9         0 <span style="color: #949494;">&lt;named list [1]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
 <p>The <code>instructions_suffix</code> is appended to your base
 instructions.</p>
 </div>
@@ -326,72 +318,12 @@ instructions.</p>
 <span>  <span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 1: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 1</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 7</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 10</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 4</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 5</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 9</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 7: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 3</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 5</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 7</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 9</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 5: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 6: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 9: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 10: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 2</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 5</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 6</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 9</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 10</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier3</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 7</span></span></span>
 <span><span class="co">#&gt;   n_trials best_trial best_score mean_score std_error best_params      trials  </span></span>
 <span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1          1          1         0 <span style="color: #949494;">&lt;named list [2]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1        0.9        0.9         0 <span style="color: #949494;">&lt;named list [2]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
 <p>This tests all combinations: 2 temperatures × 2 instruction variants
 = 4 total configurations.</p>
 </div>
@@ -422,19 +354,9 @@ explicit variants:</p>
 <span>  trainset <span class="op">=</span> <span class="va">trainset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 2</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Optimizing 1/3 | Score: 0.0000</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.</span></span>
-<span><span class="co">#&gt; Metric evaluation failed for row 2</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Optimizing 2/3 | Score: 0.0000</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 2: LLM call failed: HTTP 429 Too Many Requests.</span></span>
-<span><span class="co">#&gt; Metric evaluation failed for row 2</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Optimizing 3/3 | Score: 0.0000</span></span></code></pre></div>
+<span><span class="co">#&gt; Optimizing 1/3 | Score: 0.5000</span></span>
+<span><span class="co">#&gt; Optimizing 2/3 | Score: 0.5000</span></span>
+<span><span class="co">#&gt; Optimizing 3/3 | Score: 0.5000</span></span></code></pre></div>
 <p>This combines instruction optimization with few-shot example
 selection.</p>
 </div>
@@ -450,21 +372,16 @@ selection.</p>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 3</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 4</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
+<span><span class="co">#&gt; Processing 2/4 |  50% | ETA:  1s</span></span>
+<span><span class="co">#&gt; Processing 4/4 | 100% | ETA:  0s</span></span>
+<span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="va">test_results</span></span>
 <span><span class="co">#&gt; $mean_score</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $scores</span></span>
-<span><span class="co">#&gt; [1]  1  1 NA NA</span></span>
+<span><span class="co">#&gt; [1] 1 1 1 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $predictions</span></span>
 <span><span class="co">#&gt; $predictions[[1]]</span></span>
@@ -478,26 +395,29 @@ selection.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $predictions[[3]]</span></span>
-<span><span class="co">#&gt; [1] NA</span></span>
+<span><span class="co">#&gt; $predictions[[3]]$sentiment</span></span>
+<span><span class="co">#&gt; [1] "neutral"</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $predictions[[4]]</span></span>
-<span><span class="co">#&gt; [1] NA</span></span>
+<span><span class="co">#&gt; $predictions[[4]]$sentiment</span></span>
+<span><span class="co">#&gt; [1] "positive"</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $n_evaluated</span></span>
-<span><span class="co">#&gt; [1] 2</span></span>
+<span><span class="co">#&gt; [1] 4</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $n_errors</span></span>
-<span><span class="co">#&gt; [1] 2</span></span>
+<span><span class="co">#&gt; [1] 0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $errors</span></span>
-<span><span class="co">#&gt; [1] "Cannot extract field from non-list object"</span></span>
-<span><span class="co">#&gt; [2] "Cannot extract field from non-list object"</span></span>
+<span><span class="co">#&gt; character(0)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata</span></span>
 <span><span class="co">#&gt; $metadata[[1]]</span></span>
 <span><span class="co">#&gt; $metadata[[1]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 534.7588</span></span>
+<span><span class="co">#&gt; [1] 719.8486</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 168</span></span>
@@ -509,7 +429,7 @@ selection.</p>
 <span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-06 17:10:13 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-06 23:36:49 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
@@ -517,7 +437,7 @@ selection.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]</span></span>
 <span><span class="co">#&gt; $metadata[[2]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 531.7335</span></span>
+<span><span class="co">#&gt; [1] 716.6395</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 175</span></span>
@@ -529,38 +449,50 @@ selection.</p>
 <span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-06 17:10:13 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-06 23:36:49 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 2</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]</span></span>
-<span><span class="co">#&gt; $metadata[[3]]$error</span></span>
-<span><span class="co">#&gt; [1] "LLM call failed: HTTP 429 Too Many Requests."</span></span>
+<span><span class="co">#&gt; $metadata[[3]]$latency_ms</span></span>
+<span><span class="co">#&gt; [1] 727.8569</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[3]]$batch_index</span></span>
-<span><span class="co">#&gt; [1] 3</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[3]]$instructions</span></span>
-<span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
+<span><span class="co">#&gt; $metadata[[3]]$prompt_length</span></span>
+<span><span class="co">#&gt; [1] 177</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]$prompt</span></span>
 <span><span class="co">#&gt; [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Average product, average price."</span></span>
 <span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $metadata[[3]]$instructions</span></span>
+<span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $metadata[[3]]$timestamp</span></span>
+<span><span class="co">#&gt; [1] "2026-01-06 23:36:50 UTC"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $metadata[[3]]$batch_index</span></span>
+<span><span class="co">#&gt; [1] 3</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]</span></span>
-<span><span class="co">#&gt; $metadata[[4]]$error</span></span>
-<span><span class="co">#&gt; [1] "LLM call failed: HTTP 429 Too Many Requests."</span></span>
+<span><span class="co">#&gt; $metadata[[4]]$latency_ms</span></span>
+<span><span class="co">#&gt; [1] 724.196</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[4]]$batch_index</span></span>
-<span><span class="co">#&gt; [1] 4</span></span>
+<span><span class="co">#&gt; $metadata[[4]]$prompt_length</span></span>
+<span><span class="co">#&gt; [1] 185</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $metadata[[4]]$prompt</span></span>
+<span><span class="co">#&gt; [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]$instructions</span></span>
 <span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[4]]$prompt</span></span>
-<span><span class="co">#&gt; [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"</span></span>
+<span><span class="co">#&gt; $metadata[[4]]$timestamp</span></span>
+<span><span class="co">#&gt; [1] "2026-01-06 23:36:51 UTC"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $metadata[[4]]$batch_index</span></span>
+<span><span class="co">#&gt; [1] 4</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
@@ -570,8 +502,8 @@ selection.</p>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                               <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;list&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Great value for money!              positive  <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Stopped working after a week.       negative  <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Average product, average price.     neutral   <span style="color: #949494;">&lt;lgl [1]&gt;</span>    <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Couldn't be happier with this purc… positive  <span style="color: #949494;">&lt;lgl [1]&gt;</span>    <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Average product, average price.     neutral   <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Couldn't be happier with this purc… positive  <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; attr(,"class")</span></span>
 <span><span class="co">#&gt; [1] "dsprrr_evaluation"</span></span></code></pre></div>
@@ -586,16 +518,8 @@ selection.</p>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; Processing 2/4 |  50% | ETA:  1s</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 3: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
-<span><span class="co">#&gt; Warning: Failed to process item 4: LLM call failed: HTTP 429 Too Many</span></span>
-<span><span class="co">#&gt; Requests.</span></span>
 <span><span class="co">#&gt; Processing 4/4 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 3</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
-<span><span class="co">#&gt; Warning: Metric evaluation failed for row 4</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Cannot extract field from non-list object</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Baseline test accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">baseline_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Baseline test accuracy: 100%</span></span>
@@ -636,8 +560,8 @@ selection.</p>
 <span><span class="co">#&gt;     f1 &lt;- 2 * precision * recall/(precision + recall)</span></span>
 <span><span class="co">#&gt;     f1</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x5638136fc080&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x56381ce6f9a8&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x55f51f629230&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x55f51f628420&gt;</span></span>
 <span></span>
 <span><span class="co"># Check if output contains a string</span></span>
 <span><span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"error"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -657,8 +581,8 @@ selection.</p>
 <span><span class="co">#&gt;         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)</span></span>
 <span><span class="co">#&gt;     }</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x56381c3160a0&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x56381d3c2640&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x55f51f4d2f40&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x55f51f4cc840&gt;</span></span>
 <span></span>
 <span><span class="co"># Custom logic</span></span>
 <span><span class="fu"><a href="../reference/metric_custom.html">metric_custom</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
@@ -686,8 +610,8 @@ selection.</p>
 <span><span class="co">#&gt;             x = e$message), parent = e)</span></span>
 <span><span class="co">#&gt;     })</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x563815a7e6d8&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x5638169feff0&gt;</span></span>
+<span><span class="co">#&gt; &lt;bytecode: 0x55f51f33b688&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x55f51f307538&gt;</span></span>
 <span></span>
 <span><span class="co"># Threshold wrapper</span></span>
 <span><span class="fu"><a href="../reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
@@ -702,8 +626,8 @@ selection.</p>
 <span><span class="co">#&gt;         `&lt;=` = score &lt;= threshold)</span></span>
 <span><span class="co">#&gt;     result</span></span>
 <span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x5638175fbfb8&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x56381aa613a0&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;bytecode: 0x55f51f13dae8&gt;</span></span>
+<span><span class="co">#&gt; &lt;environment: 0x55f51f137110&gt;</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-10-tracking-costs">Step 10: Tracking Costs<a class="anchor" aria-label="anchor" href="#step-10-tracking-costs"></a>
