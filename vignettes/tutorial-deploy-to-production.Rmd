@@ -343,12 +343,14 @@ Congratulations! You've completed the core tutorial sequence. You now know how t
 ### Advanced Tutorials
 
 Build complete applications:
+
 - **[Text Adventure Game](text-adventure.html)** — Interactive AI with state management
 - **[Generate llms.txt](llms-txt.html)** — Multi-stage documentation pipeline
 
 ### How-To Guides
 
 Solve specific problems:
+
 - **[Build RAG Pipelines](rag-workflows.html)** — Retrieval-augmented generation
 - **[Evaluate with Vitals](vitals-integration.html)** — Rigorous evaluation
 - **[Production Orchestration](orchestration.html)** — targets and Quarto integration
@@ -356,5 +358,6 @@ Solve specific problems:
 ### Concepts
 
 Understand the "why":
+
 - **[The DSPy Philosophy](concepts-dspy-philosophy.html)** — Programs, not prompts
 - **[How Optimization Works](concepts-optimization-theory.html)** — Teleprompter theory

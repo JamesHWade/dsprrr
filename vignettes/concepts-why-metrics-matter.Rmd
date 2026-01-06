@@ -155,6 +155,7 @@ result$n_errors      # 0
 ```
 
 This single function call:
+
 1. Runs your module on every example
 2. Applies your metric to each prediction
 3. Aggregates results into actionable statistics
@@ -357,6 +358,7 @@ Metric-driven development takes more upfront effort:
 - Maintaining train/val/test splits
 
 But it pays off:
+
 - **Confidence**: You know when things work
 - **Progress**: You can measure improvement
 - **Debugging**: You can identify failure modes

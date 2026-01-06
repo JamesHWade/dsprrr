@@ -85,6 +85,7 @@ mod <- module(signature("text -> sentiment"), type = "predict")
 ```
 
 Modules are:
+
 - **Stateful**: They remember their configuration, demos, and traces
 - **Composable**: You can chain modules together
 - **Optimizable**: Their parameters can be tuned automatically
@@ -119,6 +120,7 @@ The optimizer:
 - Keeps the best one
 
 This works because:
+
 1. LLMs are sensitive to prompt wording (small changes → big effects)
 2. The search space is navigable (parameters are mostly continuous)
 3. Evaluation is cheap compared to training
@@ -218,6 +220,7 @@ dsprrr is this shift for LLM applications in R.
 If you accept this philosophy, your workflow changes:
 
 **Before (prompt engineering)**:
+
 1. Write prompt
 2. Try examples manually
 3. Tweak wording
@@ -225,6 +228,7 @@ If you accept this philosophy, your workflow changes:
 5. Hope it keeps working
 
 **After (prompt programming)**:
+
 1. Define signature
 2. Create labeled dataset
 3. Define metric

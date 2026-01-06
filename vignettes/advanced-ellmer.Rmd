@@ -233,6 +233,7 @@ tryCatch(
 ## Summary
 
 Key integration points with ellmer:
+
 1. **Parallel processing**: Choose between mirai (multi-process) or ellmer native (async HTTP)
 2. **Tool integration**: Convert modules to ellmer tools with `as_ellmer_tool()`
 3. **Cost tracking**: Use `get_cost()`, `get_tokens()`, and `session_cost()` for usage tracking

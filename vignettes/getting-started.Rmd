@@ -36,6 +36,7 @@ That one-liner handles prompt construction, structured output parsing, and type 
 ### New to dsprrr?
 
 Start with the **tutorial sequence**—hands-on lessons that build on each other:
+
 1. [Your First LLM Call](tutorial-hello-world.html) — Make structured calls with `dsp()` (10 min)
 2. [Building a Classifier](tutorial-build-classifier.html) — Create reusable modules (20 min)
 3. [Extracting Structured Data](tutorial-structured-outputs.html) — Multi-field outputs (25 min)
@@ -46,12 +47,14 @@ Start with the **tutorial sequence**—hands-on lessons that build on each other
 ### Already know the basics?
 
 Jump to what you need:
+
 - **[Quick Reference](cheatsheet.html)** — Signature syntax, module types, metrics
 - **[Troubleshooting](troubleshooting.html)** — Fix common issues
 
 ### Want to understand the "why"?
 
 Read the conceptual guides:
+
 - **[The DSPy Philosophy](concepts-dspy-philosophy.html)** — Programs, not prompts
 - **[Understanding Signatures & Modules](concepts-signatures-modules.html)** — Why S7 and R6
 - **[How Optimization Works](concepts-optimization-theory.html)** — Teleprompter theory
@@ -59,6 +62,7 @@ Read the conceptual guides:
 ### Building something specific?
 
 Check the how-to guides:
+
 - **[Compile & Optimize](compilation-optimization.html)** — Full optimization workflow
 - **[Build RAG Pipelines](rag-workflows.html)** — Retrieval-augmented generation
 - **[Deploy to Production](orchestration.html)** — pins, targets, and Quarto

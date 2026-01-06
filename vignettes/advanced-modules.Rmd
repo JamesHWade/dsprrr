@@ -37,6 +37,7 @@ library(ellmer)
 ## Overview
 
 dsprrr provides advanced module types inspired by [DSPy](https://dspy.ai/) that implement sophisticated reasoning patterns. These modules go beyond simple prompt-response to enable:
+
 - **Step-by-step reasoning** with ChainOfThought
 - **Multiple attempts** with BestOfN
 - **Iterative refinement** with Refine
@@ -78,6 +79,7 @@ result$reasoning
 result$solution
 #> "60 miles per hour"
 ```
+
 ### Signature Transforms
 
 Under the hood, `chain_of_thought()` uses `with_reasoning()` to transform the signature. You can use this directly for more control:
@@ -670,6 +672,7 @@ compiled <- compile(tp, wrapper, trainset)
 ### Token Usage
 
 Advanced modules use more tokens than simple prediction:
+
 - **ChainOfThought**: ~1.5-2x tokens (reasoning + answer)
 - **BestOfN(N=3)**: Up to 3x tokens (worst case, no early stopping)
 - **Refine(N=3)**: Up to 3x tokens plus feedback overhead
