@@ -56,7 +56,7 @@ library(dsprrr)
 library(ellmer)
 library(tibble)
 
-chat <- chat_openai()
+chat <- chat_openai(model = "gpt-5-mini")
 ```
 
 ## Step 1: Set Up the Problem
