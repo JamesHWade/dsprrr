@@ -7,52 +7,58 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8c9111881661e7-ORD
+      cf-ray: 9b8f9358bac15d77-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:25 GMT
+      date: Mon, 05 Jan 2026 02:34:17 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '573'
+      openai-processing-ms: '1545'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=1nVGhEzS.2Fm5ZrCopp5.rq6zzR2dEYHY_dnB8CVm9U-1767548905-1.0.1.1-W4zkdnR_ziKP6PMmKdqaKm4.NoV6JBgBWAES6VKsfpiFEwi39fgi_RRgGkRmU9SZzExAFnFWieOpOH9oMdvyNkixEt8c.nDXFEOmLc9cwh8;
-        path=/; expires=Sun, 04-Jan-26 18:18:25 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=phR3eYFl8w24yGBjZqXbg4iNhzVBEJzizxowSwEkU98-1767580457-1.0.1.1-S.FYE8alfrWVOTWcZLuVAuAL_VNglsczaYms6Q2MONNROHkDJkqO0urGb1gEC9EkykR0u8Z6YIX39JUJZ_t9THYPIAU4AfZylkh1FjmDZQI;
+        path=/; expires=Mon, 05-Jan-26 03:04:17 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=UBE0T76V9VffuScBMyMIKvHlDN0EyGZmAN4LzNC..J8-1767548905856-0.0.1.1-604800000;
+      - _cfuvid=G8LMn8YvfD7RouQOPJev5w6Uoz2JMpsELk_SIlwzTz0-1767580457411-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '576'
+      x-envoy-upstream-service-time: '1550'
       x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-limit-tokens: '500000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-remaining-tokens: '500000'
       x-ratelimit-reset-requests: 120ms
       x-ratelimit-reset-tokens: 0s
-      x-request-id: req_9fe2000a19cb475bb5a880397bb7b6ea
+      x-request-id: req_7864489b015642df8ee24b64e27303d6
     body:
       string: |-
         {
-          "id": "resp_0a5f23b0b44c3b2401695aa7e94a48819786f9ca5d91f89e32",
+          "id": "resp_073b54906f53fc2801695b2327e438819c85db19cd2e8d7f62",
           "object": "response",
-          "created_at": 1767548905,
+          "created_at": 1767580455,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767548905,
+          "completed_at": 1767580457,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-4.1-2025-04-14",
+          "model": "gpt-5-mini-2025-08-07",
           "output": [
             {
-              "id": "msg_0a5f23b0b44c3b2401695aa7e9c0288197a4aab19e873d890b",
+              "id": "rs_073b54906f53fc2801695b23283738819c954e7e0a7714dedc",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyMpcpHqYl5_bqkEaZxPc6eQBR7yO5uC8OFiPepzPbiEEWjEDfnwQiQGZDbNxWw2-NXK577RlRGZrrrs8glKo9O_34MZ5iKQ4LVknexGF9tlHjinWLB88eXMDedzwwIfyiDmOe9QdFFhtLQpVUjJ7ABcMdJn9esa41ZQlgBUDSpcW4EDIRu3XGAJ9DKXKOw9i1qMj9m4ulEU70nzFpO-msX2YP7EdYmTS11YCW7hO5SQE1tOmMH-ZhlBfXNL1cTGCDW2YhvIHiEbqIMeecyZGVunYuFl1HuCT0AwIHGXBm6ed4Q5SpHyDHt1wIv8PSf77tHIx5JVNXB4--0h1SKDruK23G2gODurwYmvu3ZWzP3MJEnR7kzbg2mwkZpFuuRHrZRXyPFj1CilNZQOUotAvjSje7wJ0aWjv0VM9Qhy9EA3PJg7gA7aWMNtSPZQGPOmMSOg-vdkK-uFaKN6518rY6MWXhO5zhZpDnx1AcbLIYfftpmLx3PM_dAI07f2syg9Qh721boH3wVHKMcVBTd8lDElfk_4FSiPSmq929MubTEBccabwjvli8rbRUfhiGkjJrjjb1OG-Y7-RVd-Cj-_NkyiCL_99oblLTHD0qTwemnhyywS8x5-0F40XL3-kbk8X4i8KekzK7wy4d0797vJzE2ARAv8MU2OEsgfuiJzBgBM2vCwPFXqJWisvRVufy7hTTZ0hX4wJAK_zBHKk3Jjbp2LrbjskJeKiFzKS-A84USyARf33coPWruE9jAvEDDNgmJQ0O48hWaCoyPn-CoMWJB11EScmlZWaxLjBcPVUDsUL2QMR7L2QVFlR8Ago9nh7CEy5YZmlr3qKmGlK_HZWw-AwSp99sIUpaicMueHIYlQXly3gmi-yt8RoqLhfKuYAe8qy66DNB6qErKbmvY9ojf9dkzMlCifPRkvAkPYEQxA4dupsjH8Pak9Oxr3R3CCGooeuGcyKdgSyQAMwBFtmw5pnWOOw3551LDMEVpFZFUzosrl1u87q24mAIixSwQtvSMchxIh5BBPOBu3zJz4xLePpvXLbljiVw5IBPU3lKNBeJbbU62hKhkqM78f0ytLpeQ62r-yuwgQFEBiSXABIFzmSFMqSIL00lr1aBJ43jmaA2UD80TTW1Z8Opy6C_JyUYK7JTlfc3xPU0TsobE9DVynLoUUSP7ZOfWQtYARN_-OBmZr7-2OLEwOGoN057idL-jWcKKjiARuOVkMSb-7gC_4eUf72CfagsGrdHwJwkvKAMn0u2zn1wNcDhkUnB8ybj-XkZBC_kx7ykVZol1gmsqpZq_a2TejCYk9CUYbHp4fdYE=",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b23292c6c819c814e47caea62e9ec",
               "type": "message",
               "status": "completed",
               "content": [
@@ -71,7 +77,7 @@ http_interactions:
           "prompt_cache_key": null,
           "prompt_cache_retention": null,
           "reasoning": {
-            "effort": null,
+            "effort": "medium",
             "summary": null
           },
           "safety_identifier": null,
@@ -113,58 +119,20 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 3536,
+            "input_tokens": 3893,
             "input_tokens_details": {
               "cached_tokens": 3328
             },
-            "output_tokens": 6,
+            "output_tokens": 79,
             "output_tokens_details": {
-              "reasoning_tokens": 0
+              "reasoning_tokens": 64
             },
-            "total_tokens": 3542
+            "total_tokens": 3972
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-04 17:48:25
-- request:
-    method: POST
-    uri: https://api.openai.com/v1/responses
-  response:
-    status: 429
-    headers:
-      alt-svc: h3=":443"; ma=86400
-      cf-cache-status: DYNAMIC
-      cf-ray: 9b8c91332cfe61e7-ORD
-      content-length: '351'
-      content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:30 GMT
-      openai-organization: james-wade-gxavj5
-      openai-processing-ms: '142'
-      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
-      openai-version: '2020-10-01'
-      server: cloudflare
-      set-cookie:
-      - __cf_bm=q2JUByeIsaphv7qQfEmGdu261zWeJdZobr1dXae0vvI-1767548910-1.0.1.1-97XO6OOZQDJ4Iqn64EuuOsgkItnXrW2gUPe.OcsMCm6g7zHVhM_h5J29QCBk6rPL1J9LzH9N2IaLhBllpFskDnTfGSZWSQKqabh47kd7g3o;
-        path=/; expires=Sun, 04-Jan-26 18:18:30 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=DalrKXYS5i5I01L5kMZM.61NTTcGZDshKMoB3yUaMBo-1767548910788-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '149'
-      x-request-id: req_2cc1e935d0474e4bb06e6ed0fe77943d
-    body:
-      string: |-
-        {
-          "error": {
-            "message": "Rate limit reached for gpt-4.1 in organization org-mShKuFJrdihlXnXKm8kzf1PX on tokens per min (TPM): Limit 30000, Used 26903, Requested 3642. Please try again in 1.09s. Visit https://platform.openai.com/account/rate-limits to learn more.",
-            "type": "tokens",
-            "param": null,
-            "code": "rate_limit_exceeded"
-          }
-        }
-  recorded_at: 2026-01-04 17:48:30
+  recorded_at: 2026-01-05 02:34:17
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
@@ -173,52 +141,192 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8c914678cf61e7-ORD
+      cf-ray: 9b8f936518485d77-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:34 GMT
+      date: Mon, 05 Jan 2026 02:34:22 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '820'
+      openai-processing-ms: '3239'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=IrKwR0FCHeNUegjJR_bLIu718EKWXcOjD8ZSxTH9OLU-1767548914-1.0.1.1-hV2R9n.la7wQYWptXkb0Q3WsbL1hvewr3V8P2.ick7lvqgv75t_2kVtCEfpHnN4U9colDjlKEvqPQH1A39Lsk29pmF68qUZGhHHueh0XiNg;
-        path=/; expires=Sun, 04-Jan-26 18:18:34 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=by2R_etq3mwnskTaOglWJH4k2l3ltk0V3GUDwLO7V4w-1767580462-1.0.1.1-2rt2iLoThQfmb3njrA2f55KqKHIJUpD7wGjrKLl4QKXmJEUmBv8wsIt3DiiHdYlJI450UbWhKG95az92HnBmzH9XMUVTazIKXysSnU49j1s;
+        path=/; expires=Mon, 05-Jan-26 03:04:22 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=B5aRlV3zBqKbP8OTTBQBeWjPnHpqIDe6_3VrtjfRke8-1767548914569-0.0.1.1-604800000;
+      - _cfuvid=rTccsl__IDZJOHm5xl5a2EmcYc0hVNB4NiqkQkP39bM-1767580462595-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '823'
+      x-envoy-upstream-service-time: '4700'
       x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-limit-tokens: '500000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-remaining-tokens: '500000'
       x-ratelimit-reset-requests: 120ms
       x-ratelimit-reset-tokens: 0s
-      x-request-id: req_e3c8e4b1d89e4a7c816a0606669733b8
+      x-request-id: req_7d3861d98acb445abafc13389d206a66
     body:
       string: |-
         {
-          "id": "resp_09ab02250558375201695aa7f1c05881919c81290e02d44283",
+          "id": "resp_073b54906f53fc2801695b232b7e1c819c9360507c44a84113",
           "object": "response",
-          "created_at": 1767548913,
+          "created_at": 1767580459,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767548914,
+          "completed_at": 1767580462,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-4.1-2025-04-14",
+          "model": "gpt-5-mini-2025-08-07",
           "output": [
             {
-              "id": "msg_09ab02250558375201695aa7f274808191a13a0bad5a0d9853",
+              "id": "rs_073b54906f53fc2801695b232cb8c4819c88fc69052cf99bdd",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyMuj5ZtZzGVjnVObPtMOzuK5zC_O4P27rkv9_gzsCZ2JIRntC3zte-CMXEHQc8F0_lXKZLasQCo5E6_yBCj926lDk-QLNwwonh8gMHVDrdDeHBp3SN72Hv8r4nnPpxNUDWP_OQnRCyj2dYYlO1PZofr9yde7tDUsLGibRD1ouuWG3IATQ1cu-VnSObLILcdapemDh3VTn4iO0iySsWaXcvnqx07HoPRQ58TxzHMcIv8LxvmNEneeWDXHRKLgazlXodQXt0G01CvYp-fhTxkR7H4BSEG3_fz6r7AGvOTj1k-BbbsRDgm_xK5_lObbgqpomqBWtwxO3V6ujXmup6jMW88yWsHsiJU980QwlEj2jfboY4p8npEDzZu3-b1NLTlfrrhRuYm_7amwqlB7KOV6cVGp7eahVYDnXC2L_habfmKVqdS90nLMTOlOD0o5S7FWcIR6XUdUd0gD8cUVo3E5mEixWbeHJxnT8pgSTCl4otXzCzptxdjg6hoq2hKOt0YF08rVaYKfI2vKCmBCAiJ2N6yai8o6F9gKq9P80lJkfMXQxG-zFuucdLxkdMEeHZofXXqJEGZspHd1rRxUZtBQbwfYNJhdmN5XjvvLFdc1cH1SgzU3LqznlIEvNZ6qiLYOUaHYM0imdcOlNNNvNcK0pKbpCR0pRhcYqV6EcR1JGHYzJqCX7nQgu0JjxQq_BcvaVuvNneaoixYKczlOOfhXHnu-GkWoCegA1bpt3x68Nv270yhlPuf9iojZioQlwkBYizzWAyfcGRfbcB-BkIlhAf1o_ofrgrTwu0Tnq0B2YroQpFrLENfINN5JlAEQPww2DNVB3F5-uHCPkkERCt2HJz_wtM6ha67a_GyJh1Q4vm83m5edoT08H9UvytsgP1KuCr2_y3834eBENWn8fcCPZbhpMkSfDyqhWLQY1YkrQnWtP9ZxCQWN4U1GI5AeV5IkCw3xaoj4IrOVy5HB3-_mlWytIg73SIabzvd7Jr4JVN0UiTc3bEpgE05kNjmWANPejx4uvqsZpDJ4WZByaNivWnW_PtO2c2G81NbBdI7cXj_2FTWogQb1noziW3QDl8KI-aQWPnzfc9KsNeUbybqEbO_tN5P4HY76ZluJ4xeZdjFrKfBQTOSxKghfHERav2wU-PkS0YvIt5ho1F-WSC07XnjUqpuySg8NvRZG5TjYa7bqiI3db_T0h1xcZpWSRc0q74kU_2E_5K5b9NiIQKCcXfa_nYMd34E-vCJhWg7HkK9eZ9Y_k60YxNofDux-I9emwrziiyQ0BhS-A46oFwyT-EPmEwW0_nU6txXX7iHVUN2Etc=",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b232e0cf0819c86b6279780d139be",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"billing\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "billing",
+                      "technical",
+                      "shipping",
+                      "general"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 3982,
+            "input_tokens_details": {
+              "cached_tokens": 2944
+            },
+            "output_tokens": 79,
+            "output_tokens_details": {
+              "reasoning_tokens": 64
+            },
+            "total_tokens": 4061
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-05 02:34:22
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8f93865fd25d77-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Mon, 05 Jan 2026 02:34:25 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2007'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=M_sGGnOAu5o4xSBnl9jBuRSzA7_J4bHPCySjCizc94I-1767580465-1.0.1.1-E_YMt5GIUA8bs20BHsHX0A1g8L0s6j3Z.Z2iBwPVIRv9m5P8Xd.VNgMfcR0fZM_uPCudhuvf24THRplCpkN00ceBAFB3lUIXAYZCXFiu0Lo;
+        path=/; expires=Mon, 05-Jan-26 03:04:25 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=MLrNhnRVI2ZCY6CNnftElYYiLfEaMsYApUvN7SCD7.E-1767580465191-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2010'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_6b47258d932b4ce48908955222861515
+    body:
+      string: |-
+        {
+          "id": "resp_073b54906f53fc2801695b232f32d8819cb1d430f78c393fa9",
+          "object": "response",
+          "created_at": 1767580463,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767580465,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_073b54906f53fc2801695b232f846c819c896bdfe6a59fac08",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyMxvPQW8TkoPYbxkysHfWLUiRmLVwhsK-cgA86yMAoX23N222DQEqQ_YOW7fiiWkbtcKi1eyjMj5TgWFsIswzjLhPAOUv_4LwlZWKXNw5WZWRtMLH-hg6b-X0OPYeFW8CsZVWo6HYoMv5Aygg5R7OPy-VkHswhdFcTINNEW-jmFPwQJ64Oiw4G8wrxcXv60QAEZc1JtCcH7-okYy6DMleVesXq0bAKVDwp_K4EHmO-zHD_ppOuI2sKyGSCfETXzYEvlZLxa0uDoZFgg3nEaxGMuhc-bpR-JOXdSiR6f0NWMLniMog-MwZbz6Dts-PRbc1FAipj23Z6WyCqr5lqjqXlHVNBNV6oIVSA46fsUfQjbMRVQKQoNSODJLRcsAinRf4g_VKQMhTsxOYtHi6x6-0L6n_B4hOerfWlcYBoOtR1kPOalQsD451YOQRtlWct6bqywBAoZ_mrxY4wg3sPUBkAH61xtYKVyXxPlGoUx1tWMQSI0uY8goCJGWhNnWnFl9VG1wqaHz7o5aqbb4v8fZrFrkmPQ5g2tLe7bt2zaB7hYIoV-cw_Vd1wpFB9tJ4S-6lOFGK3dcjpdLMWDiZj5O2_HX6okiW2XIaPpEdA_2NBqHqIxGfpG1WmxAV7rSKo2sEcQGmuL5vqJT41qtk2pqe29MIT3M08i0oYhwHHfM-O0d3WWsmp89E_OtziWvglOMuL6PTmIY6SlNfVdthaXFkoJdOD9qUjMq0MRTI7f-_-u4d8U70Vn46sWKd_3nIfGaJWGtFbxlA-EKKBjhBrq1d1-2_ScgmHCYKlnHSdRptcxxY-CjtUkzdeoY6AqecmB0_aGJdIXKj-QZznr5rx3kBQJT0pitfwtWgztu1JdCoKu0CaXoslQrXS2vS-bkLpFWJRajZSA2rDSw8qhKEUX_BH_pat4sK2MjEo3Lz_hu35vKhwohIQCPui2e0Qy38RkOyhx4lCMZaxB5NeE2ujxiQcSDWmvZPuclQ2vJutmrFfc42PH2MfZxpAWxXs6gVWeQ0V1-CZkB-9FgZVpfMThfbdffKZKAvete52armT8twaqynRJ4AG9QJUcTVblmvMnVnovRKKQ4m4M6HUyHUTgQeaInxzKVDB53rM78Ep2sE42StvGgcyQQG7n5ACwugqJuQSCiGt040pvlhisZnI_xvl2Hm0CCCQzRL_C_j0ZiZ9VwZQh1CmH-DrP2MH2MQFeFOb6eWEcyBK7QJAieDrut3OlqFxZ1afJGhFVNrcn-73VTAJx4A1nPpUXFy1YuNMAchfsDh3HSAhdvuyGqdMxoZy5_4o1RQOmcjhHWprGbsLfCnaXc0ROZedWizLmDGv0zGEbCZhLnvfMbrBZSLXX7g7QKOs2SFJ32yl5K5wMYrw3P2yloL4e4_ehQ7GcnqMpsqcIwvgAR7ax0-NHUh8Uo9-Kv8QSfcDlu-wgPz0e5MJ5HA2caDb_yb5Jve5gArrT29IFyhEe1BEshi7vwMGYpo4GUaOTQ4Oek6OoYRf6B0bmrzOT5K-btM_6iK6mRAdo-DVGZvaWJ5AY9nDdRtrJ3FN0nA==",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b2330ebf8819c869464dbbd0212f2",
               "type": "message",
               "status": "completed",
               "content": [
@@ -237,7 +345,7 @@ http_interactions:
           "prompt_cache_key": null,
           "prompt_cache_retention": null,
           "reasoning": {
-            "effort": null,
+            "effort": "medium",
             "summary": null
           },
           "safety_identifier": null,
@@ -279,20 +387,20 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 3622,
+            "input_tokens": 4070,
             "input_tokens_details": {
-              "cached_tokens": 3456
+              "cached_tokens": 3584
             },
-            "output_tokens": 6,
+            "output_tokens": 79,
             "output_tokens_details": {
-              "reasoning_tokens": 0
+              "reasoning_tokens": 64
             },
-            "total_tokens": 3628
+            "total_tokens": 4149
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-04 17:48:34
+  recorded_at: 2026-01-05 02:34:25
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
@@ -301,52 +409,58 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8c9172ce8461e7-ORD
+      cf-ray: 9b8f9395ce3f5d77-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:41 GMT
+      date: Mon, 05 Jan 2026 02:34:26 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '475'
+      openai-processing-ms: '1216'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=6e6bpnan26xrc4eJJR9aqZNFEsmrkyfiA.nuoTDobcU-1767548921-1.0.1.1-Z4OcdyXSDwgYuj1UlVXp64I_9hbJmyGIKqLXSOBhUGaSF60YqfTm3bZOO_F.nD.I4WTHhr8SdCZbecwgzLEOTc.V4JticrKyZ4b4vlAYJpw;
-        path=/; expires=Sun, 04-Jan-26 18:18:41 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=jaAh.xnfIIEC9uER3ShjqKluoXrIusVVihFbyJBpDc8-1767580466-1.0.1.1-NkIGOW13HgXbsy.69D9jRbj4AX1WX4rGTjchzn6es.nAaPkcTmrCBqVjBk92IZzfh1MpBnY1ZWs5nRwvgXcOrhtGEov_EXYODY93FA0PzN0;
+        path=/; expires=Mon, 05-Jan-26 03:04:26 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=3A4IoqEcX7Ptve_vposVxFG_Kxxjg2OquRZoEk4sDVM-1767548921305-0.0.1.1-604800000;
+      - _cfuvid=0SyD8MRhGi5MgZnpvATHYvSpFWDLcOX41z_ND64TwdE-1767580466877-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '479'
+      x-envoy-upstream-service-time: '1220'
       x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-limit-tokens: '500000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-remaining-tokens: '500000'
       x-ratelimit-reset-requests: 120ms
       x-ratelimit-reset-tokens: 0s
-      x-request-id: req_46588fa186d54b059b0a2aa904911250
+      x-request-id: req_ddb7608ed5a84f62a9ede58f36a78aee
     body:
       string: |-
         {
-          "id": "resp_0becda75a92343fd01695aa7f8d2ac819085753b878b2d8563",
+          "id": "resp_073b54906f53fc2801695b2331aa08819cb85a761177865331",
           "object": "response",
-          "created_at": 1767548920,
+          "created_at": 1767580465,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767548921,
+          "completed_at": 1767580466,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-4.1-2025-04-14",
+          "model": "gpt-5-mini-2025-08-07",
           "output": [
             {
-              "id": "msg_0becda75a92343fd01695aa7f932d48190b739d02c6c9804d9",
+              "id": "rs_073b54906f53fc2801695b2331fb0c819cb760bc8bc612c65a",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyMyH7_0E3kzyyAloNX7vP29bjalNxjl9hGS0bCwpQ-Uow-7ImL_zAum1EsNIWV4Mazw6oTNSVANLDqYccXMzw638ThXAMP1AXy2fA5EdEYG6gX7wiclaRK06PrOUhBFt_4yaqVY7sDjTkCpgZM2CR8BbCSFX2cqMjErpDvjbwkrZWaj4T1c64p7hZcwqNdDXwRxCoZISneHPrT05PzL-iz6p0SRGFvAdlCQT2uFCXzugRETmaVaQR2wTEUnXt-rqsxb4ysUAWG5zAEeaNVLGfPaLhmrTPF7_hZLG5YLCymQsJKXqbPNKatAWctjXp9kjy7OWtuY8mitcDwgfjEIyYi1qHHE0he1nzt97w9YSoRaihADzoKpb45xOiITOJQe2jDWxM6vy1v2-_APl6rYuiUTAG9T4Ooh2YGq0xZCvVuClKWOXrel5U5VriuorKZ0NPSzgMiPUKOraBAAaXQ8kj0M4qrlTvB1-DUZ3As9KZXUtXBayY_ZF1fS_pfX3RFI1DtU3-_M2oZhAXzoPIy7Us3p26LxRFsBa3TPEQfzc_MdWUOkVITV2QCY1BQSwV_d6M0uU-TwIlbEeSlVbHk6Hos2iODJ3PZetrU2x5OSNfk7j5B_4OkASSFJn-H6OMFjDvUMLH_ny0gEPZ8YT7EYEq7yyLPfN9v43vI5zlim5v5L2vn4WlQjU825SaFCVzyqadRncMxXwzIBdECy1LkJwPAlrdOuCWBdctNjkqywLfDKtw0N4vd2FiZ4quX1AzF3UambDgXuyDZPLk-gicBEiDB-yC0VSiINljUKU2GtzVPp0izNKNOqQjIO8O6sbDs_De-jHj8kA1dKrCiLi7DYVodNEaTqx3Je93-aWi1ayYBKdrNi3XV03wW-Iv8IODftpUBNZux7gltBMLJl2-sVzJ5nD_z-SzFVOCg0DaQrVdtk8HyFzHeJyVdqLfkv6GmWx1CjVYXwGGax4mKDRfmAT8itA5sPFjfgLqJYfoBMojIUNoPuItz271cXbFb9xQeZTQDJ7In5G2E2oj2b0AjBGn3nwF4a4xQR3_CaluSYQ8QMQUlllq5ivlB3qVVkmHRbSmNHD11LrGEyNkkdkZ9yiqiRUYfODvxIiG9_VmCymiJAAbsF2yHwKcVgJPFJyyG-Zb_myzr5x5dADfRC4qhoLZm3hw==",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b2332a298819c8c410f32454b4742",
               "type": "message",
               "status": "completed",
               "content": [
@@ -365,7 +479,7 @@ http_interactions:
           "prompt_cache_key": null,
           "prompt_cache_retention": null,
           "reasoning": {
-            "effort": null,
+            "effort": "medium",
             "summary": null
           },
           "safety_identifier": null,
@@ -407,93 +521,20 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 3707,
+            "input_tokens": 4157,
             "input_tokens_details": {
-              "cached_tokens": 3328
+              "cached_tokens": 3840
             },
-            "output_tokens": 6,
+            "output_tokens": 15,
             "output_tokens_details": {
               "reasoning_tokens": 0
             },
-            "total_tokens": 3713
+            "total_tokens": 4172
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-04 17:48:41
-- request:
-    method: POST
-    uri: https://api.openai.com/v1/responses
-  response:
-    status: 429
-    headers:
-      alt-svc: h3=":443"; ma=86400
-      cf-cache-status: DYNAMIC
-      cf-ray: 9b8c918f4ca161e7-ORD
-      content-length: '352'
-      content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:45 GMT
-      openai-organization: james-wade-gxavj5
-      openai-processing-ms: '135'
-      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
-      openai-version: '2020-10-01'
-      server: cloudflare
-      set-cookie:
-      - __cf_bm=eiDIP3zig3SgDckz5xHKprC86fzQaNECElLgvDSbJ30-1767548925-1.0.1.1-wZKOAejv5VumFd0m4zSnhAqgAjqrJM6Rkjj0cSLuRs72HtgAK2P6eEwz408ytXeqlrikbm01aIHn6VAxmdB0nP1bNb9wJEleR69tC305Rsg;
-        path=/; expires=Sun, 04-Jan-26 18:18:45 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=3NPtTqjQEane5j.USffgyQl6Cy_uXrBXtcGi4HhqEz0-1767548925529-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '136'
-      x-request-id: req_dab8b772c5c448f7ba5d270b5d8bdf8c
-    body:
-      string: |-
-        {
-          "error": {
-            "message": "Rate limit reached for gpt-4.1 in organization org-mShKuFJrdihlXnXKm8kzf1PX on tokens per min (TPM): Limit 30000, Used 26902, Requested 3811. Please try again in 1.426s. Visit https://platform.openai.com/account/rate-limits to learn more.",
-            "type": "tokens",
-            "param": null,
-            "code": "rate_limit_exceeded"
-          }
-        }
-  recorded_at: 2026-01-04 17:48:45
-- request:
-    method: POST
-    uri: https://api.openai.com/v1/responses
-  response:
-    status: 500
-    headers:
-      alt-svc: h3=":443"; ma=86400
-      cf-cache-status: DYNAMIC
-      cf-ray: 9b8c9194a9f561e7-ORD
-      content-length: '369'
-      content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:49 GMT
-      openai-processing-ms: '3145'
-      server: cloudflare
-      set-cookie:
-      - __cf_bm=NTl7HXdISpducR5MRWi4eNg1MRIpcxHmXM5526DsP6c-1767548929-1.0.1.1-UVpt70Vb0YvTCYQRRLOvm5Y1E.3Lpw3cmE3RE1mmJwZtr4YYzjyELKge2FmQQx646cSrMi_WfoIEWLI_2cO5X2PZfI1hW3f4kzYCLWBXRAs;
-        path=/; expires=Sun, 04-Jan-26 18:18:49 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=7KKWvd.4NSIcA.c4MYgXUV_UdmErJFQdfebGzCNKANY-1767548929466-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '3224'
-      x-request-id: req_af574f879d2c4c39b405e3ce9e66cf49
-    body:
-      string: |-
-        {
-          "error": {
-            "message": "The server had an error processing your request. Sorry about that! You can retry your request, or contact us through our help center at help.openai.com if you keep seeing this error. (Please include the request ID req_af574f879d2c4c39b405e3ce9e66cf49 in your email.)",
-            "type": "server_error",
-            "param": null,
-            "code": null
-          }
-        }
-  recorded_at: 2026-01-04 17:48:49
+  recorded_at: 2026-01-05 02:34:26
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
@@ -502,52 +543,58 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8c91ad6b2a61e7-ORD
+      cf-ray: 9b8f93a07cdf5d77-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:50 GMT
+      date: Mon, 05 Jan 2026 02:34:29 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '641'
+      openai-processing-ms: '2028'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=TBIeYOSlW5jKX2QofawHzhbWmch0bU2OI7TWPo.IAuQ-1767548930-1.0.1.1-uYY3qXS2ArY49uS90mW5FGJnLekkV0jT4GH9.QJA5aSGZVSf2j8zLZteCPYmO9ni7Oc6lSBHMIG1pX5q9mQ8hsSKWj4w.z2Cn7_K4Bmg57U;
-        path=/; expires=Sun, 04-Jan-26 18:18:50 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=.1jQRmGHX.SU5cNwEfC8_zRkXAMi.7wtkMlnY.n9QBk-1767580469-1.0.1.1-IZYaOFItgVeuFt9u6UW5BfyEXZ4qAy9BAICSdS5QOUpVid96ER3yt1OKx3kTv6jAvk_KCPwDaQcnFQ.X22Z6cRzV7xKRYjZP.8MND6e1dAk;
+        path=/; expires=Mon, 05-Jan-26 03:04:29 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=111PIJITO_a9j6lbP6nFPuoWjf1r9picCPEQtp34IbM-1767548930839-0.0.1.1-604800000;
+      - _cfuvid=2PoJ8VtC4A7i92vpoV.ITJjSUBJSdl9pdRe6vckW1pU-1767580469415-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '645'
+      x-envoy-upstream-service-time: '2032'
       x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-limit-tokens: '500000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-remaining-tokens: '500000'
       x-ratelimit-reset-requests: 120ms
       x-ratelimit-reset-tokens: 0s
-      x-request-id: req_ffe4ae6e9989460aa0c78f2c2b0353d1
+      x-request-id: req_d9182e5a09a64c64a09ff473f7e7faec
     body:
       string: |-
         {
-          "id": "resp_0452767d17af1b4e01695aa80232d88197972c94d5321b36c4",
+          "id": "resp_073b54906f53fc2801695b233362a8819ca28827825da664e8",
           "object": "response",
-          "created_at": 1767548930,
+          "created_at": 1767580467,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767548930,
+          "completed_at": 1767580469,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-4.1-2025-04-14",
+          "model": "gpt-5-mini-2025-08-07",
           "output": [
             {
-              "id": "msg_0452767d17af1b4e01695aa802bf0c81979569ffe35dc0f6a3",
+              "id": "rs_073b54906f53fc2801695b23340a1c819c80484d4328b05a52",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyM15OjDHkF3M4TXLn79eIeoqtk_hDAGsUjVSGJxzkmUsOw-PWBFgM47FLjO2cLIxvWHJWrGn334n1ixk6f766lua7LW8LUgyGGBVqnmrNHCg5w3Imi-W3StLpQI6ZetCsdJxbGeuvk_Wovf_wc571YK-N788E-qzZuRTJjL2Z9piwNoYbuzSbTwXZsQwf8r0H88q_xiz_3jy3Wf3PYJxp_uuySuYmsFRChA6SlyPMZOq14B-SXcY-5JiOYawFfWu09J3gvcIZNtaMwiRQZoBl01IUZluiOP6t1ikHaVqW1eOjx4o5Bk6X3BUcogBoHXWZanAILNMfO-MkTUahO8uOlmey-m5sKe2R6oyIFd3vNZbaLXa0rOYnstt3fkyYyrjdMwpmoefJ2di2fc2yvc3OgorJBVzpqLSybi9fU8FtvRFS4RwHYJQHprLRSZgeQNUcybsa7Vu38egOKCgaE8iJfmONd2mfsRKuGsirnL2DSiEtWuGz-5rltWiTtyLUs24XPYLQLCHsbY8F77bitPrYqTjWjeWeT8YkapuBpJxVB2341lme1wy9DYq7xayuJ5QF1Kg0mIYPK7MaEy7OI30aQmDKMzRBat2FHPniORtXz1p5hYFCRZ-yIm43ukwzjnDJ5JFLMBNMMc86DzKKT1F1Fe2hkqV2t7VplECsizf0Vbtc7f8yzZgAWmTztW_eh4e6mMHhG3Ko28I2rn_LlqzVWIFQRf3Kx9IRUrnt-9PCXoEoK3dLLoKNtWtnR1cTkKfCwmdTvpB1h5VsgXNDYy1WQ85cLyMJVHmpiJArPYHIS3UQLRDdYasaa_dkheFZX22s72Qf1FN70jwx9YkzcbFZcJUxUhZUi16gZawJiJ0CSyFib4l4zIUty1JewPd5pBNVd3sqw8mm8sztfmpzPGlODn0Ztn4Ebe3NTBs1UP-QP3aamGOIIv_5bzZox7wKkc4sbVh-Tr7i7Vhwgg7wvxIC4SCxbyBirXu39NlPBMxu5AzhIAC02fFnPZGu5Zp7t59xLjGLRGuU8rHBFJd3QTUk3B05yC4l1e5h_9xhPBmGjYeK1rs2yrUvNt_YCM91P-6wKCs5yIA4PvxRCnkjQndkNzNeUOa7G0nMX8_z0_qUZ3be4HYeyTukRA_4IaGKJBkRZSzsKaBCLAyjbnjvJ4no5AO44l5uWcBQQuYPQMTvfa0uaV7FwWESPxODp-xKXcu2tR-LQ6iZ32r1QFbgtE38e4jzviYc8K5Ef7DE_rZHe_VFvoVPUQNLNgXKH7y689hLwy79iQrPSofyuLnOsjcvXiHgegri7qSZ9CBb0CdqXeVzkKOtJvrMaalx0PhUTDv3WmXEcHaEgDdlRMqfJWemgNUIUwpINl6YRu5r2NaA78eu_aY8M2VKfPdWro_5RGnCQa",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b2335274c819c9928ba33a28471d7",
               "type": "message",
               "status": "completed",
               "content": [
@@ -566,7 +613,7 @@ http_interactions:
           "prompt_cache_key": null,
           "prompt_cache_retention": null,
           "reasoning": {
-            "effort": null,
+            "effort": "medium",
             "summary": null
           },
           "safety_identifier": null,
@@ -608,20 +655,20 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 3790,
+            "input_tokens": 4244,
             "input_tokens_details": {
-              "cached_tokens": 3584
+              "cached_tokens": 3328
             },
-            "output_tokens": 6,
+            "output_tokens": 79,
             "output_tokens_details": {
-              "reasoning_tokens": 0
+              "reasoning_tokens": 64
             },
-            "total_tokens": 3796
+            "total_tokens": 4323
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-04 17:48:50
+  recorded_at: 2026-01-05 02:34:29
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
@@ -630,52 +677,326 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8c91d3d88a61e7-ORD
+      cf-ray: 9b8f93b0bde75d77-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:56 GMT
+      date: Mon, 05 Jan 2026 02:34:31 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '468'
+      openai-processing-ms: '1184'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=IOrJdIsTkcnPrkZeMj1mpr2faYX3KHMXniUK9VV3BJ8-1767548936-1.0.1.1-JmxlHn_p0B29xhptOrVrrT8_OwZLhh34WeYxyrZsx6S1JeyI2w.FSUZVDHZkKcprxIXXBSeL1VQ.zkV8A1qfU2Uhe3T3VzXfvKk9PIjm1yk;
-        path=/; expires=Sun, 04-Jan-26 18:18:56 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=2PNdp6YaCvy7KjfcOmePHAobaypK91WUph8iyUKLuvI-1767580471-1.0.1.1-U8g1LIr3Gbvnb5O_lyDKRwTCfaIeXkAWeDLLxcS1pE5oGWAJCZSvTzXn89Bto2m0xwCCFI1_yyckEFUa1sZPh0hd9mkANbd9KXyg5urr8hw;
+        path=/; expires=Mon, 05-Jan-26 03:04:31 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=RhbmWR_DU8Wj0yzwW8HonkNTraiAzAxfVrrxgqsy.g8-1767548936839-0.0.1.1-604800000;
+      - _cfuvid=gPb2m64EDR7QFO00fluRUj55NRdlsrt6V506MCg3tx8-1767580471156-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '473'
+      x-envoy-upstream-service-time: '1185'
       x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-limit-tokens: '500000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-remaining-tokens: '500000'
       x-ratelimit-reset-requests: 120ms
       x-ratelimit-reset-tokens: 0s
-      x-request-id: req_7095e66dc09c47048a92d34119e72702
+      x-request-id: req_a3914fd2ccc649e38d451eb4f868d9f4
     body:
       string: |-
         {
-          "id": "resp_033ac26cf900117e01695aa8085e448192b9d40d747347c713",
+          "id": "resp_073b54906f53fc2801695b2335fa80819cad8deefa17d8ba89",
           "object": "response",
-          "created_at": 1767548936,
+          "created_at": 1767580470,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767548936,
+          "completed_at": 1767580471,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-4.1-2025-04-14",
+          "model": "gpt-5-mini-2025-08-07",
           "output": [
             {
-              "id": "msg_033ac26cf900117e01695aa808b7088192b6f4f6d7ecc4c7a0",
+              "id": "rs_073b54906f53fc2801695b233655fc819c95105c5f5b9c75f1",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyM3zXdqTnPGJPyl2QxKCcAaRMq3MvcxpVLnXooJk0lqJCkNvQye_gKT4KkJjRXE4cI4p0cW4xr83LjQvLEHpQeikM4JJHSigPU9fKnA65YBj-ET2h5WlYNjOAIUl6UZhQHKAyiboFMl973-vrZkbAB-N-HCXoAws8r9RHX3LrQI8kQT_9ydGWYfvc1xMPeAYLjlP4J5lNmeOh-3jMX5kW8cDp52P1buf4u_-LuHc-QKwiiyIX-ovaRoUKN53thlJkK4yRj4lFhRtsoGwUiCLZvljH-ztffg0tuezUmTTQAGbF3OIsqpgHoZcdKcC2BWzYiDPWLXsERC-Uz82Vl30yJ3mQOGxIAkbil9NYjMr9SWE-9EIxtLFATt0kZFVYD28j0pqlNcFUW9yF5JDJJx9qTzOfDeSkxz5r2oYEHJhns7P4rMjun6fbEBEgwPdWEhqh0j1TQnDnyJHYEyvvt7-WWL7brRbZuU_fIZU46ZmBxMvuoI-VfRkm201vQPTAslUBIDrPpMVgLGr7TjN_P40LKt-06o5igQnY-RSxocpq-BZB-0m2Z5SEfHd98-MzqB1ziHqr9_zn4wYC5oU9sEiBVrtX-lyCCpzlDILgcoYYKR1LTBaisPUEk54hABMajjw1oVrp9jGpi7DKggrbEmVbC3gcLzBVPwqVVOTLgBm2DlA-2s6n6qioYQZKbqXz9X6IflcC3HQQkHsU8ay1BpHIUu6sX2VdiuY2RKA7Gs9cPgDq0ABp73csHEKBOhUZmx3PnxsJYssikly-Bct7rr5iw11AufzoZjfFyjsD4QYEyzZowLKfL67L7yDIb0LIRnmyHeDyaeZqJE0TB8CPbGTr2vXL2zowu6VtuMQQobrrUn4OEfCiZKcKuKsytQ2RW-KaW-Gj74oQx-LVZlwdWJq_OejyDIxANL6ET9FBC5ayWxewl3Kq8LGpXH0-NYmGN9dnoav5uDTSlvJvyBHJ6VKeRtMQsPJfUMww7Ordk19pdmaL-b0pi1yKfj8nPsZNLAheeKI9ioDfRpte81ikfiyXBIodegMmge5WC5W92SdokgylTb8reZCfNHkzBdVgJZ-v61CiLkWmmCzSMwlnmkE1-04w==",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b2336ed38819c82de877efd05971a",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"shipping\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "billing",
+                      "technical",
+                      "shipping",
+                      "general"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 4332,
+            "input_tokens_details": {
+              "cached_tokens": 4096
+            },
+            "output_tokens": 15,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 4347
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-05 02:34:31
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8f93bb9ea65d77-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Mon, 05 Jan 2026 02:34:33 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1722'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=_aJpLnAGYx9DEJVvjJN8xm0oxoHn75iVpCmDA23jF1U-1767580473-1.0.1.1-ccHarEKRSS8xd2YdYC6ufvpGPb7iLs8ZjJ52dde72YWOo35D3mWw_y61XrmM8UyNMQNecUX3vYSaQEsoZG2575uvHK778UP8AVn2GNk9Lbk;
+        path=/; expires=Mon, 05-Jan-26 03:04:33 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=3V23qaXdQW17tScCXWaZnuR9uXetCzLDLGi2iZn9X10-1767580473445-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1725'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_fc928e6c5a1a48499ffba49424558479
+    body:
+      string: |-
+        {
+          "id": "resp_073b54906f53fc2801695b2337b66c819c93dd593942bbab1b",
+          "object": "response",
+          "created_at": 1767580471,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767580473,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_073b54906f53fc2801695b233807bc819ca4de73bce8e08803",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyM5PDSuq2516sySWXd2MDgAGmN0FtxcHcBbSZWlVkdcVaNn8chADd_EkBurnwVojuhX5SdFg7IBL7dZ-p1bKXLVMqKINZmNqtUKUUl_5mJIwLaSfVCO5J85yuKuoNmg_shxGWK8O9KxXbc7zNvQZEwuxtMIiQz2kZ0jGsPu563m63762mWdqxvNrQZLTdE6FCzEP9aiHhBxPlTJzmsBBoZsls4b_Okl7KSUu3SlO4Nazck35iRt3-YcW6pLS742mC8IKkTndARQk4I1a4EcHHlqqqy4hFMf96XZlBx2GM5QbzUmyvjRfRHTHMw1QhhPYRKFxqEme_n4hIusMk6rSihi72LHSxkiUiKGrpXwracoirc9t5sJi6dLFUQuRxdvexHKiGOIRhRVJyoar2NXo4Uct3dglnfKcGKDIaWouO3TU42CO57zLo3jxAy8FInXdJxluS-Q84qN7rtP7v2XuCUA-opzFT6ah1_h5cZvW59CHaGjT-fXqFe6myABxsu3MUnmMRlBBkuNZeX3_S4zp89p-XDJw6xBxJYuh3dSIwcN4USJaLOPrKFBmll9sQZ1xrhPq5y9pwi_0qmElTbdVvKq8WkiwxHxra_iBNd3vE-ffZcEU4emJnzWVHRKb8ltLe3a-lSKwQ0AFDIF73GbTaDy77cNOveT6qStf00sC11HHq5_zgUNdn9hmxFLAmTVAWXttInwRrmUI3XvnDfqLVSglb8qShM4XF8DW9KVlXEa6ItkDdr5jMTXaBn0yB4LkWeshr0ul6V4eRgZJoYjHmj8LHvCyeEX-AWwYjulUs-XDE8sdDizoSDIEkmNRq4GC1BIgf1xS8muAMdbyfqZbh59qlTCplviZCln5jSudLCjgQuVn6VHyXyCLOW0UiUZPQF1iRs3bb74SErMwWBWclkteXN-nZ28zkRaz1Audy48tFrW7a1jclcW4HBc2bYlG7XglL54D7OF0fDn-2a50J-icU-CqMtLOXAvS-mOAAyQWp46NMj3fcQoMrOsRoO-gi0B9W-_Ff6uwzYtR-GDWLctFD8L9V7nCQNwZYPwUBr36E6deXVQkSFEOU0JxonwedWyPrnhU4EgIBDkhzp-2ByUFDRlBrw9DGDcTgwrniqjHxepeCsVNVNvYUkNmSZmm1cBqTOFMeTVccbvWeclxd0Rf5PIov2X_tkrUbX53X6G75mXtBSZ_O238DCZ3lauDvenKBgAMHtUc9lmwaQrbZjU3o3m86TBfDp10ZY7kCrU-UwwGs3c1z8Rd7rTEgctM2tLtAfNuawL3lCd-6NPNtQzEiNRuW-0zZ4dU60Z16AC22YvSvtTup6sXPcHJ4zMT-ID9mzRN1KFqqT3dP9e6Jta0_0X17455RnFVVRkbTxFnfVjNmOI7E6REiBT4edaNSdBqKWVjDbxBjptQxoCY-ts-Sa34zI006oMXY5fs6I8I9Q=",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b23391a84819c8ce0e81b8037ebf0",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"shipping\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "billing",
+                      "technical",
+                      "shipping",
+                      "general"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 4417,
+            "input_tokens_details": {
+              "cached_tokens": 4224
+            },
+            "output_tokens": 79,
+            "output_tokens_details": {
+              "reasoning_tokens": 64
+            },
+            "total_tokens": 4496
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-05 02:34:33
+- request:
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    status: 200
+    headers:
+      alt-svc: h3=":443"; ma=86400
+      cf-cache-status: DYNAMIC
+      cf-ray: 9b8f93c99f215d77-ORD
+      content-encoding: gzip
+      content-type: application/json
+      date: Mon, 05 Jan 2026 02:34:35 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1882'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=E49MIC05ZQ6KLeIK45Vw.bTzxzMCPtURiTitF5ZLL7c-1767580475-1.0.1.1-eP490CnBXC.tvpY0eAeFg.PLRB63oXR_cChn8g4uqkgLqOltChzzYnLBPrwoGj.HTZSANUtrSZYL16TUkCYK.RD2mRdBPD3jjStH7CiteEQ;
+        path=/; expires=Mon, 05-Jan-26 03:04:35 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=dYR7E3taGBGpVRSuoGh44M4fiqp8R.g6b69d2YmkUhQ-1767580475899-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1887'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_18e184ae34ff494a9e524c391c23237d
+    body:
+      string: |-
+        {
+          "id": "resp_073b54906f53fc2801695b233a0938819cbeea7c7884468ca8",
+          "object": "response",
+          "created_at": 1767580474,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767580475,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_073b54906f53fc2801695b233a6a70819cb7dc75dde0ccd2bd",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyM7v_SlrD7aGHf6Nq1rcyvduTo7ZfPbSjW9nBFEjucgZi8kWoMFDjL9zI01neaekRMZKmeEWjaexEFh7kK_mt89k6-bDC0Je-8oQWBg-mQPh86VwrhlqIg5463GVCd3bIdszksTLgaFYznN7VK8eI7h1t21V84FXgaBR070uCHDz4Kszmc1dcjeW7C21PMB3AbalOdcx8DS3hfu98QbCet2xWjW127A6Nmtuhds9P9QFHJ6o7lNEXVZkVuOGkZKYImqVbd59Ou3LVntUQbbHivO3bU2JnX3_eWAte-GCRjHIu23smIoRNGMjF21qcW0fSDmVANbDf2Iy8lVwRc4ifz8qSVLe-PV6SZ_oU6wKIEgAarZLtEGkx5suG34XCQFXAm8-StjIVo16LwbBZUlfu_EMLsPY9HCD94B0gyG-t5e-wDZaSjJUtXDkCGWjGSvV_5GvXDH40HRPkqDQ615syfBq8EXasoyK3obM_kXp6C2cKOm56J1BatebtLqn8RTa5lQkfWih35lCHmGhuRr2t44ZPe7HfPzrVfpitKE6d454UsvsciwhNEhcauELmQOtLGDeqAr99aRY5YhSdOdIw2ejuZe-709X6j3E79SLBkfGOQxMrgQRT1DwC1c04dcueD1S2RZ-JO5pE6v4ddemwdQRhZkRgJwJ55df0iSkgYMhHJlso9R5ucmeBGD-PLloDEMidMhli1J3X0CSEPX2Msqjnh0ivO0wt1oAXqKRxIQelxjxYyGrtQIpoq_f3lUxcPJMYGAJzyFkeLONLOumqsz7q4g5og02hI08dYTWF3UOtButXBt3claO8nhCOad0sTZV_Y-RnvX5Q66IoU7PYJWG8ncCmoXpXZnyKoRWUaNwsjY9aL4DBYJZd3MEiOPtlP8hBG_ygm1VU2J3YMgyAKw7qCWqEGiVYVPrX4t0llWyZ5EU6O9KWX8U46Oojucc2Be8q9tFJ6-vbfPho3y2uo-FS0vsq0_kSyBOTw_8vkp3rECYEjfuJtCLjh_W97jBCDpnFAW7WphoFjslZN9qKh8IxfOudGcFaWlNAt1WeKrgep4mPO0BHcjhLkPdNKg7GRnTcFZK0W_j568OamM1dDVlCe9nvPH098bh8kvbm6USFOADP0FUseHR7hUy0VFGYAJxThPCXCQsXq19Zt5mZje1MFF0x_yp2Eke3sH2xuVigKXte1gqzep0-9WIZv4ic5MQmOrNVmcoDeyxfbuJQHgt0vHMd5Jt_V6_zlsF-CN-5lWe4arV00WlcZod2yVElNkduScQtrC8kfkCy6bsRVW08RyTA2AI7zp0E7eixWeIQIz9FpIdwMlvM8q5UIErVTUeY_vSePmBW2ctgYoM7I_mEYFbhmfOSeHasdTAbzI3bc=",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b233ba0cc819c9e56a2d3bdee2d83",
               "type": "message",
               "status": "completed",
               "content": [
@@ -694,7 +1015,7 @@ http_interactions:
           "prompt_cache_key": null,
           "prompt_cache_retention": null,
           "reasoning": {
-            "effort": null,
+            "effort": "medium",
             "summary": null
           },
           "safety_identifier": null,
@@ -736,20 +1057,20 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 3876,
+            "input_tokens": 4505,
             "input_tokens_details": {
-              "cached_tokens": 3712
+              "cached_tokens": 0
             },
-            "output_tokens": 6,
+            "output_tokens": 79,
             "output_tokens_details": {
-              "reasoning_tokens": 0
+              "reasoning_tokens": 64
             },
-            "total_tokens": 3882
+            "total_tokens": 4584
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-04 17:48:56
+  recorded_at: 2026-01-05 02:34:35
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
@@ -758,52 +1079,58 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8c91da7edb61e7-ORD
+      cf-ray: 9b8f93d90ac95d77-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Sun, 04 Jan 2026 17:48:57 GMT
+      date: Mon, 05 Jan 2026 02:34:38 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '452'
+      openai-processing-ms: '1876'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=d5YBNj8WJYkoqTFGp5KSt59oiMwEUah69WhiBVKM0B4-1767548937-1.0.1.1-zYxTuH7.6YQ3mIVI0aw5k5tizm2Mm7tY24eENWGeeUGqHt005hyLfTe1NOgV115x4anzM1u4EXGxwwssSPys6pgaVR4CiFYA2q8V0p.dpvY;
-        path=/; expires=Sun, 04-Jan-26 18:18:57 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=0TLLJ1Rpn6iwFvL7kdarGVvRBJEU9mao9WOCKCH4.5I-1767580478-1.0.1.1-KfvWcT7ZksEfYz07MdfA196CopThrerqNvyqIT6s33Ami58PzN2sp.4CSJnHqgl0Qgl7N6GYV.eVPQsnMhQfIH2FCnBDWLz1tkqLBla2vzw;
+        path=/; expires=Mon, 05-Jan-26 03:04:38 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=ldmF9PaRu78Iny7ECBfTieQ.rnK6jyGfwDolUXn7vuY-1767548937860-0.0.1.1-604800000;
+      - _cfuvid=HOTMPwpc_K74XN0fCWsyfyFX3HMtopX4gyBBZLiREOQ-1767580478292-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '454'
+      x-envoy-upstream-service-time: '1878'
       x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '30000'
+      x-ratelimit-limit-tokens: '500000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '30000'
+      x-ratelimit-remaining-tokens: '500000'
       x-ratelimit-reset-requests: 120ms
       x-ratelimit-reset-tokens: 0s
-      x-request-id: req_bb77ff80beaa4cbea5bcce8033844e3c
+      x-request-id: req_b870055e162a48b1b3389523cc304114
     body:
       string: |-
         {
-          "id": "resp_0def3f00065e00ea01695aa80968ac81a083fb340ad6360c8d",
+          "id": "resp_073b54906f53fc2801695b233c6b90819c8c388fd29802ebee",
           "object": "response",
-          "created_at": 1767548937,
+          "created_at": 1767580476,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767548937,
+          "completed_at": 1767580478,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-4.1-2025-04-14",
+          "model": "gpt-5-mini-2025-08-07",
           "output": [
             {
-              "id": "msg_0def3f00065e00ea01695aa809c1bc81a0a33ec7a5bf22ea1f",
+              "id": "rs_073b54906f53fc2801695b233cc490819c887544f83f25ab0f",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyM-B5q7ZDS_CwG8uDnJO14domBv_S7Ng9Se_JbDDBVyG2N3c4kG1e48cnmWmUruxYqzpgZsFMiq-V-7CaDZEdfkhzyJ9hGdpK6IBCFd8IvVP85_NCLTlG0ews7XBy6IkpuDVN0dnF9ImOjnBe2mKxgqeMiR3X9tXugHxXu996Zl1QrjffcinTib8rHERs0kzjTwbxzS5QJXIFs_kIFg5_-FyZPxZvl8PUyGVogZHghNeWq9tQxMgROBEpDplgGbKWWvjDEIiJf8El4JQtbiY0PKUaaR92XPr5r6uVXthyBUjRZNxsMRulYFcVjFXie8yjl0N0jKzqnE-G8MnM9isMULYORNzORdeVFw1W7pkyEwof2uqhnt4g5c_a3lUesttA6kErxHzuHZ5amytNrzEmgeyzC-etH9WfWigSLdYTL8EA9pieu5xwJfrELua5wwbN3i66qDWbmB_crT7cLarwNRbZkgZ6EXY9c4LG85SJy-3SIrJ1zAchUUqIRyG7SHmH6T46VfD4ItfmEW1ziv3yB1TU1jDYDj5HuKYC-df_2SQ_VN_tgtuoD8N30A5eYmMgSBrkb56nVKnoOQKGgFgC904mNA4fx6Kw6de7PieETIAIVzW4w6utkJ2EYjpEZvm6ihUe8IIxKeGKJkqKDaO7h9EVoLhAhpTno3ZhcrIk7mFyEZ53IrcyL1vvL02BO-SmawVRMIo2d3mJF5aUS99qpnoe5nHa2n8VG3JYIh5TXbUq89oVlOHqDzazeTKkadLnZkDFeGtiNgXU4SklJ2Skp9eR6gnkv-bapCdMvQbBLuffmZxBFa7DkJQzrAVBHMW3-lDqB_2CxwExRkyUXE6SppFz0thvXVKndQ1iWbYGHy5TJK-oAhdCLFWRrsqBCnYlg9-AOBZDhqvizfO9KIcjqkhrEm83Andp6roHfVYT1Qdn1vTkS8rWwEKyV_1nZtLHjIr9J0aBW0jG8XCZt_puYJ_xmUIBwUueCQ1XR0DBgQtuZBs_fXX3QeorQ-qISzqrXwWFmxAuywR0IxCuMe1H9UjzTMeSd75rP4x8sNlxS5Io6mHcfWKFBpbH5T9M8aDo4ontJtIaOMFZJM-CDCW6YDfcfBfQAZwHGfZKvIYGU3tffN0VaBk2q1WQUgEuXP2oy0HaICuTlXCxYN-gL9LrDkmE_RurZlnIjOtXGH_fSz2ASRul2qWOgmsNvy-JXRb0xRy1wdwzpk22tDiAz4SFSI_CoznB69jCBB2g0mWK43ZFUz3pwz8G0nYAVMS0Zl0pmxnqcjxRun9on4UYuMvF0JcHqzaB-kBfkTE9b0StGlR3vjDtJAYHDZ_aM-4h3FyIB3jK9UNBEuUybcdyq_vAzzT4s0wxFmFrB5UPlAWk2qWUbqYOJDyplqeRsBxDw8m_KrUZ9CdZeX9RN9C84nzTxEIKiXso5rv4Mqk6dcmLlgzCc=",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b233e0b08819ca1b69bc25c097242",
               "type": "message",
               "status": "completed",
               "content": [
@@ -822,7 +1149,7 @@ http_interactions:
           "prompt_cache_key": null,
           "prompt_cache_retention": null,
           "reasoning": {
-            "effort": null,
+            "effort": "medium",
             "summary": null
           },
           "safety_identifier": null,
@@ -864,56 +1191,152 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 3962,
+            "input_tokens": 4593,
             "input_tokens_details": {
-              "cached_tokens": 3840
+              "cached_tokens": 4352
             },
-            "output_tokens": 6,
+            "output_tokens": 79,
             "output_tokens_details": {
-              "reasoning_tokens": 0
+              "reasoning_tokens": 64
             },
-            "total_tokens": 3968
+            "total_tokens": 4672
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-04 17:48:57
+  recorded_at: 2026-01-05 02:34:38
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
   response:
-    status: 429
+    status: 200
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8c91f65a0161e7-ORD
-      content-length: '352'
+      cf-ray: 9b8f93e81cf05d77-ORD
+      content-encoding: gzip
       content-type: application/json
-      date: Sun, 04 Jan 2026 17:49:02 GMT
+      date: Mon, 05 Jan 2026 02:34:41 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '152'
+      openai-processing-ms: '2176'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=_YWStXDALL8.n8rMHRDZ2nKF9NL.iExB1YwejrcY33Y-1767548942-1.0.1.1-QBrQuVDjsyXaDD8zEESLb_sC2SZel_9ztclgvTX.TXe298QrZqNwBF_AMG7D_PQp3vlG9FsOjnSuukorUBx58isqn18ISbKF5DiU3BLsojs;
-        path=/; expires=Sun, 04-Jan-26 18:19:02 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=5J2VGsdUFDCvNivJ0hn2iG_iTOYGL2clE039qyYKWyg-1767580481-1.0.1.1-m8u5dxK0w0k2BrVE9i2uE1KGHHgP_vajo0ZCXdXEYk7LG2aOQGMdr8.5DNYlE._HUBY4wWPnVTuqEMjA5xaQbEsA5OLGe9FgEqoAqrDt3Ok;
+        path=/; expires=Mon, 05-Jan-26 03:04:41 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=kes8h57HJjgmlnFFD1TBY04mc5397UKYN0HiJx0GMjM-1767548942023-0.0.1.1-604800000;
+      - _cfuvid=TexzQMg_uJPcaNu33.0cRslIFGFDxRs9irc.015S2y0-1767580481029-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '158'
-      x-request-id: req_1d92247ceb1d44a09ef02ef51482f392
+      x-envoy-upstream-service-time: '2174'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_3c9b8e44974b45e78bc92b94bba7863e
     body:
       string: |-
         {
-          "error": {
-            "message": "Rate limit reached for gpt-4.1 in organization org-mShKuFJrdihlXnXKm8kzf1PX on tokens per min (TPM): Limit 30000, Used 30000, Requested 4066. Please try again in 8.132s. Visit https://platform.openai.com/account/rate-limits to learn more.",
-            "type": "tokens",
-            "param": null,
-            "code": "rate_limit_exceeded"
-          }
+          "id": "resp_073b54906f53fc2801695b233edbd8819cbeb8666bce245512",
+          "object": "response",
+          "created_at": 1767580478,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767580480,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_073b54906f53fc2801695b233f4350819caa78cae7b5ef1b72",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpWyNAhrdhWKdZa8x17iTOGEJGdFBgumZuE7eo3HZUAbl57kgWNntqtBu6YZRg8xXCQJz_YJn25-Ky06aefuU5pec4EsBafth8waq8U5PxcMDmMduB6-ZLEbym49YK6b8OTjn8BCR8ZMnT3YyUWb0n0CpSARB8hXdoAj_2aBQFx5cdAus9Oexx3m0D8ELYYRoIE93JHK7YJVfzVNvcaI8ycIICVAi1ExKUJk1yxZ0igEICjUm8Rciaw8Iwx0817dhFQMi4S_8p9d9L5tKBQpeVb6Vx8VR7uSDhnB6tdabcEbr1rsZcT1BHnGuwzRQtTRXWiIlVa2YuIgYMyvtSwBfGLb21oNsqU7NFcbYCi5ZK_81lDEgUzz7IPAbWsHYbPsPmvq8xJNUMFbto-kQ5sOKjLsMtQ6mmX_Nf6XplOXBXRnnotxEqyr1CpgPzuUvfXQvCh0ho_jLrgtsv83F13yq6lnzbFQJ3-tdgL00onpU9OYc3EYUiVKI2wgN6s6Hmno5P91Rw21n6ACMREJ4FJSKwRXrT7ZmFfvZUd_xXAryM2qLn3kooytnslERdQK60HveGEdXh-phYh91OW9-E1QrOhERWPD7n4KGTPOgitdwVbdBbgUtGnuLRBgrpPXhUTnFXEh-ctcyiK2I5i8ty3kJNm9pMKIj9E3QDWa8OXFhBsD5sPXod2GrVH5Kh6rA93paO88uLQvQy4jKvjwPgl2PClegy53F0s9QnATKzs3SIROV5G3ThThvfNy3IJ3LK08CM2qRR59azhCbZMIqzrv58DyWsYzsXdoSHsQRc2xr4ZIseDcOTPuveZyanJKQC4Ekdimb51Ro-7hK4OfPXYKxCEsPTk3HXQBXAtXGjnvJpAg9sMz4Rb6WOQD7HlHQWKDuKMtgedyIPkL-HN2wMStoneYvOVB0KXeguUAxnxv6z2SPI0GtGd1nyuWJltOZRKUIWepfKpq6QGt2aza8djPVys9C_5waJPCXg_FME9iteTR7nr_1vxxJ_UUPYZIAFEmgxd0y_dazhH7r2ZttNvct-qjPycTlmP9kwwYx_ZQLezFTy6bu5EidpHQ1Wh3vs1zvmOIFMFe9qg7zjaNLRhf2X0TPafXP3skGbzn4sQA1kq5EYeNCIF-guJrI-Lzb4yi5X7IOBZEc7I3pr_ZIPuIRSgL_GsyVGPSAihoi-kABSbgibxolOWWTKkQohMsWJNcR8ufWgHOn7TwCz2R3Q7vHg6782vmBpWhT2OHVURqC0voxdT8bsM74PKYVnpBdNEt67-NGAMaIgbnn67mL0_6izorGYBxDYJl4Nn0o_zXrCX1gZ0AGCmXRQb0WquAkQADh_5Z1IWKrK6uPg8mKjxnZCyH1YcZibAb3YfS_pj_OnOugl2oHBr0NUG-2P-AvL5eEC4w4E3_6CUj463DtVjla7acp2FNSSzaug0LMFTCz5-oBMRq2zFHO0A2c64K9oDttrrcaq",
+              "summary": []
+            },
+            {
+              "id": "msg_073b54906f53fc2801695b2340c218819c8f9a214a11c4c7d3",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"general\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "billing",
+                      "technical",
+                      "shipping",
+                      "general"
+                    ]
+                  }
+                },
+                "required": [
+                  "category"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 4680,
+            "input_tokens_details": {
+              "cached_tokens": 3968
+            },
+            "output_tokens": 79,
+            "output_tokens_details": {
+              "reasoning_tokens": 64
+            },
+            "total_tokens": 4759
+          },
+          "user": null,
+          "metadata": {}
         }
-  recorded_at: 2026-01-04 17:49:02
+  recorded_at: 2026-01-05 02:34:41
 recorded_with: VCR-vcr/2.1.0
