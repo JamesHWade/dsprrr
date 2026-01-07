@@ -77,6 +77,7 @@ Collate:
     'module-wrapper.R'
     'module.R'
     'optimize.R'
+    'optimizer-accessors.R'
     'optimizer-core.R'
     'optimizer-discrete-bo.R'
     'optimizer-logging.R'

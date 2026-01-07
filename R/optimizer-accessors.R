@@ -25,7 +25,7 @@ NULL
 #' @family optimizer accessors
 #'
 #' @examples
-#' \dontrun
+#' if (FALSE) {
 #' mod <- module(signature("text -> sentiment"), type = "predict")
 #' mod$optimize_grid(
 #'   data = train_data,
@@ -81,7 +81,7 @@ best_params <- function(module, flatten = TRUE) {
 #' @family optimizer accessors
 #'
 #' @examples
-#' \dontrun{
+#' if (FALSE) {
 #' tp <- LabeledFewShot(k = 4L)
 #' compiled <- compile(tp, mod, trainset)
 #' demos <- best_demos(compiled)
@@ -91,8 +91,8 @@ best_demos <- function(module, as_tibble = FALSE) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
 
-  # Try config$demos first (PredictModule stores demos here)
-  demos <- module$config$demos
+  # PredictModule stores demos in $demos field, fall back to config$demos
+  demos <- module$demos %||% module$config$demos
 
   if (is.null(demos) || length(demos) == 0) {
     return(NULL)
@@ -136,7 +136,7 @@ best_demos <- function(module, as_tibble = FALSE) {
 #' @family optimizer accessors
 #'
 #' @examples
-#' \dontrun{
+#' if (FALSE) {
 #' # Transfer optimization from one module to another
 #' optimized <- mod$optimize_grid(data, metric, parameters)
 #' new_mod <- module(signature, type = "predict")
@@ -182,7 +182,12 @@ apply_best_config <- function(
   if (include %in% c("all", "demos")) {
     demos <- best_demos(source)
     if (!is.null(demos)) {
-      target$config$demos <- demos
+      # PredictModule uses $demos field, other modules use config$demos
+      if ("demos" %in% names(target)) {
+        target$demos <- demos
+      } else {
+        target$config$demos <- demos
+      }
     }
   }
 
@@ -213,7 +218,7 @@ apply_best_config <- function(
 #' @family optimizer accessors
 #'
 #' @examples
-#' \dontrun{
+#' if (FALSE) {
 #' # Get top 3 trials from module
 #' top_trials(mod, k = 3)
 #'
@@ -310,13 +315,12 @@ top_trials.TrialLog <- function(
 #' @family optimizer accessors
 #'
 #' @examples
-#' \dontrun{
+#' if (FALSE) {
 #' mod <- module(signature("text -> sentiment"), type = "predict")
 #' mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
 #' config_diff(mod)
 #' }
 config_diff <- function(module, baseline = NULL) {
-
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
@@ -339,9 +343,25 @@ config_diff <- function(module, baseline = NULL) {
   all_params <- unique(c(names(baseline), names(current)))
 
   # Filter to only relevant parameters
-  relevant_params <- all_params[!all_params %in% c(
-    "demos", "compiled", "teleprompter"
-  )]
+  relevant_params <- all_params[
+    !all_params %in%
+      c(
+        "demos",
+        "compiled",
+        "teleprompter"
+      )
+  ]
+
+  # Return empty tibble if no relevant parameters
+
+  if (length(relevant_params) == 0) {
+    return(tibble::tibble(
+      parameter = character(),
+      before = character(),
+      after = character(),
+      changed = logical()
+    ))
+  }
 
   rows <- lapply(relevant_params, function(param) {
     before <- baseline[[param]]
@@ -383,13 +403,13 @@ config_diff <- function(module, baseline = NULL) {
 #'   returns the code as a character string.
 #'
 #' @return If `file` is NULL, returns the R code as a character string
-#'   (invisibly). If `file` is specified
+#'   (invisibly). If `file` is specified, writes to file and returns invisibly.
 #'
 #' @export
 #' @family optimizer accessors
 #'
 #' @examples
-#' \dontrun{
+#' if (FALSE) {
 #' mod <- module(signature("text -> sentiment"), type = "predict")
 #' mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
 #'
@@ -414,15 +434,21 @@ export_module_code <- function(
 
   # Header comment
   lines <- c(lines, "# DSPrrr Module Configuration")
-  lines <- c(lines, paste0(
-    "# Generated: ",
-    format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  ))
+  lines <- c(
+    lines,
+    paste0(
+      "# Generated: ",
+      format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+    )
+  )
   if (module$is_compiled()) {
-    lines <- c(lines, paste0(
-      "# Best score: ",
-      round(module$state$best_score %||% NA, 4)
-    ))
+    lines <- c(
+      lines,
+      paste0(
+        "# Best score: ",
+        round(module$state$best_score %||% NA, 4)
+      )
+    )
   }
   lines <- c(lines, "")
 
@@ -441,19 +467,25 @@ export_module_code <- function(
 
   lines <- c(lines, "# Create signature")
   if (nzchar(sig@instructions)) {
-    lines <- c(lines, paste0(
-      "sig <- signature(\"",
-      sig_str,
-      "\","
-    ))
+    lines <- c(
+      lines,
+      paste0(
+        "sig <- signature(\"",
+        sig_str,
+        "\","
+      )
+    )
     # Format instructions nicely
     instructions_escaped <- gsub("\"", "\\\\\"", sig@instructions)
     instructions_escaped <- gsub("\n", "\\\\n", instructions_escaped)
-    lines <- c(lines, paste0(
-      "  instructions = \"",
-      instructions_escaped,
-      "\""
-    ))
+    lines <- c(
+      lines,
+      paste0(
+        "  instructions = \"",
+        instructions_escaped,
+        "\""
+      )
+    )
     lines <- c(lines, ")")
   } else {
     lines <- c(lines, paste0("sig <- signature(\"", sig_str, "\")"))
@@ -467,7 +499,9 @@ export_module_code <- function(
 
   # Apply configuration
   config <- module$config
-  config_params <- config[!names(config) %in% c("demos", "compiled", "teleprompter")]
+  config_params <- config[
+    !names(config) %in% c("demos", "compiled", "teleprompter")
+  ]
 
   if (length(config_params) > 0) {
     lines <- c(lines, "# Apply optimized configuration")
@@ -481,18 +515,24 @@ export_module_code <- function(
     lines <- c(lines, "")
   }
 
-  # Demos
-  demos <- module$config$demos
+  # Demos - PredictModule uses $demos field
+  demos <- module$demos %||% module$config$demos
   if (include_demos && !is.null(demos) && length(demos) > 0) {
     lines <- c(lines, "# Few-shot demonstrations")
-    lines <- c(lines, paste0(name, "$config$demos <- list("))
+    lines <- c(lines, paste0(name, "$demos <- list("))
     for (i in seq_along(demos)) {
       demo <- demos[[i]]
-      demo_parts <- vapply(names(demo), function(n) {
-        paste0(n, " = ", format_value_for_code(demo[[n]]))
-      }, character(1))
+      demo_parts <- vapply(
+        names(demo),
+        function(n) {
+          paste0(n, " = ", format_value_for_code(demo[[n]]))
+        },
+        character(1)
+      )
       demo_str <- paste0("  list(", paste(demo_parts, collapse = ", "), ")")
-      if (i < length(demos)) demo_str <- paste0(demo_str, ",")
+      if (i < length(demos)) {
+        demo_str <- paste0(demo_str, ",")
+      }
       lines <- c(lines, demo_str)
     }
     lines <- c(lines, ")")
@@ -504,11 +544,14 @@ export_module_code <- function(
     lines <- c(lines, "# Mark as compiled")
     lines <- c(lines, paste0(name, "$state$compiled <- TRUE"))
     if (!is.null(module$state$best_score)) {
-      lines <- c(lines, paste0(
-        name,
-        "$state$best_score <- ",
-        module$state$best_score
-      ))
+      lines <- c(
+        lines,
+        paste0(
+          name,
+          "$state$best_score <- ",
+          module$state$best_score
+        )
+      )
     }
   }
 
@@ -545,9 +588,9 @@ export_module_code <- function(
 #' @family optimizer accessors
 #'
 #' @examples
-#' \dontrun{
+#' if (FALSE) {
 #' mod$optimize_grid(data, metric, parameters)
-#' summary <- optimization_summary(mod
+#' summary <- optimization_summary(mod)
 #' print(summary)
 #' }
 optimization_summary <- function(module) {
@@ -588,13 +631,17 @@ optimization_summary <- function(module) {
   # Try to get total cost from evaluations
   total_cost <- tryCatch(
     {
-      costs <- vapply(trials$evaluation, function(e) {
-        if (is.list(e) && "total_cost" %in% names(e)) {
-          e$total_cost %||% 0
-        } else {
-          0
-        }
-      }, numeric(1))
+      costs <- vapply(
+        trials$evaluation,
+        function(e) {
+          if (is.list(e) && "total_cost" %in% names(e)) {
+            e$total_cost %||% 0
+          } else {
+            0
+          }
+        },
+        numeric(1)
+      )
       sum(costs, na.rm = TRUE)
     },
     error = function(e) NA_real_
@@ -705,9 +752,13 @@ format_value_for_code <- function(x) {
     return(if (x) "TRUE" else "FALSE")
   }
   if (is.list(x)) {
-    items <- vapply(names(x), function(n) {
-      paste0(n, " = ", format_value_for_code(x[[n]]))
-    }, character(1))
+    items <- vapply(
+      names(x),
+      function(n) {
+        paste0(n, " = ", format_value_for_code(x[[n]]))
+      },
+      character(1)
+    )
     return(paste0("list(", paste(items, collapse = ", "), ")"))
   }
   deparse(x)
