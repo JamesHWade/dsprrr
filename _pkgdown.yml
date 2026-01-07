@@ -240,6 +240,19 @@ reference:
     - module_trials
     - module_metrics
 
+  - title: Optimizer Accessors
+    desc: Convenience functions for working with optimization results
+    contents:
+    - optimizer-accessors
+    - best_params
+    - best_demos
+    - apply_best_config
+    - top_trials
+    - config_diff
+    - export_module_code
+    - optimization_summary
+    - print.dsprrr_optimization_summary
+
   - title: Optimizer Infrastructure
     desc: Low-level optimizer building blocks
     contents:
