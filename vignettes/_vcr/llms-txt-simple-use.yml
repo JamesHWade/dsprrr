@@ -37,12 +37,13 @@ http_interactions:
         -> answer\")\n#> \n#> ── S\nexported_functions: BootstrapFewShot, BootstrapFewShotWithRandomSearch,
         COPRO, Ensemble, GEPA, GridSearchTeleprompter, KNNFewShot, LabeledFewShot,
         MIPROv2, OptimizerControl, SIMBA, Signature, Teleprompter, Trial, TrialLog,
-        as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module, as_reward_fn,
-        as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task, best_of_n,
-        chain_of_thought, clear_default_chat, clear_prompt_history, clear_traces,
-        code_act, compile, compile_module, complete_trial, create_search_tool, create_trial,
-        dsp, dsp_configure, dsp_trainset, dsprrr_sitrep, ensemble, ensemble_from_programs,
-        eval_program, eval_vignette, evaluate, evaluate_dsp, export_traces, fit_llm_predict,
+        apply_best_config, as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module,
+        as_reward_fn, as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task,
+        best_demos, best_of_n, best_params, chain_of_thought, clear_default_chat,
+        clear_prompt_history, clear_traces, code_act, compile, compile_module, complete_trial,
+        config_diff, create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset,
+        dsprrr_sitrep, ensemble, ensemble_from_programs, eval_program, eval_vignette,
+        evaluate, evaluate_dsp, export_module_code, export_traces, fit_llm_predict,
         get_cost, get_default_chat, get_last_prompt, get_last_trace, get_metadata,
         get_output, get_tokens, has_reasoning, input, input_array, input_boolean,
         input_enum, input_integer, input_number, input_object, input_string, inspect_history,
@@ -50,15 +51,15 @@ http_interactions:
         metric_detect_includes, metric_detect_match, metric_detect_pattern, metric_exact_match,
         metric_f1, metric_field_match, metric_model_graded_fact, metric_model_graded_qa,
         metric_threshold, module, module_metrics, module_parameters, module_trials,
-        multi_chain_comparison, optimize_grid, optimizer_control, pin_module_config,
-        pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric, program_of_thought,
-        provider_defaults, r_code_runner, rag_module, ragnar_tool, read_trials_jsonl,
-        reasoning_effort, reduce_best_by_metric, reduce_first, reduce_majority, reduce_weighted_vote,
-        refine, register_dsprrr_engine, register_dsprrr_tool, restore_module_config,
-        run, run_async, run_dataset, sample_dataset, session_cost, set_default_chat,
-        signature, split_dataset, stream_async, summarize_traces, summarize_traces_df,
-        temperature, top_p, use_dsprrr_template, validate_workflow, with_reasoning,
-        without_reasoning, write_trials_jsonl"}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
+        multi_chain_comparison, optimization_summary, optimize_grid, optimizer_control,
+        pin_module_config, pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric,
+        program_of_thought, provider_defaults, r_code_runner, rag_module, ragnar_tool,
+        read_trials_jsonl, reasoning_effort, reduce_best_by_metric, reduce_first,
+        reduce_majority, reduce_weighted_vote, refine, register_dsprrr_engine, register_dsprrr_tool,
+        restore_module_config, run, run_async, run_dataset, sample_dataset, session_cost,
+        set_default_chat, signature, split_dataset, stream_async, summarize_traces,
+        summarize_traces_df, temperature, top_p, top_trials, use_dsprrr_template,
+        validate_workflow, with_reasoning, without_reasoning, write_trials_jsonl"}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
         Let''s think step by step in order to produce the purpose, key_concepts, target_audience,
         and prerequisites."},"purpose":{"type":"string","description":"One sentence:
         what problem does this solve?"},"key_concepts":{"type":"array","description":"3-5
@@ -71,43 +72,43 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8f54f6fdfc6077-ORD
+      cf-ray: 9ba5bd697b2d11fb-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Mon, 05 Jan 2026 01:51:47 GMT
+      date: Wed, 07 Jan 2026 19:07:52 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '5823'
+      openai-processing-ms: '7386'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=wnKtzrNCoQhUSD8drT3gHhH2CcE2zl2LcRpbDD0PEVQ-1767577907-1.0.1.1-GCbFiRJ5RC4pZMtAtbHaMCwQRFMrrYt50ixo0rk1xA6Gh1JX1TmMGRMAaVxFl3tuMo5Qi6BzRZCd2.fMPK_QBulJsiAfqn.OuVM42GqbH6Q;
-        path=/; expires=Mon, 05-Jan-26 02:21:47 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=i1JtAAuKNdFlP1H2JGWLZ6zjaEbCvU8e8YUMM9ejoVA-1767812872-1.0.1.1-bkzKO5BTS.POEhaylnvmAKp6RYp3oj47oVFCeuykdUNRX.Mdg3XQeraJJGhhImlobTaaI6MCZyJ7l17pV.lJAX93ZAlEdhhbGBgfeA13IEQ;
+        path=/; expires=Wed, 07-Jan-26 19:37:52 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=BBUl4gL8kwAZZhqEgbkD_Fmog6l.dvTVvN2zRq9H6hE-1767577907180-0.0.1.1-604800000;
+      - _cfuvid=VZX.SnTsCquGpk0egJWNfRJoHfH.e1xqUC.G7IdV9KY-1767812872975-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '5826'
+      x-envoy-upstream-service-time: '7356'
       x-ratelimit-limit-requests: '500'
       x-ratelimit-limit-tokens: '30000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '29551'
+      x-ratelimit-remaining-tokens: '29591'
       x-ratelimit-reset-requests: 120ms
-      x-ratelimit-reset-tokens: 898ms
-      x-request-id: req_2d07b99542ed4054b3e1964f6dd77883
+      x-ratelimit-reset-tokens: 818ms
+      x-request-id: req_3559590cf5884b21b7d78693ee44c0a5
     body:
       string: |-
         {
-          "id": "resp_04da340a3096db5b01695b192d583c819295cd52fe58672b38",
+          "id": "resp_0f78c145398c356b01695eaf0198c481958da143e7ca3640b2",
           "object": "response",
-          "created_at": 1767577901,
+          "created_at": 1767812865,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767577907,
+          "completed_at": 1767812872,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
@@ -116,7 +117,7 @@ http_interactions:
           "model": "gpt-4.1-2025-04-14",
           "output": [
             {
-              "id": "msg_04da340a3096db5b01695b192dd6548192aca9edbe62a82fa8",
+              "id": "msg_0f78c145398c356b01695eaf020f608195b290d395a986eb5e",
               "type": "message",
               "status": "completed",
               "content": [
@@ -124,7 +125,7 @@ http_interactions:
                   "type": "output_text",
                   "annotations": [],
                   "logprobs": [],
-                  "text": "{\n  \"reasoning\": \"The package 'dsprrr' is designed to move beyond prompt engineering for LLMs in R by introducing a principled, modular, and test-driven structure based on the ideas from Stanford's DSPy. Unlike basic prompt libraries, dsprrr enables declarative specifications (signatures), automatic optimization, workflow tracing, and tidyverse integration. Its core uniqueness is the ability to treat LLM-powered steps as optimizable programs instead of fragile static prompts: users can compose, test, optimize (using their own data), and debug multi-step LLM workflows. This tightly integrates advanced NLP concepts within the R ecosystem for applications where LLM output reliability, maintainability, and improvement are critical.\",\n  \"purpose\": \"Provides a structured, testable, and optimizable programming model for LLM-powered applications in R, making LLM workflows as robust and improvable as software modules.\",\n  \"key_concepts\": [\n    {\n      \"term\": \"Declarative Signatures\",\n      \"definition\": \"A compact notation for specifying the expected inputs and outputs of LLM-driven functions, supporting automation and validation.\"\n    },\n    {\n      \"term\": \"Composable Modules\",\n      \"definition\": \"LLM workflows are organized into interconnected units (modules), enabling reusable, testable, and maintainable program structure.\"\n    },\n    {\n      \"term\": \"Prompt Optimization\",\n      \"definition\": \"Automatically finds better prompt variants using supervised data, improving LLM accuracy and generalization over hand-tuned static prompts.\"\n    },\n    {\n      \"term\": \"Workflow Tracing\",\n      \"definition\": \"Build-in diagnostics that track each step and output in a multi-step LLM application, supporting error analysis and improvement.\"\n    },\n    {\n      \"term\": \"tidyverse Integration\",\n      \"definition\": \"Leverages the tidyverse's idioms and data structures, making LLM applications work seamlessly with popular R data workflows.\"\n    }\n  ],\n  \"target_audience\": \"R developers and data scientists building robust, data-driven LLM applications who need reproducibility, optimization, and large-scale workflow management.\",\n  \"prerequisites\": [\n    \"Intermediate R programming\",\n    \"Familiarity with LLMs and NLP concepts\",\n    \"Basic understanding of the tidyverse\"\n  ]\n}"
+                  "text": "{\"reasoning\":\"First, I note dsprrr is modeled on DSPy (Stanford NLP) but is implemented for R and builds on ellmer. The problem it solves is prompt fragility: hand-tuned prompts break when models or requirements change, and are hard to systematically improve. dsprrr instead treats LLM workflows as declarative programs amenable to test-driven development and optimization. It makes LLM workflows in R more robust, testable, and optimizable. Its unique features include declarative signatures for specifying LLM I/O, composable modules, automatic prompt optimization, deep tidyverse integration, tracing capabilities, and test-driven self-improvement leveraging user data. Compared to ellmer, dsprrr adds systematic program structuring and optimization capabilities, taking ideas from DSPy. dsprrr targets users with advanced LLM workflows that need maintainability, testability, and optimization\u2014beyond prompt engineering.\",\"purpose\":\"Enables robust, test-driven, and optimizable LLM workflows in R via declarative programming, automatic prompt optimization, and modular program structure, leveraging user data for systematic improvement.\",\"key_concepts\":[{\"term\":\"Declarative Signatures\",\"definition\":\"Compact notations specifying the structure of LLM inputs and outputs for programmatic workflows.\"},{\"term\":\"Self-Improving LLM Workflows\",\"definition\":\"Treat LLM prompts and workflows as structured programs that can be automatically optimized and improved using test data.\"},{\"term\":\"Composable Modules\",\"definition\":\"Reusable components that define parts of LLM workflows, enabling modular and flexible applications.\"},{\"term\":\"Prompt Optimization\",\"definition\":\"Automated search and adaptation of prompts and workflow parameters, improving performance against evaluation data.\"},{\"term\":\"Integration with tidyverse\",\"definition\":\"Seamless compatibility with R's tidyverse toolkit, facilitating data manipulation and workflow integration.\"}],\"target_audience\":\"R developers and data scientists creating advanced LLM-powered applications requiring maintainability, optimization, and robust performance.\",\"prerequisites\":[\"Intermediate R programming\",\"Understanding of LLMs and prompt engineering\",\"Familiarity with tidyverse packages\",\"Basic knowledge of test-driven development concepts\"]}"
                 }
               ],
               "role": "assistant"
@@ -214,20 +215,20 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 1334,
+            "input_tokens": 1358,
             "input_tokens_details": {
               "cached_tokens": 0
             },
-            "output_tokens": 468,
+            "output_tokens": 428,
             "output_tokens_details": {
               "reasoning_tokens": 0
             },
-            "total_tokens": 1802
+            "total_tokens": 1786
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-05 01:51:47
+  recorded_at: 2026-01-07 19:07:52
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
@@ -266,12 +267,13 @@ http_interactions:
         -> answer\")\n#> \n#> ── S\nexported_functions: BootstrapFewShot, BootstrapFewShotWithRandomSearch,
         COPRO, Ensemble, GEPA, GridSearchTeleprompter, KNNFewShot, LabeledFewShot,
         MIPROv2, OptimizerControl, SIMBA, Signature, Teleprompter, Trial, TrialLog,
-        as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module, as_reward_fn,
-        as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task, best_of_n,
-        chain_of_thought, clear_default_chat, clear_prompt_history, clear_traces,
-        code_act, compile, compile_module, complete_trial, create_search_tool, create_trial,
-        dsp, dsp_configure, dsp_trainset, dsprrr_sitrep, ensemble, ensemble_from_programs,
-        eval_program, eval_vignette, evaluate, evaluate_dsp, export_traces, fit_llm_predict,
+        apply_best_config, as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module,
+        as_reward_fn, as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task,
+        best_demos, best_of_n, best_params, chain_of_thought, clear_default_chat,
+        clear_prompt_history, clear_traces, code_act, compile, compile_module, complete_trial,
+        config_diff, create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset,
+        dsprrr_sitrep, ensemble, ensemble_from_programs, eval_program, eval_vignette,
+        evaluate, evaluate_dsp, export_module_code, export_traces, fit_llm_predict,
         get_cost, get_default_chat, get_last_prompt, get_last_trace, get_metadata,
         get_output, get_tokens, has_reasoning, input, input_array, input_boolean,
         input_enum, input_integer, input_number, input_object, input_string, inspect_history,
@@ -279,80 +281,83 @@ http_interactions:
         metric_detect_includes, metric_detect_match, metric_detect_pattern, metric_exact_match,
         metric_f1, metric_field_match, metric_model_graded_fact, metric_model_graded_qa,
         metric_threshold, module, module_metrics, module_parameters, module_trials,
-        multi_chain_comparison, optimize_grid, optimizer_control, pin_module_config,
-        pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric, program_of_thought,
-        provider_defaults, r_code_runner, rag_module, ragnar_tool, read_trials_jsonl,
-        reasoning_effort, reduce_best_by_metric, reduce_first, reduce_majority, reduce_weighted_vote,
-        refine, register_dsprrr_engine, register_dsprrr_tool, restore_module_config,
-        run, run_async, run_dataset, sample_dataset, session_cost, set_default_chat,
-        signature, split_dataset, stream_async, summarize_traces, summarize_traces_df,
-        temperature, top_p, use_dsprrr_template, validate_workflow, with_reasoning,
-        without_reasoning, write_trials_jsonl"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"The
-        package ''dsprrr'' is designed to move beyond prompt engineering for LLMs
-        in R by introducing a principled, modular, and test-driven structure based
-        on the ideas from Stanford''s DSPy. Unlike basic prompt libraries, dsprrr
-        enables declarative specifications (signatures), automatic optimization, workflow
-        tracing, and tidyverse integration. Its core uniqueness is the ability to
-        treat LLM-powered steps as optimizable programs instead of fragile static
-        prompts: users can compose, test, optimize (using their own data), and debug
-        multi-step LLM workflows. This tightly integrates advanced NLP concepts within
-        the R ecosystem for applications where LLM output reliability, maintainability,
-        and improvement are critical.\",\"purpose\":\"Provides a structured, testable,
-        and optimizable programming model for LLM-powered applications in R, making
-        LLM workflows as robust and improvable as software modules.\",\"key_concepts\":[{\"term\":\"Declarative
-        Signatures\",\"definition\":\"A compact notation for specifying the expected
-        inputs and outputs of LLM-driven functions, supporting automation and validation.\"},{\"term\":\"Composable
-        Modules\",\"definition\":\"LLM workflows are organized into interconnected
-        units (modules), enabling reusable, testable, and maintainable program structure.\"},{\"term\":\"Prompt
-        Optimization\",\"definition\":\"Automatically finds better prompt variants
-        using supervised data, improving LLM accuracy and generalization over hand-tuned
-        static prompts.\"},{\"term\":\"Workflow Tracing\",\"definition\":\"Build-in
-        diagnostics that track each step and output in a multi-step LLM application,
-        supporting error analysis and improvement.\"},{\"term\":\"tidyverse Integration\",\"definition\":\"Leverages
-        the tidyverse''s idioms and data structures, making LLM applications work
-        seamlessly with popular R data workflows.\"}],\"target_audience\":\"R developers
-        and data scientists building robust, data-driven LLM applications who need
-        reproducibility, optimization, and large-scale workflow management.\",\"prerequisites\":[\"Intermediate
-        R programming\",\"Familiarity with LLMs and NLP concepts\",\"Basic understanding
-        of the tidyverse\"]}"}]},{"role":"user","content":[{"type":"input_text","text":"Analyze
+        multi_chain_comparison, optimization_summary, optimize_grid, optimizer_control,
+        pin_module_config, pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric,
+        program_of_thought, provider_defaults, r_code_runner, rag_module, ragnar_tool,
+        read_trials_jsonl, reasoning_effort, reduce_best_by_metric, reduce_first,
+        reduce_majority, reduce_weighted_vote, refine, register_dsprrr_engine, register_dsprrr_tool,
+        restore_module_config, run, run_async, run_dataset, sample_dataset, session_cost,
+        set_default_chat, signature, split_dataset, stream_async, summarize_traces,
+        summarize_traces_df, temperature, top_p, top_trials, use_dsprrr_template,
+        validate_workflow, with_reasoning, without_reasoning, write_trials_jsonl"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"First,
+        I note dsprrr is modeled on DSPy (Stanford NLP) but is implemented for R and
+        builds on ellmer. The problem it solves is prompt fragility: hand-tuned prompts
+        break when models or requirements change, and are hard to systematically improve.
+        dsprrr instead treats LLM workflows as declarative programs amenable to test-driven
+        development and optimization. It makes LLM workflows in R more robust, testable,
+        and optimizable. Its unique features include declarative signatures for specifying
+        LLM I/O, composable modules, automatic prompt optimization, deep tidyverse
+        integration, tracing capabilities, and test-driven self-improvement leveraging
+        user data. Compared to ellmer, dsprrr adds systematic program structuring
+        and optimization capabilities, taking ideas from DSPy. dsprrr targets users
+        with advanced LLM workflows that need maintainability, testability, and optimization—beyond
+        prompt engineering.\",\"purpose\":\"Enables robust, test-driven, and optimizable
+        LLM workflows in R via declarative programming, automatic prompt optimization,
+        and modular program structure, leveraging user data for systematic improvement.\",\"key_concepts\":[{\"term\":\"Declarative
+        Signatures\",\"definition\":\"Compact notations specifying the structure of
+        LLM inputs and outputs for programmatic workflows.\"},{\"term\":\"Self-Improving
+        LLM Workflows\",\"definition\":\"Treat LLM prompts and workflows as structured
+        programs that can be automatically optimized and improved using test data.\"},{\"term\":\"Composable
+        Modules\",\"definition\":\"Reusable components that define parts of LLM workflows,
+        enabling modular and flexible applications.\"},{\"term\":\"Prompt Optimization\",\"definition\":\"Automated
+        search and adaptation of prompts and workflow parameters, improving performance
+        against evaluation data.\"},{\"term\":\"Integration with tidyverse\",\"definition\":\"Seamless
+        compatibility with R''s tidyverse toolkit, facilitating data manipulation
+        and workflow integration.\"}],\"target_audience\":\"R developers and data
+        scientists creating advanced LLM-powered applications requiring maintainability,
+        optimization, and robust performance.\",\"prerequisites\":[\"Intermediate
+        R programming\",\"Understanding of LLMs and prompt engineering\",\"Familiarity
+        with tidyverse packages\",\"Basic knowledge of test-driven development concepts\"]}"}]},{"role":"user","content":[{"type":"input_text","text":"Analyze
         package structure to help developers navigate it.\nIdentify important files
         and entry points. Think through your reasoning step by step before providing
         the answer.\n\nInput:\npkg_name: dsprrr\nr_files: accessors.R, async.R, chat-default.R,
         compile.R, dsp.R, dsprrr-package.R, ellmer.R, evaluate.R, import-standalone-purrr.R,
         input.R, inspect.R, metrics.R, module-base.R, module-codeact.R, module-ensemble.R,
         module-knn.R, module-multichain.R, module-predict.R, module-program-of-thought.R,
-        module-rag.R, module-react.R, module-wrapper.R, module.R, optimize.R, optimizer-core.R,
-        optimizer-discrete-bo.R, optimizer-logging.R, orchestration.R, pareto.R, parsnip.R,
-        r-code-runner.R, ragnar.R, run.R, signature-parser.R, signature-transforms.R,
-        signature.R, teleprompter-bootstrap-rs.R, teleprompter-bootstrap.R, teleprompter-copro.R,
-        teleprompter-ensemble.R, teleprompter-gepa.R, teleprompter-knn.R, teleprompter-mipro.R,
-        teleprompter-simba.R, teleprompter.R, traces.R, utils.R, vitals.R, zzz.R\nexports:
-        BootstrapFewShot, BootstrapFewShotWithRandomSearch, COPRO, Ensemble, GEPA,
-        GridSearchTeleprompter, KNNFewShot, LabeledFewShot, MIPROv2, OptimizerControl,
-        SIMBA, Signature, Teleprompter, Trial, TrialLog, as_dsprrr_metric, as_dsprrr_traces,
-        as_ellmer_tool, as_module, as_reward_fn, as_vitals_cost, as_vitals_samples,
-        as_vitals_solver, as_vitals_task, best_of_n, chain_of_thought, clear_default_chat,
+        module-rag.R, module-react.R, module-wrapper.R, module.R, optimize.R, optimizer-accessors.R,
+        optimizer-core.R, optimizer-discrete-bo.R, optimizer-logging.R, orchestration.R,
+        pareto.R, parsnip.R, r-code-runner.R, ragnar.R, run.R, signature-parser.R,
+        signature-transforms.R, signature.R, teleprompter-bootstrap-rs.R, teleprompter-bootstrap.R,
+        teleprompter-copro.R, teleprompter-ensemble.R, teleprompter-gepa.R, teleprompter-knn.R,
+        teleprompter-mipro.R, teleprompter-simba.R, teleprompter.R, traces.R, utils.R,
+        vitals.R, zzz.R\nexports: BootstrapFewShot, BootstrapFewShotWithRandomSearch,
+        COPRO, Ensemble, GEPA, GridSearchTeleprompter, KNNFewShot, LabeledFewShot,
+        MIPROv2, OptimizerControl, SIMBA, Signature, Teleprompter, Trial, TrialLog,
+        apply_best_config, as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module,
+        as_reward_fn, as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task,
+        best_demos, best_of_n, best_params, chain_of_thought, clear_default_chat,
         clear_prompt_history, clear_traces, code_act, compile, compile_module, complete_trial,
-        create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset, dsprrr_sitrep,
-        ensemble, ensemble_from_programs, eval_program, eval_vignette, evaluate, evaluate_dsp,
-        export_traces, fit_llm_predict, get_cost, get_default_chat, get_last_prompt,
-        get_last_trace, get_metadata, get_output, get_tokens, has_reasoning, input,
-        input_array, input_boolean, input_enum, input_integer, input_number, input_object,
-        input_string, inspect_history, is_reasoning_model, llm_predict, load_trial_log,
-        metric_contains, metric_custom, metric_detect_includes, metric_detect_match,
-        metric_detect_pattern, metric_exact_match, metric_f1, metric_field_match,
-        metric_model_graded_fact, metric_model_graded_qa, metric_threshold, module,
-        module_metrics, module_parameters, module_trials, multi_chain_comparison,
-        optimize_grid, optimizer_control, pin_module_config, pin_trace, pin_vitals_log,
-        predict_llm_class, predict_llm_numeric, program_of_thought, provider_defaults,
-        r_code_runner, rag_module, ragnar_tool, read_trials_jsonl, reasoning_effort,
-        reduce_best_by_metric, reduce_first, reduce_majority, reduce_weighted_vote,
-        refine, register_dsprrr_engine, register_dsprrr_tool, restore_module_config,
-        run, run_async, run_dataset, sample_dataset, session_cost, set_default_chat,
-        signature, split_dataset, stream_async, summarize_traces, summarize_traces_df,
-        temperature, top_p, use_dsprrr_template, validate_workflow, with_reasoning,
-        without_reasoning, write_trials_jsonl\nhas_vignettes: TRUE\ndependencies:
-        cli, ellmer, glue, jsonlite, methods, mirai, R6, rlang, S7, tibble"}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
+        config_diff, create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset,
+        dsprrr_sitrep, ensemble, ensemble_from_programs, eval_program, eval_vignette,
+        evaluate, evaluate_dsp, export_module_code, export_traces, fit_llm_predict,
+        get_cost, get_default_chat, get_last_prompt, get_last_trace, get_metadata,
+        get_output, get_tokens, has_reasoning, input, input_array, input_boolean,
+        input_enum, input_integer, input_number, input_object, input_string, inspect_history,
+        is_reasoning_model, llm_predict, load_trial_log, metric_contains, metric_custom,
+        metric_detect_includes, metric_detect_match, metric_detect_pattern, metric_exact_match,
+        metric_f1, metric_field_match, metric_model_graded_fact, metric_model_graded_qa,
+        metric_threshold, module, module_metrics, module_parameters, module_trials,
+        multi_chain_comparison, optimization_summary, optimize_grid, optimizer_control,
+        pin_module_config, pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric,
+        program_of_thought, provider_defaults, r_code_runner, rag_module, ragnar_tool,
+        read_trials_jsonl, reasoning_effort, reduce_best_by_metric, reduce_first,
+        reduce_majority, reduce_weighted_vote, refine, register_dsprrr_engine, register_dsprrr_tool,
+        restore_module_config, run, run_async, run_dataset, sample_dataset, session_cost,
+        set_default_chat, signature, split_dataset, stream_async, summarize_traces,
+        summarize_traces_df, temperature, top_p, top_trials, use_dsprrr_template,
+        validate_workflow, with_reasoning, without_reasoning, write_trials_jsonl\nhas_vignettes:
+        TRUE\ndependencies: cli, ellmer, glue, jsonlite, methods, mirai, R6, rlang,
+        S7, tibble"}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
         Let''s think step by step in order to produce the organization, main_files,
         entry_points, and patterns."},"organization":{"type":"string","description":"How
         is code organized? (1-2 sentences)"},"main_files":{"type":"array","description":"3-5
@@ -365,43 +370,43 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8f552148b96077-ORD
+      cf-ray: 9ba5bd995d2011fb-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Mon, 05 Jan 2026 01:51:59 GMT
+      date: Wed, 07 Jan 2026 19:08:06 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '12092'
+      openai-processing-ms: '13006'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=j31D48yqsXpqYzFOwTagvZVHLGfN_6acsbZsJWcB7oI-1767577919-1.0.1.1-HwEjsndoSj1UYvh9jI9.vmBM4tErcnavEz_pYLFD80xgMSuiDK.OquLVeb4agOzVZ7ACcoxbXdcXZ_iEPKLXTGCQARF6eTNEYE0vT.gtDOE;
-        path=/; expires=Mon, 05-Jan-26 02:21:59 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=ruJv6Mg3VTZhEwBbqIxvDwgQnBT3CjZ3zpkOzh2aRo0-1767812886-1.0.1.1-QfR0lwOY19QIjFWtJs3J5lHC02pIJpZR3.6KOMQDH.eBEigLIdGI.6K80IqDZnJk2_XvPf1fZvLO8_YoeTlSGPHldTryDIgM8cdy3vZLmYs;
+        path=/; expires=Wed, 07-Jan-26 19:38:06 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=WCTJkcPqDhcv4MUYA278FVpgZXNeG7jIcWJkptnPZhk-1767577919990-0.0.1.1-604800000;
+      - _cfuvid=ofE4kwzmY7oHkMQ3fFVCaIQEXJiZGCXRSJ0i5n3.Lak-1767812886227-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '12096'
+      x-envoy-upstream-service-time: '13008'
       x-ratelimit-limit-requests: '500'
       x-ratelimit-limit-tokens: '30000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '29534'
+      x-ratelimit-remaining-tokens: '29464'
       x-ratelimit-reset-requests: 120ms
-      x-ratelimit-reset-tokens: 932ms
-      x-request-id: req_4ea97a33ea89461cba24dea313d23ec6
+      x-ratelimit-reset-tokens: 1.072s
+      x-request-id: req_d96774c0568b4ce389e8998a5f800073
     body:
       string: |-
         {
-          "id": "resp_0a48619bb8d0793701695b1933e070819680b1cbfeda54c221",
+          "id": "resp_0d23f732afcdcd2101695eaf0937cc81969d540c7a5d2da4ae",
           "object": "response",
-          "created_at": 1767577907,
+          "created_at": 1767812873,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767577919,
+          "completed_at": 1767812886,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
@@ -410,7 +415,7 @@ http_interactions:
           "model": "gpt-4.1-2025-04-14",
           "output": [
             {
-              "id": "msg_0a48619bb8d0793701695b1934ffe08196ac72165d8c744985",
+              "id": "msg_0d23f732afcdcd2101695eaf09b9f881969f0686c5c3d625d5",
               "type": "message",
               "status": "completed",
               "content": [
@@ -418,7 +423,7 @@ http_interactions:
                   "type": "output_text",
                   "annotations": [],
                   "logprobs": [],
-                  "text": "{\"reasoning\":\"The large number of R files are organized around the main abstractions of the package: signatures, modules, teleprompters, optimizers, evaluation, and tracing. Many files deal with different module or teleprompter types, reflecting the package's compositional design inspired by DSPy. The core workflow involves defining a signature (specifying LLM input/output structure), creating or composing modules (algorithms or agent types), and then optimizing/evaluating their performance. The exported functions further clarify the entry points: signature(), module(), teleprompter(), compile(), evaluate(), run(), and various optimizers are typical ways to interact with the package. The use of S7, R6, and rlang packages suggests advanced OOP and metaprogramming patterns. The existence of vitals.R, traces.R, and metrics.R points to careful handling of model diagnostics and systematic evaluation. Integration points with ellmer and tidyverse-style naming and design indicate idiomatic, modular, and extensible code.\",\"organization\":\"The codebase is modular and organized by major abstractions (signatures, modules, optimizers, teleprompters, evaluation, and utilities), with one or more files dedicated to each. Supporting files (utils, import-standalone-purrr, orchestration, etc.) provide glue or functional utilities.\",\"main_files\":[{\"file\":\"signature.R\",\"purpose\":\"Core logic for defining and parsing declarative input/output program signatures.\"},{\"file\":\"module.R\",\"purpose\":\"Abstraction, creation, and orchestration of LLM modules\u2014building blocks of workflows.\"},{\"file\":\"teleprompter.R\",\"purpose\":\"Implements types of 'teleprompter' modules (optimization and prompt strategies).\"},{\"file\":\"optimize.R\",\"purpose\":\"High-level interface and engines for optimizing prompts/modules using data.\"},{\"file\":\"traces.R\",\"purpose\":\"Recording and analyzing workflow execution traces for debugging and improvement.\"}],\"entry_points\":[\"signature()\",\"module()\",\"teleprompter()\",\"compile()\",\"evaluate()\",\"run()\",\"optimize_grid()\",\"dsp()\"],\"patterns\":\"Primarily S7 and R6 object-oriented patterns for extensibility and encapsulation. Strong use of tidyeval/rlang for declarative and functional APIs. Exports provide a tidyverse-style, composable interface. Modular file structure matching major program abstractions.\"}"
+                  "text": "{\"reasoning\":\"Step by step, I see that the package is large and modular, organized by functional domains. The presence of R6 and S7 (in dependencies) suggests object-oriented patterns, which fits the declarative/modular approach. Key files in the root R/ directory include: files for signature handling (signature.R, signature-parser.R), module definitions (module-base.R, module.R, specific module types like module-program-of-thought.R, module-rag.R, module-ensemble.R), optimization (optimize.R, optimizer-*.R), orchestration and run logic (run.R, orchestration.R, compile.R), and evaluation/tracing/metrics (evaluate.R, metrics.R, traces.R). 'dsprrr-package.R' is boilerplate. Teleprompter-*.R files appear to be optimizer or trainer components analogous to DSPy. Given the abundance of exported functions, entry points for users would be higher-level exported constructors (e.g., module(), signature(), compile(), run(), evaluate(), Teleprompter, ...). Public API emphasizes creating 'Signatures', 'Modules', compiling and running them, and evaluating results. Patterns: Modular, composable architecture, functional programming (tidyverse idioms, use of purrr in import-standalone-purrr.R), S7 and R6 OO, and tidy evaluation (rlang).\",\"organization\":\"Code is organized by functional domains: signatures, modules, optimization, orchestration, evaluation, and utilities. Each domain typically has a core file and specialized variants, reflecting a modular and extensible architecture.\",\"main_files\":[{\"file\":\"signature.R\",\"purpose\":\"Defines and handles declarative signatures for LLM inputs/outputs.\"},{\"file\":\"module.R and module-base.R\",\"purpose\":\"Provides core abstractions for 'modules' that encapsulate parts of LLM workflows. Specialized module-*.R files implement common variants.\"},{\"file\":\"compile.R\",\"purpose\":\"Handles compilation of modules and workflows into executable forms.\"},{\"file\":\"optimize.R and optimizer-*.R\",\"purpose\":\"Implement optimization/search logic for self-improving LLM programs.\"},{\"file\":\"run.R and orchestration.R\",\"purpose\":\"Entry points for orchestrating, running, and managing whole LLM workflows.\"}],\"entry_points\":[\"signature()\",\"module()\",\"compile()\",\"run()\",\"evaluate()\",\"Teleprompter\"],\"patterns\":\"Heavy use of modular composition, S7 (and possibly R6) object-oriented systems, tidyverse/rlang/tidyeval idioms, functional decomposition, and layered optimization. DSPy/DSPRRR-specific abstractions like 'signature', 'module', 'teleprompter' signal design patterned after modern ML program frameworks.\"}"
                 }
               ],
               "role": "assistant"
@@ -508,20 +513,20 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 2552,
+            "input_tokens": 2633,
             "input_tokens_details": {
               "cached_tokens": 0
             },
-            "output_tokens": 485,
+            "output_tokens": 555,
             "output_tokens_details": {
               "reasoning_tokens": 0
             },
-            "total_tokens": 3037
+            "total_tokens": 3188
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-05 01:52:00
+  recorded_at: 2026-01-07 19:08:06
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
@@ -560,12 +565,13 @@ http_interactions:
         -> answer\")\n#> \n#> ── S\nexported_functions: BootstrapFewShot, BootstrapFewShotWithRandomSearch,
         COPRO, Ensemble, GEPA, GridSearchTeleprompter, KNNFewShot, LabeledFewShot,
         MIPROv2, OptimizerControl, SIMBA, Signature, Teleprompter, Trial, TrialLog,
-        as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module, as_reward_fn,
-        as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task, best_of_n,
-        chain_of_thought, clear_default_chat, clear_prompt_history, clear_traces,
-        code_act, compile, compile_module, complete_trial, create_search_tool, create_trial,
-        dsp, dsp_configure, dsp_trainset, dsprrr_sitrep, ensemble, ensemble_from_programs,
-        eval_program, eval_vignette, evaluate, evaluate_dsp, export_traces, fit_llm_predict,
+        apply_best_config, as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module,
+        as_reward_fn, as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task,
+        best_demos, best_of_n, best_params, chain_of_thought, clear_default_chat,
+        clear_prompt_history, clear_traces, code_act, compile, compile_module, complete_trial,
+        config_diff, create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset,
+        dsprrr_sitrep, ensemble, ensemble_from_programs, eval_program, eval_vignette,
+        evaluate, evaluate_dsp, export_module_code, export_traces, fit_llm_predict,
         get_cost, get_default_chat, get_last_prompt, get_last_trace, get_metadata,
         get_output, get_tokens, has_reasoning, input, input_array, input_boolean,
         input_enum, input_integer, input_number, input_object, input_string, inspect_history,
@@ -573,124 +579,129 @@ http_interactions:
         metric_detect_includes, metric_detect_match, metric_detect_pattern, metric_exact_match,
         metric_f1, metric_field_match, metric_model_graded_fact, metric_model_graded_qa,
         metric_threshold, module, module_metrics, module_parameters, module_trials,
-        multi_chain_comparison, optimize_grid, optimizer_control, pin_module_config,
-        pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric, program_of_thought,
-        provider_defaults, r_code_runner, rag_module, ragnar_tool, read_trials_jsonl,
-        reasoning_effort, reduce_best_by_metric, reduce_first, reduce_majority, reduce_weighted_vote,
-        refine, register_dsprrr_engine, register_dsprrr_tool, restore_module_config,
-        run, run_async, run_dataset, sample_dataset, session_cost, set_default_chat,
-        signature, split_dataset, stream_async, summarize_traces, summarize_traces_df,
-        temperature, top_p, use_dsprrr_template, validate_workflow, with_reasoning,
-        without_reasoning, write_trials_jsonl"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"The
-        package ''dsprrr'' is designed to move beyond prompt engineering for LLMs
-        in R by introducing a principled, modular, and test-driven structure based
-        on the ideas from Stanford''s DSPy. Unlike basic prompt libraries, dsprrr
-        enables declarative specifications (signatures), automatic optimization, workflow
-        tracing, and tidyverse integration. Its core uniqueness is the ability to
-        treat LLM-powered steps as optimizable programs instead of fragile static
-        prompts: users can compose, test, optimize (using their own data), and debug
-        multi-step LLM workflows. This tightly integrates advanced NLP concepts within
-        the R ecosystem for applications where LLM output reliability, maintainability,
-        and improvement are critical.\",\"purpose\":\"Provides a structured, testable,
-        and optimizable programming model for LLM-powered applications in R, making
-        LLM workflows as robust and improvable as software modules.\",\"key_concepts\":[{\"term\":\"Declarative
-        Signatures\",\"definition\":\"A compact notation for specifying the expected
-        inputs and outputs of LLM-driven functions, supporting automation and validation.\"},{\"term\":\"Composable
-        Modules\",\"definition\":\"LLM workflows are organized into interconnected
-        units (modules), enabling reusable, testable, and maintainable program structure.\"},{\"term\":\"Prompt
-        Optimization\",\"definition\":\"Automatically finds better prompt variants
-        using supervised data, improving LLM accuracy and generalization over hand-tuned
-        static prompts.\"},{\"term\":\"Workflow Tracing\",\"definition\":\"Build-in
-        diagnostics that track each step and output in a multi-step LLM application,
-        supporting error analysis and improvement.\"},{\"term\":\"tidyverse Integration\",\"definition\":\"Leverages
-        the tidyverse''s idioms and data structures, making LLM applications work
-        seamlessly with popular R data workflows.\"}],\"target_audience\":\"R developers
-        and data scientists building robust, data-driven LLM applications who need
-        reproducibility, optimization, and large-scale workflow management.\",\"prerequisites\":[\"Intermediate
-        R programming\",\"Familiarity with LLMs and NLP concepts\",\"Basic understanding
-        of the tidyverse\"]}"}]},{"role":"user","content":[{"type":"input_text","text":"Analyze
+        multi_chain_comparison, optimization_summary, optimize_grid, optimizer_control,
+        pin_module_config, pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric,
+        program_of_thought, provider_defaults, r_code_runner, rag_module, ragnar_tool,
+        read_trials_jsonl, reasoning_effort, reduce_best_by_metric, reduce_first,
+        reduce_majority, reduce_weighted_vote, refine, register_dsprrr_engine, register_dsprrr_tool,
+        restore_module_config, run, run_async, run_dataset, sample_dataset, session_cost,
+        set_default_chat, signature, split_dataset, stream_async, summarize_traces,
+        summarize_traces_df, temperature, top_p, top_trials, use_dsprrr_template,
+        validate_workflow, with_reasoning, without_reasoning, write_trials_jsonl"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"First,
+        I note dsprrr is modeled on DSPy (Stanford NLP) but is implemented for R and
+        builds on ellmer. The problem it solves is prompt fragility: hand-tuned prompts
+        break when models or requirements change, and are hard to systematically improve.
+        dsprrr instead treats LLM workflows as declarative programs amenable to test-driven
+        development and optimization. It makes LLM workflows in R more robust, testable,
+        and optimizable. Its unique features include declarative signatures for specifying
+        LLM I/O, composable modules, automatic prompt optimization, deep tidyverse
+        integration, tracing capabilities, and test-driven self-improvement leveraging
+        user data. Compared to ellmer, dsprrr adds systematic program structuring
+        and optimization capabilities, taking ideas from DSPy. dsprrr targets users
+        with advanced LLM workflows that need maintainability, testability, and optimization—beyond
+        prompt engineering.\",\"purpose\":\"Enables robust, test-driven, and optimizable
+        LLM workflows in R via declarative programming, automatic prompt optimization,
+        and modular program structure, leveraging user data for systematic improvement.\",\"key_concepts\":[{\"term\":\"Declarative
+        Signatures\",\"definition\":\"Compact notations specifying the structure of
+        LLM inputs and outputs for programmatic workflows.\"},{\"term\":\"Self-Improving
+        LLM Workflows\",\"definition\":\"Treat LLM prompts and workflows as structured
+        programs that can be automatically optimized and improved using test data.\"},{\"term\":\"Composable
+        Modules\",\"definition\":\"Reusable components that define parts of LLM workflows,
+        enabling modular and flexible applications.\"},{\"term\":\"Prompt Optimization\",\"definition\":\"Automated
+        search and adaptation of prompts and workflow parameters, improving performance
+        against evaluation data.\"},{\"term\":\"Integration with tidyverse\",\"definition\":\"Seamless
+        compatibility with R''s tidyverse toolkit, facilitating data manipulation
+        and workflow integration.\"}],\"target_audience\":\"R developers and data
+        scientists creating advanced LLM-powered applications requiring maintainability,
+        optimization, and robust performance.\",\"prerequisites\":[\"Intermediate
+        R programming\",\"Understanding of LLMs and prompt engineering\",\"Familiarity
+        with tidyverse packages\",\"Basic knowledge of test-driven development concepts\"]}"}]},{"role":"user","content":[{"type":"input_text","text":"Analyze
         package structure to help developers navigate it.\nIdentify important files
         and entry points. Think through your reasoning step by step before providing
         the answer.\n\nInput:\npkg_name: dsprrr\nr_files: accessors.R, async.R, chat-default.R,
         compile.R, dsp.R, dsprrr-package.R, ellmer.R, evaluate.R, import-standalone-purrr.R,
         input.R, inspect.R, metrics.R, module-base.R, module-codeact.R, module-ensemble.R,
         module-knn.R, module-multichain.R, module-predict.R, module-program-of-thought.R,
-        module-rag.R, module-react.R, module-wrapper.R, module.R, optimize.R, optimizer-core.R,
-        optimizer-discrete-bo.R, optimizer-logging.R, orchestration.R, pareto.R, parsnip.R,
-        r-code-runner.R, ragnar.R, run.R, signature-parser.R, signature-transforms.R,
-        signature.R, teleprompter-bootstrap-rs.R, teleprompter-bootstrap.R, teleprompter-copro.R,
-        teleprompter-ensemble.R, teleprompter-gepa.R, teleprompter-knn.R, teleprompter-mipro.R,
-        teleprompter-simba.R, teleprompter.R, traces.R, utils.R, vitals.R, zzz.R\nexports:
-        BootstrapFewShot, BootstrapFewShotWithRandomSearch, COPRO, Ensemble, GEPA,
-        GridSearchTeleprompter, KNNFewShot, LabeledFewShot, MIPROv2, OptimizerControl,
-        SIMBA, Signature, Teleprompter, Trial, TrialLog, as_dsprrr_metric, as_dsprrr_traces,
-        as_ellmer_tool, as_module, as_reward_fn, as_vitals_cost, as_vitals_samples,
-        as_vitals_solver, as_vitals_task, best_of_n, chain_of_thought, clear_default_chat,
+        module-rag.R, module-react.R, module-wrapper.R, module.R, optimize.R, optimizer-accessors.R,
+        optimizer-core.R, optimizer-discrete-bo.R, optimizer-logging.R, orchestration.R,
+        pareto.R, parsnip.R, r-code-runner.R, ragnar.R, run.R, signature-parser.R,
+        signature-transforms.R, signature.R, teleprompter-bootstrap-rs.R, teleprompter-bootstrap.R,
+        teleprompter-copro.R, teleprompter-ensemble.R, teleprompter-gepa.R, teleprompter-knn.R,
+        teleprompter-mipro.R, teleprompter-simba.R, teleprompter.R, traces.R, utils.R,
+        vitals.R, zzz.R\nexports: BootstrapFewShot, BootstrapFewShotWithRandomSearch,
+        COPRO, Ensemble, GEPA, GridSearchTeleprompter, KNNFewShot, LabeledFewShot,
+        MIPROv2, OptimizerControl, SIMBA, Signature, Teleprompter, Trial, TrialLog,
+        apply_best_config, as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module,
+        as_reward_fn, as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task,
+        best_demos, best_of_n, best_params, chain_of_thought, clear_default_chat,
         clear_prompt_history, clear_traces, code_act, compile, compile_module, complete_trial,
-        create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset, dsprrr_sitrep,
-        ensemble, ensemble_from_programs, eval_program, eval_vignette, evaluate, evaluate_dsp,
-        export_traces, fit_llm_predict, get_cost, get_default_chat, get_last_prompt,
-        get_last_trace, get_metadata, get_output, get_tokens, has_reasoning, input,
-        input_array, input_boolean, input_enum, input_integer, input_number, input_object,
-        input_string, inspect_history, is_reasoning_model, llm_predict, load_trial_log,
-        metric_contains, metric_custom, metric_detect_includes, metric_detect_match,
-        metric_detect_pattern, metric_exact_match, metric_f1, metric_field_match,
-        metric_model_graded_fact, metric_model_graded_qa, metric_threshold, module,
-        module_metrics, module_parameters, module_trials, multi_chain_comparison,
-        optimize_grid, optimizer_control, pin_module_config, pin_trace, pin_vitals_log,
-        predict_llm_class, predict_llm_numeric, program_of_thought, provider_defaults,
-        r_code_runner, rag_module, ragnar_tool, read_trials_jsonl, reasoning_effort,
-        reduce_best_by_metric, reduce_first, reduce_majority, reduce_weighted_vote,
-        refine, register_dsprrr_engine, register_dsprrr_tool, restore_module_config,
-        run, run_async, run_dataset, sample_dataset, session_cost, set_default_chat,
-        signature, split_dataset, stream_async, summarize_traces, summarize_traces_df,
-        temperature, top_p, use_dsprrr_template, validate_workflow, with_reasoning,
-        without_reasoning, write_trials_jsonl\nhas_vignettes: TRUE\ndependencies:
-        cli, ellmer, glue, jsonlite, methods, mirai, R6, rlang, S7, tibble"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"The
-        large number of R files are organized around the main abstractions of the
-        package: signatures, modules, teleprompters, optimizers, evaluation, and tracing.
-        Many files deal with different module or teleprompter types, reflecting the
-        package''s compositional design inspired by DSPy. The core workflow involves
-        defining a signature (specifying LLM input/output structure), creating or
-        composing modules (algorithms or agent types), and then optimizing/evaluating
-        their performance. The exported functions further clarify the entry points:
-        signature(), module(), teleprompter(), compile(), evaluate(), run(), and various
-        optimizers are typical ways to interact with the package. The use of S7, R6,
-        and rlang packages suggests advanced OOP and metaprogramming patterns. The
-        existence of vitals.R, traces.R, and metrics.R points to careful handling
-        of model diagnostics and systematic evaluation. Integration points with ellmer
-        and tidyverse-style naming and design indicate idiomatic, modular, and extensible
-        code.\",\"organization\":\"The codebase is modular and organized by major
-        abstractions (signatures, modules, optimizers, teleprompters, evaluation,
-        and utilities), with one or more files dedicated to each. Supporting files
-        (utils, import-standalone-purrr, orchestration, etc.) provide glue or functional
-        utilities.\",\"main_files\":[{\"file\":\"signature.R\",\"purpose\":\"Core
-        logic for defining and parsing declarative input/output program signatures.\"},{\"file\":\"module.R\",\"purpose\":\"Abstraction,
-        creation, and orchestration of LLM modules—building blocks of workflows.\"},{\"file\":\"teleprompter.R\",\"purpose\":\"Implements
-        types of ''teleprompter'' modules (optimization and prompt strategies).\"},{\"file\":\"optimize.R\",\"purpose\":\"High-level
-        interface and engines for optimizing prompts/modules using data.\"},{\"file\":\"traces.R\",\"purpose\":\"Recording
-        and analyzing workflow execution traces for debugging and improvement.\"}],\"entry_points\":[\"signature()\",\"module()\",\"teleprompter()\",\"compile()\",\"evaluate()\",\"run()\",\"optimize_grid()\",\"dsp()\"],\"patterns\":\"Primarily
-        S7 and R6 object-oriented patterns for extensibility and encapsulation. Strong
-        use of tidyeval/rlang for declarative and functional APIs. Exports provide
-        a tidyverse-style, composable interface. Modular file structure matching major
-        program abstractions.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Generate
+        config_diff, create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset,
+        dsprrr_sitrep, ensemble, ensemble_from_programs, eval_program, eval_vignette,
+        evaluate, evaluate_dsp, export_module_code, export_traces, fit_llm_predict,
+        get_cost, get_default_chat, get_last_prompt, get_last_trace, get_metadata,
+        get_output, get_tokens, has_reasoning, input, input_array, input_boolean,
+        input_enum, input_integer, input_number, input_object, input_string, inspect_history,
+        is_reasoning_model, llm_predict, load_trial_log, metric_contains, metric_custom,
+        metric_detect_includes, metric_detect_match, metric_detect_pattern, metric_exact_match,
+        metric_f1, metric_field_match, metric_model_graded_fact, metric_model_graded_qa,
+        metric_threshold, module, module_metrics, module_parameters, module_trials,
+        multi_chain_comparison, optimization_summary, optimize_grid, optimizer_control,
+        pin_module_config, pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric,
+        program_of_thought, provider_defaults, r_code_runner, rag_module, ragnar_tool,
+        read_trials_jsonl, reasoning_effort, reduce_best_by_metric, reduce_first,
+        reduce_majority, reduce_weighted_vote, refine, register_dsprrr_engine, register_dsprrr_tool,
+        restore_module_config, run, run_async, run_dataset, sample_dataset, session_cost,
+        set_default_chat, signature, split_dataset, stream_async, summarize_traces,
+        summarize_traces_df, temperature, top_p, top_trials, use_dsprrr_template,
+        validate_workflow, with_reasoning, without_reasoning, write_trials_jsonl\nhas_vignettes:
+        TRUE\ndependencies: cli, ellmer, glue, jsonlite, methods, mirai, R6, rlang,
+        S7, tibble"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"Step
+        by step, I see that the package is large and modular, organized by functional
+        domains. The presence of R6 and S7 (in dependencies) suggests object-oriented
+        patterns, which fits the declarative/modular approach. Key files in the root
+        R/ directory include: files for signature handling (signature.R, signature-parser.R),
+        module definitions (module-base.R, module.R, specific module types like module-program-of-thought.R,
+        module-rag.R, module-ensemble.R), optimization (optimize.R, optimizer-*.R),
+        orchestration and run logic (run.R, orchestration.R, compile.R), and evaluation/tracing/metrics
+        (evaluate.R, metrics.R, traces.R). ''dsprrr-package.R'' is boilerplate. Teleprompter-*.R
+        files appear to be optimizer or trainer components analogous to DSPy. Given
+        the abundance of exported functions, entry points for users would be higher-level
+        exported constructors (e.g., module(), signature(), compile(), run(), evaluate(),
+        Teleprompter, ...). Public API emphasizes creating ''Signatures'', ''Modules'',
+        compiling and running them, and evaluating results. Patterns: Modular, composable
+        architecture, functional programming (tidyverse idioms, use of purrr in import-standalone-purrr.R),
+        S7 and R6 OO, and tidy evaluation (rlang).\",\"organization\":\"Code is organized
+        by functional domains: signatures, modules, optimization, orchestration, evaluation,
+        and utilities. Each domain typically has a core file and specialized variants,
+        reflecting a modular and extensible architecture.\",\"main_files\":[{\"file\":\"signature.R\",\"purpose\":\"Defines
+        and handles declarative signatures for LLM inputs/outputs.\"},{\"file\":\"module.R
+        and module-base.R\",\"purpose\":\"Provides core abstractions for ''modules''
+        that encapsulate parts of LLM workflows. Specialized module-*.R files implement
+        common variants.\"},{\"file\":\"compile.R\",\"purpose\":\"Handles compilation
+        of modules and workflows into executable forms.\"},{\"file\":\"optimize.R
+        and optimizer-*.R\",\"purpose\":\"Implement optimization/search logic for
+        self-improving LLM programs.\"},{\"file\":\"run.R and orchestration.R\",\"purpose\":\"Entry
+        points for orchestrating, running, and managing whole LLM workflows.\"}],\"entry_points\":[\"signature()\",\"module()\",\"compile()\",\"run()\",\"evaluate()\",\"Teleprompter\"],\"patterns\":\"Heavy
+        use of modular composition, S7 (and possibly R6) object-oriented systems,
+        tidyverse/rlang/tidyeval idioms, functional decomposition, and layered optimization.
+        DSPy/DSPRRR-specific abstractions like ''signature'', ''module'', ''teleprompter''
+        signal design patterned after modern ML program frameworks.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Generate
         realistic R code examples.\nExamples must be syntactically valid R. Think
         through your reasoning step by step before providing the answer.\n\nInput:\npkg_name:
-        dsprrr\npurpose: Provides a structured, testable, and optimizable programming
-        model for LLM-powered applications in R, making LLM workflows as robust and
-        improvable as software modules.\nentry_points: signature(), module(), teleprompter(),
-        compile(), evaluate(), run(), optimize_grid(), dsp()\nkey_concepts: [{\"term\":\"Declarative
-        Signatures\",\"definition\":\"A compact notation for specifying the expected
-        inputs and outputs of LLM-driven functions, supporting automation and validation.\"},{\"term\":\"Composable
-        Modules\",\"definition\":\"LLM workflows are organized into interconnected
-        units (modules), enabling reusable, testable, and maintainable program structure.\"},{\"term\":\"Prompt
-        Optimization\",\"definition\":\"Automatically finds better prompt variants
-        using supervised data, improving LLM accuracy and generalization over hand-tuned
-        static prompts.\"},{\"term\":\"Workflow Tracing\",\"definition\":\"Build-in
-        diagnostics that track each step and output in a multi-step LLM application,
-        supporting error analysis and improvement.\"},{\"term\":\"tidyverse Integration\",\"definition\":\"Leverages
-        the tidyverse''s idioms and data structures, making LLM applications work
-        seamlessly with popular R data workflows.\"}]"}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
+        dsprrr\npurpose: Enables robust, test-driven, and optimizable LLM workflows
+        in R via declarative programming, automatic prompt optimization, and modular
+        program structure, leveraging user data for systematic improvement.\nentry_points:
+        signature(), module(), compile(), run(), evaluate(), Teleprompter\nkey_concepts:
+        [{\"term\":\"Declarative Signatures\",\"definition\":\"Compact notations specifying
+        the structure of LLM inputs and outputs for programmatic workflows.\"},{\"term\":\"Self-Improving
+        LLM Workflows\",\"definition\":\"Treat LLM prompts and workflows as structured
+        programs that can be automatically optimized and improved using test data.\"},{\"term\":\"Composable
+        Modules\",\"definition\":\"Reusable components that define parts of LLM workflows,
+        enabling modular and flexible applications.\"},{\"term\":\"Prompt Optimization\",\"definition\":\"Automated
+        search and adaptation of prompts and workflow parameters, improving performance
+        against evaluation data.\"},{\"term\":\"Integration with tidyverse\",\"definition\":\"Seamless
+        compatibility with R''s tidyverse toolkit, facilitating data manipulation
+        and workflow integration.\"}]"}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"reasoning":{"type":"string","description":"Reasoning:
         Let''s think step by step in order to produce the basic, intermediate, and
         gotchas."},"basic":{"type":"string","description":"3-5 line minimal example"},"intermediate":{"type":"string","description":"5-10
         line common workflow"},"gotchas":{"type":"array","description":"1-3 common
@@ -700,43 +711,43 @@ http_interactions:
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8f55720f7f6077-ORD
+      cf-ray: 9ba5bdec4ee011fb-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Mon, 05 Jan 2026 01:52:06 GMT
+      date: Wed, 07 Jan 2026 19:08:15 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '6466'
+      openai-processing-ms: '7984'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=B9jhN0DWH5G_aLPmR6oE9VVrlmAqiHG7j97MdB0HgLY-1767577926-1.0.1.1-VUtGmh4vF8c.IvONEFdNcRiDuJIRv1Y_Nyn016rFtWzK8bdvZdbJ6QB.yQYv1pOn2GJpbTPUWGaqEBORDCr9U0scDp_A26HTp1TuejkhMdE;
-        path=/; expires=Mon, 05-Jan-26 02:22:06 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=LgTDdMlQ8wQ3NwPPABrjLrnmFkjaGijHuRNMR_4aJoo-1767812895-1.0.1.1-ljFIvKDXv._d.elffuF1VSLXq7KegAYsd4X4He96DvcXyaFg5hHJg16AlxtQBA1E7o1Mhqunsphnbood4iVHHykgxOpvhMzY6YPM.pzJSQQ;
+        path=/; expires=Wed, 07-Jan-26 19:38:15 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=LayH2pk2drrInm.LRbc3G.Hj6ivQdi3S_9qk_kgwUuI-1767577926858-0.0.1.1-604800000;
+      - _cfuvid=_gQlFa8GM_zMsOKpzSQb0iXVCepPCuksfDZwD5NDzYo-1767812895074-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '6468'
+      x-envoy-upstream-service-time: '7988'
       x-ratelimit-limit-requests: '500'
       x-ratelimit-limit-tokens: '30000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '29600'
+      x-ratelimit-remaining-tokens: '29696'
       x-ratelimit-reset-requests: 120ms
-      x-ratelimit-reset-tokens: 800ms
-      x-request-id: req_13b95674df7d4a84a6c6caf69b19a5b4
+      x-ratelimit-reset-tokens: 608ms
+      x-request-id: req_ee87f23f58324fd087fc7bc15840e277
     body:
       string: |-
         {
-          "id": "resp_0b79f69c35b3fce601695b19405ef881958d0073aed4d06c64",
+          "id": "resp_09852cc45a96cf2901695eaf17139c8191886a4f66fd5710af",
           "object": "response",
-          "created_at": 1767577920,
+          "created_at": 1767812887,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767577926,
+          "completed_at": 1767812895,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
@@ -745,7 +756,7 @@ http_interactions:
           "model": "gpt-4.1-2025-04-14",
           "output": [
             {
-              "id": "msg_0b79f69c35b3fce601695b19409ea08195ba772f0c5406c585",
+              "id": "msg_09852cc45a96cf2901695eaf17a9288191ac0c8850ac1cf63c",
               "type": "message",
               "status": "completed",
               "content": [
@@ -753,7 +764,7 @@ http_interactions:
                   "type": "output_text",
                   "annotations": [],
                   "logprobs": [],
-                  "text": "{\"reasoning\":\"I'll provide three levels of examples: (1) a basic one that shows how to define a signature and call a module on a single input, which demonstrates the declarative workflow; (2) an intermediate example that composes a simple workflow using a module and runs it on a dataset, showing dataset-driven, testable LLM workflows; (3) Gotchas that cover common mistakes like forgetting to install LLM providers, mismatching signatures, or passing plain text instead of a structured prompt/input.\",\"basic\":\"library(dsprrr)\\n# Define the input/output signature for an LLM function\\nsig <- signature(\\\"question -> answer\\\")\\n\\n# Create a simple program (chain-of-thought question answering module)\\nqa_module <- module(signature = sig)\\n\\n# Run the module on an example question\\nresult <- run(qa_module, list(question = \\\"What is the capital of France?\\\"))\\nprint(result$answer)\",\"intermediate\":\"library(dsprrr)\\nlibrary(tibble)\\n\\n# Define dataset\\nqa_data <- tibble(\\n  question = c(\\\"What is the capital of Germany?\\\", \\\"Who wrote '1984'?\\\"),\\n  answer = c(\\\"Berlin\\\", \\\"George Orwell\\\")\\n)\\n\\n# Define a signature for the LLM-powered QA task\\nsig <- signature(\\\"question -> answer\\\")\\n\\n# Create and optimize a teleprompter module with grid search\\nqa_tp <- teleprompter(signature = sig)\\nopt_results <- optimize_grid(module = qa_tp, data = qa_data)\\n\\n# Evaluate optimized module\\neval_out <- evaluate(opt_results$module, qa_data)\\nprint(eval_out)\",\"gotchas\":[\"Forgetting to create or correctly specify the signature: input/output names must match between signature, data, and modules.\",\"Passing strings or unstructured data as input, instead of named lists or data frames matching the signature.\",\"Not installing or configuring LLM providers/hooks, resulting in run() errors or empty outputs.\"]}"
+                  "text": "{\"reasoning\":\"To give valid, realistic R examples, I want to: (1) show a simple signature in dsprrr (minimal), (2) build a basic workflow\u2014define a signature, create a module using it, compile and run it (common scenario), (3) point out common pitfalls (like not loading dsprrr, mis-specifying signatures, or running before compiling). I will use the functions as exported entry points and echo tidyverse-style idioms.\",\"basic\":\"library(dsprrr)\\n\\n# Declare a simple LLM workflow signature:\\nqa_sig <- signature(\\\"question -> answer\\\")\",\"intermediate\":\"library(dsprrr)\\n\\n# 1. Define signature for a Q&A task\\nqa_sig <- signature(\\\"question -> answer\\\")\\n\\n# 2. Create a simple module for the task\\nqa_module <- module(\\n  signature = qa_sig,\\n  prompt = \\\"Answer the following question: {question}\\\"\\n)\\n\\n# 3. Compile the module to prep for execution\\nqa_prog <- compile(qa_module)\\n\\n# 4. Run with an example input\\na_result <- run(qa_prog, list(question = \\\"What is R?\\\") )\\n\\n# 5. Print result\\nprint(a_result)\",\"gotchas\":[\"Not loading or attaching the dsprrr package before using signature() or module().\",\"Mis-specifying signature notation (e.g., missing '->' or typo in variable names).\",\"Trying to run() a module before compiling it with compile().\"]}"
                 }
               ],
               "role": "assistant"
@@ -819,20 +830,20 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 3231,
+            "input_tokens": 3358,
             "input_tokens_details": {
               "cached_tokens": 0
             },
-            "output_tokens": 419,
+            "output_tokens": 323,
             "output_tokens_details": {
               "reasoning_tokens": 0
             },
-            "total_tokens": 3650
+            "total_tokens": 3681
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-05 01:52:07
+  recorded_at: 2026-01-07 19:08:15
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
@@ -871,12 +882,13 @@ http_interactions:
         -> answer\")\n#> \n#> ── S\nexported_functions: BootstrapFewShot, BootstrapFewShotWithRandomSearch,
         COPRO, Ensemble, GEPA, GridSearchTeleprompter, KNNFewShot, LabeledFewShot,
         MIPROv2, OptimizerControl, SIMBA, Signature, Teleprompter, Trial, TrialLog,
-        as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module, as_reward_fn,
-        as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task, best_of_n,
-        chain_of_thought, clear_default_chat, clear_prompt_history, clear_traces,
-        code_act, compile, compile_module, complete_trial, create_search_tool, create_trial,
-        dsp, dsp_configure, dsp_trainset, dsprrr_sitrep, ensemble, ensemble_from_programs,
-        eval_program, eval_vignette, evaluate, evaluate_dsp, export_traces, fit_llm_predict,
+        apply_best_config, as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module,
+        as_reward_fn, as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task,
+        best_demos, best_of_n, best_params, chain_of_thought, clear_default_chat,
+        clear_prompt_history, clear_traces, code_act, compile, compile_module, complete_trial,
+        config_diff, create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset,
+        dsprrr_sitrep, ensemble, ensemble_from_programs, eval_program, eval_vignette,
+        evaluate, evaluate_dsp, export_module_code, export_traces, fit_llm_predict,
         get_cost, get_default_chat, get_last_prompt, get_last_trace, get_metadata,
         get_output, get_tokens, has_reasoning, input, input_array, input_boolean,
         input_enum, input_integer, input_number, input_object, input_string, inspect_history,
@@ -884,236 +896,228 @@ http_interactions:
         metric_detect_includes, metric_detect_match, metric_detect_pattern, metric_exact_match,
         metric_f1, metric_field_match, metric_model_graded_fact, metric_model_graded_qa,
         metric_threshold, module, module_metrics, module_parameters, module_trials,
-        multi_chain_comparison, optimize_grid, optimizer_control, pin_module_config,
-        pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric, program_of_thought,
-        provider_defaults, r_code_runner, rag_module, ragnar_tool, read_trials_jsonl,
-        reasoning_effort, reduce_best_by_metric, reduce_first, reduce_majority, reduce_weighted_vote,
-        refine, register_dsprrr_engine, register_dsprrr_tool, restore_module_config,
-        run, run_async, run_dataset, sample_dataset, session_cost, set_default_chat,
-        signature, split_dataset, stream_async, summarize_traces, summarize_traces_df,
-        temperature, top_p, use_dsprrr_template, validate_workflow, with_reasoning,
-        without_reasoning, write_trials_jsonl"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"The
-        package ''dsprrr'' is designed to move beyond prompt engineering for LLMs
-        in R by introducing a principled, modular, and test-driven structure based
-        on the ideas from Stanford''s DSPy. Unlike basic prompt libraries, dsprrr
-        enables declarative specifications (signatures), automatic optimization, workflow
-        tracing, and tidyverse integration. Its core uniqueness is the ability to
-        treat LLM-powered steps as optimizable programs instead of fragile static
-        prompts: users can compose, test, optimize (using their own data), and debug
-        multi-step LLM workflows. This tightly integrates advanced NLP concepts within
-        the R ecosystem for applications where LLM output reliability, maintainability,
-        and improvement are critical.\",\"purpose\":\"Provides a structured, testable,
-        and optimizable programming model for LLM-powered applications in R, making
-        LLM workflows as robust and improvable as software modules.\",\"key_concepts\":[{\"term\":\"Declarative
-        Signatures\",\"definition\":\"A compact notation for specifying the expected
-        inputs and outputs of LLM-driven functions, supporting automation and validation.\"},{\"term\":\"Composable
-        Modules\",\"definition\":\"LLM workflows are organized into interconnected
-        units (modules), enabling reusable, testable, and maintainable program structure.\"},{\"term\":\"Prompt
-        Optimization\",\"definition\":\"Automatically finds better prompt variants
-        using supervised data, improving LLM accuracy and generalization over hand-tuned
-        static prompts.\"},{\"term\":\"Workflow Tracing\",\"definition\":\"Build-in
-        diagnostics that track each step and output in a multi-step LLM application,
-        supporting error analysis and improvement.\"},{\"term\":\"tidyverse Integration\",\"definition\":\"Leverages
-        the tidyverse''s idioms and data structures, making LLM applications work
-        seamlessly with popular R data workflows.\"}],\"target_audience\":\"R developers
-        and data scientists building robust, data-driven LLM applications who need
-        reproducibility, optimization, and large-scale workflow management.\",\"prerequisites\":[\"Intermediate
-        R programming\",\"Familiarity with LLMs and NLP concepts\",\"Basic understanding
-        of the tidyverse\"]}"}]},{"role":"user","content":[{"type":"input_text","text":"Analyze
+        multi_chain_comparison, optimization_summary, optimize_grid, optimizer_control,
+        pin_module_config, pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric,
+        program_of_thought, provider_defaults, r_code_runner, rag_module, ragnar_tool,
+        read_trials_jsonl, reasoning_effort, reduce_best_by_metric, reduce_first,
+        reduce_majority, reduce_weighted_vote, refine, register_dsprrr_engine, register_dsprrr_tool,
+        restore_module_config, run, run_async, run_dataset, sample_dataset, session_cost,
+        set_default_chat, signature, split_dataset, stream_async, summarize_traces,
+        summarize_traces_df, temperature, top_p, top_trials, use_dsprrr_template,
+        validate_workflow, with_reasoning, without_reasoning, write_trials_jsonl"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"First,
+        I note dsprrr is modeled on DSPy (Stanford NLP) but is implemented for R and
+        builds on ellmer. The problem it solves is prompt fragility: hand-tuned prompts
+        break when models or requirements change, and are hard to systematically improve.
+        dsprrr instead treats LLM workflows as declarative programs amenable to test-driven
+        development and optimization. It makes LLM workflows in R more robust, testable,
+        and optimizable. Its unique features include declarative signatures for specifying
+        LLM I/O, composable modules, automatic prompt optimization, deep tidyverse
+        integration, tracing capabilities, and test-driven self-improvement leveraging
+        user data. Compared to ellmer, dsprrr adds systematic program structuring
+        and optimization capabilities, taking ideas from DSPy. dsprrr targets users
+        with advanced LLM workflows that need maintainability, testability, and optimization—beyond
+        prompt engineering.\",\"purpose\":\"Enables robust, test-driven, and optimizable
+        LLM workflows in R via declarative programming, automatic prompt optimization,
+        and modular program structure, leveraging user data for systematic improvement.\",\"key_concepts\":[{\"term\":\"Declarative
+        Signatures\",\"definition\":\"Compact notations specifying the structure of
+        LLM inputs and outputs for programmatic workflows.\"},{\"term\":\"Self-Improving
+        LLM Workflows\",\"definition\":\"Treat LLM prompts and workflows as structured
+        programs that can be automatically optimized and improved using test data.\"},{\"term\":\"Composable
+        Modules\",\"definition\":\"Reusable components that define parts of LLM workflows,
+        enabling modular and flexible applications.\"},{\"term\":\"Prompt Optimization\",\"definition\":\"Automated
+        search and adaptation of prompts and workflow parameters, improving performance
+        against evaluation data.\"},{\"term\":\"Integration with tidyverse\",\"definition\":\"Seamless
+        compatibility with R''s tidyverse toolkit, facilitating data manipulation
+        and workflow integration.\"}],\"target_audience\":\"R developers and data
+        scientists creating advanced LLM-powered applications requiring maintainability,
+        optimization, and robust performance.\",\"prerequisites\":[\"Intermediate
+        R programming\",\"Understanding of LLMs and prompt engineering\",\"Familiarity
+        with tidyverse packages\",\"Basic knowledge of test-driven development concepts\"]}"}]},{"role":"user","content":[{"type":"input_text","text":"Analyze
         package structure to help developers navigate it.\nIdentify important files
         and entry points. Think through your reasoning step by step before providing
         the answer.\n\nInput:\npkg_name: dsprrr\nr_files: accessors.R, async.R, chat-default.R,
         compile.R, dsp.R, dsprrr-package.R, ellmer.R, evaluate.R, import-standalone-purrr.R,
         input.R, inspect.R, metrics.R, module-base.R, module-codeact.R, module-ensemble.R,
         module-knn.R, module-multichain.R, module-predict.R, module-program-of-thought.R,
-        module-rag.R, module-react.R, module-wrapper.R, module.R, optimize.R, optimizer-core.R,
-        optimizer-discrete-bo.R, optimizer-logging.R, orchestration.R, pareto.R, parsnip.R,
-        r-code-runner.R, ragnar.R, run.R, signature-parser.R, signature-transforms.R,
-        signature.R, teleprompter-bootstrap-rs.R, teleprompter-bootstrap.R, teleprompter-copro.R,
-        teleprompter-ensemble.R, teleprompter-gepa.R, teleprompter-knn.R, teleprompter-mipro.R,
-        teleprompter-simba.R, teleprompter.R, traces.R, utils.R, vitals.R, zzz.R\nexports:
-        BootstrapFewShot, BootstrapFewShotWithRandomSearch, COPRO, Ensemble, GEPA,
-        GridSearchTeleprompter, KNNFewShot, LabeledFewShot, MIPROv2, OptimizerControl,
-        SIMBA, Signature, Teleprompter, Trial, TrialLog, as_dsprrr_metric, as_dsprrr_traces,
-        as_ellmer_tool, as_module, as_reward_fn, as_vitals_cost, as_vitals_samples,
-        as_vitals_solver, as_vitals_task, best_of_n, chain_of_thought, clear_default_chat,
+        module-rag.R, module-react.R, module-wrapper.R, module.R, optimize.R, optimizer-accessors.R,
+        optimizer-core.R, optimizer-discrete-bo.R, optimizer-logging.R, orchestration.R,
+        pareto.R, parsnip.R, r-code-runner.R, ragnar.R, run.R, signature-parser.R,
+        signature-transforms.R, signature.R, teleprompter-bootstrap-rs.R, teleprompter-bootstrap.R,
+        teleprompter-copro.R, teleprompter-ensemble.R, teleprompter-gepa.R, teleprompter-knn.R,
+        teleprompter-mipro.R, teleprompter-simba.R, teleprompter.R, traces.R, utils.R,
+        vitals.R, zzz.R\nexports: BootstrapFewShot, BootstrapFewShotWithRandomSearch,
+        COPRO, Ensemble, GEPA, GridSearchTeleprompter, KNNFewShot, LabeledFewShot,
+        MIPROv2, OptimizerControl, SIMBA, Signature, Teleprompter, Trial, TrialLog,
+        apply_best_config, as_dsprrr_metric, as_dsprrr_traces, as_ellmer_tool, as_module,
+        as_reward_fn, as_vitals_cost, as_vitals_samples, as_vitals_solver, as_vitals_task,
+        best_demos, best_of_n, best_params, chain_of_thought, clear_default_chat,
         clear_prompt_history, clear_traces, code_act, compile, compile_module, complete_trial,
-        create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset, dsprrr_sitrep,
-        ensemble, ensemble_from_programs, eval_program, eval_vignette, evaluate, evaluate_dsp,
-        export_traces, fit_llm_predict, get_cost, get_default_chat, get_last_prompt,
-        get_last_trace, get_metadata, get_output, get_tokens, has_reasoning, input,
-        input_array, input_boolean, input_enum, input_integer, input_number, input_object,
-        input_string, inspect_history, is_reasoning_model, llm_predict, load_trial_log,
-        metric_contains, metric_custom, metric_detect_includes, metric_detect_match,
-        metric_detect_pattern, metric_exact_match, metric_f1, metric_field_match,
-        metric_model_graded_fact, metric_model_graded_qa, metric_threshold, module,
-        module_metrics, module_parameters, module_trials, multi_chain_comparison,
-        optimize_grid, optimizer_control, pin_module_config, pin_trace, pin_vitals_log,
-        predict_llm_class, predict_llm_numeric, program_of_thought, provider_defaults,
-        r_code_runner, rag_module, ragnar_tool, read_trials_jsonl, reasoning_effort,
-        reduce_best_by_metric, reduce_first, reduce_majority, reduce_weighted_vote,
-        refine, register_dsprrr_engine, register_dsprrr_tool, restore_module_config,
-        run, run_async, run_dataset, sample_dataset, session_cost, set_default_chat,
-        signature, split_dataset, stream_async, summarize_traces, summarize_traces_df,
-        temperature, top_p, use_dsprrr_template, validate_workflow, with_reasoning,
-        without_reasoning, write_trials_jsonl\nhas_vignettes: TRUE\ndependencies:
-        cli, ellmer, glue, jsonlite, methods, mirai, R6, rlang, S7, tibble"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"The
-        large number of R files are organized around the main abstractions of the
-        package: signatures, modules, teleprompters, optimizers, evaluation, and tracing.
-        Many files deal with different module or teleprompter types, reflecting the
-        package''s compositional design inspired by DSPy. The core workflow involves
-        defining a signature (specifying LLM input/output structure), creating or
-        composing modules (algorithms or agent types), and then optimizing/evaluating
-        their performance. The exported functions further clarify the entry points:
-        signature(), module(), teleprompter(), compile(), evaluate(), run(), and various
-        optimizers are typical ways to interact with the package. The use of S7, R6,
-        and rlang packages suggests advanced OOP and metaprogramming patterns. The
-        existence of vitals.R, traces.R, and metrics.R points to careful handling
-        of model diagnostics and systematic evaluation. Integration points with ellmer
-        and tidyverse-style naming and design indicate idiomatic, modular, and extensible
-        code.\",\"organization\":\"The codebase is modular and organized by major
-        abstractions (signatures, modules, optimizers, teleprompters, evaluation,
-        and utilities), with one or more files dedicated to each. Supporting files
-        (utils, import-standalone-purrr, orchestration, etc.) provide glue or functional
-        utilities.\",\"main_files\":[{\"file\":\"signature.R\",\"purpose\":\"Core
-        logic for defining and parsing declarative input/output program signatures.\"},{\"file\":\"module.R\",\"purpose\":\"Abstraction,
-        creation, and orchestration of LLM modules—building blocks of workflows.\"},{\"file\":\"teleprompter.R\",\"purpose\":\"Implements
-        types of ''teleprompter'' modules (optimization and prompt strategies).\"},{\"file\":\"optimize.R\",\"purpose\":\"High-level
-        interface and engines for optimizing prompts/modules using data.\"},{\"file\":\"traces.R\",\"purpose\":\"Recording
-        and analyzing workflow execution traces for debugging and improvement.\"}],\"entry_points\":[\"signature()\",\"module()\",\"teleprompter()\",\"compile()\",\"evaluate()\",\"run()\",\"optimize_grid()\",\"dsp()\"],\"patterns\":\"Primarily
-        S7 and R6 object-oriented patterns for extensibility and encapsulation. Strong
-        use of tidyeval/rlang for declarative and functional APIs. Exports provide
-        a tidyverse-style, composable interface. Modular file structure matching major
-        program abstractions.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Generate
+        config_diff, create_search_tool, create_trial, dsp, dsp_configure, dsp_trainset,
+        dsprrr_sitrep, ensemble, ensemble_from_programs, eval_program, eval_vignette,
+        evaluate, evaluate_dsp, export_module_code, export_traces, fit_llm_predict,
+        get_cost, get_default_chat, get_last_prompt, get_last_trace, get_metadata,
+        get_output, get_tokens, has_reasoning, input, input_array, input_boolean,
+        input_enum, input_integer, input_number, input_object, input_string, inspect_history,
+        is_reasoning_model, llm_predict, load_trial_log, metric_contains, metric_custom,
+        metric_detect_includes, metric_detect_match, metric_detect_pattern, metric_exact_match,
+        metric_f1, metric_field_match, metric_model_graded_fact, metric_model_graded_qa,
+        metric_threshold, module, module_metrics, module_parameters, module_trials,
+        multi_chain_comparison, optimization_summary, optimize_grid, optimizer_control,
+        pin_module_config, pin_trace, pin_vitals_log, predict_llm_class, predict_llm_numeric,
+        program_of_thought, provider_defaults, r_code_runner, rag_module, ragnar_tool,
+        read_trials_jsonl, reasoning_effort, reduce_best_by_metric, reduce_first,
+        reduce_majority, reduce_weighted_vote, refine, register_dsprrr_engine, register_dsprrr_tool,
+        restore_module_config, run, run_async, run_dataset, sample_dataset, session_cost,
+        set_default_chat, signature, split_dataset, stream_async, summarize_traces,
+        summarize_traces_df, temperature, top_p, top_trials, use_dsprrr_template,
+        validate_workflow, with_reasoning, without_reasoning, write_trials_jsonl\nhas_vignettes:
+        TRUE\ndependencies: cli, ellmer, glue, jsonlite, methods, mirai, R6, rlang,
+        S7, tibble"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"Step
+        by step, I see that the package is large and modular, organized by functional
+        domains. The presence of R6 and S7 (in dependencies) suggests object-oriented
+        patterns, which fits the declarative/modular approach. Key files in the root
+        R/ directory include: files for signature handling (signature.R, signature-parser.R),
+        module definitions (module-base.R, module.R, specific module types like module-program-of-thought.R,
+        module-rag.R, module-ensemble.R), optimization (optimize.R, optimizer-*.R),
+        orchestration and run logic (run.R, orchestration.R, compile.R), and evaluation/tracing/metrics
+        (evaluate.R, metrics.R, traces.R). ''dsprrr-package.R'' is boilerplate. Teleprompter-*.R
+        files appear to be optimizer or trainer components analogous to DSPy. Given
+        the abundance of exported functions, entry points for users would be higher-level
+        exported constructors (e.g., module(), signature(), compile(), run(), evaluate(),
+        Teleprompter, ...). Public API emphasizes creating ''Signatures'', ''Modules'',
+        compiling and running them, and evaluating results. Patterns: Modular, composable
+        architecture, functional programming (tidyverse idioms, use of purrr in import-standalone-purrr.R),
+        S7 and R6 OO, and tidy evaluation (rlang).\",\"organization\":\"Code is organized
+        by functional domains: signatures, modules, optimization, orchestration, evaluation,
+        and utilities. Each domain typically has a core file and specialized variants,
+        reflecting a modular and extensible architecture.\",\"main_files\":[{\"file\":\"signature.R\",\"purpose\":\"Defines
+        and handles declarative signatures for LLM inputs/outputs.\"},{\"file\":\"module.R
+        and module-base.R\",\"purpose\":\"Provides core abstractions for ''modules''
+        that encapsulate parts of LLM workflows. Specialized module-*.R files implement
+        common variants.\"},{\"file\":\"compile.R\",\"purpose\":\"Handles compilation
+        of modules and workflows into executable forms.\"},{\"file\":\"optimize.R
+        and optimizer-*.R\",\"purpose\":\"Implement optimization/search logic for
+        self-improving LLM programs.\"},{\"file\":\"run.R and orchestration.R\",\"purpose\":\"Entry
+        points for orchestrating, running, and managing whole LLM workflows.\"}],\"entry_points\":[\"signature()\",\"module()\",\"compile()\",\"run()\",\"evaluate()\",\"Teleprompter\"],\"patterns\":\"Heavy
+        use of modular composition, S7 (and possibly R6) object-oriented systems,
+        tidyverse/rlang/tidyeval idioms, functional decomposition, and layered optimization.
+        DSPy/DSPRRR-specific abstractions like ''signature'', ''module'', ''teleprompter''
+        signal design patterned after modern ML program frameworks.\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Generate
         realistic R code examples.\nExamples must be syntactically valid R. Think
         through your reasoning step by step before providing the answer.\n\nInput:\npkg_name:
-        dsprrr\npurpose: Provides a structured, testable, and optimizable programming
-        model for LLM-powered applications in R, making LLM workflows as robust and
-        improvable as software modules.\nentry_points: signature(), module(), teleprompter(),
-        compile(), evaluate(), run(), optimize_grid(), dsp()\nkey_concepts: [{\"term\":\"Declarative
-        Signatures\",\"definition\":\"A compact notation for specifying the expected
-        inputs and outputs of LLM-driven functions, supporting automation and validation.\"},{\"term\":\"Composable
-        Modules\",\"definition\":\"LLM workflows are organized into interconnected
-        units (modules), enabling reusable, testable, and maintainable program structure.\"},{\"term\":\"Prompt
-        Optimization\",\"definition\":\"Automatically finds better prompt variants
-        using supervised data, improving LLM accuracy and generalization over hand-tuned
-        static prompts.\"},{\"term\":\"Workflow Tracing\",\"definition\":\"Build-in
-        diagnostics that track each step and output in a multi-step LLM application,
-        supporting error analysis and improvement.\"},{\"term\":\"tidyverse Integration\",\"definition\":\"Leverages
-        the tidyverse''s idioms and data structures, making LLM applications work
-        seamlessly with popular R data workflows.\"}]"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"I''ll
-        provide three levels of examples: (1) a basic one that shows how to define
-        a signature and call a module on a single input, which demonstrates the declarative
-        workflow; (2) an intermediate example that composes a simple workflow using
-        a module and runs it on a dataset, showing dataset-driven, testable LLM workflows;
-        (3) Gotchas that cover common mistakes like forgetting to install LLM providers,
-        mismatching signatures, or passing plain text instead of a structured prompt/input.\",\"basic\":\"library(dsprrr)\\n#
-        Define the input/output signature for an LLM function\\nsig <- signature(\\\"question
-        -> answer\\\")\\n\\n# Create a simple program (chain-of-thought question answering
-        module)\\nqa_module <- module(signature = sig)\\n\\n# Run the module on an
-        example question\\nresult <- run(qa_module, list(question = \\\"What is the
-        capital of France?\\\"))\\nprint(result$answer)\",\"intermediate\":\"library(dsprrr)\\nlibrary(tibble)\\n\\n#
-        Define dataset\\nqa_data <- tibble(\\n  question = c(\\\"What is the capital
-        of Germany?\\\", \\\"Who wrote ''1984''?\\\"),\\n  answer = c(\\\"Berlin\\\",
-        \\\"George Orwell\\\")\\n)\\n\\n# Define a signature for the LLM-powered QA
-        task\\nsig <- signature(\\\"question -> answer\\\")\\n\\n# Create and optimize
-        a teleprompter module with grid search\\nqa_tp <- teleprompter(signature =
-        sig)\\nopt_results <- optimize_grid(module = qa_tp, data = qa_data)\\n\\n#
-        Evaluate optimized module\\neval_out <- evaluate(opt_results$module, qa_data)\\nprint(eval_out)\",\"gotchas\":[\"Forgetting
-        to create or correctly specify the signature: input/output names must match
-        between signature, data, and modules.\",\"Passing strings or unstructured
-        data as input, instead of named lists or data frames matching the signature.\",\"Not
-        installing or configuring LLM providers/hooks, resulting in run() errors or
-        empty outputs.\"]}"}]},{"role":"user","content":[{"type":"input_text","text":"Generate
+        dsprrr\npurpose: Enables robust, test-driven, and optimizable LLM workflows
+        in R via declarative programming, automatic prompt optimization, and modular
+        program structure, leveraging user data for systematic improvement.\nentry_points:
+        signature(), module(), compile(), run(), evaluate(), Teleprompter\nkey_concepts:
+        [{\"term\":\"Declarative Signatures\",\"definition\":\"Compact notations specifying
+        the structure of LLM inputs and outputs for programmatic workflows.\"},{\"term\":\"Self-Improving
+        LLM Workflows\",\"definition\":\"Treat LLM prompts and workflows as structured
+        programs that can be automatically optimized and improved using test data.\"},{\"term\":\"Composable
+        Modules\",\"definition\":\"Reusable components that define parts of LLM workflows,
+        enabling modular and flexible applications.\"},{\"term\":\"Prompt Optimization\",\"definition\":\"Automated
+        search and adaptation of prompts and workflow parameters, improving performance
+        against evaluation data.\"},{\"term\":\"Integration with tidyverse\",\"definition\":\"Seamless
+        compatibility with R''s tidyverse toolkit, facilitating data manipulation
+        and workflow integration.\"}]"}]},{"role":"assistant","content":[{"type":"output_text","text":"{\"reasoning\":\"To
+        give valid, realistic R examples, I want to: (1) show a simple signature in
+        dsprrr (minimal), (2) build a basic workflow—define a signature, create a
+        module using it, compile and run it (common scenario), (3) point out common
+        pitfalls (like not loading dsprrr, mis-specifying signatures, or running before
+        compiling). I will use the functions as exported entry points and echo tidyverse-style
+        idioms.\",\"basic\":\"library(dsprrr)\\n\\n# Declare a simple LLM workflow
+        signature:\\nqa_sig <- signature(\\\"question -> answer\\\")\",\"intermediate\":\"library(dsprrr)\\n\\n#
+        1. Define signature for a Q&A task\\nqa_sig <- signature(\\\"question -> answer\\\")\\n\\n#
+        2. Create a simple module for the task\\nqa_module <- module(\\n  signature
+        = qa_sig,\\n  prompt = \\\"Answer the following question: {question}\\\"\\n)\\n\\n#
+        3. Compile the module to prep for execution\\nqa_prog <- compile(qa_module)\\n\\n#
+        4. Run with an example input\\na_result <- run(qa_prog, list(question = \\\"What
+        is R?\\\") )\\n\\n# 5. Print result\\nprint(a_result)\",\"gotchas\":[\"Not
+        loading or attaching the dsprrr package before using signature() or module().\",\"Mis-specifying
+        signature notation (e.g., missing ''->'' or typo in variable names).\",\"Trying
+        to run() a module before compiling it with compile().\"]}"}]},{"role":"user","content":[{"type":"input_text","text":"Generate
         llms.txt in markdown format with sections:\n# {pkg_name}, Key Concepts, Quick
         Start, Common Workflow,\nCode Organization, Entry Points, Watch Out For.\nKeep
         it concise - this is reference documentation for AI systems.\n\nInput:\npkg_name:
-        dsprrr\npurpose: Provides a structured, testable, and optimizable programming
-        model for LLM-powered applications in R, making LLM workflows as robust and
-        improvable as software modules.\ntarget_audience: R developers and data scientists
-        building robust, data-driven LLM applications who need reproducibility, optimization,
-        and large-scale workflow management.\nkey_concepts_json: [{\"term\":\"Declarative
-        Signatures\",\"definition\":\"A compact notation for specifying the expected
-        inputs and outputs of LLM-driven functions, supporting automation and validation.\"},{\"term\":\"Composable
-        Modules\",\"definition\":\"LLM workflows are organized into interconnected
-        units (modules), enabling reusable, testable, and maintainable program structure.\"},{\"term\":\"Prompt
-        Optimization\",\"definition\":\"Automatically finds better prompt variants
-        using supervised data, improving LLM accuracy and generalization over hand-tuned
-        static prompts.\"},{\"term\":\"Workflow Tracing\",\"definition\":\"Build-in
-        diagnostics that track each step and output in a multi-step LLM application,
-        supporting error analysis and improvement.\"},{\"term\":\"tidyverse Integration\",\"definition\":\"Leverages
-        the tidyverse''s idioms and data structures, making LLM applications work
-        seamlessly with popular R data workflows.\"}]\norganization: The codebase
-        is modular and organized by major abstractions (signatures, modules, optimizers,
-        teleprompters, evaluation, and utilities), with one or more files dedicated
-        to each. Supporting files (utils, import-standalone-purrr, orchestration,
-        etc.) provide glue or functional utilities.\nentry_points: signature(), module(),
-        teleprompter(), compile(), evaluate(), run(), optimize_grid(), dsp()\nmain_files_json:
-        [{\"file\":\"signature.R\",\"purpose\":\"Core logic for defining and parsing
-        declarative input/output program signatures.\"},{\"file\":\"module.R\",\"purpose\":\"Abstraction,
-        creation, and orchestration of LLM modules—building blocks of workflows.\"},{\"file\":\"teleprompter.R\",\"purpose\":\"Implements
-        types of ''teleprompter'' modules (optimization and prompt strategies).\"},{\"file\":\"optimize.R\",\"purpose\":\"High-level
-        interface and engines for optimizing prompts/modules using data.\"},{\"file\":\"traces.R\",\"purpose\":\"Recording
-        and analyzing workflow execution traces for debugging and improvement.\"}]\nbasic_example:
-        library(dsprrr)\n# Define the input/output signature for an LLM function\nsig
-        <- signature(\"question -> answer\")\n\n# Create a simple program (chain-of-thought
-        question answering module)\nqa_module <- module(signature = sig)\n\n# Run
-        the module on an example question\nresult <- run(qa_module, list(question
-        = \"What is the capital of France?\"))\nprint(result$answer)\nintermediate_example:
-        library(dsprrr)\nlibrary(tibble)\n\n# Define dataset\nqa_data <- tibble(\n  question
-        = c(\"What is the capital of Germany?\", \"Who wrote ''1984''?\"),\n  answer
-        = c(\"Berlin\", \"George Orwell\")\n)\n\n# Define a signature for the LLM-powered
-        QA task\nsig <- signature(\"question -> answer\")\n\n# Create and optimize
-        a teleprompter module with grid search\nqa_tp <- teleprompter(signature =
-        sig)\nopt_results <- optimize_grid(module = qa_tp, data = qa_data)\n\n# Evaluate
-        optimized module\neval_out <- evaluate(opt_results$module, qa_data)\nprint(eval_out)\ngotchas:
-        Forgetting to create or correctly specify the signature: input/output names
-        must match between signature, data, and modules.; Passing strings or unstructured
-        data as input, instead of named lists or data frames matching the signature.;
-        Not installing or configuring LLM providers/hooks, resulting in run() errors
-        or empty outputs."}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"wrapper":{"type":"string","description":""}},"required":["wrapper"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
+        dsprrr\npurpose: Enables robust, test-driven, and optimizable LLM workflows
+        in R via declarative programming, automatic prompt optimization, and modular
+        program structure, leveraging user data for systematic improvement.\ntarget_audience:
+        R developers and data scientists creating advanced LLM-powered applications
+        requiring maintainability, optimization, and robust performance.\nkey_concepts_json:
+        [{\"term\":\"Declarative Signatures\",\"definition\":\"Compact notations specifying
+        the structure of LLM inputs and outputs for programmatic workflows.\"},{\"term\":\"Self-Improving
+        LLM Workflows\",\"definition\":\"Treat LLM prompts and workflows as structured
+        programs that can be automatically optimized and improved using test data.\"},{\"term\":\"Composable
+        Modules\",\"definition\":\"Reusable components that define parts of LLM workflows,
+        enabling modular and flexible applications.\"},{\"term\":\"Prompt Optimization\",\"definition\":\"Automated
+        search and adaptation of prompts and workflow parameters, improving performance
+        against evaluation data.\"},{\"term\":\"Integration with tidyverse\",\"definition\":\"Seamless
+        compatibility with R''s tidyverse toolkit, facilitating data manipulation
+        and workflow integration.\"}]\norganization: Code is organized by functional
+        domains: signatures, modules, optimization, orchestration, evaluation, and
+        utilities. Each domain typically has a core file and specialized variants,
+        reflecting a modular and extensible architecture.\nentry_points: signature(),
+        module(), compile(), run(), evaluate(), Teleprompter\nmain_files_json: [{\"file\":\"signature.R\",\"purpose\":\"Defines
+        and handles declarative signatures for LLM inputs/outputs.\"},{\"file\":\"module.R
+        and module-base.R\",\"purpose\":\"Provides core abstractions for ''modules''
+        that encapsulate parts of LLM workflows. Specialized module-*.R files implement
+        common variants.\"},{\"file\":\"compile.R\",\"purpose\":\"Handles compilation
+        of modules and workflows into executable forms.\"},{\"file\":\"optimize.R
+        and optimizer-*.R\",\"purpose\":\"Implement optimization/search logic for
+        self-improving LLM programs.\"},{\"file\":\"run.R and orchestration.R\",\"purpose\":\"Entry
+        points for orchestrating, running, and managing whole LLM workflows.\"}]\nbasic_example:
+        library(dsprrr)\n\n# Declare a simple LLM workflow signature:\nqa_sig <- signature(\"question
+        -> answer\")\nintermediate_example: library(dsprrr)\n\n# 1. Define signature
+        for a Q&A task\nqa_sig <- signature(\"question -> answer\")\n\n# 2. Create
+        a simple module for the task\nqa_module <- module(\n  signature = qa_sig,\n  prompt
+        = \"Answer the following question: {question}\"\n)\n\n# 3. Compile the module
+        to prep for execution\nqa_prog <- compile(qa_module)\n\n# 4. Run with an example
+        input\na_result <- run(qa_prog, list(question = \"What is R?\") )\n\n# 5.
+        Print result\nprint(a_result)\ngotchas: Not loading or attaching the dsprrr
+        package before using signature() or module().; Mis-specifying signature notation
+        (e.g., missing ''->'' or typo in variable names).; Trying to run() a module
+        before compiling it with compile()."}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"wrapper":{"type":"string","description":""}},"required":["wrapper"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 9b8f559cda136077-ORD
+      cf-ray: 9ba5be233b2111fb-ORD
       content-encoding: gzip
       content-type: application/json
-      date: Mon, 05 Jan 2026 01:52:13 GMT
+      date: Wed, 07 Jan 2026 19:08:23 GMT
       openai-organization: james-wade-gxavj5
-      openai-processing-ms: '6093'
+      openai-processing-ms: '8163'
       openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=hVEmJ77J7u8sFKm8.mPEQ.J0TajgrRQVbhmsSeUo21o-1767577933-1.0.1.1-irBTpqRiQFGDQAzyCU43jCkKoL0z74duMV78HwLu5nLmGqzV8lULAOy_j658zDGpMv_ZPMSSGY9zVdaBZV7V9GaRaCstVzr4Ww.nGSvdKrk;
-        path=/; expires=Mon, 05-Jan-26 02:22:13 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=UYgIWS.TWGRgLMyIkCTL_lUAxnlliJWZ1OzulFjuxQs-1767812903-1.0.1.1-8Q1bhifYKZ.91sziPMZoPoy9G01mE4fY1ujFRA.gauWZStrutJYHh3XUUT0BnYou1BwSmlNi7O6o.WNGywMsh_j69HLiX1OWJzba87R.REc;
+        path=/; expires=Wed, 07-Jan-26 19:38:23 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=rpjTQrvJFbrbYFaRdgRJVKbQe1AgI3devEf1CKK2nhM-1767577933699-0.0.1.1-604800000;
+      - _cfuvid=Hr96wLfpjva4tzxIryqr.Q8KkIvi2HC0uFeTblU17Tc-1767812903477-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '6096'
+      x-envoy-upstream-service-time: '8165'
       x-ratelimit-limit-requests: '500'
       x-ratelimit-limit-tokens: '30000'
       x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '29286'
+      x-ratelimit-remaining-tokens: '29365'
       x-ratelimit-reset-requests: 120ms
-      x-ratelimit-reset-tokens: 1.428s
-      x-request-id: req_d78f5b9e33f544b6814af3754ac60b39
+      x-ratelimit-reset-tokens: 1.27s
+      x-request-id: req_3324521a5eeb45fc8e4101d8e3867049
     body:
       string: |-
         {
-          "id": "resp_07e6b92714a5aa8501695b19479ad08192aed2721a3b9893f4",
+          "id": "resp_009d91c177aab49501695eaf1f4bec819da2750a87eca9f156",
           "object": "response",
-          "created_at": 1767577927,
+          "created_at": 1767812895,
           "status": "completed",
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1767577933,
+          "completed_at": 1767812903,
           "error": null,
           "incomplete_details": null,
           "instructions": null,
@@ -1122,7 +1126,7 @@ http_interactions:
           "model": "gpt-4.1-2025-04-14",
           "output": [
             {
-              "id": "msg_07e6b92714a5aa8501695b19481ec48192a735db7af05fe0f6",
+              "id": "msg_009d91c177aab49501695eaf202c14819d948acaac3486c648",
               "type": "message",
               "status": "completed",
               "content": [
@@ -1130,7 +1134,7 @@ http_interactions:
                   "type": "output_text",
                   "annotations": [],
                   "logprobs": [],
-                  "text": "{\"wrapper\":\"# dsprrr\\n\\nDeclarative, test-driven, and optimizable LLM workflows for R. Designed for robust, scalable, and maintainable AI-powered applications.\\n\\n---\\n\\n## Key Concepts\\n\\n- **Declarative Signatures**: Compact notation for defining LLM input/output formats, enabling strict type alignment and validation.\\n- **Composable Modules**: LLM programs are built from interchangeable, testable units, facilitating robust and extensible workflows.\\n- **Prompt Optimization**: Automated fine-tuning of workflow components using supervised data, rather than relying on static, hand-crafted prompts.\\n- **Workflow Tracing**: Built-in tools for step-by-step debugging and performance profiling at each stage of a workflow.\\n- **tidyverse Integration**: Works seamlessly with tidyverse idioms/data types for modern R pipelines.\\n\\n---\\n\\n## Quick Start\\n\\n```r\\nlibrary(dsprrr)\\n# Define the input/output signature for an LLM function\\nsig <- signature(\\\"question -> answer\\\")\\n\\n# Create a simple program (chain-of-thought question answering module)\\nqa_module <- module(signature = sig)\\n\\n# Run the module on an example question\\nresult <- run(qa_module, list(question = \\\"What is the capital of France?\\\"))\\nprint(result$answer)\\n```\\n\\n---\\n\\n## Common Workflow\\n\\n```r\\nlibrary(dsprrr)\\nlibrary(tibble)\\n\\n# Define dataset\\nqa_data <- tibble(\\n  question = c(\\\"What is the capital of Germany?\\\", \\\"Who wrote '1984'?\\\"),\\n  answer = c(\\\"Berlin\\\", \\\"George Orwell\\\")\\n)\\n\\n# Define a signature for the LLM-powered QA task\\nsig <- signature(\\\"question -> answer\\\")\\n\\n# Create and optimize a teleprompter module with grid search\\nqa_tp <- teleprompter(signature = sig)\\nopt_results <- optimize_grid(module = qa_tp, data = qa_data)\\n\\n# Evaluate optimized module\\neval_out <- evaluate(opt_results$module, qa_data)\\nprint(eval_out)\\n```\\n\\n---\\n\\n## Code Organization\\n\\nCore abstractions are separated into modular files:\\n\\n- **signature.R**: Parsing and handling declarative input/output signatures.\\n- **module.R**: Defining, composing, and managing LLM modules/workflows.\\n- **teleprompter.R**: Optimization and smart prompting strategies.\\n- **optimize.R**: Optimization drivers for data-driven prompt/module refinement.\\n- **traces.R**: Recording execution details for robust debugging/testing.\\n\\nAdditional utility and glue files support extensibility and workflow management.\\n\\n---\\n\\n## Entry Points\\n\\nMost workflows use these functions:\\n- `signature()`\\n- `module()`\\n- `teleprompter()`\\n- `compile()`\\n- `evaluate()`\\n- `run()`\\n- `optimize_grid()`\\n- `dsp()`\\n\\n---\\n\\n## Watch Out For\\n\\n- **Signature Alignment**: Input/output names must match everywhere (signature, data, and modules).\\n- **Structured Inputs**: Use named lists or tibbles matching your signatures, not plain strings.\\n- **LLM Provider Hooks**: Set up your LLM provider (e.g., OpenAI key); missing configuration causes run() errors or blank outputs.\\n\"}"
+                  "text": "{\"wrapper\":\"# dsprrr\\n\\nEnables robust, test-driven, and optimizable LLM workflows in R via declarative programming, automatic prompt optimization, and modular program structure, leveraging user data for systematic improvement.\\n\\n---\\n\\n## Key Concepts\\n\\n- **Declarative Signatures:** Compact notations specifying the structure of LLM inputs and outputs for programmatic workflows.\\n- **Self-Improving LLM Workflows:** Treat LLM prompts and workflows as structured programs that can be automatically optimized and improved using test data.\\n- **Composable Modules:** Reusable components that define parts of LLM workflows, enabling modular and flexible applications.\\n- **Prompt Optimization:** Automated search and adaptation of prompts and workflow parameters, improving performance against evaluation data.\\n- **Integration with tidyverse:** Seamless compatibility with R's tidyverse toolkit, facilitating data manipulation and workflow integration.\\n\\n---\\n\\n## Quick Start\\n\\nBasic example:\\n\\n```r\\nlibrary(dsprrr)\\n\\n# Declare a simple LLM workflow signature:\\nqa_sig <- signature(\\\"question -> answer\\\")\\n```\\n\\n---\\n\\n## Common Workflow\\n\\n```r\\nlibrary(dsprrr)\\n\\n# 1. Define signature for a Q&A task\\nqa_sig <- signature(\\\"question -> answer\\\")\\n\\n# 2. Create a simple module for the task\\nqa_module <- module(\\n  signature = qa_sig,\\n  prompt = \\\"Answer the following question: {question}\\\"\\n)\\n\\n# 3. Compile the module to prep for execution\\nqa_prog <- compile(qa_module)\\n\\n# 4. Run with an example input\\na_result <- run(qa_prog, list(question = \\\"What is R?\\\") )\\n\\n# 5. Print result\\nprint(a_result)\\n```\\n\\n---\\n\\n## Code Organization\\n\\nCode is organized by functional domains: signatures, modules, optimization, orchestration, evaluation, and utilities. Each domain typically has a core file and specialized variants, reflecting a modular and extensible architecture.\\n\\n- **signature.R:** Handles declarative signatures for LLM I/O.\\n- **module.R and module-base.R:** Abstractions for 'modules'; specialized module-*.R files extend functionality.\\n- **compile.R:** Compilation of modules/workflows.\\n- **optimize.R, optimizer-*.R:** Optimization/search logic for self-improvement.\\n- **run.R, orchestration.R:** Orchestrate, run, and manage LLM workflows.\\n\\n---\\n\\n## Entry Points\\n\\n- `signature()`\\n- `module()`\\n- `compile()`\\n- `run()`\\n- `evaluate()`\\n- `Teleprompter`\\n\\n---\\n\\n## Watch Out For\\n\\n- Not loading or attaching the dsprrr package before using `signature()` or `module()`.\\n- Mis-specifying signature notation (e.g., missing `->` or typo in variable names).\\n- Trying to `run()` a module before compiling it with `compile()`.\\n\"}"
                 }
               ],
               "role": "assistant"
@@ -1177,18 +1181,18 @@ http_interactions:
           "top_p": 1.0,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 4356,
+            "input_tokens": 4270,
             "input_tokens_details": {
               "cached_tokens": 0
             },
-            "output_tokens": 733,
+            "output_tokens": 654,
             "output_tokens_details": {
               "reasoning_tokens": 0
             },
-            "total_tokens": 5089
+            "total_tokens": 4924
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-01-05 01:52:13
+  recorded_at: 2026-01-07 19:08:23
 recorded_with: VCR-vcr/2.1.0
