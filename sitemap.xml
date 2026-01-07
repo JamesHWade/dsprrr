@@ -49,6 +49,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/Trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/TrialLog.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/accessors.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/apply_best_config.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_dsprrr_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.html</loc></url>
@@ -59,7 +60,9 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/as_vitals_task.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/async.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/best_demos.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/best_of_n.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/best_params.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/chain_of_thought.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/clear_default_chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.html</loc></url>
@@ -68,6 +71,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/complete_trial.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/config_diff.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_search_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/default-chat.html</loc></url>
@@ -83,6 +87,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/evaluate.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/evaluate_dsp.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/expand_grid_from_list.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/export_module_code.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/export_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/fit_llm_predict.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/generate_grid_from_parameters.html</loc></url>
@@ -120,7 +125,9 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_parameters.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_trials.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/optimization_summary.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/optimize_grid.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/optimizer-accessors.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/optimizer_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/orchestration.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/parsnip-integration.html</loc></url>
@@ -141,6 +148,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_batch_result.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_evaluation.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_optimization_summary.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.ragnar_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/program_of_thought.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/prompt-visibility.html</loc></url>
@@ -174,6 +182,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/teleprompter-ensemble.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/temperature.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/top_p.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/top_trials.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/tunable_llm_predict.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/validate_workflow.html</loc></url>

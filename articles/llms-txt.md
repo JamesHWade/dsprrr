@@ -387,33 +387,29 @@ cat(result$llmstxt)
 
     #> # dsprrr
     #> 
-    #> Declarative, test-driven, and optimizable LLM workflows for R. Designed for robust, scalable, and maintainable AI-powered applications.
+    #> Enables robust, test-driven, and optimizable LLM workflows in R via declarative programming, automatic prompt optimization, and modular program structure, leveraging user data for systematic improvement.
     #> 
     #> ---
     #> 
     #> ## Key Concepts
     #> 
-    #> - **Declarative Signatures**: Compact notation for defining LLM input/output formats, enabling strict type alignment and validation.
-    #> - **Composable Modules**: LLM programs are built from interchangeable, testable units, facilitating robust and extensible workflows.
-    #> - **Prompt Optimization**: Automated fine-tuning of workflow components using supervised data, rather than relying on static, hand-crafted prompts.
-    #> - **Workflow Tracing**: Built-in tools for step-by-step debugging and performance profiling at each stage of a workflow.
-    #> - **tidyverse Integration**: Works seamlessly with tidyverse idioms/data types for modern R pipelines.
+    #> - **Declarative Signatures:** Compact notations specifying the structure of LLM inputs and outputs for programmatic workflows.
+    #> - **Self-Improving LLM Workflows:** Treat LLM prompts and workflows as structured programs that can be automatically optimized and improved using test data.
+    #> - **Composable Modules:** Reusable components that define parts of LLM workflows, enabling modular and flexible applications.
+    #> - **Prompt Optimization:** Automated search and adaptation of prompts and workflow parameters, improving performance against evaluation data.
+    #> - **Integration with tidyverse:** Seamless compatibility with R's tidyverse toolkit, facilitating data manipulation and workflow integration.
     #> 
     #> ---
     #> 
     #> ## Quick Start
     #> 
+    #> Basic example:
+    #> 
     #> ```r
     #> library(dsprrr)
-    #> # Define the input/output signature for an LLM function
-    #> sig <- signature("question -> answer")
     #> 
-    #> # Create a simple program (chain-of-thought question answering module)
-    #> qa_module <- module(signature = sig)
-    #> 
-    #> # Run the module on an example question
-    #> result <- run(qa_module, list(question = "What is the capital of France?"))
-    #> print(result$answer)
+    #> # Declare a simple LLM workflow signature:
+    #> qa_sig <- signature("question -> answer")
     #> ```
     #> 
     #> ---
@@ -422,61 +418,56 @@ cat(result$llmstxt)
     #> 
     #> ```r
     #> library(dsprrr)
-    #> library(tibble)
     #> 
-    #> # Define dataset
-    #> qa_data <- tibble(
-    #>   question = c("What is the capital of Germany?", "Who wrote '1984'?"),
-    #>   answer = c("Berlin", "George Orwell")
+    #> # 1. Define signature for a Q&A task
+    #> qa_sig <- signature("question -> answer")
+    #> 
+    #> # 2. Create a simple module for the task
+    #> qa_module <- module(
+    #>   signature = qa_sig,
+    #>   prompt = "Answer the following question: {question}"
     #> )
     #> 
-    #> # Define a signature for the LLM-powered QA task
-    #> sig <- signature("question -> answer")
+    #> # 3. Compile the module to prep for execution
+    #> qa_prog <- compile(qa_module)
     #> 
-    #> # Create and optimize a teleprompter module with grid search
-    #> qa_tp <- teleprompter(signature = sig)
-    #> opt_results <- optimize_grid(module = qa_tp, data = qa_data)
+    #> # 4. Run with an example input
+    #> a_result <- run(qa_prog, list(question = "What is R?") )
     #> 
-    #> # Evaluate optimized module
-    #> eval_out <- evaluate(opt_results$module, qa_data)
-    #> print(eval_out)
+    #> # 5. Print result
+    #> print(a_result)
     #> ```
     #> 
     #> ---
     #> 
     #> ## Code Organization
     #> 
-    #> Core abstractions are separated into modular files:
+    #> Code is organized by functional domains: signatures, modules, optimization, orchestration, evaluation, and utilities. Each domain typically has a core file and specialized variants, reflecting a modular and extensible architecture.
     #> 
-    #> - **signature.R**: Parsing and handling declarative input/output signatures.
-    #> - **module.R**: Defining, composing, and managing LLM modules/workflows.
-    #> - **teleprompter.R**: Optimization and smart prompting strategies.
-    #> - **optimize.R**: Optimization drivers for data-driven prompt/module refinement.
-    #> - **traces.R**: Recording execution details for robust debugging/testing.
-    #> 
-    #> Additional utility and glue files support extensibility and workflow management.
+    #> - **signature.R:** Handles declarative signatures for LLM I/O.
+    #> - **module.R and module-base.R:** Abstractions for 'modules'; specialized module-*.R files extend functionality.
+    #> - **compile.R:** Compilation of modules/workflows.
+    #> - **optimize.R, optimizer-*.R:** Optimization/search logic for self-improvement.
+    #> - **run.R, orchestration.R:** Orchestrate, run, and manage LLM workflows.
     #> 
     #> ---
     #> 
     #> ## Entry Points
     #> 
-    #> Most workflows use these functions:
     #> - `signature()`
     #> - `module()`
-    #> - `teleprompter()`
     #> - `compile()`
-    #> - `evaluate()`
     #> - `run()`
-    #> - `optimize_grid()`
-    #> - `dsp()`
+    #> - `evaluate()`
+    #> - `Teleprompter`
     #> 
     #> ---
     #> 
     #> ## Watch Out For
     #> 
-    #> - **Signature Alignment**: Input/output names must match everywhere (signature, data, and modules).
-    #> - **Structured Inputs**: Use named lists or tibbles matching your signatures, not plain strings.
-    #> - **LLM Provider Hooks**: Set up your LLM provider (e.g., OpenAI key); missing configuration causes run() errors or blank outputs.
+    #> - Not loading or attaching the dsprrr package before using `signature()` or `module()`.
+    #> - Mis-specifying signature notation (e.g., missing `->` or typo in variable names).
+    #> - Trying to `run()` a module before compiling it with `compile()`.
 
 **This works.** For a one-off script, you’re done.
 
@@ -809,7 +800,7 @@ result <- analyze_package(pkg_root)
 #> 
 #> Declarative Self-Improving Language Programs for R
 #> 
-#> 123 exports, 49 R files
+#> 130 exports, 50 R files
 #> 
 #> ℹ Analyzing purpose and concepts...
 #> 
@@ -826,14 +817,15 @@ print(result)
 #> 
 #> ── Analysis: dsprrr ──
 #> 
-#> Purpose: Provides a framework for building, optimizing, and debugging
-#> structured LLM workflows in R using declarative, data-driven programming,
-#> making prompt engineering systematic and improvable.
-#> Audience: R developers and data scientists who want robust, scalable, and
-#> testable LLM workflows, especially those familiar with the tidyverse and
-#> seeking more than basic prompt chaining.
-#> Entry points: "signature", "module", "compile", "optimize_grid", "run", and
-#> "evaluate"
+#> Purpose: dsprrr provides a declarative, test-driven, and optimizable
+#> programming framework to systematically build, evaluate, and improve LLM
+#> workflows in R, bridging prompt engineering and formal programmatic
+#> optimization.
+#> Audience: Advanced R developers and data scientists building complex,
+#> data-driven LLM workflows who need systematic optimization and robust
+#> debugging, especially in tidyverse-centric environments.
+#> Entry points: "signature", "module", "Teleprompter", "run", "optimize_grid",
+#> "evaluate", and "compile_module"
 
 # See the generated llms.txt
 cat(result@llmstxt)
@@ -841,96 +833,88 @@ cat(result@llmstxt)
 
     #> # dsprrr
     #> 
-    #> **Purpose:** Provides a framework for building, optimizing, and debugging structured LLM workflows in R using declarative, data-driven programming, making prompt engineering systematic and improvable.
-    #> 
-    #> **Target Audience:** R developers and data scientists who want robust, scalable, and testable LLM workflows, especially those familiar with the tidyverse and seeking more than basic prompt chaining.
-    #> 
-    #> ---
+    #> Declarative, test-driven, and optimizable LLM program framework for R. Build, evaluate, and systematically improve LLM workflows using principled abstractions, composable modules, and data-driven optimization.
     #> 
     #> ## Key Concepts
     #> 
-    #> - **Declarative Signatures:** Define LLM tasks concisely by specifying inputs and expected outputs (e.g., `"question -> answer"`).
-    #> - **Modular LLM Workflows:** Build and combine LLM processes as modules, allowing systematic improvement and reuse.
-    #> - **Automatic Prompt Optimization:** Use labeled data to optimize prompts and workflows instead of manually tweaking prompts.
-    #> - **Tracing and Evaluation:** Record, analyze, and debug LLM decisions using built-in trace and evaluation tools.
-    #> - **tidyverse Integration:** Designed to work seamlessly with tidyverse data structures and idioms for convenience and interoperability.
-    #> 
-    #> ---
+    #> - **Declarative Signatures**: Compact, type-safe notation for specifying LLM input/output structures.
+    #> - **Composable Modules**: Reusable units for encapsulating and composing complex LLM workflows, integrated with tidyverse/ellmer.
+    #> - **Test-driven LLM Optimization**: Guide prompt and workflow tuning with labeled data and metrics for systematic improvement.
+    #> - **Program Tracing and Debugging**: Capture execution traces and diagnose multi-step or agentic pipeline errors.
+    #> - **Integration with tidyverse and ellmer**: Seamless embedding in R data pipelines and LLM dialogue frameworks.
     #> 
     #> ## Quick Start
     #> 
+    #> ### Basic Example
     #> ```r
     #> library(dsprrr)
     #> 
-    #> # Define a minimal signature: input is a 'question', output is an 'answer'
+    #> # Define a signature for input/output structure
     #> sig <- signature("question -> answer")
     #> 
-    #> # Use 'run' to execute with an LLM (assuming LLM provider/account configured)
-    #> run(sig, question = "What is the capital of France?")
-    #> #> $answer
-    #> #> [1] "Paris"
+    #> # Create a trivial module (no LLM call, just structure)
+    #> mod <- module(sig)
+    #> 
+    #> print(mod)
     #> ```
     #> 
-    #> ---
+    #> ### Intermediate (LLM-powered classification)
+    #> ```r
+    #> library(dsprrr)
+    #> 
+    #> sig <- signature("complaint -> category:string")
+    #> complaint_classifier <- module(sig, 
+    #>   prompt = "Classify the customer complaint into one of: billing, technical, service, other.")
+    #> 
+    #> dat <- data.frame(complaint = c(
+    #>   "My internet has been down for days!",
+    #>   "Why was I charged twice this month?",
+    #>   "Can you make the agent more polite?"
+    #> ))
+    #> 
+    #> results <- run(complaint_classifier, dat)
+    #> print(results)
+    #> 
+    #> y_true <- c("technical", "billing", "service")
+    #> eval <- evaluate(results$category, y_true, metric = metric_exact_match)
+    #> print(eval)
+    #> 
+    #> best_mod <- optimize_grid(
+    #>   complaint_classifier, dat, y_true, 
+    #>   grid = list(temperature = c(0, 0.5, 1)),
+    #>   metric = metric_exact_match
+    #> )
+    #> print(best_mod)
+    #> ```
     #> 
     #> ## Common Workflow
-    #> 
-    #> ```r
-    #> library(dsprrr)
-    #> library(tibble)
-    #> 
-    #> # Sample labeled data for optimization and eval
-    #> df <- tibble::tibble(
-    #>   question = c("What is the capital of France?", "Who wrote '1984'?"),
-    #>   answer = c("Paris", "George Orwell")
-    #> )
-    #> 
-    #> # Step 1: Declare the signature and module
-    #> sig <- signature("question -> answer")
-    #> mod <- module(signature = sig, task = "qa_simple")
-    #> 
-    #> # Step 2: Compile the program and optimize (e.g., grid search over prompt params)
-    #> prog <- compile(mod)
-    #> opt_prog <- optimize_grid(prog, dataset = df, metric = metric_exact_match)
-    #> 
-    #> # Step 3: Evaluate and inspect
-    #> results <- evaluate(opt_prog, dataset = df)
-    #> print(results)
-    #> traces <- traces(opt_prog)
-    #> print(traces)
-    #> ```
-    #> 
-    #> ---
+    #> 1. **Declare signatures** to specify expected structure.
+    #> 2. **Build modules** for each logical unit or LLM-powered task.
+    #> 3. **Compose modules** for end-to-end workflows.
+    #> 4. **Run** on datasets via `run()` or `run_dataset()`.
+    #> 5. **Evaluate** and optimize with real data/metrics.
+    #> 6. **Debug**/trace execution; iterate for improvement.
     #> 
     #> ## Code Organization
-    #> 
-    #> - **signature.R:** Defines the DSL and logic for LLM task signatures (input/output specification).
-    #> - **module.R:** Core API for constructing and composing LLM modules; base class for other module types.
-    #> - **compile.R:** Functions to build, validate, and optimize workflows from modules and signatures.
-    #> - **optimize.R:** Implements automatic prompt/workflow optimization and hyperparameter search logic.
-    #> - **run.R:** Execution engine for running workflows on data, handling orchestration and parallelism.
-    #> - **traces.R:** Recording, exporting, and analysis of traces and telemetry from workflow executions.
-    #> 
-    #> Modules and adapters (teleprompter-, optimizer-, module-* files) implement specific strategies and workflow archetypes.
-    #> 
-    #> ---
+    #> - **signature.R**: Signature parsing/creation utilities.
+    #> - **module.R**: Module definition/composition logic.
+    #> - **teleprompter.R**: Prompt engineering & modular LLM workflow strategies.
+    #> - **optimize.R**: Grid/random search optimization primitives.
+    #> - **run.R**: Orchestration of LLM workflows, batch execution.
     #> 
     #> ## Entry Points
-    #> 
-    #> - `signature`: Define structured task signatures
-    #> - `module`: Create LLM modules using signatures
-    #> - `compile`: Assemble and validate workflows
-    #> - `optimize_grid`: Data-driven prompt/hyperparameter search
-    #> - `run`: Execute workflows on input data
-    #> - `evaluate`: Assess performance and review traces
-    #> 
-    #> ---
+    #> - `signature` – Define workflow I/O structure.
+    #> - `module` – Create LLM workflow components.
+    #> - `Teleprompter` – Advanced prompt/module interface.
+    #> - `run` – Execute modules over data.
+    #> - `optimize_grid` – Tune workflow parameters systematically.
+    #> - `evaluate` – Score outputs with custom metrics.
+    #> - `compile_module` – Finalize/lock module configurations.
     #> 
     #> ## Watch Out For
-    #> 
-    #> - **Missing Signatures:** Omitting a signature for modules/tasks will cause errors or ambiguous input/output.
-    #> - **Data Format:** Supply training/evaluation data as `tibble` or tidyverse-compatible structures; using base `data.frame` may cause subtle bugs.
-    #> - **Optimization Needs Data:** Optimization and evaluation tools require labeled data. Without examples, systematic improvement isn't possible.
+    #> - **No prompt defined**: Modules need explicit prompt content to invoke LLMs.
+    #> - **Signature/data mismatch**: Inputs/outputs in signature must match dataset column names/types.
+    #> - **Metric omission**: Always supply a metric to `optimize_grid()` and `evaluate()` for meaningful results.
 
 ## Example Output
 

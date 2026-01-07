@@ -455,6 +455,29 @@ Functions for optimizing module performance
 - [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
   : Summarise optimisation metrics per trial
 
+## Optimizer Accessors
+
+Convenience functions for working with optimization results
+
+- [`optimizer-accessors`](https://jameshwade.github.io/dsprrr/reference/optimizer-accessors.md)
+  : Optimizer Convenience Functions
+- [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md)
+  : Extract Best Parameters from a Module
+- [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md)
+  : Extract Best Demos from a Compiled Module
+- [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md)
+  : Apply Best Configuration from One Module to Another
+- [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
+  : Get Top Performing Trials
+- [`config_diff()`](https://jameshwade.github.io/dsprrr/reference/config_diff.md)
+  : Compare Module Configuration Before and After Optimization
+- [`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md)
+  : Export Module Configuration as R Code
+- [`optimization_summary()`](https://jameshwade.github.io/dsprrr/reference/optimization_summary.md)
+  : Get Optimization Summary
+- [`print(`*`<dsprrr_optimization_summary>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_optimization_summary.md)
+  : Print method for optimization summary
+
 ## Optimizer Infrastructure
 
 Low-level optimizer building blocks
