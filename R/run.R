@@ -499,20 +499,38 @@ run_batch_ellmer_parallel <- function(
 
   # Check if ellmer has parallel_chat_structured
   if (!exists("parallel_chat_structured", envir = asNamespace("ellmer"))) {
-    cli::cli_warn(c(
-      "ellmer::parallel_chat_structured() not available",
-      "i" = "Falling back to mirai-based parallelism",
-      "i" = "Update ellmer to use native parallel processing"
-    ))
-    return(run_batch_parallel(
-      module,
-      input_sets,
-      n,
-      .llm,
-      .verbose,
-      .return_format,
-      .progress
-    ))
+    if (!is.null(.llm)) {
+      # Can't use mirai with a custom .llm (not safe to share across workers)
+      cli::cli_warn(c(
+        "ellmer::parallel_chat_structured() not available",
+        "i" = "Falling back to sequential processing",
+        "i" = "Update ellmer to enable native parallel processing: {.code pak::pak('tidyverse/ellmer')}"
+      ))
+      return(run_batch_sequential(
+        module,
+        input_sets,
+        n,
+        .llm,
+        .verbose,
+        .return_format,
+        .progress
+      ))
+    } else {
+      cli::cli_warn(c(
+        "ellmer::parallel_chat_structured() not available",
+        "i" = "Falling back to mirai-based parallelism",
+        "i" = "Update ellmer to enable native parallel processing: {.code pak::pak('tidyverse/ellmer')}"
+      ))
+      return(run_batch_parallel(
+        module,
+        input_sets,
+        n,
+        .llm,
+        .verbose,
+        .return_format,
+        .progress
+      ))
+    }
   }
 
   # Show progress indication
