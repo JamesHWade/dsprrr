@@ -357,7 +357,7 @@ test_that("batch processing handles errors gracefully", {
   expect_equal(results[[3]], "success")
 })
 
-test_that("run warns when parallel execution with custom llm", {
+test_that("run warns when mirai parallel execution with custom llm", {
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
     output_type = ellmer::type_string()
@@ -369,15 +369,52 @@ test_that("run warns when parallel execution with custom llm", {
     class = "Chat"
   )
 
+  # mirai parallel method requires .llm = NULL
   expect_warning(
     out <- run(
       module,
       text = c("a", "b"),
       .llm = mock_llm,
       .parallel = TRUE,
+      .parallel_method = "mirai",
       .progress = FALSE
     ),
-    "Parallel execution requires"
+    "mirai parallel execution requires"
+  )
+  expect_equal(length(out), 2)
+})
+
+test_that("run does NOT warn when ellmer parallel execution with custom llm", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string()
+  )
+  mod <- module(signature = sig, type = "predict", template = "{text}")
+
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, ...) "ok"),
+    class = "Chat"
+  )
+
+  # ellmer parallel method should NOT warn when .llm is provided
+ # (it actually needs .llm to work)
+  # However, ellmer::parallel_chat_structured may not be available,
+  # so it may fall back to mirai with a different warning
+  skip_if_not(
+    exists("parallel_chat_structured", envir = asNamespace("ellmer")),
+    "ellmer::parallel_chat_structured not available"
+  )
+
+  # Should not produce the "mirai parallel execution requires" warning
+  expect_no_warning(
+    out <- run(
+      mod,
+      text = c("a", "b"),
+      .llm = mock_llm,
+      .parallel = TRUE,
+      .parallel_method = "ellmer",
+      .progress = FALSE
+    )
   )
   expect_equal(length(out), 2)
 })

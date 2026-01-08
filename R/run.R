@@ -14,14 +14,12 @@
 #'   \describe{
 #'     \item{.llm}{An ellmer chat object for LLM interaction (optional)}
 #'     \item{.verbose}{Logical indicating whether to print debug information}
-#'     \item{.parallel}{Logical indicating whether to process batch inputs in parallel (default FALSE).
-#'       When `TRUE`, a fresh LLM client is created per worker unless a custom
-#'       `.llm` is supplied (in which case the call falls back to sequential
-#'       execution).}
-#'     \item{.parallel_method}{Character, either "mirai" (default) or "ellmer".
-#'       "mirai" uses mirai for multi-process parallelism (one LLM client per worker).
+#'     \item{.parallel}{Logical indicating whether to process batch inputs in parallel (default FALSE).}
+#'     \item{.parallel_method}{Character, either "ellmer" (default) or "mirai".
 #'       "ellmer" uses ellmer's `parallel_chat_structured()` for native async HTTP
-#'       parallelism (more efficient, single process).}
+#'       parallelism (more efficient, single process).
+#'       "mirai" uses mirai for multi-process parallelism (requires `.llm = NULL`
+#'       so each worker can create an independent client).}
 #'     \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 #'     \item{.return_format}{Character, either "simple" (default) or "structured".
 #'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
@@ -105,7 +103,7 @@ run.PredictModule <- function(
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
-  .parallel_method = c("mirai", "ellmer"),
+  .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
   .show_prompt = FALSE
@@ -157,11 +155,11 @@ run.PredictModule <- function(
   is_batch <- any(input_lengths > 1)
 
   if (is_batch) {
-    if (.parallel && !is.null(.llm)) {
+    if (.parallel && !is.null(.llm) && .parallel_method == "mirai") {
       cli::cli_warn(c(
-        "Parallel execution requires {.code .llm = NULL} so each worker can create an independent client",
+        "mirai parallel execution requires {.code .llm = NULL} so each worker can create an independent client",
         "i" = "Falling back to sequential processing",
-        "i" = "To enable parallel: remove {.arg .llm} or set {.code .llm = NULL}"
+        "i" = "To enable parallel: remove {.arg .llm}, set {.code .llm = NULL}, or use {.code .parallel_method = \"ellmer\"}"
       ))
       .parallel <- FALSE
     }
@@ -296,7 +294,8 @@ extract_simple_output <- function(response, output_type) {
       length(output_type@properties) == 1
   ) {
     field_name <- names(output_type@properties)[1]
-    if (!is.null(response[[field_name]])) {
+    # Safely check if response is a list/environment with the field
+    if (is.list(response) && field_name %in% names(response)) {
       return(response[[field_name]])
     }
   }
@@ -481,8 +480,8 @@ run_batch_ellmer_parallel <- function(
   .return_format,
   .progress
 ) {
-  # Build prompts for all inputs
-  prompts <- vapply(
+  # Build prompts for all inputs (as list, required by ellmer::parallel_chat_structured)
+  prompts <- lapply(
     input_sets,
     function(input_set) {
       prompt <- build_prompt(module, input_set)
@@ -492,8 +491,7 @@ run_batch_ellmer_parallel <- function(
       } else {
         prompt
       }
-    },
-    character(1)
+    }
   )
 
   # Get the Chat provider - need to clone for parallel use
@@ -556,22 +554,26 @@ run_batch_ellmer_parallel <- function(
     cli::cli_progress_done()
   }
 
-  # Format results
-  results <- vector("list", n)
-  for (i in seq_len(n)) {
-    response <- responses[[i]]
+  # Normalize responses to list-of-lists format
+  # parallel_chat_structured returns a tibble where each row is a response
+  if (is.data.frame(responses)) {
+    responses_list <- lapply(seq_len(nrow(responses)), function(i) as.list(responses[i, ]))
+  } else {
+    responses_list <- responses
+  }
 
-    if (.return_format == "simple") {
-      results[[i]] <- extract_simple_output(
-        response,
-        module$signature@output_type
-      )
-    } else {
-      results[[i]] <- list(
+  # Format results
+  if (.return_format == "simple") {
+    results <- map(responses_list, function(response) {
+      extract_simple_output(response, module$signature@output_type)
+    })
+  } else {
+    results <- map2(responses_list, seq_along(responses_list), function(response, i) {
+      list(
         output = response,
         chat = chat,
         metadata = list(
-          latency_ms = total_latency / n, # Approximate per-item latency
+          latency_ms = total_latency / n,
           prompt_length = nchar(prompts[[i]]),
           prompt = prompts[[i]],
           instructions = module$signature@instructions,
@@ -580,7 +582,7 @@ run_batch_ellmer_parallel <- function(
           parallel_method = "ellmer"
         )
       )
-    }
+    })
   }
 
   results
@@ -930,6 +932,10 @@ run_dataset <- function(module, ...) {
 #' @param .llm Optional ellmer Chat object for LLM calls
 #' @param .verbose Logical whether to print verbose output
 #' @param .parallel Logical whether to enable parallel processing
+#' @param .parallel_method Character, either "ellmer" (default) or "mirai".
+#'   "ellmer" uses ellmer's `parallel_chat_structured()` for native async HTTP
+#'   parallelism (more efficient, single process).
+#'   "mirai" uses mirai for multi-process parallelism (requires `.llm = NULL`).
 #' @param .progress Logical whether to show progress bar
 #' @param .return_format Character either "simple" or "structured"
 #' @export
@@ -939,10 +945,12 @@ run_dataset.Module <- function(
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
+  .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
   ...
 ) {
+  .parallel_method <- match.arg(.parallel_method)
   # Validate data
   if (!is.data.frame(data)) {
     cli::cli_abort(c(
@@ -1004,6 +1012,7 @@ run_dataset.Module <- function(
         .llm = .llm,
         .verbose = .verbose,
         .parallel = .parallel,
+        .parallel_method = .parallel_method,
         .progress = .progress,
         .return_format = .return_format
       )
