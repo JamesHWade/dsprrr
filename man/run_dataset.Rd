@@ -13,6 +13,7 @@ run_dataset(module, ...)
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
+  .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
   ...
@@ -30,6 +31,11 @@ run_dataset(module, ...)
 \item{.verbose}{Logical whether to print verbose output}
 
 \item{.parallel}{Logical whether to enable parallel processing}
+
+\item{.parallel_method}{Character, either "ellmer" (default) or "mirai".
+"ellmer" uses ellmer's \code{parallel_chat_structured()} for native async HTTP
+parallelism (more efficient, single process).
+"mirai" uses mirai for multi-process parallelism (requires \code{.llm = NULL}).}
 
 \item{.progress}{Logical whether to show progress bar}
 

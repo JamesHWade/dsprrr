@@ -14,14 +14,12 @@ Can be single values or vectors for batch processing. Additional parameters:
 \describe{
 \item{.llm}{An ellmer chat object for LLM interaction (optional)}
 \item{.verbose}{Logical indicating whether to print debug information}
-\item{.parallel}{Logical indicating whether to process batch inputs in parallel (default FALSE).
-When \code{TRUE}, a fresh LLM client is created per worker unless a custom
-\code{.llm} is supplied (in which case the call falls back to sequential
-execution).}
-\item{.parallel_method}{Character, either "mirai" (default) or "ellmer".
-"mirai" uses mirai for multi-process parallelism (one LLM client per worker).
+\item{.parallel}{Logical indicating whether to process batch inputs in parallel (default FALSE).}
+\item{.parallel_method}{Character, either "ellmer" (default) or "mirai".
 "ellmer" uses ellmer's \code{parallel_chat_structured()} for native async HTTP
-parallelism (more efficient, single process).}
+parallelism (more efficient, single process).
+"mirai" uses mirai for multi-process parallelism (requires \code{.llm = NULL}
+so each worker can create an independent client).}
 \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 \item{.return_format}{Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
