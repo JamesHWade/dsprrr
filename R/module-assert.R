@@ -18,7 +18,6 @@
 #' 5. If hard assertions fail and retries remain, inject feedback and retry
 #' 6. If max retries exceeded, either error or warn (based on configuration)
 #'
-#' @keywords internal
 #' @noRd
 AssertModule <- R6::R6Class(
   "AssertModule",
@@ -124,6 +123,7 @@ AssertModule <- R6::R6Class(
       start_time <- Sys.time()
       attempts <- list()
       assertion_results_history <- list()
+      module_errors <- list() # Track errors for debugging
       best_result <- NULL
       best_metadata <- NULL
       best_chat <- NULL
@@ -153,6 +153,12 @@ AssertModule <- R6::R6Class(
               "Attempt {i} failed in AssertModule",
               "x" = e$message
             ))
+            # Track error for debugging
+            module_errors[[length(module_errors) + 1]] <<- list(
+              attempt = i,
+              error = e$message,
+              timestamp = Sys.time()
+            )
             NULL
           }
         )
@@ -233,7 +239,15 @@ AssertModule <- R6::R6Class(
 
       # Handle case where we never got a valid result
       if (is.null(best_result)) {
-        cli::cli_abort("All attempts failed in AssertModule")
+        error_msgs <- if (length(module_errors) > 0) {
+          vapply(module_errors, function(e) e$error, character(1))
+        } else {
+          "No attempts completed successfully"
+        }
+        cli::cli_abort(c(
+          "All attempts failed in AssertModule",
+          "x" = error_msgs
+        ))
       }
 
       # Handle case where assertions never passed after all retries
@@ -266,7 +280,8 @@ AssertModule <- R6::R6Class(
         n_soft_failed = best_assertion_result$n_soft_failed,
         total_tokens = total_tokens,
         total_cost = total_cost,
-        latency_ms = latency_ms
+        latency_ms = latency_ms,
+        module_errors = if (length(module_errors) > 0) module_errors else NULL
       )
 
       # Record trace with all attempts
@@ -277,6 +292,7 @@ AssertModule <- R6::R6Class(
           output = best_result,
           attempts = attempts,
           assertion_results = assertion_results_history,
+          module_errors = module_errors,
           n_attempts = length(attempts),
           assertions_passed = best_assertion_result$all_passed,
           model = best_metadata$model
@@ -449,11 +465,8 @@ AssertModule <- R6::R6Class(
     #' Inject feedback into the batch
     inject_feedback = function(batch, feedback) {
       # Add or update assertion_feedback field
-      if (is.data.frame(batch)) {
-        batch$assertion_feedback <- feedback
-      } else {
-        batch$assertion_feedback <- feedback
-      }
+      # Works for both data frames and lists via $ assignment
+      batch$assertion_feedback <- feedback
       batch
     }
   )
@@ -473,7 +486,10 @@ AssertModule <- R6::R6Class(
 #' @param on_failure What to do when max retries exceeded: "error" (default)
 #'   or "warn" (return best attempt with warning)
 #' @param feedback_template Template for feedback injection on retry.
-#'   Uses glue syntax with `{failures}` for failure messages.
+#'   Uses glue syntax. Available variables:
+#'   \itemize{
+#'     \item `{failures}`: Bulleted list of hard assertion failure messages
+#'   }
 #' @param ... Additional arguments passed to the module constructor
 #'
 #' @return An AssertModule object

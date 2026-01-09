@@ -392,17 +392,21 @@ test_that("AssertModule uses custom feedback template", {
 })
 
 # Test edge cases
-test_that("AssertModule handles empty assertions list", {
+test_that("AssertModule handles empty assertions list with warning", {
   mock_mod <- create_mock_module(list(list(answer = "test")))
   assertions <- list() # Empty
 
-  expect_error(
-    assertion_set(assertions),
-    NA
-  ) # Should create empty set without error
+  # Should warn about empty assertion set
+  expect_warning(
+    set <- assertion_set(assertions),
+    "empty AssertionSet"
+  )
 
-  # with_assertions should work with empty set
-  assert_mod <- with_assertions(mock_mod, assertion_set())
+  # with_assertions should work with empty set (warns during creation)
+  expect_warning(
+    assert_mod <- with_assertions(mock_mod, assertion_set()),
+    "empty AssertionSet"
+  )
   result <- assert_mod$forward(list(question = "test"))
   expect_true(result$metadata[[1]]$assertions_passed)
 })
@@ -465,4 +469,82 @@ test_that("AssertModule apply_optimization_params updates max_retries", {
 
   assert_mod$apply_optimization_params(list(max_retries = 5))
   expect_equal(assert_mod$max_retries, 5)
+})
+
+# Test max_retries=0 with on_failure=error
+test_that("AssertModule with max_retries=0 errors immediately on assertion failure", {
+  mock_mod <- create_mock_module(list(list(answer = "x"))) # Too short
+  assertions <- list(
+    assert_output(~ nchar(.x$answer) > 10, "Must be longer than 10 chars")
+  )
+
+  assert_mod <- with_assertions(
+    mock_mod,
+    assertions,
+    max_retries = 0,
+    on_failure = "error"
+  )
+
+  expect_error(
+    assert_mod$forward(list(question = "test")),
+    "Assertions failed after 1 attempt"
+  )
+
+  # Should have only tried once
+  expect_equal(mock_mod$call_count, 1)
+})
+
+# Test all module attempts throwing exceptions
+test_that("AssertModule handles all attempts throwing exceptions", {
+  # Module that always throws errors
+  error_module <- R6::R6Class(
+    "ErrorModule",
+    inherit = Module,
+    public = list(
+      call_count = 0,
+      initialize = function() {
+        super$initialize(
+          signature = signature("question -> answer"),
+          config = list()
+        )
+      },
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        self$call_count <- self$call_count + 1
+        stop(sprintf("Simulated error on attempt %d", self$call_count))
+      },
+      reset_copy = function() self
+    )
+  )$new()
+
+  assertions <- list(assert_output(~TRUE, "OK"))
+  assert_mod <- with_assertions(error_module, assertions, max_retries = 2)
+
+  # Should error with tracked error messages
+  expect_error(
+    suppressWarnings(assert_mod$forward(list(question = "test"))),
+    "All attempts failed"
+  )
+
+  # Should have tried 3 times (1 initial + 2 retries)
+  expect_equal(error_module$call_count, 3)
+})
+
+# Test batch processing with multiple rows
+test_that("AssertModule processes first row of data frame batch", {
+  mock_mod <- create_mock_module(list(list(answer = "Good answer")))
+  assertions <- list(
+    assert_output(~ nchar(.x$answer) > 5, "Must have content")
+  )
+
+  assert_mod <- with_assertions(mock_mod, assertions)
+
+  # Pass a data frame with multiple rows
+  batch_df <- data.frame(
+    question = c("Q1", "Q2", "Q3"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- assert_mod$forward(batch_df)
+  expect_equal(result$output[[1]]$answer, "Good answer")
+  expect_equal(result$metadata[[1]]$n_attempts, 1)
 })

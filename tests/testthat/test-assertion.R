@@ -117,15 +117,16 @@ test_that("evaluate_assertion handles field extraction", {
   expect_true(result$passed)
 })
 
-test_that("evaluate_assertion handles missing field gracefully", {
+test_that("evaluate_assertion fails on missing field", {
   assertion <- assert_output(~TRUE, "Test", field = "missing_field")
 
-  # Should warn and return passed=TRUE (skipped)
+  # Should warn and return passed=FALSE (missing field is a failure)
   expect_warning(
     result <- dsprrr:::evaluate_assertion(assertion, list(other = "value")),
     "not found in output"
   )
-  expect_true(result$passed)
+  expect_false(result$passed)
+  expect_match(result$message, "field 'missing_field' not found")
 })
 
 test_that("evaluate_assertion handles condition errors gracefully", {
@@ -358,4 +359,57 @@ test_that("AssertionSet print method works", {
   )
   # S7 print methods use cli which may not be captured by expect_output
   expect_no_error(print(set))
+})
+
+# Test evaluate_assertion handles NA from condition
+test_that("evaluate_assertion handles condition returning NA", {
+  # Condition that returns NA (e.g., from comparing with NA)
+  assertion <- assert_output(~NA, "Test")
+
+  expect_warning(
+    result <- dsprrr:::evaluate_assertion(assertion, "input"),
+    "returned NA"
+  )
+  expect_false(result$passed)
+})
+
+test_that("evaluate_assertion handles condition returning vector", {
+  # Condition that returns a vector instead of single logical
+  assertion <- assert_output(~ c(TRUE, TRUE), "Test")
+
+  expect_warning(
+    result <- dsprrr:::evaluate_assertion(assertion, "input"),
+    "single logical value"
+  )
+  expect_false(result$passed)
+})
+
+# Test assert_contains with empty pattern
+test_that("assert_contains handles empty string pattern", {
+  assertion <- assert_contains("answer", "")
+
+  # Empty string is contained in everything
+  result <- dsprrr:::evaluate_assertion(assertion, list(answer = "anything"))
+  expect_true(result$passed)
+
+  # Even in empty string
+  result <- dsprrr:::evaluate_assertion(assertion, list(answer = ""))
+  expect_true(result$passed)
+})
+
+test_that("assert_not_contains handles empty string pattern", {
+  assertion <- assert_not_contains("answer", "")
+
+  # Empty string is contained in everything, so NOT contains fails
+  result <- dsprrr:::evaluate_assertion(assertion, list(answer = "anything"))
+  expect_false(result$passed)
+})
+
+# Test assertion_set warns on empty set
+test_that("assertion_set warns when creating empty set", {
+  expect_warning(
+    set <- assertion_set(),
+    "empty AssertionSet"
+  )
+  expect_length(set@assertions, 0)
 })

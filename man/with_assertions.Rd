@@ -25,7 +25,10 @@ with_assertions(
 or "warn" (return best attempt with warning)}
 
 \item{feedback_template}{Template for feedback injection on retry.
-Uses glue syntax with \code{{failures}} for failure messages.}
+Uses glue syntax. Available variables:
+\itemize{
+\item \code{{failures}}: Bulleted list of hard assertion failure messages
+}}
 
 \item{...}{Additional arguments passed to the module constructor}
 }

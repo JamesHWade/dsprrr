@@ -247,10 +247,21 @@ evaluate_assertion <- function(assertion, output) {
     if (is.list(output) && assertion@field %in% names(output)) {
       output[[assertion@field]]
     } else {
-      cli::cli_warn(
-        "Field {.field {assertion@field}} not found in output, assertion skipped"
-      )
-      return(list(passed = TRUE, message = NULL))
+      # Missing field is a failure - typos or schema changes should not pass silently
+      cli::cli_warn(c(
+        "Field {.field {assertion@field}} not found in output",
+        "i" = "Available fields: {.field {names(output)}}",
+        "!" = "Assertion failed due to missing field"
+      ))
+      return(list(
+        passed = FALSE,
+        message = sprintf(
+          "%s (field '%s' not found in output)",
+          assertion@message,
+          assertion@field
+        ),
+        type = assertion@type
+      ))
     }
   }
 
@@ -260,23 +271,50 @@ evaluate_assertion <- function(assertion, output) {
       assertion@condition(value)
     },
     error = function(e) {
-      cli::cli_warn(
-        "Assertion condition raised error: {e$message}"
-      )
-      FALSE
+      cli::cli_warn(c(
+        "Assertion condition raised error: {e$message}",
+        "i" = "Field: {.field {assertion@field %||% 'entire output'}}",
+        "i" = "This may indicate a bug in the assertion condition"
+      ))
+      # Return a special marker to distinguish from assertion failure
+      structure(FALSE, condition_error = TRUE, error_message = e$message)
     }
   )
 
-  if (!is.logical(result) || length(result) != 1) {
-    cli::cli_warn(
-      "Assertion condition must return a single logical value, got {.cls {class(result)}}"
-    )
+  # Handle NA values explicitly
+  if (is.logical(result) && length(result) == 1 && is.na(result)) {
+    cli::cli_warn(c(
+      "Assertion condition returned NA (unknown)",
+      "!" = "Treating as FALSE - NA typically indicates missing data or invalid input"
+    ))
     result <- FALSE
+  } else if (!is.logical(result) || length(result) != 1) {
+    cli::cli_warn(c(
+      "Assertion condition must return a single logical value",
+      "i" = "Got: {.cls {class(result)}} of length {length(result)}",
+      "!" = "Treating as FALSE - consider fixing your condition function"
+    ))
+    result <- FALSE
+  }
+
+  # Build the message, including condition error context if applicable
+  final_message <- if (!isTRUE(result)) {
+    if (!is.null(attr(result, "condition_error"))) {
+      sprintf(
+        "%s (condition error: %s)",
+        assertion@message,
+        attr(result, "error_message")
+      )
+    } else {
+      assertion@message
+    }
+  } else {
+    NULL
   }
 
   list(
     passed = isTRUE(result),
-    message = if (!isTRUE(result)) assertion@message else NULL,
+    message = final_message,
     type = assertion@type
   )
 }
@@ -341,6 +379,15 @@ assertion_set <- function(...) {
         "Element {i} must be an Assertion object (use assert_output() or suggest_output())"
       )
     }
+  }
+
+  # Warn if empty assertion set (likely unintended)
+  if (length(args) == 0) {
+    cli::cli_warn(c(
+      "Creating empty AssertionSet with no assertions",
+      "i" = "This will pass all outputs without validation",
+      "i" = "Add assertions using {.fn assert_output} or {.fn suggest_output}"
+    ))
   }
 
   AssertionSet(assertions = args)
