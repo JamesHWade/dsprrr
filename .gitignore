@@ -20,3 +20,6 @@ tests/testthat/_vcr/*.yml
 gh-issue-advanced-modules.md
 settings.local.json
 gh-issue-optimizers.md
+
+# dsprrr LLM response cache
+.dsprrr_cache/

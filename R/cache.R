@@ -18,6 +18,20 @@ NULL
 #' Configure the caching behavior for LLM responses. By default, both memory
 #' and disk caching are enabled.
 #'
+#' @details
+#' The cache stores parsed LLM responses (lists, tibbles, vectors) keyed by
+#' a hash of the prompt, model, temperature, and output type. This avoids
+#' redundant API calls during development and optimization.
+#'
+#' **Environment variable**: Set `DSPRRR_CACHE_ENABLED=false` (or `0`, `no`,
+#' `off`) to globally disable caching, useful for CI/testing environments.
+#'
+#' **Git**: If using disk caching, add `.dsprrr_cache/` to your `.gitignore`:
+#' ```
+#' # dsprrr LLM response cache
+#' .dsprrr_cache/
+#' ```
+#'
 #' @param enable Logical. Master switch to enable/disable all caching.
 #'   Default `TRUE`.
 #' @param enable_memory Logical. Enable in-memory LRU cache. Default `TRUE`.
@@ -206,15 +220,21 @@ print.dsprrr_cache_stats <- function(x, ...) {
 #'
 #' @description
 #' Get the current cache configuration, initializing defaults if needed.
+#' Respects `DSPRRR_CACHE_ENABLED` environment variable (set to "false" or "0"
+#' to disable caching globally, useful for CI/testing).
 #'
 #' @return A list with cache configuration.
 #'
 #' @noRd
 get_cache_config <- function() {
   if (is.null(.dsprrr_env$cache_config)) {
+    # Check environment variable for global disable
+    env_enabled <- Sys.getenv("DSPRRR_CACHE_ENABLED", unset = "")
+    env_disabled <- tolower(env_enabled) %in% c("false", "0", "no", "off")
+
     # Initialize with defaults
     .dsprrr_env$cache_config <- list(
-      enable = TRUE,
+      enable = !env_disabled,
       enable_memory = TRUE,
       enable_disk = TRUE,
       disk_path = ".dsprrr_cache",
@@ -312,6 +332,8 @@ cache_enabled <- function() {
 #' @param temperature Numeric or NULL. Temperature parameter.
 #' @param output_type An ellmer Type object or description.
 #' @param rollout_id Optional integer for cache partitioning.
+#' @param llm_id Optional character. Unique identifier for the LLM object
+#'   (used for mock LLMs to prevent cache collisions).
 #'
 #' @return Character. A hex digest (SHA256) cache key.
 #'
@@ -321,7 +343,8 @@ cache_key <- function(
   model,
   temperature = NULL,
   output_type,
-  rollout_id = NULL
+  rollout_id = NULL,
+  llm_id = NULL
 ) {
   # Serialize output_type to stable representation
   output_type_repr <- tryCatch(
@@ -351,6 +374,11 @@ cache_key <- function(
   # Add rollout_id if provided (enables cache partitioning for diversity)
   if (!is.null(rollout_id)) {
     key_parts$rollout_id <- as.character(rollout_id)
+  }
+
+  # Add llm_id if provided (used for mock LLMs to prevent cache collisions)
+  if (!is.null(llm_id)) {
+    key_parts$llm_id <- llm_id
   }
 
   # Compute SHA256 hash
@@ -415,13 +443,23 @@ cached_chat_structured <- function(
     error = function(e) NULL
   )
 
+  # Get LLM identity - use address for mock LLMs that don't have proper get_model()
+  # This ensures different mock LLM objects don't share cache entries
+  llm_id <- if (model == "unknown") {
+    # For mock/unknown LLMs, include object address to avoid collisions
+    format(rlang::obj_address(llm))
+  } else {
+    NULL
+  }
+
   # Compute cache key
   key <- cache_key(
     prompt = prompt,
     model = model,
     temperature = temperature,
     output_type = output_type,
-    rollout_id = rollout_id
+    rollout_id = rollout_id,
+    llm_id = llm_id
   )
 
   # Try to get from cache

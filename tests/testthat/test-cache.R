@@ -214,3 +214,129 @@ test_that("clear_cache with 'memory' only clears memory", {
   result <- cache$get("test_key")
   expect_true(cachem::is.key_missing(result))
 })
+
+test_that("DSPRRR_CACHE_ENABLED=false disables cache", {
+  local_reset_cache()
+
+  # Reset config to force re-read of env var
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  pkg_env$cache_config <- NULL
+
+  withr::local_envvar(DSPRRR_CACHE_ENABLED = "false")
+
+  config <- dsprrr:::get_cache_config()
+  expect_false(config$enable)
+})
+
+test_that("DSPRRR_CACHE_ENABLED=0 disables cache", {
+  local_reset_cache()
+
+  # Reset config to force re-read of env var
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  pkg_env$cache_config <- NULL
+
+  withr::local_envvar(DSPRRR_CACHE_ENABLED = "0")
+
+  config <- dsprrr:::get_cache_config()
+  expect_false(config$enable)
+})
+
+test_that("DSPRRR_CACHE_ENABLED unset enables cache by default", {
+  local_reset_cache()
+
+  # Reset config to force re-read of env var
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  pkg_env$cache_config <- NULL
+
+  # Ensure env var is not set
+  withr::local_envvar(DSPRRR_CACHE_ENABLED = NA)
+
+  config <- dsprrr:::get_cache_config()
+  expect_true(config$enable)
+})
+
+test_that("cached_chat_structured uses cache for repeated calls", {
+  local_reset_cache()
+
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+
+  # Create a mock LLM that tracks calls
+  call_count <- 0
+  mock_llm <- list(
+    get_model = function() "mock-model",
+    chat_structured = function(prompt, type, echo = "none") {
+      call_count <<- call_count + 1
+      list(answer = paste("response", call_count))
+    },
+    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+  )
+  class(mock_llm) <- "Chat"
+
+  output_type <- ellmer::type_object(answer = ellmer::type_string())
+
+  # First call - cache miss
+  result1 <- dsprrr:::cached_chat_structured(
+    llm = mock_llm,
+    prompt = "test prompt",
+    output_type = output_type
+  )
+
+  expect_equal(call_count, 1)
+  expect_equal(result1$answer, "response 1")
+
+  # Second call with same params - cache hit
+  result2 <- dsprrr:::cached_chat_structured(
+    llm = mock_llm,
+    prompt = "test prompt",
+    output_type = output_type
+  )
+
+  # Should NOT have called LLM again
+
+  expect_equal(call_count, 1)
+  expect_equal(result2$answer, "response 1")
+
+  # Verify cache stats
+  stats <- cache_stats()
+  expect_equal(stats$hits, 1L)
+  expect_equal(stats$misses, 1L)
+})
+
+test_that("cached_chat_structured bypasses cache when disabled", {
+  local_reset_cache()
+
+  configure_cache(enable = FALSE)
+
+  # Create a mock LLM that tracks calls
+  call_count <- 0
+  mock_llm <- list(
+    get_model = function() "mock-model",
+    chat_structured = function(prompt, type, echo = "none") {
+      call_count <<- call_count + 1
+      list(answer = paste("response", call_count))
+    }
+  )
+  class(mock_llm) <- "Chat"
+
+  output_type <- ellmer::type_object(answer = ellmer::type_string())
+
+  # First call
+  result1 <- dsprrr:::cached_chat_structured(
+    llm = mock_llm,
+    prompt = "test prompt",
+    output_type = output_type
+  )
+
+  expect_equal(call_count, 1)
+
+  # Second call - should call LLM again (no caching)
+  result2 <- dsprrr:::cached_chat_structured(
+    llm = mock_llm,
+    prompt = "test prompt",
+    output_type = output_type
+  )
+
+  expect_equal(call_count, 2)
+  expect_equal(result2$answer, "response 2")
+})

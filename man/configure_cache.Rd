@@ -41,6 +41,20 @@ Invisibly returns the previous cache configuration as a list.
 Configure the caching behavior for LLM responses. By default, both memory
 and disk caching are enabled.
 }
+\details{
+The cache stores parsed LLM responses (lists, tibbles, vectors) keyed by
+a hash of the prompt, model, temperature, and output type. This avoids
+redundant API calls during development and optimization.
+
+\strong{Environment variable}: Set \code{DSPRRR_CACHE_ENABLED=false} (or \code{0}, \code{no},
+\code{off}) to globally disable caching, useful for CI/testing environments.
+
+\strong{Git}: If using disk caching, add \verb{.dsprrr_cache/} to your \code{.gitignore}:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{# dsprrr LLM response cache
+.dsprrr_cache/
+}\if{html}{\out{</div>}}
+}
 \examples{
 \dontrun{
 # Use defaults (caching enabled)

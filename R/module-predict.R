@@ -547,11 +547,11 @@ PredictModule <- R6::R6Class(
           prompt
         }
 
-        # Make the API call through ellmer's chat_structured method
-        result <- llm$chat_structured(
-          full_prompt,
-          type = output_type,
-          echo = "none"
+        # Use cached wrapper for LLM call
+        result <- cached_chat_structured(
+          llm = llm,
+          prompt = full_prompt,
+          output_type = output_type
         )
       }
 
