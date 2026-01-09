@@ -56,6 +56,8 @@ Suggests:
     yardstick
 Collate:
     'accessors.R'
+    'assertion-helpers.R'
+    'assertion.R'
     'async.R'
     'cache.R'
     'chat-default.R'
@@ -68,6 +70,7 @@ Collate:
     'input.R'
     'inspect.R'
     'metrics.R'
+    'module-assert.R'
     'module-base.R'
     'module-codeact.R'
     'module-ensemble.R'
