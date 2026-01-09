@@ -255,15 +255,15 @@ Let’s see how each version performs:
 ``` r
 # Run all three on the test set
 results_baseline <- run_dataset(classifier, trainset, .llm = chat)
-#> Processing 4/10 |  40% | ETA:  2s
+#> Processing 8/10 |  80% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
-#> Processing 4/10 |  40% | ETA:  2s
+#> Processing 7/10 |  70% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 results_compiled <- run_dataset(compiled, trainset, .llm = chat)
-#> Processing 3/10 |  30% | ETA:  3s
+#> Processing 4/10 |  40% | ETA:  2s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 
@@ -297,7 +297,8 @@ metric <- metric_exact_match(field = "category")
 
 # Evaluate the compiled module
 eval_result <- evaluate(compiled, trainset, metric = metric, .llm = chat)
-#> Processing 6/10 |  60% | ETA:  2s
+#> Processing 3/10 |  30% | ETA:  3s
+#> Processing 9/10 |  90% | ETA:  0s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 
@@ -372,7 +373,7 @@ eval_result
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 422.8334
+#> [1] 411.8221
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 272
@@ -384,7 +385,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-09 02:14:55 UTC"
+#> [1] "2026-01-09 16:16:05 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -392,7 +393,7 @@ eval_result
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 424.7682
+#> [1] 419.3778
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 269
@@ -404,7 +405,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-09 02:14:56 UTC"
+#> [1] "2026-01-09 16:16:05 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -412,7 +413,7 @@ eval_result
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 431.812
+#> [1] 413.7697
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 269
@@ -424,7 +425,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-09 02:14:56 UTC"
+#> [1] "2026-01-09 16:16:06 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -432,7 +433,7 @@ eval_result
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 436.6271
+#> [1] 416.1301
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 272
@@ -444,7 +445,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-09 02:14:57 UTC"
+#> [1] "2026-01-09 16:16:06 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -452,7 +453,7 @@ eval_result
 #> 
 #> $metadata[[5]]
 #> $metadata[[5]]$latency_ms
-#> [1] 447.4549
+#> [1] 440.4459
 #> 
 #> $metadata[[5]]$prompt_length
 #> [1] 259
@@ -464,7 +465,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[5]]$timestamp
-#> [1] "2026-01-09 02:14:57 UTC"
+#> [1] "2026-01-09 16:16:06 UTC"
 #> 
 #> $metadata[[5]]$batch_index
 #> [1] 5
@@ -472,7 +473,7 @@ eval_result
 #> 
 #> $metadata[[6]]
 #> $metadata[[6]]$latency_ms
-#> [1] 454.0529
+#> [1] 441.6645
 #> 
 #> $metadata[[6]]$prompt_length
 #> [1] 268
@@ -484,7 +485,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[6]]$timestamp
-#> [1] "2026-01-09 02:14:57 UTC"
+#> [1] "2026-01-09 16:16:07 UTC"
 #> 
 #> $metadata[[6]]$batch_index
 #> [1] 6
@@ -492,7 +493,7 @@ eval_result
 #> 
 #> $metadata[[7]]
 #> $metadata[[7]]$latency_ms
-#> [1] 467.0057
+#> [1] 448.1862
 #> 
 #> $metadata[[7]]$prompt_length
 #> [1] 262
@@ -504,7 +505,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[7]]$timestamp
-#> [1] "2026-01-09 02:14:58 UTC"
+#> [1] "2026-01-09 16:16:07 UTC"
 #> 
 #> $metadata[[7]]$batch_index
 #> [1] 7
@@ -512,7 +513,7 @@ eval_result
 #> 
 #> $metadata[[8]]
 #> $metadata[[8]]$latency_ms
-#> [1] 465.9538
+#> [1] 454.9153
 #> 
 #> $metadata[[8]]$prompt_length
 #> [1] 270
@@ -524,7 +525,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[8]]$timestamp
-#> [1] "2026-01-09 02:14:58 UTC"
+#> [1] "2026-01-09 16:16:08 UTC"
 #> 
 #> $metadata[[8]]$batch_index
 #> [1] 8
@@ -532,7 +533,7 @@ eval_result
 #> 
 #> $metadata[[9]]
 #> $metadata[[9]]$latency_ms
-#> [1] 473.2392
+#> [1] 456.0275
 #> 
 #> $metadata[[9]]$prompt_length
 #> [1] 269
@@ -544,7 +545,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[9]]$timestamp
-#> [1] "2026-01-09 02:14:59 UTC"
+#> [1] "2026-01-09 16:16:08 UTC"
 #> 
 #> $metadata[[9]]$batch_index
 #> [1] 9
@@ -552,7 +553,7 @@ eval_result
 #> 
 #> $metadata[[10]]
 #> $metadata[[10]]$latency_ms
-#> [1] 475.4617
+#> [1] 601.1727
 #> 
 #> $metadata[[10]]$prompt_length
 #> [1] 264
@@ -564,7 +565,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[10]]$timestamp
-#> [1] "2026-01-09 02:14:59 UTC"
+#> [1] "2026-01-09 16:16:09 UTC"
 #> 
 #> $metadata[[10]]$batch_index
 #> [1] 10
@@ -614,21 +615,23 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
     accuracy = eval_k$mean_score
   )
 }
-#> Processing 2/10 |  20% | ETA:  4s
-#> Processing 9/10 |  90% | ETA:  0s
+#> Processing 5/10 |  50% | ETA:  2s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
-#> Processing 4/10 |  40% | ETA:  3s
+#> Processing 3/10 |  30% | ETA:  3s
+#> Processing 7/10 |  70% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
-#> Processing 5/10 |  50% | ETA:  3s
+#> Processing 3/10 |  30% | ETA:  4s
+#> Processing 8/10 |  80% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
-#> Processing 5/10 |  50% | ETA:  3s
+#> Processing 3/10 |  30% | ETA:  4s
+#> Processing 9/10 |  90% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 #> Processing 4/10 |  40% | ETA:  4s
-#> Processing 9/10 |  90% | ETA:  1s
+#> Processing 8/10 |  80% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
 

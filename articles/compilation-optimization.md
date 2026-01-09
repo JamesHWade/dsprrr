@@ -25,16 +25,8 @@ library(dsprrr)
 #>     signature
 library(ellmer)
 
-# Configure Claude (Anthropic's Sonnet model)
-llm <- chat_claude(
-  api_key = Sys.getenv("ANTHROPIC_API_KEY"),
-  model = "claude-sonnet-4-20250514"
-)
-#> Warning: The `api_key` argument of `chat_anthropic()` is deprecated as of ellmer 0.4.0.
-#> ℹ Please use the `credentials` argument instead.
-#> This warning is displayed once every 8 hours.
-#> Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-#> generated.
+# Configure OpenAI (gpt-5-mini for cost-effective cassette recording)
+llm <- chat_openai(model = "gpt-5-mini")
 ```
 
 ## Quick tour: optimizing a module with `optimize_grid()`
@@ -911,16 +903,16 @@ for (k in c(1L, 2L, 3L, 4L)) {
 
 print(results_by_k) # See which k works best
 #> $k_1
-#> [1] 0.8204392
+#> [1] 0.7622253
 #> 
 #> $k_2
-#> [1] 0.8467905
+#> [1] 0.7840854
 #> 
 #> $k_3
-#> [1] 0.8655405
+#> [1] 0.7640367
 #> 
 #> $k_4
-#> [1] 0.9
+#> [1] 0.8172435
 
 # Strategy B: Grid search over different instruction styles
 instruction_variants <- data.frame(
@@ -965,10 +957,11 @@ analysis <- best_analyzer |>
   run(document = new_document, .llm = llm)
 
 print(analysis$summary)
-#> [1] "Merger proposal projects $5M annual cost savings with promising synergies but faces significant cultural integration challenges, requiring 6-8 months for regulatory approval and careful change management."
+#> [1] "Merger offers $5M annual synergies; regulatory approval expected in 6–8 months; employee survey indicates 60% job-security concern; cultural integration risk is high. Financial upside appears to outweigh risks if integration and change management are executed promptly and effectively."
 print(analysis$topics)
-#> [1] "merger synergies"     "cost savings"         "cultural integration"
-#> [4] "regulatory approval"  "change management"
+#> [1] "financial synergies"       "cultural integration risk"
+#> [3] "regulatory timeline"       "employee sentiment"       
+#> [5] "change management"
 print(analysis$sentiment) # Likely "mixed"
 #> [1] "mixed"
 print(analysis$recommendation) # Likely "review"

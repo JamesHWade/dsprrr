@@ -264,6 +264,9 @@ test_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
+#> Processing 3/4 |  75% | ETA:  1s
+#> Processing 4/4 | 100% | ETA:  0s
+#> 
 
 test_results
 #> $mean_score
@@ -306,19 +309,19 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 715.5957
+#> [1] 847.2798
 #> 
 #> $metadata[[1]]$prompt_length
-#> [1] 168
+#> [1] 177
 #> 
 #> $metadata[[1]]$prompt
-#> [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Great value for money!"
+#> [1] "Example 1:\nreview: Exceeded all my expectations!\nOutput: positive\n\nExample 2:\nreview: Don't bother. Total junk.\nOutput: negative\n\n\n# Input: review\nreview: Great value for money!"
 #> 
 #> $metadata[[1]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-09 02:16:31 UTC"
+#> [1] "2026-01-09 16:17:37 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -326,19 +329,19 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 739.116
+#> [1] 671.8423
 #> 
 #> $metadata[[2]]$prompt_length
-#> [1] 175
+#> [1] 184
 #> 
 #> $metadata[[2]]$prompt
-#> [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Stopped working after a week."
+#> [1] "Example 1:\nreview: Exceeded all my expectations!\nOutput: positive\n\nExample 2:\nreview: Don't bother. Total junk.\nOutput: negative\n\n\n# Input: review\nreview: Stopped working after a week."
 #> 
 #> $metadata[[2]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-09 02:16:32 UTC"
+#> [1] "2026-01-09 16:17:38 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -346,19 +349,19 @@ test_results
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 728.2894
+#> [1] 676.496
 #> 
 #> $metadata[[3]]$prompt_length
-#> [1] 177
+#> [1] 186
 #> 
 #> $metadata[[3]]$prompt
-#> [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Average product, average price."
+#> [1] "Example 1:\nreview: Exceeded all my expectations!\nOutput: positive\n\nExample 2:\nreview: Don't bother. Total junk.\nOutput: negative\n\n\n# Input: review\nreview: Average product, average price."
 #> 
 #> $metadata[[3]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-09 02:16:33 UTC"
+#> [1] "2026-01-09 16:17:38 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -366,19 +369,19 @@ test_results
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 746.9063
+#> [1] 683.1298
 #> 
 #> $metadata[[4]]$prompt_length
-#> [1] 185
+#> [1] 194
 #> 
 #> $metadata[[4]]$prompt
-#> [1] "Example 1:\nreview: Don't bother. Total junk.\nOutput: negative\n\nExample 2:\nreview: Decent for the price.\nOutput: neutral\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"
+#> [1] "Example 1:\nreview: Exceeded all my expectations!\nOutput: positive\n\nExample 2:\nreview: Don't bother. Total junk.\nOutput: negative\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"
 #> 
 #> $metadata[[4]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-09 02:16:33 UTC"
+#> [1] "2026-01-09 16:17:39 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -409,7 +412,7 @@ baseline_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
-#> Processing 2/4 |  50% | ETA:  2s
+#> Processing 3/4 |  75% | ETA:  1s
 #> Processing 4/4 | 100% | ETA:  0s
 #> 
 
@@ -453,8 +456,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x55a5cc9dad58>
-#> <environment: 0x55a5cc9d1e08>
+#> <bytecode: 0x55e7fe2c8378>
+#> <environment: 0x55e7ff0374c8>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -474,8 +477,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x55a5cc922110>
-#> <environment: 0x55a5cc910370>
+#> <bytecode: 0x55e7f90e6288>
+#> <environment: 0x55e7f7fc6418>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -503,8 +506,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x55a5cc877d70>
-#> <environment: 0x55a5cc870318>
+#> <bytecode: 0x55e8014be6c0>
+#> <environment: 0x55e8022253b8>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -519,8 +522,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x55a5cc769b50>
-#> <environment: 0x55a5cc766ce0>
+#> <bytecode: 0x55e801cfd460>
+#> <environment: 0x55e801cfe340>
 ```
 
 ## Step 10: Tracking Costs

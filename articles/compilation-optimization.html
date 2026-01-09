@@ -157,16 +157,8 @@ programs</li>
 <span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Configure Claude (Anthropic's Sonnet model)</span></span>
-<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_claude</a></span><span class="op">(</span></span>
-<span>  api_key <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"ANTHROPIC_API_KEY"</span><span class="op">)</span>,</span>
-<span>  model <span class="op">=</span> <span class="st">"claude-sonnet-4-20250514"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: The `api_key` argument of `chat_anthropic()` is deprecated as of ellmer 0.4.0.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Please use the `credentials` argument instead.</span></span>
-<span><span class="co">#&gt; <span style="color: #555555;">This warning is displayed once every 8 hours.</span></span></span>
-<span><span class="co">#&gt; <span style="color: #555555;">Call `lifecycle::last_lifecycle_warnings()` to see where this warning was</span></span></span>
-<span><span class="co">#&gt; <span style="color: #555555;">generated.</span></span></span></code></pre></div>
+<span><span class="co"># Configure OpenAI (gpt-5-mini for cost-effective cassette recording)</span></span>
+<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="quick-tour-optimizing-a-module-with-optimize_grid">Quick tour: optimizing a module with
@@ -1026,16 +1018,16 @@ performance:</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_by_k</span><span class="op">)</span> <span class="co"># See which k works best</span></span>
 <span><span class="co">#&gt; $k_1</span></span>
-<span><span class="co">#&gt; [1] 0.8204392</span></span>
+<span><span class="co">#&gt; [1] 0.7622253</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $k_2</span></span>
-<span><span class="co">#&gt; [1] 0.8467905</span></span>
+<span><span class="co">#&gt; [1] 0.7840854</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $k_3</span></span>
-<span><span class="co">#&gt; [1] 0.8655405</span></span>
+<span><span class="co">#&gt; [1] 0.7640367</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $k_4</span></span>
-<span><span class="co">#&gt; [1] 0.9</span></span>
+<span><span class="co">#&gt; [1] 0.8172435</span></span>
 <span></span>
 <span><span class="co"># Strategy B: Grid search over different instruction styles</span></span>
 <span><span class="va">instruction_variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -1080,10 +1072,11 @@ performance:</p>
 <span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span>document <span class="op">=</span> <span class="va">new_document</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Merger proposal projects $5M annual cost savings with promising synergies but faces significant cultural integration challenges, requiring 6-8 months for regulatory approval and careful change management."</span></span>
+<span><span class="co">#&gt; [1] "Merger offers $5M annual synergies; regulatory approval expected in 6–8 months; employee survey indicates 60% job-security concern; cultural integration risk is high. Financial upside appears to outweigh risks if integration and change management are executed promptly and effectively."</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">topics</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "merger synergies"     "cost savings"         "cultural integration"</span></span>
-<span><span class="co">#&gt; [4] "regulatory approval"  "change management"</span></span>
+<span><span class="co">#&gt; [1] "financial synergies"       "cultural integration risk"</span></span>
+<span><span class="co">#&gt; [3] "regulatory timeline"       "employee sentiment"       </span></span>
+<span><span class="co">#&gt; [5] "change management"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">sentiment</span><span class="op">)</span> <span class="co"># Likely "mixed"</span></span>
 <span><span class="co">#&gt; [1] "mixed"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">recommendation</span><span class="op">)</span> <span class="co"># Likely "review"</span></span>

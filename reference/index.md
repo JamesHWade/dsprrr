@@ -60,6 +60,39 @@ DSPy-inspired reasoning patterns for improved accuracy
 - [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
   : Best by Metric Reducer
 
+## Assertions
+
+Output validation with backtracking
+
+- [`Assertion()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  [`AssertionSet()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  [`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  [`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  : Assertions for Output Validation
+- [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
+  : Wrap a Module with Assertions
+- [`assertion-helpers`](https://jameshwade.github.io/dsprrr/reference/assertion-helpers.md)
+  : Assertion Helper Functions
+- [`assert_length()`](https://jameshwade.github.io/dsprrr/reference/assert_length.md)
+  : Assert Output Length
+- [`assert_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_contains.md)
+  : Assert Output Contains Substring
+- [`assert_not_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_not_contains.md)
+  : Assert Output Does Not Contain Substring
+- [`assert_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_matches.md)
+  : Assert Output Matches Pattern
+- [`assert_not_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_not_matches.md)
+  : Assert Output Does Not Match Pattern
+- [`assert_one_of()`](https://jameshwade.github.io/dsprrr/reference/assert_one_of.md)
+  : Assert Output is One Of
+- [`assert_custom()`](https://jameshwade.github.io/dsprrr/reference/assert_custom.md)
+  : Assert Custom Condition
+- [`assert_not_empty()`](https://jameshwade.github.io/dsprrr/reference/assert_not_empty.md)
+  : Assert Output is Not Empty
+- [`assert_range()`](https://jameshwade.github.io/dsprrr/reference/assert_range.md)
+  : Assert Numeric Value in Range
+
 ## Code Execution Modules
 
 Execute LLM-generated R code safely
@@ -104,6 +137,16 @@ Setup and configure dsprrr
   : Set the Default Chat
 - [`clear_default_chat()`](https://jameshwade.github.io/dsprrr/reference/clear_default_chat.md)
   : Clear Cached Default Chat
+- [`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)
+  : Execute Code with a Scoped LM Override
+- [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/local_lm.md)
+  : Set Local LM Override
+- [`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md)
+  : Configure dsprrr Cache
+- [`clear_cache()`](https://jameshwade.github.io/dsprrr/reference/clear_cache.md)
+  : Clear dsprrr Cache
+- [`cache_stats()`](https://jameshwade.github.io/dsprrr/reference/cache_stats.md)
+  : Get Cache Statistics
 
 ## Async and Streaming
 

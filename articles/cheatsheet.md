@@ -52,6 +52,50 @@ chat <- get_default_chat()
 clear_default_chat()
 ```
 
+### Scoped LLM Override
+
+``` r
+# Temporarily use a different LLM for a block
+claude <- chat_claude()
+with_lm(claude, {
+  dsp("question -> answer", question = "What is 2+2?")
+  dsp("text -> summary", text = "Long article...")
+})
+
+# Function-scoped LLM (auto-cleans up on exit)
+my_analysis <- function(data) {
+  local_lm(chat_claude())
+  dsp("data -> summary", data = data)
+}
+```
+
+### Response Caching
+
+``` r
+# Caching is enabled by default (memory + disk)
+# Configure cache behavior
+configure_cache(
+ enable_disk = TRUE,
+  disk_path = ".dsprrr_cache",
+  memory_max_entries = 1000L
+)
+
+# View cache performance
+cache_stats()
+#> Hit rate: 75%
+#> Memory entries: 42
+
+# Clear caches
+clear_cache("all")    # Both memory and disk
+clear_cache("memory") # Memory only
+
+# Disable caching globally via environment variable
+# DSPRRR_CACHE_ENABLED=false
+```
+
+**Tip**: Add `.dsprrr_cache/` to your `.gitignore` when using disk
+caching.
+
 ------------------------------------------------------------------------
 
 ## API Quick Reference
@@ -66,6 +110,10 @@ clear_default_chat()
 | [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)         | Execute on data frame                                                                    | tibble with outputs |
 | [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)               | Compute metrics on test data                                                             | Evaluation result   |
 | [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)                 | Optimize with teleprompter                                                               | Compiled module     |
+| [`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)                 | Scoped LLM override for code block                                                       | Block result        |
+| [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/local_lm.md)               | Function-scoped LLM override                                                             | Previous LLM        |
+| [`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md) | Set cache options                                                                        | Previous config     |
+| [`cache_stats()`](https://jameshwade.github.io/dsprrr/reference/cache_stats.md)         | View cache hit rate and size                                                             | Stats list          |
 | [`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md) | Inspect last prompt sent                                                                 | Prompt text         |
 | [`get_last_trace()`](https://jameshwade.github.io/dsprrr/reference/get_last_trace.md)   | Get trace from last [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) call | Trace object        |
 

@@ -351,7 +351,8 @@ ragnar integration for RAG
 
 **E - Caching & LM Configuration (dsprrr-mqo, dsprrr-1y9):** -
 Multi-tier caching (memory → disk → provider) - `configure_dsprrr()` /
-`with_lm()` for global LM config
+[`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)
+for global LM config
 
 **F - Ecosystem Integration:** - shinychat integration, MLflow
 observability
