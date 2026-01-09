@@ -28,6 +28,9 @@ knitr::opts_chunk$set(
 )
 
 if (should_eval) {
+  # Disable dsprrr cache to ensure consistent HTTP recordings
+  dsprrr:::configure_cache(enable_memory = FALSE, enable_disk = FALSE)
+
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }

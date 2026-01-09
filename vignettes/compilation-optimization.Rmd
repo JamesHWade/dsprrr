@@ -24,6 +24,9 @@ knitr::opts_chunk$set(
 
 # Only set up VCR if we're actually evaluating
 if (should_eval) {
+  # Disable dsprrr cache to ensure consistent HTTP recordings
+  dsprrr:::configure_cache(enable_memory = FALSE, enable_disk = FALSE)
+
   # Ensure no cassettes are left over from previous vignettes
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
