@@ -294,8 +294,11 @@ extract_simple_output <- function(response, output_type) {
       length(output_type@properties) == 1
   ) {
     field_name <- names(output_type@properties)[1]
-    # Safely check if response is a list/environment with the field
-    if (is.list(response) && field_name %in% names(response)) {
+    # Safely check if response is a list or environment with the field
+    if (
+      (is.list(response) || is.environment(response)) &&
+        field_name %in% names(response)
+    ) {
       return(response[[field_name]])
     }
   }
@@ -572,12 +575,44 @@ run_batch_ellmer_parallel <- function(
     cli::cli_progress_done()
   }
 
+  # Validate response format
+
+  if (is.null(responses)) {
+    cli::cli_abort(c(
+      "parallel_chat_structured() returned NULL",
+      "i" = "This may indicate an API failure or empty response"
+    ))
+  }
+
   # Normalize responses to list-of-lists format
   # parallel_chat_structured returns a tibble where each row is a response
   if (is.data.frame(responses)) {
-    responses_list <- lapply(seq_len(nrow(responses)), function(i) as.list(responses[i, ]))
-  } else {
+    if (nrow(responses) != n) {
+      cli::cli_abort(c(
+        "Response count mismatch from parallel_chat_structured()",
+        "x" = "Expected {n} responses, got {nrow(responses)}",
+        "i" = "Some requests may have failed silently"
+      ))
+    }
+    responses_list <- lapply(
+      seq_len(nrow(responses)),
+      function(i) as.list(responses[i, ])
+    )
+  } else if (is.list(responses)) {
+    if (length(responses) != n) {
+      cli::cli_abort(c(
+        "Response count mismatch from parallel_chat_structured()",
+        "x" = "Expected {n} responses, got {length(responses)}",
+        "i" = "Some requests may have failed silently"
+      ))
+    }
     responses_list <- responses
+  } else {
+    cli::cli_abort(c(
+      "Unexpected response format from parallel_chat_structured()",
+      "x" = "Got {.cls {class(responses)[1]}} instead of data.frame or list",
+      "i" = "This may be a version mismatch with ellmer"
+    ))
   }
 
   # Format results
@@ -586,21 +621,25 @@ run_batch_ellmer_parallel <- function(
       extract_simple_output(response, module$signature@output_type)
     })
   } else {
-    results <- map2(responses_list, seq_along(responses_list), function(response, i) {
-      list(
-        output = response,
-        chat = chat,
-        metadata = list(
-          latency_ms = total_latency / n,
-          prompt_length = nchar(prompts[[i]]),
-          prompt = prompts[[i]],
-          instructions = module$signature@instructions,
-          timestamp = end_time,
-          batch_index = i,
-          parallel_method = "ellmer"
+    results <- map2(
+      responses_list,
+      seq_along(responses_list),
+      function(response, i) {
+        list(
+          output = response,
+          chat = chat,
+          metadata = list(
+            latency_ms = total_latency / n,
+            prompt_length = nchar(prompts[[i]]),
+            prompt = prompts[[i]],
+            instructions = module$signature@instructions,
+            timestamp = end_time,
+            batch_index = i,
+            parallel_method = "ellmer"
+          )
         )
-      )
-    })
+      }
+    )
   }
 
   results
