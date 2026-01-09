@@ -198,6 +198,11 @@ reference:
     - get_default_chat
     - set_default_chat
     - clear_default_chat
+    - with_lm
+    - local_lm
+    - configure_cache
+    - clear_cache
+    - cache_stats
 
   - title: Async and Streaming
     desc: Asynchronous and streaming operations

@@ -16,10 +16,11 @@
 #' @name default-chat
 NULL
 
-# Package environment to store default chat and prompt history
+# Package environment to store default chat, prompt history, and scoped LM
 .dsprrr_env <- new.env(parent = emptyenv())
 .dsprrr_env$prompt_history <- list()
 .dsprrr_env$prompt_history_max <- 100L
+.dsprrr_env$scoped_lm <- NULL
 
 #' Get the Default Chat
 #'
@@ -47,7 +48,13 @@ NULL
 #' chat <- get_default_chat(create = FALSE)
 #' }
 get_default_chat <- function(create = TRUE) {
-  # Check options first
+  # Check for scoped LM first (highest priority after explicit .llm)
+  scoped <- get_scoped_lm()
+  if (!is.null(scoped)) {
+    return(scoped)
+  }
+
+  # Check options
   chat <- getOption("dsprrr.default_chat")
   if (!is.null(chat)) {
     if (!inherits(chat, "Chat")) {
@@ -232,6 +239,140 @@ clear_default_chat <- function() {
   .dsprrr_env$default_chat <- NULL
   .dsprrr_env$auto_detect_message_shown <- FALSE
   invisible(NULL)
+}
+
+# ── Scoped LM Functions ──────────────────────────────────────────────────────
+
+#' Get Currently Scoped LM
+#'
+#' @description
+#' Returns the currently active scoped LM set by `with_lm()` or `local_lm()`,
+#' or `NULL` if no scoped LM is active.
+#'
+#' @return An ellmer Chat object, or `NULL`.
+#'
+#' @noRd
+get_scoped_lm <- function() {
+  .dsprrr_env$scoped_lm
+}
+
+#' Execute Code with a Scoped LM Override
+#'
+#' @description
+#' Temporarily sets a default LLM for all dsprrr operations within a code block.
+#' Similar to DSPy's `dspy.context(lm=lm)` context manager. When the block exits
+#' (normally or due to an error), the previous LM is restored.
+#'
+#' @details
+#' The scoped LM has higher priority than `options(dsprrr.default_chat)` and
+#' auto-detection, but lower priority than an explicit `.llm` parameter.
+#'
+#' Resolution order (highest to lowest):
+#' 1. Explicit `.llm` parameter
+#' 2. Scoped LM from `with_lm()` / `local_lm()`
+#' 3. Module's stored `$chat`
+#' 4. `options(dsprrr.default_chat)`
+#' 5. Auto-detection from environment variables
+#'
+#' @param lm An ellmer Chat object to use as the default LLM within the block.
+#' @param code An expression to evaluate with the scoped LLM.
+#'
+#' @return The result of evaluating `code`.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Use Claude for a specific block
+#' claude <- ellmer::chat_claude()
+#' result <- with_lm(claude, {
+#'   dsp("question -> answer", question = "What is 2+2?")
+#'   dsp("text -> summary", text = "Long article...")
+#' })
+#'
+#' # Nested contexts work correctly
+#' gpt4 <- ellmer::chat_openai(model = "gpt-4o")
+#' with_lm(gpt4, {
+#'   run(mod1, text = "outer uses gpt4")
+#'   with_lm(claude, {
+#'     run(mod2, text = "inner uses claude")
+#'   })
+#'   run(mod3, text = "back to gpt4")
+#' })
+#' }
+with_lm <- function(lm, code) {
+  # Validate input
+
+  if (!inherits(lm, "Chat")) {
+    cli::cli_abort(c(
+      "Invalid LM object",
+      "x" = "{.arg lm} must be an ellmer Chat object",
+      "i" = "Create one with {.code ellmer::chat_openai()} or similar"
+    ))
+  }
+
+  local_lm(lm)
+  code
+}
+
+#' Set Local LM Override
+#'
+#' @description
+#' Sets a scoped LLM override that lasts until the calling function exits.
+#' Useful for functions that need to ensure a specific LLM is used for
+#' all internal dsprrr calls.
+#'
+#' @details
+#' This function uses [withr::defer()] to ensure cleanup when the calling
+#' function exits, even if an error occurs. For a block-based alternative,
+#' see [with_lm()].
+#'
+#' @param lm An ellmer Chat object to use as the default LLM, or `NULL` to
+#'   clear any scoped override.
+#' @param .env The environment to scope to (defaults to caller's environment).
+#'
+#' @return Invisibly returns the previous scoped LM (if any).
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' my_analysis <- function(data) {
+#'   # All dsprrr calls in this function will use Claude
+#'   local_lm(ellmer::chat_claude())
+#'
+#'   # These calls don't need .llm parameter
+#'   summary <- dsp("data -> summary", data = data)
+#'   insights <- dsp("summary -> insights", summary = summary)
+#'   insights
+#' }
+#'
+#' # The scoped LM is automatically cleared when my_analysis() returns
+#' result <- my_analysis(my_data)
+#' }
+local_lm <- function(lm, .env = parent.frame()) {
+  # Validate input (NULL is allowed to clear scoped LM)
+  if (!is.null(lm) && !inherits(lm, "Chat")) {
+    cli::cli_abort(c(
+      "Invalid LM object",
+      "x" = "{.arg lm} must be an ellmer Chat object or NULL",
+      "i" = "Create one with {.code ellmer::chat_openai()} or similar"
+    ))
+  }
+
+  # Store the previous value
+  old <- .dsprrr_env$scoped_lm
+
+  # Set new value
+  .dsprrr_env$scoped_lm <- lm
+
+  # Defer cleanup when .env exits
+  withr::defer(
+    {
+      .dsprrr_env$scoped_lm <- old
+    },
+    envir = .env
+  )
+
+  invisible(old)
 }
 
 #' Configure dsprrr Default Settings
