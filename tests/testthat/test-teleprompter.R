@@ -464,3 +464,166 @@ test_that("LabeledFewShot uses metric field for output column", {
   demo_outputs <- vapply(optimized$demos, function(d) d$output, character(1))
   expect_true(all(demo_outputs %in% trainset$classification))
 })
+
+test_that("format_trainset_as_demos extracts nested field from list column", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  # Trainset with nested output in list column
+  trainset <- tibble::tibble(
+    text = c("hello", "world"),
+    output = list(
+      list(classification = "positive", confidence = 0.9),
+      list(classification = "negative", confidence = 0.8)
+    )
+  )
+
+  # Extract the nested "classification" field
+  demos <- dsprrr:::format_trainset_as_demos(
+    trainset,
+    sig,
+    output_col = "classification"
+  )
+
+  expect_length(demos, 2)
+  expect_equal(demos[[1]]$output, "positive")
+  expect_equal(demos[[2]]$output, "negative")
+})
+
+test_that("format_trainset_as_demos unwraps list column when field is column name", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  # Trainset with nested output in list column
+  trainset <- tibble::tibble(
+    text = c("hello", "world"),
+    output = list(
+      list(classification = "positive", confidence = 0.9),
+      list(classification = "negative", confidence = 0.8)
+    )
+  )
+
+  # When field = "output" (the column name), should return unwrapped list
+  demos <- dsprrr:::format_trainset_as_demos(
+    trainset,
+    sig,
+    output_col = "output"
+  )
+
+  expect_length(demos, 2)
+  # Should be unwrapped - direct access to classification, not output[[1]]$classification
+  expect_equal(demos[[1]]$output$classification, "positive")
+  expect_equal(demos[[1]]$output$confidence, 0.9)
+  expect_equal(demos[[2]]$output$classification, "negative")
+  expect_equal(demos[[2]]$output$confidence, 0.8)
+})
+
+test_that("format_trainset_as_demos handles multiple fields", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  # Trainset with nested output containing multiple fields
+  trainset <- tibble::tibble(
+    text = c("hello", "world"),
+    output = list(
+      list(classification = "positive", confidence = 0.9, extra = "foo"),
+      list(classification = "negative", confidence = 0.8, extra = "bar")
+    )
+  )
+
+  # Extract multiple specific fields
+  demos <- dsprrr:::format_trainset_as_demos(
+    trainset,
+    sig,
+    output_col = c("classification", "confidence")
+  )
+
+  expect_length(demos, 2)
+  # Should return named list with only the specified fields
+  expect_equal(demos[[1]]$output$classification, "positive")
+  expect_equal(demos[[1]]$output$confidence, 0.9)
+  expect_null(demos[[1]]$output$extra) # extra should not be included
+  expect_equal(demos[[2]]$output$classification, "negative")
+  expect_equal(demos[[2]]$output$confidence, 0.8)
+  expect_null(demos[[2]]$output$extra)
+})
+
+test_that("detect_output_source handles various trainset formats", {
+  input_names <- "text"
+
+  # Case 1: Direct column match
+  trainset1 <- data.frame(text = "a", classification = "pos")
+  result1 <- dsprrr:::detect_output_source(
+    trainset1,
+    "classification",
+    input_names
+  )
+  expect_equal(result1$type, "column")
+  expect_equal(result1$name, "classification")
+
+  # Case 2: Nested field in list column
+  trainset2 <- tibble::tibble(
+    text = "a",
+    output = list(list(sentiment = "positive"))
+  )
+  result2 <- dsprrr:::detect_output_source(trainset2, "sentiment", input_names)
+  expect_equal(result2$type, "nested")
+  expect_equal(result2$column, "output")
+  expect_equal(result2$field, "sentiment")
+
+  # Case 3: Field not found
+  trainset3 <- data.frame(text = "a", other = "b")
+  result3 <- dsprrr:::detect_output_source(
+    trainset3,
+    "nonexistent",
+    input_names
+  )
+  expect_equal(result3$type, "not_found")
+
+  # Case 4: No field specified, falls back to common names
+  trainset4 <- data.frame(text = "a", label = "pos")
+  result4 <- dsprrr:::detect_output_source(trainset4, NULL, input_names)
+  expect_equal(result4$type, "column")
+  expect_equal(result4$name, "label")
+
+  # Case 5: No field specified, no common names, uses first non-input
+  trainset5 <- data.frame(text = "a", foo = "bar")
+  result5 <- dsprrr:::detect_output_source(trainset5, NULL, input_names)
+  expect_equal(result5$type, "column")
+  expect_equal(result5$name, "foo")
+
+  # Case 6: Multiple fields in nested list column
+  trainset6 <- tibble::tibble(
+    text = "a",
+    output = list(list(classification = "pos", confidence = 0.9))
+  )
+  result6 <- dsprrr:::detect_output_source(
+    trainset6,
+    c("classification", "confidence"),
+    input_names
+  )
+  expect_equal(result6$type, "multi")
+  expect_equal(result6$column, "output")
+  expect_equal(result6$fields, c("classification", "confidence"))
+
+  # Case 7: Multiple fields not found (one missing)
+  trainset7 <- tibble::tibble(
+    text = "a",
+    output = list(list(classification = "pos")) # missing confidence
+  )
+  result7 <- dsprrr:::detect_output_source(
+    trainset7,
+    c("classification", "confidence"),
+    input_names
+  )
+  expect_equal(result7$type, "not_found")
+})
