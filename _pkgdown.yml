@@ -172,6 +172,27 @@ reference:
     - reduce_first
     - reduce_best_by_metric
 
+  - title: Assertions
+    desc: Output validation with backtracking
+    contents:
+    - assertions
+    - Assertion
+    - AssertionSet
+    - assert_output
+    - suggest_output
+    - assertion_set
+    - with_assertions
+    - assertion-helpers
+    - assert_length
+    - assert_contains
+    - assert_not_contains
+    - assert_matches
+    - assert_not_matches
+    - assert_one_of
+    - assert_custom
+    - assert_not_empty
+    - assert_range
+
   - title: Code Execution Modules
     desc: Execute LLM-generated R code safely
     contents:

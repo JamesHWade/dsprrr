@@ -1,43 +1,143 @@
 http_interactions:
 - request:
     method: POST
-    uri: https://api.anthropic.com/v1/messages
+    uri: https://api.openai.com/v1/responses
     body:
-      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0eed0335b4e98f90016960fc5be0e4819cb5f17d809442ec73","type":"reasoning","encrypted_content":"gAAAAABpYPxe3nUqkwmHFEnZFO_dUjqaCX6pcvCeYPhDoClJ1hMsQU8bzJzThputNDl7Nbf8o908t1mb9J0XbWLaHNg3bFrkGvz8RtI0yTOYfLl-U2KqRPWEqnW5GQGUKc_IrNO28wIs_ZtLCibTPhf80nN70baCqY5lrAdpOnLxrY_yPRAz64Ji3VyFspaJt8STESb2nAMv5RFJtt0HxOo1-TdJiIQmUe88mzQmoQMoVrz8luP4auux_n4BrPhWkGze5hsnA0FUD4m-oWwER0-6WNuyj2NGZj_rDnGTayatbNmUkK_h9znjk3SOZxU1dCJCH5VVg8iP_C4ZCGIyzGFQjun5yXo90VA7l-VEyqfdax39h9tCg0xuWG421IrVb7_8Heo8ktqgo_XOAXeMeMV2EGK8yk2Ez2CZV5MQbJ1LX3PXERzLrNbKEcLyFI66L41sCgFYUkcRp-7HWzReLGfbKR8s0IHgX987-7kXdkjRWja7ur8P_-FsdaTmHXiFDCKSFCebxV3ZulvNm7fCkqspIdsRTvF96coQA_MTBinUNb_UQBMybQJCa7UsBKmdSJgSR3vDE7J0gewTPxhz8hX3nG5tLIBD_W5jNvoR-OFAh7qpKiZ3AhyrPyBs4P-JMi_aPHI7_JvMfVtwm9uo7SyszdNln69uszMFfHOFN9AEPVNw26F7O3yb8jdHpwb4wBvGxX0AlSNm_xkMsZfx9H2E9uKxyMZ5SfeMCAMzNWaqDPR-m1xTjYXgghvX23tpwh7439FO1l1u3LDez8nYj27M0k7Ke20-yNyRBsZmQ2AsjQehhDkcBqs5U0_4GrmmPcknDKqjt3gaWu0oUL9wqDBHRJTaezJPZNUZv5ULl3o59ZM5zgJnA3WooYTgI-Tr-dJhA9RKjvw_GcoirdqKKxf9DVGdvGOZqKwsSzy8Y8gu7TtNgM-TvCDM229Gfb4dc9Jmp47l1M6dYzu8jk-RqvupMJFGXLOp40nsl0nNusIjzAapkc4lYk_CX66TGBDpU-5460nEfQkqlF0cloPRynIJomXchEEvzb3OsyhRFv8p-bVZEjZlZVsm8aVdxEhZzpNnX-55YIvQHZCV8zT-iKRfmhqUqZebEZFGrIevDmOvTXCe8gB0HO_LRpgC-0IJa8Q41KUb19oUKW3KeMCV55FG8Nuz4l61n36YzMkOSrfcEiioBy1gctadak3cVifCyuKBRMjgq0fUyyCFtXoWsBD_FbgtCqezgb3Y2BggKkbO2F-5NBCe47wYecswIrNRyAxzK224_luPQtUbC9zSU7dnjeB10de_2VRuX0aQO1Ds1UPNvX8PTEwtJOo_rwuP_QiIgBVBbIN9z8nViwXqVLi_bokFjiQuN2vU0xdVErbxI9ek8zGDIW94ZeAbz58f0rhfuIfnhMAl_RIZRuglGarqn2hIX0qfKJtRw2kNU0GGS69hCEhpYnTNYxlQp5L4mx_W0N18RikZLIufG8TDiAx1QSUORlUu6efmZmveheo3ZoRaAN6pIHODQp3E1JbSLR9WtTvgFYj4QCktoI1P6lkqwfDuqTgrZYEidjG6u3DphEi_crRVgMlR1tc3Gqi9xiwvTesFj8rWzB9M6nVnd1Kj08NURCfe8gigmAyMhE0GqXlqmVQOALYSUpcjVZTYCK_nNW8t_b9kLxACtsl6joQS_B3bQKe3oMgtqV3tE-5mhzkEBJCcvwMI3B5CH8IN0MwbS3dS_ovlm6mWT9CYfXPzoTY1voY-DUrz2QYo3fMbn6YCsU3fX-E=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0eed0335b4e98f90016960fc5f14c0819cabdde139712da81e","type":"reasoning","encrypted_content":"gAAAAABpYPxghqXEZxrVtp1m4AcUwZyb3hIVivJO-sXGyH1Ym2jXhZ3oAw4UagGuvWanHlMCXqMH4fUNn9uXZEIlJ8AwBtwvDUs5yI6JRushszy7Ppn6ma5KZx9mXMW3CD0yTk6xmbH2jDk-6tNoeTEOvHwfd-sG3vJoO1Xwx3ihf7J8GV0sUnNdQHXlHVzgayOf83ABdQednbXHc4RmmJks1qavjet8Q_-XKuduUNmNqmLp4CM1z-sX8biM8XWk3RmXqHMSqEtwNKnLeM9PKRltRzordhkcEa2QUCwGF7uIWyfwt4e510rK2GTkGLJTaAs_y1u_s1lX6_enowrgTUpeTuygUbA9s_scTcUaRh-iiJbZXnrZx77UpOVU3k_gAs8C9yu6gt3CQXNfRhQEchFWyavJI6NC4T-Gn5QnuphyeXNyYG8_7bsSQmyKQvTV5lRWAyAOdXE6NhC5h7iEc3LXCJi7EFQxs0eC5M6U7VX0raKLIW0FOh3is5On8oigXNDwUUKk3zkeYDiZQBo82zOew-ofQjEhahFXHkLtLcN4MDpbPV46DmTDBDMT-Zn4uxkeL2obyCRaO4pHDu_Mc3YaonswHO2yyx060EUMVIKFT_rleNBhv3tUTLtxgExOohMUOzd6quCWQTh5sgr7stfEcxtMSMtyl6DQTuzAFqct14itXMDWXOydrtgwDoEuRVfsUUUN52MauLxgfNvztpsJVjp_aL4F8vtFVvfTJwDC4Eyhhht2zxF77gyxEroypGhVSPxH63k96802x1noPjpIllKfzzr9luQy2Q25NAffyK5JRkZvhXNREffceFgWsezIyCMXPXh_0XdyUWz34pSHl2t_fybyfKnGNyGVVLZN-fmBVDI3aJ2iKgWuJO1PPhjFseb367rXmjTxDVc1AesBpwsYW3AGr6MDsL3zapcz9JftetwZpo1LgKmKhJXEiEHniFgcwjkIJ7imnfO2-kJiD6r2ocli5senkwhpzWDpKV6PJFKYg8tnFixfT-OmIy-UG0uKxvm1RpnRj5lRZGydYHWkfioiEG9lYpqxPrFtXPglWjw5N_mFVXFk03emKIa62gWBUM7M2eRgds8aT3AsZRVh9La0qI5oaBFefnPsQSFYYYObkv91UAdw9wHQOMDRAnchK67S4jiFobg_y3FoljleZjo7PBMcecZSXntWYlvLw8LM-wZ9ikYzhmEICmXIXnXNkg0-l5NJ5xcYgB6dM_2pRSam9gtYL1yIBtZ6oL-Nyy6doIVu-EjVmakQk1GnJsEf_MA3K2iTw6sd0wXzum9HxPJyjxAbF6T-ZLfRPTeo462dcs9TroUUq41X87t_BIiyfj60DiLA4Y8p1ec48pzIeolNgyPHT8UQN9WOHZ6NHBYINVPqj6unPc3fUFfbAcRrXd-23QMSvusrJ_Lx7tyGJ8LjRnfHjTCzYNgtBOpEkkQbNBFLbTeCQdRFZ1NdfoUP21Bc-4urE64CegQT8MgLtNp7dMJDrZzw9LTAJTemv5xEFzPQWG_443cXTT9fAt0mOjGUUN3OIMTH9aNFzaY3EiQovA==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
         product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
         It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
-        This is fantastic!\n\nSentiment:","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
-        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["sentiment"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+        This is fantastic!\n\nSentiment:"}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"sentiment":{"type":"string","description":"","enum":["positive","negative","neutral"]}},"required":["sentiment"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
-      date: Sun, 04 Jan 2026 02:32:01 GMT
-      content-type: application/json
-      anthropic-ratelimit-input-tokens-limit: '30000'
-      anthropic-ratelimit-input-tokens-remaining: '30000'
-      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:01Z'
-      anthropic-ratelimit-output-tokens-limit: '8000'
-      anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:01Z'
-      anthropic-ratelimit-requests-limit: '50'
-      anthropic-ratelimit-requests-remaining: '49'
-      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:00Z'
-      anthropic-ratelimit-tokens-limit: '38000'
-      anthropic-ratelimit-tokens-remaining: '38000'
-      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:01Z'
-      request-id: req_011CWmZ58miFdjBBo4pRFXD7
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      server: cloudflare
-      x-envoy-upstream-service-time: '1985'
+      alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      x-robots-tag: none
+      cf-ray: 9bb420ff198ce21f-ORD
       content-encoding: gzip
-      cf-ray: 9b8752a51d5cf606-ORD
+      content-type: application/json
+      date: Fri, 09 Jan 2026 13:02:37 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '12533'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=MFTRq0YI4M83YngV8zro4OkegAorNFNbLN8m9506hB8-1767963757-1.0.1.1-nhT4H60X8FRazXFZHhGO_4bY4YU8b0qEuEWfF6NPsoSPvDH5EqBCOJ4zFPBYLq0ausRmFdot9EoSIsUxWPXHm34oBs0WaNWZlGqAEfBzCZ8;
+        path=/; expires=Fri, 09-Jan-26 13:32:37 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=WupaePdpfTHk3NgkbSuEez_ujqbaKdO4sq8_p.6MO9A-1767963757695-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '12537'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '499497'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 60ms
+      x-request-id: req_03a41f04937443928ec67c0c4fdb2cb2
     body:
-      string: '{"model":"claude-sonnet-4-20250514","id":"msg_011zbZT3FCdw65QezXw4WNJw","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_017oaYukDZZvH8c6avWfSu21","name":"_structured_tool_call","input":{"data":{"sentiment":"positive"}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":568,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":38,"service_tier":"standard"}}'
-  recorded_at: 2026-01-04 02:32:01
+      string: |-
+        {
+          "id": "resp_0eed0335b4e98f90016960fc612ab8819cb64ab9e71d6b825a",
+          "object": "response",
+          "created_at": 1767963745,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767963757,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_0eed0335b4e98f90016960fc61acbc819cbb258a4a05915b64",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpYPxtuqyWn4r83s0Ejd4d6I99AuiGwnfxPw54rb6yGQLdzP_8dN35lAONKD8IQzTVcQisFGp2wQcQjUIh6Azr0yMsyvXfYCQl0ojR1VK0d-Dq87jl9PW6EwzlVAhLcn0FCeC9ENGDUHTNT1nP_tfsJMiz3Yjbdaa5gIFRkGiSCQrYWjxLkcXKYA9KzVDcyjTbvwyulU98pp8Kl9by3gsqL8G1owEG-tCHK10--MAJFyymfQPwS1X3oRJ3BS7siPUTyPYWrCah0XgQs8K-Sorr_DkWxPxrghl31RhyCahRfZQs7NVjeT1tdgu8KgOnF9Kuv6mXsHgXO6oSUNqShfqy99-qi954jmWX8iv0UGQmS6T7BY_sfoZmCLGPIf9SAzIje5wjX9W1McodJxYKtpbMCUDrYU1JOGBF7A0PgqKQXg1rrtDE5zAua8yGF7d2xPQ3ORgLH2YH4Jt4j5bPhN8VpoIe_BbYklKCMFQEr_K5wPF9DLpQb9itoYx1T0gXtKMd0mEkmsJfROddrZLxE5sAtlQpST3CESW0ZxpH8UapEp_EW3SVrUMV-f04DTVOFGBDmRjfR4fAwmpRmayBjFmBNMKJkZXH-lSpoqwctCkaGpAC3C0B4Q4Fj-50ZDvYg3tP-hnsyOt9SQld3ZMzuwQbs3SM8zMMmWfcfS7GPxsg3ILcYyuugy0uESFp2bShQxziFm-CAK5vcD_ezIzdfBW7TpKo3c-RsvOcZsL67bjb6mOeIkd4V544lwM8zqiYKqoqUHhbXvoUhP9lezBZvHAKN7gWU8VctQEhYjbSd-fPlH_cF0UtgOGuUaIjnEfdG8skzCJCevaZlbImvnUnNd1DuG8F6FFKqRzyDtgW4jrmGcizy_9Ir8x6wu0pvo6--iarBk9d5TAnwXCZMbYJQ0FBF0DNCprKAiw1fcVLZ8koIhD_Hc1NL20Y_w0Jzn2Eh608302UcGb7cBxFBwhSbRIzUoJ7Xm-l1XVAn0OZyFG2s3vEfcHV370Bwopw2tNMG7QtQTHm7KXgTIAR3-jH8I8N7MDBo77-QYjyqQsXflsixwiAkn_uNvUuH5X68eb9Q2AeLW0hLg-_b1mMl4GU36XeT81kYcz6nKtuzQxaCYKAfBfjUkpTJx2-njB1YtxhWSwIM6Kv-D5ajkBNOjgt2xlBn6hV4OxLFo4QRUsmRNshS4WshdQn-OoQkb9hbmI8M5G3EJm1GhNT2oqZ2RRWLFODoXS6OK9U-c6fweOWsvsV3dQfMX8Z_mJ8nl_dvp8dKHv-Tl_13F9IV-WnZ3GBXLIy3xqvLD5T5N5niEmph-XatsNgQN8h-WVjd_NJ-XZc_UNe5OcWqdGJSo8JPtm6SxjaDiGsSfHC_E8bU6QVGlWDL2QfDa_xKCP6bi014kOj2oOZpDb-39PthlHZMXy5s9MeNyyomTIuHpf7c2D1Z1l8DLexgyouqVg7Fau2LS75Q9ZqIsx2wdLgXqAVFXll4pc1alkiyqzCCEnQDVV_6orIfaC34q4JypF_ke1osZtUbU6hHoaA88tCfXhhBAeXij8uX89AlRaPTp39yG1K0DyFLDku1GJM7wN4pQwe07akRTjAqjyOQTjVDSAlwAg66HBFtzsKNVhOvQGJY3Mw3T56AdHApJdohbJHxyE6l0WYqETMsK5AyMtfQPayXyN5JN2o3SoWYgwvHY3IdsWi8U5DQeFEpKECy90EBm4_QfDor0kh5X8F9QvZuVCN5-XWxJmrZF2pQuSdL1y61pc6o1nPAqUYuRzkT-hfN6ynL0ZnCsGdQBe92c5boOYZmGdeLsM5xSLR7AV4qwa6P2V1vIah5TFXG9-YP9KKa-Jpq3xDZ_JBaUcedfObmDjVfoaIl5-fr5yDfuThtn7OmJKoyA0NklPrCK5sCCzCOAa5euGvJj06iT8oFNtNLPTQjKpI2BfCtb3VQ0Xtnoy7ZA8XSKv4b1KDcg43LQQLes1LXnkmb6h_PuxYVIEyCswzG5e-wjIV6M663XAH7mVy-nEmwn3p07F5LPLS3ASQ4zwl6cM9GnJm-z0Aal0PfK7KttP5Q7y_ZRpP-0InfLF02YAw-X7e0FUJqOs0BT40C_9f9jiGsdm7RxTLK08r3zBg6S5YWuZ2A6UJXkulg9zuGLjnMUspv_9tIGx3IprfgeiL-Vf5E_VsK548-RhFuC5LKu65x2BWcmqoqFZ_GRLJX1Zbu9Dnk43uEJ9Fkezxt2A1iwG9FCBoCaieGkoQ-niQ7vMmjdMpc8DTRXPBkfl-s478fBjn8v8Pr8qsX-z-j2n0ZKJDRUAfQj9no4knzAzPjQA7f1utZIHdXCTuvqc9IYzcAM3KJmOsAHv4hieaW-hrZ8OAA_vbHrLaCNweIw1xP678Egh9eqkx5VCiC1YWggo7w2Nk-Mc0uyEnutFzHMc-kuE5S9Lr7dHK5fMMtDENOq75bcf9WU1HU8iUf48s8Dgy3uw34plwZXzQ7K7H6zJPU6kYgSPqA63hdm4m2muItrEXbeNyAULP8-o_5iPsDbvBQWCD0oUGSBO4u9s4WE9dkdjOjbKTrplbozdZC4G6TxMpAp1C4UhZ94dAWXXAiutlokTrGNdFMBGxupibNRLss-qvf8TfCE4EMrJu91Kgk0vJJb6qK_HC3ulqjkBctu9jWqknJZnM8X2UXn-Dbc3zTV7nHMydwfj-s0lloHtgJBRR0Iyc9vJD8qZaUViKI1stD2xg6EOc2gUp4hNdnnEC3B-BHKW3z35oubGbw7vMQMtRx0ejRGI0k7tIGsHiBPnykrq0POOpOtyFRvQNdDCy-obQAZ2LMuylkRDhMI5o6UuapSJCmi9A0Wl7uELuY3Gh2a0P0DqSjnLe9oYzDCI_Qr4B6cBaK8aoaCqz5b08E5pasR-jJjsTlExl2HiYE_G_gAL_kakSJ4a9RDqkw9aU3fyN5d6BCeveootS6MCV-Scs1_gYTQLGlKnHvb4pC6S-Pgo52RLd1kKGoj5qkE7P1_PzElNF58I2yfdSMrNSzcMuTF77VB7ZrYXcc5qnFhkQp6hEVPbnEDkO8pxaXaB8m3g-ye57E0snKwQUm25abniErtu5yEuXIe950z3sYt2mleIOgmeuxcNkLhGFSJy5FF-cwkbDzw7h3QEiqd8B-cJ3dAAQhFEDvY5V927CwhZiZBMwKCkwq4LVrB1YyvdqS8__CS-XHYCUCDtSKK7BWvB-Aj-w8UCOUfb2aqxEaU0fvTfhMaDpYd3QFauOeTnFABc8erIKST7tTfZMQcyUU31jiFLsZeg9JT0I4pScNsgFR5T_ZEcWAPvYL8HwhZ1l7CsvZdSu2bvRhWCrgkRtyrqaFcGgFb1h5mvyeEWrtbiOW5_oaGiRD2gaYfYfZw095l6UVouihiwF0ndj01hDrd4jYHFYwGNLZqC4OCpIDAbAsbPQs1LI9qfQVwSEEGugrdY5IXD-JiWZ0qiKweIupXYTeHDYMHCXAUusM03JDt8JlRapYZHXSfRfPPiwdu86GYExj55a4qrYd3X2maAaDd5EsoyTJtofe-0kwMDJxA2J-JD3ZKRQv8-M1HUf10t4M-jdFtl339OyK_MT4dtWyLNgGg3m_gCVRx_tUzBPQetRdyNI2QVXvkAdIWq4dAEf6Xsf9jrf-MzvjnB6juleI_cDnS_V7M8DFzjeJGIYT5wVsMu-LSCih7wFKf1NKDtsIdDNGjfjj1VGTMBNsqrmbc8eu0MPzekybZJyEylSeyB14ZTns9XP_r5GarN39NRiwFzjS2i8TO25p3jkfD_Z0-_WHxyvV9EG9M7PYVwcpu7H4duh_ohRSWBnOSDvMUg3Y9Z7Jz8q3RWYiwEqerPjPAgwUsJk2-0cjuTLkTn3bQX6arConl3siNmGnXZzFrvl0172F-S0xho-yE0p2vYrs7UChf8mU68aRtfb1-MHGAJq5naOVj5RZ7vy7a57m03YOtVNWFELQ7cRV38uo5JRcRFy8qoGCiGwbiljF-YLhfsC-byjCqMdrBV-q-Wez6KiNdLB3zGd1pxslOMJTRPzKVZn8vvd4PDhVHM2s2L7jIUQtL7UdwJFJWQ0zGFRrBEa7XFir8TMs0TE6r_2t_OU_b2r-I_Exi-Rmn9akneaBZzPNtje3sBDH8oZMRA5gQy5cP9z5KN1t57j7XF8dVQLL1ngAunMhQ66iwcQ6N97cNNw8h1VLUxjz9eGktOH7abU9FhYuNBCDiFPDbsaWjCZzBc6_HhGugAAt-PpRdqKeHBYsgHlR2DSGNxdXveOAdgOP3sJl_EkQahOFEOzqA0sk1h4wrS9oYwi6uPpiUJ3lkimohibKjR2UZxO6FlT7fVH2IS1ABGZfdgZIr0cFGxSqiVHxAyu6TYUJnbm3HcP-tiDoXckK-bO5B3KeuablJPdd5hUHIrQCOu3buz5LKAqOaRKyWodrFEaSokPx-qcG8LGTiD3d9wVD3hnzxfAIdl7dnhWkekTQIOljfMvULbCkTWVG4KjzOlJKIxCwf2qOD6OqPXI6zm4rCnQ-dhHQZORc0Uzi7NQ4WI1FaaD56mXr9XLJa_n_1L5sGTY_mJg3Crzhx9AolrOh9bzkdVLoNIhfJ-KAsUAR9qNZ4M5DvPnGhCWVIIfYjjZDfJvhCtWv0b_rxvkJ1GiXxAxFqSZUqRhA95WF9OMUlwtFrxb7i0C3u9Z1kTtu13w6d_-t9eU3G4gT3E5g-cRnkMQBb23WsMmFtutieEGRXeSIJ81ANInOn7l-oiW1_MnontR46GNIwDY4aioJTEOvljapUf4w3QzjgYyTsipu6fkoUyI82kGZzW8cChJHH5X8TLmY3H8_haycwYZzNVUZy00v8uS5y2Kw8Pg_rJQK5aEICFXbpwGudobYsY48ht363ZupLZVpF69Y_g91yAxzsKVXF8c2CyTLBiF81UmRXnXiiqPoRuqB4Oui7yNFFtLk2XZkde-XFV9YKaf-ohdQ7mCRPHQbk19plQfYs4R71F34Ofp3uGr6kH88vXt-xCdgXcaXB35ndvDuZCbDlIbStCAnAOuwKZd0AnMQGu0zpTCr0R_FJLWi8Og_cI7MwAb1lKUekydXgOoFB69ty7Fz2yDROsq4WX5CVWSYNMSfTigaifGYnHRVwXXyA15M4b33TFItR43L-R7__lhsnj8nB_7WRwF-TLrBqFS_y5omBKlhMUdsqQwEC_Y4qi9ikMxK8nHPNcdZL1SlflOkm7s-mz3cffiw-5T4Mk-z6a4cXhPvHxsimGQG8O6yLb0GfHWvVCDbgmwQf7Byzo7_Z_SJrMQ6Ry_UM4F97Uz2B_Igt4XrQbs5JQW67dm1wO21sj6g3edeLEusHhfMEPpOnbfOLFZS6Qm-HcIl_yjy3w1koQNKWVtbYW8ECiWHDWdKC2ZlyX_qt8Wr9cnGbC4FUyakMJRSSFnLBY-8Vs1Ahuui4ykiOH9BZIxFrVzPIbANDCDLymtERE3AK4kgZQGJ3Ko-xqs44hKHm_dIh-E0tBv-wyZArOSN4N1B8hJigWBFBvR8ajUwhCTcoJBSuIXh2OSjfiZHZWdSzNDGM7RqCYb0_DJ7Vsqr2QMAiLOwS5f6ZP5rXyAb2K8IbmMy_nszfzWr9xY4mmwTXJStWdkTegeyK20d1Z6Qm3NVtiFZTnKP0qrSqXLc84Taa1CNt0zYakJNnKDWyWETyCBOALfuXJdoFJ3hHERkAqLGqIUJ6d_X65wlOBm5MSGhRkb5h1nSArkMJ-CZlTlEnZDbBRvpRoVioA_W77O7MmqMCxRABheuC8EIOrF0HDNMtvAIJJiUEPR5nZvbcnZmrBnFBzdpPvrD4Bnte267qKpvW_j7cSxBpQZ5AAq_E1M1tqPZ8GUXq-yPevEsiWveI3q-Vd9zSbxa1QA",
+              "summary": []
+            },
+            {
+              "id": "msg_0eed0335b4e98f90016960fc6d5e10819cbfa0ccd429e407f1",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"sentiment\":\"positive\"}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "sentiment": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "positive",
+                      "negative",
+                      "neutral"
+                    ]
+                  }
+                },
+                "required": [
+                  "sentiment"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 168,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 720,
+            "output_tokens_details": {
+              "reasoning_tokens": 704
+            },
+            "total_tokens": 888
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-09 13:02:37
 recorded_with: VCR-vcr/2.1.0

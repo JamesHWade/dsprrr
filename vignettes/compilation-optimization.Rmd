@@ -24,6 +24,9 @@ knitr::opts_chunk$set(
 
 # Only set up VCR if we're actually evaluating
 if (should_eval) {
+  # Disable dsprrr cache to ensure consistent HTTP recordings
+  dsprrr:::configure_cache(enable_memory = FALSE, enable_disk = FALSE)
+
   # Ensure no cassettes are left over from previous vignettes
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
@@ -49,11 +52,8 @@ This vignette covers:
 library(dsprrr)
 library(ellmer)
 
-# Configure Claude (Anthropic's Sonnet model)
-llm <- chat_claude(
-  api_key = Sys.getenv("ANTHROPIC_API_KEY"),
-  model = "claude-sonnet-4-20250514"
-)
+# Configure OpenAI (gpt-5-mini for cost-effective cassette recording)
+llm <- chat_openai(model = "gpt-5-mini")
 ```
 
 ## Quick tour: optimizing a module with `optimize_grid()`
