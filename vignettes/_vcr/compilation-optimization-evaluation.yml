@@ -1,418 +1,1114 @@
 http_interactions:
 - request:
     method: POST
-    uri: https://api.anthropic.com/v1/messages
+    uri: https://api.openai.com/v1/responses
     body:
-      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eefc1e90819189dbf881c1eae531","type":"reasoning","encrypted_content":"gAAAAABpYO7-3X_Vrpn7XpiWPtaFWGqh-ovX0nv0tfZDkegZRheuXUAgo6zoPJC1toE63GsnNv2jEBF_9A3TeEafNcnQUQ9rEYDGwfV60RoqTL2WKeWBPzoycW9dhIAg41iAKYCMMlW5q46iEkz8E_K5AflBDNB77qQwjXe1a568t__eRhkgidFmbZe54WQ-mm-a9QW3BiAGvR8-Nq3kA_dGTl5j-zoeI0aQ9jlTkTHuTuctWKO7FidAlls-4yA4uWAUQEEZ1gzdFVilORM_1g3fMdDHMEb9NEY_IWV6P0VO8-TgeiAtcD5pkBFnIJowXrmi5xlbLMJR4CI4wRL7ixHdq1II4XvmQ7eqGQcGZs6SlgvwDDi0OBYnjdlVGJasG0COFuvg2sREeo5UNkgC204HKmg5TKj-Dd3jLKtUt_kL4aijtG4qW52Mn--e_uo39dnjdw9l6dhMrIuD3E969fHZnWpwXUygIw8n16pA-XDgeiDaHdmMKvZlKZT87_e1zHHEOb4liYkjNSkgr8YY37DNjWA5F9U8nfTGoAf1mlb7OInb9ooGQ7WHPSLI2n9I6fxUgQw9Limky3QFL3R2DhwRyXDf6p4SvtzW_Z7K26JwyML-XeFDqmZS2dbHozd21C9gyq8we2at_5paso5-hvfUIQdF2kmNc3IvPgikTzS05cnU440YaI37C25bcGYQ6YLentLCnK2H890HsgRTN0-CUS1LUkf9j-qkTPOu9HFa09mPKa_qVDMp9IO8iwgohpJMwSjgvRVMo6EO_COZGZHgDrbob586Dsdd1MSxlLJ3z7S8PhVZwY0X4AWwsPE7LvusPOZXx3AgoA92Dou_tzvTvdl8Zfhai4PupuKzoF59RRLXtTTi8hKaHoVXgUSL50InTLHs0JCaM3qBxSf_yH50B_DUwfZ8mbV44j2CyIZhJ6_AdhmFV0Y8ugLuQhgnbaBePC5EqUWmAMHjlwRRZQSkN0o8cyHi4nVKV2W9KTO6nP49jmsNduZNsCACCnPCFAbQBe-snRAU6KAAOLqwgFIU6OwQtALShEX64BmurC8HXBYSpMfzvNM1s-FaHLM4US6GkR-EYiqmZ4ie0vDuK3dHnDGV-AxQ9-6MFx21rZFtBimTqVuo0HdGiowv7nYxe7aFMhFL4Zj0ipwOjSBiNnD4XJRH2PAVFx4c7H5iC8W6dDhch5f-rTuZETkDqlcHOlkKVKwQAXFIshunTAcs8FD4cZXxB5MM3UdOrPMGKnyZKj0dxHh75KyMA9n4hH8-I7uBiJMg1NvspDNGEna-88xzxrCCdSamiMDKIWR5-Ru8sfOSbHIVZH4eG-lCxM7JqYxUKYonf1oADkEwb_QJVuga993Jc4W04VwlSHxkygaloPgDLxZvgULcYOVKonuhyvKUqDMKXT6vTKSZ-83a6Bxzcfkyw_Q667alPoRvoCGmI-A0WVrB9swHeaJR8vmktPqY8N7UtnwNqyftEdkyW7uw5BnLLlpRBpeq7WNQjZz_M03xh6bkZpt8J0PdqpIRXnycb7oMysMhzpoOpa7lWkwO6X3f78wk9hvZkxN6kD8tfU9DJTStJlGTO4kMSEvNjF1XU4eaFWxBC5pW1GMd4qNWFqrOCShThcUHAZArWQ0SGjw20K8h1xE=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eeff611081918eaa59bffcf22dec","type":"reasoning","encrypted_content":"gAAAAABpYO8ADFVOPOBkNYSncVagubZ52l7snpV1BCKsiS4YkHuod0GmRSn9Z4RLI9cymff6uCgYRHo78Cek8fQ9pUWa-RxCr1-c8MUNquwaNZ-qPa66bOGI7Lv8dzRcJ__Gpcttv0Pq8FA1B0GFvvtwH9nr4g1xxy9JhMnmFNRgjFbXFnM9Q0VSO-dKlhTLnrW7IvwPGXb0HYlctkbl7fooxo_hTCZIss71VCzyEWDQrhYGk6Hr08YWd5QhCf84uFp0VkFK74CXFvnFcmGzWK5CGeDzP2LwiYepOb3e15zniDvh9gfrBUGqkkZ1x6ELvCPUNS9bKSnbbU9ww-ZtrcM1IJ-dHjhxR0vE70qC-wm53qFTgkO_Y-cmcfIkDTKwFQGCqA2ezyhm5waEI__Adi3EUPg84Dwec-6vFQDyOWkMgHd6OKVCwZfHf4UpS9gSBnv67wVyFKWtjVb5TTA1lyiTP9WY0YPF64Zyaj6MCObO3nIoNehxIf8afpg1-ss8mB0Bg1_sfNNd_8qWWwG8pCV3aqPfoTCOxqAyWObpeCTUeLVSqPK6N_Hkz9gONjr2tnwICbUwGJ1rLh_0Nqw_pjbhrZm9u8ySwHU6k8MWUbTTkZEOT5g-solDgbk6hTB1NqrsqTkH7iSc771Fnq-IjfIhiOgPpPNsbLgge37yp2oY3WGaXDc699pBcC6xpdMB09-L-76IifhkLyGqDlXOkHhxr-mJ4l7MKTZCi8zWtGRJWey6dC62yTa7yjMNfiuLOpuB7PWBrwCX8UGsQsJbjjcvWiLL-27fBlyOE1PMRf6OBRowGgc2aJpSxgcSTMgktEFY0dZppdY7edQh4f2UM7nheOxI0CnPp0F7-uLDNy5Jk5n5DcvOcEXZGbk2JX6WaYMWeoU9sUrkXHZTsYyKdk8XYjbidm4moo-s9gLU96OWWMJ02cRUAtuPsr5Ai9ppH2r1cVUNZNjiRJfOGcszwdlSHPFKhD-a8Acj_HNAiI4W9YYhIlLH9Hih9g2rfTYapv-Zlipmi2w-3kGH__PWAqqNB3e1OVaO-NU9vShOm7J-FjRnZYh0rrwwynQAwPiYzmVufIkdcOuyzl22XoWPG82_3M6YexpPDCsx2rcZ6IYbXs4FLtkaPqayvsjk_YxAxSeYQ8Mcsllc-dHbmwyX4O7OcMKvDDZaypF9fYSsJ9ygZMmJGmKn2YtkSlplOvot0spxXT0rdNCUDfC6j8cGulTIbSQOit4whLYbmwndl3boYYKsDb0nilm9-U2AoHWAoMagkEbfrOymXX1XA8ILBC7uhIH52IRjvlDw_3aDWLEWiahqE8OqUD_4JABDkh4IAS5IOIKZMaryijFaEIuCqOkH11pB5Y15PF4C6RYQ7K12v_mxWNyooiOLT2iJy_LUUGRwCEbpc1gK","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
         product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
         It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
-        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        This is fantastic!\n\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960ef0199bc8191a62390da79af0b5b","type":"reasoning","encrypted_content":"gAAAAABpYO8DReWoo5ps7qvTwiYOMZGbm1feNInr-Jzg-Hn6QBRHLEEjSi8UoXflm6x_tdnHJLz5x9JDj0JkCGA75XRfjlzbAApYSycEcXtQmUpRi7BcJwHUxbZOc8gdx7LbbByyf1b8gBrcGT8HXN_Y6rt79kTVtTV2udh7HjR3DNwt4vqFBfC-iLDGnkILRTmo0ra1SeD1GpMwanjRBFHCB1aqhhlG1vu0P_w7vEDkQRiIFc6swQapPmiaybKmMnND0R34SYLe2g2l7ZXq-28SVq11iy2-j5WO_P3GnTzp5PcfU8PXpaKFVmtfoFQi0FZiy-sGA-NlLt5pKmSkHmT0zeHvc7kza19fSl9MRhbWl_vcMQ6Zlsl5oBYsvKwtBaDJFaBNP8B7fJneJaFZUOuPm5BPje4LBedRQuOHsMUIcj6H2n3yk3eN5Djj7Q-dyVeSogXw_ZRlv5CaWxQd2D52PrqNbONQMmTrjI9c_GL_CbEX56pATTchP296EaI3W9zwjJlzlKe-SaBKN7iLBxj4SCNoIvAICl94xL6dgX5HWqHo5sTbrnp0Qm4tRJO9Di__0daFIz1vsANvJH8I7GLz6Ep_3S5ugmWEBxxLmsYURslJ5lGrl9hCDi07JLba-Iz_iSSQupfr6sfSL6Y5OtkyKBI_tV6t-5kwBOkLVbgeHMUExmHZg2QFKUL6yccg8-UzFhWNqwy0QcZXry6EUmd12dt4aVrGO5RujCZMpyamC7RpyllqpO0Wuvg67iAedzla2jsXuyJ8XfQTyrKYfM0avnspUUvjJF7jJ_IyHNi1ajbSFFeOsrYfcq3JKzFm1ejICfyzEJv62CvO7gQcu2dSMZdqu1sASilJJVWg2xOUPQZtUKLNYgPPORDY4hESWbReCJPE0OhjR1zNJvLm_WKDkV40yERk56s8mqp6bnQEWqdY0Tg-pS9akvuYjvEUKYPxkYcYbdo4tMNkOKTm1D18TSmIHyNVb5POhZ-NdbpG_UyZdZQf_U-iGGWPWfpSgaoCkZcmEaUGhRICKll6ywOHEEZvl5Tpjb5kOyAAxRVG1X_P2mtuRuwzhaVM2YxyZF1MKCD8anNnwv6JalAtm-wC0MovP3aF99cyHnBSfIUo1PfZeO3euIuL3feAl3dZ_EIS5QgKN_1OvVpUwj2W0eJrHmnOVDfyDnBV5kY6bXpfVNAa2NlRUP9vcisH-EdC7qFn8mNA6bUlGkNa8hkOQaThtmg0RTA4BKF0rS2HVEnQ_9z2nML3UaOT8FOpfPPg_J-G_ncdt62OXqIA5dbrKRv_h11vROVg6GIQwI8X6H6-OVwxtnVTjQGvh-_PssUO3pE05nc3IHCi20OuHt0FZs3Tm97LF02WH96kkDfN62EdR0xEkLUq7KWJOmY4cLCY6S1rOUc83X8kMarqve0-nBGtW2jLaQg_p8Mvd1AM12aZheGUtX16Peh0LwfaIkz_fmDlkNLIeOTd7Vv_5sUhcNjZEx7xLcdzbOIrsZF7O4fTGRfL32WGx06-loaEi951_xrAnqzqO3i5o2Vzgk73jmLQ3EC3h_sAx2hxCGt4njt7R1_-8hnqrq8FaZKu7bXppM_TVv_CnbOsLC3dT1_-FnmhYtbD7J_Mqwtwoo4RayW_Q44n8QQXX14UwMv-K3ObSwsQnCWSxIwPMil1G36cIbJ_afqzz8_WYXYghjyHCfE4kSh3r4czuIJd_hSJ8TrbpLhYIpEjmXT8Lc5Dk6ZeeVKYw8Lmc8lEmg==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
         1:\ncontext: Python was created by Guido van Rossum and first released in
         1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
         JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
         How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
-        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
-        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"id":"rs_0f2372fa41383bc7016960ef07c5d881918fbc501826535bac","type":"reasoning","encrypted_content":"gAAAAABpYO8JX3Ff-_KysiHGorkf4lcW0hGJOMaoY2yYu_-54oCjk7-LaqNkcgXZXBFEGaPZob3u4vkvlNFBuD7Z072Vey_VA8EfHKDmKzUutBeFbfxNnqLAjy3BevKjMZtDWsLC4Aj8v58kFB0tk5A7TSjxUu6bqL2Ir4NldOCeaRftU7YL2ELhOb42V7b9Zpkrx_2MiuPfWfHVs4_ZKhqB9atdz2aG8USmjmKOKpDac3bIzq02azwjvKHq8SZh_bG3BWCbodFWLUyt6ZjtJg_je4gtKvKL-czQEtOx4nJ5eHGWVUNMmfPpFres36NL1T3yv5B-PcHvXHPJsg9khbbWvtaAIfqQfuAaR_b5dtxrjDCgR1PgS1CUDc0BkyzjPI14H1HiqTEzg_C_gSSKepuBxDVYRYHx4yp2JQS0qf19q4ZpazW6wP0LBxUMgS79wocnpEGmeMMAyoqZ0MVlmNJgVSm_j3-RZovW1MrM7epDy_ROscRgKwYgPkV088ikNkSvD8fVoDj7h-dwKLJ7asXbVvaDZAdul6cEpriSxWKoX_vDU0_WQuFpgTI3X95bBy9jHZHfO_p96KCpxKKska08RlpBdXbx0Vnr9UJt9F6jAEyu5a3xfw7Yw--H2us9hZ-ZePsxFoKvqfBNq9GJ6Njc9ZiL49GNiPG2Srf0yQX5WjTSXJIAXXWWME3i7eAsYysidXVdLn4DWDgXUXPn-orC9i7XWlMGDWOaw7M5kNftyXDLRdhw5UB0nd6NvjmNLEw1MRTTvpnoMnaGuD9rj8lt13E4BPJ-9cN3nrBCWGP6Uy4bf3LFk_SrhKsBMg1sLNYbBeug8whWT_k8bsdmUcfWJpoyYhJJJBTUiTtRl_NLylyGxQKmcyoYCuhsgq4_KllocVtEwSBf8JWo7v2UpqTDB--AJ53_CsuvmccTpk8kelBh75TVBKDQwhc0ibKp4igCk6u6A-zSoWk33VnjWYO8wP_1fxOvFBqRReWTzkEX7Kg6KHCr9I63xXZjts8yYIbGGYsiTQk6dDBXH37DNnD4D9vsKDfpZKVXPcK361wWCCTx2q5bq9XaUJFMixsYcQA4hRbduEfUyekopvBLRguxge8SABgsJ27-oZ3ldnnzgUFPbo7Qa94Kc0ONWljhAsxvwVkS2g19YflwPJ8dBBOcg0NASDExAiCiy-jN0KTuACF4lgGo9RHWJpK7NtVaGbgz41FkFXw36gkTxkyJtIhBtj9BqoRQ2MYonxleFUNElQRZjVAigWc6t-1Ocx-bZ8SfovoVfJD8riTuufIP92YOGrC8o3J4B9ZDUUhJ9D90wtEXA6lWvw74EbJH2pCPlJiw3wguoZZX5IfIikhJPIOuFmSelIZMO-Ecx3R7KXgv5E94xQKWl6iSTQ4Kbe2z8L9l23QOYbT4djvOiP63QqjhSGcSX7VbIjRJJY7aVMRROYIsDGGuyybJDMIj9bkGOo-sMo9Lwg2TWd0_XVXqpqgLkN_5TkvHDmX9WTRW0eze4uvTsmxZZSzjrjoUunsb2AOgUFx738aDZcdL7dw8Z6s3AwZndtMkSHynVH8SjFfKVJz2QUBZ8lhPuziplxWyaErJsMcH-figsTD4PZy6lJclQTF0xy6aag==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
-        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        is unacceptable!"}]},{"id":"rs_0f2372fa41383bc7016960ef0cc3588191a47c1ecd1502242d","type":"reasoning","encrypted_content":"gAAAAABpYO8TdttxKToUA-1p0EC6QfFaE6tVSY6W6IzAW6WFzKeUXaTda-Gpwyksbyn7O4AscgwRU6SBeFaBquwAb0fiYTfp4LmsgfyWwT_M2cwPiHwm3ubaba8BRywPS6wtyTY1WQPxA_Md2W0CDAxBMxEeHfcfjU-Kh65DHJxVBHjHKUHtsFY2IEGj4AqGAKrFXghDYwUHn-l16lSc-oW_N5Z_CPVjkb4NPusj2WBumeqcQwpD2Zd367Dp77bY4HrFT6TrQgE7sQkV0zBZjjHxMcV-OZ5so91IKDHfMdpdaxqItDbBNxZI3EqfpHNhwdv5g07v-2JuJ20p3joFkTL1Pkxwqpz5RxH8EdDMMyYWMs8pVuOVpFHWpKk-s0dnimf5sZ9Qp1Etewmx17FSl_mi5kgMg0H6OTk64CIcdhTktr_qAvua20eDd0Dc-cEZ1BTPZW3FIxHMSuWZmtS-2wvNhFNSSHSsRh2PPsglePKFn_B2QWO3i_D3dVORablTAcd10PRqXwaoF37_yo6IxkdEiBS0G4cOT5RjWKxS8hE3xNffRDWtG8LVY_mo09jodlRl26JBVagy1PLm4hhbv8-Fpk0Pcbw3Ej5iKHwFxULCTRwhF0-Xyqmq93JxAxHgvOI-2gDUTmKG0yF0irRpi0l4nur3yARzCQkmWOTujbkyc2wdKqrtyYLoUleGsz9GJIXh-XpVaE5CJktACfD3jn8fBU7ejynCt9eWY5qjAAlMYf_-acKgBpwC9YWn28-CFm8GnDB5DJEdgPjieoehflwFM7oUVC5J9RfztPIRuUsokMcObzt1QCGDeAuNLgjAupLsj1Sj_2DSn4dUe3tbwFWWor3eJrVmH1cZzc29c3KcoBNDiWFCJcyMXlmNVsROF1kUrH9i_QYCr_QLNbm98M03J0MPdNhJVYud_9n14Bp2jIIFrGhuAG04-i0MSP9-VWPsq-9J-298dMKqVCMHklymhMUON8j7qzt6RCKj6qGgI98uxfDWIUa5QvwhU8k-FVMNshgox4Dm-hvFxm3L4siB7m569trASF5LgoVefZaMZyIIsfbiP8bFn0v_32lZPPopV3E0qGdNUG6kWorODxXAm0hg-nq-keI9Q14BfjsoSzE2v8lBoWHYLPzv0S2OeBLNqLmDatS7qomjbAaYfDLRVwd4qwi0Z7Oa40SAycj7TQmLhzvXUSk8QqMU6YKsyouQdtGW5H3PJFm8tIKiGcGx66L-xh2knwI3i-FGDXDNbYGMYUOQPeJoAaGBeGyzV06xFVWAQ3NR3AW-pz5y03zvlSF8ofiVrkD-4O36U9DdapVv8IhCfdL-kIuvy3UiVno0SjLWzd4aXlfJWX3RQYLbJeIyV_8WgTr0DULXF17BqfSvv6v8PxxuWqf44_iHqHveGqsDOpRq2jsGO9eZAyE-QAU-nwBE3g0-XNQqCD4q_o0aXt5EVU_mZoYKpLyWj4JkEp973EPhQ0Bh4VZTSLU2Ue4RzbtDh8h7qVoFIFrupiBl5H-d8fxmdrNvAAC3RZQE4uKAwUeUeC4g8k1Ll_eFAgjS8uB8lZQnsp6CJIv0fL6o9D-ZZJkCLhxlsOi5E1wiq0T-QYdy3n04XIcye02RiBg-cIQj9od8dUDt5cXe893mNZPY-bDt7wkORb2YnGy7rUxNWs0Z6ygjnOMT4pQkmW876PA8IhrSKFDryRwl7vVxGV8_7Y8oXLcBpjz1NuWmy54Owj-ZDjdxYj1aXFmgFKiCYDbkfsnx_OYyH7WLxJIYOerVsyRx50OFpj5tPFaJ4UgViaet0-PIks1Wl8bbpl-Vj0j3p9XFyIbbMuKKTYaEtJW12Ln6QqOKBJsn7Gq5v1JrpZe2obPH1dvugIeC7Krr-Rc4oRQHrzjevhhZUevVH_e4t22xsauB9MMI4H4bAN9067pbuohz5KHnWVLwBx63-b99AoJt9y6NTXJNBQUSwMWL9dZ8eRmWdcnwfCKqZXWn0bMbZC9nL2IljwhzIwmhvfAvZ_53CAUChbR2OzDeNr9KrPN38AN340fk1rievtEV57ykUJAcX7cZ6WaDyY2s9tTGgLIhi3nm8WrLkVp_rb--PSVOOzjfVzUTWBpWNE13QpOoiNmxeUpmvYwTHAhQFztbYpXlxV0VGXi3M6j1LKfei6fG5G2JuCGEDzNkXwftwHldXDkGAxdVqrUJ3zmhMT8tHJPSONBRMcldm-SDphKLavIhNqboWYm1I1TZFiiLuBkebF9kc7ol7O3m9fE7JZJC3rexC2g4W0db3Qmcy_jbEXluXNietXUJE_sVrIwCJ1HMf5OJKp9M_ohlyjJZX_U9fU0osrTPF4EFPEUU0CF6Mt5wLwt2fL8z4HsaQYEYx4_SE8J0_QENQRmK4UigAejVvHWJ1PZ8_V5rlvnFuFtV7x-ogkAvDPUg77vCVdHb269NNVn-FwX6enk_IEZvXeHvyrNReVeYZEUNrAMEfp2BH8vmIOoJHaNA5oye86F1VJ2o8Gh3pKya6aBlUQ1yltAGKQqi2q7gmj_HOBxVQSqf8qYyG18wuHvZrg8qPLqSd3cely6g1JSKFIAvdLMitW97bHCMb-5bw6M-FrrX2E_0rG0yU6-CFBHvD4a2Lk-Tw4tw89PQuakzkVxgTmOxyDjsqF4yUGgPJqWC7gOkOUWzlzQmObzQs3tM6xWM4a5ATOmN9Yi-N-QRnh8o3k9VehSs4HjoPA7MnDRG51M2g75vXHISEE7ZWpIo75WN_sh1pr6FuossiNtpRrgArYRVAJeMN1Svatlx096JK14L0pG2WNZvBozyFIkvKYEInj4fqIrqYbza31C92LZQGd5YKpMAOXpMPDsjHxembjuTScnJ73CA_ZlbrheyBPJ7o-pBpDi33pl_XelWn-aN9t7Qt3c1WtctWIpfB3y89v1Oy6eEwaiFA7QxYjpo6vH4Rvmr-A63Xbqs_tM6a1Lre-cy9W1fJBj74qysNzfoso7WXeznpK4dzUdNHkjaSpt-GctB-SGv5i6FXkzbu_IoYBGcHWmjjM9r7snbwFFiNf0yrTY_UrWgbWuaF5JcN8ZoFGp-3wlBOz8WQrv2MS7ijUXy2fEiTg7Lk8H80R4M4mg8Ljip1IQ423spBAtLU4LpofZsnyfYUmpOtdCZMoEN1Burs2lH2O9ErDs3viQT4hUI4iEuU1JU6557wN0ultiLIRovnmT4A1ce1udYQq92eDu6c1OxQ8dsr1eyk-cvV3hOF4m3XvLE032_wkUO_Qe3BPuEhOTNfb5EjMHpV4-btAXxQQTZ2YuvaeOosWWkkYw628_DEpkvbXEHLBax26yORAKr0elWhzi4fTLCf2nVBUBNv3IxQHORiAq2vqMKxPh1Pkk8_UZhsKp0iEys6NHGkPivF1OYTSPQgs93V-cUuwFD3_s24KbckzN8vcpYgUuPtQqyp0I=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping.","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
-        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+        shipping."}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
-      date: Sun, 04 Jan 2026 02:32:14 GMT
-      content-type: application/json
-      anthropic-ratelimit-input-tokens-limit: '30000'
-      anthropic-ratelimit-input-tokens-remaining: '28000'
-      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:16Z'
-      anthropic-ratelimit-output-tokens-limit: '8000'
-      anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:14Z'
-      anthropic-ratelimit-requests-limit: '50'
-      anthropic-ratelimit-requests-remaining: '49'
-      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:13Z'
-      anthropic-ratelimit-tokens-limit: '38000'
-      anthropic-ratelimit-tokens-remaining: '36000'
-      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:14Z'
-      request-id: req_011CWmZ64QZRAADKF3XVtE2j
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      server: cloudflare
-      x-envoy-upstream-service-time: '2107'
+      alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      x-robots-tag: none
+      cf-ray: 9bb3cdde3daf4354-ORD
       content-encoding: gzip
-      cf-ray: 9b8752f37e6610a1-ORD
+      content-type: application/json
+      date: Fri, 09 Jan 2026 12:05:43 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '3019'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=SMXFi3CPD6l5dLvT4W_VNITY5FMQ0bSDVqgtDnxPiDo-1767960343-1.0.1.1-0Lzqeuqbby4ekMYEahM7gG8SPdqOT_Ngs5ID6o8HuckhdtZCUB0RjqdZvDGsrTZC8iuXQEqULr9nhA4B8KT8oOtozRSnTCRbhN0YzuZANc0;
+        path=/; expires=Fri, 09-Jan-26 12:35:43 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=FckgWUfhZCJIAW4lK8wWn8wdrzz_Ij52RXvIYRNC194-1767960343245-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '3023'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_2e3729c5c33d4e348c9016ec5c930086
     body:
-      string: '{"model":"claude-sonnet-4-20250514","id":"msg_0132xDs3dhr7Xk9SLQyNWFGA","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01VJD7sZ3nX1y4KSxwicJjXo","name":"_structured_tool_call","input":{"data":{"category":"complaint","priority":"normal","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":975,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
-  recorded_at: 2026-01-04 02:32:14
+      string: |-
+        {
+          "id": "resp_0f2372fa41383bc7016960ef143ba48191a31e71e63abd5110",
+          "object": "response",
+          "created_at": 1767960340,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767960343,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_0f2372fa41383bc7016960ef1482f881919b92729250c623ca",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpYO8XuUThXVGTYf6_YJkprapdH0a2-fCsqoAkQDA3V4aoMEkCIUuXKVC_X50piKdVNUv2xuaP02SRzI9Z7QTH1ZjL7UC8r2-sbcnJl1Cat0HcSuqctgGSEKHhNwa9ysTbNBvtToR-fuT_bS8pXnwlQg1nvvZYkZBZzLnzzq5Bysmji-b22qEDKe1lHgolwkSEYchjKUVSuYvTcYaI2cJESxcBfGM2h9pJ2jfvGbDVUwlWNz1Svs9AQT3ud8uZ4NLicqgPvkrb02jPGhBFXxiOsqwJx_qzHAL_4z5h9yYWlkb7yFElFLj-Q-wRf7FavHVMnNih9WOmhwtNiR3k6ZUhXxC6g6f634YGYVanSHYSKCrpVGkMPcGnvIw_MUVs-WuCGLjYr29VCdYKom4SGDWuRMdynhgeVC3BkNSMEaP2kCJbiYMZUaiGWheFha2gL9IAeC9IbybHYv7Ikq97yrJ6sTjAVNsXjEKUEZjwTWOJoEmh7Msv64IuhN3guiO5HqAa8GDbGj2IPyP_E-_VJT4TvyiCrqUwr8T6B7rqLe32BjmIoxI9kAbugkrnE0T-zMQtfE9W9MwC6hWg2lDWAyokCnG8yFN-iDImK_AZDgqpgyvrZbgxD4q7nGlIQCTtw7Amku3tzh0zF3YtTMyFENC9zOun1jplYgmQKgdmF-s7fM0SNcGM0DU8KkKL8GR4fhsg6fB6eknjb8-QXxy6Ai7ncBba4TsgK0jVjBms7wtxQOc9rUaxXyC51AIi5BjlK0y9UzzsLxH_LJUkJydDryIf8gjUzuloAp2hZCtvceArKnasGYy0p55Wk-PvMm78sc6MEGM2I7nGlaFX6gWHiAGr2cASNNVXfYj1zyK0MbQQvduUGzb8sbfLfBiGwNpHmj64Dh7g4BVqlCi_gQ3dh5nobEnxJ9qQlI2Sjr0Cc8ShhbWLWnZza1S2YtmnhpByhIAmR6JZIZHTnCAw2I26ycfuzu96aXxDzzc2QrESJvULPxFQDncfP2Cjkv2ZrjV_XKlF3LDgpD5IzAFV7luF_LGELJG87FD5AjPJdwE9_3JLArygW1dmLKCdSYTI4eiuu0rTG6q8CcWkGICjoPk2d8yKXcBn-83u8lEK8H9O679we_twr6zfbOTfZF8y4MyDgrfIn0zRX6z-nPeaOB129mOzkC7IvT17Iox4Hgq_GdgqCeOk-IGV9Q6k4cyqkF_WipctdRaz4LPy6QcJWlVZZ56l-WQ9V-mOSJf7lOrfpchpW3jErfbAR17d8_89A7H-rZFjCr2WTjVCCX2Sc1qxN3VeiiDowlYSNaB9GS-t3RhQpaoOsnIYgynwlnLr5M-tIFYb7Zw-jLYxTVeAWyFwo5vbUZp_yUAD6jUm8elTTX7paZynmPUlDZGMiZaC8hVoA52evvXoLlk70xf8rRQ7pU_OMxofUt39m3oN4AbGZxlsW-mCvaUl3KFNP9Hmyclq9c2qHh-nNtUvmcCxDlZmgguhCJkcBmsuJURAkPJEuL1hTQEwVqUnfVrl4RQGYPS3tD4r0_KQzXCPLP1kuokmaO_m1t03sX9KXW6NWtirSD4evU9CLOZ19wUcnFAOerBu10GjrUCYSrzSM3tvSw5TmXGpmW5AooMwpZvuCytUjsaCogy5Zac7D8jDjYIVueWuBE9EjSsiZ0TV9i787pIG8MVfzfJ9Xfn6_ygHUDpgOOLqkvBywjS68MAOoPYo9DKQgLmrqm-UqiMMBulvWVmyMjhZvX3npF2gEf4KI8v2dJofVFT9w3c=",
+              "summary": []
+            },
+            {
+              "id": "msg_0f2372fa41383bc7016960ef16d9a88191b6e462428706fd7a",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 527,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 153,
+            "output_tokens_details": {
+              "reasoning_tokens": 128
+            },
+            "total_tokens": 680
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-09 12:05:43
 - request:
     method: POST
-    uri: https://api.anthropic.com/v1/messages
+    uri: https://api.openai.com/v1/responses
     body:
-      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eefc1e90819189dbf881c1eae531","type":"reasoning","encrypted_content":"gAAAAABpYO7-3X_Vrpn7XpiWPtaFWGqh-ovX0nv0tfZDkegZRheuXUAgo6zoPJC1toE63GsnNv2jEBF_9A3TeEafNcnQUQ9rEYDGwfV60RoqTL2WKeWBPzoycW9dhIAg41iAKYCMMlW5q46iEkz8E_K5AflBDNB77qQwjXe1a568t__eRhkgidFmbZe54WQ-mm-a9QW3BiAGvR8-Nq3kA_dGTl5j-zoeI0aQ9jlTkTHuTuctWKO7FidAlls-4yA4uWAUQEEZ1gzdFVilORM_1g3fMdDHMEb9NEY_IWV6P0VO8-TgeiAtcD5pkBFnIJowXrmi5xlbLMJR4CI4wRL7ixHdq1II4XvmQ7eqGQcGZs6SlgvwDDi0OBYnjdlVGJasG0COFuvg2sREeo5UNkgC204HKmg5TKj-Dd3jLKtUt_kL4aijtG4qW52Mn--e_uo39dnjdw9l6dhMrIuD3E969fHZnWpwXUygIw8n16pA-XDgeiDaHdmMKvZlKZT87_e1zHHEOb4liYkjNSkgr8YY37DNjWA5F9U8nfTGoAf1mlb7OInb9ooGQ7WHPSLI2n9I6fxUgQw9Limky3QFL3R2DhwRyXDf6p4SvtzW_Z7K26JwyML-XeFDqmZS2dbHozd21C9gyq8we2at_5paso5-hvfUIQdF2kmNc3IvPgikTzS05cnU440YaI37C25bcGYQ6YLentLCnK2H890HsgRTN0-CUS1LUkf9j-qkTPOu9HFa09mPKa_qVDMp9IO8iwgohpJMwSjgvRVMo6EO_COZGZHgDrbob586Dsdd1MSxlLJ3z7S8PhVZwY0X4AWwsPE7LvusPOZXx3AgoA92Dou_tzvTvdl8Zfhai4PupuKzoF59RRLXtTTi8hKaHoVXgUSL50InTLHs0JCaM3qBxSf_yH50B_DUwfZ8mbV44j2CyIZhJ6_AdhmFV0Y8ugLuQhgnbaBePC5EqUWmAMHjlwRRZQSkN0o8cyHi4nVKV2W9KTO6nP49jmsNduZNsCACCnPCFAbQBe-snRAU6KAAOLqwgFIU6OwQtALShEX64BmurC8HXBYSpMfzvNM1s-FaHLM4US6GkR-EYiqmZ4ie0vDuK3dHnDGV-AxQ9-6MFx21rZFtBimTqVuo0HdGiowv7nYxe7aFMhFL4Zj0ipwOjSBiNnD4XJRH2PAVFx4c7H5iC8W6dDhch5f-rTuZETkDqlcHOlkKVKwQAXFIshunTAcs8FD4cZXxB5MM3UdOrPMGKnyZKj0dxHh75KyMA9n4hH8-I7uBiJMg1NvspDNGEna-88xzxrCCdSamiMDKIWR5-Ru8sfOSbHIVZH4eG-lCxM7JqYxUKYonf1oADkEwb_QJVuga993Jc4W04VwlSHxkygaloPgDLxZvgULcYOVKonuhyvKUqDMKXT6vTKSZ-83a6Bxzcfkyw_Q667alPoRvoCGmI-A0WVrB9swHeaJR8vmktPqY8N7UtnwNqyftEdkyW7uw5BnLLlpRBpeq7WNQjZz_M03xh6bkZpt8J0PdqpIRXnycb7oMysMhzpoOpa7lWkwO6X3f78wk9hvZkxN6kD8tfU9DJTStJlGTO4kMSEvNjF1XU4eaFWxBC5pW1GMd4qNWFqrOCShThcUHAZArWQ0SGjw20K8h1xE=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eeff611081918eaa59bffcf22dec","type":"reasoning","encrypted_content":"gAAAAABpYO8ADFVOPOBkNYSncVagubZ52l7snpV1BCKsiS4YkHuod0GmRSn9Z4RLI9cymff6uCgYRHo78Cek8fQ9pUWa-RxCr1-c8MUNquwaNZ-qPa66bOGI7Lv8dzRcJ__Gpcttv0Pq8FA1B0GFvvtwH9nr4g1xxy9JhMnmFNRgjFbXFnM9Q0VSO-dKlhTLnrW7IvwPGXb0HYlctkbl7fooxo_hTCZIss71VCzyEWDQrhYGk6Hr08YWd5QhCf84uFp0VkFK74CXFvnFcmGzWK5CGeDzP2LwiYepOb3e15zniDvh9gfrBUGqkkZ1x6ELvCPUNS9bKSnbbU9ww-ZtrcM1IJ-dHjhxR0vE70qC-wm53qFTgkO_Y-cmcfIkDTKwFQGCqA2ezyhm5waEI__Adi3EUPg84Dwec-6vFQDyOWkMgHd6OKVCwZfHf4UpS9gSBnv67wVyFKWtjVb5TTA1lyiTP9WY0YPF64Zyaj6MCObO3nIoNehxIf8afpg1-ss8mB0Bg1_sfNNd_8qWWwG8pCV3aqPfoTCOxqAyWObpeCTUeLVSqPK6N_Hkz9gONjr2tnwICbUwGJ1rLh_0Nqw_pjbhrZm9u8ySwHU6k8MWUbTTkZEOT5g-solDgbk6hTB1NqrsqTkH7iSc771Fnq-IjfIhiOgPpPNsbLgge37yp2oY3WGaXDc699pBcC6xpdMB09-L-76IifhkLyGqDlXOkHhxr-mJ4l7MKTZCi8zWtGRJWey6dC62yTa7yjMNfiuLOpuB7PWBrwCX8UGsQsJbjjcvWiLL-27fBlyOE1PMRf6OBRowGgc2aJpSxgcSTMgktEFY0dZppdY7edQh4f2UM7nheOxI0CnPp0F7-uLDNy5Jk5n5DcvOcEXZGbk2JX6WaYMWeoU9sUrkXHZTsYyKdk8XYjbidm4moo-s9gLU96OWWMJ02cRUAtuPsr5Ai9ppH2r1cVUNZNjiRJfOGcszwdlSHPFKhD-a8Acj_HNAiI4W9YYhIlLH9Hih9g2rfTYapv-Zlipmi2w-3kGH__PWAqqNB3e1OVaO-NU9vShOm7J-FjRnZYh0rrwwynQAwPiYzmVufIkdcOuyzl22XoWPG82_3M6YexpPDCsx2rcZ6IYbXs4FLtkaPqayvsjk_YxAxSeYQ8Mcsllc-dHbmwyX4O7OcMKvDDZaypF9fYSsJ9ygZMmJGmKn2YtkSlplOvot0spxXT0rdNCUDfC6j8cGulTIbSQOit4whLYbmwndl3boYYKsDb0nilm9-U2AoHWAoMagkEbfrOymXX1XA8ILBC7uhIH52IRjvlDw_3aDWLEWiahqE8OqUD_4JABDkh4IAS5IOIKZMaryijFaEIuCqOkH11pB5Y15PF4C6RYQ7K12v_mxWNyooiOLT2iJy_LUUGRwCEbpc1gK","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
         product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
         It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
-        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        This is fantastic!\n\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960ef0199bc8191a62390da79af0b5b","type":"reasoning","encrypted_content":"gAAAAABpYO8DReWoo5ps7qvTwiYOMZGbm1feNInr-Jzg-Hn6QBRHLEEjSi8UoXflm6x_tdnHJLz5x9JDj0JkCGA75XRfjlzbAApYSycEcXtQmUpRi7BcJwHUxbZOc8gdx7LbbByyf1b8gBrcGT8HXN_Y6rt79kTVtTV2udh7HjR3DNwt4vqFBfC-iLDGnkILRTmo0ra1SeD1GpMwanjRBFHCB1aqhhlG1vu0P_w7vEDkQRiIFc6swQapPmiaybKmMnND0R34SYLe2g2l7ZXq-28SVq11iy2-j5WO_P3GnTzp5PcfU8PXpaKFVmtfoFQi0FZiy-sGA-NlLt5pKmSkHmT0zeHvc7kza19fSl9MRhbWl_vcMQ6Zlsl5oBYsvKwtBaDJFaBNP8B7fJneJaFZUOuPm5BPje4LBedRQuOHsMUIcj6H2n3yk3eN5Djj7Q-dyVeSogXw_ZRlv5CaWxQd2D52PrqNbONQMmTrjI9c_GL_CbEX56pATTchP296EaI3W9zwjJlzlKe-SaBKN7iLBxj4SCNoIvAICl94xL6dgX5HWqHo5sTbrnp0Qm4tRJO9Di__0daFIz1vsANvJH8I7GLz6Ep_3S5ugmWEBxxLmsYURslJ5lGrl9hCDi07JLba-Iz_iSSQupfr6sfSL6Y5OtkyKBI_tV6t-5kwBOkLVbgeHMUExmHZg2QFKUL6yccg8-UzFhWNqwy0QcZXry6EUmd12dt4aVrGO5RujCZMpyamC7RpyllqpO0Wuvg67iAedzla2jsXuyJ8XfQTyrKYfM0avnspUUvjJF7jJ_IyHNi1ajbSFFeOsrYfcq3JKzFm1ejICfyzEJv62CvO7gQcu2dSMZdqu1sASilJJVWg2xOUPQZtUKLNYgPPORDY4hESWbReCJPE0OhjR1zNJvLm_WKDkV40yERk56s8mqp6bnQEWqdY0Tg-pS9akvuYjvEUKYPxkYcYbdo4tMNkOKTm1D18TSmIHyNVb5POhZ-NdbpG_UyZdZQf_U-iGGWPWfpSgaoCkZcmEaUGhRICKll6ywOHEEZvl5Tpjb5kOyAAxRVG1X_P2mtuRuwzhaVM2YxyZF1MKCD8anNnwv6JalAtm-wC0MovP3aF99cyHnBSfIUo1PfZeO3euIuL3feAl3dZ_EIS5QgKN_1OvVpUwj2W0eJrHmnOVDfyDnBV5kY6bXpfVNAa2NlRUP9vcisH-EdC7qFn8mNA6bUlGkNa8hkOQaThtmg0RTA4BKF0rS2HVEnQ_9z2nML3UaOT8FOpfPPg_J-G_ncdt62OXqIA5dbrKRv_h11vROVg6GIQwI8X6H6-OVwxtnVTjQGvh-_PssUO3pE05nc3IHCi20OuHt0FZs3Tm97LF02WH96kkDfN62EdR0xEkLUq7KWJOmY4cLCY6S1rOUc83X8kMarqve0-nBGtW2jLaQg_p8Mvd1AM12aZheGUtX16Peh0LwfaIkz_fmDlkNLIeOTd7Vv_5sUhcNjZEx7xLcdzbOIrsZF7O4fTGRfL32WGx06-loaEi951_xrAnqzqO3i5o2Vzgk73jmLQ3EC3h_sAx2hxCGt4njt7R1_-8hnqrq8FaZKu7bXppM_TVv_CnbOsLC3dT1_-FnmhYtbD7J_Mqwtwoo4RayW_Q44n8QQXX14UwMv-K3ObSwsQnCWSxIwPMil1G36cIbJ_afqzz8_WYXYghjyHCfE4kSh3r4czuIJd_hSJ8TrbpLhYIpEjmXT8Lc5Dk6ZeeVKYw8Lmc8lEmg==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
         1:\ncontext: Python was created by Guido van Rossum and first released in
         1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
         JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
         How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
-        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
-        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"id":"rs_0f2372fa41383bc7016960ef07c5d881918fbc501826535bac","type":"reasoning","encrypted_content":"gAAAAABpYO8JX3Ff-_KysiHGorkf4lcW0hGJOMaoY2yYu_-54oCjk7-LaqNkcgXZXBFEGaPZob3u4vkvlNFBuD7Z072Vey_VA8EfHKDmKzUutBeFbfxNnqLAjy3BevKjMZtDWsLC4Aj8v58kFB0tk5A7TSjxUu6bqL2Ir4NldOCeaRftU7YL2ELhOb42V7b9Zpkrx_2MiuPfWfHVs4_ZKhqB9atdz2aG8USmjmKOKpDac3bIzq02azwjvKHq8SZh_bG3BWCbodFWLUyt6ZjtJg_je4gtKvKL-czQEtOx4nJ5eHGWVUNMmfPpFres36NL1T3yv5B-PcHvXHPJsg9khbbWvtaAIfqQfuAaR_b5dtxrjDCgR1PgS1CUDc0BkyzjPI14H1HiqTEzg_C_gSSKepuBxDVYRYHx4yp2JQS0qf19q4ZpazW6wP0LBxUMgS79wocnpEGmeMMAyoqZ0MVlmNJgVSm_j3-RZovW1MrM7epDy_ROscRgKwYgPkV088ikNkSvD8fVoDj7h-dwKLJ7asXbVvaDZAdul6cEpriSxWKoX_vDU0_WQuFpgTI3X95bBy9jHZHfO_p96KCpxKKska08RlpBdXbx0Vnr9UJt9F6jAEyu5a3xfw7Yw--H2us9hZ-ZePsxFoKvqfBNq9GJ6Njc9ZiL49GNiPG2Srf0yQX5WjTSXJIAXXWWME3i7eAsYysidXVdLn4DWDgXUXPn-orC9i7XWlMGDWOaw7M5kNftyXDLRdhw5UB0nd6NvjmNLEw1MRTTvpnoMnaGuD9rj8lt13E4BPJ-9cN3nrBCWGP6Uy4bf3LFk_SrhKsBMg1sLNYbBeug8whWT_k8bsdmUcfWJpoyYhJJJBTUiTtRl_NLylyGxQKmcyoYCuhsgq4_KllocVtEwSBf8JWo7v2UpqTDB--AJ53_CsuvmccTpk8kelBh75TVBKDQwhc0ibKp4igCk6u6A-zSoWk33VnjWYO8wP_1fxOvFBqRReWTzkEX7Kg6KHCr9I63xXZjts8yYIbGGYsiTQk6dDBXH37DNnD4D9vsKDfpZKVXPcK361wWCCTx2q5bq9XaUJFMixsYcQA4hRbduEfUyekopvBLRguxge8SABgsJ27-oZ3ldnnzgUFPbo7Qa94Kc0ONWljhAsxvwVkS2g19YflwPJ8dBBOcg0NASDExAiCiy-jN0KTuACF4lgGo9RHWJpK7NtVaGbgz41FkFXw36gkTxkyJtIhBtj9BqoRQ2MYonxleFUNElQRZjVAigWc6t-1Ocx-bZ8SfovoVfJD8riTuufIP92YOGrC8o3J4B9ZDUUhJ9D90wtEXA6lWvw74EbJH2pCPlJiw3wguoZZX5IfIikhJPIOuFmSelIZMO-Ecx3R7KXgv5E94xQKWl6iSTQ4Kbe2z8L9l23QOYbT4djvOiP63QqjhSGcSX7VbIjRJJY7aVMRROYIsDGGuyybJDMIj9bkGOo-sMo9Lwg2TWd0_XVXqpqgLkN_5TkvHDmX9WTRW0eze4uvTsmxZZSzjrjoUunsb2AOgUFx738aDZcdL7dw8Z6s3AwZndtMkSHynVH8SjFfKVJz2QUBZ8lhPuziplxWyaErJsMcH-figsTD4PZy6lJclQTF0xy6aag==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
-        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        is unacceptable!"}]},{"id":"rs_0f2372fa41383bc7016960ef0cc3588191a47c1ecd1502242d","type":"reasoning","encrypted_content":"gAAAAABpYO8TdttxKToUA-1p0EC6QfFaE6tVSY6W6IzAW6WFzKeUXaTda-Gpwyksbyn7O4AscgwRU6SBeFaBquwAb0fiYTfp4LmsgfyWwT_M2cwPiHwm3ubaba8BRywPS6wtyTY1WQPxA_Md2W0CDAxBMxEeHfcfjU-Kh65DHJxVBHjHKUHtsFY2IEGj4AqGAKrFXghDYwUHn-l16lSc-oW_N5Z_CPVjkb4NPusj2WBumeqcQwpD2Zd367Dp77bY4HrFT6TrQgE7sQkV0zBZjjHxMcV-OZ5so91IKDHfMdpdaxqItDbBNxZI3EqfpHNhwdv5g07v-2JuJ20p3joFkTL1Pkxwqpz5RxH8EdDMMyYWMs8pVuOVpFHWpKk-s0dnimf5sZ9Qp1Etewmx17FSl_mi5kgMg0H6OTk64CIcdhTktr_qAvua20eDd0Dc-cEZ1BTPZW3FIxHMSuWZmtS-2wvNhFNSSHSsRh2PPsglePKFn_B2QWO3i_D3dVORablTAcd10PRqXwaoF37_yo6IxkdEiBS0G4cOT5RjWKxS8hE3xNffRDWtG8LVY_mo09jodlRl26JBVagy1PLm4hhbv8-Fpk0Pcbw3Ej5iKHwFxULCTRwhF0-Xyqmq93JxAxHgvOI-2gDUTmKG0yF0irRpi0l4nur3yARzCQkmWOTujbkyc2wdKqrtyYLoUleGsz9GJIXh-XpVaE5CJktACfD3jn8fBU7ejynCt9eWY5qjAAlMYf_-acKgBpwC9YWn28-CFm8GnDB5DJEdgPjieoehflwFM7oUVC5J9RfztPIRuUsokMcObzt1QCGDeAuNLgjAupLsj1Sj_2DSn4dUe3tbwFWWor3eJrVmH1cZzc29c3KcoBNDiWFCJcyMXlmNVsROF1kUrH9i_QYCr_QLNbm98M03J0MPdNhJVYud_9n14Bp2jIIFrGhuAG04-i0MSP9-VWPsq-9J-298dMKqVCMHklymhMUON8j7qzt6RCKj6qGgI98uxfDWIUa5QvwhU8k-FVMNshgox4Dm-hvFxm3L4siB7m569trASF5LgoVefZaMZyIIsfbiP8bFn0v_32lZPPopV3E0qGdNUG6kWorODxXAm0hg-nq-keI9Q14BfjsoSzE2v8lBoWHYLPzv0S2OeBLNqLmDatS7qomjbAaYfDLRVwd4qwi0Z7Oa40SAycj7TQmLhzvXUSk8QqMU6YKsyouQdtGW5H3PJFm8tIKiGcGx66L-xh2knwI3i-FGDXDNbYGMYUOQPeJoAaGBeGyzV06xFVWAQ3NR3AW-pz5y03zvlSF8ofiVrkD-4O36U9DdapVv8IhCfdL-kIuvy3UiVno0SjLWzd4aXlfJWX3RQYLbJeIyV_8WgTr0DULXF17BqfSvv6v8PxxuWqf44_iHqHveGqsDOpRq2jsGO9eZAyE-QAU-nwBE3g0-XNQqCD4q_o0aXt5EVU_mZoYKpLyWj4JkEp973EPhQ0Bh4VZTSLU2Ue4RzbtDh8h7qVoFIFrupiBl5H-d8fxmdrNvAAC3RZQE4uKAwUeUeC4g8k1Ll_eFAgjS8uB8lZQnsp6CJIv0fL6o9D-ZZJkCLhxlsOi5E1wiq0T-QYdy3n04XIcye02RiBg-cIQj9od8dUDt5cXe893mNZPY-bDt7wkORb2YnGy7rUxNWs0Z6ygjnOMT4pQkmW876PA8IhrSKFDryRwl7vVxGV8_7Y8oXLcBpjz1NuWmy54Owj-ZDjdxYj1aXFmgFKiCYDbkfsnx_OYyH7WLxJIYOerVsyRx50OFpj5tPFaJ4UgViaet0-PIks1Wl8bbpl-Vj0j3p9XFyIbbMuKKTYaEtJW12Ln6QqOKBJsn7Gq5v1JrpZe2obPH1dvugIeC7Krr-Rc4oRQHrzjevhhZUevVH_e4t22xsauB9MMI4H4bAN9067pbuohz5KHnWVLwBx63-b99AoJt9y6NTXJNBQUSwMWL9dZ8eRmWdcnwfCKqZXWn0bMbZC9nL2IljwhzIwmhvfAvZ_53CAUChbR2OzDeNr9KrPN38AN340fk1rievtEV57ykUJAcX7cZ6WaDyY2s9tTGgLIhi3nm8WrLkVp_rb--PSVOOzjfVzUTWBpWNE13QpOoiNmxeUpmvYwTHAhQFztbYpXlxV0VGXi3M6j1LKfei6fG5G2JuCGEDzNkXwftwHldXDkGAxdVqrUJ3zmhMT8tHJPSONBRMcldm-SDphKLavIhNqboWYm1I1TZFiiLuBkebF9kc7ol7O3m9fE7JZJC3rexC2g4W0db3Qmcy_jbEXluXNietXUJE_sVrIwCJ1HMf5OJKp9M_ohlyjJZX_U9fU0osrTPF4EFPEUU0CF6Mt5wLwt2fL8z4HsaQYEYx4_SE8J0_QENQRmK4UigAejVvHWJ1PZ8_V5rlvnFuFtV7x-ogkAvDPUg77vCVdHb269NNVn-FwX6enk_IEZvXeHvyrNReVeYZEUNrAMEfp2BH8vmIOoJHaNA5oye86F1VJ2o8Gh3pKya6aBlUQ1yltAGKQqi2q7gmj_HOBxVQSqf8qYyG18wuHvZrg8qPLqSd3cely6g1JSKFIAvdLMitW97bHCMb-5bw6M-FrrX2E_0rG0yU6-CFBHvD4a2Lk-Tw4tw89PQuakzkVxgTmOxyDjsqF4yUGgPJqWC7gOkOUWzlzQmObzQs3tM6xWM4a5ATOmN9Yi-N-QRnh8o3k9VehSs4HjoPA7MnDRG51M2g75vXHISEE7ZWpIo75WN_sh1pr6FuossiNtpRrgArYRVAJeMN1Svatlx096JK14L0pG2WNZvBozyFIkvKYEInj4fqIrqYbza31C92LZQGd5YKpMAOXpMPDsjHxembjuTScnJ73CA_ZlbrheyBPJ7o-pBpDi33pl_XelWn-aN9t7Qt3c1WtctWIpfB3y89v1Oy6eEwaiFA7QxYjpo6vH4Rvmr-A63Xbqs_tM6a1Lre-cy9W1fJBj74qysNzfoso7WXeznpK4dzUdNHkjaSpt-GctB-SGv5i6FXkzbu_IoYBGcHWmjjM9r7snbwFFiNf0yrTY_UrWgbWuaF5JcN8ZoFGp-3wlBOz8WQrv2MS7ijUXy2fEiTg7Lk8H80R4M4mg8Ljip1IQ423spBAtLU4LpofZsnyfYUmpOtdCZMoEN1Burs2lH2O9ErDs3viQT4hUI4iEuU1JU6557wN0ultiLIRovnmT4A1ce1udYQq92eDu6c1OxQ8dsr1eyk-cvV3hOF4m3XvLE032_wkUO_Qe3BPuEhOTNfb5EjMHpV4-btAXxQQTZ2YuvaeOosWWkkYw628_DEpkvbXEHLBax26yORAKr0elWhzi4fTLCf2nVBUBNv3IxQHORiAq2vqMKxPh1Pkk8_UZhsKp0iEys6NHGkPivF1OYTSPQgs93V-cUuwFD3_s24KbckzN8vcpYgUuPtQqyp0I=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        shipping."}]},{"id":"rs_0f2372fa41383bc7016960ef1482f881919b92729250c623ca","type":"reasoning","encrypted_content":"gAAAAABpYO8XuUThXVGTYf6_YJkprapdH0a2-fCsqoAkQDA3V4aoMEkCIUuXKVC_X50piKdVNUv2xuaP02SRzI9Z7QTH1ZjL7UC8r2-sbcnJl1Cat0HcSuqctgGSEKHhNwa9ysTbNBvtToR-fuT_bS8pXnwlQg1nvvZYkZBZzLnzzq5Bysmji-b22qEDKe1lHgolwkSEYchjKUVSuYvTcYaI2cJESxcBfGM2h9pJ2jfvGbDVUwlWNz1Svs9AQT3ud8uZ4NLicqgPvkrb02jPGhBFXxiOsqwJx_qzHAL_4z5h9yYWlkb7yFElFLj-Q-wRf7FavHVMnNih9WOmhwtNiR3k6ZUhXxC6g6f634YGYVanSHYSKCrpVGkMPcGnvIw_MUVs-WuCGLjYr29VCdYKom4SGDWuRMdynhgeVC3BkNSMEaP2kCJbiYMZUaiGWheFha2gL9IAeC9IbybHYv7Ikq97yrJ6sTjAVNsXjEKUEZjwTWOJoEmh7Msv64IuhN3guiO5HqAa8GDbGj2IPyP_E-_VJT4TvyiCrqUwr8T6B7rqLe32BjmIoxI9kAbugkrnE0T-zMQtfE9W9MwC6hWg2lDWAyokCnG8yFN-iDImK_AZDgqpgyvrZbgxD4q7nGlIQCTtw7Amku3tzh0zF3YtTMyFENC9zOun1jplYgmQKgdmF-s7fM0SNcGM0DU8KkKL8GR4fhsg6fB6eknjb8-QXxy6Ai7ncBba4TsgK0jVjBms7wtxQOc9rUaxXyC51AIi5BjlK0y9UzzsLxH_LJUkJydDryIf8gjUzuloAp2hZCtvceArKnasGYy0p55Wk-PvMm78sc6MEGM2I7nGlaFX6gWHiAGr2cASNNVXfYj1zyK0MbQQvduUGzb8sbfLfBiGwNpHmj64Dh7g4BVqlCi_gQ3dh5nobEnxJ9qQlI2Sjr0Cc8ShhbWLWnZza1S2YtmnhpByhIAmR6JZIZHTnCAw2I26ycfuzu96aXxDzzc2QrESJvULPxFQDncfP2Cjkv2ZrjV_XKlF3LDgpD5IzAFV7luF_LGELJG87FD5AjPJdwE9_3JLArygW1dmLKCdSYTI4eiuu0rTG6q8CcWkGICjoPk2d8yKXcBn-83u8lEK8H9O679we_twr6zfbOTfZF8y4MyDgrfIn0zRX6z-nPeaOB129mOzkC7IvT17Iox4Hgq_GdgqCeOk-IGV9Q6k4cyqkF_WipctdRaz4LPy6QcJWlVZZ56l-WQ9V-mOSJf7lOrfpchpW3jErfbAR17d8_89A7H-rZFjCr2WTjVCCX2Sc1qxN3VeiiDowlYSNaB9GS-t3RhQpaoOsnIYgynwlnLr5M-tIFYb7Zw-jLYxTVeAWyFwo5vbUZp_yUAD6jUm8elTTX7paZynmPUlDZGMiZaC8hVoA52evvXoLlk70xf8rRQ7pU_OMxofUt39m3oN4AbGZxlsW-mCvaUl3KFNP9Hmyclq9c2qHh-nNtUvmcCxDlZmgguhCJkcBmsuJURAkPJEuL1hTQEwVqUnfVrl4RQGYPS3tD4r0_KQzXCPLP1kuokmaO_m1t03sX9KXW6NWtirSD4evU9CLOZ19wUcnFAOerBu10GjrUCYSrzSM3tvSw5TmXGpmW5AooMwpZvuCytUjsaCogy5Zac7D8jDjYIVueWuBE9EjSsiZ0TV9i787pIG8MVfzfJ9Xfn6_ygHUDpgOOLqkvBywjS68MAOoPYo9DKQgLmrqm-UqiMMBulvWVmyMjhZvX3npF2gEf4KI8v2dJofVFT9w3c=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
-        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
-      date: Sun, 04 Jan 2026 02:32:16 GMT
-      content-type: application/json
-      anthropic-ratelimit-input-tokens-limit: '30000'
-      anthropic-ratelimit-input-tokens-remaining: '28000'
-      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:20Z'
-      anthropic-ratelimit-output-tokens-limit: '8000'
-      anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:16Z'
-      anthropic-ratelimit-requests-limit: '50'
-      anthropic-ratelimit-requests-remaining: '49'
-      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:15Z'
-      anthropic-ratelimit-tokens-limit: '38000'
-      anthropic-ratelimit-tokens-remaining: '36000'
-      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:16Z'
-      request-id: req_011CWmZ6EwZvSg95vnEssNCz
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      server: cloudflare
-      x-envoy-upstream-service-time: '1879'
+      alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      x-robots-tag: none
+      cf-ray: 9bb3cdf2cdee4354-ORD
       content-encoding: gzip
-      cf-ray: 9b875302ed9610a1-ORD
+      content-type: application/json
+      date: Fri, 09 Jan 2026 12:05:46 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2594'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=eMcouwvCp7xg1TjfEkwiHZZRonz5td0Ns1PmCcMfyNY-1767960346-1.0.1.1-1id2YZHQ0klLr5TxnCsCVGZgnUTB9P.7gjLramHAdW0xj5SqFCJRqe2J7ILKq21EoBixYNvpy44vBsqYymPr1__Jly9c83YdwXO9C71p49I;
+        path=/; expires=Fri, 09-Jan-26 12:35:46 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=2zF1xEVFW1yWUYVNjL0CwpAy17HAFTVarJmt2A5XrCA-1767960346133-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2598'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_6738b6d4951893c192014294bde68737
     body:
-      string: '{"model":"claude-sonnet-4-20250514","id":"msg_014M8B9MXyQ74MmLAFztCBcB","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_014D9VfgxJdDrJzftxoGDkME","name":"_structured_tool_call","input":{"data":{"category":"inquiry","priority":"normal","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":1047,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":1047,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
-  recorded_at: 2026-01-04 02:32:16
+      string: |-
+        {
+          "id": "resp_0f2372fa41383bc7016960ef17864c8191ae190fcb149b2934",
+          "object": "response",
+          "created_at": 1767960343,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767960346,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_0f2372fa41383bc7016960ef17ce048191bc0d06f7babfeb72",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpYO8aS1X5no1v484-DTWujD7rOQet7RZ3F7JleokONv0g_22O9yg9aJXK_2oANFA7ZKAyv-jHkqZpvaX32EFklK3vts9J3PEGg3LL9CCvOrZmwGXqV6whI36Z8AbOyXJHQG10vY3C1F2HrUIKRH9DJI9KiF_7SjWZ69mCRxpNUB0ACmr8NahCzM8mQglJ2OxGoFUQl_YLCcGAY6Q6DxDiOAExLNC4yb7M6Nfqr7e33Sesal9Gly3Jkwzb_46Mf7dWUpzK8ATt0g_jSWFBsRg56T_wN1SKpVsCmCoXvud5Xa19uPPk71Z3WxoZDiatfq5OW5UE10eEkE1vKf-08XGmItsSIcDy3i965LD_0KdZEjDUSnEUH2sqwGkBUNnk6Z9_TmS81GmGWw6ZN7-4H6xWQAd85AS_UQL9oFQSZQEZaozOnNX0C8CZfW9FUig9zSrxh53aFvECKf32uB70I9wXKsqBhS5ngAEqsyEzgCPKzlE8VbV-0SU7A2gmUsu7joPAwtp5xozKThscFg15azo5CRdtp6wxZyh-uuxfSzNxWNJkXpr9H_7sMYtuQmht9NrsYCdjDzhZAScqpA-4xnQQfD0I9t6hbzRbbNq4oAWYtVvR2bnswIH8cRC4CvBJIVEXa2zMlGAWomDx9xdQZBUMQGLSIxPPaNqqS2NKWUHVkDgSYgP3YUJE2zGtIW3zGig3gZOWYiiSQsA7_qt3HyIWOXQ84FJmBbloGoH18Dhh0SO2-xAorPkB0ZMgw3WWITYp0H30ZyEcSvqBM_iYll5UJZ979_CFFLw4tiacBvn-q9fzdvFN7LchRFwwpNPxvYKXgXmSfDvsvi4MjGiaVxdWAwu7dtC8NN8OAFm6rZ4UuKyc5QmT3b3qSJANwz4X-B2dqli4uSTp4l1w3ryvsMZRlqhsrqa7zwDvkfBP8g86aqtG_EJLl6ttH7rjksc-x_qSIVkB9wnagU7OD-BUOIZwSr3era7OmNb2eVXxe6X56P7qXCQ27UMU4GSglj1dPQ-tihEzRUw4MKqP_zC6LqPnS6kqHzWX7De3EPL1ffMPnefI-mGwRp9P0i0j0EiIfCXwzlrpia7V3vMz1HBAJZioL0N5Qvph_aIGk6aqaUSNzLMuxOmiXmn2Rm1xaNOJwe453I2XNAMPUZirnpi6v6kBC6-gV3vkl9vCPYKiJPtojDK75YSCAcRhPbw7fdSBhEupO7OEeOJrimJ5a6gwBN6P6XoKkEnwRw1ejn-ejjDNRe7-JQikr61yppdHG-7VhL7YYzKTpMPzWkbl-eqZ0OqAYn5CHr3-GimEdQ5GsMJUekos5eCQXz-pyw7mC9NsM3jgoOnT8IOEZkyEOSV7_39VwGbLg3SiqpyMqjhtwcSEIzpIKvN9Nc4txpr16rPU3aKXFC7cANQcho79wft49Ki1iHeEh84YhJro5C2cFM-rPJcdcgQ1euUdbQ6X5UCeFE64SSCRHZoy8ApcdIhjegjzNSwy8YA5-Ev8T4oSHXWA1FmMohU0UCnNj-hqGtyZ3vuQ7j4JKmqwjQNTp-B7chKxWyBHXQs8OZ1nOzeizLsXCbya2XE7JzxBWE2FzN-3Oj7Apk6GPhVeXxy3rBVbgaj6taEKSu7JaEqQuUd4Utjn3073ExsSJBAEEJLMATJ0Ccy0pgHqkcUBPy-193qd1PG4dNe9t84-gKK2LMWXnBWaPtx_PmuLIKzAilBu4B0T5POXvZzdqDBeLkBjZw7kya5YzkDPSSpO0tLh36W4DJiswV7iAFc=",
+              "summary": []
+            },
+            {
+              "id": "msg_0f2372fa41383bc7016960ef199ad08191a3bd5c800aa6b6fc",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 621,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 153,
+            "output_tokens_details": {
+              "reasoning_tokens": 128
+            },
+            "total_tokens": 774
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-09 12:05:46
 - request:
     method: POST
-    uri: https://api.anthropic.com/v1/messages
+    uri: https://api.openai.com/v1/responses
     body:
-      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eefc1e90819189dbf881c1eae531","type":"reasoning","encrypted_content":"gAAAAABpYO7-3X_Vrpn7XpiWPtaFWGqh-ovX0nv0tfZDkegZRheuXUAgo6zoPJC1toE63GsnNv2jEBF_9A3TeEafNcnQUQ9rEYDGwfV60RoqTL2WKeWBPzoycW9dhIAg41iAKYCMMlW5q46iEkz8E_K5AflBDNB77qQwjXe1a568t__eRhkgidFmbZe54WQ-mm-a9QW3BiAGvR8-Nq3kA_dGTl5j-zoeI0aQ9jlTkTHuTuctWKO7FidAlls-4yA4uWAUQEEZ1gzdFVilORM_1g3fMdDHMEb9NEY_IWV6P0VO8-TgeiAtcD5pkBFnIJowXrmi5xlbLMJR4CI4wRL7ixHdq1II4XvmQ7eqGQcGZs6SlgvwDDi0OBYnjdlVGJasG0COFuvg2sREeo5UNkgC204HKmg5TKj-Dd3jLKtUt_kL4aijtG4qW52Mn--e_uo39dnjdw9l6dhMrIuD3E969fHZnWpwXUygIw8n16pA-XDgeiDaHdmMKvZlKZT87_e1zHHEOb4liYkjNSkgr8YY37DNjWA5F9U8nfTGoAf1mlb7OInb9ooGQ7WHPSLI2n9I6fxUgQw9Limky3QFL3R2DhwRyXDf6p4SvtzW_Z7K26JwyML-XeFDqmZS2dbHozd21C9gyq8we2at_5paso5-hvfUIQdF2kmNc3IvPgikTzS05cnU440YaI37C25bcGYQ6YLentLCnK2H890HsgRTN0-CUS1LUkf9j-qkTPOu9HFa09mPKa_qVDMp9IO8iwgohpJMwSjgvRVMo6EO_COZGZHgDrbob586Dsdd1MSxlLJ3z7S8PhVZwY0X4AWwsPE7LvusPOZXx3AgoA92Dou_tzvTvdl8Zfhai4PupuKzoF59RRLXtTTi8hKaHoVXgUSL50InTLHs0JCaM3qBxSf_yH50B_DUwfZ8mbV44j2CyIZhJ6_AdhmFV0Y8ugLuQhgnbaBePC5EqUWmAMHjlwRRZQSkN0o8cyHi4nVKV2W9KTO6nP49jmsNduZNsCACCnPCFAbQBe-snRAU6KAAOLqwgFIU6OwQtALShEX64BmurC8HXBYSpMfzvNM1s-FaHLM4US6GkR-EYiqmZ4ie0vDuK3dHnDGV-AxQ9-6MFx21rZFtBimTqVuo0HdGiowv7nYxe7aFMhFL4Zj0ipwOjSBiNnD4XJRH2PAVFx4c7H5iC8W6dDhch5f-rTuZETkDqlcHOlkKVKwQAXFIshunTAcs8FD4cZXxB5MM3UdOrPMGKnyZKj0dxHh75KyMA9n4hH8-I7uBiJMg1NvspDNGEna-88xzxrCCdSamiMDKIWR5-Ru8sfOSbHIVZH4eG-lCxM7JqYxUKYonf1oADkEwb_QJVuga993Jc4W04VwlSHxkygaloPgDLxZvgULcYOVKonuhyvKUqDMKXT6vTKSZ-83a6Bxzcfkyw_Q667alPoRvoCGmI-A0WVrB9swHeaJR8vmktPqY8N7UtnwNqyftEdkyW7uw5BnLLlpRBpeq7WNQjZz_M03xh6bkZpt8J0PdqpIRXnycb7oMysMhzpoOpa7lWkwO6X3f78wk9hvZkxN6kD8tfU9DJTStJlGTO4kMSEvNjF1XU4eaFWxBC5pW1GMd4qNWFqrOCShThcUHAZArWQ0SGjw20K8h1xE=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eeff611081918eaa59bffcf22dec","type":"reasoning","encrypted_content":"gAAAAABpYO8ADFVOPOBkNYSncVagubZ52l7snpV1BCKsiS4YkHuod0GmRSn9Z4RLI9cymff6uCgYRHo78Cek8fQ9pUWa-RxCr1-c8MUNquwaNZ-qPa66bOGI7Lv8dzRcJ__Gpcttv0Pq8FA1B0GFvvtwH9nr4g1xxy9JhMnmFNRgjFbXFnM9Q0VSO-dKlhTLnrW7IvwPGXb0HYlctkbl7fooxo_hTCZIss71VCzyEWDQrhYGk6Hr08YWd5QhCf84uFp0VkFK74CXFvnFcmGzWK5CGeDzP2LwiYepOb3e15zniDvh9gfrBUGqkkZ1x6ELvCPUNS9bKSnbbU9ww-ZtrcM1IJ-dHjhxR0vE70qC-wm53qFTgkO_Y-cmcfIkDTKwFQGCqA2ezyhm5waEI__Adi3EUPg84Dwec-6vFQDyOWkMgHd6OKVCwZfHf4UpS9gSBnv67wVyFKWtjVb5TTA1lyiTP9WY0YPF64Zyaj6MCObO3nIoNehxIf8afpg1-ss8mB0Bg1_sfNNd_8qWWwG8pCV3aqPfoTCOxqAyWObpeCTUeLVSqPK6N_Hkz9gONjr2tnwICbUwGJ1rLh_0Nqw_pjbhrZm9u8ySwHU6k8MWUbTTkZEOT5g-solDgbk6hTB1NqrsqTkH7iSc771Fnq-IjfIhiOgPpPNsbLgge37yp2oY3WGaXDc699pBcC6xpdMB09-L-76IifhkLyGqDlXOkHhxr-mJ4l7MKTZCi8zWtGRJWey6dC62yTa7yjMNfiuLOpuB7PWBrwCX8UGsQsJbjjcvWiLL-27fBlyOE1PMRf6OBRowGgc2aJpSxgcSTMgktEFY0dZppdY7edQh4f2UM7nheOxI0CnPp0F7-uLDNy5Jk5n5DcvOcEXZGbk2JX6WaYMWeoU9sUrkXHZTsYyKdk8XYjbidm4moo-s9gLU96OWWMJ02cRUAtuPsr5Ai9ppH2r1cVUNZNjiRJfOGcszwdlSHPFKhD-a8Acj_HNAiI4W9YYhIlLH9Hih9g2rfTYapv-Zlipmi2w-3kGH__PWAqqNB3e1OVaO-NU9vShOm7J-FjRnZYh0rrwwynQAwPiYzmVufIkdcOuyzl22XoWPG82_3M6YexpPDCsx2rcZ6IYbXs4FLtkaPqayvsjk_YxAxSeYQ8Mcsllc-dHbmwyX4O7OcMKvDDZaypF9fYSsJ9ygZMmJGmKn2YtkSlplOvot0spxXT0rdNCUDfC6j8cGulTIbSQOit4whLYbmwndl3boYYKsDb0nilm9-U2AoHWAoMagkEbfrOymXX1XA8ILBC7uhIH52IRjvlDw_3aDWLEWiahqE8OqUD_4JABDkh4IAS5IOIKZMaryijFaEIuCqOkH11pB5Y15PF4C6RYQ7K12v_mxWNyooiOLT2iJy_LUUGRwCEbpc1gK","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
         product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
         It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
-        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        This is fantastic!\n\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960ef0199bc8191a62390da79af0b5b","type":"reasoning","encrypted_content":"gAAAAABpYO8DReWoo5ps7qvTwiYOMZGbm1feNInr-Jzg-Hn6QBRHLEEjSi8UoXflm6x_tdnHJLz5x9JDj0JkCGA75XRfjlzbAApYSycEcXtQmUpRi7BcJwHUxbZOc8gdx7LbbByyf1b8gBrcGT8HXN_Y6rt79kTVtTV2udh7HjR3DNwt4vqFBfC-iLDGnkILRTmo0ra1SeD1GpMwanjRBFHCB1aqhhlG1vu0P_w7vEDkQRiIFc6swQapPmiaybKmMnND0R34SYLe2g2l7ZXq-28SVq11iy2-j5WO_P3GnTzp5PcfU8PXpaKFVmtfoFQi0FZiy-sGA-NlLt5pKmSkHmT0zeHvc7kza19fSl9MRhbWl_vcMQ6Zlsl5oBYsvKwtBaDJFaBNP8B7fJneJaFZUOuPm5BPje4LBedRQuOHsMUIcj6H2n3yk3eN5Djj7Q-dyVeSogXw_ZRlv5CaWxQd2D52PrqNbONQMmTrjI9c_GL_CbEX56pATTchP296EaI3W9zwjJlzlKe-SaBKN7iLBxj4SCNoIvAICl94xL6dgX5HWqHo5sTbrnp0Qm4tRJO9Di__0daFIz1vsANvJH8I7GLz6Ep_3S5ugmWEBxxLmsYURslJ5lGrl9hCDi07JLba-Iz_iSSQupfr6sfSL6Y5OtkyKBI_tV6t-5kwBOkLVbgeHMUExmHZg2QFKUL6yccg8-UzFhWNqwy0QcZXry6EUmd12dt4aVrGO5RujCZMpyamC7RpyllqpO0Wuvg67iAedzla2jsXuyJ8XfQTyrKYfM0avnspUUvjJF7jJ_IyHNi1ajbSFFeOsrYfcq3JKzFm1ejICfyzEJv62CvO7gQcu2dSMZdqu1sASilJJVWg2xOUPQZtUKLNYgPPORDY4hESWbReCJPE0OhjR1zNJvLm_WKDkV40yERk56s8mqp6bnQEWqdY0Tg-pS9akvuYjvEUKYPxkYcYbdo4tMNkOKTm1D18TSmIHyNVb5POhZ-NdbpG_UyZdZQf_U-iGGWPWfpSgaoCkZcmEaUGhRICKll6ywOHEEZvl5Tpjb5kOyAAxRVG1X_P2mtuRuwzhaVM2YxyZF1MKCD8anNnwv6JalAtm-wC0MovP3aF99cyHnBSfIUo1PfZeO3euIuL3feAl3dZ_EIS5QgKN_1OvVpUwj2W0eJrHmnOVDfyDnBV5kY6bXpfVNAa2NlRUP9vcisH-EdC7qFn8mNA6bUlGkNa8hkOQaThtmg0RTA4BKF0rS2HVEnQ_9z2nML3UaOT8FOpfPPg_J-G_ncdt62OXqIA5dbrKRv_h11vROVg6GIQwI8X6H6-OVwxtnVTjQGvh-_PssUO3pE05nc3IHCi20OuHt0FZs3Tm97LF02WH96kkDfN62EdR0xEkLUq7KWJOmY4cLCY6S1rOUc83X8kMarqve0-nBGtW2jLaQg_p8Mvd1AM12aZheGUtX16Peh0LwfaIkz_fmDlkNLIeOTd7Vv_5sUhcNjZEx7xLcdzbOIrsZF7O4fTGRfL32WGx06-loaEi951_xrAnqzqO3i5o2Vzgk73jmLQ3EC3h_sAx2hxCGt4njt7R1_-8hnqrq8FaZKu7bXppM_TVv_CnbOsLC3dT1_-FnmhYtbD7J_Mqwtwoo4RayW_Q44n8QQXX14UwMv-K3ObSwsQnCWSxIwPMil1G36cIbJ_afqzz8_WYXYghjyHCfE4kSh3r4czuIJd_hSJ8TrbpLhYIpEjmXT8Lc5Dk6ZeeVKYw8Lmc8lEmg==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
         1:\ncontext: Python was created by Guido van Rossum and first released in
         1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
         JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
         How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
-        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
-        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"id":"rs_0f2372fa41383bc7016960ef07c5d881918fbc501826535bac","type":"reasoning","encrypted_content":"gAAAAABpYO8JX3Ff-_KysiHGorkf4lcW0hGJOMaoY2yYu_-54oCjk7-LaqNkcgXZXBFEGaPZob3u4vkvlNFBuD7Z072Vey_VA8EfHKDmKzUutBeFbfxNnqLAjy3BevKjMZtDWsLC4Aj8v58kFB0tk5A7TSjxUu6bqL2Ir4NldOCeaRftU7YL2ELhOb42V7b9Zpkrx_2MiuPfWfHVs4_ZKhqB9atdz2aG8USmjmKOKpDac3bIzq02azwjvKHq8SZh_bG3BWCbodFWLUyt6ZjtJg_je4gtKvKL-czQEtOx4nJ5eHGWVUNMmfPpFres36NL1T3yv5B-PcHvXHPJsg9khbbWvtaAIfqQfuAaR_b5dtxrjDCgR1PgS1CUDc0BkyzjPI14H1HiqTEzg_C_gSSKepuBxDVYRYHx4yp2JQS0qf19q4ZpazW6wP0LBxUMgS79wocnpEGmeMMAyoqZ0MVlmNJgVSm_j3-RZovW1MrM7epDy_ROscRgKwYgPkV088ikNkSvD8fVoDj7h-dwKLJ7asXbVvaDZAdul6cEpriSxWKoX_vDU0_WQuFpgTI3X95bBy9jHZHfO_p96KCpxKKska08RlpBdXbx0Vnr9UJt9F6jAEyu5a3xfw7Yw--H2us9hZ-ZePsxFoKvqfBNq9GJ6Njc9ZiL49GNiPG2Srf0yQX5WjTSXJIAXXWWME3i7eAsYysidXVdLn4DWDgXUXPn-orC9i7XWlMGDWOaw7M5kNftyXDLRdhw5UB0nd6NvjmNLEw1MRTTvpnoMnaGuD9rj8lt13E4BPJ-9cN3nrBCWGP6Uy4bf3LFk_SrhKsBMg1sLNYbBeug8whWT_k8bsdmUcfWJpoyYhJJJBTUiTtRl_NLylyGxQKmcyoYCuhsgq4_KllocVtEwSBf8JWo7v2UpqTDB--AJ53_CsuvmccTpk8kelBh75TVBKDQwhc0ibKp4igCk6u6A-zSoWk33VnjWYO8wP_1fxOvFBqRReWTzkEX7Kg6KHCr9I63xXZjts8yYIbGGYsiTQk6dDBXH37DNnD4D9vsKDfpZKVXPcK361wWCCTx2q5bq9XaUJFMixsYcQA4hRbduEfUyekopvBLRguxge8SABgsJ27-oZ3ldnnzgUFPbo7Qa94Kc0ONWljhAsxvwVkS2g19YflwPJ8dBBOcg0NASDExAiCiy-jN0KTuACF4lgGo9RHWJpK7NtVaGbgz41FkFXw36gkTxkyJtIhBtj9BqoRQ2MYonxleFUNElQRZjVAigWc6t-1Ocx-bZ8SfovoVfJD8riTuufIP92YOGrC8o3J4B9ZDUUhJ9D90wtEXA6lWvw74EbJH2pCPlJiw3wguoZZX5IfIikhJPIOuFmSelIZMO-Ecx3R7KXgv5E94xQKWl6iSTQ4Kbe2z8L9l23QOYbT4djvOiP63QqjhSGcSX7VbIjRJJY7aVMRROYIsDGGuyybJDMIj9bkGOo-sMo9Lwg2TWd0_XVXqpqgLkN_5TkvHDmX9WTRW0eze4uvTsmxZZSzjrjoUunsb2AOgUFx738aDZcdL7dw8Z6s3AwZndtMkSHynVH8SjFfKVJz2QUBZ8lhPuziplxWyaErJsMcH-figsTD4PZy6lJclQTF0xy6aag==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
-        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        is unacceptable!"}]},{"id":"rs_0f2372fa41383bc7016960ef0cc3588191a47c1ecd1502242d","type":"reasoning","encrypted_content":"gAAAAABpYO8TdttxKToUA-1p0EC6QfFaE6tVSY6W6IzAW6WFzKeUXaTda-Gpwyksbyn7O4AscgwRU6SBeFaBquwAb0fiYTfp4LmsgfyWwT_M2cwPiHwm3ubaba8BRywPS6wtyTY1WQPxA_Md2W0CDAxBMxEeHfcfjU-Kh65DHJxVBHjHKUHtsFY2IEGj4AqGAKrFXghDYwUHn-l16lSc-oW_N5Z_CPVjkb4NPusj2WBumeqcQwpD2Zd367Dp77bY4HrFT6TrQgE7sQkV0zBZjjHxMcV-OZ5so91IKDHfMdpdaxqItDbBNxZI3EqfpHNhwdv5g07v-2JuJ20p3joFkTL1Pkxwqpz5RxH8EdDMMyYWMs8pVuOVpFHWpKk-s0dnimf5sZ9Qp1Etewmx17FSl_mi5kgMg0H6OTk64CIcdhTktr_qAvua20eDd0Dc-cEZ1BTPZW3FIxHMSuWZmtS-2wvNhFNSSHSsRh2PPsglePKFn_B2QWO3i_D3dVORablTAcd10PRqXwaoF37_yo6IxkdEiBS0G4cOT5RjWKxS8hE3xNffRDWtG8LVY_mo09jodlRl26JBVagy1PLm4hhbv8-Fpk0Pcbw3Ej5iKHwFxULCTRwhF0-Xyqmq93JxAxHgvOI-2gDUTmKG0yF0irRpi0l4nur3yARzCQkmWOTujbkyc2wdKqrtyYLoUleGsz9GJIXh-XpVaE5CJktACfD3jn8fBU7ejynCt9eWY5qjAAlMYf_-acKgBpwC9YWn28-CFm8GnDB5DJEdgPjieoehflwFM7oUVC5J9RfztPIRuUsokMcObzt1QCGDeAuNLgjAupLsj1Sj_2DSn4dUe3tbwFWWor3eJrVmH1cZzc29c3KcoBNDiWFCJcyMXlmNVsROF1kUrH9i_QYCr_QLNbm98M03J0MPdNhJVYud_9n14Bp2jIIFrGhuAG04-i0MSP9-VWPsq-9J-298dMKqVCMHklymhMUON8j7qzt6RCKj6qGgI98uxfDWIUa5QvwhU8k-FVMNshgox4Dm-hvFxm3L4siB7m569trASF5LgoVefZaMZyIIsfbiP8bFn0v_32lZPPopV3E0qGdNUG6kWorODxXAm0hg-nq-keI9Q14BfjsoSzE2v8lBoWHYLPzv0S2OeBLNqLmDatS7qomjbAaYfDLRVwd4qwi0Z7Oa40SAycj7TQmLhzvXUSk8QqMU6YKsyouQdtGW5H3PJFm8tIKiGcGx66L-xh2knwI3i-FGDXDNbYGMYUOQPeJoAaGBeGyzV06xFVWAQ3NR3AW-pz5y03zvlSF8ofiVrkD-4O36U9DdapVv8IhCfdL-kIuvy3UiVno0SjLWzd4aXlfJWX3RQYLbJeIyV_8WgTr0DULXF17BqfSvv6v8PxxuWqf44_iHqHveGqsDOpRq2jsGO9eZAyE-QAU-nwBE3g0-XNQqCD4q_o0aXt5EVU_mZoYKpLyWj4JkEp973EPhQ0Bh4VZTSLU2Ue4RzbtDh8h7qVoFIFrupiBl5H-d8fxmdrNvAAC3RZQE4uKAwUeUeC4g8k1Ll_eFAgjS8uB8lZQnsp6CJIv0fL6o9D-ZZJkCLhxlsOi5E1wiq0T-QYdy3n04XIcye02RiBg-cIQj9od8dUDt5cXe893mNZPY-bDt7wkORb2YnGy7rUxNWs0Z6ygjnOMT4pQkmW876PA8IhrSKFDryRwl7vVxGV8_7Y8oXLcBpjz1NuWmy54Owj-ZDjdxYj1aXFmgFKiCYDbkfsnx_OYyH7WLxJIYOerVsyRx50OFpj5tPFaJ4UgViaet0-PIks1Wl8bbpl-Vj0j3p9XFyIbbMuKKTYaEtJW12Ln6QqOKBJsn7Gq5v1JrpZe2obPH1dvugIeC7Krr-Rc4oRQHrzjevhhZUevVH_e4t22xsauB9MMI4H4bAN9067pbuohz5KHnWVLwBx63-b99AoJt9y6NTXJNBQUSwMWL9dZ8eRmWdcnwfCKqZXWn0bMbZC9nL2IljwhzIwmhvfAvZ_53CAUChbR2OzDeNr9KrPN38AN340fk1rievtEV57ykUJAcX7cZ6WaDyY2s9tTGgLIhi3nm8WrLkVp_rb--PSVOOzjfVzUTWBpWNE13QpOoiNmxeUpmvYwTHAhQFztbYpXlxV0VGXi3M6j1LKfei6fG5G2JuCGEDzNkXwftwHldXDkGAxdVqrUJ3zmhMT8tHJPSONBRMcldm-SDphKLavIhNqboWYm1I1TZFiiLuBkebF9kc7ol7O3m9fE7JZJC3rexC2g4W0db3Qmcy_jbEXluXNietXUJE_sVrIwCJ1HMf5OJKp9M_ohlyjJZX_U9fU0osrTPF4EFPEUU0CF6Mt5wLwt2fL8z4HsaQYEYx4_SE8J0_QENQRmK4UigAejVvHWJ1PZ8_V5rlvnFuFtV7x-ogkAvDPUg77vCVdHb269NNVn-FwX6enk_IEZvXeHvyrNReVeYZEUNrAMEfp2BH8vmIOoJHaNA5oye86F1VJ2o8Gh3pKya6aBlUQ1yltAGKQqi2q7gmj_HOBxVQSqf8qYyG18wuHvZrg8qPLqSd3cely6g1JSKFIAvdLMitW97bHCMb-5bw6M-FrrX2E_0rG0yU6-CFBHvD4a2Lk-Tw4tw89PQuakzkVxgTmOxyDjsqF4yUGgPJqWC7gOkOUWzlzQmObzQs3tM6xWM4a5ATOmN9Yi-N-QRnh8o3k9VehSs4HjoPA7MnDRG51M2g75vXHISEE7ZWpIo75WN_sh1pr6FuossiNtpRrgArYRVAJeMN1Svatlx096JK14L0pG2WNZvBozyFIkvKYEInj4fqIrqYbza31C92LZQGd5YKpMAOXpMPDsjHxembjuTScnJ73CA_ZlbrheyBPJ7o-pBpDi33pl_XelWn-aN9t7Qt3c1WtctWIpfB3y89v1Oy6eEwaiFA7QxYjpo6vH4Rvmr-A63Xbqs_tM6a1Lre-cy9W1fJBj74qysNzfoso7WXeznpK4dzUdNHkjaSpt-GctB-SGv5i6FXkzbu_IoYBGcHWmjjM9r7snbwFFiNf0yrTY_UrWgbWuaF5JcN8ZoFGp-3wlBOz8WQrv2MS7ijUXy2fEiTg7Lk8H80R4M4mg8Ljip1IQ423spBAtLU4LpofZsnyfYUmpOtdCZMoEN1Burs2lH2O9ErDs3viQT4hUI4iEuU1JU6557wN0ultiLIRovnmT4A1ce1udYQq92eDu6c1OxQ8dsr1eyk-cvV3hOF4m3XvLE032_wkUO_Qe3BPuEhOTNfb5EjMHpV4-btAXxQQTZ2YuvaeOosWWkkYw628_DEpkvbXEHLBax26yORAKr0elWhzi4fTLCf2nVBUBNv3IxQHORiAq2vqMKxPh1Pkk8_UZhsKp0iEys6NHGkPivF1OYTSPQgs93V-cUuwFD3_s24KbckzN8vcpYgUuPtQqyp0I=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        shipping."}]},{"id":"rs_0f2372fa41383bc7016960ef1482f881919b92729250c623ca","type":"reasoning","encrypted_content":"gAAAAABpYO8XuUThXVGTYf6_YJkprapdH0a2-fCsqoAkQDA3V4aoMEkCIUuXKVC_X50piKdVNUv2xuaP02SRzI9Z7QTH1ZjL7UC8r2-sbcnJl1Cat0HcSuqctgGSEKHhNwa9ysTbNBvtToR-fuT_bS8pXnwlQg1nvvZYkZBZzLnzzq5Bysmji-b22qEDKe1lHgolwkSEYchjKUVSuYvTcYaI2cJESxcBfGM2h9pJ2jfvGbDVUwlWNz1Svs9AQT3ud8uZ4NLicqgPvkrb02jPGhBFXxiOsqwJx_qzHAL_4z5h9yYWlkb7yFElFLj-Q-wRf7FavHVMnNih9WOmhwtNiR3k6ZUhXxC6g6f634YGYVanSHYSKCrpVGkMPcGnvIw_MUVs-WuCGLjYr29VCdYKom4SGDWuRMdynhgeVC3BkNSMEaP2kCJbiYMZUaiGWheFha2gL9IAeC9IbybHYv7Ikq97yrJ6sTjAVNsXjEKUEZjwTWOJoEmh7Msv64IuhN3guiO5HqAa8GDbGj2IPyP_E-_VJT4TvyiCrqUwr8T6B7rqLe32BjmIoxI9kAbugkrnE0T-zMQtfE9W9MwC6hWg2lDWAyokCnG8yFN-iDImK_AZDgqpgyvrZbgxD4q7nGlIQCTtw7Amku3tzh0zF3YtTMyFENC9zOun1jplYgmQKgdmF-s7fM0SNcGM0DU8KkKL8GR4fhsg6fB6eknjb8-QXxy6Ai7ncBba4TsgK0jVjBms7wtxQOc9rUaxXyC51AIi5BjlK0y9UzzsLxH_LJUkJydDryIf8gjUzuloAp2hZCtvceArKnasGYy0p55Wk-PvMm78sc6MEGM2I7nGlaFX6gWHiAGr2cASNNVXfYj1zyK0MbQQvduUGzb8sbfLfBiGwNpHmj64Dh7g4BVqlCi_gQ3dh5nobEnxJ9qQlI2Sjr0Cc8ShhbWLWnZza1S2YtmnhpByhIAmR6JZIZHTnCAw2I26ycfuzu96aXxDzzc2QrESJvULPxFQDncfP2Cjkv2ZrjV_XKlF3LDgpD5IzAFV7luF_LGELJG87FD5AjPJdwE9_3JLArygW1dmLKCdSYTI4eiuu0rTG6q8CcWkGICjoPk2d8yKXcBn-83u8lEK8H9O679we_twr6zfbOTfZF8y4MyDgrfIn0zRX6z-nPeaOB129mOzkC7IvT17Iox4Hgq_GdgqCeOk-IGV9Q6k4cyqkF_WipctdRaz4LPy6QcJWlVZZ56l-WQ9V-mOSJf7lOrfpchpW3jErfbAR17d8_89A7H-rZFjCr2WTjVCCX2Sc1qxN3VeiiDowlYSNaB9GS-t3RhQpaoOsnIYgynwlnLr5M-tIFYb7Zw-jLYxTVeAWyFwo5vbUZp_yUAD6jUm8elTTX7paZynmPUlDZGMiZaC8hVoA52evvXoLlk70xf8rRQ7pU_OMxofUt39m3oN4AbGZxlsW-mCvaUl3KFNP9Hmyclq9c2qHh-nNtUvmcCxDlZmgguhCJkcBmsuJURAkPJEuL1hTQEwVqUnfVrl4RQGYPS3tD4r0_KQzXCPLP1kuokmaO_m1t03sX9KXW6NWtirSD4evU9CLOZ19wUcnFAOerBu10GjrUCYSrzSM3tvSw5TmXGpmW5AooMwpZvuCytUjsaCogy5Zac7D8jDjYIVueWuBE9EjSsiZ0TV9i787pIG8MVfzfJ9Xfn6_ygHUDpgOOLqkvBywjS68MAOoPYo9DKQgLmrqm-UqiMMBulvWVmyMjhZvX3npF2gEf4KI8v2dJofVFT9w3c=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"id":"rs_0f2372fa41383bc7016960ef17ce048191bc0d06f7babfeb72","type":"reasoning","encrypted_content":"gAAAAABpYO8aS1X5no1v484-DTWujD7rOQet7RZ3F7JleokONv0g_22O9yg9aJXK_2oANFA7ZKAyv-jHkqZpvaX32EFklK3vts9J3PEGg3LL9CCvOrZmwGXqV6whI36Z8AbOyXJHQG10vY3C1F2HrUIKRH9DJI9KiF_7SjWZ69mCRxpNUB0ACmr8NahCzM8mQglJ2OxGoFUQl_YLCcGAY6Q6DxDiOAExLNC4yb7M6Nfqr7e33Sesal9Gly3Jkwzb_46Mf7dWUpzK8ATt0g_jSWFBsRg56T_wN1SKpVsCmCoXvud5Xa19uPPk71Z3WxoZDiatfq5OW5UE10eEkE1vKf-08XGmItsSIcDy3i965LD_0KdZEjDUSnEUH2sqwGkBUNnk6Z9_TmS81GmGWw6ZN7-4H6xWQAd85AS_UQL9oFQSZQEZaozOnNX0C8CZfW9FUig9zSrxh53aFvECKf32uB70I9wXKsqBhS5ngAEqsyEzgCPKzlE8VbV-0SU7A2gmUsu7joPAwtp5xozKThscFg15azo5CRdtp6wxZyh-uuxfSzNxWNJkXpr9H_7sMYtuQmht9NrsYCdjDzhZAScqpA-4xnQQfD0I9t6hbzRbbNq4oAWYtVvR2bnswIH8cRC4CvBJIVEXa2zMlGAWomDx9xdQZBUMQGLSIxPPaNqqS2NKWUHVkDgSYgP3YUJE2zGtIW3zGig3gZOWYiiSQsA7_qt3HyIWOXQ84FJmBbloGoH18Dhh0SO2-xAorPkB0ZMgw3WWITYp0H30ZyEcSvqBM_iYll5UJZ979_CFFLw4tiacBvn-q9fzdvFN7LchRFwwpNPxvYKXgXmSfDvsvi4MjGiaVxdWAwu7dtC8NN8OAFm6rZ4UuKyc5QmT3b3qSJANwz4X-B2dqli4uSTp4l1w3ryvsMZRlqhsrqa7zwDvkfBP8g86aqtG_EJLl6ttH7rjksc-x_qSIVkB9wnagU7OD-BUOIZwSr3era7OmNb2eVXxe6X56P7qXCQ27UMU4GSglj1dPQ-tihEzRUw4MKqP_zC6LqPnS6kqHzWX7De3EPL1ffMPnefI-mGwRp9P0i0j0EiIfCXwzlrpia7V3vMz1HBAJZioL0N5Qvph_aIGk6aqaUSNzLMuxOmiXmn2Rm1xaNOJwe453I2XNAMPUZirnpi6v6kBC6-gV3vkl9vCPYKiJPtojDK75YSCAcRhPbw7fdSBhEupO7OEeOJrimJ5a6gwBN6P6XoKkEnwRw1ejn-ejjDNRe7-JQikr61yppdHG-7VhL7YYzKTpMPzWkbl-eqZ0OqAYn5CHr3-GimEdQ5GsMJUekos5eCQXz-pyw7mC9NsM3jgoOnT8IOEZkyEOSV7_39VwGbLg3SiqpyMqjhtwcSEIzpIKvN9Nc4txpr16rPU3aKXFC7cANQcho79wft49Ki1iHeEh84YhJro5C2cFM-rPJcdcgQ1euUdbQ6X5UCeFE64SSCRHZoy8ApcdIhjegjzNSwy8YA5-Ev8T4oSHXWA1FmMohU0UCnNj-hqGtyZ3vuQ7j4JKmqwjQNTp-B7chKxWyBHXQs8OZ1nOzeizLsXCbya2XE7JzxBWE2FzN-3Oj7Apk6GPhVeXxy3rBVbgaj6taEKSu7JaEqQuUd4Utjn3073ExsSJBAEEJLMATJ0Ccy0pgHqkcUBPy-193qd1PG4dNe9t84-gKK2LMWXnBWaPtx_PmuLIKzAilBu4B0T5POXvZzdqDBeLkBjZw7kya5YzkDPSSpO0tLh36W4DJiswV7iAFc=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
-        Thank you!","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
-        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+        Thank you!"}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
-      date: Sun, 04 Jan 2026 02:32:19 GMT
-      content-type: application/json
-      anthropic-ratelimit-input-tokens-limit: '30000'
-      anthropic-ratelimit-input-tokens-remaining: '28000'
-      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:22Z'
-      anthropic-ratelimit-output-tokens-limit: '8000'
-      anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:19Z'
-      anthropic-ratelimit-requests-limit: '50'
-      anthropic-ratelimit-requests-remaining: '48'
-      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:18Z'
-      anthropic-ratelimit-tokens-limit: '38000'
-      anthropic-ratelimit-tokens-remaining: '36000'
-      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:19Z'
-      request-id: req_011CWmZ6QMN7oTpZHhKWGk4M
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      server: cloudflare
-      x-envoy-upstream-service-time: '2796'
+      alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      x-robots-tag: none
+      cf-ray: 9bb3ce047e184354-ORD
       content-encoding: gzip
-      cf-ray: 9b8753109a1e10a1-ORD
+      content-type: application/json
+      date: Fri, 09 Jan 2026 12:05:50 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '4357'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=gB4BornNcESjw0lNuC.kTRUuNwbG7Usu4w.wyZPaUas-1767960350-1.0.1.1-iimTS5otTLLJ1jxco7di_r7im9H7Ve1tgFq14xBSpNuCFwrq1EfJTBZyRQcisx.K3zk93o0b9q9wPD.HkMN9aa61Tnc1v9BV_89yExrKw7E;
+        path=/; expires=Fri, 09-Jan-26 12:35:50 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=3UfhTatmEZLVQOlgNbOAa_k41iAUpGbHtqY89o79C54-1767960350743-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '4361'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '499937'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 7ms
+      x-request-id: req_c74ddf6e39fd4c609f254887e7d886c0
     body:
-      string: '{"model":"claude-sonnet-4-20250514","id":"msg_017JcJys2VxjYYVbTKtvMM9H","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01CYNHhxs1bwM3qVWUE3CFLD","name":"_structured_tool_call","input":{"data":{"category":"feedback","priority":"low","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":101,"cache_read_input_tokens":1047,"cache_creation":{"ephemeral_5m_input_tokens":101,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
-  recorded_at: 2026-01-04 02:32:19
+      string: |-
+        {
+          "id": "resp_0f2372fa41383bc7016960ef1a5d9c8191aff960a8bde85893",
+          "object": "response",
+          "created_at": 1767960346,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767960350,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_0f2372fa41383bc7016960ef1aa3a881918f1c40fcd2a77844",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpYO8e992q2OU4I1xwWCCxpF2VLf5NUhnQTP0o55ibAZW9DaTl6xkOYTSOVpuqQlInSvtsO1sPhh04vFG1wnrl7MuP2LLC8RW0axp7ASDFUPpGRkXjBFtEFLH0yO4Zza60nsbSMgQFcPxSXQ2pP1hOhfs1dPngMh1drDroK49PWLVuFXTLTiiz3uQaVc6-uw41Hv2zviYLkztE3Xjy_szUfxGlnIAc6hL7cpE-JTtJJnwnl6LLsaEa_-ZlOz2BgZYPmiohK_zC3Kix-DzkIh7Wwoz-Yxit9TFnccBoDpdG9ADcw54McQvLAkBPUPPUq9HSM_iePb-ObYuMYlDOdBR4BF8WHfH6H-ZUOokEfnAfOhG-_gJm7e9wde3s_f7Q7pQvH4zeF9chNyh3d6oe4MrcX9EQJwHVSUONbuzOA3JXA4oPhN6qQvlYq9y2vNeK9g_LVKFSfmgnjY3U9NYYINgwdsbG9hKF2y6Os7eEK42lEzfd9s-n_GkGG8DHAkDbtRwZQXiVr12xw8z-aAHGR3aEwfHyXU3kJsBL3lGrNuZGNAPV12-ppMR_hbBkTidAcF7nWbKex_BiG4KsCpjtpM_YYMleuj79kqBtXolUdjRrme-7k8sJcIxhQOwi1gcIjfsFZol9lrmDOa6dc3now2P311MRBwXv7TEhXNe6Aowm4lTaqdtLRHrMiH76x5-bylVgpPZORimpo2UeW4RKJy5lSii25O-FELCISB47zmaEx7c7cvHROL1byDnFel2HWZnLCPQbisNN9Q3ndYZaSxvwiYYIlIOmuGAAi4ZA-WJQAqzX1OawgC_fBQUPpcOTC7MqnJ8sYKvRdd5uc0Zr3K6jPg8S9MhY9LdWlmThQ637LhEc7dDxUtZXVFdq0qcCpDMCGkTXzQVZQPo2OC8tBOUFlROoWsFFGLPSx9AZdpr6xkIJN4b5salX1cUE3R8k6WZUK8CaY8VcRrc9BHDpMQhzS9T3pJddrzzB968azDS_7nngQ_VcUh1jj9ZU6pmw7zGapTC6A6DLj6QZjtCh3BpUKtpqmqjlYGzrAaaFJv1wVw5V9xS3mwTgjh46tfT9bLOCh6t44KUknn2znAzjrRVGi2QkBXQm57Tc2kb-xN5Duk9SJSSe2BXmq7VoCCg4qEQ_5BBaYP5FxqFX4dx4AJEconn5Q8InumBJcYxyLHuX71fIFFAxLcY3YGczQxa1aEAKu4ujxkJrZ9TkL7_NbyFwZVM8vy7xjlWiA_6oKYJNKraVU_txImB1pBUYTTFSiXYCIwT6uY-fDEBu1qMj1PhLjv_kDMKxjdJBkJi-dARy1TGoCEE6RCW4OLCMShSSKPih2Kc6sZLrpC7iwAdfOXmBEPINSW9l7y0d0Y9BtaPfVs8cpnyUfgjO064ZNHmcPoLdJr_T-_q3LPoe2OnkPy4GWP3ro7rEhAYDiYyoqgzVB-Q8mI08M-Wav_uMMv-i7jcU6e1p9ktutjFWbT1-lvI6EbS0IKqUFMgvJRbAyoHEaPLr7rh8WFAv7iFANg5PWiZ9GrjMJkN5OMMpzeRowNnmd3_RoNEmxHrlYo_-CEJ6Nb77uGDcpnEvGM0Z6BZYazdpSSPSNyNPGbWZF1BnDQQOKLSgnV4FA5wT9Ob00oFSWRP2rS1lx9JZiCvXVZ1E292jQ-lMyJXiKFAdOJWgdC9hcr8zqfhjSi7QIRgmkC3BqXiNdFAJ7jseVCiiBzaMvhkuTRPo_agNnnwFj7AWjp-0kU0j4a_5dOAyZjz2uQ7_g3AiFCga-qSA8ZK2bOTgt8TgmS1B_nPV3hpYBCkoy1OQVcmunLjhdnKlVdS7efQxcUP3kXozWo2912gshVpF1C_2ieZ44XIqmioMJTkQ-slON_QpvveL6j43EyRtVfWMBhB9SjNyD7Camn3OENGLXjpZZD_0wYp1zKk8qb6yqa7twla_5u4AQCMigIjc2uIqpNsrLEb6IiN7lillxXCeMq9AZnyCbSWx064Q7Ot85tWtHuSa-SzqwlT4DKrwB9DXYAsTzf_g8wVIW5YyAkzclxCJojL0gtXnCI7BcLFThaKe4DSeUBPPJsB750G7oHZL7I7CovxAsDLmhn632fFU9DnyIknBZ7UHxm3M5h6kH_WnPA7ttZhZ04oDSgxRIajDteqk2u-oLDoxbySenHbx1kFqzI_Nd1JJqmwnIcSBhYjzLWCZ9DEQiYYXnXO8Y5m2EoOCaDAH4ArAB9_Sh2uA6eeISewhaXUXh_Elnw8HRo3aQdC2RNjzBSv0LZwS-_j_yA_igpjeVvakyPKGrEcHEPzfac2vpHpAmqes07EOmA6gAIA_7QT-QHE4e26KlGqLgtCskS5vQFGmqgdtoKaMKaFBXC9MdXGeOYCSbomRhdR0rjyeE7q6RX7g2StQA3kP5sdjsio2_FCe6yrTHI6laP1ddx66wgckp6ta4rDeNqwLDd-jJtFGpsHcWawMlLiLIl3sEYuAMUe2odnxO6nSxmCuKR_0IJ2dljucW4BiWE5Yh7UY3JP4dNPF5obOLuEhC-pivMuhEeP5ECmelKytmu8t9Pm-x9MjmGoVoF2lk2GjrH9WEGU5gr5uNi6mMF9E2H2DccBmeb9ovyUapkDpZUHKmvkkUKBlJbPuBd2fBROIEukJs9HOO16FWDLxuiq8MH3FQu6W1SNm55QARCrTwEUOCDf64_i1bFerUI-DZfidNfFx0DoqHMR5oqu65uLLpl_wPkg=",
+              "summary": []
+            },
+            {
+              "id": "msg_0f2372fa41383bc7016960ef1e495c81918ba7da86bbda3b15",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":false}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 719,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 280,
+            "output_tokens_details": {
+              "reasoning_tokens": 256
+            },
+            "total_tokens": 999
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-09 12:05:50
 - request:
     method: POST
-    uri: https://api.anthropic.com/v1/messages
+    uri: https://api.openai.com/v1/responses
     body:
-      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eefc1e90819189dbf881c1eae531","type":"reasoning","encrypted_content":"gAAAAABpYO7-3X_Vrpn7XpiWPtaFWGqh-ovX0nv0tfZDkegZRheuXUAgo6zoPJC1toE63GsnNv2jEBF_9A3TeEafNcnQUQ9rEYDGwfV60RoqTL2WKeWBPzoycW9dhIAg41iAKYCMMlW5q46iEkz8E_K5AflBDNB77qQwjXe1a568t__eRhkgidFmbZe54WQ-mm-a9QW3BiAGvR8-Nq3kA_dGTl5j-zoeI0aQ9jlTkTHuTuctWKO7FidAlls-4yA4uWAUQEEZ1gzdFVilORM_1g3fMdDHMEb9NEY_IWV6P0VO8-TgeiAtcD5pkBFnIJowXrmi5xlbLMJR4CI4wRL7ixHdq1II4XvmQ7eqGQcGZs6SlgvwDDi0OBYnjdlVGJasG0COFuvg2sREeo5UNkgC204HKmg5TKj-Dd3jLKtUt_kL4aijtG4qW52Mn--e_uo39dnjdw9l6dhMrIuD3E969fHZnWpwXUygIw8n16pA-XDgeiDaHdmMKvZlKZT87_e1zHHEOb4liYkjNSkgr8YY37DNjWA5F9U8nfTGoAf1mlb7OInb9ooGQ7WHPSLI2n9I6fxUgQw9Limky3QFL3R2DhwRyXDf6p4SvtzW_Z7K26JwyML-XeFDqmZS2dbHozd21C9gyq8we2at_5paso5-hvfUIQdF2kmNc3IvPgikTzS05cnU440YaI37C25bcGYQ6YLentLCnK2H890HsgRTN0-CUS1LUkf9j-qkTPOu9HFa09mPKa_qVDMp9IO8iwgohpJMwSjgvRVMo6EO_COZGZHgDrbob586Dsdd1MSxlLJ3z7S8PhVZwY0X4AWwsPE7LvusPOZXx3AgoA92Dou_tzvTvdl8Zfhai4PupuKzoF59RRLXtTTi8hKaHoVXgUSL50InTLHs0JCaM3qBxSf_yH50B_DUwfZ8mbV44j2CyIZhJ6_AdhmFV0Y8ugLuQhgnbaBePC5EqUWmAMHjlwRRZQSkN0o8cyHi4nVKV2W9KTO6nP49jmsNduZNsCACCnPCFAbQBe-snRAU6KAAOLqwgFIU6OwQtALShEX64BmurC8HXBYSpMfzvNM1s-FaHLM4US6GkR-EYiqmZ4ie0vDuK3dHnDGV-AxQ9-6MFx21rZFtBimTqVuo0HdGiowv7nYxe7aFMhFL4Zj0ipwOjSBiNnD4XJRH2PAVFx4c7H5iC8W6dDhch5f-rTuZETkDqlcHOlkKVKwQAXFIshunTAcs8FD4cZXxB5MM3UdOrPMGKnyZKj0dxHh75KyMA9n4hH8-I7uBiJMg1NvspDNGEna-88xzxrCCdSamiMDKIWR5-Ru8sfOSbHIVZH4eG-lCxM7JqYxUKYonf1oADkEwb_QJVuga993Jc4W04VwlSHxkygaloPgDLxZvgULcYOVKonuhyvKUqDMKXT6vTKSZ-83a6Bxzcfkyw_Q667alPoRvoCGmI-A0WVrB9swHeaJR8vmktPqY8N7UtnwNqyftEdkyW7uw5BnLLlpRBpeq7WNQjZz_M03xh6bkZpt8J0PdqpIRXnycb7oMysMhzpoOpa7lWkwO6X3f78wk9hvZkxN6kD8tfU9DJTStJlGTO4kMSEvNjF1XU4eaFWxBC5pW1GMd4qNWFqrOCShThcUHAZArWQ0SGjw20K8h1xE=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eeff611081918eaa59bffcf22dec","type":"reasoning","encrypted_content":"gAAAAABpYO8ADFVOPOBkNYSncVagubZ52l7snpV1BCKsiS4YkHuod0GmRSn9Z4RLI9cymff6uCgYRHo78Cek8fQ9pUWa-RxCr1-c8MUNquwaNZ-qPa66bOGI7Lv8dzRcJ__Gpcttv0Pq8FA1B0GFvvtwH9nr4g1xxy9JhMnmFNRgjFbXFnM9Q0VSO-dKlhTLnrW7IvwPGXb0HYlctkbl7fooxo_hTCZIss71VCzyEWDQrhYGk6Hr08YWd5QhCf84uFp0VkFK74CXFvnFcmGzWK5CGeDzP2LwiYepOb3e15zniDvh9gfrBUGqkkZ1x6ELvCPUNS9bKSnbbU9ww-ZtrcM1IJ-dHjhxR0vE70qC-wm53qFTgkO_Y-cmcfIkDTKwFQGCqA2ezyhm5waEI__Adi3EUPg84Dwec-6vFQDyOWkMgHd6OKVCwZfHf4UpS9gSBnv67wVyFKWtjVb5TTA1lyiTP9WY0YPF64Zyaj6MCObO3nIoNehxIf8afpg1-ss8mB0Bg1_sfNNd_8qWWwG8pCV3aqPfoTCOxqAyWObpeCTUeLVSqPK6N_Hkz9gONjr2tnwICbUwGJ1rLh_0Nqw_pjbhrZm9u8ySwHU6k8MWUbTTkZEOT5g-solDgbk6hTB1NqrsqTkH7iSc771Fnq-IjfIhiOgPpPNsbLgge37yp2oY3WGaXDc699pBcC6xpdMB09-L-76IifhkLyGqDlXOkHhxr-mJ4l7MKTZCi8zWtGRJWey6dC62yTa7yjMNfiuLOpuB7PWBrwCX8UGsQsJbjjcvWiLL-27fBlyOE1PMRf6OBRowGgc2aJpSxgcSTMgktEFY0dZppdY7edQh4f2UM7nheOxI0CnPp0F7-uLDNy5Jk5n5DcvOcEXZGbk2JX6WaYMWeoU9sUrkXHZTsYyKdk8XYjbidm4moo-s9gLU96OWWMJ02cRUAtuPsr5Ai9ppH2r1cVUNZNjiRJfOGcszwdlSHPFKhD-a8Acj_HNAiI4W9YYhIlLH9Hih9g2rfTYapv-Zlipmi2w-3kGH__PWAqqNB3e1OVaO-NU9vShOm7J-FjRnZYh0rrwwynQAwPiYzmVufIkdcOuyzl22XoWPG82_3M6YexpPDCsx2rcZ6IYbXs4FLtkaPqayvsjk_YxAxSeYQ8Mcsllc-dHbmwyX4O7OcMKvDDZaypF9fYSsJ9ygZMmJGmKn2YtkSlplOvot0spxXT0rdNCUDfC6j8cGulTIbSQOit4whLYbmwndl3boYYKsDb0nilm9-U2AoHWAoMagkEbfrOymXX1XA8ILBC7uhIH52IRjvlDw_3aDWLEWiahqE8OqUD_4JABDkh4IAS5IOIKZMaryijFaEIuCqOkH11pB5Y15PF4C6RYQ7K12v_mxWNyooiOLT2iJy_LUUGRwCEbpc1gK","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
         product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
         It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
-        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        This is fantastic!\n\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960ef0199bc8191a62390da79af0b5b","type":"reasoning","encrypted_content":"gAAAAABpYO8DReWoo5ps7qvTwiYOMZGbm1feNInr-Jzg-Hn6QBRHLEEjSi8UoXflm6x_tdnHJLz5x9JDj0JkCGA75XRfjlzbAApYSycEcXtQmUpRi7BcJwHUxbZOc8gdx7LbbByyf1b8gBrcGT8HXN_Y6rt79kTVtTV2udh7HjR3DNwt4vqFBfC-iLDGnkILRTmo0ra1SeD1GpMwanjRBFHCB1aqhhlG1vu0P_w7vEDkQRiIFc6swQapPmiaybKmMnND0R34SYLe2g2l7ZXq-28SVq11iy2-j5WO_P3GnTzp5PcfU8PXpaKFVmtfoFQi0FZiy-sGA-NlLt5pKmSkHmT0zeHvc7kza19fSl9MRhbWl_vcMQ6Zlsl5oBYsvKwtBaDJFaBNP8B7fJneJaFZUOuPm5BPje4LBedRQuOHsMUIcj6H2n3yk3eN5Djj7Q-dyVeSogXw_ZRlv5CaWxQd2D52PrqNbONQMmTrjI9c_GL_CbEX56pATTchP296EaI3W9zwjJlzlKe-SaBKN7iLBxj4SCNoIvAICl94xL6dgX5HWqHo5sTbrnp0Qm4tRJO9Di__0daFIz1vsANvJH8I7GLz6Ep_3S5ugmWEBxxLmsYURslJ5lGrl9hCDi07JLba-Iz_iSSQupfr6sfSL6Y5OtkyKBI_tV6t-5kwBOkLVbgeHMUExmHZg2QFKUL6yccg8-UzFhWNqwy0QcZXry6EUmd12dt4aVrGO5RujCZMpyamC7RpyllqpO0Wuvg67iAedzla2jsXuyJ8XfQTyrKYfM0avnspUUvjJF7jJ_IyHNi1ajbSFFeOsrYfcq3JKzFm1ejICfyzEJv62CvO7gQcu2dSMZdqu1sASilJJVWg2xOUPQZtUKLNYgPPORDY4hESWbReCJPE0OhjR1zNJvLm_WKDkV40yERk56s8mqp6bnQEWqdY0Tg-pS9akvuYjvEUKYPxkYcYbdo4tMNkOKTm1D18TSmIHyNVb5POhZ-NdbpG_UyZdZQf_U-iGGWPWfpSgaoCkZcmEaUGhRICKll6ywOHEEZvl5Tpjb5kOyAAxRVG1X_P2mtuRuwzhaVM2YxyZF1MKCD8anNnwv6JalAtm-wC0MovP3aF99cyHnBSfIUo1PfZeO3euIuL3feAl3dZ_EIS5QgKN_1OvVpUwj2W0eJrHmnOVDfyDnBV5kY6bXpfVNAa2NlRUP9vcisH-EdC7qFn8mNA6bUlGkNa8hkOQaThtmg0RTA4BKF0rS2HVEnQ_9z2nML3UaOT8FOpfPPg_J-G_ncdt62OXqIA5dbrKRv_h11vROVg6GIQwI8X6H6-OVwxtnVTjQGvh-_PssUO3pE05nc3IHCi20OuHt0FZs3Tm97LF02WH96kkDfN62EdR0xEkLUq7KWJOmY4cLCY6S1rOUc83X8kMarqve0-nBGtW2jLaQg_p8Mvd1AM12aZheGUtX16Peh0LwfaIkz_fmDlkNLIeOTd7Vv_5sUhcNjZEx7xLcdzbOIrsZF7O4fTGRfL32WGx06-loaEi951_xrAnqzqO3i5o2Vzgk73jmLQ3EC3h_sAx2hxCGt4njt7R1_-8hnqrq8FaZKu7bXppM_TVv_CnbOsLC3dT1_-FnmhYtbD7J_Mqwtwoo4RayW_Q44n8QQXX14UwMv-K3ObSwsQnCWSxIwPMil1G36cIbJ_afqzz8_WYXYghjyHCfE4kSh3r4czuIJd_hSJ8TrbpLhYIpEjmXT8Lc5Dk6ZeeVKYw8Lmc8lEmg==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
         1:\ncontext: Python was created by Guido van Rossum and first released in
         1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
         JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
         How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
-        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
-        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"id":"rs_0f2372fa41383bc7016960ef07c5d881918fbc501826535bac","type":"reasoning","encrypted_content":"gAAAAABpYO8JX3Ff-_KysiHGorkf4lcW0hGJOMaoY2yYu_-54oCjk7-LaqNkcgXZXBFEGaPZob3u4vkvlNFBuD7Z072Vey_VA8EfHKDmKzUutBeFbfxNnqLAjy3BevKjMZtDWsLC4Aj8v58kFB0tk5A7TSjxUu6bqL2Ir4NldOCeaRftU7YL2ELhOb42V7b9Zpkrx_2MiuPfWfHVs4_ZKhqB9atdz2aG8USmjmKOKpDac3bIzq02azwjvKHq8SZh_bG3BWCbodFWLUyt6ZjtJg_je4gtKvKL-czQEtOx4nJ5eHGWVUNMmfPpFres36NL1T3yv5B-PcHvXHPJsg9khbbWvtaAIfqQfuAaR_b5dtxrjDCgR1PgS1CUDc0BkyzjPI14H1HiqTEzg_C_gSSKepuBxDVYRYHx4yp2JQS0qf19q4ZpazW6wP0LBxUMgS79wocnpEGmeMMAyoqZ0MVlmNJgVSm_j3-RZovW1MrM7epDy_ROscRgKwYgPkV088ikNkSvD8fVoDj7h-dwKLJ7asXbVvaDZAdul6cEpriSxWKoX_vDU0_WQuFpgTI3X95bBy9jHZHfO_p96KCpxKKska08RlpBdXbx0Vnr9UJt9F6jAEyu5a3xfw7Yw--H2us9hZ-ZePsxFoKvqfBNq9GJ6Njc9ZiL49GNiPG2Srf0yQX5WjTSXJIAXXWWME3i7eAsYysidXVdLn4DWDgXUXPn-orC9i7XWlMGDWOaw7M5kNftyXDLRdhw5UB0nd6NvjmNLEw1MRTTvpnoMnaGuD9rj8lt13E4BPJ-9cN3nrBCWGP6Uy4bf3LFk_SrhKsBMg1sLNYbBeug8whWT_k8bsdmUcfWJpoyYhJJJBTUiTtRl_NLylyGxQKmcyoYCuhsgq4_KllocVtEwSBf8JWo7v2UpqTDB--AJ53_CsuvmccTpk8kelBh75TVBKDQwhc0ibKp4igCk6u6A-zSoWk33VnjWYO8wP_1fxOvFBqRReWTzkEX7Kg6KHCr9I63xXZjts8yYIbGGYsiTQk6dDBXH37DNnD4D9vsKDfpZKVXPcK361wWCCTx2q5bq9XaUJFMixsYcQA4hRbduEfUyekopvBLRguxge8SABgsJ27-oZ3ldnnzgUFPbo7Qa94Kc0ONWljhAsxvwVkS2g19YflwPJ8dBBOcg0NASDExAiCiy-jN0KTuACF4lgGo9RHWJpK7NtVaGbgz41FkFXw36gkTxkyJtIhBtj9BqoRQ2MYonxleFUNElQRZjVAigWc6t-1Ocx-bZ8SfovoVfJD8riTuufIP92YOGrC8o3J4B9ZDUUhJ9D90wtEXA6lWvw74EbJH2pCPlJiw3wguoZZX5IfIikhJPIOuFmSelIZMO-Ecx3R7KXgv5E94xQKWl6iSTQ4Kbe2z8L9l23QOYbT4djvOiP63QqjhSGcSX7VbIjRJJY7aVMRROYIsDGGuyybJDMIj9bkGOo-sMo9Lwg2TWd0_XVXqpqgLkN_5TkvHDmX9WTRW0eze4uvTsmxZZSzjrjoUunsb2AOgUFx738aDZcdL7dw8Z6s3AwZndtMkSHynVH8SjFfKVJz2QUBZ8lhPuziplxWyaErJsMcH-figsTD4PZy6lJclQTF0xy6aag==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
-        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        is unacceptable!"}]},{"id":"rs_0f2372fa41383bc7016960ef0cc3588191a47c1ecd1502242d","type":"reasoning","encrypted_content":"gAAAAABpYO8TdttxKToUA-1p0EC6QfFaE6tVSY6W6IzAW6WFzKeUXaTda-Gpwyksbyn7O4AscgwRU6SBeFaBquwAb0fiYTfp4LmsgfyWwT_M2cwPiHwm3ubaba8BRywPS6wtyTY1WQPxA_Md2W0CDAxBMxEeHfcfjU-Kh65DHJxVBHjHKUHtsFY2IEGj4AqGAKrFXghDYwUHn-l16lSc-oW_N5Z_CPVjkb4NPusj2WBumeqcQwpD2Zd367Dp77bY4HrFT6TrQgE7sQkV0zBZjjHxMcV-OZ5so91IKDHfMdpdaxqItDbBNxZI3EqfpHNhwdv5g07v-2JuJ20p3joFkTL1Pkxwqpz5RxH8EdDMMyYWMs8pVuOVpFHWpKk-s0dnimf5sZ9Qp1Etewmx17FSl_mi5kgMg0H6OTk64CIcdhTktr_qAvua20eDd0Dc-cEZ1BTPZW3FIxHMSuWZmtS-2wvNhFNSSHSsRh2PPsglePKFn_B2QWO3i_D3dVORablTAcd10PRqXwaoF37_yo6IxkdEiBS0G4cOT5RjWKxS8hE3xNffRDWtG8LVY_mo09jodlRl26JBVagy1PLm4hhbv8-Fpk0Pcbw3Ej5iKHwFxULCTRwhF0-Xyqmq93JxAxHgvOI-2gDUTmKG0yF0irRpi0l4nur3yARzCQkmWOTujbkyc2wdKqrtyYLoUleGsz9GJIXh-XpVaE5CJktACfD3jn8fBU7ejynCt9eWY5qjAAlMYf_-acKgBpwC9YWn28-CFm8GnDB5DJEdgPjieoehflwFM7oUVC5J9RfztPIRuUsokMcObzt1QCGDeAuNLgjAupLsj1Sj_2DSn4dUe3tbwFWWor3eJrVmH1cZzc29c3KcoBNDiWFCJcyMXlmNVsROF1kUrH9i_QYCr_QLNbm98M03J0MPdNhJVYud_9n14Bp2jIIFrGhuAG04-i0MSP9-VWPsq-9J-298dMKqVCMHklymhMUON8j7qzt6RCKj6qGgI98uxfDWIUa5QvwhU8k-FVMNshgox4Dm-hvFxm3L4siB7m569trASF5LgoVefZaMZyIIsfbiP8bFn0v_32lZPPopV3E0qGdNUG6kWorODxXAm0hg-nq-keI9Q14BfjsoSzE2v8lBoWHYLPzv0S2OeBLNqLmDatS7qomjbAaYfDLRVwd4qwi0Z7Oa40SAycj7TQmLhzvXUSk8QqMU6YKsyouQdtGW5H3PJFm8tIKiGcGx66L-xh2knwI3i-FGDXDNbYGMYUOQPeJoAaGBeGyzV06xFVWAQ3NR3AW-pz5y03zvlSF8ofiVrkD-4O36U9DdapVv8IhCfdL-kIuvy3UiVno0SjLWzd4aXlfJWX3RQYLbJeIyV_8WgTr0DULXF17BqfSvv6v8PxxuWqf44_iHqHveGqsDOpRq2jsGO9eZAyE-QAU-nwBE3g0-XNQqCD4q_o0aXt5EVU_mZoYKpLyWj4JkEp973EPhQ0Bh4VZTSLU2Ue4RzbtDh8h7qVoFIFrupiBl5H-d8fxmdrNvAAC3RZQE4uKAwUeUeC4g8k1Ll_eFAgjS8uB8lZQnsp6CJIv0fL6o9D-ZZJkCLhxlsOi5E1wiq0T-QYdy3n04XIcye02RiBg-cIQj9od8dUDt5cXe893mNZPY-bDt7wkORb2YnGy7rUxNWs0Z6ygjnOMT4pQkmW876PA8IhrSKFDryRwl7vVxGV8_7Y8oXLcBpjz1NuWmy54Owj-ZDjdxYj1aXFmgFKiCYDbkfsnx_OYyH7WLxJIYOerVsyRx50OFpj5tPFaJ4UgViaet0-PIks1Wl8bbpl-Vj0j3p9XFyIbbMuKKTYaEtJW12Ln6QqOKBJsn7Gq5v1JrpZe2obPH1dvugIeC7Krr-Rc4oRQHrzjevhhZUevVH_e4t22xsauB9MMI4H4bAN9067pbuohz5KHnWVLwBx63-b99AoJt9y6NTXJNBQUSwMWL9dZ8eRmWdcnwfCKqZXWn0bMbZC9nL2IljwhzIwmhvfAvZ_53CAUChbR2OzDeNr9KrPN38AN340fk1rievtEV57ykUJAcX7cZ6WaDyY2s9tTGgLIhi3nm8WrLkVp_rb--PSVOOzjfVzUTWBpWNE13QpOoiNmxeUpmvYwTHAhQFztbYpXlxV0VGXi3M6j1LKfei6fG5G2JuCGEDzNkXwftwHldXDkGAxdVqrUJ3zmhMT8tHJPSONBRMcldm-SDphKLavIhNqboWYm1I1TZFiiLuBkebF9kc7ol7O3m9fE7JZJC3rexC2g4W0db3Qmcy_jbEXluXNietXUJE_sVrIwCJ1HMf5OJKp9M_ohlyjJZX_U9fU0osrTPF4EFPEUU0CF6Mt5wLwt2fL8z4HsaQYEYx4_SE8J0_QENQRmK4UigAejVvHWJ1PZ8_V5rlvnFuFtV7x-ogkAvDPUg77vCVdHb269NNVn-FwX6enk_IEZvXeHvyrNReVeYZEUNrAMEfp2BH8vmIOoJHaNA5oye86F1VJ2o8Gh3pKya6aBlUQ1yltAGKQqi2q7gmj_HOBxVQSqf8qYyG18wuHvZrg8qPLqSd3cely6g1JSKFIAvdLMitW97bHCMb-5bw6M-FrrX2E_0rG0yU6-CFBHvD4a2Lk-Tw4tw89PQuakzkVxgTmOxyDjsqF4yUGgPJqWC7gOkOUWzlzQmObzQs3tM6xWM4a5ATOmN9Yi-N-QRnh8o3k9VehSs4HjoPA7MnDRG51M2g75vXHISEE7ZWpIo75WN_sh1pr6FuossiNtpRrgArYRVAJeMN1Svatlx096JK14L0pG2WNZvBozyFIkvKYEInj4fqIrqYbza31C92LZQGd5YKpMAOXpMPDsjHxembjuTScnJ73CA_ZlbrheyBPJ7o-pBpDi33pl_XelWn-aN9t7Qt3c1WtctWIpfB3y89v1Oy6eEwaiFA7QxYjpo6vH4Rvmr-A63Xbqs_tM6a1Lre-cy9W1fJBj74qysNzfoso7WXeznpK4dzUdNHkjaSpt-GctB-SGv5i6FXkzbu_IoYBGcHWmjjM9r7snbwFFiNf0yrTY_UrWgbWuaF5JcN8ZoFGp-3wlBOz8WQrv2MS7ijUXy2fEiTg7Lk8H80R4M4mg8Ljip1IQ423spBAtLU4LpofZsnyfYUmpOtdCZMoEN1Burs2lH2O9ErDs3viQT4hUI4iEuU1JU6557wN0ultiLIRovnmT4A1ce1udYQq92eDu6c1OxQ8dsr1eyk-cvV3hOF4m3XvLE032_wkUO_Qe3BPuEhOTNfb5EjMHpV4-btAXxQQTZ2YuvaeOosWWkkYw628_DEpkvbXEHLBax26yORAKr0elWhzi4fTLCf2nVBUBNv3IxQHORiAq2vqMKxPh1Pkk8_UZhsKp0iEys6NHGkPivF1OYTSPQgs93V-cUuwFD3_s24KbckzN8vcpYgUuPtQqyp0I=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        shipping."}]},{"id":"rs_0f2372fa41383bc7016960ef1482f881919b92729250c623ca","type":"reasoning","encrypted_content":"gAAAAABpYO8XuUThXVGTYf6_YJkprapdH0a2-fCsqoAkQDA3V4aoMEkCIUuXKVC_X50piKdVNUv2xuaP02SRzI9Z7QTH1ZjL7UC8r2-sbcnJl1Cat0HcSuqctgGSEKHhNwa9ysTbNBvtToR-fuT_bS8pXnwlQg1nvvZYkZBZzLnzzq5Bysmji-b22qEDKe1lHgolwkSEYchjKUVSuYvTcYaI2cJESxcBfGM2h9pJ2jfvGbDVUwlWNz1Svs9AQT3ud8uZ4NLicqgPvkrb02jPGhBFXxiOsqwJx_qzHAL_4z5h9yYWlkb7yFElFLj-Q-wRf7FavHVMnNih9WOmhwtNiR3k6ZUhXxC6g6f634YGYVanSHYSKCrpVGkMPcGnvIw_MUVs-WuCGLjYr29VCdYKom4SGDWuRMdynhgeVC3BkNSMEaP2kCJbiYMZUaiGWheFha2gL9IAeC9IbybHYv7Ikq97yrJ6sTjAVNsXjEKUEZjwTWOJoEmh7Msv64IuhN3guiO5HqAa8GDbGj2IPyP_E-_VJT4TvyiCrqUwr8T6B7rqLe32BjmIoxI9kAbugkrnE0T-zMQtfE9W9MwC6hWg2lDWAyokCnG8yFN-iDImK_AZDgqpgyvrZbgxD4q7nGlIQCTtw7Amku3tzh0zF3YtTMyFENC9zOun1jplYgmQKgdmF-s7fM0SNcGM0DU8KkKL8GR4fhsg6fB6eknjb8-QXxy6Ai7ncBba4TsgK0jVjBms7wtxQOc9rUaxXyC51AIi5BjlK0y9UzzsLxH_LJUkJydDryIf8gjUzuloAp2hZCtvceArKnasGYy0p55Wk-PvMm78sc6MEGM2I7nGlaFX6gWHiAGr2cASNNVXfYj1zyK0MbQQvduUGzb8sbfLfBiGwNpHmj64Dh7g4BVqlCi_gQ3dh5nobEnxJ9qQlI2Sjr0Cc8ShhbWLWnZza1S2YtmnhpByhIAmR6JZIZHTnCAw2I26ycfuzu96aXxDzzc2QrESJvULPxFQDncfP2Cjkv2ZrjV_XKlF3LDgpD5IzAFV7luF_LGELJG87FD5AjPJdwE9_3JLArygW1dmLKCdSYTI4eiuu0rTG6q8CcWkGICjoPk2d8yKXcBn-83u8lEK8H9O679we_twr6zfbOTfZF8y4MyDgrfIn0zRX6z-nPeaOB129mOzkC7IvT17Iox4Hgq_GdgqCeOk-IGV9Q6k4cyqkF_WipctdRaz4LPy6QcJWlVZZ56l-WQ9V-mOSJf7lOrfpchpW3jErfbAR17d8_89A7H-rZFjCr2WTjVCCX2Sc1qxN3VeiiDowlYSNaB9GS-t3RhQpaoOsnIYgynwlnLr5M-tIFYb7Zw-jLYxTVeAWyFwo5vbUZp_yUAD6jUm8elTTX7paZynmPUlDZGMiZaC8hVoA52evvXoLlk70xf8rRQ7pU_OMxofUt39m3oN4AbGZxlsW-mCvaUl3KFNP9Hmyclq9c2qHh-nNtUvmcCxDlZmgguhCJkcBmsuJURAkPJEuL1hTQEwVqUnfVrl4RQGYPS3tD4r0_KQzXCPLP1kuokmaO_m1t03sX9KXW6NWtirSD4evU9CLOZ19wUcnFAOerBu10GjrUCYSrzSM3tvSw5TmXGpmW5AooMwpZvuCytUjsaCogy5Zac7D8jDjYIVueWuBE9EjSsiZ0TV9i787pIG8MVfzfJ9Xfn6_ygHUDpgOOLqkvBywjS68MAOoPYo9DKQgLmrqm-UqiMMBulvWVmyMjhZvX3npF2gEf4KI8v2dJofVFT9w3c=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"id":"rs_0f2372fa41383bc7016960ef17ce048191bc0d06f7babfeb72","type":"reasoning","encrypted_content":"gAAAAABpYO8aS1X5no1v484-DTWujD7rOQet7RZ3F7JleokONv0g_22O9yg9aJXK_2oANFA7ZKAyv-jHkqZpvaX32EFklK3vts9J3PEGg3LL9CCvOrZmwGXqV6whI36Z8AbOyXJHQG10vY3C1F2HrUIKRH9DJI9KiF_7SjWZ69mCRxpNUB0ACmr8NahCzM8mQglJ2OxGoFUQl_YLCcGAY6Q6DxDiOAExLNC4yb7M6Nfqr7e33Sesal9Gly3Jkwzb_46Mf7dWUpzK8ATt0g_jSWFBsRg56T_wN1SKpVsCmCoXvud5Xa19uPPk71Z3WxoZDiatfq5OW5UE10eEkE1vKf-08XGmItsSIcDy3i965LD_0KdZEjDUSnEUH2sqwGkBUNnk6Z9_TmS81GmGWw6ZN7-4H6xWQAd85AS_UQL9oFQSZQEZaozOnNX0C8CZfW9FUig9zSrxh53aFvECKf32uB70I9wXKsqBhS5ngAEqsyEzgCPKzlE8VbV-0SU7A2gmUsu7joPAwtp5xozKThscFg15azo5CRdtp6wxZyh-uuxfSzNxWNJkXpr9H_7sMYtuQmht9NrsYCdjDzhZAScqpA-4xnQQfD0I9t6hbzRbbNq4oAWYtVvR2bnswIH8cRC4CvBJIVEXa2zMlGAWomDx9xdQZBUMQGLSIxPPaNqqS2NKWUHVkDgSYgP3YUJE2zGtIW3zGig3gZOWYiiSQsA7_qt3HyIWOXQ84FJmBbloGoH18Dhh0SO2-xAorPkB0ZMgw3WWITYp0H30ZyEcSvqBM_iYll5UJZ979_CFFLw4tiacBvn-q9fzdvFN7LchRFwwpNPxvYKXgXmSfDvsvi4MjGiaVxdWAwu7dtC8NN8OAFm6rZ4UuKyc5QmT3b3qSJANwz4X-B2dqli4uSTp4l1w3ryvsMZRlqhsrqa7zwDvkfBP8g86aqtG_EJLl6ttH7rjksc-x_qSIVkB9wnagU7OD-BUOIZwSr3era7OmNb2eVXxe6X56P7qXCQ27UMU4GSglj1dPQ-tihEzRUw4MKqP_zC6LqPnS6kqHzWX7De3EPL1ffMPnefI-mGwRp9P0i0j0EiIfCXwzlrpia7V3vMz1HBAJZioL0N5Qvph_aIGk6aqaUSNzLMuxOmiXmn2Rm1xaNOJwe453I2XNAMPUZirnpi6v6kBC6-gV3vkl9vCPYKiJPtojDK75YSCAcRhPbw7fdSBhEupO7OEeOJrimJ5a6gwBN6P6XoKkEnwRw1ejn-ejjDNRe7-JQikr61yppdHG-7VhL7YYzKTpMPzWkbl-eqZ0OqAYn5CHr3-GimEdQ5GsMJUekos5eCQXz-pyw7mC9NsM3jgoOnT8IOEZkyEOSV7_39VwGbLg3SiqpyMqjhtwcSEIzpIKvN9Nc4txpr16rPU3aKXFC7cANQcho79wft49Ki1iHeEh84YhJro5C2cFM-rPJcdcgQ1euUdbQ6X5UCeFE64SSCRHZoy8ApcdIhjegjzNSwy8YA5-Ev8T4oSHXWA1FmMohU0UCnNj-hqGtyZ3vuQ7j4JKmqwjQNTp-B7chKxWyBHXQs8OZ1nOzeizLsXCbya2XE7JzxBWE2FzN-3Oj7Apk6GPhVeXxy3rBVbgaj6taEKSu7JaEqQuUd4Utjn3073ExsSJBAEEJLMATJ0Ccy0pgHqkcUBPy-193qd1PG4dNe9t84-gKK2LMWXnBWaPtx_PmuLIKzAilBu4B0T5POXvZzdqDBeLkBjZw7kya5YzkDPSSpO0tLh36W4DJiswV7iAFc=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
-        Thank you!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Thank you!"}]},{"id":"rs_0f2372fa41383bc7016960ef1aa3a881918f1c40fcd2a77844","type":"reasoning","encrypted_content":"gAAAAABpYO8e992q2OU4I1xwWCCxpF2VLf5NUhnQTP0o55ibAZW9DaTl6xkOYTSOVpuqQlInSvtsO1sPhh04vFG1wnrl7MuP2LLC8RW0axp7ASDFUPpGRkXjBFtEFLH0yO4Zza60nsbSMgQFcPxSXQ2pP1hOhfs1dPngMh1drDroK49PWLVuFXTLTiiz3uQaVc6-uw41Hv2zviYLkztE3Xjy_szUfxGlnIAc6hL7cpE-JTtJJnwnl6LLsaEa_-ZlOz2BgZYPmiohK_zC3Kix-DzkIh7Wwoz-Yxit9TFnccBoDpdG9ADcw54McQvLAkBPUPPUq9HSM_iePb-ObYuMYlDOdBR4BF8WHfH6H-ZUOokEfnAfOhG-_gJm7e9wde3s_f7Q7pQvH4zeF9chNyh3d6oe4MrcX9EQJwHVSUONbuzOA3JXA4oPhN6qQvlYq9y2vNeK9g_LVKFSfmgnjY3U9NYYINgwdsbG9hKF2y6Os7eEK42lEzfd9s-n_GkGG8DHAkDbtRwZQXiVr12xw8z-aAHGR3aEwfHyXU3kJsBL3lGrNuZGNAPV12-ppMR_hbBkTidAcF7nWbKex_BiG4KsCpjtpM_YYMleuj79kqBtXolUdjRrme-7k8sJcIxhQOwi1gcIjfsFZol9lrmDOa6dc3now2P311MRBwXv7TEhXNe6Aowm4lTaqdtLRHrMiH76x5-bylVgpPZORimpo2UeW4RKJy5lSii25O-FELCISB47zmaEx7c7cvHROL1byDnFel2HWZnLCPQbisNN9Q3ndYZaSxvwiYYIlIOmuGAAi4ZA-WJQAqzX1OawgC_fBQUPpcOTC7MqnJ8sYKvRdd5uc0Zr3K6jPg8S9MhY9LdWlmThQ637LhEc7dDxUtZXVFdq0qcCpDMCGkTXzQVZQPo2OC8tBOUFlROoWsFFGLPSx9AZdpr6xkIJN4b5salX1cUE3R8k6WZUK8CaY8VcRrc9BHDpMQhzS9T3pJddrzzB968azDS_7nngQ_VcUh1jj9ZU6pmw7zGapTC6A6DLj6QZjtCh3BpUKtpqmqjlYGzrAaaFJv1wVw5V9xS3mwTgjh46tfT9bLOCh6t44KUknn2znAzjrRVGi2QkBXQm57Tc2kb-xN5Duk9SJSSe2BXmq7VoCCg4qEQ_5BBaYP5FxqFX4dx4AJEconn5Q8InumBJcYxyLHuX71fIFFAxLcY3YGczQxa1aEAKu4ujxkJrZ9TkL7_NbyFwZVM8vy7xjlWiA_6oKYJNKraVU_txImB1pBUYTTFSiXYCIwT6uY-fDEBu1qMj1PhLjv_kDMKxjdJBkJi-dARy1TGoCEE6RCW4OLCMShSSKPih2Kc6sZLrpC7iwAdfOXmBEPINSW9l7y0d0Y9BtaPfVs8cpnyUfgjO064ZNHmcPoLdJr_T-_q3LPoe2OnkPy4GWP3ro7rEhAYDiYyoqgzVB-Q8mI08M-Wav_uMMv-i7jcU6e1p9ktutjFWbT1-lvI6EbS0IKqUFMgvJRbAyoHEaPLr7rh8WFAv7iFANg5PWiZ9GrjMJkN5OMMpzeRowNnmd3_RoNEmxHrlYo_-CEJ6Nb77uGDcpnEvGM0Z6BZYazdpSSPSNyNPGbWZF1BnDQQOKLSgnV4FA5wT9Ob00oFSWRP2rS1lx9JZiCvXVZ1E292jQ-lMyJXiKFAdOJWgdC9hcr8zqfhjSi7QIRgmkC3BqXiNdFAJ7jseVCiiBzaMvhkuTRPo_agNnnwFj7AWjp-0kU0j4a_5dOAyZjz2uQ7_g3AiFCga-qSA8ZK2bOTgt8TgmS1B_nPV3hpYBCkoy1OQVcmunLjhdnKlVdS7efQxcUP3kXozWo2912gshVpF1C_2ieZ44XIqmioMJTkQ-slON_QpvveL6j43EyRtVfWMBhB9SjNyD7Camn3OENGLXjpZZD_0wYp1zKk8qb6yqa7twla_5u4AQCMigIjc2uIqpNsrLEb6IiN7lillxXCeMq9AZnyCbSWx064Q7Ot85tWtHuSa-SzqwlT4DKrwB9DXYAsTzf_g8wVIW5YyAkzclxCJojL0gtXnCI7BcLFThaKe4DSeUBPPJsB750G7oHZL7I7CovxAsDLmhn632fFU9DnyIknBZ7UHxm3M5h6kH_WnPA7ttZhZ04oDSgxRIajDteqk2u-oLDoxbySenHbx1kFqzI_Nd1JJqmwnIcSBhYjzLWCZ9DEQiYYXnXO8Y5m2EoOCaDAH4ArAB9_Sh2uA6eeISewhaXUXh_Elnw8HRo3aQdC2RNjzBSv0LZwS-_j_yA_igpjeVvakyPKGrEcHEPzfac2vpHpAmqes07EOmA6gAIA_7QT-QHE4e26KlGqLgtCskS5vQFGmqgdtoKaMKaFBXC9MdXGeOYCSbomRhdR0rjyeE7q6RX7g2StQA3kP5sdjsio2_FCe6yrTHI6laP1ddx66wgckp6ta4rDeNqwLDd-jJtFGpsHcWawMlLiLIl3sEYuAMUe2odnxO6nSxmCuKR_0IJ2dljucW4BiWE5Yh7UY3JP4dNPF5obOLuEhC-pivMuhEeP5ECmelKytmu8t9Pm-x9MjmGoVoF2lk2GjrH9WEGU5gr5uNi6mMF9E2H2DccBmeb9ovyUapkDpZUHKmvkkUKBlJbPuBd2fBROIEukJs9HOO16FWDLxuiq8MH3FQu6W1SNm55QARCrTwEUOCDf64_i1bFerUI-DZfidNfFx0DoqHMR5oqu65uLLpl_wPkg=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":false}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping.","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
-        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+        shipping."}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
-      date: Sun, 04 Jan 2026 02:32:22 GMT
-      content-type: application/json
-      anthropic-ratelimit-input-tokens-limit: '30000'
-      anthropic-ratelimit-input-tokens-remaining: '30000'
-      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:22Z'
-      anthropic-ratelimit-output-tokens-limit: '8000'
-      anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:23Z'
-      anthropic-ratelimit-requests-limit: '50'
-      anthropic-ratelimit-requests-remaining: '48'
-      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:22Z'
-      anthropic-ratelimit-tokens-limit: '38000'
-      anthropic-ratelimit-tokens-remaining: '38000'
-      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:22Z'
-      request-id: req_011CWmZ6eEnfhfVCT22qaeHT
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      server: cloudflare
-      x-envoy-upstream-service-time: '2733'
+      alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      x-robots-tag: none
+      cf-ray: 9bb3ce216b774354-ORD
       content-encoding: gzip
-      cf-ray: 9b875324fc6710a1-ORD
+      content-type: application/json
+      date: Fri, 09 Jan 2026 12:05:53 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '2370'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=qei8P9Bj.U2TmWUIFdtUa1JIEEy90txgOH4WVGSONBw-1767960353-1.0.1.1-UUS9ZVNy4hBCrpdwZ.hcmI5EZ9za.yNyYnouIRCBj8wpLwY.q.gLCHZrGicL6XBrzlgNtgTST0i6ltHo0goiJ7SACwxcQIsAqM9CFQzI1f4;
+        path=/; expires=Fri, 09-Jan-26 12:35:53 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=G9zpSDjvEnlLDt5cHdJ4U._2rlGMhp9KdspjJpb.ckU-1767960353373-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '2373'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_c66e614f779046f69e08aaf37c176134
     body:
-      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01Dc3twHGE6kMNtGjH8HQocV","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_018Z1Bjbw6xjiW1JJE8yXnzb","name":"_structured_tool_call","input":{"data":{"category":"complaint","priority":"normal","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":98,"cache_read_input_tokens":1148,"cache_creation":{"ephemeral_5m_input_tokens":98,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
-  recorded_at: 2026-01-04 02:32:22
+      string: |-
+        {
+          "id": "resp_0f2372fa41383bc7016960ef1efca481919ea1fc8678049eb8",
+          "object": "response",
+          "created_at": 1767960351,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767960353,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_0f2372fa41383bc7016960ef1f4b948191bc3cce074d054155",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpYO8h-My2w7KUZcbwxDFXjvVemcYy2OgiAEldUqdNIBj3EFHkeHXaV4S1kaYa0kWuIp5zHvExY1DdZmOvxZ38u1D-X0emaxWlEFylfos5WKqN6Sd-fLP6w1Ps-fHXNW7_okJ2mU1m5CVvaWdnR-81p3EGBld8nILyBuD7NFs2aVfQPDimzrhrGUORNdyiutG4_Jj8aQMWsxcFiq2YXxKlu7psRhXJcPUHmDsh6N1B_xMrL2lvj_9z3QvLrlr9-8KUN66IrxfD4b2-6EHXXOPXXPd-FN2G4rQiUESsFrSXKHUAOJsA9jUWtIcvYegkEcTSrQriy0xRfmA61xRpl5_HRqTjBix-RbJmFPTq5cTxDaYv5-VH4gSXcr4GNoxQiPYPBNJhq6FarjWd-mvPTE99KUneMaUz4pzYTQBrDBX7fm15SvtHzve7WAy1Cbq5xdWnlg7XDyyUXVPbTG9scNhstvGvH6EcSkyrzWDdR8-4Led9BXRvMNP1Hgr-jdqyqaK-w636TCae131oojyxUFbZ6nbljHiuEjB7Lude8X4BmXjqeeDckc-DxHUnVtJmInToI9mFHSSwRRqAo9lnjAnRLZXDln17rCvebGaALEoX7ZpENAiUHg7KR-NHe5lpeOUcFo_6MrcrOVuJWIXwLAxXeOoJYW-pvi6G5fHpWlzzs6sJ2SBX9_LPx42Vt5Lqmcn7-1ezDT2pD2RqayRiLukI0Bl2NJfAxSXsATqwO2YgLoWrKAZSZoZsPObZEfJXMR7diUY3N6IHkoKlqzCAKptgriLwYE-cXd9UfcZikZn3oZnidOodupaKG4-DIXh-Pag6x4WhjejzhQE-QWLIG_feoTgUJHxvr7LE9aCdf49WAUJlP5FPAmBWpbfpR18OfuJb6G2ds5dHRoO3rSCplC5AoETR2Im92lSlm6BqNl3HPu9nYOtukUyzNHtsvK9sHq2UMdYzlpaZ0mdKG2XwxnUsDG9g-qJx8CSmuElxAd8wMyRhpGZSaeG7x9V6QWpVZohn8eEJ0u71pmkh76_ccW4fxUbRZ8vTvIJjwsnlqTgUiV98lF0Jf-LTRbMrAbWOnJBmMH0EuRuxs5wZ7oLiaMrfBPjIk-1yzTxrxVq41r83jfUrg88C-shUIS7YzYxMlbRpuQw9lI1daF6lU4XDDIFhJepS2ydXbP8CGsjGKb0Sub0ms5FzsknL3bqtEbs_gAIademUdeXkfFJw3Zajw8D_Pwk2UnWK1zi3lCys02OkVR5KRnulTO_ogk8wmOnj2wifuXeg3KtvOf5_8GgfMq0rtKRUw_tePi5zuEWYRSgU5kUXwPtIBT3JDsdGmhEyUtq1pJTVDtmrVdcdWRbXa44eLDPvz991pMqsZBlB9485E_tf9np6SmQ-QwvGzSbZ3-l9i39o4OKzVfvIHn4YWhF-P7nnbaqsEGRXvwVhH8xfJD8Af8HvP8Id3iba-D0rFRQVE_PkTMm8qTQVBc7pMygSs7DXwXTv4FEPPV44zpnxdAvpg19fQtkpN1SYJhMk2rhBNozet7lZ7V21jMPADh0ywGDBkw==",
+              "summary": []
+            },
+            {
+              "id": "msg_0f2372fa41383bc7016960ef2104e48191bab30968f2c1f6d7",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 813,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 89,
+            "output_tokens_details": {
+              "reasoning_tokens": 64
+            },
+            "total_tokens": 902
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-09 12:05:53
 - request:
     method: POST
-    uri: https://api.anthropic.com/v1/messages
+    uri: https://api.openai.com/v1/responses
     body:
-      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eefc1e90819189dbf881c1eae531","type":"reasoning","encrypted_content":"gAAAAABpYO7-3X_Vrpn7XpiWPtaFWGqh-ovX0nv0tfZDkegZRheuXUAgo6zoPJC1toE63GsnNv2jEBF_9A3TeEafNcnQUQ9rEYDGwfV60RoqTL2WKeWBPzoycW9dhIAg41iAKYCMMlW5q46iEkz8E_K5AflBDNB77qQwjXe1a568t__eRhkgidFmbZe54WQ-mm-a9QW3BiAGvR8-Nq3kA_dGTl5j-zoeI0aQ9jlTkTHuTuctWKO7FidAlls-4yA4uWAUQEEZ1gzdFVilORM_1g3fMdDHMEb9NEY_IWV6P0VO8-TgeiAtcD5pkBFnIJowXrmi5xlbLMJR4CI4wRL7ixHdq1II4XvmQ7eqGQcGZs6SlgvwDDi0OBYnjdlVGJasG0COFuvg2sREeo5UNkgC204HKmg5TKj-Dd3jLKtUt_kL4aijtG4qW52Mn--e_uo39dnjdw9l6dhMrIuD3E969fHZnWpwXUygIw8n16pA-XDgeiDaHdmMKvZlKZT87_e1zHHEOb4liYkjNSkgr8YY37DNjWA5F9U8nfTGoAf1mlb7OInb9ooGQ7WHPSLI2n9I6fxUgQw9Limky3QFL3R2DhwRyXDf6p4SvtzW_Z7K26JwyML-XeFDqmZS2dbHozd21C9gyq8we2at_5paso5-hvfUIQdF2kmNc3IvPgikTzS05cnU440YaI37C25bcGYQ6YLentLCnK2H890HsgRTN0-CUS1LUkf9j-qkTPOu9HFa09mPKa_qVDMp9IO8iwgohpJMwSjgvRVMo6EO_COZGZHgDrbob586Dsdd1MSxlLJ3z7S8PhVZwY0X4AWwsPE7LvusPOZXx3AgoA92Dou_tzvTvdl8Zfhai4PupuKzoF59RRLXtTTi8hKaHoVXgUSL50InTLHs0JCaM3qBxSf_yH50B_DUwfZ8mbV44j2CyIZhJ6_AdhmFV0Y8ugLuQhgnbaBePC5EqUWmAMHjlwRRZQSkN0o8cyHi4nVKV2W9KTO6nP49jmsNduZNsCACCnPCFAbQBe-snRAU6KAAOLqwgFIU6OwQtALShEX64BmurC8HXBYSpMfzvNM1s-FaHLM4US6GkR-EYiqmZ4ie0vDuK3dHnDGV-AxQ9-6MFx21rZFtBimTqVuo0HdGiowv7nYxe7aFMhFL4Zj0ipwOjSBiNnD4XJRH2PAVFx4c7H5iC8W6dDhch5f-rTuZETkDqlcHOlkKVKwQAXFIshunTAcs8FD4cZXxB5MM3UdOrPMGKnyZKj0dxHh75KyMA9n4hH8-I7uBiJMg1NvspDNGEna-88xzxrCCdSamiMDKIWR5-Ru8sfOSbHIVZH4eG-lCxM7JqYxUKYonf1oADkEwb_QJVuga993Jc4W04VwlSHxkygaloPgDLxZvgULcYOVKonuhyvKUqDMKXT6vTKSZ-83a6Bxzcfkyw_Q667alPoRvoCGmI-A0WVrB9swHeaJR8vmktPqY8N7UtnwNqyftEdkyW7uw5BnLLlpRBpeq7WNQjZz_M03xh6bkZpt8J0PdqpIRXnycb7oMysMhzpoOpa7lWkwO6X3f78wk9hvZkxN6kD8tfU9DJTStJlGTO4kMSEvNjF1XU4eaFWxBC5pW1GMd4qNWFqrOCShThcUHAZArWQ0SGjw20K8h1xE=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eeff611081918eaa59bffcf22dec","type":"reasoning","encrypted_content":"gAAAAABpYO8ADFVOPOBkNYSncVagubZ52l7snpV1BCKsiS4YkHuod0GmRSn9Z4RLI9cymff6uCgYRHo78Cek8fQ9pUWa-RxCr1-c8MUNquwaNZ-qPa66bOGI7Lv8dzRcJ__Gpcttv0Pq8FA1B0GFvvtwH9nr4g1xxy9JhMnmFNRgjFbXFnM9Q0VSO-dKlhTLnrW7IvwPGXb0HYlctkbl7fooxo_hTCZIss71VCzyEWDQrhYGk6Hr08YWd5QhCf84uFp0VkFK74CXFvnFcmGzWK5CGeDzP2LwiYepOb3e15zniDvh9gfrBUGqkkZ1x6ELvCPUNS9bKSnbbU9ww-ZtrcM1IJ-dHjhxR0vE70qC-wm53qFTgkO_Y-cmcfIkDTKwFQGCqA2ezyhm5waEI__Adi3EUPg84Dwec-6vFQDyOWkMgHd6OKVCwZfHf4UpS9gSBnv67wVyFKWtjVb5TTA1lyiTP9WY0YPF64Zyaj6MCObO3nIoNehxIf8afpg1-ss8mB0Bg1_sfNNd_8qWWwG8pCV3aqPfoTCOxqAyWObpeCTUeLVSqPK6N_Hkz9gONjr2tnwICbUwGJ1rLh_0Nqw_pjbhrZm9u8ySwHU6k8MWUbTTkZEOT5g-solDgbk6hTB1NqrsqTkH7iSc771Fnq-IjfIhiOgPpPNsbLgge37yp2oY3WGaXDc699pBcC6xpdMB09-L-76IifhkLyGqDlXOkHhxr-mJ4l7MKTZCi8zWtGRJWey6dC62yTa7yjMNfiuLOpuB7PWBrwCX8UGsQsJbjjcvWiLL-27fBlyOE1PMRf6OBRowGgc2aJpSxgcSTMgktEFY0dZppdY7edQh4f2UM7nheOxI0CnPp0F7-uLDNy5Jk5n5DcvOcEXZGbk2JX6WaYMWeoU9sUrkXHZTsYyKdk8XYjbidm4moo-s9gLU96OWWMJ02cRUAtuPsr5Ai9ppH2r1cVUNZNjiRJfOGcszwdlSHPFKhD-a8Acj_HNAiI4W9YYhIlLH9Hih9g2rfTYapv-Zlipmi2w-3kGH__PWAqqNB3e1OVaO-NU9vShOm7J-FjRnZYh0rrwwynQAwPiYzmVufIkdcOuyzl22XoWPG82_3M6YexpPDCsx2rcZ6IYbXs4FLtkaPqayvsjk_YxAxSeYQ8Mcsllc-dHbmwyX4O7OcMKvDDZaypF9fYSsJ9ygZMmJGmKn2YtkSlplOvot0spxXT0rdNCUDfC6j8cGulTIbSQOit4whLYbmwndl3boYYKsDb0nilm9-U2AoHWAoMagkEbfrOymXX1XA8ILBC7uhIH52IRjvlDw_3aDWLEWiahqE8OqUD_4JABDkh4IAS5IOIKZMaryijFaEIuCqOkH11pB5Y15PF4C6RYQ7K12v_mxWNyooiOLT2iJy_LUUGRwCEbpc1gK","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
         product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
         It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
-        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        This is fantastic!\n\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960ef0199bc8191a62390da79af0b5b","type":"reasoning","encrypted_content":"gAAAAABpYO8DReWoo5ps7qvTwiYOMZGbm1feNInr-Jzg-Hn6QBRHLEEjSi8UoXflm6x_tdnHJLz5x9JDj0JkCGA75XRfjlzbAApYSycEcXtQmUpRi7BcJwHUxbZOc8gdx7LbbByyf1b8gBrcGT8HXN_Y6rt79kTVtTV2udh7HjR3DNwt4vqFBfC-iLDGnkILRTmo0ra1SeD1GpMwanjRBFHCB1aqhhlG1vu0P_w7vEDkQRiIFc6swQapPmiaybKmMnND0R34SYLe2g2l7ZXq-28SVq11iy2-j5WO_P3GnTzp5PcfU8PXpaKFVmtfoFQi0FZiy-sGA-NlLt5pKmSkHmT0zeHvc7kza19fSl9MRhbWl_vcMQ6Zlsl5oBYsvKwtBaDJFaBNP8B7fJneJaFZUOuPm5BPje4LBedRQuOHsMUIcj6H2n3yk3eN5Djj7Q-dyVeSogXw_ZRlv5CaWxQd2D52PrqNbONQMmTrjI9c_GL_CbEX56pATTchP296EaI3W9zwjJlzlKe-SaBKN7iLBxj4SCNoIvAICl94xL6dgX5HWqHo5sTbrnp0Qm4tRJO9Di__0daFIz1vsANvJH8I7GLz6Ep_3S5ugmWEBxxLmsYURslJ5lGrl9hCDi07JLba-Iz_iSSQupfr6sfSL6Y5OtkyKBI_tV6t-5kwBOkLVbgeHMUExmHZg2QFKUL6yccg8-UzFhWNqwy0QcZXry6EUmd12dt4aVrGO5RujCZMpyamC7RpyllqpO0Wuvg67iAedzla2jsXuyJ8XfQTyrKYfM0avnspUUvjJF7jJ_IyHNi1ajbSFFeOsrYfcq3JKzFm1ejICfyzEJv62CvO7gQcu2dSMZdqu1sASilJJVWg2xOUPQZtUKLNYgPPORDY4hESWbReCJPE0OhjR1zNJvLm_WKDkV40yERk56s8mqp6bnQEWqdY0Tg-pS9akvuYjvEUKYPxkYcYbdo4tMNkOKTm1D18TSmIHyNVb5POhZ-NdbpG_UyZdZQf_U-iGGWPWfpSgaoCkZcmEaUGhRICKll6ywOHEEZvl5Tpjb5kOyAAxRVG1X_P2mtuRuwzhaVM2YxyZF1MKCD8anNnwv6JalAtm-wC0MovP3aF99cyHnBSfIUo1PfZeO3euIuL3feAl3dZ_EIS5QgKN_1OvVpUwj2W0eJrHmnOVDfyDnBV5kY6bXpfVNAa2NlRUP9vcisH-EdC7qFn8mNA6bUlGkNa8hkOQaThtmg0RTA4BKF0rS2HVEnQ_9z2nML3UaOT8FOpfPPg_J-G_ncdt62OXqIA5dbrKRv_h11vROVg6GIQwI8X6H6-OVwxtnVTjQGvh-_PssUO3pE05nc3IHCi20OuHt0FZs3Tm97LF02WH96kkDfN62EdR0xEkLUq7KWJOmY4cLCY6S1rOUc83X8kMarqve0-nBGtW2jLaQg_p8Mvd1AM12aZheGUtX16Peh0LwfaIkz_fmDlkNLIeOTd7Vv_5sUhcNjZEx7xLcdzbOIrsZF7O4fTGRfL32WGx06-loaEi951_xrAnqzqO3i5o2Vzgk73jmLQ3EC3h_sAx2hxCGt4njt7R1_-8hnqrq8FaZKu7bXppM_TVv_CnbOsLC3dT1_-FnmhYtbD7J_Mqwtwoo4RayW_Q44n8QQXX14UwMv-K3ObSwsQnCWSxIwPMil1G36cIbJ_afqzz8_WYXYghjyHCfE4kSh3r4czuIJd_hSJ8TrbpLhYIpEjmXT8Lc5Dk6ZeeVKYw8Lmc8lEmg==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
         1:\ncontext: Python was created by Guido van Rossum and first released in
         1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
         JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
         How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
-        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
-        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"id":"rs_0f2372fa41383bc7016960ef07c5d881918fbc501826535bac","type":"reasoning","encrypted_content":"gAAAAABpYO8JX3Ff-_KysiHGorkf4lcW0hGJOMaoY2yYu_-54oCjk7-LaqNkcgXZXBFEGaPZob3u4vkvlNFBuD7Z072Vey_VA8EfHKDmKzUutBeFbfxNnqLAjy3BevKjMZtDWsLC4Aj8v58kFB0tk5A7TSjxUu6bqL2Ir4NldOCeaRftU7YL2ELhOb42V7b9Zpkrx_2MiuPfWfHVs4_ZKhqB9atdz2aG8USmjmKOKpDac3bIzq02azwjvKHq8SZh_bG3BWCbodFWLUyt6ZjtJg_je4gtKvKL-czQEtOx4nJ5eHGWVUNMmfPpFres36NL1T3yv5B-PcHvXHPJsg9khbbWvtaAIfqQfuAaR_b5dtxrjDCgR1PgS1CUDc0BkyzjPI14H1HiqTEzg_C_gSSKepuBxDVYRYHx4yp2JQS0qf19q4ZpazW6wP0LBxUMgS79wocnpEGmeMMAyoqZ0MVlmNJgVSm_j3-RZovW1MrM7epDy_ROscRgKwYgPkV088ikNkSvD8fVoDj7h-dwKLJ7asXbVvaDZAdul6cEpriSxWKoX_vDU0_WQuFpgTI3X95bBy9jHZHfO_p96KCpxKKska08RlpBdXbx0Vnr9UJt9F6jAEyu5a3xfw7Yw--H2us9hZ-ZePsxFoKvqfBNq9GJ6Njc9ZiL49GNiPG2Srf0yQX5WjTSXJIAXXWWME3i7eAsYysidXVdLn4DWDgXUXPn-orC9i7XWlMGDWOaw7M5kNftyXDLRdhw5UB0nd6NvjmNLEw1MRTTvpnoMnaGuD9rj8lt13E4BPJ-9cN3nrBCWGP6Uy4bf3LFk_SrhKsBMg1sLNYbBeug8whWT_k8bsdmUcfWJpoyYhJJJBTUiTtRl_NLylyGxQKmcyoYCuhsgq4_KllocVtEwSBf8JWo7v2UpqTDB--AJ53_CsuvmccTpk8kelBh75TVBKDQwhc0ibKp4igCk6u6A-zSoWk33VnjWYO8wP_1fxOvFBqRReWTzkEX7Kg6KHCr9I63xXZjts8yYIbGGYsiTQk6dDBXH37DNnD4D9vsKDfpZKVXPcK361wWCCTx2q5bq9XaUJFMixsYcQA4hRbduEfUyekopvBLRguxge8SABgsJ27-oZ3ldnnzgUFPbo7Qa94Kc0ONWljhAsxvwVkS2g19YflwPJ8dBBOcg0NASDExAiCiy-jN0KTuACF4lgGo9RHWJpK7NtVaGbgz41FkFXw36gkTxkyJtIhBtj9BqoRQ2MYonxleFUNElQRZjVAigWc6t-1Ocx-bZ8SfovoVfJD8riTuufIP92YOGrC8o3J4B9ZDUUhJ9D90wtEXA6lWvw74EbJH2pCPlJiw3wguoZZX5IfIikhJPIOuFmSelIZMO-Ecx3R7KXgv5E94xQKWl6iSTQ4Kbe2z8L9l23QOYbT4djvOiP63QqjhSGcSX7VbIjRJJY7aVMRROYIsDGGuyybJDMIj9bkGOo-sMo9Lwg2TWd0_XVXqpqgLkN_5TkvHDmX9WTRW0eze4uvTsmxZZSzjrjoUunsb2AOgUFx738aDZcdL7dw8Z6s3AwZndtMkSHynVH8SjFfKVJz2QUBZ8lhPuziplxWyaErJsMcH-figsTD4PZy6lJclQTF0xy6aag==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
-        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        is unacceptable!"}]},{"id":"rs_0f2372fa41383bc7016960ef0cc3588191a47c1ecd1502242d","type":"reasoning","encrypted_content":"gAAAAABpYO8TdttxKToUA-1p0EC6QfFaE6tVSY6W6IzAW6WFzKeUXaTda-Gpwyksbyn7O4AscgwRU6SBeFaBquwAb0fiYTfp4LmsgfyWwT_M2cwPiHwm3ubaba8BRywPS6wtyTY1WQPxA_Md2W0CDAxBMxEeHfcfjU-Kh65DHJxVBHjHKUHtsFY2IEGj4AqGAKrFXghDYwUHn-l16lSc-oW_N5Z_CPVjkb4NPusj2WBumeqcQwpD2Zd367Dp77bY4HrFT6TrQgE7sQkV0zBZjjHxMcV-OZ5so91IKDHfMdpdaxqItDbBNxZI3EqfpHNhwdv5g07v-2JuJ20p3joFkTL1Pkxwqpz5RxH8EdDMMyYWMs8pVuOVpFHWpKk-s0dnimf5sZ9Qp1Etewmx17FSl_mi5kgMg0H6OTk64CIcdhTktr_qAvua20eDd0Dc-cEZ1BTPZW3FIxHMSuWZmtS-2wvNhFNSSHSsRh2PPsglePKFn_B2QWO3i_D3dVORablTAcd10PRqXwaoF37_yo6IxkdEiBS0G4cOT5RjWKxS8hE3xNffRDWtG8LVY_mo09jodlRl26JBVagy1PLm4hhbv8-Fpk0Pcbw3Ej5iKHwFxULCTRwhF0-Xyqmq93JxAxHgvOI-2gDUTmKG0yF0irRpi0l4nur3yARzCQkmWOTujbkyc2wdKqrtyYLoUleGsz9GJIXh-XpVaE5CJktACfD3jn8fBU7ejynCt9eWY5qjAAlMYf_-acKgBpwC9YWn28-CFm8GnDB5DJEdgPjieoehflwFM7oUVC5J9RfztPIRuUsokMcObzt1QCGDeAuNLgjAupLsj1Sj_2DSn4dUe3tbwFWWor3eJrVmH1cZzc29c3KcoBNDiWFCJcyMXlmNVsROF1kUrH9i_QYCr_QLNbm98M03J0MPdNhJVYud_9n14Bp2jIIFrGhuAG04-i0MSP9-VWPsq-9J-298dMKqVCMHklymhMUON8j7qzt6RCKj6qGgI98uxfDWIUa5QvwhU8k-FVMNshgox4Dm-hvFxm3L4siB7m569trASF5LgoVefZaMZyIIsfbiP8bFn0v_32lZPPopV3E0qGdNUG6kWorODxXAm0hg-nq-keI9Q14BfjsoSzE2v8lBoWHYLPzv0S2OeBLNqLmDatS7qomjbAaYfDLRVwd4qwi0Z7Oa40SAycj7TQmLhzvXUSk8QqMU6YKsyouQdtGW5H3PJFm8tIKiGcGx66L-xh2knwI3i-FGDXDNbYGMYUOQPeJoAaGBeGyzV06xFVWAQ3NR3AW-pz5y03zvlSF8ofiVrkD-4O36U9DdapVv8IhCfdL-kIuvy3UiVno0SjLWzd4aXlfJWX3RQYLbJeIyV_8WgTr0DULXF17BqfSvv6v8PxxuWqf44_iHqHveGqsDOpRq2jsGO9eZAyE-QAU-nwBE3g0-XNQqCD4q_o0aXt5EVU_mZoYKpLyWj4JkEp973EPhQ0Bh4VZTSLU2Ue4RzbtDh8h7qVoFIFrupiBl5H-d8fxmdrNvAAC3RZQE4uKAwUeUeC4g8k1Ll_eFAgjS8uB8lZQnsp6CJIv0fL6o9D-ZZJkCLhxlsOi5E1wiq0T-QYdy3n04XIcye02RiBg-cIQj9od8dUDt5cXe893mNZPY-bDt7wkORb2YnGy7rUxNWs0Z6ygjnOMT4pQkmW876PA8IhrSKFDryRwl7vVxGV8_7Y8oXLcBpjz1NuWmy54Owj-ZDjdxYj1aXFmgFKiCYDbkfsnx_OYyH7WLxJIYOerVsyRx50OFpj5tPFaJ4UgViaet0-PIks1Wl8bbpl-Vj0j3p9XFyIbbMuKKTYaEtJW12Ln6QqOKBJsn7Gq5v1JrpZe2obPH1dvugIeC7Krr-Rc4oRQHrzjevhhZUevVH_e4t22xsauB9MMI4H4bAN9067pbuohz5KHnWVLwBx63-b99AoJt9y6NTXJNBQUSwMWL9dZ8eRmWdcnwfCKqZXWn0bMbZC9nL2IljwhzIwmhvfAvZ_53CAUChbR2OzDeNr9KrPN38AN340fk1rievtEV57ykUJAcX7cZ6WaDyY2s9tTGgLIhi3nm8WrLkVp_rb--PSVOOzjfVzUTWBpWNE13QpOoiNmxeUpmvYwTHAhQFztbYpXlxV0VGXi3M6j1LKfei6fG5G2JuCGEDzNkXwftwHldXDkGAxdVqrUJ3zmhMT8tHJPSONBRMcldm-SDphKLavIhNqboWYm1I1TZFiiLuBkebF9kc7ol7O3m9fE7JZJC3rexC2g4W0db3Qmcy_jbEXluXNietXUJE_sVrIwCJ1HMf5OJKp9M_ohlyjJZX_U9fU0osrTPF4EFPEUU0CF6Mt5wLwt2fL8z4HsaQYEYx4_SE8J0_QENQRmK4UigAejVvHWJ1PZ8_V5rlvnFuFtV7x-ogkAvDPUg77vCVdHb269NNVn-FwX6enk_IEZvXeHvyrNReVeYZEUNrAMEfp2BH8vmIOoJHaNA5oye86F1VJ2o8Gh3pKya6aBlUQ1yltAGKQqi2q7gmj_HOBxVQSqf8qYyG18wuHvZrg8qPLqSd3cely6g1JSKFIAvdLMitW97bHCMb-5bw6M-FrrX2E_0rG0yU6-CFBHvD4a2Lk-Tw4tw89PQuakzkVxgTmOxyDjsqF4yUGgPJqWC7gOkOUWzlzQmObzQs3tM6xWM4a5ATOmN9Yi-N-QRnh8o3k9VehSs4HjoPA7MnDRG51M2g75vXHISEE7ZWpIo75WN_sh1pr6FuossiNtpRrgArYRVAJeMN1Svatlx096JK14L0pG2WNZvBozyFIkvKYEInj4fqIrqYbza31C92LZQGd5YKpMAOXpMPDsjHxembjuTScnJ73CA_ZlbrheyBPJ7o-pBpDi33pl_XelWn-aN9t7Qt3c1WtctWIpfB3y89v1Oy6eEwaiFA7QxYjpo6vH4Rvmr-A63Xbqs_tM6a1Lre-cy9W1fJBj74qysNzfoso7WXeznpK4dzUdNHkjaSpt-GctB-SGv5i6FXkzbu_IoYBGcHWmjjM9r7snbwFFiNf0yrTY_UrWgbWuaF5JcN8ZoFGp-3wlBOz8WQrv2MS7ijUXy2fEiTg7Lk8H80R4M4mg8Ljip1IQ423spBAtLU4LpofZsnyfYUmpOtdCZMoEN1Burs2lH2O9ErDs3viQT4hUI4iEuU1JU6557wN0ultiLIRovnmT4A1ce1udYQq92eDu6c1OxQ8dsr1eyk-cvV3hOF4m3XvLE032_wkUO_Qe3BPuEhOTNfb5EjMHpV4-btAXxQQTZ2YuvaeOosWWkkYw628_DEpkvbXEHLBax26yORAKr0elWhzi4fTLCf2nVBUBNv3IxQHORiAq2vqMKxPh1Pkk8_UZhsKp0iEys6NHGkPivF1OYTSPQgs93V-cUuwFD3_s24KbckzN8vcpYgUuPtQqyp0I=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        shipping."}]},{"id":"rs_0f2372fa41383bc7016960ef1482f881919b92729250c623ca","type":"reasoning","encrypted_content":"gAAAAABpYO8XuUThXVGTYf6_YJkprapdH0a2-fCsqoAkQDA3V4aoMEkCIUuXKVC_X50piKdVNUv2xuaP02SRzI9Z7QTH1ZjL7UC8r2-sbcnJl1Cat0HcSuqctgGSEKHhNwa9ysTbNBvtToR-fuT_bS8pXnwlQg1nvvZYkZBZzLnzzq5Bysmji-b22qEDKe1lHgolwkSEYchjKUVSuYvTcYaI2cJESxcBfGM2h9pJ2jfvGbDVUwlWNz1Svs9AQT3ud8uZ4NLicqgPvkrb02jPGhBFXxiOsqwJx_qzHAL_4z5h9yYWlkb7yFElFLj-Q-wRf7FavHVMnNih9WOmhwtNiR3k6ZUhXxC6g6f634YGYVanSHYSKCrpVGkMPcGnvIw_MUVs-WuCGLjYr29VCdYKom4SGDWuRMdynhgeVC3BkNSMEaP2kCJbiYMZUaiGWheFha2gL9IAeC9IbybHYv7Ikq97yrJ6sTjAVNsXjEKUEZjwTWOJoEmh7Msv64IuhN3guiO5HqAa8GDbGj2IPyP_E-_VJT4TvyiCrqUwr8T6B7rqLe32BjmIoxI9kAbugkrnE0T-zMQtfE9W9MwC6hWg2lDWAyokCnG8yFN-iDImK_AZDgqpgyvrZbgxD4q7nGlIQCTtw7Amku3tzh0zF3YtTMyFENC9zOun1jplYgmQKgdmF-s7fM0SNcGM0DU8KkKL8GR4fhsg6fB6eknjb8-QXxy6Ai7ncBba4TsgK0jVjBms7wtxQOc9rUaxXyC51AIi5BjlK0y9UzzsLxH_LJUkJydDryIf8gjUzuloAp2hZCtvceArKnasGYy0p55Wk-PvMm78sc6MEGM2I7nGlaFX6gWHiAGr2cASNNVXfYj1zyK0MbQQvduUGzb8sbfLfBiGwNpHmj64Dh7g4BVqlCi_gQ3dh5nobEnxJ9qQlI2Sjr0Cc8ShhbWLWnZza1S2YtmnhpByhIAmR6JZIZHTnCAw2I26ycfuzu96aXxDzzc2QrESJvULPxFQDncfP2Cjkv2ZrjV_XKlF3LDgpD5IzAFV7luF_LGELJG87FD5AjPJdwE9_3JLArygW1dmLKCdSYTI4eiuu0rTG6q8CcWkGICjoPk2d8yKXcBn-83u8lEK8H9O679we_twr6zfbOTfZF8y4MyDgrfIn0zRX6z-nPeaOB129mOzkC7IvT17Iox4Hgq_GdgqCeOk-IGV9Q6k4cyqkF_WipctdRaz4LPy6QcJWlVZZ56l-WQ9V-mOSJf7lOrfpchpW3jErfbAR17d8_89A7H-rZFjCr2WTjVCCX2Sc1qxN3VeiiDowlYSNaB9GS-t3RhQpaoOsnIYgynwlnLr5M-tIFYb7Zw-jLYxTVeAWyFwo5vbUZp_yUAD6jUm8elTTX7paZynmPUlDZGMiZaC8hVoA52evvXoLlk70xf8rRQ7pU_OMxofUt39m3oN4AbGZxlsW-mCvaUl3KFNP9Hmyclq9c2qHh-nNtUvmcCxDlZmgguhCJkcBmsuJURAkPJEuL1hTQEwVqUnfVrl4RQGYPS3tD4r0_KQzXCPLP1kuokmaO_m1t03sX9KXW6NWtirSD4evU9CLOZ19wUcnFAOerBu10GjrUCYSrzSM3tvSw5TmXGpmW5AooMwpZvuCytUjsaCogy5Zac7D8jDjYIVueWuBE9EjSsiZ0TV9i787pIG8MVfzfJ9Xfn6_ygHUDpgOOLqkvBywjS68MAOoPYo9DKQgLmrqm-UqiMMBulvWVmyMjhZvX3npF2gEf4KI8v2dJofVFT9w3c=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"id":"rs_0f2372fa41383bc7016960ef17ce048191bc0d06f7babfeb72","type":"reasoning","encrypted_content":"gAAAAABpYO8aS1X5no1v484-DTWujD7rOQet7RZ3F7JleokONv0g_22O9yg9aJXK_2oANFA7ZKAyv-jHkqZpvaX32EFklK3vts9J3PEGg3LL9CCvOrZmwGXqV6whI36Z8AbOyXJHQG10vY3C1F2HrUIKRH9DJI9KiF_7SjWZ69mCRxpNUB0ACmr8NahCzM8mQglJ2OxGoFUQl_YLCcGAY6Q6DxDiOAExLNC4yb7M6Nfqr7e33Sesal9Gly3Jkwzb_46Mf7dWUpzK8ATt0g_jSWFBsRg56T_wN1SKpVsCmCoXvud5Xa19uPPk71Z3WxoZDiatfq5OW5UE10eEkE1vKf-08XGmItsSIcDy3i965LD_0KdZEjDUSnEUH2sqwGkBUNnk6Z9_TmS81GmGWw6ZN7-4H6xWQAd85AS_UQL9oFQSZQEZaozOnNX0C8CZfW9FUig9zSrxh53aFvECKf32uB70I9wXKsqBhS5ngAEqsyEzgCPKzlE8VbV-0SU7A2gmUsu7joPAwtp5xozKThscFg15azo5CRdtp6wxZyh-uuxfSzNxWNJkXpr9H_7sMYtuQmht9NrsYCdjDzhZAScqpA-4xnQQfD0I9t6hbzRbbNq4oAWYtVvR2bnswIH8cRC4CvBJIVEXa2zMlGAWomDx9xdQZBUMQGLSIxPPaNqqS2NKWUHVkDgSYgP3YUJE2zGtIW3zGig3gZOWYiiSQsA7_qt3HyIWOXQ84FJmBbloGoH18Dhh0SO2-xAorPkB0ZMgw3WWITYp0H30ZyEcSvqBM_iYll5UJZ979_CFFLw4tiacBvn-q9fzdvFN7LchRFwwpNPxvYKXgXmSfDvsvi4MjGiaVxdWAwu7dtC8NN8OAFm6rZ4UuKyc5QmT3b3qSJANwz4X-B2dqli4uSTp4l1w3ryvsMZRlqhsrqa7zwDvkfBP8g86aqtG_EJLl6ttH7rjksc-x_qSIVkB9wnagU7OD-BUOIZwSr3era7OmNb2eVXxe6X56P7qXCQ27UMU4GSglj1dPQ-tihEzRUw4MKqP_zC6LqPnS6kqHzWX7De3EPL1ffMPnefI-mGwRp9P0i0j0EiIfCXwzlrpia7V3vMz1HBAJZioL0N5Qvph_aIGk6aqaUSNzLMuxOmiXmn2Rm1xaNOJwe453I2XNAMPUZirnpi6v6kBC6-gV3vkl9vCPYKiJPtojDK75YSCAcRhPbw7fdSBhEupO7OEeOJrimJ5a6gwBN6P6XoKkEnwRw1ejn-ejjDNRe7-JQikr61yppdHG-7VhL7YYzKTpMPzWkbl-eqZ0OqAYn5CHr3-GimEdQ5GsMJUekos5eCQXz-pyw7mC9NsM3jgoOnT8IOEZkyEOSV7_39VwGbLg3SiqpyMqjhtwcSEIzpIKvN9Nc4txpr16rPU3aKXFC7cANQcho79wft49Ki1iHeEh84YhJro5C2cFM-rPJcdcgQ1euUdbQ6X5UCeFE64SSCRHZoy8ApcdIhjegjzNSwy8YA5-Ev8T4oSHXWA1FmMohU0UCnNj-hqGtyZ3vuQ7j4JKmqwjQNTp-B7chKxWyBHXQs8OZ1nOzeizLsXCbya2XE7JzxBWE2FzN-3Oj7Apk6GPhVeXxy3rBVbgaj6taEKSu7JaEqQuUd4Utjn3073ExsSJBAEEJLMATJ0Ccy0pgHqkcUBPy-193qd1PG4dNe9t84-gKK2LMWXnBWaPtx_PmuLIKzAilBu4B0T5POXvZzdqDBeLkBjZw7kya5YzkDPSSpO0tLh36W4DJiswV7iAFc=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
-        Thank you!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Thank you!"}]},{"id":"rs_0f2372fa41383bc7016960ef1aa3a881918f1c40fcd2a77844","type":"reasoning","encrypted_content":"gAAAAABpYO8e992q2OU4I1xwWCCxpF2VLf5NUhnQTP0o55ibAZW9DaTl6xkOYTSOVpuqQlInSvtsO1sPhh04vFG1wnrl7MuP2LLC8RW0axp7ASDFUPpGRkXjBFtEFLH0yO4Zza60nsbSMgQFcPxSXQ2pP1hOhfs1dPngMh1drDroK49PWLVuFXTLTiiz3uQaVc6-uw41Hv2zviYLkztE3Xjy_szUfxGlnIAc6hL7cpE-JTtJJnwnl6LLsaEa_-ZlOz2BgZYPmiohK_zC3Kix-DzkIh7Wwoz-Yxit9TFnccBoDpdG9ADcw54McQvLAkBPUPPUq9HSM_iePb-ObYuMYlDOdBR4BF8WHfH6H-ZUOokEfnAfOhG-_gJm7e9wde3s_f7Q7pQvH4zeF9chNyh3d6oe4MrcX9EQJwHVSUONbuzOA3JXA4oPhN6qQvlYq9y2vNeK9g_LVKFSfmgnjY3U9NYYINgwdsbG9hKF2y6Os7eEK42lEzfd9s-n_GkGG8DHAkDbtRwZQXiVr12xw8z-aAHGR3aEwfHyXU3kJsBL3lGrNuZGNAPV12-ppMR_hbBkTidAcF7nWbKex_BiG4KsCpjtpM_YYMleuj79kqBtXolUdjRrme-7k8sJcIxhQOwi1gcIjfsFZol9lrmDOa6dc3now2P311MRBwXv7TEhXNe6Aowm4lTaqdtLRHrMiH76x5-bylVgpPZORimpo2UeW4RKJy5lSii25O-FELCISB47zmaEx7c7cvHROL1byDnFel2HWZnLCPQbisNN9Q3ndYZaSxvwiYYIlIOmuGAAi4ZA-WJQAqzX1OawgC_fBQUPpcOTC7MqnJ8sYKvRdd5uc0Zr3K6jPg8S9MhY9LdWlmThQ637LhEc7dDxUtZXVFdq0qcCpDMCGkTXzQVZQPo2OC8tBOUFlROoWsFFGLPSx9AZdpr6xkIJN4b5salX1cUE3R8k6WZUK8CaY8VcRrc9BHDpMQhzS9T3pJddrzzB968azDS_7nngQ_VcUh1jj9ZU6pmw7zGapTC6A6DLj6QZjtCh3BpUKtpqmqjlYGzrAaaFJv1wVw5V9xS3mwTgjh46tfT9bLOCh6t44KUknn2znAzjrRVGi2QkBXQm57Tc2kb-xN5Duk9SJSSe2BXmq7VoCCg4qEQ_5BBaYP5FxqFX4dx4AJEconn5Q8InumBJcYxyLHuX71fIFFAxLcY3YGczQxa1aEAKu4ujxkJrZ9TkL7_NbyFwZVM8vy7xjlWiA_6oKYJNKraVU_txImB1pBUYTTFSiXYCIwT6uY-fDEBu1qMj1PhLjv_kDMKxjdJBkJi-dARy1TGoCEE6RCW4OLCMShSSKPih2Kc6sZLrpC7iwAdfOXmBEPINSW9l7y0d0Y9BtaPfVs8cpnyUfgjO064ZNHmcPoLdJr_T-_q3LPoe2OnkPy4GWP3ro7rEhAYDiYyoqgzVB-Q8mI08M-Wav_uMMv-i7jcU6e1p9ktutjFWbT1-lvI6EbS0IKqUFMgvJRbAyoHEaPLr7rh8WFAv7iFANg5PWiZ9GrjMJkN5OMMpzeRowNnmd3_RoNEmxHrlYo_-CEJ6Nb77uGDcpnEvGM0Z6BZYazdpSSPSNyNPGbWZF1BnDQQOKLSgnV4FA5wT9Ob00oFSWRP2rS1lx9JZiCvXVZ1E292jQ-lMyJXiKFAdOJWgdC9hcr8zqfhjSi7QIRgmkC3BqXiNdFAJ7jseVCiiBzaMvhkuTRPo_agNnnwFj7AWjp-0kU0j4a_5dOAyZjz2uQ7_g3AiFCga-qSA8ZK2bOTgt8TgmS1B_nPV3hpYBCkoy1OQVcmunLjhdnKlVdS7efQxcUP3kXozWo2912gshVpF1C_2ieZ44XIqmioMJTkQ-slON_QpvveL6j43EyRtVfWMBhB9SjNyD7Camn3OENGLXjpZZD_0wYp1zKk8qb6yqa7twla_5u4AQCMigIjc2uIqpNsrLEb6IiN7lillxXCeMq9AZnyCbSWx064Q7Ot85tWtHuSa-SzqwlT4DKrwB9DXYAsTzf_g8wVIW5YyAkzclxCJojL0gtXnCI7BcLFThaKe4DSeUBPPJsB750G7oHZL7I7CovxAsDLmhn632fFU9DnyIknBZ7UHxm3M5h6kH_WnPA7ttZhZ04oDSgxRIajDteqk2u-oLDoxbySenHbx1kFqzI_Nd1JJqmwnIcSBhYjzLWCZ9DEQiYYXnXO8Y5m2EoOCaDAH4ArAB9_Sh2uA6eeISewhaXUXh_Elnw8HRo3aQdC2RNjzBSv0LZwS-_j_yA_igpjeVvakyPKGrEcHEPzfac2vpHpAmqes07EOmA6gAIA_7QT-QHE4e26KlGqLgtCskS5vQFGmqgdtoKaMKaFBXC9MdXGeOYCSbomRhdR0rjyeE7q6RX7g2StQA3kP5sdjsio2_FCe6yrTHI6laP1ddx66wgckp6ta4rDeNqwLDd-jJtFGpsHcWawMlLiLIl3sEYuAMUe2odnxO6nSxmCuKR_0IJ2dljucW4BiWE5Yh7UY3JP4dNPF5obOLuEhC-pivMuhEeP5ECmelKytmu8t9Pm-x9MjmGoVoF2lk2GjrH9WEGU5gr5uNi6mMF9E2H2DccBmeb9ovyUapkDpZUHKmvkkUKBlJbPuBd2fBROIEukJs9HOO16FWDLxuiq8MH3FQu6W1SNm55QARCrTwEUOCDf64_i1bFerUI-DZfidNfFx0DoqHMR5oqu65uLLpl_wPkg=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":false}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        shipping."}]},{"id":"rs_0f2372fa41383bc7016960ef1f4b948191bc3cce074d054155","type":"reasoning","encrypted_content":"gAAAAABpYO8h-My2w7KUZcbwxDFXjvVemcYy2OgiAEldUqdNIBj3EFHkeHXaV4S1kaYa0kWuIp5zHvExY1DdZmOvxZ38u1D-X0emaxWlEFylfos5WKqN6Sd-fLP6w1Ps-fHXNW7_okJ2mU1m5CVvaWdnR-81p3EGBld8nILyBuD7NFs2aVfQPDimzrhrGUORNdyiutG4_Jj8aQMWsxcFiq2YXxKlu7psRhXJcPUHmDsh6N1B_xMrL2lvj_9z3QvLrlr9-8KUN66IrxfD4b2-6EHXXOPXXPd-FN2G4rQiUESsFrSXKHUAOJsA9jUWtIcvYegkEcTSrQriy0xRfmA61xRpl5_HRqTjBix-RbJmFPTq5cTxDaYv5-VH4gSXcr4GNoxQiPYPBNJhq6FarjWd-mvPTE99KUneMaUz4pzYTQBrDBX7fm15SvtHzve7WAy1Cbq5xdWnlg7XDyyUXVPbTG9scNhstvGvH6EcSkyrzWDdR8-4Led9BXRvMNP1Hgr-jdqyqaK-w636TCae131oojyxUFbZ6nbljHiuEjB7Lude8X4BmXjqeeDckc-DxHUnVtJmInToI9mFHSSwRRqAo9lnjAnRLZXDln17rCvebGaALEoX7ZpENAiUHg7KR-NHe5lpeOUcFo_6MrcrOVuJWIXwLAxXeOoJYW-pvi6G5fHpWlzzs6sJ2SBX9_LPx42Vt5Lqmcn7-1ezDT2pD2RqayRiLukI0Bl2NJfAxSXsATqwO2YgLoWrKAZSZoZsPObZEfJXMR7diUY3N6IHkoKlqzCAKptgriLwYE-cXd9UfcZikZn3oZnidOodupaKG4-DIXh-Pag6x4WhjejzhQE-QWLIG_feoTgUJHxvr7LE9aCdf49WAUJlP5FPAmBWpbfpR18OfuJb6G2ds5dHRoO3rSCplC5AoETR2Im92lSlm6BqNl3HPu9nYOtukUyzNHtsvK9sHq2UMdYzlpaZ0mdKG2XwxnUsDG9g-qJx8CSmuElxAd8wMyRhpGZSaeG7x9V6QWpVZohn8eEJ0u71pmkh76_ccW4fxUbRZ8vTvIJjwsnlqTgUiV98lF0Jf-LTRbMrAbWOnJBmMH0EuRuxs5wZ7oLiaMrfBPjIk-1yzTxrxVq41r83jfUrg88C-shUIS7YzYxMlbRpuQw9lI1daF6lU4XDDIFhJepS2ydXbP8CGsjGKb0Sub0ms5FzsknL3bqtEbs_gAIademUdeXkfFJw3Zajw8D_Pwk2UnWK1zi3lCys02OkVR5KRnulTO_ogk8wmOnj2wifuXeg3KtvOf5_8GgfMq0rtKRUw_tePi5zuEWYRSgU5kUXwPtIBT3JDsdGmhEyUtq1pJTVDtmrVdcdWRbXa44eLDPvz991pMqsZBlB9485E_tf9np6SmQ-QwvGzSbZ3-l9i39o4OKzVfvIHn4YWhF-P7nnbaqsEGRXvwVhH8xfJD8Af8HvP8Id3iba-D0rFRQVE_PkTMm8qTQVBc7pMygSs7DXwXTv4FEPPV44zpnxdAvpg19fQtkpN1SYJhMk2rhBNozet7lZ7V21jMPADh0ywGDBkw==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
-        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
-      date: Sun, 04 Jan 2026 02:32:25 GMT
-      content-type: application/json
-      anthropic-ratelimit-input-tokens-limit: '30000'
-      anthropic-ratelimit-input-tokens-remaining: '30000'
-      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:25Z'
-      anthropic-ratelimit-output-tokens-limit: '8000'
-      anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:25Z'
-      anthropic-ratelimit-requests-limit: '50'
-      anthropic-ratelimit-requests-remaining: '48'
-      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:24Z'
-      anthropic-ratelimit-tokens-limit: '38000'
-      anthropic-ratelimit-tokens-remaining: '38000'
-      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:25Z'
-      request-id: req_011CWmZ6suKAQt7aihDoxXhf
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      server: cloudflare
-      x-envoy-upstream-service-time: '2119'
+      alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      x-robots-tag: none
+      cf-ray: 9bb3ce31d8874354-ORD
       content-encoding: gzip
-      cf-ray: 9b875338ee7c10a1-ORD
+      content-type: application/json
+      date: Fri, 09 Jan 2026 12:05:55 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '1504'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=lIR_vefdLJm3LnDJBbs82zw_pblYi3bh2YW7dhohQt8-1767960355-1.0.1.1-ue.Q6itCgJw2kcu9GtxuS.YajmnC3dUSQbdJ2g.BhbRSPtrY9mtepicDdsi0Jb0onnB7Bdoh90rm9QKPBlmaWdtyE6VJq3lcFcv8WCJIAGM;
+        path=/; expires=Fri, 09-Jan-26 12:35:55 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=.waa.4.dkPbiCSoEZWHkaISBgwt0xGrgtWr9q61LfaA-1767960355136-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '1508'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_c1c1ab1670cd438397171316c1ecd1a9
     body:
-      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01CNHeb24kdvZXg452eDCgov","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_011ybZfF5ZTWcXfU8oKTh2Gh","name":"_structured_tool_call","input":{"data":{"category":"inquiry","priority":"normal","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":98,"cache_read_input_tokens":1246,"cache_creation":{"ephemeral_5m_input_tokens":98,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
-  recorded_at: 2026-01-04 02:32:25
+      string: |-
+        {
+          "id": "resp_0f2372fa41383bc7016960ef219d7c819198edcc7b317de72c",
+          "object": "response",
+          "created_at": 1767960353,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767960355,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_0f2372fa41383bc7016960ef21e05c8191aad784990fca06e5",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpYO8j2cVVK_QjeyzqlTy7RPeC23j_IhoQ1CiQpxEFr5QNO9g37UJBKT0KvtMFOa-zblFhjsPKOwgBzj7139bX2yMdKQVWoO3lT7Aw9OQaBgeulE6r_P6YBtiDEFus5eiEKEPrFpohD6C8KChJlRRlQhq0h3bXGnDKqZJKaqmmqrRSZnpBfZfIJU4H2F9GImxXkECQoSco3TF_Upb1J011QlTpHp9CjgWcAioMIk7iMm777olHnD2UmPwdpg6dNmKbs29t5wmX0SHJYgmZGdSPPdFeRKB18o6XTk6IbK4Y-0vaOy0eROmGYYTPEkZLjWEOt5mzN8ugfBnpnXWMPlN7rQslJgBjr5wzfgRKd9kwxsto6XGLFmFTLvl2SFS36w2slf8lp8Ca2kuu1yP_dhEBqaYQJkAXjMvaQkJbKxkE3nRa7hyqz327eO0s1F2EZwBU2_RMKaeTmc_FL8D_xgNYEoKOo0OpF2csfclibcbomsZDb4tuxY55fJl8i6kOTqqMcXv2VXrCtlsk1yxPNPkmRUlv8kPyGYuSadstmfb_9em5O5txHSbpO49sK4Zd5F7ul1Nt6BWEpfu7-xFAFSVtecVZIZ0HPgwkrRy8hU2KWAq1yyu5ZVyT2scOOkI8Tu8EVeJuSnnRtuc3o9jD7OUgTg8XAx3j8RQgQuFrCpWxa8WOQq-iGZh9EvLKoc0T5eVXcNHHc29OxWLhcVtnbUM3XHc3wl7v_J-xnxC1t1eVK1gj6BQ7kJk5mY1wZxffio6T3xZayTfRlWKb7eOiTBxpYJAnTYnV-HZjrgO0KOENaPBQyyckzvuLPVkLxpzEMnrLa7Xs8lKbKRku1_AIAU_ltGm3k6TJxPopJxnI14myxHdUfMUQE-GpbzE8Y_GpQEGCV4yOA2-_aXeI9hurkS14o_YTwmMB0SNWRHCNSuc3MAE5_pWtuv2QAxvGpGyxXJ6ZQkQSaf1cWdWJn-AUstpbZCwo0ID896PxWDxOIgS_l5kP_mtaiMoYaPzt-8FksNbvP_883UrkDDyvlxq9JZtmNQ2-a_ZKWg0mHepBMNTx2if29-MMcLZ-uO9pUWvulpbRmC7bdvhn7E-1N777Oy7tAj0aXVcG8A2Iig8udnfulrKjMXZ-FrLLBBKsaRyGb0NEIgZCat-r_dwp_Yrf0Mu7gKG12LuR215oFaxOpdOJayUecvtEWVeF46VzgsGWKnWxU7QPuxVLPk8-wXwzdxbDJYyyEkJNLoV_CfcRNAywqFsdkbzK_iYcThARauGNGvA4RCVP",
+              "summary": []
+            },
+            {
+              "id": "msg_0f2372fa41383bc7016960ef22c3608191adeedb9dfcb4013b",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 907,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 89,
+            "output_tokens_details": {
+              "reasoning_tokens": 64
+            },
+            "total_tokens": 996
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-09 12:05:55
 - request:
     method: POST
-    uri: https://api.anthropic.com/v1/messages
+    uri: https://api.openai.com/v1/responses
     body:
-      string: '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Respond
-        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eefc1e90819189dbf881c1eae531","type":"reasoning","encrypted_content":"gAAAAABpYO7-3X_Vrpn7XpiWPtaFWGqh-ovX0nv0tfZDkegZRheuXUAgo6zoPJC1toE63GsnNv2jEBF_9A3TeEafNcnQUQ9rEYDGwfV60RoqTL2WKeWBPzoycW9dhIAg41iAKYCMMlW5q46iEkz8E_K5AflBDNB77qQwjXe1a568t__eRhkgidFmbZe54WQ-mm-a9QW3BiAGvR8-Nq3kA_dGTl5j-zoeI0aQ9jlTkTHuTuctWKO7FidAlls-4yA4uWAUQEEZ1gzdFVilORM_1g3fMdDHMEb9NEY_IWV6P0VO8-TgeiAtcD5pkBFnIJowXrmi5xlbLMJR4CI4wRL7ixHdq1II4XvmQ7eqGQcGZs6SlgvwDDi0OBYnjdlVGJasG0COFuvg2sREeo5UNkgC204HKmg5TKj-Dd3jLKtUt_kL4aijtG4qW52Mn--e_uo39dnjdw9l6dhMrIuD3E969fHZnWpwXUygIw8n16pA-XDgeiDaHdmMKvZlKZT87_e1zHHEOb4liYkjNSkgr8YY37DNjWA5F9U8nfTGoAf1mlb7OInb9ooGQ7WHPSLI2n9I6fxUgQw9Limky3QFL3R2DhwRyXDf6p4SvtzW_Z7K26JwyML-XeFDqmZS2dbHozd21C9gyq8we2at_5paso5-hvfUIQdF2kmNc3IvPgikTzS05cnU440YaI37C25bcGYQ6YLentLCnK2H890HsgRTN0-CUS1LUkf9j-qkTPOu9HFa09mPKa_qVDMp9IO8iwgohpJMwSjgvRVMo6EO_COZGZHgDrbob586Dsdd1MSxlLJ3z7S8PhVZwY0X4AWwsPE7LvusPOZXx3AgoA92Dou_tzvTvdl8Zfhai4PupuKzoF59RRLXtTTi8hKaHoVXgUSL50InTLHs0JCaM3qBxSf_yH50B_DUwfZ8mbV44j2CyIZhJ6_AdhmFV0Y8ugLuQhgnbaBePC5EqUWmAMHjlwRRZQSkN0o8cyHi4nVKV2W9KTO6nP49jmsNduZNsCACCnPCFAbQBe-snRAU6KAAOLqwgFIU6OwQtALShEX64BmurC8HXBYSpMfzvNM1s-FaHLM4US6GkR-EYiqmZ4ie0vDuK3dHnDGV-AxQ9-6MFx21rZFtBimTqVuo0HdGiowv7nYxe7aFMhFL4Zj0ipwOjSBiNnD4XJRH2PAVFx4c7H5iC8W6dDhch5f-rTuZETkDqlcHOlkKVKwQAXFIshunTAcs8FD4cZXxB5MM3UdOrPMGKnyZKj0dxHh75KyMA9n4hH8-I7uBiJMg1NvspDNGEna-88xzxrCCdSamiMDKIWR5-Ru8sfOSbHIVZH4eG-lCxM7JqYxUKYonf1oADkEwb_QJVuga993Jc4W04VwlSHxkygaloPgDLxZvgULcYOVKonuhyvKUqDMKXT6vTKSZ-83a6Bxzcfkyw_Q667alPoRvoCGmI-A0WVrB9swHeaJR8vmktPqY8N7UtnwNqyftEdkyW7uw5BnLLlpRBpeq7WNQjZz_M03xh6bkZpt8J0PdqpIRXnycb7oMysMhzpoOpa7lWkwO6X3f78wk9hvZkxN6kD8tfU9DJTStJlGTO4kMSEvNjF1XU4eaFWxBC5pW1GMd4qNWFqrOCShThcUHAZArWQ0SGjw20K8h1xE=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Respond
+        with the sentiment label only.\n\nReview: I absolutely loved this!\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960eeff611081918eaa59bffcf22dec","type":"reasoning","encrypted_content":"gAAAAABpYO8ADFVOPOBkNYSncVagubZ52l7snpV1BCKsiS4YkHuod0GmRSn9Z4RLI9cymff6uCgYRHo78Cek8fQ9pUWa-RxCr1-c8MUNquwaNZ-qPa66bOGI7Lv8dzRcJ__Gpcttv0Pq8FA1B0GFvvtwH9nr4g1xxy9JhMnmFNRgjFbXFnM9Q0VSO-dKlhTLnrW7IvwPGXb0HYlctkbl7fooxo_hTCZIss71VCzyEWDQrhYGk6Hr08YWd5QhCf84uFp0VkFK74CXFvnFcmGzWK5CGeDzP2LwiYepOb3e15zniDvh9gfrBUGqkkZ1x6ELvCPUNS9bKSnbbU9ww-ZtrcM1IJ-dHjhxR0vE70qC-wm53qFTgkO_Y-cmcfIkDTKwFQGCqA2ezyhm5waEI__Adi3EUPg84Dwec-6vFQDyOWkMgHd6OKVCwZfHf4UpS9gSBnv67wVyFKWtjVb5TTA1lyiTP9WY0YPF64Zyaj6MCObO3nIoNehxIf8afpg1-ss8mB0Bg1_sfNNd_8qWWwG8pCV3aqPfoTCOxqAyWObpeCTUeLVSqPK6N_Hkz9gONjr2tnwICbUwGJ1rLh_0Nqw_pjbhrZm9u8ySwHU6k8MWUbTTkZEOT5g-solDgbk6hTB1NqrsqTkH7iSc771Fnq-IjfIhiOgPpPNsbLgge37yp2oY3WGaXDc699pBcC6xpdMB09-L-76IifhkLyGqDlXOkHhxr-mJ4l7MKTZCi8zWtGRJWey6dC62yTa7yjMNfiuLOpuB7PWBrwCX8UGsQsJbjjcvWiLL-27fBlyOE1PMRf6OBRowGgc2aJpSxgcSTMgktEFY0dZppdY7edQh4f2UM7nheOxI0CnPp0F7-uLDNy5Jk5n5DcvOcEXZGbk2JX6WaYMWeoU9sUrkXHZTsYyKdk8XYjbidm4moo-s9gLU96OWWMJ02cRUAtuPsr5Ai9ppH2r1cVUNZNjiRJfOGcszwdlSHPFKhD-a8Acj_HNAiI4W9YYhIlLH9Hih9g2rfTYapv-Zlipmi2w-3kGH__PWAqqNB3e1OVaO-NU9vShOm7J-FjRnZYh0rrwwynQAwPiYzmVufIkdcOuyzl22XoWPG82_3M6YexpPDCsx2rcZ6IYbXs4FLtkaPqayvsjk_YxAxSeYQ8Mcsllc-dHbmwyX4O7OcMKvDDZaypF9fYSsJ9ygZMmJGmKn2YtkSlplOvot0spxXT0rdNCUDfC6j8cGulTIbSQOit4whLYbmwndl3boYYKsDb0nilm9-U2AoHWAoMagkEbfrOymXX1XA8ILBC7uhIH52IRjvlDw_3aDWLEWiahqE8OqUD_4JABDkh4IAS5IOIKZMaryijFaEIuCqOkH11pB5Y15PF4C6RYQ7K12v_mxWNyooiOLT2iJy_LUUGRwCEbpc1gK","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `text`, produce the fields `sentiment`.\n\nExample 1:\ntext: This
         product is amazing! Best purchase ever!\nOutput: positive\n\nExample 2:\ntext:
         It''s okay, nothing special but works.\nOutput: neutral\n\n\nAnalyze sentiment:
-        This is fantastic!\n\nSentiment:"}]},{"role":"assistant","content":[{"type":"text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"text","text":"Given
+        This is fantastic!\n\nSentiment:"}]},{"id":"rs_0f2372fa41383bc7016960ef0199bc8191a62390da79af0b5b","type":"reasoning","encrypted_content":"gAAAAABpYO8DReWoo5ps7qvTwiYOMZGbm1feNInr-Jzg-Hn6QBRHLEEjSi8UoXflm6x_tdnHJLz5x9JDj0JkCGA75XRfjlzbAApYSycEcXtQmUpRi7BcJwHUxbZOc8gdx7LbbByyf1b8gBrcGT8HXN_Y6rt79kTVtTV2udh7HjR3DNwt4vqFBfC-iLDGnkILRTmo0ra1SeD1GpMwanjRBFHCB1aqhhlG1vu0P_w7vEDkQRiIFc6swQapPmiaybKmMnND0R34SYLe2g2l7ZXq-28SVq11iy2-j5WO_P3GnTzp5PcfU8PXpaKFVmtfoFQi0FZiy-sGA-NlLt5pKmSkHmT0zeHvc7kza19fSl9MRhbWl_vcMQ6Zlsl5oBYsvKwtBaDJFaBNP8B7fJneJaFZUOuPm5BPje4LBedRQuOHsMUIcj6H2n3yk3eN5Djj7Q-dyVeSogXw_ZRlv5CaWxQd2D52PrqNbONQMmTrjI9c_GL_CbEX56pATTchP296EaI3W9zwjJlzlKe-SaBKN7iLBxj4SCNoIvAICl94xL6dgX5HWqHo5sTbrnp0Qm4tRJO9Di__0daFIz1vsANvJH8I7GLz6Ep_3S5ugmWEBxxLmsYURslJ5lGrl9hCDi07JLba-Iz_iSSQupfr6sfSL6Y5OtkyKBI_tV6t-5kwBOkLVbgeHMUExmHZg2QFKUL6yccg8-UzFhWNqwy0QcZXry6EUmd12dt4aVrGO5RujCZMpyamC7RpyllqpO0Wuvg67iAedzla2jsXuyJ8XfQTyrKYfM0avnspUUvjJF7jJ_IyHNi1ajbSFFeOsrYfcq3JKzFm1ejICfyzEJv62CvO7gQcu2dSMZdqu1sASilJJVWg2xOUPQZtUKLNYgPPORDY4hESWbReCJPE0OhjR1zNJvLm_WKDkV40yERk56s8mqp6bnQEWqdY0Tg-pS9akvuYjvEUKYPxkYcYbdo4tMNkOKTm1D18TSmIHyNVb5POhZ-NdbpG_UyZdZQf_U-iGGWPWfpSgaoCkZcmEaUGhRICKll6ywOHEEZvl5Tpjb5kOyAAxRVG1X_P2mtuRuwzhaVM2YxyZF1MKCD8anNnwv6JalAtm-wC0MovP3aF99cyHnBSfIUo1PfZeO3euIuL3feAl3dZ_EIS5QgKN_1OvVpUwj2W0eJrHmnOVDfyDnBV5kY6bXpfVNAa2NlRUP9vcisH-EdC7qFn8mNA6bUlGkNa8hkOQaThtmg0RTA4BKF0rS2HVEnQ_9z2nML3UaOT8FOpfPPg_J-G_ncdt62OXqIA5dbrKRv_h11vROVg6GIQwI8X6H6-OVwxtnVTjQGvh-_PssUO3pE05nc3IHCi20OuHt0FZs3Tm97LF02WH96kkDfN62EdR0xEkLUq7KWJOmY4cLCY6S1rOUc83X8kMarqve0-nBGtW2jLaQg_p8Mvd1AM12aZheGUtX16Peh0LwfaIkz_fmDlkNLIeOTd7Vv_5sUhcNjZEx7xLcdzbOIrsZF7O4fTGRfL32WGx06-loaEi951_xrAnqzqO3i5o2Vzgk73jmLQ3EC3h_sAx2hxCGt4njt7R1_-8hnqrq8FaZKu7bXppM_TVv_CnbOsLC3dT1_-FnmhYtbD7J_Mqwtwoo4RayW_Q44n8QQXX14UwMv-K3ObSwsQnCWSxIwPMil1G36cIbJ_afqzz8_WYXYghjyHCfE4kSh3r4czuIJd_hSJ8TrbpLhYIpEjmXT8Lc5Dk6ZeeVKYw8Lmc8lEmg==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"sentiment\":\"positive\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Given
         the fields `context`, `question`, produce the fields `answer`. . Answer concisely.\n\nExample
         1:\ncontext: Python was created by Guido van Rossum and first released in
         1991.\nquestion: When was Python released?\nOutput: 1991\n\nExample 2:\ncontext:
         JavaScript was created by Brendan Eich in just 10 days in 1995.\nquestion:
         How long did it take to create JavaScript?\nOutput: 10 days\n\n\nInput:\ncontext:
-        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"answer\":\"Yukihiro
-        Matsumoto\"}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Ruby was created by Yukihiro Matsumoto in 1995.\nquestion: Who created Ruby?"}]},{"id":"rs_0f2372fa41383bc7016960ef07c5d881918fbc501826535bac","type":"reasoning","encrypted_content":"gAAAAABpYO8JX3Ff-_KysiHGorkf4lcW0hGJOMaoY2yYu_-54oCjk7-LaqNkcgXZXBFEGaPZob3u4vkvlNFBuD7Z072Vey_VA8EfHKDmKzUutBeFbfxNnqLAjy3BevKjMZtDWsLC4Aj8v58kFB0tk5A7TSjxUu6bqL2Ir4NldOCeaRftU7YL2ELhOb42V7b9Zpkrx_2MiuPfWfHVs4_ZKhqB9atdz2aG8USmjmKOKpDac3bIzq02azwjvKHq8SZh_bG3BWCbodFWLUyt6ZjtJg_je4gtKvKL-czQEtOx4nJ5eHGWVUNMmfPpFres36NL1T3yv5B-PcHvXHPJsg9khbbWvtaAIfqQfuAaR_b5dtxrjDCgR1PgS1CUDc0BkyzjPI14H1HiqTEzg_C_gSSKepuBxDVYRYHx4yp2JQS0qf19q4ZpazW6wP0LBxUMgS79wocnpEGmeMMAyoqZ0MVlmNJgVSm_j3-RZovW1MrM7epDy_ROscRgKwYgPkV088ikNkSvD8fVoDj7h-dwKLJ7asXbVvaDZAdul6cEpriSxWKoX_vDU0_WQuFpgTI3X95bBy9jHZHfO_p96KCpxKKska08RlpBdXbx0Vnr9UJt9F6jAEyu5a3xfw7Yw--H2us9hZ-ZePsxFoKvqfBNq9GJ6Njc9ZiL49GNiPG2Srf0yQX5WjTSXJIAXXWWME3i7eAsYysidXVdLn4DWDgXUXPn-orC9i7XWlMGDWOaw7M5kNftyXDLRdhw5UB0nd6NvjmNLEw1MRTTvpnoMnaGuD9rj8lt13E4BPJ-9cN3nrBCWGP6Uy4bf3LFk_SrhKsBMg1sLNYbBeug8whWT_k8bsdmUcfWJpoyYhJJJBTUiTtRl_NLylyGxQKmcyoYCuhsgq4_KllocVtEwSBf8JWo7v2UpqTDB--AJ53_CsuvmccTpk8kelBh75TVBKDQwhc0ibKp4igCk6u6A-zSoWk33VnjWYO8wP_1fxOvFBqRReWTzkEX7Kg6KHCr9I63xXZjts8yYIbGGYsiTQk6dDBXH37DNnD4D9vsKDfpZKVXPcK361wWCCTx2q5bq9XaUJFMixsYcQA4hRbduEfUyekopvBLRguxge8SABgsJ27-oZ3ldnnzgUFPbo7Qa94Kc0ONWljhAsxvwVkS2g19YflwPJ8dBBOcg0NASDExAiCiy-jN0KTuACF4lgGo9RHWJpK7NtVaGbgz41FkFXw36gkTxkyJtIhBtj9BqoRQ2MYonxleFUNElQRZjVAigWc6t-1Ocx-bZ8SfovoVfJD8riTuufIP92YOGrC8o3J4B9ZDUUhJ9D90wtEXA6lWvw74EbJH2pCPlJiw3wguoZZX5IfIikhJPIOuFmSelIZMO-Ecx3R7KXgv5E94xQKWl6iSTQ4Kbe2z8L9l23QOYbT4djvOiP63QqjhSGcSX7VbIjRJJY7aVMRROYIsDGGuyybJDMIj9bkGOo-sMo9Lwg2TWd0_XVXqpqgLkN_5TkvHDmX9WTRW0eze4uvTsmxZZSzjrjoUunsb2AOgUFx738aDZcdL7dw8Z6s3AwZndtMkSHynVH8SjFfKVJz2QUBZ8lhPuziplxWyaErJsMcH-figsTD4PZy6lJclQTF0xy6aag==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"answer\":\"Yukihiro
+        Matsumoto\"}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\nInput:\nemail: I''ve been waiting for 2 hours on hold! This
-        is unacceptable!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        is unacceptable!"}]},{"id":"rs_0f2372fa41383bc7016960ef0cc3588191a47c1ecd1502242d","type":"reasoning","encrypted_content":"gAAAAABpYO8TdttxKToUA-1p0EC6QfFaE6tVSY6W6IzAW6WFzKeUXaTda-Gpwyksbyn7O4AscgwRU6SBeFaBquwAb0fiYTfp4LmsgfyWwT_M2cwPiHwm3ubaba8BRywPS6wtyTY1WQPxA_Md2W0CDAxBMxEeHfcfjU-Kh65DHJxVBHjHKUHtsFY2IEGj4AqGAKrFXghDYwUHn-l16lSc-oW_N5Z_CPVjkb4NPusj2WBumeqcQwpD2Zd367Dp77bY4HrFT6TrQgE7sQkV0zBZjjHxMcV-OZ5so91IKDHfMdpdaxqItDbBNxZI3EqfpHNhwdv5g07v-2JuJ20p3joFkTL1Pkxwqpz5RxH8EdDMMyYWMs8pVuOVpFHWpKk-s0dnimf5sZ9Qp1Etewmx17FSl_mi5kgMg0H6OTk64CIcdhTktr_qAvua20eDd0Dc-cEZ1BTPZW3FIxHMSuWZmtS-2wvNhFNSSHSsRh2PPsglePKFn_B2QWO3i_D3dVORablTAcd10PRqXwaoF37_yo6IxkdEiBS0G4cOT5RjWKxS8hE3xNffRDWtG8LVY_mo09jodlRl26JBVagy1PLm4hhbv8-Fpk0Pcbw3Ej5iKHwFxULCTRwhF0-Xyqmq93JxAxHgvOI-2gDUTmKG0yF0irRpi0l4nur3yARzCQkmWOTujbkyc2wdKqrtyYLoUleGsz9GJIXh-XpVaE5CJktACfD3jn8fBU7ejynCt9eWY5qjAAlMYf_-acKgBpwC9YWn28-CFm8GnDB5DJEdgPjieoehflwFM7oUVC5J9RfztPIRuUsokMcObzt1QCGDeAuNLgjAupLsj1Sj_2DSn4dUe3tbwFWWor3eJrVmH1cZzc29c3KcoBNDiWFCJcyMXlmNVsROF1kUrH9i_QYCr_QLNbm98M03J0MPdNhJVYud_9n14Bp2jIIFrGhuAG04-i0MSP9-VWPsq-9J-298dMKqVCMHklymhMUON8j7qzt6RCKj6qGgI98uxfDWIUa5QvwhU8k-FVMNshgox4Dm-hvFxm3L4siB7m569trASF5LgoVefZaMZyIIsfbiP8bFn0v_32lZPPopV3E0qGdNUG6kWorODxXAm0hg-nq-keI9Q14BfjsoSzE2v8lBoWHYLPzv0S2OeBLNqLmDatS7qomjbAaYfDLRVwd4qwi0Z7Oa40SAycj7TQmLhzvXUSk8QqMU6YKsyouQdtGW5H3PJFm8tIKiGcGx66L-xh2knwI3i-FGDXDNbYGMYUOQPeJoAaGBeGyzV06xFVWAQ3NR3AW-pz5y03zvlSF8ofiVrkD-4O36U9DdapVv8IhCfdL-kIuvy3UiVno0SjLWzd4aXlfJWX3RQYLbJeIyV_8WgTr0DULXF17BqfSvv6v8PxxuWqf44_iHqHveGqsDOpRq2jsGO9eZAyE-QAU-nwBE3g0-XNQqCD4q_o0aXt5EVU_mZoYKpLyWj4JkEp973EPhQ0Bh4VZTSLU2Ue4RzbtDh8h7qVoFIFrupiBl5H-d8fxmdrNvAAC3RZQE4uKAwUeUeC4g8k1Ll_eFAgjS8uB8lZQnsp6CJIv0fL6o9D-ZZJkCLhxlsOi5E1wiq0T-QYdy3n04XIcye02RiBg-cIQj9od8dUDt5cXe893mNZPY-bDt7wkORb2YnGy7rUxNWs0Z6ygjnOMT4pQkmW876PA8IhrSKFDryRwl7vVxGV8_7Y8oXLcBpjz1NuWmy54Owj-ZDjdxYj1aXFmgFKiCYDbkfsnx_OYyH7WLxJIYOerVsyRx50OFpj5tPFaJ4UgViaet0-PIks1Wl8bbpl-Vj0j3p9XFyIbbMuKKTYaEtJW12Ln6QqOKBJsn7Gq5v1JrpZe2obPH1dvugIeC7Krr-Rc4oRQHrzjevhhZUevVH_e4t22xsauB9MMI4H4bAN9067pbuohz5KHnWVLwBx63-b99AoJt9y6NTXJNBQUSwMWL9dZ8eRmWdcnwfCKqZXWn0bMbZC9nL2IljwhzIwmhvfAvZ_53CAUChbR2OzDeNr9KrPN38AN340fk1rievtEV57ykUJAcX7cZ6WaDyY2s9tTGgLIhi3nm8WrLkVp_rb--PSVOOzjfVzUTWBpWNE13QpOoiNmxeUpmvYwTHAhQFztbYpXlxV0VGXi3M6j1LKfei6fG5G2JuCGEDzNkXwftwHldXDkGAxdVqrUJ3zmhMT8tHJPSONBRMcldm-SDphKLavIhNqboWYm1I1TZFiiLuBkebF9kc7ol7O3m9fE7JZJC3rexC2g4W0db3Qmcy_jbEXluXNietXUJE_sVrIwCJ1HMf5OJKp9M_ohlyjJZX_U9fU0osrTPF4EFPEUU0CF6Mt5wLwt2fL8z4HsaQYEYx4_SE8J0_QENQRmK4UigAejVvHWJ1PZ8_V5rlvnFuFtV7x-ogkAvDPUg77vCVdHb269NNVn-FwX6enk_IEZvXeHvyrNReVeYZEUNrAMEfp2BH8vmIOoJHaNA5oye86F1VJ2o8Gh3pKya6aBlUQ1yltAGKQqi2q7gmj_HOBxVQSqf8qYyG18wuHvZrg8qPLqSd3cely6g1JSKFIAvdLMitW97bHCMb-5bw6M-FrrX2E_0rG0yU6-CFBHvD4a2Lk-Tw4tw89PQuakzkVxgTmOxyDjsqF4yUGgPJqWC7gOkOUWzlzQmObzQs3tM6xWM4a5ATOmN9Yi-N-QRnh8o3k9VehSs4HjoPA7MnDRG51M2g75vXHISEE7ZWpIo75WN_sh1pr6FuossiNtpRrgArYRVAJeMN1Svatlx096JK14L0pG2WNZvBozyFIkvKYEInj4fqIrqYbza31C92LZQGd5YKpMAOXpMPDsjHxembjuTScnJ73CA_ZlbrheyBPJ7o-pBpDi33pl_XelWn-aN9t7Qt3c1WtctWIpfB3y89v1Oy6eEwaiFA7QxYjpo6vH4Rvmr-A63Xbqs_tM6a1Lre-cy9W1fJBj74qysNzfoso7WXeznpK4dzUdNHkjaSpt-GctB-SGv5i6FXkzbu_IoYBGcHWmjjM9r7snbwFFiNf0yrTY_UrWgbWuaF5JcN8ZoFGp-3wlBOz8WQrv2MS7ijUXy2fEiTg7Lk8H80R4M4mg8Ljip1IQ423spBAtLU4LpofZsnyfYUmpOtdCZMoEN1Burs2lH2O9ErDs3viQT4hUI4iEuU1JU6557wN0ultiLIRovnmT4A1ce1udYQq92eDu6c1OxQ8dsr1eyk-cvV3hOF4m3XvLE032_wkUO_Qe3BPuEhOTNfb5EjMHpV4-btAXxQQTZ2YuvaeOosWWkkYw628_DEpkvbXEHLBax26yORAKr0elWhzi4fTLCf2nVBUBNv3IxQHORiAq2vqMKxPh1Pkk8_UZhsKp0iEys6NHGkPivF1OYTSPQgs93V-cUuwFD3_s24KbckzN8vcpYgUuPtQqyp0I=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        shipping."}]},{"id":"rs_0f2372fa41383bc7016960ef1482f881919b92729250c623ca","type":"reasoning","encrypted_content":"gAAAAABpYO8XuUThXVGTYf6_YJkprapdH0a2-fCsqoAkQDA3V4aoMEkCIUuXKVC_X50piKdVNUv2xuaP02SRzI9Z7QTH1ZjL7UC8r2-sbcnJl1Cat0HcSuqctgGSEKHhNwa9ysTbNBvtToR-fuT_bS8pXnwlQg1nvvZYkZBZzLnzzq5Bysmji-b22qEDKe1lHgolwkSEYchjKUVSuYvTcYaI2cJESxcBfGM2h9pJ2jfvGbDVUwlWNz1Svs9AQT3ud8uZ4NLicqgPvkrb02jPGhBFXxiOsqwJx_qzHAL_4z5h9yYWlkb7yFElFLj-Q-wRf7FavHVMnNih9WOmhwtNiR3k6ZUhXxC6g6f634YGYVanSHYSKCrpVGkMPcGnvIw_MUVs-WuCGLjYr29VCdYKom4SGDWuRMdynhgeVC3BkNSMEaP2kCJbiYMZUaiGWheFha2gL9IAeC9IbybHYv7Ikq97yrJ6sTjAVNsXjEKUEZjwTWOJoEmh7Msv64IuhN3guiO5HqAa8GDbGj2IPyP_E-_VJT4TvyiCrqUwr8T6B7rqLe32BjmIoxI9kAbugkrnE0T-zMQtfE9W9MwC6hWg2lDWAyokCnG8yFN-iDImK_AZDgqpgyvrZbgxD4q7nGlIQCTtw7Amku3tzh0zF3YtTMyFENC9zOun1jplYgmQKgdmF-s7fM0SNcGM0DU8KkKL8GR4fhsg6fB6eknjb8-QXxy6Ai7ncBba4TsgK0jVjBms7wtxQOc9rUaxXyC51AIi5BjlK0y9UzzsLxH_LJUkJydDryIf8gjUzuloAp2hZCtvceArKnasGYy0p55Wk-PvMm78sc6MEGM2I7nGlaFX6gWHiAGr2cASNNVXfYj1zyK0MbQQvduUGzb8sbfLfBiGwNpHmj64Dh7g4BVqlCi_gQ3dh5nobEnxJ9qQlI2Sjr0Cc8ShhbWLWnZza1S2YtmnhpByhIAmR6JZIZHTnCAw2I26ycfuzu96aXxDzzc2QrESJvULPxFQDncfP2Cjkv2ZrjV_XKlF3LDgpD5IzAFV7luF_LGELJG87FD5AjPJdwE9_3JLArygW1dmLKCdSYTI4eiuu0rTG6q8CcWkGICjoPk2d8yKXcBn-83u8lEK8H9O679we_twr6zfbOTfZF8y4MyDgrfIn0zRX6z-nPeaOB129mOzkC7IvT17Iox4Hgq_GdgqCeOk-IGV9Q6k4cyqkF_WipctdRaz4LPy6QcJWlVZZ56l-WQ9V-mOSJf7lOrfpchpW3jErfbAR17d8_89A7H-rZFjCr2WTjVCCX2Sc1qxN3VeiiDowlYSNaB9GS-t3RhQpaoOsnIYgynwlnLr5M-tIFYb7Zw-jLYxTVeAWyFwo5vbUZp_yUAD6jUm8elTTX7paZynmPUlDZGMiZaC8hVoA52evvXoLlk70xf8rRQ7pU_OMxofUt39m3oN4AbGZxlsW-mCvaUl3KFNP9Hmyclq9c2qHh-nNtUvmcCxDlZmgguhCJkcBmsuJURAkPJEuL1hTQEwVqUnfVrl4RQGYPS3tD4r0_KQzXCPLP1kuokmaO_m1t03sX9KXW6NWtirSD4evU9CLOZ19wUcnFAOerBu10GjrUCYSrzSM3tvSw5TmXGpmW5AooMwpZvuCytUjsaCogy5Zac7D8jDjYIVueWuBE9EjSsiZ0TV9i787pIG8MVfzfJ9Xfn6_ygHUDpgOOLqkvBywjS68MAOoPYo9DKQgLmrqm-UqiMMBulvWVmyMjhZvX3npF2gEf4KI8v2dJofVFT9w3c=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"id":"rs_0f2372fa41383bc7016960ef17ce048191bc0d06f7babfeb72","type":"reasoning","encrypted_content":"gAAAAABpYO8aS1X5no1v484-DTWujD7rOQet7RZ3F7JleokONv0g_22O9yg9aJXK_2oANFA7ZKAyv-jHkqZpvaX32EFklK3vts9J3PEGg3LL9CCvOrZmwGXqV6whI36Z8AbOyXJHQG10vY3C1F2HrUIKRH9DJI9KiF_7SjWZ69mCRxpNUB0ACmr8NahCzM8mQglJ2OxGoFUQl_YLCcGAY6Q6DxDiOAExLNC4yb7M6Nfqr7e33Sesal9Gly3Jkwzb_46Mf7dWUpzK8ATt0g_jSWFBsRg56T_wN1SKpVsCmCoXvud5Xa19uPPk71Z3WxoZDiatfq5OW5UE10eEkE1vKf-08XGmItsSIcDy3i965LD_0KdZEjDUSnEUH2sqwGkBUNnk6Z9_TmS81GmGWw6ZN7-4H6xWQAd85AS_UQL9oFQSZQEZaozOnNX0C8CZfW9FUig9zSrxh53aFvECKf32uB70I9wXKsqBhS5ngAEqsyEzgCPKzlE8VbV-0SU7A2gmUsu7joPAwtp5xozKThscFg15azo5CRdtp6wxZyh-uuxfSzNxWNJkXpr9H_7sMYtuQmht9NrsYCdjDzhZAScqpA-4xnQQfD0I9t6hbzRbbNq4oAWYtVvR2bnswIH8cRC4CvBJIVEXa2zMlGAWomDx9xdQZBUMQGLSIxPPaNqqS2NKWUHVkDgSYgP3YUJE2zGtIW3zGig3gZOWYiiSQsA7_qt3HyIWOXQ84FJmBbloGoH18Dhh0SO2-xAorPkB0ZMgw3WWITYp0H30ZyEcSvqBM_iYll5UJZ979_CFFLw4tiacBvn-q9fzdvFN7LchRFwwpNPxvYKXgXmSfDvsvi4MjGiaVxdWAwu7dtC8NN8OAFm6rZ4UuKyc5QmT3b3qSJANwz4X-B2dqli4uSTp4l1w3ryvsMZRlqhsrqa7zwDvkfBP8g86aqtG_EJLl6ttH7rjksc-x_qSIVkB9wnagU7OD-BUOIZwSr3era7OmNb2eVXxe6X56P7qXCQ27UMU4GSglj1dPQ-tihEzRUw4MKqP_zC6LqPnS6kqHzWX7De3EPL1ffMPnefI-mGwRp9P0i0j0EiIfCXwzlrpia7V3vMz1HBAJZioL0N5Qvph_aIGk6aqaUSNzLMuxOmiXmn2Rm1xaNOJwe453I2XNAMPUZirnpi6v6kBC6-gV3vkl9vCPYKiJPtojDK75YSCAcRhPbw7fdSBhEupO7OEeOJrimJ5a6gwBN6P6XoKkEnwRw1ejn-ejjDNRe7-JQikr61yppdHG-7VhL7YYzKTpMPzWkbl-eqZ0OqAYn5CHr3-GimEdQ5GsMJUekos5eCQXz-pyw7mC9NsM3jgoOnT8IOEZkyEOSV7_39VwGbLg3SiqpyMqjhtwcSEIzpIKvN9Nc4txpr16rPU3aKXFC7cANQcho79wft49Ki1iHeEh84YhJro5C2cFM-rPJcdcgQ1euUdbQ6X5UCeFE64SSCRHZoy8ApcdIhjegjzNSwy8YA5-Ev8T4oSHXWA1FmMohU0UCnNj-hqGtyZ3vuQ7j4JKmqwjQNTp-B7chKxWyBHXQs8OZ1nOzeizLsXCbya2XE7JzxBWE2FzN-3Oj7Apk6GPhVeXxy3rBVbgaj6taEKSu7JaEqQuUd4Utjn3073ExsSJBAEEJLMATJ0Ccy0pgHqkcUBPy-193qd1PG4dNe9t84-gKK2LMWXnBWaPtx_PmuLIKzAilBu4B0T5POXvZzdqDBeLkBjZw7kya5YzkDPSSpO0tLh36W4DJiswV7iAFc=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
-        Thank you!"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        Thank you!"}]},{"id":"rs_0f2372fa41383bc7016960ef1aa3a881918f1c40fcd2a77844","type":"reasoning","encrypted_content":"gAAAAABpYO8e992q2OU4I1xwWCCxpF2VLf5NUhnQTP0o55ibAZW9DaTl6xkOYTSOVpuqQlInSvtsO1sPhh04vFG1wnrl7MuP2LLC8RW0axp7ASDFUPpGRkXjBFtEFLH0yO4Zza60nsbSMgQFcPxSXQ2pP1hOhfs1dPngMh1drDroK49PWLVuFXTLTiiz3uQaVc6-uw41Hv2zviYLkztE3Xjy_szUfxGlnIAc6hL7cpE-JTtJJnwnl6LLsaEa_-ZlOz2BgZYPmiohK_zC3Kix-DzkIh7Wwoz-Yxit9TFnccBoDpdG9ADcw54McQvLAkBPUPPUq9HSM_iePb-ObYuMYlDOdBR4BF8WHfH6H-ZUOokEfnAfOhG-_gJm7e9wde3s_f7Q7pQvH4zeF9chNyh3d6oe4MrcX9EQJwHVSUONbuzOA3JXA4oPhN6qQvlYq9y2vNeK9g_LVKFSfmgnjY3U9NYYINgwdsbG9hKF2y6Os7eEK42lEzfd9s-n_GkGG8DHAkDbtRwZQXiVr12xw8z-aAHGR3aEwfHyXU3kJsBL3lGrNuZGNAPV12-ppMR_hbBkTidAcF7nWbKex_BiG4KsCpjtpM_YYMleuj79kqBtXolUdjRrme-7k8sJcIxhQOwi1gcIjfsFZol9lrmDOa6dc3now2P311MRBwXv7TEhXNe6Aowm4lTaqdtLRHrMiH76x5-bylVgpPZORimpo2UeW4RKJy5lSii25O-FELCISB47zmaEx7c7cvHROL1byDnFel2HWZnLCPQbisNN9Q3ndYZaSxvwiYYIlIOmuGAAi4ZA-WJQAqzX1OawgC_fBQUPpcOTC7MqnJ8sYKvRdd5uc0Zr3K6jPg8S9MhY9LdWlmThQ637LhEc7dDxUtZXVFdq0qcCpDMCGkTXzQVZQPo2OC8tBOUFlROoWsFFGLPSx9AZdpr6xkIJN4b5salX1cUE3R8k6WZUK8CaY8VcRrc9BHDpMQhzS9T3pJddrzzB968azDS_7nngQ_VcUh1jj9ZU6pmw7zGapTC6A6DLj6QZjtCh3BpUKtpqmqjlYGzrAaaFJv1wVw5V9xS3mwTgjh46tfT9bLOCh6t44KUknn2znAzjrRVGi2QkBXQm57Tc2kb-xN5Duk9SJSSe2BXmq7VoCCg4qEQ_5BBaYP5FxqFX4dx4AJEconn5Q8InumBJcYxyLHuX71fIFFAxLcY3YGczQxa1aEAKu4ujxkJrZ9TkL7_NbyFwZVM8vy7xjlWiA_6oKYJNKraVU_txImB1pBUYTTFSiXYCIwT6uY-fDEBu1qMj1PhLjv_kDMKxjdJBkJi-dARy1TGoCEE6RCW4OLCMShSSKPih2Kc6sZLrpC7iwAdfOXmBEPINSW9l7y0d0Y9BtaPfVs8cpnyUfgjO064ZNHmcPoLdJr_T-_q3LPoe2OnkPy4GWP3ro7rEhAYDiYyoqgzVB-Q8mI08M-Wav_uMMv-i7jcU6e1p9ktutjFWbT1-lvI6EbS0IKqUFMgvJRbAyoHEaPLr7rh8WFAv7iFANg5PWiZ9GrjMJkN5OMMpzeRowNnmd3_RoNEmxHrlYo_-CEJ6Nb77uGDcpnEvGM0Z6BZYazdpSSPSNyNPGbWZF1BnDQQOKLSgnV4FA5wT9Ob00oFSWRP2rS1lx9JZiCvXVZ1E292jQ-lMyJXiKFAdOJWgdC9hcr8zqfhjSi7QIRgmkC3BqXiNdFAJ7jseVCiiBzaMvhkuTRPo_agNnnwFj7AWjp-0kU0j4a_5dOAyZjz2uQ7_g3AiFCga-qSA8ZK2bOTgt8TgmS1B_nPV3hpYBCkoy1OQVcmunLjhdnKlVdS7efQxcUP3kXozWo2912gshVpF1C_2ieZ44XIqmioMJTkQ-slON_QpvveL6j43EyRtVfWMBhB9SjNyD7Camn3OENGLXjpZZD_0wYp1zKk8qb6yqa7twla_5u4AQCMigIjc2uIqpNsrLEb6IiN7lillxXCeMq9AZnyCbSWx064Q7Ot85tWtHuSa-SzqwlT4DKrwB9DXYAsTzf_g8wVIW5YyAkzclxCJojL0gtXnCI7BcLFThaKe4DSeUBPPJsB750G7oHZL7I7CovxAsDLmhn632fFU9DnyIknBZ7UHxm3M5h6kH_WnPA7ttZhZ04oDSgxRIajDteqk2u-oLDoxbySenHbx1kFqzI_Nd1JJqmwnIcSBhYjzLWCZ9DEQiYYXnXO8Y5m2EoOCaDAH4ArAB9_Sh2uA6eeISewhaXUXh_Elnw8HRo3aQdC2RNjzBSv0LZwS-_j_yA_igpjeVvakyPKGrEcHEPzfac2vpHpAmqes07EOmA6gAIA_7QT-QHE4e26KlGqLgtCskS5vQFGmqgdtoKaMKaFBXC9MdXGeOYCSbomRhdR0rjyeE7q6RX7g2StQA3kP5sdjsio2_FCe6yrTHI6laP1ddx66wgckp6ta4rDeNqwLDd-jJtFGpsHcWawMlLiLIl3sEYuAMUe2odnxO6nSxmCuKR_0IJ2dljucW4BiWE5Yh7UY3JP4dNPF5obOLuEhC-pivMuhEeP5ECmelKytmu8t9Pm-x9MjmGoVoF2lk2GjrH9WEGU5gr5uNi6mMF9E2H2DccBmeb9ovyUapkDpZUHKmvkkUKBlJbPuBd2fBROIEukJs9HOO16FWDLxuiq8MH3FQu6W1SNm55QARCrTwEUOCDf64_i1bFerUI-DZfidNfFx0DoqHMR5oqu65uLLpl_wPkg=","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":false}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: The package was damaged during
-        shipping."}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"complaint\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        shipping."}]},{"id":"rs_0f2372fa41383bc7016960ef1f4b948191bc3cce074d054155","type":"reasoning","encrypted_content":"gAAAAABpYO8h-My2w7KUZcbwxDFXjvVemcYy2OgiAEldUqdNIBj3EFHkeHXaV4S1kaYa0kWuIp5zHvExY1DdZmOvxZ38u1D-X0emaxWlEFylfos5WKqN6Sd-fLP6w1Ps-fHXNW7_okJ2mU1m5CVvaWdnR-81p3EGBld8nILyBuD7NFs2aVfQPDimzrhrGUORNdyiutG4_Jj8aQMWsxcFiq2YXxKlu7psRhXJcPUHmDsh6N1B_xMrL2lvj_9z3QvLrlr9-8KUN66IrxfD4b2-6EHXXOPXXPd-FN2G4rQiUESsFrSXKHUAOJsA9jUWtIcvYegkEcTSrQriy0xRfmA61xRpl5_HRqTjBix-RbJmFPTq5cTxDaYv5-VH4gSXcr4GNoxQiPYPBNJhq6FarjWd-mvPTE99KUneMaUz4pzYTQBrDBX7fm15SvtHzve7WAy1Cbq5xdWnlg7XDyyUXVPbTG9scNhstvGvH6EcSkyrzWDdR8-4Led9BXRvMNP1Hgr-jdqyqaK-w636TCae131oojyxUFbZ6nbljHiuEjB7Lude8X4BmXjqeeDckc-DxHUnVtJmInToI9mFHSSwRRqAo9lnjAnRLZXDln17rCvebGaALEoX7ZpENAiUHg7KR-NHe5lpeOUcFo_6MrcrOVuJWIXwLAxXeOoJYW-pvi6G5fHpWlzzs6sJ2SBX9_LPx42Vt5Lqmcn7-1ezDT2pD2RqayRiLukI0Bl2NJfAxSXsATqwO2YgLoWrKAZSZoZsPObZEfJXMR7diUY3N6IHkoKlqzCAKptgriLwYE-cXd9UfcZikZn3oZnidOodupaKG4-DIXh-Pag6x4WhjejzhQE-QWLIG_feoTgUJHxvr7LE9aCdf49WAUJlP5FPAmBWpbfpR18OfuJb6G2ds5dHRoO3rSCplC5AoETR2Im92lSlm6BqNl3HPu9nYOtukUyzNHtsvK9sHq2UMdYzlpaZ0mdKG2XwxnUsDG9g-qJx8CSmuElxAd8wMyRhpGZSaeG7x9V6QWpVZohn8eEJ0u71pmkh76_ccW4fxUbRZ8vTvIJjwsnlqTgUiV98lF0Jf-LTRbMrAbWOnJBmMH0EuRuxs5wZ7oLiaMrfBPjIk-1yzTxrxVq41r83jfUrg88C-shUIS7YzYxMlbRpuQw9lI1daF6lU4XDDIFhJepS2ydXbP8CGsjGKb0Sub0ms5FzsknL3bqtEbs_gAIademUdeXkfFJw3Zajw8D_Pwk2UnWK1zi3lCys02OkVR5KRnulTO_ogk8wmOnj2wifuXeg3KtvOf5_8GgfMq0rtKRUw_tePi5zuEWYRSgU5kUXwPtIBT3JDsdGmhEyUtq1pJTVDtmrVdcdWRbXa44eLDPvz991pMqsZBlB9485E_tf9np6SmQ-QwvGzSbZ3-l9i39o4OKzVfvIHn4YWhF-P7nnbaqsEGRXvwVhH8xfJD8Af8HvP8Id3iba-D0rFRQVE_PkTMm8qTQVBc7pMygSs7DXwXTv4FEPPV44zpnxdAvpg19fQtkpN1SYJhMk2rhBNozet7lZ7V21jMPADh0ywGDBkw==","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"complaint\",\"priority\":\"urgent\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
-        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"role":"assistant","content":[{"type":"text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"text","text":"Classify
+        feedback\n\n\n# Customer email text\nemail: Do you offer student discounts?"}]},{"id":"rs_0f2372fa41383bc7016960ef21e05c8191aad784990fca06e5","type":"reasoning","encrypted_content":"gAAAAABpYO8j2cVVK_QjeyzqlTy7RPeC23j_IhoQ1CiQpxEFr5QNO9g37UJBKT0KvtMFOa-zblFhjsPKOwgBzj7139bX2yMdKQVWoO3lT7Aw9OQaBgeulE6r_P6YBtiDEFus5eiEKEPrFpohD6C8KChJlRRlQhq0h3bXGnDKqZJKaqmmqrRSZnpBfZfIJU4H2F9GImxXkECQoSco3TF_Upb1J011QlTpHp9CjgWcAioMIk7iMm777olHnD2UmPwdpg6dNmKbs29t5wmX0SHJYgmZGdSPPdFeRKB18o6XTk6IbK4Y-0vaOy0eROmGYYTPEkZLjWEOt5mzN8ugfBnpnXWMPlN7rQslJgBjr5wzfgRKd9kwxsto6XGLFmFTLvl2SFS36w2slf8lp8Ca2kuu1yP_dhEBqaYQJkAXjMvaQkJbKxkE3nRa7hyqz327eO0s1F2EZwBU2_RMKaeTmc_FL8D_xgNYEoKOo0OpF2csfclibcbomsZDb4tuxY55fJl8i6kOTqqMcXv2VXrCtlsk1yxPNPkmRUlv8kPyGYuSadstmfb_9em5O5txHSbpO49sK4Zd5F7ul1Nt6BWEpfu7-xFAFSVtecVZIZ0HPgwkrRy8hU2KWAq1yyu5ZVyT2scOOkI8Tu8EVeJuSnnRtuc3o9jD7OUgTg8XAx3j8RQgQuFrCpWxa8WOQq-iGZh9EvLKoc0T5eVXcNHHc29OxWLhcVtnbUM3XHc3wl7v_J-xnxC1t1eVK1gj6BQ7kJk5mY1wZxffio6T3xZayTfRlWKb7eOiTBxpYJAnTYnV-HZjrgO0KOENaPBQyyckzvuLPVkLxpzEMnrLa7Xs8lKbKRku1_AIAU_ltGm3k6TJxPopJxnI14myxHdUfMUQE-GpbzE8Y_GpQEGCV4yOA2-_aXeI9hurkS14o_YTwmMB0SNWRHCNSuc3MAE5_pWtuv2QAxvGpGyxXJ6ZQkQSaf1cWdWJn-AUstpbZCwo0ID896PxWDxOIgS_l5kP_mtaiMoYaPzt-8FksNbvP_883UrkDDyvlxq9JZtmNQ2-a_ZKWg0mHepBMNTx2if29-MMcLZ-uO9pUWvulpbRmC7bdvhn7E-1N777Oy7tAj0aXVcG8A2Iig8udnfulrKjMXZ-FrLLBBKsaRyGb0NEIgZCat-r_dwp_Yrf0Mu7gKG12LuR215oFaxOpdOJayUecvtEWVeF46VzgsGWKnWxU7QPuxVLPk8-wXwzdxbDJYyyEkJNLoV_CfcRNAywqFsdkbzK_iYcThARauGNGvA4RCVP","summary":[]},{"role":"assistant","content":[{"type":"output_text","text":"{\"category\":\"inquiry\",\"priority\":\"normal\",\"needs_response\":true}"}]},{"role":"user","content":[{"type":"input_text","text":"Classify
         customer emails by category and priority. . Use professional business judgment.\n\nExample
         1:\nemail: CLICK HERE FOR FREE PRIZES!!! Limited time offer!!!\nOutput: spam\n\nExample
         2:\nemail: Just wanted to say your customer service is excellent.\nOutput:
         feedback\n\n\n# Customer email text\nemail: Your team went above and beyond.
-        Thank you!","cache_control":{"type":"ephemeral","ttl":"5m"}}]}],"stream":false,"tools":[{"name":"_structured_tool_call","description":"Extract
-        structured data","input_schema":{"type":"object","description":"","properties":{"data":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false}},"required":["data"],"additionalProperties":false}}],"tool_choice":{"type":"tool","name":"_structured_tool_call"},"max_tokens":4096}'
+        Thank you!"}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5-mini","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"category":{"type":"string","description":"","enum":["complaint","inquiry","feedback","spam"]},"priority":{"type":"string","description":"","enum":["urgent","normal","low"]},"needs_response":{"type":"boolean","description":""}},"required":["category","priority","needs_response"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
-      date: Sun, 04 Jan 2026 02:32:28 GMT
-      content-type: application/json
-      anthropic-ratelimit-input-tokens-limit: '30000'
-      anthropic-ratelimit-input-tokens-remaining: '30000'
-      anthropic-ratelimit-input-tokens-reset: '2026-01-04T02:32:27Z'
-      anthropic-ratelimit-output-tokens-limit: '8000'
-      anthropic-ratelimit-output-tokens-remaining: '8000'
-      anthropic-ratelimit-output-tokens-reset: '2026-01-04T02:32:28Z'
-      anthropic-ratelimit-requests-limit: '50'
-      anthropic-ratelimit-requests-remaining: '48'
-      anthropic-ratelimit-requests-reset: '2026-01-04T02:32:28Z'
-      anthropic-ratelimit-tokens-limit: '38000'
-      anthropic-ratelimit-tokens-remaining: '38000'
-      anthropic-ratelimit-tokens-reset: '2026-01-04T02:32:27Z'
-      request-id: req_011CWmZ74rd3nJGiC5FRhkAM
-      strict-transport-security: max-age=31536000; includeSubDomains; preload
-      anthropic-organization-id: 589cabd5-ed9a-4b8e-a45d-db2907b12f8c
-      server: cloudflare
-      x-envoy-upstream-service-time: '2255'
+      alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      x-robots-tag: none
+      cf-ray: 9bb3ce3d5e594354-ORD
       content-encoding: gzip
-      cf-ray: 9b875348fd6210a1-ORD
+      content-type: application/json
+      date: Fri, 09 Jan 2026 12:05:58 GMT
+      openai-organization: james-wade-gxavj5
+      openai-processing-ms: '3490'
+      openai-project: proj_52QUMhtrLoBeFWjuGQhiv2ox
+      openai-version: '2020-10-01'
+      server: cloudflare
+      set-cookie:
+      - __cf_bm=JztPrE2s3R7lW7AH_fgrCduc12Cp8Cx.fXGCdn1Gsyg-1767960358-1.0.1.1-RQYbgsX3Xw_luebE1c5ZP1jQxEw40Zqdb2NiUfqqoM7UJTCb0pE0FY4xfaM62aU6c2O74jHyG0EmE7RMFiNo1fnvmgKcnNDObPltO1x9Kyw;
+        path=/; expires=Fri, 09-Jan-26 12:35:58 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=zM5PNnl9.1ciC4j44DIfaFD_F2c4XCgxGplRr.c5g2M-1767960358955-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      strict-transport-security: max-age=31536000; includeSubDomains; preload
+      x-content-type-options: nosniff
+      x-envoy-upstream-service-time: '3492'
+      x-ratelimit-limit-requests: '500'
+      x-ratelimit-limit-tokens: '500000'
+      x-ratelimit-remaining-requests: '499'
+      x-ratelimit-remaining-tokens: '500000'
+      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_ee52b1b2933749ff9855171c24e10cac
     body:
-      string: '{"model":"claude-sonnet-4-20250514","id":"msg_011zGERpCk88g6uHcUk8tsRQ","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01FNttfcLWFxbuVBwb8vUwmX","name":"_structured_tool_call","input":{"data":{"category":"feedback","priority":"low","needs_response":true}}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":26,"cache_creation_input_tokens":101,"cache_read_input_tokens":1344,"cache_creation":{"ephemeral_5m_input_tokens":101,"ephemeral_1h_input_tokens":0},"output_tokens":50,"service_tier":"standard"}}'
-  recorded_at: 2026-01-04 02:32:28
+      string: |-
+        {
+          "id": "resp_0f2372fa41383bc7016960ef2374348191b4b89b524f1e0bba",
+          "object": "response",
+          "created_at": 1767960355,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1767960358,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-5-mini-2025-08-07",
+          "output": [
+            {
+              "id": "rs_0f2372fa41383bc7016960ef23f81c81919b1750741f26685a",
+              "type": "reasoning",
+              "encrypted_content": "gAAAAABpYO8mr2EWSgohIhGXAuBKgRkQXHBiYxaJiVnW-WWRrlpaw4M9yrflgpzCe8Z5sogSaNo0-O9W0ycLtinyO-DzF__36sN3v9PoQXszzJlEWoQhBIjST5V-2vhaL8tqVGi28RbpuPcc9Zekt8JVv59FlFXzhpYjY8J256PjKbxUMyRkaVb15j5KxUGUvEfPtZ0RIBhkgsB8Y7QhigpH4rgzhkESdRxNyBuFYrmY8uChp25X4HLP44AA3TXUHePVS5LRDTKWiFLDoE-oSLXs-WFBJjoRm1MyZozXd7aq-PQmtbb_s1I4OCSFa5mPj5c0RpsHLHkZrnq9zXlxEViaGy0Siy3o-0DGssyov9bR-P5c53xofZxgsSSdtoPlBhDp23WDdw4-zx2gGB5fV4szVoh31INBF2ZmaHNrmb7msvy_p8aSxIL1fwLG8rWiFrzom1H36fsenXxC5eEsSxOWQvmjhDM7qXzLCSJD8M-17RWdD5pKg0sBzkkDzLT3YNxZwx0jHrGHPayaIBvFWi4dS82xb9YnXqq3x0laSkdsVb18N0VzQxDXkbLOuflYBFwlEB9EqjjmEUFDL5isk8M6SKXgaUoXspkQiXRporg3ZNBvtYTJLf4HjXlxwV5aLSdDbRcQINs77PwGDDDTAfQm9xi2n7IhAEDhUElDSgFdviOkiToQSawATLOvhPonhCBZxpMAzZELLQmVl6AETJqbeJj_NQ6zWg6ZeOFAAat3gyt0xEBgLgwvpwj0oFHi3er0JsIg_z4kwXy8X-RYR5r3QHBTmiYnRoydnXDad9p_Df3OohG8mevbGqKSLPDVjPpUDppqpziAtQH93VMT4eqt8ig86lpwNK08YqezsPomP-uRTctY79y7G44QAqQ6FSj0PoVrfidXxwdpfIgVTC8HkbCm4NHpvqBhb55UxLjDoBNahxqAPuU6ajekRG6RVRaCbe2yVW4gYduqQpjZPRAO1pB5MLbZs-ikT97h2IEzdvJHRr9anZp_RfXfRRHECQ5vd4P1I0QUFhwNq4raCHwtYwz3IqySQ2gr670TU1iT-4QUVwAKz2wSrKfx2-rqM37mex44XnVnfI67uFBC19_Tzsvkhu9HFm7Cv-iQq5hU9OuBPIMJkojtoFp4S72-DuuhVPDtuaqgGe5EkYE-3KGNOSFj5irX-RgRlXXhGeVhL7HijtHAgpyr6X3tgqD74Q1aRi_Jp9f-khz-3K6ZamvQ_4ujGGwpLuNGrLwNyfAIfmmgouvmEXlwSrBk1omgNy_yUpcQIymw8LqJ7a8vwIoyq-ntBkgtdYlwpAj6xCPeXue4K3JIK9jT6__pMFjWa8aCiDGc7jhZUKAnYqX4Ymqh5nOLUF0jpPR6UrlVss8Ob-pI30nGLttEzxWn_rn_YsONTtcrDJnh3S1BHetW7tKY4jg8IsHCyOimWNqjifxIVYjs-HoAo6k2lsuncdB5lGz3P9BhnFpJJ6fo2SoGp06FVyvYYdaFtlVddg3jEPQeYYza55tL44m2SpKNCA_IGAdKZvMBn4jiRW14aWEbrQOscz0wrdr7MCVlx18__OheIx0DK3SQ68AASnnIIUzcljuXdDJTwR4xcLLGtNvGFgCNVKQZ6u1OHyLOJz9gJZz9QzCIzjycIG1AC6xoMWiv5711jy4dgWTcO9h3YLIANjwJUeQpGj2gWYB5h4_NH4Rd5KlQsxmO6Wi3EYBOuLYzSPtFSKX5ipb5c99A5gKGpsWxcZND6TcBoLpcic9GZtsnRPP3G4TA7haKSzVr0O-hItjsCDZrXzwM-qJIhdX4pNa24Q5up6m2I86lR3LX2L0W-yuSyl7NsatN3E49UK6SsxWN5VdCme5l_pT91Jy0H2TrQdzrZkJeiw==",
+              "summary": []
+            },
+            {
+              "id": "msg_0f2372fa41383bc7016960ef268b508191b6fcb2353cb399cb",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"category\":\"feedback\",\"priority\":\"low\",\"needs_response\":false}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": "medium",
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "complaint",
+                      "inquiry",
+                      "feedback",
+                      "spam"
+                    ]
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "",
+                    "enum": [
+                      "urgent",
+                      "normal",
+                      "low"
+                    ]
+                  },
+                  "needs_response": {
+                    "type": "boolean",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "category",
+                  "priority",
+                  "needs_response"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 1005,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 152,
+            "output_tokens_details": {
+              "reasoning_tokens": 128
+            },
+            "total_tokens": 1157
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: 2026-01-09 12:05:59
 recorded_with: VCR-vcr/2.1.0
