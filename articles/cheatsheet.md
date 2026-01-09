@@ -217,9 +217,17 @@ classifier <- chat_openai(model = "gpt-5-mini") |>
 
 # Use repeatedly
 classifier$predict(text = "Love it!")
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "positive"
 classifier$predict(text = "Hate it!")
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "negative"
 ```

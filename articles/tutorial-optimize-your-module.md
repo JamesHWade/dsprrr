@@ -158,6 +158,10 @@ configuration:
 ``` r
 # This uses the best temperature found
 run(classifier, review = "This product changed my life!", .llm = chat)
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "positive"
 ```
@@ -247,6 +251,7 @@ optimized <- compile_module(
   .llm = chat
 )
 #> Optimizing 1/3 | Score: 0.5000
+#> Optimizing 2/3 | Score: 0.5000
 #> Optimizing 3/3 | Score: 0.5000
 ```
 
@@ -264,7 +269,7 @@ test_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
-#> Processing 3/4 |  75% | ETA:  1s
+#> Processing 2/4 |  50% | ETA:  1s
 #> Processing 4/4 | 100% | ETA:  0s
 #> 
 
@@ -309,7 +314,7 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 847.2798
+#> [1] 715.7495
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 177
@@ -321,7 +326,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-09 16:17:37 UTC"
+#> [1] "2026-01-09 23:00:22 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -329,7 +334,7 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 671.8423
+#> [1] 716.7466
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 184
@@ -341,7 +346,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-09 16:17:38 UTC"
+#> [1] "2026-01-09 23:00:23 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -349,7 +354,7 @@ test_results
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 676.496
+#> [1] 729.1362
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 186
@@ -361,7 +366,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-09 16:17:38 UTC"
+#> [1] "2026-01-09 23:00:23 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -369,7 +374,7 @@ test_results
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 683.1298
+#> [1] 746.943
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 194
@@ -381,7 +386,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-09 16:17:39 UTC"
+#> [1] "2026-01-09 23:00:24 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -412,7 +417,7 @@ baseline_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
-#> Processing 3/4 |  75% | ETA:  1s
+#> Processing 2/4 |  50% | ETA:  2s
 #> Processing 4/4 | 100% | ETA:  0s
 #> 
 
@@ -456,8 +461,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x55e7fe2c8378>
-#> <environment: 0x55e7ff0374c8>
+#> <bytecode: 0x565228deaa28>
+#> <environment: 0x565228f43b58>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -477,8 +482,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x55e7f90e6288>
-#> <environment: 0x55e7f7fc6418>
+#> <bytecode: 0x56522a0e97f8>
+#> <environment: 0x56522a0eac88>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -506,8 +511,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x55e8014be6c0>
-#> <environment: 0x55e8022253b8>
+#> <bytecode: 0x5652292631a8>
+#> <environment: 0x565229261800>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -522,8 +527,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x55e801cfd460>
-#> <environment: 0x55e801cfe340>
+#> <bytecode: 0x565229005760>
+#> <environment: 0x5652290066e8>
 ```
 
 ## Step 10: Tracking Costs

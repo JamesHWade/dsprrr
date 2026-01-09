@@ -67,6 +67,10 @@ classifier <- compile_module(
 
 # Verify it works
 run(classifier, review = "This product is fantastic!", .llm = chat)
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "positive"
 ```
@@ -82,7 +86,7 @@ board <- board_folder(tempdir())
 
 # Save the module configuration
 pin_module_config(board, "sentiment-classifier", classifier)
-#> Creating new version '20260109T161539Z-a85cb'
+#> Creating new version '20260109T225815Z-be77e'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned module configuration: "sentiment-classifier"
 #> ℹ Module type: <PredictModule>
@@ -104,21 +108,21 @@ board |> pin_list()
 board |> pin_meta("sentiment-classifier")
 #> List of 13
 #>  $ file       : chr "sentiment-classifier.rds"
-#>  $ file_size  : 'fs_bytes' int 593
-#>  $ pin_hash   : chr "a85cbee4848997fc"
+#>  $ file_size  : 'fs_bytes' int 589
+#>  $ pin_hash   : chr "be77e68885887bec"
 #>  $ type       : chr "rds"
 #>  $ title      : chr "sentiment-classifier: a pinned list"
 #>  $ description: chr "dsprrr module config: sentiment-classifier"
 #>  $ tags       : NULL
 #>  $ urls       : NULL
-#>  $ created    : POSIXct[1:1], format: "2026-01-09 16:15:39"
+#>  $ created    : POSIXct[1:1], format: "2026-01-09 22:58:15"
 #>  $ api_version: int 1
 #>  $ user       : list()
 #>  $ name       : chr "sentiment-classifier"
 #>  $ local      :List of 3
-#>   ..$ dir    : 'fs_path' chr "/tmp/Rtmpg69wfl/sentiment-classifier/20260109T161539Z-a85cb"
+#>   ..$ dir    : 'fs_path' chr "/tmp/RtmpmdwSGL/sentiment-classifier/20260109T225815Z-be77e"
 #>   ..$ url    : NULL
-#>   ..$ version: chr "20260109T161539Z-a85cb"
+#>   ..$ version: chr "20260109T225815Z-be77e"
 ```
 
 ## Step 4: Restore in a New Session
@@ -135,6 +139,10 @@ restored <- restore_module_config(config)
 
 # It works immediately
 run(restored, review = "Worst product ever!", .llm = chat)
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeBasic"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> [1] "negative"
 ```
 
@@ -157,7 +165,7 @@ improved <- compile_module(
 
 # Save again - creates new version
 pin_module_config(board, "sentiment-classifier", improved)
-#> Creating new version '20260109T161539Z-7a946'
+#> Creating new version '20260109T225815Z-66e63'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned module configuration: "sentiment-classifier"
 #> ℹ Module type: <PredictModule>
@@ -168,8 +176,8 @@ board |> pin_versions("sentiment-classifier")
 #> # A tibble: 2 × 3
 #>   version                created             hash 
 #>   <chr>                  <dttm>              <chr>
-#> 1 20260109T161539Z-7a946 2026-01-09 16:15:39 7a946
-#> 2 20260109T161539Z-a85cb 2026-01-09 16:15:39 a85cb
+#> 1 20260109T225815Z-66e63 2026-01-09 22:58:15 66e63
+#> 2 20260109T225815Z-be77e 2026-01-09 22:58:15 be77e
 ```
 
 ## Step 6: Roll Back to Previous Version

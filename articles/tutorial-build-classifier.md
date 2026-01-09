@@ -86,6 +86,10 @@ Use the `$predict()` method to classify:
 
 ``` r
 classifier$predict(text = "I absolutely loved this movie!")
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "positive"
 ```
@@ -94,14 +98,26 @@ Try a few more:
 
 ``` r
 classifier$predict(text = "This was a complete waste of time.")
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "negative"
 
 classifier$predict(text = "It was okay, I guess.")
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "neutral"
 
 classifier$predict(text = "The service was terrible but the food was amazing.")
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "neutral"
 ```
@@ -121,6 +137,26 @@ reviews <- c(
 )
 
 classifier$predict(text = reviews)
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
+#> Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
+#> Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
+#> Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
+#> Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> [[1]]
 #> [[1]]$sentiment
 #> [1] "positive"
@@ -209,6 +245,10 @@ execute:
 
 ``` r
 run(classifier2, text = "This is fantastic!", .llm = chat)
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeObject"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "positive"
 ```
@@ -285,6 +325,10 @@ run(
   review_text = "Five stars! Would buy again!",
   .llm = chat
 )
+#> Warning: Failed to serialize output_type for cache key
+#> ℹ Using class name as fallback: "ellmer::TypeEnum"
+#> ℹ This may cause cache collisions for different output types
+#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> [1] "positive"
 ```
 

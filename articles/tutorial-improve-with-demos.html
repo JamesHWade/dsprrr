@@ -172,14 +172,26 @@ improvement.</p>
 <p>Test it:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, ticket <span class="op">=</span> <span class="st">"My package hasn't arrived yet"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Failed to serialize output_type for cache key</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using class name as fallback: <span style="color: #0000BB;">"ellmer::TypeObject"</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> This may cause cache collisions for different output types</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Original error: cannot coerce type 'object' to vector of type 'character'</span></span>
 <span><span class="co">#&gt; $category</span></span>
 <span><span class="co">#&gt; [1] "shipping"</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, ticket <span class="op">=</span> <span class="st">"I was charged twice for my order"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Failed to serialize output_type for cache key</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using class name as fallback: <span style="color: #0000BB;">"ellmer::TypeObject"</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> This may cause cache collisions for different output types</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Original error: cannot coerce type 'object' to vector of type 'character'</span></span>
 <span><span class="co">#&gt; $category</span></span>
 <span><span class="co">#&gt; [1] "billing"</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, ticket <span class="op">=</span> <span class="st">"The app keeps crashing when I try to login"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Failed to serialize output_type for cache key</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using class name as fallback: <span style="color: #0000BB;">"ellmer::TypeObject"</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> This may cause cache collisions for different output types</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Original error: cannot coerce type 'object' to vector of type 'character'</span></span>
 <span><span class="co">#&gt; $category</span></span>
 <span><span class="co">#&gt; [1] "technical"</span></span></code></pre></div>
 <p>This works, but how do we know it’s accurate? And how do we improve
@@ -239,6 +251,9 @@ tibble where input columns are matched with expected output columns.</p>
 <p>Before improving, let’s measure current performance:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">baseline_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Processing 5/10 |  50% | ETA:  1s</span></span>
+<span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="va">baseline_results</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 10 × 3</span></span></span>
 <span><span class="co">#&gt;    ticket                                category  result   </span></span>
@@ -293,10 +308,18 @@ tibble where input columns are matched with expected output columns.</p>
 <p>Test the improved classifier:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier_with_demos</span>, ticket <span class="op">=</span> <span class="st">"I need a receipt for my purchase"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Failed to serialize output_type for cache key</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using class name as fallback: <span style="color: #0000BB;">"ellmer::TypeObject"</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> This may cause cache collisions for different output types</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Original error: cannot coerce type 'object' to vector of type 'character'</span></span>
 <span><span class="co">#&gt; $category</span></span>
 <span><span class="co">#&gt; [1] "billing"</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier_with_demos</span>, ticket <span class="op">=</span> <span class="st">"The button doesn't respond when clicked"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Failed to serialize output_type for cache key</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using class name as fallback: <span style="color: #0000BB;">"ellmer::TypeObject"</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> This may cause cache collisions for different output types</span></span>
+<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> Original error: cannot coerce type 'object' to vector of type 'character'</span></span>
 <span><span class="co">#&gt; $category</span></span>
 <span><span class="co">#&gt; [1] "technical"</span></span></code></pre></div>
 </div>
@@ -356,15 +379,16 @@ with automatically selected demonstrations.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run all three on the test set</span></span>
 <span><span class="va">results_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Processing 8/10 |  80% | ETA:  1s</span></span>
+<span><span class="co">#&gt; Processing 4/10 |  40% | ETA:  2s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">results_manual</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier_with_demos</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Processing 7/10 |  70% | ETA:  1s</span></span>
+<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  2s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">results_compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">compiled</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Processing 4/10 |  40% | ETA:  2s</span></span>
+<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  3s</span></span>
+<span><span class="co">#&gt; Processing 9/10 |  90% | ETA:  0s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
@@ -396,8 +420,7 @@ with automatically selected demonstrations.</p>
 <span></span>
 <span><span class="co"># Evaluate the compiled module</span></span>
 <span><span class="va">eval_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">compiled</span>, <span class="va">trainset</span>, metric <span class="op">=</span> <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  3s</span></span>
-<span><span class="co">#&gt; Processing 9/10 |  90% | ETA:  0s</span></span>
+<span><span class="co">#&gt; Processing 6/10 |  60% | ETA:  2s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
@@ -472,7 +495,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; $metadata</span></span>
 <span><span class="co">#&gt; $metadata[[1]]</span></span>
 <span><span class="co">#&gt; $metadata[[1]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 411.8221</span></span>
+<span><span class="co">#&gt; [1] 423.5942</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 272</span></span>
@@ -484,7 +507,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:05 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:42 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
@@ -492,7 +515,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]</span></span>
 <span><span class="co">#&gt; $metadata[[2]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 419.3778</span></span>
+<span><span class="co">#&gt; [1] 427.0051</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 269</span></span>
@@ -504,7 +527,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:05 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:43 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 2</span></span>
@@ -512,7 +535,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]</span></span>
 <span><span class="co">#&gt; $metadata[[3]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 413.7697</span></span>
+<span><span class="co">#&gt; [1] 430.0995</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 269</span></span>
@@ -524,7 +547,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:06 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:43 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 3</span></span>
@@ -532,7 +555,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]</span></span>
 <span><span class="co">#&gt; $metadata[[4]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 416.1301</span></span>
+<span><span class="co">#&gt; [1] 459.7628</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 272</span></span>
@@ -544,7 +567,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:06 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:44 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 4</span></span>
@@ -552,7 +575,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[5]]</span></span>
 <span><span class="co">#&gt; $metadata[[5]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 440.4459</span></span>
+<span><span class="co">#&gt; [1] 455.6286</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[5]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 259</span></span>
@@ -564,7 +587,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[5]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:06 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:44 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[5]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 5</span></span>
@@ -572,7 +595,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[6]]</span></span>
 <span><span class="co">#&gt; $metadata[[6]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 441.6645</span></span>
+<span><span class="co">#&gt; [1] 445.9651</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[6]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 268</span></span>
@@ -584,7 +607,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[6]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:07 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:45 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[6]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 6</span></span>
@@ -592,7 +615,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[7]]</span></span>
 <span><span class="co">#&gt; $metadata[[7]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 448.1862</span></span>
+<span><span class="co">#&gt; [1] 453.3451</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[7]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 262</span></span>
@@ -604,7 +627,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[7]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:07 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:45 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[7]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 7</span></span>
@@ -612,7 +635,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[8]]</span></span>
 <span><span class="co">#&gt; $metadata[[8]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 454.9153</span></span>
+<span><span class="co">#&gt; [1] 465.8139</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[8]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 270</span></span>
@@ -624,7 +647,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[8]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:08 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:45 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[8]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 8</span></span>
@@ -632,7 +655,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[9]]</span></span>
 <span><span class="co">#&gt; $metadata[[9]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 456.0275</span></span>
+<span><span class="co">#&gt; [1] 467.4015</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[9]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 269</span></span>
@@ -644,7 +667,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[9]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:08 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:46 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[9]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 9</span></span>
@@ -652,7 +675,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[10]]</span></span>
 <span><span class="co">#&gt; $metadata[[10]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 601.1727</span></span>
+<span><span class="co">#&gt; [1] 483.8235</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[10]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 264</span></span>
@@ -664,7 +687,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[10]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-01-09 16:16:09 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-01-09 22:58:46 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[10]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 10</span></span>
@@ -711,23 +734,23 @@ the model predicted</p>
 <span>    accuracy <span class="op">=</span> <span class="va">eval_k</span><span class="op">$</span><span class="va">mean_score</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; Processing 5/10 |  50% | ETA:  2s</span></span>
-<span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  3s</span></span>
-<span><span class="co">#&gt; Processing 7/10 |  70% | ETA:  1s</span></span>
-<span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  4s</span></span>
 <span><span class="co">#&gt; Processing 8/10 |  80% | ETA:  1s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  4s</span></span>
+<span><span class="co">#&gt; Processing 4/10 |  40% | ETA:  3s</span></span>
 <span><span class="co">#&gt; Processing 9/10 |  90% | ETA:  1s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Processing 5/10 |  50% | ETA:  3s</span></span>
+<span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Processing 4/10 |  40% | ETA:  4s</span></span>
-<span><span class="co">#&gt; Processing 8/10 |  80% | ETA:  1s</span></span>
+<span><span class="co">#&gt; Processing 9/10 |  90% | ETA:  1s</span></span>
+<span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  5s</span></span>
+<span><span class="co">#&gt; Processing 7/10 |  70% | ETA:  2s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
