@@ -154,7 +154,13 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   }
 
   # Convert to demo format expected by the module
-  demos <- format_trainset_as_demos(demos_data, program$signature)
+  # Use the metric's field attribute if available to determine the output column
+  output_col <- get_metric_field(teleprompter@metric)
+  demos <- format_trainset_as_demos(
+    demos_data,
+    program$signature,
+    output_col = output_col
+  )
 
   # Update the module's demos
   optimized$demos <- demos
@@ -288,11 +294,17 @@ compile_gridsearch <- function(
   }
 
   # Prepare demos from training set
+  # Use the metric's field attribute if available to determine the output column
+  output_col <- get_metric_field(teleprompter@metric)
   n_demos <- min(teleprompter@k, nrow(trainset_for_demos))
   if (n_demos > 0) {
     demo_indices <- sample(nrow(trainset_for_demos), n_demos)
     demos_data <- trainset_for_demos[demo_indices, , drop = FALSE]
-    demos <- format_trainset_as_demos(demos_data, program$signature)
+    demos <- format_trainset_as_demos(
+      demos_data,
+      program$signature,
+      output_col = output_col
+    )
   } else {
     demos <- list()
   }
@@ -374,42 +386,49 @@ copy_signature <- function(sig) {
 }
 
 #' Format training data as demonstrations
+#'
+#' @param trainset Data frame containing training examples
+#' @param signature The module's signature
+#' @param output_col Optional explicit output column name. If provided, this
+#'   takes precedence over automatic detection. Typically extracted from the
+#'   metric's field attribute via `get_metric_field()`.
 #' @noRd
-format_trainset_as_demos <- function(trainset, signature) {
+format_trainset_as_demos <- function(trainset, signature, output_col = NULL) {
   demos <- list()
 
   # Get input names from signature
   input_names <- vapply(signature@inputs, function(x) x$name, character(1))
 
-  # Determine output column name
-  # Try common names first
-  output_col <- NULL
-  possible_output_names <- c(
-    "output",
-    "label",
-    "answer",
-    "response",
-    "result",
-    "y"
-  )
-  for (col in possible_output_names) {
-    if (col %in% names(trainset)) {
-      output_col <- col
-      break
-    }
-  }
-
-  # If no standard output column found, use any column not in inputs
+  # If output_col not provided, try to determine it automatically
   if (is.null(output_col)) {
-    remaining_cols <- setdiff(names(trainset), input_names)
-    if (length(remaining_cols) > 0) {
-      output_col <- remaining_cols[1]
-      if (length(remaining_cols) > 1) {
-        cli::cli_warn(c(
-          "Multiple potential output columns found",
-          "i" = "Using: {output_col}",
-          "i" = "Other columns: {remaining_cols[-1]}"
-        ))
+    # Try common names first
+    possible_output_names <- c(
+      "output",
+      "label",
+      "answer",
+      "response",
+      "result",
+      "y"
+    )
+    for (col in possible_output_names) {
+      if (col %in% names(trainset)) {
+        output_col <- col
+        break
+      }
+    }
+
+    # If no standard output column found, use any column not in inputs
+    if (is.null(output_col)) {
+      remaining_cols <- setdiff(names(trainset), input_names)
+      if (length(remaining_cols) > 0) {
+        output_col <- remaining_cols[1]
+        if (length(remaining_cols) > 1) {
+          cli::cli_warn(c(
+            "Multiple potential output columns found",
+            "i" = "Using: {output_col}",
+            "i" = "Other columns: {remaining_cols[-1]}"
+          ))
+        }
       }
     }
   }

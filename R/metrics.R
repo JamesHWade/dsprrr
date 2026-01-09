@@ -29,7 +29,7 @@ metric_exact_match <- function(
   ignore_case = FALSE,
   normalize = TRUE
 ) {
-  function(prediction, expected) {
+  fn <- function(prediction, expected) {
     # Extract field if specified
     if (!is.null(field)) {
       prediction <- extract_field(prediction, field)
@@ -54,6 +54,10 @@ metric_exact_match <- function(
 
     pred_str == exp_str
   }
+
+  # Store field as attribute for use by teleprompters
+  attr(fn, "field") <- field
+  fn
 }
 
 #' Create an F1 Score Metric
@@ -79,7 +83,7 @@ metric_exact_match <- function(
 #'   list(answer = "the fast brown fox")
 #' )
 metric_f1 <- function(field = NULL, normalize = TRUE) {
-  function(prediction, expected) {
+  fn <- function(prediction, expected) {
     # Extract field if specified
     if (!is.null(field)) {
       prediction <- extract_field(prediction, field)
@@ -120,6 +124,10 @@ metric_f1 <- function(field = NULL, normalize = TRUE) {
     f1 <- 2 * precision * recall / (precision + recall)
     f1
   }
+
+  # Store field as attribute for use by teleprompters
+  attr(fn, "field") <- field
+  fn
 }
 
 #' Create a Contains Metric
@@ -149,7 +157,7 @@ metric_contains <- function(
   ignore_case = FALSE,
   fixed = TRUE
 ) {
-  function(prediction, expected = NULL) {
+  fn <- function(prediction, expected = NULL) {
     # Extract field if specified
     if (!is.null(field)) {
       prediction <- extract_field(prediction, field)
@@ -170,6 +178,10 @@ metric_contains <- function(
       grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
     }
   }
+
+  # Store field as attribute for use by teleprompters
+  attr(fn, "field") <- field
+  fn
 }
 
 #' Create a Custom Metric
@@ -315,6 +327,23 @@ normalize_text <- function(text) {
   text <- gsub("[[:punct:]]", " ", text)
   text <- normalize_whitespace(text)
   text
+}
+
+#' Extract field attribute from a metric function
+#'
+#' @description
+#' Retrieves the field attribute that was stored on a metric function
+#' when it was created. This is used by teleprompters to determine
+#' which column in the training data contains the expected output.
+#'
+#' @param metric A metric function (e.g., from `metric_exact_match()`)
+#' @return The field name as a character string, or NULL if not set
+#' @noRd
+get_metric_field <- function(metric) {
+  if (is.null(metric)) {
+    return(NULL)
+  }
+  attr(metric, "field")
 }
 
 #' Create a Threshold Metric

@@ -202,7 +202,9 @@ compile_simba <- function(
   }
 
   input_names <- get_input_names(program$signature)
-  output_col <- find_output_column(trainset, input_names)
+  # First try to get field from metric, then fall back to auto-detection
+  output_col <- get_metric_field(teleprompter@metric) %||%
+    find_output_column(trainset, input_names)
 
   if (is.null(output_col)) {
     cli::cli_warn(
@@ -285,7 +287,8 @@ compile_simba <- function(
     if (!is.null(output_col) && teleprompter@max_demos > 0) {
       new_demos <- format_trainset_as_demos(
         hard_examples,
-        candidate$signature
+        candidate$signature,
+        output_col = output_col
       )
       for (i in seq_along(new_demos)) {
         new_demos[[i]]$source <- "simba"

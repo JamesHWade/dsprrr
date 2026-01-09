@@ -186,7 +186,9 @@ compile_bootstrap <- function(
   )
 
   # Determine output column name
-  output_col <- find_output_column(trainset, input_names)
+  # First try to get field from metric, then fall back to auto-detection
+  output_col <- get_metric_field(teleprompter@metric) %||%
+    find_output_column(trainset, input_names)
 
   if (is.null(output_col)) {
     cli::cli_warn(
@@ -207,7 +209,11 @@ compile_bootstrap <- function(
 
   if (n_labeled > 0) {
     labeled_data <- trainset[seq_len(n_labeled), , drop = FALSE]
-    labeled_demos <- format_trainset_as_demos(labeled_data, program$signature)
+    labeled_demos <- format_trainset_as_demos(
+      labeled_data,
+      program$signature,
+      output_col = output_col
+    )
 
     # Add source metadata
     for (i in seq_along(labeled_demos)) {

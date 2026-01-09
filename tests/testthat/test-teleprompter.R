@@ -378,3 +378,89 @@ test_that("format_trainset_as_demos handles various formats", {
   )
   expect_equal(demos_multi[[1]]$output, "p1")
 })
+
+test_that("get_metric_field extracts field attribute from metrics", {
+  # metric_exact_match stores field as attribute
+  metric_with_field <- metric_exact_match(field = "sentiment")
+  expect_equal(dsprrr:::get_metric_field(metric_with_field), "sentiment")
+
+  # metric without field returns NULL
+  metric_no_field <- metric_exact_match()
+  expect_null(dsprrr:::get_metric_field(metric_no_field))
+
+  # NULL metric returns NULL
+  expect_null(dsprrr:::get_metric_field(NULL))
+
+  # metric_f1 also stores field attribute
+  metric_f1_with_field <- metric_f1(field = "answer")
+  expect_equal(dsprrr:::get_metric_field(metric_f1_with_field), "answer")
+
+  # metric_contains also stores field attribute
+  metric_contains_with_field <- metric_contains("test", field = "response")
+  expect_equal(
+    dsprrr:::get_metric_field(metric_contains_with_field),
+    "response"
+  )
+})
+
+test_that("format_trainset_as_demos uses explicit output_col parameter", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  # Trainset with non-standard output column name
+  trainset <- data.frame(
+    id = 1:2,
+    text = c("hello", "world"),
+    classification = c("positive", "negative"),
+    stringsAsFactors = FALSE
+  )
+
+  # Without output_col, would warn about multiple columns
+  # With explicit output_col, should use that column
+  demos <- dsprrr:::format_trainset_as_demos(
+    trainset,
+    sig,
+    output_col = "classification"
+  )
+  expect_length(demos, 2)
+  expect_equal(demos[[1]]$output, "positive")
+  expect_equal(demos[[2]]$output, "negative")
+})
+
+test_that("LabeledFewShot uses metric field for output column", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify text"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Trainset with non-standard column name "classification"
+  trainset <- data.frame(
+    id = 1:4,
+    text = c("great", "terrible", "ok", "amazing"),
+    classification = c("positive", "negative", "neutral", "positive"),
+    stringsAsFactors = FALSE
+  )
+
+  # Without metric field, would warn about multiple columns or use wrong one
+  # With metric field = "classification", should use that column
+  tp <- LabeledFewShot(
+    k = 2L,
+    seed = 42L,
+    metric = metric_exact_match(field = "classification")
+  )
+
+  # Should not warn about multiple output columns
+  optimized <- compile(tp, mod, trainset)
+
+  expect_true(inherits(optimized, "Module"))
+  expect_length(optimized$demos, 2)
+
+  # Verify demos use the classification column
+  demo_outputs <- vapply(optimized$demos, function(d) d$output, character(1))
+  expect_true(all(demo_outputs %in% trainset$classification))
+})
