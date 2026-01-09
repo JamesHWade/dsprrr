@@ -90,6 +90,51 @@ chat <- get_default_chat()
 clear_default_chat()
 ```
 
+### Scoped LLM Override
+
+```{r scoped-lm}
+#| eval: false
+# Temporarily use a different LLM for a block
+claude <- chat_claude()
+with_lm(claude, {
+  dsp("question -> answer", question = "What is 2+2?")
+  dsp("text -> summary", text = "Long article...")
+})
+
+# Function-scoped LLM (auto-cleans up on exit)
+my_analysis <- function(data) {
+  local_lm(chat_claude())
+  dsp("data -> summary", data = data)
+}
+```
+
+### Response Caching
+
+```{r caching}
+#| eval: false
+# Caching is enabled by default (memory + disk)
+# Configure cache behavior
+configure_cache(
+ enable_disk = TRUE,
+  disk_path = ".dsprrr_cache",
+  memory_max_entries = 1000L
+)
+
+# View cache performance
+cache_stats()
+#> Hit rate: 75%
+#> Memory entries: 42
+
+# Clear caches
+clear_cache("all")    # Both memory and disk
+clear_cache("memory") # Memory only
+
+# Disable caching globally via environment variable
+# DSPRRR_CACHE_ENABLED=false
+```
+
+**Tip**: Add `.dsprrr_cache/` to your `.gitignore` when using disk caching.
+
 ---
 
 ## API Quick Reference
@@ -104,6 +149,10 @@ clear_default_chat()
 | `run_dataset()` | Execute on data frame | tibble with outputs |
 | `evaluate()` | Compute metrics on test data | Evaluation result |
 | `compile()` | Optimize with teleprompter | Compiled module |
+| `with_lm()` | Scoped LLM override for code block | Block result |
+| `local_lm()` | Function-scoped LLM override | Previous LLM |
+| `configure_cache()` | Set cache options | Previous config |
+| `cache_stats()` | View cache hit rate and size | Stats list |
 | `get_last_prompt()` | Inspect last prompt sent | Prompt text |
 | `get_last_trace()` | Get trace from last `dsp()` call | Trace object |
 
