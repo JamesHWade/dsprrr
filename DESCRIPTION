@@ -21,7 +21,9 @@ URL: https://github.com/JamesHWade/dsprrr,
     https://jameshwade.github.io/dsprrr/
 BugReports: https://github.com/JamesHWade/dsprrr/issues
 Imports:
+    cachem,
     cli,
+    digest,
     ellmer,
     glue,
     jsonlite,
@@ -30,7 +32,8 @@ Imports:
     R6,
     rlang,
     S7,
-    tibble
+    tibble,
+    withr
 Suggests:
     lifecycle,
     callr,
@@ -50,11 +53,11 @@ Suggests:
     tune,
     vcr (>= 2.0.0),
     vitals,
-    withr,
     yardstick
-Collate: 
+Collate:
     'accessors.R'
     'async.R'
+    'cache.R'
     'chat-default.R'
     'compile.R'
     'dsp.R'
