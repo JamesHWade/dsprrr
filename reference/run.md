@@ -37,18 +37,17 @@ run(module, ...)
   .parallel
 
   :   Logical indicating whether to process batch inputs in parallel
-      (default FALSE). When `TRUE`, a fresh LLM client is created per
-      worker unless a custom `.llm` is supplied (in which case the call
-      falls back to sequential execution).
+      (default FALSE).
 
   .parallel_method
 
-  :   Character, either "mirai" (default) or "ellmer". "mirai" uses
-      mirai for multi-process parallelism (one LLM client per worker).
-      "ellmer" uses ellmer's
+  :   Character, either "ellmer" (default) or "mirai". "ellmer" uses
+      ellmer's
       [`parallel_chat_structured()`](https://ellmer.tidyverse.org/reference/parallel_chat.html)
       for native async HTTP parallelism (more efficient, single
-      process).
+      process). "mirai" uses mirai for multi-process parallelism
+      (requires `.llm = NULL` so each worker can create an independent
+      client).
 
   .progress
 

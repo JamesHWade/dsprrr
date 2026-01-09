@@ -118,16 +118,14 @@ Can be single values or vectors for batch processing. Additional parameters:</p>
 <dd><p>Logical indicating whether to print debug information</p></dd>
 
 <dt>.parallel</dt>
-<dd><p>Logical indicating whether to process batch inputs in parallel (default FALSE).
-When <code>TRUE</code>, a fresh LLM client is created per worker unless a custom
-<code>.llm</code> is supplied (in which case the call falls back to sequential
-execution).</p></dd>
+<dd><p>Logical indicating whether to process batch inputs in parallel (default FALSE).</p></dd>
 
 <dt>.parallel_method</dt>
-<dd><p>Character, either "mirai" (default) or "ellmer".
-"mirai" uses mirai for multi-process parallelism (one LLM client per worker).
+<dd><p>Character, either "ellmer" (default) or "mirai".
 "ellmer" uses ellmer's <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">parallel_chat_structured()</a></code> for native async HTTP
-parallelism (more efficient, single process).</p></dd>
+parallelism (more efficient, single process).
+"mirai" uses mirai for multi-process parallelism (requires <code>.llm = NULL</code>
+so each worker can create an independent client).</p></dd>
 
 <dt>.progress</dt>
 <dd><p>Logical indicating whether to show progress bar for batch processing (default TRUE)</p></dd>

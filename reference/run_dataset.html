@@ -95,6 +95,7 @@
 <span>  .llm <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  .parallel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .parallel_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ellmer"</span>, <span class="st">"mirai"</span><span class="op">)</span>,</span>
 <span>  .progress <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  .return_format <span class="op">=</span> <span class="st">"simple"</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -127,6 +128,13 @@
 
 <dt id="arg--parallel">.parallel<a class="anchor" aria-label="anchor" href="#arg--parallel"></a></dt>
 <dd><p>Logical whether to enable parallel processing</p></dd>
+
+
+<dt id="arg--parallel-method">.parallel_method<a class="anchor" aria-label="anchor" href="#arg--parallel-method"></a></dt>
+<dd><p>Character, either "ellmer" (default) or "mirai".
+"ellmer" uses ellmer's <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">parallel_chat_structured()</a></code> for native async HTTP
+parallelism (more efficient, single process).
+"mirai" uses mirai for multi-process parallelism (requires <code>.llm = NULL</code>).</p></dd>
 
 
 <dt id="arg--progress">.progress<a class="anchor" aria-label="anchor" href="#arg--progress"></a></dt>

@@ -14,6 +14,7 @@ run_dataset(
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
+  .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
   ...
@@ -47,6 +48,15 @@ run_dataset(
 - .parallel:
 
   Logical whether to enable parallel processing
+
+- .parallel_method:
+
+  Character, either "ellmer" (default) or "mirai". "ellmer" uses
+  ellmer's
+  [`parallel_chat_structured()`](https://ellmer.tidyverse.org/reference/parallel_chat.html)
+  for native async HTTP parallelism (more efficient, single process).
+  "mirai" uses mirai for multi-process parallelism (requires
+  `.llm = NULL`).
 
 - .progress:
 
