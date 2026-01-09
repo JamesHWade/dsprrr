@@ -46,6 +46,9 @@ Assertion <- S7::new_class(
         if (!is.character(value) || length(value) != 1) {
           return("message must be a single character string")
         }
+        if (nchar(value) == 0) {
+          return("message must not be empty")
+        }
         NULL
       }
     ),

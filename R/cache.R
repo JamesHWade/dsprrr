@@ -279,17 +279,59 @@ get_cache <- function() {
 
   # Disk tier
   if (config$enable_disk) {
+    disk_ok <- TRUE
+
     # Create directory if needed
     if (!dir.exists(config$disk_path)) {
-      dir.create(config$disk_path, recursive = TRUE, showWarnings = FALSE)
+      dir_created <- tryCatch(
+        {
+          dir.create(config$disk_path, recursive = TRUE, showWarnings = TRUE)
+          TRUE
+        },
+        warning = function(w) {
+          cli::cli_warn(c(
+            "Could not create cache directory: {.path {config$disk_path}}",
+            "i" = "Disk caching will be disabled for this session",
+            "x" = w$message
+          ))
+          FALSE
+        },
+        error = function(e) {
+          cli::cli_warn(c(
+            "Error creating cache directory: {.path {config$disk_path}}",
+            "i" = "Disk caching will be disabled for this session",
+            "x" = e$message
+          ))
+          FALSE
+        }
+      )
+      disk_ok <- dir_created
     }
 
-    .dsprrr_env$cache_disk <- cachem::cache_disk(
-      dir = config$disk_path,
-      max_size = config$disk_max_size,
-      max_age = config$disk_max_age
-    )
-    caches <- c(caches, list(.dsprrr_env$cache_disk))
+    if (disk_ok) {
+      disk_cache_result <- tryCatch(
+        {
+          cachem::cache_disk(
+            dir = config$disk_path,
+            max_size = config$disk_max_size,
+            max_age = config$disk_max_age
+          )
+        },
+        error = function(e) {
+          cli::cli_warn(c(
+            "Failed to create disk cache at {.path {config$disk_path}}",
+            "i" = "Disk caching will be disabled for this session",
+            "x" = e$message
+          ))
+          NULL
+        }
+      )
+
+      if (!is.null(disk_cache_result)) {
+        .dsprrr_env$cache_disk <- disk_cache_result
+        caches <- c(caches, list(.dsprrr_env$cache_disk))
+      }
+    }
   }
 
   # Create layered cache or use single tier
@@ -360,7 +402,16 @@ cache_key <- function(
         as.character(output_type)
       }
     },
-    error = function(e) as.character(class(output_type)[1])
+    error = function(e) {
+      fallback <- as.character(class(output_type)[1])
+      cli::cli_warn(c(
+        "Failed to serialize output_type for cache key",
+        "i" = "Using class name as fallback: {.val {fallback}}",
+        "i" = "This may cause cache collisions for different output types",
+        "x" = "Original error: {e$message}"
+      ))
+      fallback
+    }
   )
 
   # Build key components
@@ -410,7 +461,7 @@ increment_cache_stats <- function(type) {
 #' @param llm An ellmer Chat object.
 #' @param prompt Character. The prompt text.
 #' @param output_type An ellmer Type object.
-#' @param rollout_id Optional integer for cache bypass.
+#' @param rollout_id Optional value for cache partitioning (will be converted to character).
 #'
 #' @return The LLM response (from cache or fresh call).
 #'
@@ -432,7 +483,17 @@ cached_chat_structured <- function(
   }
 
   # Get model name for cache key
-  model <- tryCatch(llm$get_model(), error = function(e) "unknown")
+  model <- tryCatch(
+    llm$get_model(),
+    error = function(e) {
+      cli::cli_warn(c(
+        "Could not extract model name from LLM for cache key",
+        "i" = "Using 'unknown' as fallback - cache may be less effective",
+        "x" = "Error: {e$message}"
+      ))
+      "unknown"
+    }
+  )
 
   # Get temperature from LLM config if available
   temperature <- tryCatch(

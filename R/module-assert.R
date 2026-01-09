@@ -81,6 +81,14 @@ AssertModule <- R6::R6Class(
 
       on_failure <- match.arg(on_failure)
 
+      # Validate module's signature exists
+      if (is.null(module$signature)) {
+        cli::cli_abort(c(
+          "Wrapped module must have a valid signature",
+          "x" = "module$signature is NULL"
+        ))
+      }
+
       # Use module's signature
       super$initialize(
         signature = module$signature,
@@ -128,7 +136,7 @@ AssertModule <- R6::R6Class(
       best_metadata <- NULL
       best_chat <- NULL
       best_assertion_result <- NULL
-      total_tokens <- 0
+      total_tokens <- 0L
       total_cost <- 0
       current_batch <- batch
       previous_feedback <- NULL

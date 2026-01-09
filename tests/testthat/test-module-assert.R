@@ -548,3 +548,121 @@ test_that("AssertModule processes first row of data frame batch", {
   expect_equal(result$output[[1]]$answer, "Good answer")
   expect_equal(result$metadata[[1]]$n_attempts, 1)
 })
+
+# Test partial failure recovery (error then success)
+test_that("AssertModule recovers from error followed by assertion failure then success", {
+  # Scenario:
+  # 1. First attempt: module throws error
+  # 2. Second attempt: module succeeds but assertion fails
+  # 3. Third attempt: module succeeds and assertion passes
+  # This tests realistic transient failure scenarios
+
+  recovery_module <- R6::R6Class(
+    "RecoveryModule",
+    inherit = Module,
+    public = list(
+      call_count = 0,
+      initialize = function() {
+        super$initialize(
+          signature = signature("question -> answer"),
+          config = list()
+        )
+      },
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        self$call_count <- self$call_count + 1
+
+        # First call: throw error (simulating network timeout)
+        if (self$call_count == 1) {
+          stop("Simulated network timeout")
+        }
+
+        # Second call: succeed but return short answer (fails assertion)
+        if (self$call_count == 2) {
+          return(tibble::tibble(
+            output = list(list(answer = "short")),
+            chat = list(NULL),
+            metadata = list(list(
+              timestamp = Sys.time(),
+              model = "mock",
+              total_tokens = 10,
+              cost = 0.001
+            ))
+          ))
+        }
+
+        # Third call and beyond: succeed with good answer
+        tibble::tibble(
+          output = list(list(answer = "This is a good, detailed answer")),
+          chat = list(NULL),
+          metadata = list(list(
+            timestamp = Sys.time(),
+            model = "mock",
+            total_tokens = 10,
+            cost = 0.001
+          ))
+        )
+      },
+      reset_copy = function() self
+    )
+  )$new()
+
+  assertions <- list(
+    assert_output(
+      ~ nchar(.x$answer) > 10,
+      "Answer must be longer than 10 characters"
+    )
+  )
+
+  assert_mod <- with_assertions(recovery_module, assertions, max_retries = 3)
+
+  # Should warn about the first error, then succeed
+  expect_warning(
+    result <- assert_mod$forward(list(question = "test")),
+    "Attempt 1 failed"
+  )
+
+  # Should have called 3 times total
+  expect_equal(recovery_module$call_count, 3)
+
+  # Should return the successful result from third attempt
+  expect_equal(result$output[[1]]$answer, "This is a good, detailed answer")
+  expect_true(result$metadata[[1]]$assertions_passed)
+
+  # n_attempts only counts successful attempts (attempts that return results)
+  # The first attempt threw an error, so it doesn't count in the attempt list
+  expect_equal(result$metadata[[1]]$n_attempts, 2)
+
+  # Should accumulate tokens from successful attempts (2 and 3)
+  expect_equal(result$metadata[[1]]$total_tokens, 20L)
+  expect_equal(result$metadata[[1]]$total_cost, 0.002)
+})
+
+# Test that signature validation works
+test_that("AssertModule rejects module with NULL signature", {
+  # Create a mock module without proper signature
+  bad_module <- list(
+    signature = NULL,
+    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+      tibble::tibble(output = list(list(answer = "test")))
+    }
+  )
+  class(bad_module) <- c("BadModule", "Module", "R6")
+
+  assertions <- list(assert_output(~TRUE, "OK"))
+
+  expect_error(
+    with_assertions(bad_module, assertions),
+    "Wrapped module must have a valid signature"
+  )
+})
+
+# Test that empty message validation works
+test_that("Assertion rejects empty message", {
+  expect_error(
+    Assertion(
+      condition = function(x) TRUE,
+      message = ""
+    ),
+    "message must not be empty"
+  )
+})

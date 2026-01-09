@@ -340,3 +340,152 @@ test_that("cached_chat_structured bypasses cache when disabled", {
   expect_equal(call_count, 2)
   expect_equal(result2$answer, "response 2")
 })
+
+# Disk cache integration tests
+
+test_that("disk cache persists data across cache resets", {
+  local_reset_cache()
+
+  tmp_dir <- tempfile("cache_test_")
+  withr::defer(unlink(tmp_dir, recursive = TRUE))
+
+  # Configure with only disk cache
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = tmp_dir
+  )
+
+  cache <- dsprrr:::get_cache()
+  expect_false(is.null(cache))
+
+  # Store a value
+  cache$set("persist_key", list(answer = "persisted value"))
+
+  # Verify it's there
+  result <- cache$get("persist_key")
+  expect_false(cachem::is.key_missing(result))
+  expect_equal(result$answer, "persisted value")
+
+  # Reset memory references (simulating session refresh)
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  pkg_env$cache <- NULL
+  pkg_env$cache_disk <- NULL
+
+  # Reconfigure with same disk path
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = tmp_dir
+  )
+
+  # Get new cache handle
+  cache2 <- dsprrr:::get_cache()
+
+  # Data should still be there
+
+  result2 <- cache2$get("persist_key")
+  expect_false(cachem::is.key_missing(result2))
+  expect_equal(result2$answer, "persisted value")
+})
+
+test_that("layered cache uses both memory and disk tiers", {
+  local_reset_cache()
+
+  tmp_dir <- tempfile("cache_test_layered_")
+  withr::defer(unlink(tmp_dir, recursive = TRUE))
+
+  # Configure with both tiers
+  configure_cache(enable_memory = TRUE, enable_disk = TRUE, disk_path = tmp_dir)
+
+  cache <- dsprrr:::get_cache()
+  expect_false(is.null(cache))
+
+  # Store a value
+  cache$set("layered_key", list(answer = "layered value"))
+
+  # Should be in memory cache
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  expect_false(is.null(pkg_env$cache_memory))
+  mem_result <- pkg_env$cache_memory$get("layered_key")
+  expect_false(cachem::is.key_missing(mem_result))
+
+  # Should also be in disk cache
+  expect_false(is.null(pkg_env$cache_disk))
+  disk_result <- pkg_env$cache_disk$get("layered_key")
+  expect_false(cachem::is.key_missing(disk_result))
+})
+
+test_that("disk cache creates directory when it doesn't exist", {
+  local_reset_cache()
+
+  # Use a nested path that doesn't exist
+  tmp_dir <- file.path(tempdir(), "dsprrr_test", "nested", "cache")
+  withr::defer(unlink(file.path(tempdir(), "dsprrr_test"), recursive = TRUE))
+
+  # Directory should not exist yet
+  expect_false(dir.exists(tmp_dir))
+
+  # Configure disk cache - should create directory
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = tmp_dir
+  )
+
+  cache <- dsprrr:::get_cache()
+
+  # If we got a cache, directory should exist now
+  if (!is.null(cache)) {
+    expect_true(dir.exists(tmp_dir))
+  }
+})
+
+test_that("different mock LLMs don't share cache entries", {
+  local_reset_cache()
+
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+
+  # Create two mock LLMs with same "unknown" model behavior
+  mock_llm1 <- list(
+    get_model = function() stop("no model"),
+    chat_structured = function(prompt, type, echo = "none") {
+      list(answer = "response from LLM 1")
+    }
+  )
+  class(mock_llm1) <- "Chat"
+
+  mock_llm2 <- list(
+    get_model = function() stop("no model"),
+    chat_structured = function(prompt, type, echo = "none") {
+      list(answer = "response from LLM 2")
+    }
+  )
+  class(mock_llm2) <- "Chat"
+
+  output_type <- ellmer::type_object(answer = ellmer::type_string())
+
+  # Call with first LLM (expect warning about model extraction)
+  result1 <- suppressWarnings(
+    dsprrr:::cached_chat_structured(
+      llm = mock_llm1,
+      prompt = "test prompt",
+      output_type = output_type
+    )
+  )
+
+  expect_equal(result1$answer, "response from LLM 1")
+
+  # Call with second LLM - should NOT get cached result from first
+  result2 <- suppressWarnings(
+    dsprrr:::cached_chat_structured(
+      llm = mock_llm2,
+      prompt = "test prompt",
+      output_type = output_type
+    )
+  )
+
+  # Different LLM objects should not share cache
+  expect_equal(result2$answer, "response from LLM 2")
+})
