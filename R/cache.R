@@ -289,6 +289,14 @@ get_cache <- function() {
           TRUE
         },
         warning = function(w) {
+          # Check if directory exists despite the warning (race condition case)
+          # Another process may have created it between our check and mkdir
+          if (dir.exists(config$disk_path)) {
+            # Directory exists now - likely "already exists" warning from race
+            # This is benign, proceed with disk caching
+            return(TRUE)
+          }
+          # Directory still doesn't exist - this is a real problem
           cli::cli_warn(c(
             "Could not create cache directory: {.path {config$disk_path}}",
             "i" = "Disk caching will be disabled for this session",
