@@ -627,3 +627,91 @@ test_that("detect_output_source handles various trainset formats", {
   )
   expect_equal(result7$type, "not_found")
 })
+
+test_that("get_metric_field warns for non-function input", {
+  # Passing wrong type should warn and return NULL
+  expect_warning(
+    result <- dsprrr:::get_metric_field("not a function"),
+    "Expected metric to be a function"
+  )
+  expect_null(result)
+
+  # List should also warn
+  expect_warning(
+    result2 <- dsprrr:::get_metric_field(list(field = "test")),
+    "Expected metric to be a function"
+  )
+  expect_null(result2)
+})
+
+test_that("format_trainset_as_demos validates output_col type", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  trainset <- data.frame(text = "hello", output = "positive")
+
+  # Passing numeric should error
+
+  expect_error(
+    dsprrr:::format_trainset_as_demos(trainset, sig, output_col = 1),
+    "must be a character vector or NULL"
+  )
+
+  # Passing list should error
+  expect_error(
+    dsprrr:::format_trainset_as_demos(
+      trainset,
+      sig,
+      output_col = list("output")
+    ),
+    "must be a character vector or NULL"
+  )
+})
+
+test_that("detect_output_source warns when field not found", {
+  input_names <- "text"
+
+  # Single field not found should warn
+  trainset <- data.frame(text = "a", other = "b")
+  expect_warning(
+    result <- dsprrr:::detect_output_source(
+      trainset,
+      "nonexistent",
+      input_names
+    ),
+    "Could not find output field"
+  )
+  expect_equal(result$type, "not_found")
+})
+
+test_that("detect_output_source warns when multiple fields not found", {
+  input_names <- "text"
+
+  # Multiple fields not all found should warn
+  trainset <- tibble::tibble(
+    text = "a",
+    output = list(list(classification = "pos"))
+  )
+  expect_warning(
+    result <- dsprrr:::detect_output_source(
+      trainset,
+      c("classification", "missing_field"),
+      input_names
+    ),
+    "Could not find all requested fields"
+  )
+  expect_equal(result$type, "not_found")
+})
+
+test_that("detect_output_source warns when no output column found", {
+  # Trainset with only input column
+  trainset <- data.frame(text = "a")
+  expect_warning(
+    result <- dsprrr:::detect_output_source(trainset, NULL, "text"),
+    "No output column found"
+  )
+  expect_equal(result$type, "none")
+})

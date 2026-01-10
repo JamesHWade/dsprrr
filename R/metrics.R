@@ -343,6 +343,14 @@ get_metric_field <- function(metric) {
   if (is.null(metric)) {
     return(NULL)
   }
+  if (!is.function(metric)) {
+    cli::cli_warn(c(
+      "Expected metric to be a function",
+      "i" = "Got: {.cls {class(metric)}}",
+      "!" = "Falling back to auto-detection for output column"
+    ))
+    return(NULL)
+  }
   attr(metric, "field")
 }
 

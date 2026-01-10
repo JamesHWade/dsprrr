@@ -478,7 +478,13 @@ detect_output_source <- function(trainset, fields, input_names) {
         }
       }
     }
-    # Fields not found
+    # Fields not found - warn the user
+    cli::cli_warn(c(
+      "Could not find all requested fields in trainset",
+      "i" = "Requested fields: {.val {fields}}",
+      "i" = "Available columns: {.val {names(trainset)}}",
+      "!" = "Demo outputs will be set to NULL"
+    ))
     return(list(type = "not_found", fields = fields))
   }
 
@@ -505,7 +511,12 @@ detect_output_source <- function(trainset, fields, input_names) {
         }
       }
     }
-    # Field not found - will return NULL for outputs
+    # Field not found - warn the user
+    cli::cli_warn(c(
+      "Could not find output field {.val {field}} in trainset",
+      "i" = "Available columns: {.val {names(trainset)}}",
+      "!" = "Demo outputs will be set to NULL"
+    ))
     return(list(type = "not_found", field = field))
   }
 
@@ -537,6 +548,13 @@ detect_output_source <- function(trainset, fields, input_names) {
     return(list(type = "column", name = remaining_cols[1]))
   }
 
+  # No output column found at all - this is likely a configuration error
+  cli::cli_warn(c(
+    "No output column found in trainset",
+    "i" = "Trainset columns: {.val {names(trainset)}}",
+    "i" = "Input columns (excluded): {.val {input_names}}",
+    "!" = "All demos will have NULL output"
+  ))
   list(type = "none")
 }
 
@@ -552,6 +570,14 @@ detect_output_source <- function(trainset, fields, input_names) {
 #'   Typically extracted from the metric's field attribute via `get_metric_field()`.
 #' @noRd
 format_trainset_as_demos <- function(trainset, signature, output_col = NULL) {
+  # Validate output_col parameter
+  if (!is.null(output_col) && !is.character(output_col)) {
+    cli::cli_abort(c(
+      "{.arg output_col} must be a character vector or NULL",
+      "x" = "Got: {.cls {class(output_col)}}"
+    ))
+  }
+
   demos <- list()
 
   # Get input names from signature
@@ -597,7 +623,13 @@ format_trainset_as_demos <- function(trainset, signature, output_col = NULL) {
       },
       "not_found" = NULL,
       "none" = NULL,
-      NULL
+      {
+        cli::cli_warn(c(
+          "Unknown output source type: {.val {output_source$type}}",
+          "!" = "Demo output set to NULL"
+        ))
+        NULL
+      }
     )
     demos[[i]] <- list(
       inputs = demo_inputs,
