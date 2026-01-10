@@ -240,19 +240,44 @@ evaluate.Module <- function(
     }
 
     # Compute mean score per example across epochs
+    # Mark as NA if ANY epoch failed (conservative approach to not hide intermittent failures)
     scores <- vapply(
       seq_len(nrow(data)),
       function(i) {
         epoch_scores_i <- vapply(all_epoch_scores, function(s) s[i], numeric(1))
-        mean(epoch_scores_i, na.rm = TRUE)
+        # If any epoch failed, mark this row as failed
+        if (any(is.na(epoch_scores_i))) {
+          NA_real_
+        } else {
+          mean(epoch_scores_i, na.rm = TRUE)
+        }
       },
       numeric(1)
     )
 
+    # Aggregate errors across all epochs
+    # A row has an error if it failed in ANY epoch
+    all_errors <- character(nrow(data))
+    for (i in seq_len(nrow(data))) {
+      epoch_errors_i <- character(0)
+      for (epoch_idx in seq_along(epoch_results)) {
+        err <- epoch_results[[epoch_idx]]$errors[i]
+        if (!is.na(err) && err != "") {
+          epoch_errors_i <- c(
+            epoch_errors_i,
+            paste0("Epoch ", epoch_idx, ": ", err)
+          )
+        }
+      }
+      if (length(epoch_errors_i) > 0) {
+        all_errors[i] <- paste(epoch_errors_i, collapse = "; ")
+      }
+    }
+    errors <- all_errors
+
     # Use last epoch's predictions and metadata for the result
     predictions <- epoch_results[[epochs]]$predictions
     metadata <- epoch_results[[epochs]]$metadata
-    errors <- epoch_results[[epochs]]$errors
     evaluated <- epoch_results[[epochs]]$evaluated
   }
 

@@ -407,3 +407,57 @@ test_that("eval_program() validates epochs parameter", {
     "must be a positive integer"
   )
 })
+
+test_that("evaluate() counts intermittent metric failures correctly", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  # Mock LLM that returns consistent output
+  mock_llm <- list(chat_structured = function(...) "4")
+
+  dataset <- tibble::tibble(
+    question = c("Q1", "Q2", "Q3"),
+    answer = c("4", "4", "4")
+  )
+
+  # Metric that fails intermittently for specific rows/epochs
+  # Row 1: fails in epoch 1 only
+  # Row 2: succeeds in all epochs
+  # Row 3: fails in epoch 2 only
+  call_count <- 0
+  intermittent_metric <- function(prediction, expected_row) {
+    call_count <<- call_count + 1
+    # Pattern: epoch 1 (calls 1-3), epoch 2 (calls 4-6), epoch 3 (calls 7-9)
+    # Fail on call 1 (row 1, epoch 1) and call 6 (row 3, epoch 2)
+    if (call_count %in% c(1, 6)) {
+      stop("Intermittent failure")
+    }
+    identical(prediction, expected_row$answer)
+  }
+
+  result <- suppressWarnings(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = intermittent_metric,
+      .llm = mock_llm,
+      .progress = FALSE,
+      epochs = 3L
+    )
+  )
+
+  # Should mark rows 1 and 3 as errors (intermittent failures)
+  # Row 2 should succeed (no failures)
+  expect_equal(result$n_errors, 2L)
+  expect_equal(result$n_evaluated, 1L)
+
+  # Scores should have NA for rows 1 and 3, valid for row 2
+  expect_true(is.na(result$scores[1]))
+  expect_false(is.na(result$scores[2]))
+  expect_true(is.na(result$scores[3]))
+
+  # Errors should contain information from both epochs
+  expect_true(length(result$errors) > 0)
+  expect_true(any(grepl("Epoch 1", result$errors)))
+  expect_true(any(grepl("Epoch 2", result$errors)))
+})
