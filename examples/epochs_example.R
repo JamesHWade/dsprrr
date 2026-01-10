@@ -17,7 +17,7 @@ dataset <- tibble(
     "What color is the sky?"
   ),
   answer = c("4", "Paris", "blue")
-  )
+)
 
 # Metric to check correctness
 metric <- metric_exact_match()
@@ -45,16 +45,20 @@ print(result_multi)
 # Access epoch-specific results
 cat("\nEpoch-by-epoch scores:\n")
 for (i in seq_along(result_multi$epoch_scores)) {
-  cat(sprintf("Epoch %d: Mean = %.3f\n",
-              i,
-              mean(result_multi$epoch_scores[[i]], na.rm = TRUE)))
+  cat(sprintf(
+    "Epoch %d: Mean = %.3f\n",
+    i,
+    mean(result_multi$epoch_scores[[i]], na.rm = TRUE)
+  ))
 }
 
 cat(sprintf("\nOverall Mean: %.3f\n", result_multi$mean_score))
 cat(sprintf("Standard Deviation: %.3f\n", result_multi$score_std))
-cat(sprintf("95%% CI: [%.3f, %.3f]\n",
-            result_multi$ci_95[1],
-            result_multi$ci_95[2]))
+cat(sprintf(
+  "95%% CI: [%.3f, %.3f]\n",
+  result_multi$ci_95[1],
+  result_multi$ci_95[2]
+))
 
 # Use epochs with eval_program for optimization
 ctrl <- optimizer_control(progress = TRUE)

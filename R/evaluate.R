@@ -132,15 +132,27 @@ evaluate.Module <- function(
       cli::cli_alert_info("Running epoch {epoch}/{epochs}")
     }
 
-    # Execute module
-    evaluated <- run_dataset(
-      module,
-      data,
-      .llm = .llm,
-      .parallel = parallel_allowed,
-      .progress = .progress && epochs == 1, # Only show dataset progress for single epoch
-      .return_format = "structured",
-      ...
+    # Execute module with error handling
+    evaluated <- tryCatch(
+      {
+        run_dataset(
+          module,
+          data,
+          .llm = .llm,
+          .parallel = parallel_allowed,
+          .progress = .progress && epochs == 1,
+          .return_format = "structured",
+          ...
+        )
+      },
+      error = function(e) {
+        cli::cli_abort(c(
+          "Epoch {epoch}/{epochs} failed during module execution",
+          "x" = conditionMessage(e),
+          "i" = "Successfully completed {epoch - 1} epoch(s) before failure",
+          "i" = "Consider reducing dataset size or disabling parallel processing"
+        ))
+      }
     )
 
     predictions <- evaluated$result
@@ -173,8 +185,19 @@ evaluate.Module <- function(
         },
         error = function(e) {
           errors[i] <<- e$message
+
+          # Include epoch context in error message
+          epoch_context <- if (epochs > 1) {
+            paste0(" (epoch ", epoch, "/", epochs, ")")
+          } else {
+            ""
+          }
+
           cli::cli_warn(
-            c("Metric evaluation failed for row {i}", "x" = e$message),
+            c(
+              "Metric evaluation failed for row {i}{epoch_context}",
+              "x" = e$message
+            ),
             class = "dsprrr_metric_error"
           )
           NA_real_
@@ -202,8 +225,19 @@ evaluate.Module <- function(
     errors <- epoch_results[[1]]$errors
     evaluated <- epoch_results[[1]]$evaluated
   } else {
-    # Aggregate scores across epochs
+    # Extract scores from all epochs (computed once, reused later)
     all_epoch_scores <- lapply(epoch_results, function(x) x$scores)
+
+    # Validate all epochs have same length
+    epoch_lengths <- vapply(all_epoch_scores, length, integer(1))
+    if (length(unique(epoch_lengths)) > 1) {
+      cli::cli_abort(c(
+        "Epochs produced inconsistent result lengths",
+        "x" = "Expected all epochs to evaluate {nrow(data)} examples",
+        "i" = "Epoch lengths: {paste(epoch_lengths, collapse = ', ')}",
+        "i" = "This indicates a bug in run_dataset() or data corruption"
+      ))
+    }
 
     # Compute mean score per example across epochs
     scores <- vapply(
@@ -238,8 +272,7 @@ evaluate.Module <- function(
 
   # Add epoch-specific statistics when epochs > 1
   if (epochs > 1) {
-    # Extract all epoch scores
-    all_epoch_scores <- lapply(epoch_results, function(x) x$scores)
+    # Use all_epoch_scores already computed during aggregation
     result$epoch_scores <- all_epoch_scores
 
     # Compute mean score for each epoch
@@ -249,19 +282,65 @@ evaluate.Module <- function(
       numeric(1)
     )
 
-    # Standard deviation of epoch means
-    result$score_std <- stats::sd(epoch_means, na.rm = TRUE)
+    # Standard deviation of epoch means with validation
+    score_std_raw <- stats::sd(epoch_means, na.rm = TRUE)
 
-    # 95% confidence interval for the mean
-    # Use t-distribution for small sample sizes
-    if (length(epoch_means) > 1 && !all(is.na(epoch_means))) {
+    # Validate statistical results
+    if (is.nan(score_std_raw) || is.infinite(score_std_raw)) {
+      cli::cli_warn(c(
+        "Invalid standard deviation computed across epochs",
+        "x" = "Got {score_std_raw}",
+        "i" = "Epoch means: {paste(round(epoch_means, 4), collapse = ', ')}",
+        "i" = "This may indicate metric computation errors"
+      ))
+      result$score_std <- NA_real_
+    } else {
+      result$score_std <- score_std_raw
+    }
+
+    # 95% confidence interval using t-distribution
+    # Appropriate for any sample size, especially small n
+    if (
+      length(epoch_means) > 1 &&
+        !all(is.na(epoch_means)) &&
+        !is.na(result$score_std)
+    ) {
       se <- result$score_std / sqrt(length(epoch_means))
-      t_crit <- stats::qt(0.975, df = length(epoch_means) - 1)
-      margin <- t_crit * se
-      result$ci_95 <- c(
-        lower = mean(epoch_means, na.rm = TRUE) - margin,
-        upper = mean(epoch_means, na.rm = TRUE) + margin
-      )
+
+      # Validate SE
+      if (is.nan(se) || is.infinite(se)) {
+        cli::cli_warn(c(
+          "Invalid standard error: {se}",
+          "i" = "Cannot compute valid confidence intervals"
+        ))
+        result$ci_95 <- c(lower = NA_real_, upper = NA_real_)
+      } else {
+        df <- length(epoch_means) - 1
+
+        # Warn about low degrees of freedom
+        if (df < 3) {
+          cli::cli_warn(c(
+            "Confidence intervals computed with only {epochs} epochs (df={df})",
+            "i" = "Consider using epochs >= 5 for reliable statistical inference",
+            "i" = "Current CI may be extremely wide and unreliable"
+          ))
+        }
+
+        t_crit <- stats::qt(0.975, df = df)
+        margin <- t_crit * se
+        result$ci_95 <- c(
+          lower = mean(epoch_means, na.rm = TRUE) - margin,
+          upper = mean(epoch_means, na.rm = TRUE) + margin
+        )
+
+        # Validate final CI
+        if (any(is.nan(result$ci_95)) || any(is.infinite(result$ci_95))) {
+          cli::cli_warn(
+            "Invalid confidence interval computed: [{result$ci_95[1]}, {result$ci_95[2]}]"
+          )
+          result$ci_95 <- c(lower = NA_real_, upper = NA_real_)
+        }
+      }
     } else {
       result$ci_95 <- c(lower = NA_real_, upper = NA_real_)
     }

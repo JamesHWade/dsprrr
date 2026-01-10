@@ -192,9 +192,9 @@ EvalResult <- S7::new_class(
 #' @param ... Additional arguments passed to [evaluate()].
 #'
 #' @return An EvalResult object containing:
-#'   - `examples`: tibble with per-example inputs, expected, predicted, score, error, latency
+#'   - `examples`: tibble with per-example row_id, score, error, predicted, and input columns (prefixed with input_*)
 #'   - `mean_score`: mean score across successful evaluations
-#'   - `std_error`: standard error of the mean
+#'   - `std_error`: standard error of per-example scores (SD / sqrt(n))
 #'   - `n_evaluated`: number of successful evaluations
 #'   - `n_errors`: number of failed evaluations
 #'   - `total_tokens`: total tokens used
@@ -249,6 +249,16 @@ eval_program <- function(
 
   if (!is.function(metric)) {
     cli::cli_abort("{.arg metric} must be a function")
+  }
+
+  # Validate epochs
+  epochs <- as.integer(epochs)
+  if (length(epochs) != 1 || epochs < 1) {
+    cli::cli_abort(c(
+      "{.arg epochs} must be a positive integer",
+      "x" = "Got {epochs}",
+      "i" = "Use epochs = 1L for single evaluation or epochs > 1 for multiple runs"
+    ))
   }
 
   # Use default control if not provided

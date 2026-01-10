@@ -33,9 +33,9 @@ significance. Defaults to 1L. When > 1, computes std and confidence intervals.}
 \value{
 An EvalResult object containing:
 \itemize{
-\item \code{examples}: tibble with per-example inputs, expected, predicted, score, error, latency
+\item \code{examples}: tibble with per-example row_id, score, error, predicted, and input columns (prefixed with input_*)
 \item \code{mean_score}: mean score across successful evaluations
-\item \code{std_error}: standard error of the mean
+\item \code{std_error}: standard error of per-example scores (SD / sqrt(n))
 \item \code{n_evaluated}: number of successful evaluations
 \item \code{n_errors}: number of failed evaluations
 \item \code{total_tokens}: total tokens used

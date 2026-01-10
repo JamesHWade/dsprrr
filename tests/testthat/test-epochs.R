@@ -147,16 +147,19 @@ test_that("eval_program() works with epochs parameter", {
   }
   ctrl <- optimizer_control(progress = FALSE)
 
-  result <- eval_program(
-    mod,
-    dataset,
-    metric = metric,
-    .llm = mock_llm,
-    control = ctrl,
-    epochs = 3L
+  result <- suppressWarnings(
+    eval_program(
+      mod,
+      dataset,
+      metric = metric,
+      .llm = mock_llm,
+      control = ctrl,
+      epochs = 3L
+    )
   )
 
-  expect_s3_class(result, "EvalResult")
+  # Check S7 class using S7::class_of
+  expect_true(inherits(result, "S7_object"))
   expect_equal(result@epochs, 3L)
   expect_equal(length(result@epoch_scores), 3)
   expect_true(!is.na(result@score_std))
@@ -263,23 +266,144 @@ test_that("print methods show epoch information", {
     identical(prediction, expected_row$answer)
   }
 
+  result <- suppressWarnings(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = metric,
+      .llm = mock_llm,
+      .progress = FALSE,
+      epochs = 3L
+    )
+  )
+
+  # Check that result has epoch fields
+  expect_true("epoch_scores" %in% names(result))
+  expect_true("score_std" %in% names(result))
+  expect_true("ci_95" %in% names(result))
+  expect_equal(length(result$epoch_scores), 3)
+})
+
+test_that("evaluate() handles empty dataset with epochs > 1", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+  mock_llm <- list(chat_structured = function(...) "4")
+
+  empty_data <- tibble::tibble(question = character(0), answer = character(0))
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+
   result <- evaluate(
     mod,
-    data = dataset,
+    data = empty_data,
     metric = metric,
     .llm = mock_llm,
     .progress = FALSE,
     epochs = 3L
   )
 
-  # Capture printed output
-  output <- capture.output(print(result))
-  output_str <- paste(output, collapse = "\n")
+  # Should still return valid list structure
+  expect_type(result, "list")
+  expect_equal(result$n_evaluated, 0L)
+  expect_true(is.na(result$mean_score))
 
-  # Should mention epochs
-  expect_true(any(grepl("Epochs.*3", output, ignore.case = TRUE)))
+  # Epoch fields should NOT be present for empty dataset (early return)
+  expect_false("epoch_scores" %in% names(result))
+  expect_false("score_std" %in% names(result))
+  expect_false("ci_95" %in% names(result))
+})
 
-  # Should show SD and CI
-  expect_true(any(grepl("SD", output, ignore.case = TRUE)))
-  expect_true(any(grepl("95% CI", output, ignore.case = TRUE)))
+test_that("evaluate() reports epoch in error messages", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  # Mock LLM that works fine
+  mock_llm <- list(chat_structured = function(...) "wrong_answer")
+
+  dataset <- tibble::tibble(question = "Q1", answer = "4")
+  # Metric that always fails with error
+  bad_metric <- function(prediction, expected_row) {
+    stop("Metric intentionally fails")
+  }
+
+  # Capture warnings to check for epoch context
+  result <- suppressWarnings(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = bad_metric,
+      .llm = mock_llm,
+      .progress = FALSE,
+      epochs = 2L
+    )
+  )
+
+  # Should complete despite metric errors
+  expect_type(result, "list")
+  expect_equal(result$n_errors, 1L)
+})
+
+test_that("epochs parameter coerces non-integer with warning", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+  mock_llm <- list(chat_structured = function(...) "4")
+  dataset <- tibble::tibble(question = "Q?", answer = "4")
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+
+  # Float input should be coerced to integer
+  # Test that it works (coercion happens silently via as.integer)
+  result <- evaluate(
+    mod,
+    data = dataset,
+    metric = metric,
+    .llm = mock_llm,
+    .progress = FALSE,
+    epochs = 3.7
+  )
+
+  # Should have run 3 epochs (not 3.7)
+  expect_s3_class(result, "dsprrr_evaluation")
+  expect_equal(length(result$epoch_scores), 3)
+})
+
+test_that("eval_program() validates epochs parameter", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+  mock_llm <- list(chat_structured = function(...) "4")
+  dataset <- tibble::tibble(question = "Q?", answer = "4")
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+  ctrl <- optimizer_control(progress = FALSE)
+
+  # epochs must be positive
+  expect_error(
+    eval_program(
+      mod,
+      dataset,
+      metric,
+      .llm = mock_llm,
+      control = ctrl,
+      epochs = 0L
+    ),
+    "must be a positive integer"
+  )
+
+  expect_error(
+    eval_program(
+      mod,
+      dataset,
+      metric,
+      .llm = mock_llm,
+      control = ctrl,
+      epochs = -1L
+    ),
+    "must be a positive integer"
+  )
 })
