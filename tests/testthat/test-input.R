@@ -47,24 +47,24 @@ test_that("input() defaults to string when type is NULL", {
   expect_equal(inp2$type@type, "string")
 })
 
-test_that("input() maintains backward compatibility with S7 classes", {
-  # S7 class inputs should still work
+test_that("input() converts S7 classes to ellmer types", {
+  # S7 class inputs should be converted to ellmer types
   inp1 <- input("text", S7::class_character)
   expect_true(is_dsprrr_input(inp1))
-  expect_identical(inp1$class, S7::class_character)
   expect_true(inherits(inp1$type, "ellmer::TypeBasic"))
+  expect_equal(inp1$type@type, "string")
 
   inp2 <- input("count", S7::class_integer)
-  expect_identical(inp2$class, S7::class_integer)
   expect_true(inherits(inp2$type, "ellmer::TypeBasic"))
+  expect_equal(inp2$type@type, "integer")
 
   inp3 <- input("value", S7::class_double)
-  expect_identical(inp3$class, S7::class_double)
   expect_true(inherits(inp3$type, "ellmer::TypeBasic"))
+  expect_equal(inp3$type@type, "number")
 
   inp4 <- input("flag", S7::class_logical)
-  expect_identical(inp4$class, S7::class_logical)
   expect_true(inherits(inp4$type, "ellmer::TypeBasic"))
+  expect_equal(inp4$type@type, "boolean")
 })
 
 test_that("typed input helpers work correctly", {
@@ -149,6 +149,67 @@ test_that("type_to_s7_class converts correctly", {
   # Object -> list
   s7_7 <- type_to_s7_class(ellmer::type_object())
   expect_identical(s7_7, S7::class_list)
+})
+
+test_that("format_ellmer_type formats basic types", {
+  # String
+  expect_equal(format_ellmer_type(ellmer::type_string()), "string")
+
+  # Number
+  expect_equal(format_ellmer_type(ellmer::type_number()), "number")
+
+  # Integer
+  expect_equal(format_ellmer_type(ellmer::type_integer()), "integer")
+
+  # Boolean
+  expect_equal(format_ellmer_type(ellmer::type_boolean()), "boolean")
+
+  # NULL
+  expect_equal(format_ellmer_type(NULL), "any")
+})
+
+test_that("format_ellmer_type formats enum types", {
+  # Simple enum
+  enum_type <- ellmer::type_enum(values = c("a", "b", "c"))
+  expect_equal(format_ellmer_type(enum_type), "enum(a, b, c)")
+
+  # Enum with more values (truncates in non-verbose mode)
+  long_enum <- ellmer::type_enum(values = c("a", "b", "c", "d", "e", "f", "g"))
+  result <- format_ellmer_type(long_enum, verbose = FALSE)
+  expect_match(result, "enum\\(a, b, c, \\.\\.\\. \\+4 more\\)")
+
+  # Verbose shows all
+  result_verbose <- format_ellmer_type(long_enum, verbose = TRUE)
+  expect_equal(result_verbose, "enum(a, b, c, d, e, f, g)")
+})
+
+test_that("format_ellmer_type formats array types", {
+  # Array of strings
+  arr_type <- ellmer::type_array(items = ellmer::type_string())
+  expect_equal(format_ellmer_type(arr_type), "array(string)")
+
+  # Array of numbers
+  arr_num <- ellmer::type_array(items = ellmer::type_number())
+  expect_equal(format_ellmer_type(arr_num), "array(number)")
+})
+
+test_that("format_ellmer_type formats object types", {
+  # Empty object
+  empty_obj <- ellmer::type_object()
+  expect_equal(format_ellmer_type(empty_obj), "object")
+
+  # Object with fields (non-verbose)
+  obj_type <- ellmer::type_object(
+    name = ellmer::type_string(),
+    age = ellmer::type_number()
+  )
+  expect_equal(format_ellmer_type(obj_type, verbose = FALSE), "object(2 fields)")
+
+  # Object with fields (verbose)
+  result <- format_ellmer_type(obj_type, verbose = TRUE)
+  expect_match(result, "object\\(")
+  expect_match(result, "name: string")
+  expect_match(result, "age: number")
 })
 
 test_that("input() works in signature creation", {

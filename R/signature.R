@@ -66,13 +66,19 @@ print_signature <- function(x, ...) {
     for (i in seq_along(x@inputs)) {
       inp <- x@inputs[[i]]
       name <- if (!is.null(inp$name)) inp$name else paste0("input_", i)
-      desc <- if (!is.null(inp$description)) inp$description else ""
-      cli::cli_li("{.field {name}}: {desc}")
+      type_str <- format_ellmer_type(inp$type)
+      desc <- if (!is.null(inp$description) && nchar(inp$description) > 0) {
+        paste0(" - ", inp$description)
+      } else {
+        ""
+      }
+      cli::cli_li("{.field {name}}: {.val {type_str}}{desc}")
     }
   }
 
   cli::cli_h3("Output")
-  cli::cli_text("Type: {.cls {class(x@output_type)[1]}}")
+  output_details <- format_ellmer_type(x@output_type, verbose = TRUE)
+  cli::cli_text("Type: {.val {output_details}}")
 
   if (nchar(x@instructions) > 0) {
     cli::cli_h3("Instructions")
@@ -80,6 +86,76 @@ print_signature <- function(x, ...) {
   }
 
   invisible(x)
+}
+
+#' Format an ellmer type for display
+#' @param type An ellmer type object
+#' @param verbose If TRUE, show more details (field names for objects, enum values)
+#' @return A character string describing the type
+#' @noRd
+format_ellmer_type <- function(type, verbose = FALSE) {
+  if (is.null(type)) {
+    return("any")
+  }
+
+  # Basic types (string, number, integer, boolean)
+  if (inherits(type, "ellmer::TypeBasic")) {
+    return(type@type)
+  }
+
+  # Enum types
+  if (inherits(type, "ellmer::TypeEnum")) {
+    values <- type@values
+    if (length(values) <= 5 || verbose) {
+      return(paste0("enum(", paste(values, collapse = ", "), ")"))
+    } else {
+      return(paste0(
+        "enum(",
+        paste(values[1:3], collapse = ", "),
+        ", ... +",
+        length(values) - 3,
+        " more)"
+      ))
+    }
+  }
+
+  # Array types
+  if (inherits(type, "ellmer::TypeArray")) {
+    items_type <- format_ellmer_type(type@items, verbose = FALSE)
+    return(paste0("array(", items_type, ")"))
+  }
+
+  # Object types
+  if (inherits(type, "ellmer::TypeObject")) {
+    props <- type@properties
+    if (length(props) == 0) {
+      return("object")
+    }
+
+    if (verbose) {
+      field_strs <- vapply(names(props), function(name) {
+        field_type <- format_ellmer_type(props[[name]], verbose = FALSE)
+        paste0(name, ": ", field_type)
+      }, character(1))
+
+      if (length(field_strs) <= 5) {
+        return(paste0("object(", paste(field_strs, collapse = ", "), ")"))
+      } else {
+        return(paste0(
+          "object(",
+          paste(field_strs[1:3], collapse = ", "),
+          ", ... +",
+          length(field_strs) - 3,
+          " more)"
+        ))
+      }
+    } else {
+      return(paste0("object(", length(props), " fields)"))
+    }
+  }
+
+  # Fallback for unknown types
+  class(type)[1]
 }
 
 #' Create a Signature for LLM Operations

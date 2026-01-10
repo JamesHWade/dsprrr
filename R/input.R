@@ -40,9 +40,6 @@ input <- function(name, type = NULL, description = NULL, ...) {
   # Normalize the type specification, passing description if needed
   normalized_type <- normalize_input_type(type, description)
 
-  # Get the S7 class (for internal use)
-  s7_class <- type_to_s7_class(normalized_type)
-
   # Extract description from the type if not provided separately
   if (is.null(description) && !is.null(normalized_type@description)) {
     description <- normalized_type@description
@@ -53,7 +50,6 @@ input <- function(name, type = NULL, description = NULL, ...) {
     list(
       name = name,
       type = normalized_type, # Store the ellmer type
-      class = s7_class, # Keep S7 class for backward compatibility
       description = description,
       ... # Additional metadata
     ),
