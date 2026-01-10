@@ -74,10 +74,13 @@ pin_module_config <- function(
         list(
           name = inp$name,
           description = inp$description,
-          class = if (!is.null(inp$class)) as.character(inp$class) else NULL
+          type = format_ellmer_type(inp$type)
         )
       }),
-      output_type_class = class(module$signature@output_type)[1],
+      output_type = format_ellmer_type(
+        module$signature@output_type,
+        verbose = TRUE
+      ),
       instructions = module$signature@instructions
     ),
 
