@@ -203,7 +203,10 @@ test_that("format_ellmer_type formats object types", {
     name = ellmer::type_string(),
     age = ellmer::type_number()
   )
-  expect_equal(format_ellmer_type(obj_type, verbose = FALSE), "object(2 fields)")
+  expect_equal(
+    format_ellmer_type(obj_type, verbose = FALSE),
+    "object(2 fields)"
+  )
 
   # Object with fields (verbose)
   result <- format_ellmer_type(obj_type, verbose = TRUE)
