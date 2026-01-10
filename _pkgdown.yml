@@ -251,6 +251,7 @@ reference:
     - optimizer-accessors
     - best_params
     - best_demos
+    - module_demos_as_tibble
     - apply_best_config
     - top_trials
     - config_diff
