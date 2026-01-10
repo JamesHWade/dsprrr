@@ -133,10 +133,14 @@ format_ellmer_type <- function(type, verbose = FALSE) {
     }
 
     if (verbose) {
-      field_strs <- vapply(names(props), function(name) {
-        field_type <- format_ellmer_type(props[[name]], verbose = FALSE)
-        paste0(name, ": ", field_type)
-      }, character(1))
+      field_strs <- vapply(
+        names(props),
+        function(name) {
+          field_type <- format_ellmer_type(props[[name]], verbose = FALSE)
+          paste0(name, ": ", field_type)
+        },
+        character(1)
+      )
 
       if (length(field_strs) <= 5) {
         return(paste0("object(", paste(field_strs, collapse = ", "), ")"))
