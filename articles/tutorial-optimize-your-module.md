@@ -314,7 +314,7 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 715.7495
+#> [1] 714.4117
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 177
@@ -326,7 +326,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-09 23:00:22 UTC"
+#> [1] "2026-01-10 03:17:41 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -334,7 +334,7 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 716.7466
+#> [1] 720.8736
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 184
@@ -346,7 +346,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-09 23:00:23 UTC"
+#> [1] "2026-01-10 03:17:42 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -354,7 +354,7 @@ test_results
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 729.1362
+#> [1] 730.2961
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 186
@@ -366,7 +366,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-09 23:00:23 UTC"
+#> [1] "2026-01-10 03:17:42 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -374,7 +374,7 @@ test_results
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 746.943
+#> [1] 738.4005
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 194
@@ -386,7 +386,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-09 23:00:24 UTC"
+#> [1] "2026-01-10 03:17:43 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -461,8 +461,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x565228deaa28>
-#> <environment: 0x565228f43b58>
+#> <bytecode: 0x558dc65bc7e0>
+#> <environment: 0x558dc65bb6c0>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -482,8 +482,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x56522a0e97f8>
-#> <environment: 0x56522a0eac88>
+#> <bytecode: 0x558dc0e713e8>
+#> <environment: 0x558dc0f3dab8>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -511,8 +511,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x5652292631a8>
-#> <environment: 0x565229261800>
+#> <bytecode: 0x558dc385a618>
+#> <environment: 0x558dc3858a78>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -527,8 +527,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x565229005760>
-#> <environment: 0x5652290066e8>
+#> <bytecode: 0x558dc6f41be8>
+#> <environment: 0x558dc6f42a58>
 ```
 
 ## Step 10: Tracking Costs

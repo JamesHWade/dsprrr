@@ -234,6 +234,8 @@ Convenience functions for working with optimization results
   : Extract Best Parameters from a Module
 - [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md)
   : Extract Best Demos from a Compiled Module
+- [`module_demos_as_tibble()`](https://jameshwade.github.io/dsprrr/reference/module_demos_as_tibble.md)
+  : Convert module demos to a tibble
 - [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md)
   : Apply Best Configuration from One Module to Another
 - [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
