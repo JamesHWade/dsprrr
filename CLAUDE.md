@@ -56,20 +56,17 @@ GitHub Actions runs R CMD check across multiple R versions and OS platforms, wit
 Before creating a pull request, run these checks:
 
 ```bash
-# 1. Format ALL code with air (R/ and tests/)
-air format R/ tests/testthat/
+# 1. Format ALL code with air (entire project)
+air format .
 
-# 2. Lint with jarl
-jarl check R/
+# 2. Lint with jarl (auto-fix issues)
+jarl check --fix
 
-# 3. Run tests
-Rscript -e "devtools::test()"
-
-# 4. Run R CMD check (catches codoc mismatches, missing docs, etc.)
+# 3. Run R CMD check (catches codoc mismatches, missing docs, etc.)
 Rscript -e "devtools::check()"
 
-# 5. Build pkgdown site (checks _pkgdown.yml coverage)
-Rscript -e "devtools::document(); pkgdown::build_site(preview = FALSE)"
+# 4. Build pkgdown site (checks _pkgdown.yml coverage)
+Rscript -e "pkgdown::build_site(preview = FALSE)"
 ```
 
 **Important**: The CI runs `air format --check` on both `R/` and `tests/` directories. Always format test files too!
