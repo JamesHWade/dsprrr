@@ -24,6 +24,9 @@ Additional arguments passed to \code{\link[=run_dataset]{run_dataset()}}:
 \item \code{.progress}: Logical; whether to display progress while evaluating
 \item \code{.return_format}: Character; \code{"simple"} returns just scores and predictions,
 \code{"structured"} (default) includes full metadata and data
+\item \code{epochs}: Integer; number of times to repeat evaluation for statistical
+significance (default = 1L). When > 1, each sample is evaluated multiple
+times to quantify variation.
 }}
 }
 \value{
@@ -37,6 +40,13 @@ A list with elements. When \code{.return_format = "structured"} (default):
 \item \code{n_errors}: number of metric failures.
 \item \code{errors}: character vector with error messages, when any.
 \item \code{data}: input data augmented with prediction metadata.
+}
+
+When \code{epochs > 1}, additional fields are included:
+\itemize{
+\item \code{epoch_scores}: list of numeric vectors, one per epoch
+\item \code{score_std}: standard deviation of mean scores across epochs
+\item \code{ci_95}: 95\% confidence interval for the mean score (numeric vector of length 2)
 }
 
 When \code{.return_format = "simple"}:

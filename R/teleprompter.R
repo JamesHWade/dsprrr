@@ -440,7 +440,7 @@ extract_output_from_row <- function(row, field, input_names = character()) {
 #' Tibbles store list columns as list-of-lists. This helper unwraps
 #' the extra layer when accessing a single row.
 #'
-#' @param value The value from row[[column]]
+#' @param value The value from a row's list column
 #' @return The unwrapped value
 #' @noRd
 unwrap_list_column <- function(value) {

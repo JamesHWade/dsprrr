@@ -158,7 +158,13 @@ EvalResult <- S7::new_class(
     # Timing
     total_latency_ms = S7::new_property(S7::class_numeric, default = 0),
     start_time = S7::new_property(S7::class_any, default = NULL),
-    end_time = S7::new_property(S7::class_any, default = NULL)
+    end_time = S7::new_property(S7::class_any, default = NULL),
+    # Epochs support (for multi-epoch evaluation)
+    epochs = S7::new_property(S7::class_integer, default = 1L),
+    epoch_scores = S7::new_property(S7::class_list, default = list()),
+    score_std = S7::new_property(S7::class_any, default = NA_real_),
+    ci_lower = S7::new_property(S7::class_any, default = NA_real_),
+    ci_upper = S7::new_property(S7::class_any, default = NA_real_)
   )
 )
 
@@ -174,24 +180,32 @@ EvalResult <- S7::new_class(
 #' - Per-example timing and error information
 #' - Aggregated cost tracking
 #' - Standard error computation
+#' - Multi-epoch evaluation for statistical significance (when epochs > 1)
 #'
 #' @param program A DSPrrr module to evaluate.
 #' @param dataset A data frame containing test examples.
 #' @param metric A metric function for scoring predictions.
 #' @param .llm Optional ellmer Chat object for LLM calls.
 #' @param control An OptimizerControl object or NULL for defaults.
+#' @param epochs Integer; number of times to repeat evaluation for statistical
+#'   significance. Defaults to 1L. When > 1, computes std and confidence intervals.
 #' @param ... Additional arguments passed to [evaluate()].
 #'
 #' @return An EvalResult object containing:
-#'   - `examples`: tibble with per-example inputs, expected, predicted, score, error, latency
-
+#'   - `examples`: tibble with per-example row_id, score, error, predicted, and input columns (prefixed with input_*)
 #'   - `mean_score`: mean score across successful evaluations
-#'   - `std_error`: standard error of the mean
+#'   - `std_error`: standard error of per-example scores (SD / sqrt(n))
 #'   - `n_evaluated`: number of successful evaluations
 #'   - `n_errors`: number of failed evaluations
 #'   - `total_tokens`: total tokens used
 #'   - `total_cost`: total cost in USD
 #'   - `total_latency_ms`: total time in milliseconds
+#'
+#'   When `epochs > 1`, additional fields:
+#'   - `epochs`: number of epochs run
+#'   - `epoch_scores`: list of score vectors, one per epoch
+#'   - `score_std`: standard deviation of mean scores across epochs
+#'   - `ci_lower`, `ci_upper`: 95% confidence interval bounds
 #'
 #' @export
 #'
@@ -221,6 +235,7 @@ eval_program <- function(
   metric,
   .llm = NULL,
   control = NULL,
+  epochs = 1L,
   ...
 ) {
   # Validate inputs
@@ -234,6 +249,16 @@ eval_program <- function(
 
   if (!is.function(metric)) {
     cli::cli_abort("{.arg metric} must be a function")
+  }
+
+  # Validate epochs
+  epochs <- as.integer(epochs)
+  if (length(epochs) != 1 || epochs < 1) {
+    cli::cli_abort(c(
+      "{.arg epochs} must be a positive integer",
+      "x" = "Got {epochs}",
+      "i" = "Use epochs = 1L for single evaluation or epochs > 1 for multiple runs"
+    ))
   }
 
   # Use default control if not provided
@@ -269,6 +294,7 @@ eval_program <- function(
         .parallel = control@num_threads > 1L,
         .progress = control@progress,
         .return_format = "structured",
+        epochs = epochs,
         ...
       )
     },
@@ -284,7 +310,10 @@ eval_program <- function(
         errors = rep(conditionMessage(e), nrow(dataset)),
         mean_score = NA_real_,
         n_evaluated = 0L,
-        n_errors = nrow(dataset)
+        n_errors = nrow(dataset),
+        epoch_scores = NULL,
+        score_std = NA_real_,
+        ci_95 = c(NA_real_, NA_real_)
       )
     }
   )
@@ -329,6 +358,24 @@ eval_program <- function(
     NA_real_
   }
 
+  # Extract epoch-specific fields if present
+  epoch_count <- as.integer(epochs)
+  epoch_scores_list <- if (!is.null(eval_result$epoch_scores)) {
+    eval_result$epoch_scores
+  } else {
+    list()
+  }
+  score_std <- if (!is.null(eval_result$score_std)) {
+    eval_result$score_std
+  } else {
+    NA_real_
+  }
+  ci_values <- if (!is.null(eval_result$ci_95)) {
+    eval_result$ci_95
+  } else {
+    c(NA_real_, NA_real_)
+  }
+
   EvalResult(
     examples = examples,
     mean_score = eval_result$mean_score,
@@ -339,7 +386,12 @@ eval_program <- function(
     total_cost = cost_info$total_cost,
     total_latency_ms = total_latency_ms,
     start_time = start_time,
-    end_time = end_time
+    end_time = end_time,
+    epochs = epoch_count,
+    epoch_scores = epoch_scores_list,
+    score_std = score_std,
+    ci_lower = ci_values[1],
+    ci_upper = ci_values[2]
   )
 }
 
@@ -650,6 +702,21 @@ print.EvalResult <- function(x, ...) {
     if (!is.na(x@std_error)) {
       cli::cli_text("  SE: {round(x@std_error, 4)}")
     }
+
+    # Show epoch statistics if available
+    if (!is.na(x@score_std) && x@epochs > 1) {
+      cli::cli_text("  SD (across epochs): {round(x@score_std, 4)}")
+    }
+    if (!is.na(x@ci_lower) && !is.na(x@ci_upper) && x@epochs > 1) {
+      cli::cli_text(
+        "  95% CI: [{round(x@ci_lower, 4)}, {round(x@ci_upper, 4)}]"
+      )
+    }
+  }
+
+  # Show epoch count if multi-epoch
+  if (x@epochs > 1) {
+    cli::cli_text("{.field Epochs}: {x@epochs}")
   }
 
   cli::cli_text(
