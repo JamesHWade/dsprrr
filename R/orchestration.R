@@ -77,7 +77,10 @@ pin_module_config <- function(
           type = format_ellmer_type(inp$type)
         )
       }),
-      output_type = format_ellmer_type(module$signature@output_type, verbose = TRUE),
+      output_type = format_ellmer_type(
+        module$signature@output_type,
+        verbose = TRUE
+      ),
       instructions = module$signature@instructions
     ),
 
