@@ -47,6 +47,7 @@ Suggests:
     ragnar,
     rmarkdown,
     rsample,
+    scales,
     targets,
     tarchetypes,
     testthat (>= 3.0.0),

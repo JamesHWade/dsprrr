@@ -25,3 +25,4 @@
 ^gh-issue.*\.md$
 ^PHASE2_ISSUE\.md$
 ^vignettes/_vcr/\.gitkeep$
+^tests/testthat/\.dsprrr_cache$
