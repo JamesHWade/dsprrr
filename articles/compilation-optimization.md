@@ -74,10 +74,10 @@ optimize_grid(
 #> ── Signature ──
 #> 
 #> ── Inputs
-#> • review: Input: review
+#> • review: "string" - Input: review
 #> 
 #> ── Output
-#> Type: <ellmer::TypeObject>
+#> Type: "object(sentiment: string)"
 #> 
 #> ── Instructions
 #> Respond with the sentiment label only.

@@ -69,10 +69,10 @@ classifier
 #> ── Signature ──
 #> 
 #> ── Inputs 
-#> • text: Input: text
+#> • text: "string" - Input: text
 #> 
 #> ── Output 
-#> Type: <ellmer::TypeObject>
+#> Type: "object(sentiment: enum(positive, negative, neutral))"
 #> 
 #> ── Instructions 
 #> Given the fields `text`, produce the fields `sentiment`.
@@ -205,10 +205,10 @@ sig
 #> ── Signature ──
 #> 
 #> ── Inputs
-#> • text: Input: text
+#> • text: "string" - Input: text
 #> 
 #> ── Output
-#> Type: <ellmer::TypeObject>
+#> Type: "object(sentiment: enum(positive, negative, neutral))"
 #> 
 #> ── Instructions
 #> Classify the overall sentiment. If mixed, choose the dominant emotion.
@@ -228,10 +228,10 @@ classifier2
 #> ── Signature ──
 #> 
 #> ── Inputs
-#> • text: Input: text
+#> • text: "string" - Input: text
 #> 
 #> ── Output
-#> Type: <ellmer::TypeObject>
+#> Type: "object(sentiment: enum(positive, negative, neutral))"
 #> 
 #> ── Instructions
 #> Classify the overall sentiment. If mixed, choose the dominant emotion.

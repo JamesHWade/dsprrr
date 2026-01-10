@@ -57,9 +57,6 @@ input("text", ellmer::type_string())
 #>  @ required   : logi TRUE
 #>  @ type       : chr "string"
 #> 
-#> $class
-#> <S7_base_class>: <character>
-#> 
 #> $description
 #> NULL
 #> 
@@ -75,9 +72,6 @@ input("age", ellmer::type_number())
 #>  @ required   : logi TRUE
 #>  @ type       : chr "number"
 #> 
-#> $class
-#> <S7_base_class>: <double>
-#> 
 #> $description
 #> NULL
 #> 
@@ -92,9 +86,6 @@ input("active", ellmer::type_boolean())
 #>  @ description: NULL
 #>  @ required   : logi TRUE
 #>  @ type       : chr "boolean"
-#> 
-#> $class
-#> <S7_base_class>: <logical>
 #> 
 #> $description
 #> NULL
@@ -113,9 +104,6 @@ input("text", "string")
 #>  @ required   : logi TRUE
 #>  @ type       : chr "string"
 #> 
-#> $class
-#> <S7_base_class>: <character>
-#> 
 #> $description
 #> NULL
 #> 
@@ -131,9 +119,6 @@ input("count", "integer")
 #>  @ required   : logi TRUE
 #>  @ type       : chr "integer"
 #> 
-#> $class
-#> <S7_base_class>: <integer>
-#> 
 #> $description
 #> NULL
 #> 
@@ -148,9 +133,6 @@ input("score", "number")
 #>  @ description: NULL
 #>  @ required   : logi TRUE
 #>  @ type       : chr "number"
-#> 
-#> $class
-#> <S7_base_class>: <double>
 #> 
 #> $description
 #> NULL
@@ -169,9 +151,6 @@ input("name")
 #>  @ required   : logi TRUE
 #>  @ type       : chr "string"
 #> 
-#> $class
-#> <S7_base_class>: <character>
-#> 
 #> $description
 #> NULL
 #> 
@@ -186,9 +165,6 @@ input("name", description = "User's name")
 #>  @ description: chr "User's name"
 #>  @ required   : logi TRUE
 #>  @ type       : chr "string"
-#> 
-#> $class
-#> <S7_base_class>: <character>
 #> 
 #> $description
 #> [1] "User's name"
@@ -210,9 +186,6 @@ input("tags", ellmer::type_array(ellmer::type_string()))
 #>  .. @ required   : logi TRUE
 #>  .. @ type       : chr "string"
 #> 
-#> $class
-#> <S7_base_class>: <list>
-#> 
 #> $description
 #> NULL
 #> 
@@ -227,9 +200,6 @@ input("status", ellmer::type_enum(c("pending", "active", "done")))
 #>  @ description: NULL
 #>  @ required   : logi TRUE
 #>  @ values     : chr [1:3] "pending" "active" "done"
-#> 
-#> $class
-#> <S7_base_class>: <character>
 #> 
 #> $description
 #> NULL
