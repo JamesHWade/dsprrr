@@ -629,6 +629,10 @@ module_demos_as_tibble <- function(module) {
   })
 
   # Combine into tibble
-  # Use map_dfr pattern for robustness with varying structures
-  dplyr::bind_rows(lapply(rows, tibble::as_tibble_row))
+  # Use do.call(rbind, ...) to avoid dplyr dependency
+  tbl_rows <- lapply(rows, tibble::as_tibble_row)
+  if (length(tbl_rows) == 0) {
+    return(tibble::tibble())
+  }
+  do.call(rbind, tbl_rows)
 }
