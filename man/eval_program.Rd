@@ -4,7 +4,15 @@
 \alias{eval_program}
 \title{Evaluate a Program on a Dataset}
 \usage{
-eval_program(program, dataset, metric, .llm = NULL, control = NULL, ...)
+eval_program(
+  program,
+  dataset,
+  metric,
+  .llm = NULL,
+  control = NULL,
+  epochs = 1L,
+  ...
+)
 }
 \arguments{
 \item{program}{A DSPrrr module to evaluate.}
@@ -16,6 +24,9 @@ eval_program(program, dataset, metric, .llm = NULL, control = NULL, ...)
 \item{.llm}{Optional ellmer Chat object for LLM calls.}
 
 \item{control}{An OptimizerControl object or NULL for defaults.}
+
+\item{epochs}{Integer; number of times to repeat evaluation for statistical
+significance. Defaults to 1L. When > 1, computes std and confidence intervals.}
 
 \item{...}{Additional arguments passed to \code{\link[=evaluate]{evaluate()}}.}
 }
@@ -31,6 +42,14 @@ An EvalResult object containing:
 \item \code{total_cost}: total cost in USD
 \item \code{total_latency_ms}: total time in milliseconds
 }
+
+When \code{epochs > 1}, additional fields:
+\itemize{
+\item \code{epochs}: number of epochs run
+\item \code{epoch_scores}: list of score vectors, one per epoch
+\item \code{score_std}: standard deviation of mean scores across epochs
+\item \code{ci_lower}, \code{ci_upper}: 95\% confidence interval bounds
+}
 }
 \description{
 Standard evaluation function for optimizers. Executes a module on a dataset,
@@ -43,6 +62,7 @@ This is the core evaluation function used by all optimizers. It wraps
 \item Per-example timing and error information
 \item Aggregated cost tracking
 \item Standard error computation
+\item Multi-epoch evaluation for statistical significance (when epochs > 1)
 }
 }
 \examples{

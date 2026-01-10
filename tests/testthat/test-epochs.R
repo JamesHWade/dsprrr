@@ -1,0 +1,285 @@
+test_that("evaluate() works with epochs = 1 (default behavior)", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  # Mock LLM
+  mock_llm <- list(
+    chat_structured = function(...) "test answer"
+  )
+
+  dataset <- tibble::tibble(
+    question = c("What is 2+2?", "What is 3+3?"),
+    answer = c("4", "6")
+  )
+
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+
+  result <- evaluate(
+    mod,
+    data = dataset,
+    metric = metric,
+    .llm = mock_llm,
+    .progress = FALSE,
+    epochs = 1L
+  )
+
+  expect_s3_class(result, "dsprrr_evaluation")
+  expect_equal(result$n_evaluated, 2L)
+  expect_false("epoch_scores" %in% names(result))
+  expect_false("score_std" %in% names(result))
+  expect_false("ci_95" %in% names(result))
+})
+
+test_that("evaluate() runs multiple epochs when epochs > 1", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  # Mock LLM with some variability
+  call_count <- 0
+  mock_llm <- list(
+    chat_structured = function(...) {
+      call_count <<- call_count + 1
+      if (call_count %% 2 == 0) "4" else "wrong"
+    }
+  )
+
+  dataset <- tibble::tibble(
+    question = c("What is 2+2?", "What is 3+3?"),
+    answer = c("4", "6")
+  )
+
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+
+  result <- evaluate(
+    mod,
+    data = dataset,
+    metric = metric,
+    .llm = mock_llm,
+    .progress = FALSE,
+    epochs = 3L
+  )
+
+  expect_s3_class(result, "dsprrr_evaluation")
+  expect_true("epoch_scores" %in% names(result))
+  expect_true("score_std" %in% names(result))
+  expect_true("ci_95" %in% names(result))
+
+  # Should have 3 epoch score vectors
+  expect_equal(length(result$epoch_scores), 3)
+  expect_equal(length(result$epoch_scores[[1]]), 2) # 2 examples per epoch
+
+  # CI should be a vector of length 2
+  expect_length(result$ci_95, 2)
+  expect_named(result$ci_95, c("lower", "upper"))
+})
+
+test_that("evaluate() computes correct statistics across epochs", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  # Mock LLM with deterministic output per call
+  answers <- c("4", "4", "4") # All correct for first question across 3 epochs
+  call_idx <- 0
+  mock_llm <- list(
+    chat_structured = function(...) {
+      call_idx <<- call_idx + 1
+      answers[((call_idx - 1) %% length(answers)) + 1]
+    }
+  )
+
+  dataset <- tibble::tibble(
+    question = "What is 2+2?",
+    answer = "4"
+  )
+
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+
+  result <- evaluate(
+    mod,
+    data = dataset,
+    metric = metric,
+    .llm = mock_llm,
+    .progress = FALSE,
+    epochs = 3L
+  )
+
+  # All epochs should have score of 1.0 for this example
+  epoch_means <- vapply(
+    result$epoch_scores,
+    function(s) mean(s, na.rm = TRUE),
+    numeric(1)
+  )
+  expect_equal(epoch_means, c(1, 1, 1))
+
+  # Mean score should be 1.0
+  expect_equal(result$mean_score, 1.0)
+
+  # Standard deviation should be 0 (no variation)
+  expect_equal(result$score_std, 0)
+})
+
+test_that("eval_program() works with epochs parameter", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  # Mock LLM
+  mock_llm <- list(
+    chat_structured = function(...) "4"
+  )
+
+  dataset <- tibble::tibble(
+    question = "What is 2+2?",
+    answer = "4"
+  )
+
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+  ctrl <- optimizer_control(progress = FALSE)
+
+  result <- eval_program(
+    mod,
+    dataset,
+    metric = metric,
+    .llm = mock_llm,
+    control = ctrl,
+    epochs = 3L
+  )
+
+  expect_s3_class(result, "EvalResult")
+  expect_equal(result@epochs, 3L)
+  expect_equal(length(result@epoch_scores), 3)
+  expect_true(!is.na(result@score_std))
+  expect_true(!is.na(result@ci_lower))
+  expect_true(!is.na(result@ci_upper))
+})
+
+test_that("epochs parameter validates input", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  mock_llm <- list(chat_structured = function(...) "4")
+  dataset <- tibble::tibble(question = "Q?", answer = "A")
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+
+  # epochs must be positive
+  expect_error(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = metric,
+      .llm = mock_llm,
+      epochs = 0L
+    ),
+    "must be a positive integer"
+  )
+
+  expect_error(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = metric,
+      .llm = mock_llm,
+      epochs = -1L
+    ),
+    "must be a positive integer"
+  )
+})
+
+test_that("epoch results are aggregated correctly", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  # Mock LLM with varying correctness
+  # Epoch 1: score 0.5, Epoch 2: score 1.0, Epoch 3: score 0.0
+  responses <- c("4", "wrong", "4", "4", "wrong", "wrong")
+  call_idx <- 0
+  mock_llm <- list(
+    chat_structured = function(...) {
+      call_idx <<- call_idx + 1
+      responses[call_idx]
+    }
+  )
+
+  dataset <- tibble::tibble(
+    question = c("Q1", "Q2"),
+    answer = c("4", "4")
+  )
+
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+
+  result <- evaluate(
+    mod,
+    data = dataset,
+    metric = metric,
+    .llm = mock_llm,
+    .progress = FALSE,
+    epochs = 3L
+  )
+
+  # Check that we have 3 epochs
+  expect_equal(length(result$epoch_scores), 3)
+
+  # Compute expected epoch means: [0.5, 1.0, 0.0]
+  epoch_means <- vapply(
+    result$epoch_scores,
+    function(s) mean(s, na.rm = TRUE),
+    numeric(1)
+  )
+  expect_equal(epoch_means, c(0.5, 1.0, 0.0))
+
+  # Mean across epochs should be (0.5 + 1.0 + 0.0) / 3 = 0.5
+  expect_equal(result$mean_score, 0.5)
+
+  # SD should be sd(c(0.5, 1.0, 0.0))
+  expected_sd <- sd(c(0.5, 1.0, 0.0))
+  expect_equal(result$score_std, expected_sd)
+})
+
+test_that("print methods show epoch information", {
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "predict")
+
+  mock_llm <- list(chat_structured = function(...) "4")
+  dataset <- tibble::tibble(question = "Q?", answer = "4")
+  # Simple metric that compares prediction to expected row$answer
+  metric <- function(prediction, expected_row) {
+    identical(prediction, expected_row$answer)
+  }
+
+  result <- evaluate(
+    mod,
+    data = dataset,
+    metric = metric,
+    .llm = mock_llm,
+    .progress = FALSE,
+    epochs = 3L
+  )
+
+  # Capture printed output
+  output <- capture.output(print(result))
+  output_str <- paste(output, collapse = "\n")
+
+  # Should mention epochs
+  expect_true(any(grepl("Epochs.*3", output, ignore.case = TRUE)))
+
+  # Should show SD and CI
+  expect_true(any(grepl("SD", output, ignore.case = TRUE)))
+  expect_true(any(grepl("95% CI", output, ignore.case = TRUE)))
+})

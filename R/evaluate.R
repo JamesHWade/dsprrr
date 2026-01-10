@@ -18,6 +18,9 @@
 #'   - `.progress`: Logical; whether to display progress while evaluating
 #'   - `.return_format`: Character; `"simple"` returns just scores and predictions,
 #'     `"structured"` (default) includes full metadata and data
+#'   - `epochs`: Integer; number of times to repeat evaluation for statistical
+#'     significance (default = 1L). When > 1, each sample is evaluated multiple
+#'     times to quantify variation.
 #'
 #' @return A list with elements. When `.return_format = "structured"` (default):
 #'   - `mean_score`: numeric mean over all successful metric evaluations.
@@ -28,6 +31,11 @@
 #'   - `n_errors`: number of metric failures.
 #'   - `errors`: character vector with error messages, when any.
 #'   - `data`: input data augmented with prediction metadata.
+#'
+#'   When `epochs > 1`, additional fields are included:
+#'   - `epoch_scores`: list of numeric vectors, one per epoch
+#'   - `score_std`: standard deviation of mean scores across epochs
+#'   - `ci_95`: 95% confidence interval for the mean score (numeric vector of length 2)
 #'
 #'   When `.return_format = "simple"`:
 #'   - `mean_score`, `scores`, `predictions`, `n_evaluated`, `n_errors`, `errors`
@@ -61,9 +69,21 @@ evaluate.Module <- function(
   .parallel = FALSE,
   .progress = TRUE,
   .return_format = c("structured", "simple"),
+  epochs = 1L,
   ...
 ) {
   .return_format <- match.arg(.return_format)
+
+  # Validate epochs
+  epochs <- as.integer(epochs)
+  if (length(epochs) != 1 || epochs < 1) {
+    cli::cli_abort(c(
+      "{.arg epochs} must be a positive integer",
+      "x" = "Got {epochs}",
+      "i" = "Use epochs = 1L for single evaluation or epochs > 1 for multiple runs"
+    ))
+  }
+
   if (!is.data.frame(data)) {
     cli::cli_abort(c(
       "{.arg data} must be a data frame or tibble",
@@ -103,54 +123,103 @@ evaluate.Module <- function(
     parallel_allowed <- FALSE
   }
 
-  # Execute module
-  evaluated <- run_dataset(
-    module,
-    data,
-    .llm = .llm,
-    .parallel = parallel_allowed,
-    .progress = .progress,
-    .return_format = "structured",
-    ...
-  )
+  # Run evaluation for each epoch
+  epoch_results <- vector("list", epochs)
 
-  predictions <- evaluated$result
-  metadata <- if (".metadata" %in% names(evaluated)) {
-    evaluated$.metadata
-  } else {
-    replicate(nrow(evaluated), list(), simplify = FALSE)
+  for (epoch in seq_len(epochs)) {
+    # Show progress for multi-epoch runs
+    if (epochs > 1 && .progress) {
+      cli::cli_alert_info("Running epoch {epoch}/{epochs}")
+    }
+
+    # Execute module
+    evaluated <- run_dataset(
+      module,
+      data,
+      .llm = .llm,
+      .parallel = parallel_allowed,
+      .progress = .progress && epochs == 1, # Only show dataset progress for single epoch
+      .return_format = "structured",
+      ...
+    )
+
+    predictions <- evaluated$result
+    metadata <- if (".metadata" %in% names(evaluated)) {
+      evaluated$.metadata
+    } else {
+      replicate(nrow(evaluated), list(), simplify = FALSE)
+    }
+
+    scores <- numeric(nrow(evaluated))
+    errors <- character(nrow(evaluated))
+
+    for (i in seq_len(nrow(evaluated))) {
+      expected_row <- data[i, , drop = FALSE]
+      prediction <- predictions[[i]]
+
+      scores[i] <- tryCatch(
+        {
+          score <- metric(prediction, expected_row)
+          if (is.logical(score)) {
+            as.numeric(score)
+          } else if (is.numeric(score)) {
+            score
+          } else {
+            cli::cli_abort(c(
+              "Metric must return logical or numeric values",
+              "i" = "Got {.cls {class(score)[1]}}"
+            ))
+          }
+        },
+        error = function(e) {
+          errors[i] <<- e$message
+          cli::cli_warn(
+            c("Metric evaluation failed for row {i}", "x" = e$message),
+            class = "dsprrr_metric_error"
+          )
+          NA_real_
+        }
+      )
+    }
+
+    # Store this epoch's results
+    epoch_results[[epoch]] <- list(
+      scores = scores,
+      predictions = predictions,
+      metadata = metadata,
+      errors = errors,
+      evaluated = evaluated
+    )
   }
 
-  scores <- numeric(nrow(evaluated))
-  errors <- character(nrow(evaluated))
+  # Aggregate across epochs
+  # For single epoch, use the epoch 1 results directly
+  # For multiple epochs, aggregate scores and use last epoch's predictions/metadata
+  if (epochs == 1) {
+    scores <- epoch_results[[1]]$scores
+    predictions <- epoch_results[[1]]$predictions
+    metadata <- epoch_results[[1]]$metadata
+    errors <- epoch_results[[1]]$errors
+    evaluated <- epoch_results[[1]]$evaluated
+  } else {
+    # Aggregate scores across epochs
+    all_epoch_scores <- lapply(epoch_results, function(x) x$scores)
 
-  for (i in seq_len(nrow(evaluated))) {
-    expected_row <- data[i, , drop = FALSE]
-    prediction <- predictions[[i]]
-
-    scores[i] <- tryCatch(
-      {
-        score <- metric(prediction, expected_row)
-        if (is.logical(score)) {
-          as.numeric(score)
-        } else if (is.numeric(score)) {
-          score
-        } else {
-          cli::cli_abort(c(
-            "Metric must return logical or numeric values",
-            "i" = "Got {.cls {class(score)[1]}}"
-          ))
-        }
+    # Compute mean score per example across epochs
+    scores <- vapply(
+      seq_len(nrow(data)),
+      function(i) {
+        epoch_scores_i <- vapply(all_epoch_scores, function(s) s[i], numeric(1))
+        mean(epoch_scores_i, na.rm = TRUE)
       },
-      error = function(e) {
-        errors[i] <<- e$message
-        cli::cli_warn(
-          c("Metric evaluation failed for row {i}", "x" = e$message),
-          class = "dsprrr_metric_error"
-        )
-        NA_real_
-      }
+      numeric(1)
     )
+
+    # Use last epoch's predictions and metadata for the result
+    predictions <- epoch_results[[epochs]]$predictions
+    metadata <- epoch_results[[epochs]]$metadata
+    errors <- epoch_results[[epochs]]$errors
+    evaluated <- epoch_results[[epochs]]$evaluated
   }
 
   mean_score <- mean(scores, na.rm = TRUE)
@@ -166,6 +235,37 @@ evaluate.Module <- function(
     n_errors = n_errors,
     errors = errors[errors != ""]
   )
+
+  # Add epoch-specific statistics when epochs > 1
+  if (epochs > 1) {
+    # Extract all epoch scores
+    all_epoch_scores <- lapply(epoch_results, function(x) x$scores)
+    result$epoch_scores <- all_epoch_scores
+
+    # Compute mean score for each epoch
+    epoch_means <- vapply(
+      all_epoch_scores,
+      function(s) mean(s, na.rm = TRUE),
+      numeric(1)
+    )
+
+    # Standard deviation of epoch means
+    result$score_std <- stats::sd(epoch_means, na.rm = TRUE)
+
+    # 95% confidence interval for the mean
+    # Use t-distribution for small sample sizes
+    if (length(epoch_means) > 1 && !all(is.na(epoch_means))) {
+      se <- result$score_std / sqrt(length(epoch_means))
+      t_crit <- stats::qt(0.975, df = length(epoch_means) - 1)
+      margin <- t_crit * se
+      result$ci_95 <- c(
+        lower = mean(epoch_means, na.rm = TRUE) - margin,
+        upper = mean(epoch_means, na.rm = TRUE) + margin
+      )
+    } else {
+      result$ci_95 <- c(lower = NA_real_, upper = NA_real_)
+    }
+  }
 
   # Add metadata and data for structured format
   if (.return_format == "structured") {
@@ -187,6 +287,21 @@ print.dsprrr_evaluation <- function(x, ...) {
     cli::cli_alert_warning("No successful evaluations")
   } else {
     cli::cli_alert_success("Mean Score: {round(x$mean_score, 4)}")
+
+    # Show epoch statistics if available
+    if (!is.null(x$score_std)) {
+      cli::cli_text("  SD: {round(x$score_std, 4)}")
+    }
+    if (!is.null(x$ci_95) && !any(is.na(x$ci_95))) {
+      cli::cli_text(
+        "  95% CI: [{round(x$ci_95[1], 4)}, {round(x$ci_95[2], 4)}]"
+      )
+    }
+  }
+
+  # Show epoch info if multi-epoch evaluation
+  if (!is.null(x$epoch_scores)) {
+    cli::cli_text("{.field Epochs}: {length(x$epoch_scores)}")
   }
 
   cli::cli_text("{.field Evaluated}: {x$n_evaluated}")

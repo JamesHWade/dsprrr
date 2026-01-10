@@ -62,10 +62,10 @@ signature("question -> answer")
 #> ── Signature ──
 #> 
 #> ── Inputs
-#> • question: Input: question
+#> • question: "string" - Input: question
 #> 
 #> ── Output
-#> Type: <ellmer::TypeObject>
+#> Type: "object(answer: string)"
 #> 
 #> ── Instructions
 #> Given the fields `question`, produce the fields `answer`.
@@ -76,11 +76,11 @@ signature("context, question -> answer")
 #> ── Signature ──
 #> 
 #> ── Inputs
-#> • context: Input: context
-#> • question: Input: question
+#> • context: "string" - Input: context
+#> • question: "string" - Input: question
 #> 
 #> ── Output
-#> Type: <ellmer::TypeObject>
+#> Type: "object(answer: string)"
 #> 
 #> ── Instructions
 #> Given the fields `context`, `question`, produce the fields `answer`.
@@ -91,10 +91,10 @@ signature("review -> rating: enum('1', '2', '3', '4', '5')")
 #> ── Signature ──
 #> 
 #> ── Inputs
-#> • review: Input: review
+#> • review: "string" - Input: review
 #> 
 #> ── Output
-#> Type: <ellmer::TypeObject>
+#> Type: "object(rating: enum(1, 2, 3, 4, 5))"
 #> 
 #> ── Instructions
 #> Given the fields `review`, produce the fields `rating`.
@@ -105,10 +105,10 @@ signature("text -> summary", instructions = "Maximum 50 words.")
 #> ── Signature ──
 #> 
 #> ── Inputs
-#> • text: Input: text
+#> • text: "string" - Input: text
 #> 
 #> ── Output
-#> Type: <ellmer::TypeObject>
+#> Type: "object(summary: string)"
 #> 
 #> ── Instructions
 #> Maximum 50 words.
