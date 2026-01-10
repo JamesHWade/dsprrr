@@ -125,20 +125,17 @@
 <div class="section level3">
 <h3 id="pr-workflow">PR Workflow<a class="anchor" aria-label="anchor" href="#pr-workflow"></a></h3>
 <p>Before creating a pull request, run these checks:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># 1. Format ALL code with air (R/ and tests/)</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># 1. Format ALL code with air (entire project)</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="ex">air</span> format .</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># 2. Lint with jarl</span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># 2. Lint with jarl (auto-fix issues)</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="ex">jarl</span> check <span class="at">--fix</span></span>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co"># 3. Run tests</span></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::test()"</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co"># 3. Run R CMD check (catches codoc mismatches, missing docs, etc.)</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
 <span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co"># 4. Run R CMD check (catches codoc mismatches, missing docs, etc.)</span></span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a></span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co"># 5. Build pkgdown site (checks _pkgdown.yml coverage)</span></span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::document(); pkgdown::build_site(preview = FALSE)"</span></span></code></pre></div>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co"># 4. Build pkgdown site (checks _pkgdown.yml coverage)</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"pkgdown::build_site(preview = FALSE)"</span></span></code></pre></div>
 <p><strong>Important</strong>: The CI runs <code>air format --check</code> on both <code>R/</code> and <code>tests/</code> directories. Always format test files too!</p>
 <p>When adding new exported functions: 1. Add roxygen documentation with <code>@export</code> 2. For internal functions, use <code>@noRd</code> (not <code>@keywords internal</code>) to avoid codoc mismatch warnings with S7 classes 3. Run <code>devtools::document()</code> to generate <code>.Rd</code> files 4. Add the function to the appropriate section in <code>_pkgdown.yml</code> 5. Rebuild pkgdown to verify coverage</p>
 <p>Create PRs on feature branches:</p>

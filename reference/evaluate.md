@@ -41,6 +41,10 @@ evaluate(module, ...)
     predictions, `"structured"` (default) includes full metadata and
     data
 
+  - `epochs`: Integer; number of times to repeat evaluation for
+    statistical significance (default = 1L). When \> 1, each sample is
+    evaluated multiple times to quantify variation.
+
 ## Value
 
 A list with elements. When `.return_format = "structured"` (default):
@@ -61,6 +65,15 @@ A list with elements. When `.return_format = "structured"` (default):
 - `errors`: character vector with error messages, when any.
 
 - `data`: input data augmented with prediction metadata.
+
+When `epochs > 1`, additional fields are included:
+
+- `epoch_scores`: list of numeric vectors, one per epoch
+
+- `score_std`: standard deviation of mean scores across epochs
+
+- `ci_95`: 95% confidence interval for the mean score (numeric vector of
+  length 2)
 
 When `.return_format = "simple"`:
 

@@ -14,10 +14,20 @@ with enhanced output including:
 
 - Standard error computation
 
+- Multi-epoch evaluation for statistical significance (when epochs \> 1)
+
 ## Usage
 
 ``` r
-eval_program(program, dataset, metric, .llm = NULL, control = NULL, ...)
+eval_program(
+  program,
+  dataset,
+  metric,
+  .llm = NULL,
+  control = NULL,
+  epochs = 1L,
+  ...
+)
 ```
 
 ## Arguments
@@ -42,6 +52,12 @@ eval_program(program, dataset, metric, .llm = NULL, control = NULL, ...)
 
   An OptimizerControl object or NULL for defaults.
 
+- epochs:
+
+  Integer; number of times to repeat evaluation for statistical
+  significance. Defaults to 1L. When \> 1, computes std and confidence
+  intervals.
+
 - ...:
 
   Additional arguments passed to
@@ -51,12 +67,12 @@ eval_program(program, dataset, metric, .llm = NULL, control = NULL, ...)
 
 An EvalResult object containing:
 
-- `examples`: tibble with per-example inputs, expected, predicted,
-  score, error, latency
+- `examples`: tibble with per-example row_id, score, error, predicted,
+  and input columns (prefixed with input\_\*)
 
 - `mean_score`: mean score across successful evaluations
 
-- `std_error`: standard error of the mean
+- `std_error`: standard error of per-example scores (SD / sqrt(n))
 
 - `n_evaluated`: number of successful evaluations
 
@@ -67,6 +83,16 @@ An EvalResult object containing:
 - `total_cost`: total cost in USD
 
 - `total_latency_ms`: total time in milliseconds
+
+When `epochs > 1`, additional fields:
+
+- `epochs`: number of epochs run
+
+- `epoch_scores`: list of score vectors, one per epoch
+
+- `score_std`: standard deviation of mean scores across epochs
+
+- `ci_lower`, `ci_upper`: 95% confidence interval bounds
 
 ## Examples
 

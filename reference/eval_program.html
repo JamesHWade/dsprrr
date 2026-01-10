@@ -7,6 +7,7 @@ evaluate() with enhanced output including:
 Per-example timing and error information
 Aggregated cost tracking
 Standard error computation
+Multi-epoch evaluation for statistical significance (when epochs &amp;gt; 1)
 
 "><meta property="og:description" content="Standard evaluation function for optimizers. Executes a module on a dataset,
 applies a metric to each example, and returns detailed per-example results
@@ -16,6 +17,7 @@ evaluate() with enhanced output including:
 Per-example timing and error information
 Aggregated cost tracking
 Standard error computation
+Multi-epoch evaluation for statistical significance (when epochs &amp;gt; 1)
 
 "><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -106,11 +108,20 @@ plus aggregated statistics.</p>
 <code><a href="evaluate.html">evaluate()</a></code> with enhanced output including:</p><ul><li><p>Per-example timing and error information</p></li>
 <li><p>Aggregated cost tracking</p></li>
 <li><p>Standard error computation</p></li>
+<li><p>Multi-epoch evaluation for statistical significance (when epochs &gt; 1)</p></li>
 </ul></div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">eval_program</span><span class="op">(</span><span class="va">program</span>, <span class="va">dataset</span>, <span class="va">metric</span>, .llm <span class="op">=</span> <span class="cn">NULL</span>, control <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">eval_program</span><span class="op">(</span></span>
+<span>  <span class="va">program</span>,</span>
+<span>  <span class="va">dataset</span>,</span>
+<span>  <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  control <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  epochs <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -137,20 +148,29 @@ plus aggregated statistics.</p>
 <dd><p>An OptimizerControl object or NULL for defaults.</p></dd>
 
 
+<dt id="arg-epochs">epochs<a class="anchor" aria-label="anchor" href="#arg-epochs"></a></dt>
+<dd><p>Integer; number of times to repeat evaluation for statistical
+significance. Defaults to 1L. When &gt; 1, computes std and confidence intervals.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to <code><a href="evaluate.html">evaluate()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An EvalResult object containing:</p><ul><li><p><code>examples</code>: tibble with per-example inputs, expected, predicted, score, error, latency</p></li>
+    <p>An EvalResult object containing:</p><ul><li><p><code>examples</code>: tibble with per-example row_id, score, error, predicted, and input columns (prefixed with input_*)</p></li>
 <li><p><code>mean_score</code>: mean score across successful evaluations</p></li>
-<li><p><code>std_error</code>: standard error of the mean</p></li>
+<li><p><code>std_error</code>: standard error of per-example scores (SD / sqrt(n))</p></li>
 <li><p><code>n_evaluated</code>: number of successful evaluations</p></li>
 <li><p><code>n_errors</code>: number of failed evaluations</p></li>
 <li><p><code>total_tokens</code>: total tokens used</p></li>
 <li><p><code>total_cost</code>: total cost in USD</p></li>
 <li><p><code>total_latency_ms</code>: total time in milliseconds</p></li>
+</ul><p>When <code>epochs &gt; 1</code>, additional fields:</p><ul><li><p><code>epochs</code>: number of epochs run</p></li>
+<li><p><code>epoch_scores</code>: list of score vectors, one per epoch</p></li>
+<li><p><code>score_std</code>: standard deviation of mean scores across epochs</p></li>
+<li><p><code>ci_lower</code>, <code>ci_upper</code>: 95% confidence interval bounds</p></li>
 </ul></div>
 
     <div class="section level2">
