@@ -378,3 +378,340 @@ test_that("format_trainset_as_demos handles various formats", {
   )
   expect_equal(demos_multi[[1]]$output, "p1")
 })
+
+test_that("get_metric_field extracts field attribute from metrics", {
+  # metric_exact_match stores field as attribute
+  metric_with_field <- metric_exact_match(field = "sentiment")
+  expect_equal(dsprrr:::get_metric_field(metric_with_field), "sentiment")
+
+  # metric without field returns NULL
+  metric_no_field <- metric_exact_match()
+  expect_null(dsprrr:::get_metric_field(metric_no_field))
+
+  # NULL metric returns NULL
+  expect_null(dsprrr:::get_metric_field(NULL))
+
+  # metric_f1 also stores field attribute
+  metric_f1_with_field <- metric_f1(field = "answer")
+  expect_equal(dsprrr:::get_metric_field(metric_f1_with_field), "answer")
+
+  # metric_contains also stores field attribute
+  metric_contains_with_field <- metric_contains("test", field = "response")
+  expect_equal(
+    dsprrr:::get_metric_field(metric_contains_with_field),
+    "response"
+  )
+})
+
+test_that("format_trainset_as_demos uses explicit output_col parameter", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  # Trainset with non-standard output column name
+  trainset <- data.frame(
+    id = 1:2,
+    text = c("hello", "world"),
+    classification = c("positive", "negative"),
+    stringsAsFactors = FALSE
+  )
+
+  # Without output_col, would warn about multiple columns
+  # With explicit output_col, should use that column
+  demos <- dsprrr:::format_trainset_as_demos(
+    trainset,
+    sig,
+    output_col = "classification"
+  )
+  expect_length(demos, 2)
+  expect_equal(demos[[1]]$output, "positive")
+  expect_equal(demos[[2]]$output, "negative")
+})
+
+test_that("LabeledFewShot uses metric field for output column", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify text"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Trainset with non-standard column name "classification"
+  trainset <- data.frame(
+    id = 1:4,
+    text = c("great", "terrible", "ok", "amazing"),
+    classification = c("positive", "negative", "neutral", "positive"),
+    stringsAsFactors = FALSE
+  )
+
+  # Without metric field, would warn about multiple columns or use wrong one
+  # With metric field = "classification", should use that column
+  tp <- LabeledFewShot(
+    k = 2L,
+    seed = 42L,
+    metric = metric_exact_match(field = "classification")
+  )
+
+  # Should not warn about multiple output columns
+  optimized <- compile(tp, mod, trainset)
+
+  expect_true(inherits(optimized, "Module"))
+  expect_length(optimized$demos, 2)
+
+  # Verify demos use the classification column
+  demo_outputs <- vapply(optimized$demos, function(d) d$output, character(1))
+  expect_true(all(demo_outputs %in% trainset$classification))
+})
+
+test_that("format_trainset_as_demos extracts nested field from list column", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  # Trainset with nested output in list column
+  trainset <- tibble::tibble(
+    text = c("hello", "world"),
+    output = list(
+      list(classification = "positive", confidence = 0.9),
+      list(classification = "negative", confidence = 0.8)
+    )
+  )
+
+  # Extract the nested "classification" field
+  demos <- dsprrr:::format_trainset_as_demos(
+    trainset,
+    sig,
+    output_col = "classification"
+  )
+
+  expect_length(demos, 2)
+  expect_equal(demos[[1]]$output, "positive")
+  expect_equal(demos[[2]]$output, "negative")
+})
+
+test_that("format_trainset_as_demos unwraps list column when field is column name", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  # Trainset with nested output in list column
+  trainset <- tibble::tibble(
+    text = c("hello", "world"),
+    output = list(
+      list(classification = "positive", confidence = 0.9),
+      list(classification = "negative", confidence = 0.8)
+    )
+  )
+
+  # When field = "output" (the column name), should return unwrapped list
+  demos <- dsprrr:::format_trainset_as_demos(
+    trainset,
+    sig,
+    output_col = "output"
+  )
+
+  expect_length(demos, 2)
+  # Should be unwrapped - direct access to classification, not output[[1]]$classification
+  expect_equal(demos[[1]]$output$classification, "positive")
+  expect_equal(demos[[1]]$output$confidence, 0.9)
+  expect_equal(demos[[2]]$output$classification, "negative")
+  expect_equal(demos[[2]]$output$confidence, 0.8)
+})
+
+test_that("format_trainset_as_demos handles multiple fields", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  # Trainset with nested output containing multiple fields
+  trainset <- tibble::tibble(
+    text = c("hello", "world"),
+    output = list(
+      list(classification = "positive", confidence = 0.9, extra = "foo"),
+      list(classification = "negative", confidence = 0.8, extra = "bar")
+    )
+  )
+
+  # Extract multiple specific fields
+  demos <- dsprrr:::format_trainset_as_demos(
+    trainset,
+    sig,
+    output_col = c("classification", "confidence")
+  )
+
+  expect_length(demos, 2)
+  # Should return named list with only the specified fields
+  expect_equal(demos[[1]]$output$classification, "positive")
+  expect_equal(demos[[1]]$output$confidence, 0.9)
+  expect_null(demos[[1]]$output$extra) # extra should not be included
+  expect_equal(demos[[2]]$output$classification, "negative")
+  expect_equal(demos[[2]]$output$confidence, 0.8)
+  expect_null(demos[[2]]$output$extra)
+})
+
+test_that("detect_output_source handles various trainset formats", {
+  input_names <- "text"
+
+  # Case 1: Direct column match
+  trainset1 <- data.frame(text = "a", classification = "pos")
+  result1 <- dsprrr:::detect_output_source(
+    trainset1,
+    "classification",
+    input_names
+  )
+  expect_equal(result1$type, "column")
+  expect_equal(result1$name, "classification")
+
+  # Case 2: Nested field in list column
+  trainset2 <- tibble::tibble(
+    text = "a",
+    output = list(list(sentiment = "positive"))
+  )
+  result2 <- dsprrr:::detect_output_source(trainset2, "sentiment", input_names)
+  expect_equal(result2$type, "nested")
+  expect_equal(result2$column, "output")
+  expect_equal(result2$field, "sentiment")
+
+  # Case 3: Field not found
+  trainset3 <- data.frame(text = "a", other = "b")
+  result3 <- dsprrr:::detect_output_source(
+    trainset3,
+    "nonexistent",
+    input_names
+  )
+  expect_equal(result3$type, "not_found")
+
+  # Case 4: No field specified, falls back to common names
+  trainset4 <- data.frame(text = "a", label = "pos")
+  result4 <- dsprrr:::detect_output_source(trainset4, NULL, input_names)
+  expect_equal(result4$type, "column")
+  expect_equal(result4$name, "label")
+
+  # Case 5: No field specified, no common names, uses first non-input
+  trainset5 <- data.frame(text = "a", foo = "bar")
+  result5 <- dsprrr:::detect_output_source(trainset5, NULL, input_names)
+  expect_equal(result5$type, "column")
+  expect_equal(result5$name, "foo")
+
+  # Case 6: Multiple fields in nested list column
+  trainset6 <- tibble::tibble(
+    text = "a",
+    output = list(list(classification = "pos", confidence = 0.9))
+  )
+  result6 <- dsprrr:::detect_output_source(
+    trainset6,
+    c("classification", "confidence"),
+    input_names
+  )
+  expect_equal(result6$type, "multi")
+  expect_equal(result6$column, "output")
+  expect_equal(result6$fields, c("classification", "confidence"))
+
+  # Case 7: Multiple fields not found (one missing)
+  trainset7 <- tibble::tibble(
+    text = "a",
+    output = list(list(classification = "pos")) # missing confidence
+  )
+  result7 <- dsprrr:::detect_output_source(
+    trainset7,
+    c("classification", "confidence"),
+    input_names
+  )
+  expect_equal(result7$type, "not_found")
+})
+
+test_that("get_metric_field warns for non-function input", {
+  # Passing wrong type should warn and return NULL
+  expect_warning(
+    result <- dsprrr:::get_metric_field("not a function"),
+    "Expected metric to be a function"
+  )
+  expect_null(result)
+
+  # List should also warn
+  expect_warning(
+    result2 <- dsprrr:::get_metric_field(list(field = "test")),
+    "Expected metric to be a function"
+  )
+  expect_null(result2)
+})
+
+test_that("format_trainset_as_demos validates output_col type", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+
+  trainset <- data.frame(text = "hello", output = "positive")
+
+  # Passing numeric should error
+
+  expect_error(
+    dsprrr:::format_trainset_as_demos(trainset, sig, output_col = 1),
+    "must be a character vector or NULL"
+  )
+
+  # Passing list should error
+  expect_error(
+    dsprrr:::format_trainset_as_demos(
+      trainset,
+      sig,
+      output_col = list("output")
+    ),
+    "must be a character vector or NULL"
+  )
+})
+
+test_that("detect_output_source warns when field not found", {
+  input_names <- "text"
+
+  # Single field not found should warn
+  trainset <- data.frame(text = "a", other = "b")
+  expect_warning(
+    result <- dsprrr:::detect_output_source(
+      trainset,
+      "nonexistent",
+      input_names
+    ),
+    "Could not find output field"
+  )
+  expect_equal(result$type, "not_found")
+})
+
+test_that("detect_output_source warns when multiple fields not found", {
+  input_names <- "text"
+
+  # Multiple fields not all found should warn
+  trainset <- tibble::tibble(
+    text = "a",
+    output = list(list(classification = "pos"))
+  )
+  expect_warning(
+    result <- dsprrr:::detect_output_source(
+      trainset,
+      c("classification", "missing_field"),
+      input_names
+    ),
+    "Could not find all requested fields"
+  )
+  expect_equal(result$type, "not_found")
+})
+
+test_that("detect_output_source warns when no output column found", {
+  # Trainset with only input column
+  trainset <- data.frame(text = "a")
+  expect_warning(
+    result <- dsprrr:::detect_output_source(trainset, NULL, "text"),
+    "No output column found"
+  )
+  expect_equal(result$type, "none")
+})

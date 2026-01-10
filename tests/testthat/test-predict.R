@@ -213,3 +213,96 @@ test_that("PredictModule is_compiled works", {
   pred$state$compiled <- TRUE
   expect_true(pred$is_compiled())
 })
+
+test_that("module_demos_as_tibble converts simple demos to tibble", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify"
+  )
+
+  pred <- module(
+    signature = sig,
+    type = "predict",
+    demos = list(
+      list(inputs = list(text = "hello"), output = "positive"),
+      list(inputs = list(text = "goodbye"), output = "negative")
+    )
+  )
+
+  result <- module_demos_as_tibble(pred)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 2)
+  expect_equal(result$text, c("hello", "goodbye"))
+  expect_equal(result$output, c("positive", "negative"))
+})
+
+test_that("module_demos_as_tibble handles nested outputs", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify"
+  )
+
+  pred <- module(
+    signature = sig,
+    type = "predict",
+    demos = list(
+      list(
+        inputs = list(text = "hello"),
+        output = list(classification = "positive", confidence = 0.9)
+      ),
+      list(
+        inputs = list(text = "goodbye"),
+        output = list(classification = "negative", confidence = 0.8)
+      )
+    )
+  )
+
+  result <- module_demos_as_tibble(pred)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 2)
+  expect_equal(result$text, c("hello", "goodbye"))
+  expect_equal(result$classification, c("positive", "negative"))
+  expect_equal(result$confidence, c(0.9, 0.8))
+  # Should NOT have an "output" column - fields are flattened
+  expect_false("output" %in% names(result))
+})
+
+test_that("module_demos_as_tibble returns empty tibble for no demos", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify"
+  )
+
+  pred <- module(signature = sig, type = "predict")
+
+  result <- module_demos_as_tibble(pred)
+
+  expect_s3_class(result, "tbl_df")
+  expect_equal(nrow(result), 0)
+})
+
+test_that("demo_table active binding works", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify"
+  )
+
+  pred <- module(
+    signature = sig,
+    type = "predict",
+    demos = list(
+      list(inputs = list(text = "test"), output = "result")
+    )
+  )
+
+  # Active binding should return same as function
+  expect_equal(pred$demo_table, module_demos_as_tibble(pred))
+  expect_s3_class(pred$demo_table, "tbl_df")
+  expect_equal(nrow(pred$demo_table), 1)
+})

@@ -184,7 +184,13 @@ compile_knn <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   }
 
   # Format trainset as demos (for reference structure)
-  demos_data <- format_trainset_as_demos(trainset, program$signature)
+  # Use the metric's field attribute if available to determine the output column
+  output_col <- get_metric_field(teleprompter@metric)
+  demos_data <- format_trainset_as_demos(
+    trainset,
+    program$signature,
+    output_col = output_col
+  )
 
   # Create the KNN wrapper module
   knn_module <- KNNFewShotModule$new(

@@ -557,5 +557,82 @@ PredictModule <- R6::R6Class(
 
       result
     }
+  ),
+
+  active = list(
+    #' @field demo_table Active binding that returns demos as a tibble
+    demo_table = function() {
+      module_demos_as_tibble(self)
+    }
   )
 )
+
+#' Convert module demos to a tibble
+#'
+#' @description
+#' Converts the demos list from a compiled module into a tidy tibble format.
+#' Handles both flat outputs (single values) and nested outputs (named lists).
+#'
+#' @param module A Module object (typically a PredictModule with demos)
+#' @return A tibble with input columns and output column(s). For nested outputs,
+#'   output fields are flattened into separate columns.
+#'
+#' @examples
+#' \dontrun{
+#' # After compiling a module with LabeledFewShot
+#' compiled <- compile(LabeledFewShot(k = 3), module, trainset)
+#'
+#' # View demos as tibble
+#' module_demos_as_tibble(compiled)
+#'
+#' # Or use the active binding
+#' compiled$demo_table
+#' }
+#'
+#' @export
+module_demos_as_tibble <- function(module) {
+  if (!inherits(module, "Module")) {
+    cli::cli_abort("{.arg module} must be a Module object")
+  }
+
+  demos <- module$demos
+  if (is.null(demos) || length(demos) == 0) {
+    return(tibble::tibble())
+  }
+
+  # Convert each demo to a flat row
+  rows <- lapply(demos, function(demo) {
+    row <- list()
+
+    # Add inputs
+    if (!is.null(demo$inputs) && is.list(demo$inputs)) {
+      for (name in names(demo$inputs)) {
+        row[[name]] <- demo$inputs[[name]]
+      }
+    }
+
+    # Add output(s)
+    output <- demo$output
+    if (is.null(output)) {
+      row[["output"]] <- NA
+    } else if (is.list(output) && !is.null(names(output))) {
+      # Nested output - flatten into separate columns
+      for (name in names(output)) {
+        row[[name]] <- output[[name]]
+      }
+    } else {
+      # Simple output
+      row[["output"]] <- output
+    }
+
+    row
+  })
+
+  # Combine into tibble
+  # Use do.call(rbind, ...) to avoid dplyr dependency
+  tbl_rows <- lapply(rows, tibble::as_tibble_row)
+  if (length(tbl_rows) == 0) {
+    return(tibble::tibble())
+  }
+  do.call(rbind, tbl_rows)
+}

@@ -154,7 +154,13 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   }
 
   # Convert to demo format expected by the module
-  demos <- format_trainset_as_demos(demos_data, program$signature)
+  # Use the metric's field attribute if available to determine the output column
+  output_col <- get_metric_field(teleprompter@metric)
+  demos <- format_trainset_as_demos(
+    demos_data,
+    program$signature,
+    output_col = output_col
+  )
 
   # Update the module's demos
   optimized$demos <- demos
@@ -288,11 +294,17 @@ compile_gridsearch <- function(
   }
 
   # Prepare demos from training set
+  # Use the metric's field attribute if available to determine the output column
+  output_col <- get_metric_field(teleprompter@metric)
   n_demos <- min(teleprompter@k, nrow(trainset_for_demos))
   if (n_demos > 0) {
     demo_indices <- sample(nrow(trainset_for_demos), n_demos)
     demos_data <- trainset_for_demos[demo_indices, , drop = FALSE]
-    demos <- format_trainset_as_demos(demos_data, program$signature)
+    demos <- format_trainset_as_demos(
+      demos_data,
+      program$signature,
+      output_col = output_col
+    )
   } else {
     demos <- list()
   }
@@ -373,17 +385,142 @@ copy_signature <- function(sig) {
   )
 }
 
-#' Format training data as demonstrations
+#' Extract output value from a trainset row
+#'
+#' Searches for a field in a data frame row. If `field` is provided, it:
+#' 1. First checks if field is a direct column name
+#' 2. If not, searches within list columns for that field as a nested key
+#'
+#' @param row A single-row data frame
+#' @param field The field name to search for (can be column name or nested key)
+#' @param input_names Names of input columns to exclude from search
+#' @return The extracted value, or NULL if not found
 #' @noRd
-format_trainset_as_demos <- function(trainset, signature) {
-  demos <- list()
+extract_output_from_row <- function(row, field, input_names = character()) {
+  # If field is provided, search for it specifically
 
-  # Get input names from signature
-  input_names <- vapply(signature@inputs, function(x) x$name, character(1))
+  if (!is.null(field)) {
+    # First: check if it's a direct column name
+    if (field %in% names(row)) {
+      return(row[[field]])
+    }
 
-  # Determine output column name
-  # Try common names first
-  output_col <- NULL
+    # Second: search within list columns for nested field
+    for (col_name in names(row)) {
+      col_value <- row[[col_name]]
+      # Check if this column contains a list with our field
+      if (is.list(col_value) && !is.data.frame(col_value)) {
+        # Handle list columns (tibble stores as list of length 1 per row)
+        val <- if (length(col_value) == 1 && is.list(col_value[[1]])) {
+          col_value[[1]]
+        } else {
+          col_value
+        }
+        if (field %in% names(val)) {
+          return(val[[field]])
+        }
+      }
+    }
+
+    # Field not found anywhere
+    return(NULL)
+  }
+
+  # No field specified: fall back to finding any non-input column
+  remaining_cols <- setdiff(names(row), input_names)
+  if (length(remaining_cols) > 0) {
+    return(row[[remaining_cols[1]]])
+  }
+
+  NULL
+}
+
+#' Unwrap tibble list column value
+#'
+#' Tibbles store list columns as list-of-lists. This helper unwraps
+#' the extra layer when accessing a single row.
+#'
+#' @param value The value from row[[column]]
+#' @return The unwrapped value
+#' @noRd
+unwrap_list_column <- function(value) {
+  if (is.list(value) && length(value) == 1 && is.list(value[[1]])) {
+    value[[1]]
+  } else {
+    value
+  }
+}
+
+#' Detect the output column in a trainset
+#'
+#' @param trainset Data frame containing training examples
+#' @param fields Optional field name(s) from metric. Can be:
+#'   - NULL: auto-detect output column
+#'   - Single string: column name or nested field name
+#'   - Character vector: multiple nested field names to extract
+#' @param input_names Names of input columns to exclude
+#' @return List describing how to extract output values
+#' @noRd
+detect_output_source <- function(trainset, fields, input_names) {
+  # Handle multiple fields case
+  if (length(fields) > 1) {
+    # Multiple fields: find which column contains them
+    if (nrow(trainset) > 0) {
+      row <- trainset[1, , drop = FALSE]
+      for (col_name in names(row)) {
+        col_value <- row[[col_name]]
+        if (is.list(col_value) && !is.data.frame(col_value)) {
+          val <- unwrap_list_column(col_value)
+          # Check if all fields are present in this column
+          if (all(fields %in% names(val))) {
+            return(list(type = "multi", column = col_name, fields = fields))
+          }
+        }
+      }
+    }
+    # Fields not found - warn the user
+    cli::cli_warn(c(
+      "Could not find all requested fields in trainset",
+      "i" = "Requested fields: {.val {fields}}",
+      "i" = "Available columns: {.val {names(trainset)}}",
+      "!" = "Demo outputs will be set to NULL"
+    ))
+    return(list(type = "not_found", fields = fields))
+  }
+
+  # Single field case
+  field <- fields
+
+  # If field is provided, check if it's a direct column
+  if (!is.null(field) && field %in% names(trainset)) {
+    return(list(type = "column", name = field))
+  }
+
+  # If field is provided but not a column, it might be nested
+  if (!is.null(field)) {
+    # Check first row for nested field
+    if (nrow(trainset) > 0) {
+      row <- trainset[1, , drop = FALSE]
+      for (col_name in names(row)) {
+        col_value <- row[[col_name]]
+        if (is.list(col_value) && !is.data.frame(col_value)) {
+          val <- unwrap_list_column(col_value)
+          if (field %in% names(val)) {
+            return(list(type = "nested", column = col_name, field = field))
+          }
+        }
+      }
+    }
+    # Field not found - warn the user
+    cli::cli_warn(c(
+      "Could not find output field {.val {field}} in trainset",
+      "i" = "Available columns: {.val {names(trainset)}}",
+      "!" = "Demo outputs will be set to NULL"
+    ))
+    return(list(type = "not_found", field = field))
+  }
+
+  # No field specified: try common output column names
   possible_output_names <- c(
     "output",
     "label",
@@ -394,25 +531,60 @@ format_trainset_as_demos <- function(trainset, signature) {
   )
   for (col in possible_output_names) {
     if (col %in% names(trainset)) {
-      output_col <- col
-      break
+      return(list(type = "column", name = col))
     }
   }
 
-  # If no standard output column found, use any column not in inputs
-  if (is.null(output_col)) {
-    remaining_cols <- setdiff(names(trainset), input_names)
-    if (length(remaining_cols) > 0) {
-      output_col <- remaining_cols[1]
-      if (length(remaining_cols) > 1) {
-        cli::cli_warn(c(
-          "Multiple potential output columns found",
-          "i" = "Using: {output_col}",
-          "i" = "Other columns: {remaining_cols[-1]}"
-        ))
-      }
+  # Fall back to first non-input column
+  remaining_cols <- setdiff(names(trainset), input_names)
+  if (length(remaining_cols) > 0) {
+    if (length(remaining_cols) > 1) {
+      cli::cli_warn(c(
+        "Multiple potential output columns found",
+        "i" = "Using: {remaining_cols[1]}",
+        "i" = "Other columns: {remaining_cols[-1]}"
+      ))
     }
+    return(list(type = "column", name = remaining_cols[1]))
   }
+
+  # No output column found at all - this is likely a configuration error
+  cli::cli_warn(c(
+    "No output column found in trainset",
+    "i" = "Trainset columns: {.val {names(trainset)}}",
+    "i" = "Input columns (excluded): {.val {input_names}}",
+    "!" = "All demos will have NULL output"
+  ))
+  list(type = "none")
+}
+
+#' Format training data as demonstrations
+#'
+#' @param trainset Data frame containing training examples
+#' @param signature The module's signature
+#' @param output_col Optional field name(s) for output. This can be:
+#'   - A direct column name in the trainset
+#'   - A nested field name within a list column (e.g., "classification" inside
+#'     an "output" column containing `list(classification = "positive")`)
+#'   - A character vector of multiple field names to extract as a named list
+#'   Typically extracted from the metric's field attribute via `get_metric_field()`.
+#' @noRd
+format_trainset_as_demos <- function(trainset, signature, output_col = NULL) {
+  # Validate output_col parameter
+  if (!is.null(output_col) && !is.character(output_col)) {
+    cli::cli_abort(c(
+      "{.arg output_col} must be a character vector or NULL",
+      "x" = "Got: {.cls {class(output_col)}}"
+    ))
+  }
+
+  demos <- list()
+
+  # Get input names from signature
+  input_names <- vapply(signature@inputs, function(x) x$name, character(1))
+
+  # Detect where output values come from
+  output_source <- detect_output_source(trainset, output_col, input_names)
 
   # Create demos
   for (i in seq_len(nrow(trainset))) {
@@ -426,13 +598,39 @@ format_trainset_as_demos <- function(trainset, signature) {
       }
     }
 
-    # Extract output
-    demo_output <- if (!is.null(output_col) && output_col %in% names(row)) {
-      row[[output_col]]
-    } else {
-      NULL
-    }
-
+    # Extract output based on detected source
+    demo_output <- switch(
+      output_source$type,
+      "column" = {
+        val <- row[[output_source$name]]
+        # Unwrap tibble list column if needed
+        unwrap_list_column(val)
+      },
+      "nested" = {
+        col_value <- row[[output_source$column]]
+        val <- unwrap_list_column(col_value)
+        val[[output_source$field]]
+      },
+      "multi" = {
+        col_value <- row[[output_source$column]]
+        val <- unwrap_list_column(col_value)
+        # Extract only the specified fields as a named list
+        result <- list()
+        for (field_name in output_source$fields) {
+          result[[field_name]] <- val[[field_name]]
+        }
+        result
+      },
+      "not_found" = NULL,
+      "none" = NULL,
+      {
+        cli::cli_warn(c(
+          "Unknown output source type: {.val {output_source$type}}",
+          "!" = "Demo output set to NULL"
+        ))
+        NULL
+      }
+    )
     demos[[i]] <- list(
       inputs = demo_inputs,
       output = demo_output
