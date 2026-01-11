@@ -21,7 +21,7 @@ This guide helps you diagnose and fix common issues when using dsprrr.
 ## Quick Diagnostic
 
 When something goes wrong, start here:
-```{r diagnostic}
+```r
 library(dsprrr)
 
 # 1. Check your configuration
