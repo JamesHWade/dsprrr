@@ -233,7 +233,8 @@ test_that("epoch results are aggregated correctly", {
     metric = metric,
     .llm = mock_llm,
     .progress = FALSE,
-    epochs = 3L
+    epochs = 3L,
+    .cache = FALSE # Disable cache so each epoch gets fresh responses
   )
 
   # Check that we have 3 epochs

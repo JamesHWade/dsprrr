@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# dsprrr <img src="man/figures/logo.png" align="right" width="160" alt="dsprrr hex sticker" />
+# dsprrr <img src="man/figures/logo.png" align="right" height="139" alt="dsprrr hex sticker" />
 
 <!-- badges: start -->
 

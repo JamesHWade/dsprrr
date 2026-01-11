@@ -16,11 +16,13 @@
 #' @name default-chat
 NULL
 
-# Package environment to store default chat, prompt history, and scoped LM
+# Package environment to store default chat, prompt history, scoped LM, and cache state
 .dsprrr_env <- new.env(parent = emptyenv())
 .dsprrr_env$prompt_history <- list()
 .dsprrr_env$prompt_history_max <- 100L
 .dsprrr_env$scoped_lm <- NULL
+.dsprrr_env$cache_degraded <- FALSE
+.dsprrr_env$cache_degraded_reason <- NULL
 
 #' Get the Default Chat
 #'
@@ -752,6 +754,56 @@ dsprrr_sitrep <- function() {
     }
   } else {
     cli::cli_text("{.emph Using defaults (no options set)}")
+  }
+
+  cli::cat_line()
+
+  # ── Cache section ──
+  cli::cli_h2("Cache")
+
+  cache_config <- get_cache_config()
+  result$cache_enabled <- cache_config$enable
+
+  if (!cache_config$enable) {
+    cli::cli_bullets(c("x" = "Caching disabled"))
+    env_var <- Sys.getenv("DSPRRR_CACHE_ENABLED", unset = "")
+    if (nzchar(env_var)) {
+      cli::cli_text(
+        "  {.emph Disabled via {.envvar DSPRRR_CACHE_ENABLED={env_var}}}"
+      )
+    }
+  } else {
+    # Show enabled tiers
+    tiers <- character()
+    if (cache_config$enable_memory) {
+      tiers <- c(tiers, "memory")
+    }
+    if (cache_config$enable_disk) {
+      tiers <- c(tiers, "disk")
+    }
+
+    cli::cli_bullets(c("v" = "Cache tiers: {paste(tiers, collapse = ', ')}"))
+
+    # Cache statistics
+    stats <- cache_stats()
+    result$cache_stats <- stats
+
+    if (stats$hits > 0 || stats$misses > 0) {
+      cli::cli_bullets(c(
+        "*" = "Hit rate: {format(stats$hit_rate * 100, digits = 1)}%",
+        "*" = "Requests: {stats$hits + stats$misses} ({stats$hits} hits, {stats$misses} misses)"
+      ))
+
+      if (!is.null(stats$memory_entries) && stats$memory_entries > 0) {
+        cli::cli_bullets(c("*" = "Memory entries: {stats$memory_entries}"))
+      }
+
+      if (!is.null(stats$disk_entries) && stats$disk_entries > 0) {
+        cli::cli_bullets(c("*" = "Disk entries: {stats$disk_entries}"))
+      }
+    } else {
+      cli::cli_bullets(c("i" = "No cache activity yet"))
+    }
   }
 
   cli::cat_line()

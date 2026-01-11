@@ -23,6 +23,9 @@
 #'     \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 #'     \item{.return_format}{Character, either "simple" (default) or "structured".
 #'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
+#'     \item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
+#'       If TRUE, attempts to use cache (no effect if caching globally disabled).
+#'       If FALSE, bypasses cache for this call only.}
 #'   }
 #'
 #' @details
@@ -106,9 +109,25 @@ run.PredictModule <- function(
   .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
-  .show_prompt = FALSE
+  .show_prompt = FALSE,
+  .cache = NULL
 ) {
   .parallel_method <- match.arg(.parallel_method)
+
+  # Validate .cache parameter
+  if (!is.null(.cache)) {
+    if (!is.logical(.cache) || length(.cache) != 1 || is.na(.cache)) {
+      cache_value <- .cache
+      cli::cli_abort(c(
+        "{.arg .cache} must be {.code TRUE}, {.code FALSE}, or {.code NULL}",
+        "x" = "You provided: {.cls {class(cache_value)}} with value {.val {cache_value}}",
+        "i" = "{.code TRUE} attempts to use cache (if available)",
+        "i" = "{.code FALSE} bypasses cache for this call",
+        "i" = "{.code NULL} uses global cache configuration (default)"
+      ))
+    }
+  }
+
   # Show prompt preview if requested
   if (.show_prompt) {
     show_prompt_preview(module)
@@ -193,13 +212,14 @@ run.PredictModule <- function(
       .parallel,
       .progress,
       .return_format,
-      .parallel_method
+      .parallel_method,
+      .cache
     ))
   }
 
   # Single input processing
   # Note: ellmer handles retries internally (configurable via options(ellmer_max_tries))
-  result <- module$forward(inputs, .llm = .llm, trace = TRUE)
+  result <- module$forward(inputs, .llm = .llm, trace = TRUE, .cache = .cache)
 
   if (.verbose && !is.null(result$metadata[[1]]$prompt)) {
     cli::cli_h3("Generated Prompt")
@@ -239,7 +259,8 @@ process_batch_item <- function(
   llm,
   index,
   .verbose,
-  .return_format
+  .return_format,
+  .cache = NULL
 ) {
   prompt <- build_prompt(module, input_set)
 
@@ -255,7 +276,8 @@ process_batch_item <- function(
     prompt = prompt,
     output_type = module$signature@output_type,
     instructions = module$signature@instructions,
-    verbose = .verbose
+    verbose = .verbose,
+    .cache = .cache
   )
 
   end_time <- Sys.time()
@@ -358,7 +380,8 @@ run_batch <- function(
   .parallel,
   .progress,
   .return_format,
-  .parallel_method = "mirai"
+  .parallel_method = "mirai",
+  .cache = NULL
 ) {
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
 
@@ -371,7 +394,8 @@ run_batch <- function(
       .llm,
       .verbose,
       .return_format,
-      .progress
+      .progress,
+      .cache
     )
   } else if (.parallel_method == "ellmer") {
     # Use ellmer's parallel_chat_structured for native parallelism
@@ -382,7 +406,8 @@ run_batch <- function(
       .llm,
       .verbose,
       .return_format,
-      .progress
+      .progress,
+      .cache
     )
   } else {
     # Default: mirai-based parallelism
@@ -393,7 +418,8 @@ run_batch <- function(
       .llm,
       .verbose,
       .return_format,
-      .progress
+      .progress,
+      .cache
     )
   }
 
@@ -413,7 +439,8 @@ run_batch_sequential <- function(
   .llm,
   .verbose,
   .return_format,
-  .progress
+  .progress,
+  .cache = NULL
 ) {
   shared_llm <- .llm %||% module$chat %||% get_default_llm(module)
   results <- vector("list", n)
@@ -439,7 +466,8 @@ run_batch_sequential <- function(
           llm = shared_llm,
           index = i,
           .verbose = .verbose,
-          .return_format = .return_format
+          .return_format = .return_format,
+          .cache = .cache
         )
       },
       error = function(e) {
@@ -481,7 +509,8 @@ run_batch_ellmer_parallel <- function(
   .llm,
   .verbose,
   .return_format,
-  .progress
+  .progress,
+  .cache = NULL
 ) {
   # Build prompts for all inputs (as list, required by ellmer::parallel_chat_structured)
   prompts <- lapply(
@@ -516,7 +545,8 @@ run_batch_ellmer_parallel <- function(
         .llm,
         .verbose,
         .return_format,
-        .progress
+        .progress,
+        .cache
       ))
     } else {
       cli::cli_warn(c(
@@ -531,7 +561,8 @@ run_batch_ellmer_parallel <- function(
         .llm,
         .verbose,
         .return_format,
-        .progress
+        .progress,
+        .cache
       ))
     }
   }
@@ -654,7 +685,8 @@ run_batch_parallel <- function(
   .llm,
   .verbose,
   .return_format,
-  .progress
+  .progress,
+  .cache = NULL
 ) {
   llm_factory <- if (!is.null(.llm)) {
     function() .llm
@@ -681,6 +713,7 @@ run_batch_parallel <- function(
       module,
       .verbose,
       .return_format,
+      .cache,
       process_batch_item_fn,
       extract_simple_output_fn,
       build_prompt_fn,
@@ -700,7 +733,8 @@ run_batch_parallel <- function(
             llm = worker_llm,
             index = i,
             .verbose = .verbose,
-            .return_format = .return_format
+            .return_format = .return_format,
+            .cache = .cache
           )
         },
         error = function(e) {
@@ -720,6 +754,7 @@ run_batch_parallel <- function(
       module = module,
       .verbose = .verbose,
       .return_format = .return_format,
+      .cache = .cache,
       process_batch_item_fn = process_batch_item,
       extract_simple_output_fn = extract_simple_output,
       build_prompt_fn = build_prompt,
@@ -927,7 +962,8 @@ call_llm <- function(
   prompt,
   output_type,
   instructions = "",
-  verbose = FALSE
+  verbose = FALSE,
+  .cache = NULL
 ) {
   # Build the full prompt with instructions
   full_prompt <- if (nchar(instructions) > 0) {
@@ -936,15 +972,15 @@ call_llm <- function(
     prompt
   }
 
-  # Make the API call through ellmer's chat_structured method
+  # Make the API call through cached wrapper
   tryCatch(
     {
-      # Note: echo="text" doesn't work with chat_structured for some providers
-      # So we disable echo for structured calls even in verbose mode
-      result <- llm$chat_structured(
-        full_prompt,
-        type = output_type,
-        echo = "none"
+      # Use cached_chat_structured to respect caching configuration
+      result <- cached_chat_structured(
+        llm = llm,
+        prompt = full_prompt,
+        output_type = output_type,
+        .cache = .cache
       )
 
       result
@@ -1072,7 +1108,8 @@ run_dataset.Module <- function(
         .parallel_method = .parallel_method,
         .progress = .progress,
         .return_format = .return_format
-      )
+      ),
+      list(...) # Pass through additional arguments like .cache
     )
   )
 

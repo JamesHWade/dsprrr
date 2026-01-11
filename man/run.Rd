@@ -23,6 +23,9 @@ so each worker can create an independent client).}
 \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 \item{.return_format}{Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
+\item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
+If TRUE, attempts to use cache (no effect if caching globally disabled).
+If FALSE, bypasses cache for this call only.}
 }}
 }
 \value{
