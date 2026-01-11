@@ -64,7 +64,7 @@ as_vitals_solver <- function(
     run_args <- c(
       list(
         module = module,
-        dataset = inputs,
+        data = inputs,
         .llm = .llm,
         .parallel = .parallel,
         .progress = FALSE,
