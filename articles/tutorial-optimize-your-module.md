@@ -98,6 +98,8 @@ classifier$optimize_grid(
   ),
   .llm = chat
 )
+#> ℹ Using cached LLM responses
+#> ℹ Disable with `configure_cache(enable = FALSE)` or `.cache = FALSE`
 ```
 
 ## Step 3: View Optimization Results
@@ -110,7 +112,7 @@ module_trials(classifier)
 #> # A tibble: 1 × 7
 #>   n_trials best_trial best_score mean_score std_error best_params      trials  
 #>      <int>      <int>      <dbl>      <dbl>     <dbl> <list>           <list>  
-#> 1        4          1        0.9      0.875     0.025 <named list [1]> <tibble>
+#> 1        4          1        0.9        0.9         0 <named list [1]> <tibble>
 ```
 
 Get the summary:
@@ -124,7 +126,7 @@ module_metrics(classifier)
 #> 1        1   0.9        0.9            1   0.316          10        0
 #> 2        2   0.9        0.9            1   0.316          10        0
 #> 3        3   0.9        0.9            1   0.316          10        0
-#> 4        4   0.8        0.8            1   0.422          10        0
+#> 4        4   0.9        0.9            1   0.316          10        0
 #> # ℹ 3 more variables: params <list>, scores <list>, yardstick <list>
 ```
 
@@ -158,10 +160,6 @@ configuration:
 ``` r
 # This uses the best temperature found
 run(classifier, review = "This product changed my life!", .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "positive"
 ```
@@ -310,19 +308,19 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 738.7562
+#> [1] 477.7474
 #> 
 #> $metadata[[1]]$prompt_length
-#> [1] 177
+#> [1] 172
 #> 
 #> $metadata[[1]]$prompt
-#> [1] "Example 1:\nreview: Exceeded all my expectations!\nOutput: positive\n\nExample 2:\nreview: Don't bother. Total junk.\nOutput: negative\n\n\n# Input: review\nreview: Great value for money!"
+#> [1] "Example 1:\nreview: Decent for the price.\nOutput: neutral\n\nExample 2:\nreview: Nothing special, but it works.\nOutput: neutral\n\n\n# Input: review\nreview: Great value for money!"
 #> 
 #> $metadata[[1]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-11 17:02:28 UTC"
+#> [1] "2026-01-11 18:40:30 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -330,19 +328,19 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 741.0862
+#> [1] 485.7812
 #> 
 #> $metadata[[2]]$prompt_length
-#> [1] 184
+#> [1] 179
 #> 
 #> $metadata[[2]]$prompt
-#> [1] "Example 1:\nreview: Exceeded all my expectations!\nOutput: positive\n\nExample 2:\nreview: Don't bother. Total junk.\nOutput: negative\n\n\n# Input: review\nreview: Stopped working after a week."
+#> [1] "Example 1:\nreview: Decent for the price.\nOutput: neutral\n\nExample 2:\nreview: Nothing special, but it works.\nOutput: neutral\n\n\n# Input: review\nreview: Stopped working after a week."
 #> 
 #> $metadata[[2]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-11 17:02:29 UTC"
+#> [1] "2026-01-11 18:40:31 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -350,19 +348,19 @@ test_results
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 748.7805
+#> [1] 501.545
 #> 
 #> $metadata[[3]]$prompt_length
-#> [1] 186
+#> [1] 181
 #> 
 #> $metadata[[3]]$prompt
-#> [1] "Example 1:\nreview: Exceeded all my expectations!\nOutput: positive\n\nExample 2:\nreview: Don't bother. Total junk.\nOutput: negative\n\n\n# Input: review\nreview: Average product, average price."
+#> [1] "Example 1:\nreview: Decent for the price.\nOutput: neutral\n\nExample 2:\nreview: Nothing special, but it works.\nOutput: neutral\n\n\n# Input: review\nreview: Average product, average price."
 #> 
 #> $metadata[[3]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-11 17:02:30 UTC"
+#> [1] "2026-01-11 18:40:31 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -370,19 +368,19 @@ test_results
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 754.5891
+#> [1] 500.0944
 #> 
 #> $metadata[[4]]$prompt_length
-#> [1] 194
+#> [1] 189
 #> 
 #> $metadata[[4]]$prompt
-#> [1] "Example 1:\nreview: Exceeded all my expectations!\nOutput: positive\n\nExample 2:\nreview: Don't bother. Total junk.\nOutput: negative\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"
+#> [1] "Example 1:\nreview: Decent for the price.\nOutput: neutral\n\nExample 2:\nreview: Nothing special, but it works.\nOutput: neutral\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"
 #> 
 #> $metadata[[4]]$instructions
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-11 17:02:30 UTC"
+#> [1] "2026-01-11 18:40:32 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -413,7 +411,7 @@ baseline_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
-#> Processing 2/4 |  50% | ETA:  2s
+#> Processing 2/4 |  50% | ETA:  1s
 #> Processing 4/4 | 100% | ETA:  0s
 #> 
 
@@ -457,8 +455,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x5580b20381d0>
-#> <environment: 0x5580b2036dd8>
+#> <bytecode: 0x561f53872d80>
+#> <environment: 0x561f53871c98>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -478,8 +476,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x5580b4238fe0>
-#> <environment: 0x5580b52b4fd0>
+#> <bytecode: 0x561f57fb7c08>
+#> <environment: 0x561f5802fd40>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -507,8 +505,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x5580b4127708>
-#> <environment: 0x5580b2556e60>
+#> <bytecode: 0x561f563a4f80>
+#> <environment: 0x561f51de0048>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -523,8 +521,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x5580b303b2f0>
-#> <environment: 0x5580b7598088>
+#> <bytecode: 0x561f564d8d40>
+#> <environment: 0x561f564d9b78>
 ```
 
 ## Step 10: Tracking Costs

@@ -52,26 +52,14 @@ Test it:
 
 ``` r
 run(classifier, ticket = "My package hasn't arrived yet", .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $category
 #> [1] "shipping"
 
 run(classifier, ticket = "I was charged twice for my order", .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $category
 #> [1] "billing"
 
 run(classifier, ticket = "The app keeps crashing when I try to login", .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $category
 #> [1] "technical"
 ```
@@ -198,18 +186,10 @@ Test the improved classifier:
 
 ``` r
 run(classifier_with_demos, ticket = "I need a receipt for my purchase", .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $category
 #> [1] "billing"
 
 run(classifier_with_demos, ticket = "The button doesn't respond when clicked", .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $category
 #> [1] "technical"
 ```
@@ -275,17 +255,12 @@ Let’s see how each version performs:
 ``` r
 # Run all three on the test set
 results_baseline <- run_dataset(classifier, trainset, .llm = chat)
-#> Processing 4/10 |  40% | ETA:  2s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
+#> ℹ Using cached LLM responses
+#> ℹ Disable with `configure_cache(enable = FALSE)` or `.cache = FALSE`
 results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
+results_compiled <- run_dataset(compiled, trainset, .llm = chat)
 #> Processing 4/10 |  40% | ETA:  2s
 #> Processing 10/10 | 100% | ETA:  0s
-#> 
-results_compiled <- run_dataset(compiled, trainset, .llm = chat)
-#> Processing 3/10 |  30% | ETA:  3s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
 
 # Calculate accuracies
 acc_baseline <- mean(results_baseline$category == trainset$category)
@@ -317,9 +292,6 @@ metric <- metric_exact_match(field = "category")
 
 # Evaluate the compiled module
 eval_result <- evaluate(compiled, trainset, metric = metric, .llm = chat)
-#> Processing 6/10 |  60% | ETA:  2s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
 
 eval_result
 #> $mean_score
@@ -392,7 +364,7 @@ eval_result
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 431.381
+#> [1] 0.7174015
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 272
@@ -404,7 +376,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-11 17:00:48 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -412,7 +384,7 @@ eval_result
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 440.3887
+#> [1] 0.5862713
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 269
@@ -424,7 +396,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-11 17:00:49 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -432,7 +404,7 @@ eval_result
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 445.4148
+#> [1] 0.4968643
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 269
@@ -444,7 +416,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-11 17:00:49 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -452,7 +424,7 @@ eval_result
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 449.2874
+#> [1] 0.500679
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 272
@@ -464,7 +436,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-11 17:00:49 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -472,7 +444,7 @@ eval_result
 #> 
 #> $metadata[[5]]
 #> $metadata[[5]]$latency_ms
-#> [1] 456.0513
+#> [1] 0.521183
 #> 
 #> $metadata[[5]]$prompt_length
 #> [1] 259
@@ -484,7 +456,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[5]]$timestamp
-#> [1] "2026-01-11 17:00:50 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[5]]$batch_index
 #> [1] 5
@@ -492,7 +464,7 @@ eval_result
 #> 
 #> $metadata[[6]]
 #> $metadata[[6]]$latency_ms
-#> [1] 467.4802
+#> [1] 0.5071163
 #> 
 #> $metadata[[6]]$prompt_length
 #> [1] 268
@@ -504,7 +476,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[6]]$timestamp
-#> [1] "2026-01-11 17:00:50 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[6]]$batch_index
 #> [1] 6
@@ -512,7 +484,7 @@ eval_result
 #> 
 #> $metadata[[7]]
 #> $metadata[[7]]$latency_ms
-#> [1] 466.5956
+#> [1] 0.5002022
 #> 
 #> $metadata[[7]]$prompt_length
 #> [1] 262
@@ -524,7 +496,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[7]]$timestamp
-#> [1] "2026-01-11 17:00:51 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[7]]$batch_index
 #> [1] 7
@@ -532,7 +504,7 @@ eval_result
 #> 
 #> $metadata[[8]]
 #> $metadata[[8]]$latency_ms
-#> [1] 473.9485
+#> [1] 0.5068779
 #> 
 #> $metadata[[8]]$prompt_length
 #> [1] 270
@@ -544,7 +516,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[8]]$timestamp
-#> [1] "2026-01-11 17:00:51 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[8]]$batch_index
 #> [1] 8
@@ -552,7 +524,7 @@ eval_result
 #> 
 #> $metadata[[9]]
 #> $metadata[[9]]$latency_ms
-#> [1] 489.0618
+#> [1] 0.497818
 #> 
 #> $metadata[[9]]$prompt_length
 #> [1] 269
@@ -564,7 +536,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[9]]$timestamp
-#> [1] "2026-01-11 17:00:52 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[9]]$batch_index
 #> [1] 9
@@ -572,7 +544,7 @@ eval_result
 #> 
 #> $metadata[[10]]
 #> $metadata[[10]]$latency_ms
-#> [1] 491.5347
+#> [1] 0.4827976
 #> 
 #> $metadata[[10]]$prompt_length
 #> [1] 264
@@ -584,7 +556,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[10]]$timestamp
-#> [1] "2026-01-11 17:00:52 UTC"
+#> [1] "2026-01-11 18:39:46 UTC"
 #> 
 #> $metadata[[10]]$batch_index
 #> [1] 10
@@ -634,23 +606,17 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
     accuracy = eval_k$mean_score
   )
 }
-#> Processing 2/10 |  20% | ETA:  4s
+#> Processing 4/10 |  40% | ETA:  2s
+#> Processing 10/10 | 100% | ETA:  0s
+#> 
+#> Processing 3/10 |  30% | ETA:  3s
 #> Processing 8/10 |  80% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
-#> Processing 4/10 |  40% | ETA:  3s
-#> Processing 9/10 |  90% | ETA:  1s
+#> Processing 5/10 |  50% | ETA:  2s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 
-#> Processing 5/10 |  50% | ETA:  3s
-#> Processing 9/10 |  90% | ETA:  1s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
-#> Processing 4/10 |  40% | ETA:  4s
-#> Processing 9/10 |  90% | ETA:  1s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
-#> Processing 3/10 |  30% | ETA:  5s
+#> Processing 3/10 |  30% | ETA:  3s
 #> Processing 8/10 |  80% | ETA:  1s
 #> Processing 10/10 | 100% | ETA:  0s
 #> 

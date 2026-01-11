@@ -65,7 +65,8 @@ platforms, with test coverage reporting to Codecov.
 
 ### PR Workflow
 
-Before creating a pull request, run these checks:
+**Before creating a pull request**, run quality gates and automated
+review:
 
 ``` bash
 # 1. Format ALL code with air (entire project)
@@ -83,6 +84,77 @@ Rscript -e "pkgdown::build_site(preview = FALSE)"
 
 **Important**: The CI runs `air format --check` on both `R/` and
 `tests/` directories. Always format test files too!
+
+#### Automated PR Review (Recommended)
+
+**After passing quality gates**, use the pr-review-toolkit to catch
+issues before creating the PR:
+
+``` bash
+# Run comprehensive automated review
+/pr-review-toolkit:review-pr all
+
+# Or run specific reviews based on changes:
+/pr-review-toolkit:review-pr code tests      # Code quality + test coverage
+/pr-review-toolkit:review-pr errors comments # Error handling + comment accuracy
+/pr-review-toolkit:review-pr simplify        # Simplify and refine code
+```
+
+**Available review aspects:** - `code` - General code quality, bugs,
+project guidelines (always run) - `tests` - Test coverage quality and
+completeness (if tests changed) - `errors` - Silent failures and error
+handling (if error handling changed) - `comments` - Comment accuracy and
+maintainability (if comments/docs added) - `types` - Type design and
+invariants (if new types added) - `simplify` - Code simplification and
+clarity (run after passing other reviews) - `all` - Run all applicable
+reviews (recommended)
+
+**Review workflow:** 1. Make changes and commit locally 2. Run
+`/pr-review-toolkit:review-pr all` 3. Address any **critical** or
+**important** issues found 4. Re-run specific reviews to verify fixes 5.
+Create PR when all reviews pass
+
+**Automated Workflow (Recommended):**
+
+Use the custom `/create-reviewed-pr` command (in `.claude/commands/`)
+that automates the entire workflow:
+
+    /create-reviewed-pr
+
+This command will: 1. Check you’re on a feature branch with all changes
+committed 2. Auto-detect R package project and run appropriate quality
+gates: - `air format .` (formatting) - `jarl check --fix` (linting) -
+`devtools::check()` (R CMD check) -
+[`pkgdown::build_site()`](https://pkgdown.r-lib.org/reference/build_site.html)
+(documentation) 3. Run comprehensive automated PR review via
+pr-review-toolkit 4. Stop if critical issues found, warn if important
+issues found 5. Create PR only when safe to proceed
+
+This ensures consistent quality and catches issues before they reach
+GitHub.
+
+**Sharing with other projects**: Copy
+`.claude/commands/create-reviewed-pr.md` to other projects’
+`.claude/commands/` directory. See `.claude/README.md` for details.
+
+**Example review output:**
+
+    # PR Review Summary
+
+    ## Critical Issues (0 found)
+    (none - ready to proceed)
+
+    ## Important Issues (1 found)
+    - [code-reviewer]: Missing error handling in cache_key() [R/cache.R:425]
+
+    ## Suggestions (2 found)
+    - [comment-analyzer]: Comment could be clearer [R/module-predict.R:185]
+    - [code-simplifier]: Consider extracting helper function [R/run.R:450]
+
+    ## Recommended Action
+    1. Fix the important error handling issue
+    2. Consider the suggestions
+    3. Create PR
 
 When adding new exported functions: 1. Add roxygen documentation with
 `@export` 2. For internal functions, use `@noRd` (not
@@ -315,6 +387,103 @@ test_that("integration test with cassette", {
 [`vcr::setup_knitr()`](https://docs.ropensci.org/vcr/reference/setup_knitr.html)
 which automatically names cassettes based on chunk labels. Set
 `eval = FALSE` for chunks that don’t need recording.
+
+### Caching in Tests
+
+**IMPORTANT**: dsprrr automatically caches LLM responses to speed up
+development. This can cause test failures when tests expect different
+responses across multiple calls with the same prompt.
+
+#### When to Disable Caching in Tests
+
+Disable caching when: 1. **Tests use stateful mock LLMs** - Mock returns
+different values based on call count 2. **Testing with epochs \> 1** -
+Each epoch should get fresh responses, not cached ones 3. **Testing
+cache bypass behavior** - Need to verify `.cache = FALSE` actually
+bypasses cache 4. **Tests rely on response variation** - Multiple calls
+need different responses
+
+#### How to Disable Caching
+
+**Option 1: Per-test basis** (recommended):
+
+``` r
+test_that("epochs get fresh responses", {
+  # ... test setup ...
+
+  result <- evaluate(
+    module,
+    data = dataset,
+    metric = metric,
+    .llm = mock_llm,
+    epochs = 3L,
+    .cache = FALSE  # Disable cache for this call
+  )
+})
+```
+
+**Option 2: Use `local_reset_cache()` helper**:
+
+``` r
+test_that("stateful mock LLM", {
+  local_reset_cache()  # Clear cache at start of test
+  configure_cache(enable = FALSE)  # Disable for this test
+
+  # ... test code with stateful mock ...
+})
+```
+
+**Option 3: Clean disk cache before test runs**:
+
+``` bash
+rm -rf tests/testthat/.dsprrr_cache
+```
+
+#### Common Pitfall
+
+Tests that work in isolation may fail when run together if persistent
+disk cache (`.dsprrr_cache/`) contains entries from previous test runs.
+Always use `local_reset_cache()` or `.cache = FALSE` for tests with
+stateful mocks.
+
+**Example of problematic test without cache handling**:
+
+``` r
+# BAD: Will fail if cache has entries from previous run
+test_that("mock returns different values", {
+  call_count <- 0
+  mock_llm <- list(
+    chat_structured = function(...) {
+      call_count <<- call_count + 1
+      paste("response", call_count)
+    }
+  )
+
+  # First call: "response 1"
+  r1 <- run(mod, input = "test", .llm = mock_llm)
+
+  # Second call: expects "response 2" but gets cached "response 1"
+  r2 <- run(mod, input = "test", .llm = mock_llm)
+  expect_equal(r2, "response 2")  # FAILS with cache enabled
+})
+
+# GOOD: Explicitly disable cache
+test_that("mock returns different values", {
+  local_reset_cache()
+
+  call_count <- 0
+  mock_llm <- list(
+    chat_structured = function(...) {
+      call_count <<- call_count + 1
+      paste("response", call_count)
+    }
+  )
+
+  r1 <- run(mod, input = "test", .llm = mock_llm, .cache = FALSE)
+  r2 <- run(mod, input = "test", .llm = mock_llm, .cache = FALSE)
+  expect_equal(r2, "response 2")  # Works correctly
+})
+```
 
 ## Implementation Status
 

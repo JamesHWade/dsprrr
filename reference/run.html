@@ -134,6 +134,11 @@ so each worker can create an independent client).</p></dd>
 <dd><p>Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.</p></dd>
 
+<dt>.cache</dt>
+<dd><p>Logical or NULL. Per-call cache control. If NULL (default), uses global config.
+If TRUE, attempts to use cache (no effect if caching globally disabled).
+If FALSE, bypasses cache for this call only.</p></dd>
+
 
 </dl></dd>
 

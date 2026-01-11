@@ -60,6 +60,13 @@ run(module, ...)
       returns just the output, "structured" returns list with output,
       chat, and metadata.
 
+  .cache
+
+  :   Logical or NULL. Per-call cache control. If NULL (default), uses
+      global config. If TRUE, attempts to use cache (no effect if
+      caching globally disabled). If FALSE, bypasses cache for this call
+      only.
+
 ## Value
 
 For single inputs with .return_format="simple": The parsed output

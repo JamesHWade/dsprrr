@@ -46,10 +46,6 @@ sig <- signature("text -> sentiment, confidence: number")
 extractor <- module(sig, type = "predict")
 
 run(extractor, text = "This product is absolutely fantastic!", .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "positive"
 #> 
@@ -63,10 +59,6 @@ Try another:
 
 ``` r
 run(extractor, text = "It was okay, nothing special.", .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $sentiment
 #> [1] "neutral"
 #> 
@@ -92,10 +84,6 @@ result <- run(
   review = "I've been using this blender for 6 months now. It's incredibly powerful and easy to clean. The only downside is it's quite loud. Overall, I'm very happy with it.",
   .llm = chat
 )
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 
 result
 #> $sentiment
@@ -142,10 +130,6 @@ commercial applications within 3-5 years.
 "
 
 run(article_analyzer, article = article, .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 #> $headline
 #> [1] "MIT Scientists Achieve Breakthrough in Solar Panel Efficiency"
 #> 
@@ -189,10 +173,6 @@ and Commerce Secretary Gina Raimondo.
 "
 
 result <- run(entity_extractor, text = news, .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 result
 #> $people
 #> [1] "Tim Cook"        "President Biden" "Janet Yellen"    "Gina Raimondo"  
@@ -261,10 +241,6 @@ Sarah
 "
 
 result <- run(email_parser, email = email, .llm = chat)
-#> Warning: Failed to serialize output_type for cache key
-#> ℹ Using class name as fallback: "ellmer::TypeObject"
-#> ℹ This may cause cache collisions for different output types
-#> ✖ Original error: cannot coerce type 'object' to vector of type 'character'
 result
 #> $sender
 #> $sender$name

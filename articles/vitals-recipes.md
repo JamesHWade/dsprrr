@@ -47,10 +47,10 @@ task <- as_vitals_task(
 # 4. Run evaluation
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [645ms]
+#> ✔ Solving [857ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [134ms]
+#> ✔ Scoring [70ms]
 #> 
 
 # 5. View results
@@ -122,7 +122,7 @@ eval_task <- as_vitals_task(
 
 eval_task$eval()
 #> ℹ Solving
-#> ✔ Solving [369ms]
+#> ✔ Solving [336ms]
 #> 
 #> ℹ Scoring
 #> ✔ Scoring [54ms]
@@ -158,10 +158,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [331ms]
+#> ✔ Solving [329ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [53ms]
+#> ✔ Scoring [57ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
@@ -197,10 +197,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [331ms]
+#> ✔ Solving [330ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [329ms]
+#> ✔ Scoring [333ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
@@ -235,10 +235,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [331ms]
+#> ✔ Solving [337ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [58ms]
+#> ✔ Scoring [54ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
@@ -282,10 +282,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [824ms]
+#> ✔ Solving [841ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [120ms]
+#> ✔ Scoring [117ms]
 #> 
 
 # Get detailed scores
@@ -355,16 +355,16 @@ for (name in c("basic", "cot")) {
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
 #> ℹ Solving
-#> ✔ Solving [332ms]
+#> ✔ Solving [333ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [198ms]
+#> ✔ Scoring [207ms]
 #> 
 #> ℹ Solving
-#> ✔ Solving [350ms]
+#> ✔ Solving [354ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [212ms]
+#> ✔ Scoring [210ms]
 #> 
 
 # Compare
@@ -402,7 +402,8 @@ task <- as_vitals_task(
   name = "news-classification",
   epochs = 3L,
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-4o-mini"),
+  .cache = FALSE  # Disable cache so each epoch gets fresh responses
 )
 
 task$eval()
@@ -410,7 +411,7 @@ task$eval()
 #> ✔ Solving [1.6s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [241ms]
+#> ✔ Scoring [242ms]
 #> 
 
 # Aggregate scores across epochs

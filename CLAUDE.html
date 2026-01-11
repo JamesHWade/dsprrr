@@ -124,7 +124,7 @@
 </div>
 <div class="section level3">
 <h3 id="pr-workflow">PR Workflow<a class="anchor" aria-label="anchor" href="#pr-workflow"></a></h3>
-<p>Before creating a pull request, run these checks:</p>
+<p><strong>Before creating a pull request</strong>, run quality gates and automated review:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># 1. Format ALL code with air (entire project)</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="ex">air</span> format .</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
@@ -137,16 +137,52 @@
 <span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co"># 4. Build pkgdown site (checks _pkgdown.yml coverage)</span></span>
 <span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"pkgdown::build_site(preview = FALSE)"</span></span></code></pre></div>
 <p><strong>Important</strong>: The CI runs <code>air format --check</code> on both <code>R/</code> and <code>tests/</code> directories. Always format test files too!</p>
+<div class="section level4">
+<h4 id="automated-pr-review-recommended">Automated PR Review (Recommended)<a class="anchor" aria-label="anchor" href="#automated-pr-review-recommended"></a></h4>
+<p><strong>After passing quality gates</strong>, use the pr-review-toolkit to catch issues before creating the PR:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Run comprehensive automated review</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="ex">/pr-review-toolkit:review-pr</span> all</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co"># Or run specific reviews based on changes:</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="ex">/pr-review-toolkit:review-pr</span> code tests      <span class="co"># Code quality + test coverage</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="ex">/pr-review-toolkit:review-pr</span> errors comments <span class="co"># Error handling + comment accuracy</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="ex">/pr-review-toolkit:review-pr</span> simplify        <span class="co"># Simplify and refine code</span></span></code></pre></div>
+<p><strong>Available review aspects:</strong> - <code>code</code> - General code quality, bugs, project guidelines (always run) - <code>tests</code> - Test coverage quality and completeness (if tests changed) - <code>errors</code> - Silent failures and error handling (if error handling changed) - <code>comments</code> - Comment accuracy and maintainability (if comments/docs added) - <code>types</code> - Type design and invariants (if new types added) - <code>simplify</code> - Code simplification and clarity (run after passing other reviews) - <code>all</code> - Run all applicable reviews (recommended)</p>
+<p><strong>Review workflow:</strong> 1. Make changes and commit locally 2. Run <code>/pr-review-toolkit:review-pr all</code> 3. Address any <strong>critical</strong> or <strong>important</strong> issues found 4. Re-run specific reviews to verify fixes 5. Create PR when all reviews pass</p>
+<p><strong>Automated Workflow (Recommended):</strong></p>
+<p>Use the custom <code>/create-reviewed-pr</code> command (in <code>.claude/commands/</code>) that automates the entire workflow:</p>
+<pre><code>/create-reviewed-pr</code></pre>
+<p>This command will: 1. Check you’re on a feature branch with all changes committed 2. Auto-detect R package project and run appropriate quality gates: - <code>air format .</code> (formatting) - <code>jarl check --fix</code> (linting) - <code>devtools::check()</code> (R CMD check) - <code><a href="https://pkgdown.r-lib.org/reference/build_site.html" class="external-link">pkgdown::build_site()</a></code> (documentation) 3. Run comprehensive automated PR review via pr-review-toolkit 4. Stop if critical issues found, warn if important issues found 5. Create PR only when safe to proceed</p>
+<p>This ensures consistent quality and catches issues before they reach GitHub.</p>
+<p><strong>Sharing with other projects</strong>: Copy <code>.claude/commands/create-reviewed-pr.md</code> to other projects’ <code>.claude/commands/</code> directory. See <code>.claude/README.md</code> for details.</p>
+<p><strong>Example review output:</strong></p>
+<pre><code># PR Review Summary
+
+## Critical Issues (0 found)
+(none - ready to proceed)
+
+## Important Issues (1 found)
+- [code-reviewer]: Missing error handling in cache_key() [R/cache.R:425]
+
+## Suggestions (2 found)
+- [comment-analyzer]: Comment could be clearer [R/module-predict.R:185]
+- [code-simplifier]: Consider extracting helper function [R/run.R:450]
+
+## Recommended Action
+1. Fix the important error handling issue
+2. Consider the suggestions
+3. Create PR</code></pre>
 <p>When adding new exported functions: 1. Add roxygen documentation with <code>@export</code> 2. For internal functions, use <code>@noRd</code> (not <code>@keywords internal</code>) to avoid codoc mismatch warnings with S7 classes 3. Run <code>devtools::document()</code> to generate <code>.Rd</code> files 4. Add the function to the appropriate section in <code>_pkgdown.yml</code> 5. Rebuild pkgdown to verify coverage</p>
 <p>Create PRs on feature branches:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature/my-feature</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co"># ... make changes ...</span></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">git</span> add <span class="at">-A</span> <span class="kw">&amp;&amp;</span> <span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Description"</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin feature/my-feature</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"Title"</span> <span class="at">--body</span> <span class="st">"Description"</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature/my-feature</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co"># ... make changes ...</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="fu">git</span> add <span class="at">-A</span> <span class="kw">&amp;&amp;</span> <span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Description"</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin feature/my-feature</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"Title"</span> <span class="at">--body</span> <span class="st">"Description"</span></span></code></pre></div>
 <p>After PR is merged, clean up with:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">usethis</span><span class="fu">::</span><span class="fu">pr_finish</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 </div>
 <div class="section level2">
@@ -178,7 +214,7 @@
 <div class="section level3">
 <h3 id="key-classes">Key Classes<a class="anchor" aria-label="anchor" href="#key-classes"></a></h3>
 <p><strong>Signature (S7)</strong> - Declarative schema for LLM operations: - <code>inputs</code>: List of <code><a href="reference/input.html">input()</a></code> specifications - <code>output_type</code>: ellmer type object (e.g., <code>type_string()</code>, <code>type_enum()</code>) - <code>instructions</code>: System prompt text</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># String notation (DSPy-style)</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer: string"</span><span class="op">)</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span>, instructions <span class="op">=</span> <span class="st">"Be concise"</span><span class="op">)</span></span>
@@ -190,7 +226,7 @@
 <span>  instructions <span class="op">=</span> <span class="st">"Analyze sentiment"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><strong>Module (R6)</strong> - Stateful execution unit: - <code>signature</code>: Immutable S7 Signature reference - <code>config</code>: Mutable configuration (temperature, template, etc.) - <code>state</code>: Mutable runtime state (traces, trials, compilation status) - <code>forward()</code>: Execute on batch input, return tibble with output/metadata - <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>: Run grid search over parameter configurations - <code>is_compiled()</code>: Check if module has been optimized</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
 <p><strong>PredictModule (R6)</strong> - Subclass for text generation: - <code>template</code>: glue template for prompt construction - <code>demos</code>: List of few-shot examples - <code>apply_optimization_params()</code>: Hook for updating state after optimization</p>
@@ -213,7 +249,7 @@
 <div class="section level3">
 <h3 id="teleprompters-s7">Teleprompters (S7)<a class="anchor" aria-label="anchor" href="#teleprompters-s7"></a></h3>
 <p>Optimization strategies that compile modules: - <code>LabeledFewShot</code>: Add k examples from training set as demonstrations - <code>GridSearchTeleprompter</code>: Search over instruction/template variants</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span>, metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -226,7 +262,7 @@
 <h2 id="key-patterns">Key Patterns<a class="anchor" aria-label="anchor" href="#key-patterns"></a></h2>
 <div class="section level3">
 <h3 id="creating-and-running-modules">Creating and Running Modules<a class="anchor" aria-label="anchor" href="#creating-and-running-modules"></a></h3>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># 1. Define signature</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
 <span></span>
@@ -242,7 +278,7 @@
 </div>
 <div class="section level3">
 <h3 id="optimization-workflow">Optimization Workflow<a class="anchor" aria-label="anchor" href="#optimization-workflow"></a></h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Grid search with custom parameters</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
 <span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
@@ -257,7 +293,7 @@
 </div>
 <div class="section level3">
 <h3 id="evaluation">Evaluation<a class="anchor" aria-label="anchor" href="#evaluation"></a></h3>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">eval_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">test_data</span>, metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Returns: mean_score, scores, predictions, metadata, n_evaluated, n_errors</span></span></code></pre></div>
 </div>
@@ -274,7 +310,7 @@
 </ul></div>
 <div class="section level3">
 <h3 id="key-test-conventions">Key Test Conventions<a class="anchor" aria-label="anchor" href="#key-test-conventions"></a></h3>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Mock LLM for deterministic testing</span></span>
 <span><span class="va">mock_llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  chat_structured <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
@@ -295,15 +331,15 @@
 <p>Integration tests use <a href="https://docs.ropensci.org/vcr/" class="external-link">vcr</a> to record and replay HTTP interactions with LLM APIs. This allows tests to run without API keys and ensures reproducible results.</p>
 <p><strong>Cassette locations:</strong> - <code>tests/_vcr/</code> - Test cassettes (OpenAI) - <code>vignettes/_vcr/</code> - Vignette cassettes (Anthropic Claude)</p>
 <p><strong>Recording cassettes:</strong></p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Use the helper script (requires API keys set)</span></span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="ex">Rscript</span> inst/scripts/record-cassettes.R</span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># Use the helper script (requires API keys set)</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a><span class="ex">Rscript</span> inst/scripts/record-cassettes.R</span></code></pre></div>
 <p>Or interactively:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"inst/scripts/record-cassettes.R"</span><span class="op">)</span></span>
 <span><span class="fu">main</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Run recording</span></span></code></pre></div>
 <p><strong>When to re-record:</strong> - After changing API request format (prompt templates, output types) - After upgrading ellmer (may change request structure) - When cassettes become stale (API response format changes)</p>
 <p><strong>VCR in tests:</strong></p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">test_that</span><span class="op">(</span><span class="st">"integration test with cassette"</span>, <span class="op">{</span></span>
 <span>  <span class="fu">skip_if_not_installed</span><span class="op">(</span><span class="st">"vcr"</span><span class="op">)</span></span>
 <span>  <span class="va">cassette_file</span> <span class="op">&lt;-</span> <span class="fu">testthat</span><span class="fu">::</span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_path.html" class="external-link">test_path</a></span><span class="op">(</span><span class="st">"_vcr"</span>, <span class="st">"my-test.yml"</span><span class="op">)</span></span>
@@ -314,6 +350,81 @@
 <span>  <span class="co"># ... test code</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
 <p><strong>VCR in vignettes:</strong> Vignettes use <code><a href="https://docs.ropensci.org/vcr/reference/setup_knitr.html" class="external-link">vcr::setup_knitr()</a></code> which automatically names cassettes based on chunk labels. Set <code>eval = FALSE</code> for chunks that don’t need recording.</p>
+</div>
+<div class="section level3">
+<h3 id="caching-in-tests">Caching in Tests<a class="anchor" aria-label="anchor" href="#caching-in-tests"></a></h3>
+<p><strong>IMPORTANT</strong>: dsprrr automatically caches LLM responses to speed up development. This can cause test failures when tests expect different responses across multiple calls with the same prompt.</p>
+<div class="section level4">
+<h4 id="when-to-disable-caching-in-tests">When to Disable Caching in Tests<a class="anchor" aria-label="anchor" href="#when-to-disable-caching-in-tests"></a></h4>
+<p>Disable caching when: 1. <strong>Tests use stateful mock LLMs</strong> - Mock returns different values based on call count 2. <strong>Testing with epochs &gt; 1</strong> - Each epoch should get fresh responses, not cached ones 3. <strong>Testing cache bypass behavior</strong> - Need to verify <code>.cache = FALSE</code> actually bypasses cache 4. <strong>Tests rely on response variation</strong> - Multiple calls need different responses</p>
+</div>
+<div class="section level4">
+<h4 id="how-to-disable-caching">How to Disable Caching<a class="anchor" aria-label="anchor" href="#how-to-disable-caching"></a></h4>
+<p><strong>Option 1: Per-test basis</strong> (recommended):</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">test_that</span><span class="op">(</span><span class="st">"epochs get fresh responses"</span>, <span class="op">{</span></span>
+<span>  <span class="co"># ... test setup ...</span></span>
+<span></span>
+<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>    <span class="va">module</span>,</span>
+<span>    data <span class="op">=</span> <span class="va">dataset</span>,</span>
+<span>    metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">mock_llm</span>,</span>
+<span>    epochs <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>    .cache <span class="op">=</span> <span class="cn">FALSE</span>  <span class="co"># Disable cache for this call</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p><strong>Option 2: Use <code>local_reset_cache()</code> helper</strong>:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">test_that</span><span class="op">(</span><span class="st">"stateful mock LLM"</span>, <span class="op">{</span></span>
+<span>  <span class="fu">local_reset_cache</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Clear cache at start of test</span></span>
+<span>  <span class="fu"><a href="reference/configure_cache.html">configure_cache</a></span><span class="op">(</span>enable <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>  <span class="co"># Disable for this test</span></span>
+<span></span>
+<span>  <span class="co"># ... test code with stateful mock ...</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p><strong>Option 3: Clean disk cache before test runs</strong>:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> tests/testthat/.dsprrr_cache</span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="common-pitfall">Common Pitfall<a class="anchor" aria-label="anchor" href="#common-pitfall"></a></h4>
+<p>Tests that work in isolation may fail when run together if persistent disk cache (<code>.dsprrr_cache/</code>) contains entries from previous test runs. Always use <code>local_reset_cache()</code> or <code>.cache = FALSE</code> for tests with stateful mocks.</p>
+<p><strong>Example of problematic test without cache handling</strong>:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># BAD: Will fail if cache has entries from previous run</span></span>
+<span><span class="fu">test_that</span><span class="op">(</span><span class="st">"mock returns different values"</span>, <span class="op">{</span></span>
+<span>  <span class="va">call_count</span> <span class="op">&lt;-</span> <span class="fl">0</span></span>
+<span>  <span class="va">mock_llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    chat_structured <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">call_count</span> <span class="op">&lt;&lt;-</span> <span class="va">call_count</span> <span class="op">+</span> <span class="fl">1</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"response"</span>, <span class="va">call_count</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># First call: "response 1"</span></span>
+<span>  <span class="va">r1</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, input <span class="op">=</span> <span class="st">"test"</span>, .llm <span class="op">=</span> <span class="va">mock_llm</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># Second call: expects "response 2" but gets cached "response 1"</span></span>
+<span>  <span class="va">r2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, input <span class="op">=</span> <span class="st">"test"</span>, .llm <span class="op">=</span> <span class="va">mock_llm</span><span class="op">)</span></span>
+<span>  <span class="fu">expect_equal</span><span class="op">(</span><span class="va">r2</span>, <span class="st">"response 2"</span><span class="op">)</span>  <span class="co"># FAILS with cache enabled</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># GOOD: Explicitly disable cache</span></span>
+<span><span class="fu">test_that</span><span class="op">(</span><span class="st">"mock returns different values"</span>, <span class="op">{</span></span>
+<span>  <span class="fu">local_reset_cache</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="va">call_count</span> <span class="op">&lt;-</span> <span class="fl">0</span></span>
+<span>  <span class="va">mock_llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    chat_structured <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">call_count</span> <span class="op">&lt;&lt;-</span> <span class="va">call_count</span> <span class="op">+</span> <span class="fl">1</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"response"</span>, <span class="va">call_count</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span>  <span class="va">r1</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, input <span class="op">=</span> <span class="st">"test"</span>, .llm <span class="op">=</span> <span class="va">mock_llm</span>, .cache <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>  <span class="va">r2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, input <span class="op">=</span> <span class="st">"test"</span>, .llm <span class="op">=</span> <span class="va">mock_llm</span>, .cache <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>  <span class="fu">expect_equal</span><span class="op">(</span><span class="va">r2</span>, <span class="st">"response 2"</span><span class="op">)</span>  <span class="co"># Works correctly</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 </div>
 <div class="section level2">
@@ -381,27 +492,27 @@
 </div>
 <div class="section level3">
 <h3 id="essential-commands">Essential Commands<a class="anchor" aria-label="anchor" href="#essential-commands"></a></h3>
-<div class="sourceCode" id="cb18"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># Finding work</span></span>
-<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Show issues ready to work (no blockers)</span></span>
-<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="ex">bd</span> list <span class="at">--status</span><span class="op">=</span>open                 <span class="co"># All open issues</span></span>
-<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Detailed issue view with dependencies</span></span>
-<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a></span>
-<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a><span class="co"># Working on issues</span></span>
-<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Claim work</span></span>
-<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Mark complete</span></span>
-<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id1<span class="op">&gt;</span> <span class="op">&lt;</span>id2<span class="op">&gt;</span> ...              <span class="co"># Close multiple issues</span></span>
-<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a></span>
-<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a><span class="co"># Creating issues (always include description for context)</span></span>
-<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Fix bug"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"Details here"</span> <span class="at">-t</span> bug <span class="at">-p</span> 1</span>
-<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a></span>
-<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a><span class="co"># Dependencies</span></span>
-<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a><span class="ex">bd</span> dep add <span class="op">&lt;</span>issue<span class="op">&gt;</span> <span class="op">&lt;</span>depends-on<span class="op">&gt;</span>       <span class="co"># Add dependency</span></span>
-<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a><span class="ex">bd</span> blocked                            <span class="co"># Show blocked issues</span></span>
-<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a><span class="ex">bd</span> dep tree <span class="op">&lt;</span>id<span class="op">&gt;</span>                      <span class="co"># View dependency tree</span></span>
-<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a></span>
-<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a><span class="co"># Sync</span></span>
-<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync with git remote</span></span>
-<span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a><span class="ex">bd</span> sync <span class="at">--status</span>                      <span class="co"># Check sync status</span></span></code></pre></div>
+<div class="sourceCode" id="cb25"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># Finding work</span></span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Show issues ready to work (no blockers)</span></span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a><span class="ex">bd</span> list <span class="at">--status</span><span class="op">=</span>open                 <span class="co"># All open issues</span></span>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Detailed issue view with dependencies</span></span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a></span>
+<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a><span class="co"># Working on issues</span></span>
+<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Claim work</span></span>
+<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Mark complete</span></span>
+<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id1<span class="op">&gt;</span> <span class="op">&lt;</span>id2<span class="op">&gt;</span> ...              <span class="co"># Close multiple issues</span></span>
+<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a></span>
+<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a><span class="co"># Creating issues (always include description for context)</span></span>
+<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Fix bug"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"Details here"</span> <span class="at">-t</span> bug <span class="at">-p</span> 1</span>
+<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a></span>
+<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a><span class="co"># Dependencies</span></span>
+<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a><span class="ex">bd</span> dep add <span class="op">&lt;</span>issue<span class="op">&gt;</span> <span class="op">&lt;</span>depends-on<span class="op">&gt;</span>       <span class="co"># Add dependency</span></span>
+<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a><span class="ex">bd</span> blocked                            <span class="co"># Show blocked issues</span></span>
+<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a><span class="ex">bd</span> dep tree <span class="op">&lt;</span>id<span class="op">&gt;</span>                      <span class="co"># View dependency tree</span></span>
+<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a></span>
+<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a><span class="co"># Sync</span></span>
+<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync with git remote</span></span>
+<span id="cb25-21"><a href="#cb25-21" tabindex="-1"></a><span class="ex">bd</span> sync <span class="at">--status</span>                      <span class="co"># Check sync status</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="when-to-use-beads-vs-todowrite">When to Use Beads vs TodoWrite<a class="anchor" aria-label="anchor" href="#when-to-use-beads-vs-todowrite"></a></h3>
@@ -423,46 +534,46 @@
 <div class="section level3">
 <h3 id="id_1-find-work-and-create-feature-branch">1. Find Work and Create Feature Branch<a class="anchor" aria-label="anchor" href="#id_1-find-work-and-create-feature-branch"></a></h3>
 <p><strong>⚠️ IMPORTANT: Create the feature branch BEFORE claiming the issue or writing any code.</strong></p>
-<div class="sourceCode" id="cb19"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Find available work</span></span>
-<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Review issue details</span></span>
-<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a></span>
-<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a><span class="co"># CREATE BRANCH FIRST - before any code changes!</span></span>
-<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
-<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="co"># or: git checkout -b fix/&lt;short-description&gt;</span></span>
-<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a></span>
-<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Now claim the work</span></span></code></pre></div>
+<div class="sourceCode" id="cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Find available work</span></span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Review issue details</span></span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a></span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a><span class="co"># CREATE BRANCH FIRST - before any code changes!</span></span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
+<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a><span class="co"># or: git checkout -b fix/&lt;short-description&gt;</span></span>
+<span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a></span>
+<span id="cb26-8"><a href="#cb26-8" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Now claim the work</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="id_2-work-and-sync">2. Work and Sync<a class="anchor" aria-label="anchor" href="#id_2-work-and-sync"></a></h3>
-<div class="sourceCode" id="cb20"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co"># Make changes...</span></span>
-<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync beads periodically</span></span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="co"># Make changes...</span></span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync beads periodically</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="id_3-run-quality-gates">3. Run Quality Gates<a class="anchor" aria-label="anchor" href="#id_3-run-quality-gates"></a></h3>
-<div class="sourceCode" id="cb21"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a><span class="co"># Format ALL code with air (R/ and tests/)</span></span>
-<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
-<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a></span>
-<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a><span class="co"># Lint with jarl</span></span>
-<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
-<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a></span>
-<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a><span class="co"># Run tests</span></span>
-<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::test()"</span></span>
-<span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a></span>
-<span id="cb21-10"><a href="#cb21-10" tabindex="-1"></a><span class="co"># Run R CMD check</span></span>
-<span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
-<span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a></span>
-<span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a><span class="co"># Build pkgdown site</span></span>
-<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::document(); pkgdown::build_site(preview = FALSE)"</span></span></code></pre></div>
+<div class="sourceCode" id="cb28"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="co"># Format ALL code with air (R/ and tests/)</span></span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a></span>
+<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a><span class="co"># Lint with jarl</span></span>
+<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
+<span id="cb28-6"><a href="#cb28-6" tabindex="-1"></a></span>
+<span id="cb28-7"><a href="#cb28-7" tabindex="-1"></a><span class="co"># Run tests</span></span>
+<span id="cb28-8"><a href="#cb28-8" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::test()"</span></span>
+<span id="cb28-9"><a href="#cb28-9" tabindex="-1"></a></span>
+<span id="cb28-10"><a href="#cb28-10" tabindex="-1"></a><span class="co"># Run R CMD check</span></span>
+<span id="cb28-11"><a href="#cb28-11" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
+<span id="cb28-12"><a href="#cb28-12" tabindex="-1"></a></span>
+<span id="cb28-13"><a href="#cb28-13" tabindex="-1"></a><span class="co"># Build pkgdown site</span></span>
+<span id="cb28-14"><a href="#cb28-14" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::document(); pkgdown::build_site(preview = FALSE)"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="id_4-create-pr-and-close-issue">4. Create PR and Close Issue<a class="anchor" aria-label="anchor" href="#id_4-create-pr-and-close-issue"></a></h3>
 <p>When code is complete and ready for review:</p>
-<div class="sourceCode" id="cb22"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a><span class="fu">git</span> add .</span>
-<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr-xxx)"</span>  <span class="co"># Include beads issue ID!</span></span>
-<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Close beads issue - work is done</span></span>
-<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a><span class="ex">bd</span> sync</span>
-<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
-<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves beads-XXX"</span></span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr-xxx)"</span>  <span class="co"># Include beads issue ID!</span></span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Close beads issue - work is done</span></span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a><span class="ex">bd</span> sync</span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves beads-XXX"</span></span></code></pre></div>
 <p><strong>Important</strong>: Close the beads issue when the <em>work</em> is complete, not when the PR is merged. The issue tracks your work; the PR tracks the review/merge process.</p>
 </div>
 <div class="section level3">
@@ -471,11 +582,11 @@
 </div>
 <div class="section level3">
 <h3 id="id_6-after-pr-merged-cleanup">6. After PR Merged (Cleanup)<a class="anchor" aria-label="anchor" href="#id_6-after-pr-merged-cleanup"></a></h3>
-<div class="sourceCode" id="cb23"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a><span class="fu">git</span> checkout main</span>
-<span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a><span class="fu">git</span> pull</span>
-<span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">-d</span> feature/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a><span class="fu">git</span> checkout main</span>
+<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a><span class="fu">git</span> pull</span>
+<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">-d</span> feature/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span></code></pre></div>
 <p>Or use:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">usethis</span><span class="fu">::</span><span class="fu">pr_finish</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
@@ -484,32 +595,32 @@
 <p><strong>CRITICAL</strong>: Before ending a session, complete ALL steps. Work is NOT complete until <code>git push</code> succeeds.</p>
 <div class="section level3">
 <h3 id="mandatory-checklist-feature-branch-workflow">Mandatory Checklist (Feature Branch Workflow)<a class="anchor" aria-label="anchor" href="#mandatory-checklist-feature-branch-workflow"></a></h3>
-<div class="sourceCode" id="cb25"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># 1. Verify you're on a feature branch (NOT main!)</span></span>
-<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">--show-current</span>  <span class="co"># Should NOT be 'main'</span></span>
-<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a></span>
-<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a><span class="co"># 2. File issues for remaining work</span></span>
-<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Follow-up task"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"..."</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
-<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a></span>
-<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a><span class="co"># 3. Run quality gates (if code changed)</span></span>
-<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
-<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
-<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
-<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a></span>
-<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a><span class="co"># 4. Update issue status</span></span>
-<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>completed-issues<span class="op">&gt;</span>           <span class="co"># Include reason if helpful</span></span>
-<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>in-progress-issues<span class="op">&gt;</span> --status=open  <span class="co"># If not finished</span></span>
-<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a></span>
-<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a><span class="co"># 5. Commit with beads issue ID</span></span>
-<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a><span class="fu">git</span> add .</span>
-<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr-xxx)"</span>  <span class="co"># Always include issue ID!</span></span>
-<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a><span class="ex">bd</span> sync</span>
-<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
-<span id="cb25-21"><a href="#cb25-21" tabindex="-1"></a></span>
-<span id="cb25-22"><a href="#cb25-22" tabindex="-1"></a><span class="co"># 6. Create PR (if not already created)</span></span>
-<span id="cb25-23"><a href="#cb25-23" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves dsprrr-xxx"</span></span>
-<span id="cb25-24"><a href="#cb25-24" tabindex="-1"></a></span>
-<span id="cb25-25"><a href="#cb25-25" tabindex="-1"></a><span class="co"># 7. Verify</span></span>
-<span id="cb25-26"><a href="#cb25-26" tabindex="-1"></a><span class="fu">git</span> status  <span class="co"># Should show "up to date with origin"</span></span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a><span class="co"># 1. Verify you're on a feature branch (NOT main!)</span></span>
+<span id="cb32-2"><a href="#cb32-2" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">--show-current</span>  <span class="co"># Should NOT be 'main'</span></span>
+<span id="cb32-3"><a href="#cb32-3" tabindex="-1"></a></span>
+<span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a><span class="co"># 2. File issues for remaining work</span></span>
+<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Follow-up task"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"..."</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
+<span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a></span>
+<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a><span class="co"># 3. Run quality gates (if code changed)</span></span>
+<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
+<span id="cb32-9"><a href="#cb32-9" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
+<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
+<span id="cb32-11"><a href="#cb32-11" tabindex="-1"></a></span>
+<span id="cb32-12"><a href="#cb32-12" tabindex="-1"></a><span class="co"># 4. Update issue status</span></span>
+<span id="cb32-13"><a href="#cb32-13" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>completed-issues<span class="op">&gt;</span>           <span class="co"># Include reason if helpful</span></span>
+<span id="cb32-14"><a href="#cb32-14" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>in-progress-issues<span class="op">&gt;</span> --status=open  <span class="co"># If not finished</span></span>
+<span id="cb32-15"><a href="#cb32-15" tabindex="-1"></a></span>
+<span id="cb32-16"><a href="#cb32-16" tabindex="-1"></a><span class="co"># 5. Commit with beads issue ID</span></span>
+<span id="cb32-17"><a href="#cb32-17" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb32-18"><a href="#cb32-18" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr-xxx)"</span>  <span class="co"># Always include issue ID!</span></span>
+<span id="cb32-19"><a href="#cb32-19" tabindex="-1"></a><span class="ex">bd</span> sync</span>
+<span id="cb32-20"><a href="#cb32-20" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
+<span id="cb32-21"><a href="#cb32-21" tabindex="-1"></a></span>
+<span id="cb32-22"><a href="#cb32-22" tabindex="-1"></a><span class="co"># 6. Create PR (if not already created)</span></span>
+<span id="cb32-23"><a href="#cb32-23" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves dsprrr-xxx"</span></span>
+<span id="cb32-24"><a href="#cb32-24" tabindex="-1"></a></span>
+<span id="cb32-25"><a href="#cb32-25" tabindex="-1"></a><span class="co"># 7. Verify</span></span>
+<span id="cb32-26"><a href="#cb32-26" tabindex="-1"></a><span class="fu">git</span> status  <span class="co"># Should show "up to date with origin"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="critical-rules">Critical Rules<a class="anchor" aria-label="anchor" href="#critical-rules"></a></h3>
@@ -528,26 +639,26 @@
 <p>This project supports parallel work via git worktrees. The beads daemon commits changes to a dedicated branch, preventing conflicts when multiple Claude sessions run simultaneously.</p>
 <div class="section level3">
 <h3 id="creating-worktrees-for-parallel-features">Creating Worktrees for Parallel Features<a class="anchor" aria-label="anchor" href="#creating-worktrees-for-parallel-features"></a></h3>
-<div class="sourceCode" id="cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="co"># From main repo, create worktree for a feature</span></span>
-<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a><span class="fu">git</span> worktree add ../dsprrr-feature-x <span class="at">-b</span> feature/feature-x</span>
-<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a><span class="bu">cd</span> ../dsprrr-feature-x</span>
-<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a></span>
-<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a><span class="co"># Beads commands work normally - shared database, safe daemon</span></span>
-<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a><span class="ex">bd</span> ready</span>
-<span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Implement feature"</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
-<span id="cb26-8"><a href="#cb26-8" tabindex="-1"></a><span class="ex">bd</span> sync</span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="co"># From main repo, create worktree for a feature</span></span>
+<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a><span class="fu">git</span> worktree add ../dsprrr-feature-x <span class="at">-b</span> feature/feature-x</span>
+<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a><span class="bu">cd</span> ../dsprrr-feature-x</span>
+<span id="cb33-4"><a href="#cb33-4" tabindex="-1"></a></span>
+<span id="cb33-5"><a href="#cb33-5" tabindex="-1"></a><span class="co"># Beads commands work normally - shared database, safe daemon</span></span>
+<span id="cb33-6"><a href="#cb33-6" tabindex="-1"></a><span class="ex">bd</span> ready</span>
+<span id="cb33-7"><a href="#cb33-7" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Implement feature"</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
+<span id="cb33-8"><a href="#cb33-8" tabindex="-1"></a><span class="ex">bd</span> sync</span></code></pre></div>
 <p>All worktrees share the same <code>.beads</code> database in the main repo. Changes are immediately visible across sessions.</p>
 </div>
 <div class="section level3">
 <h3 id="cleanup-after-pr-merged">Cleanup After PR Merged<a class="anchor" aria-label="anchor" href="#cleanup-after-pr-merged"></a></h3>
-<div class="sourceCode" id="cb27"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="fu">git</span> worktree remove ../dsprrr-feature-x</span>
-<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
+<div class="sourceCode" id="cb34"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a><span class="fu">git</span> worktree remove ../dsprrr-feature-x</span>
+<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="troubleshooting-branch-already-checked-out">Troubleshooting: “Branch already checked out”<a class="anchor" aria-label="anchor" href="#troubleshooting-branch-already-checked-out"></a></h3>
 <p>If git says a branch is checked out in a beads worktree:</p>
-<div class="sourceCode" id="cb28"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> .git/beads-worktrees</span>
-<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
+<div class="sourceCode" id="cb35"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> .git/beads-worktrees</span>
+<span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
