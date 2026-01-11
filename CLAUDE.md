@@ -362,6 +362,93 @@ test_that("integration test with cassette", {
 **VCR in vignettes:**
 Vignettes use `vcr::setup_knitr()` which automatically names cassettes based on chunk labels. Set `eval = FALSE` for chunks that don't need recording.
 
+### Caching in Tests
+
+**IMPORTANT**: dsprrr automatically caches LLM responses to speed up development. This can cause test failures when tests expect different responses across multiple calls with the same prompt.
+
+#### When to Disable Caching in Tests
+
+Disable caching when:
+1. **Tests use stateful mock LLMs** - Mock returns different values based on call count
+2. **Testing with epochs > 1** - Each epoch should get fresh responses, not cached ones
+3. **Testing cache bypass behavior** - Need to verify `.cache = FALSE` actually bypasses cache
+4. **Tests rely on response variation** - Multiple calls need different responses
+
+#### How to Disable Caching
+
+**Option 1: Per-test basis** (recommended):
+```r
+test_that("epochs get fresh responses", {
+  # ... test setup ...
+
+  result <- evaluate(
+    module,
+    data = dataset,
+    metric = metric,
+    .llm = mock_llm,
+    epochs = 3L,
+    .cache = FALSE  # Disable cache for this call
+  )
+})
+```
+
+**Option 2: Use `local_reset_cache()` helper**:
+```r
+test_that("stateful mock LLM", {
+  local_reset_cache()  # Clear cache at start of test
+  configure_cache(enable = FALSE)  # Disable for this test
+
+  # ... test code with stateful mock ...
+})
+```
+
+**Option 3: Clean disk cache before test runs**:
+```bash
+rm -rf tests/testthat/.dsprrr_cache
+```
+
+#### Common Pitfall
+
+Tests that work in isolation may fail when run together if persistent disk cache (`.dsprrr_cache/`) contains entries from previous test runs. Always use `local_reset_cache()` or `.cache = FALSE` for tests with stateful mocks.
+
+**Example of problematic test without cache handling**:
+```r
+# BAD: Will fail if cache has entries from previous run
+test_that("mock returns different values", {
+  call_count <- 0
+  mock_llm <- list(
+    chat_structured = function(...) {
+      call_count <<- call_count + 1
+      paste("response", call_count)
+    }
+  )
+
+  # First call: "response 1"
+  r1 <- run(mod, input = "test", .llm = mock_llm)
+
+  # Second call: expects "response 2" but gets cached "response 1"
+  r2 <- run(mod, input = "test", .llm = mock_llm)
+  expect_equal(r2, "response 2")  # FAILS with cache enabled
+})
+
+# GOOD: Explicitly disable cache
+test_that("mock returns different values", {
+  local_reset_cache()
+
+  call_count <- 0
+  mock_llm <- list(
+    chat_structured = function(...) {
+      call_count <<- call_count + 1
+      paste("response", call_count)
+    }
+  )
+
+  r1 <- run(mod, input = "test", .llm = mock_llm, .cache = FALSE)
+  r2 <- run(mod, input = "test", .llm = mock_llm, .cache = FALSE)
+  expect_equal(r2, "response 2")  # Works correctly
+})
+```
+
 ## Implementation Status
 
 ### Completed (Milestones A-D)

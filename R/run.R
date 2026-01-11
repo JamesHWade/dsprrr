@@ -1108,7 +1108,8 @@ run_dataset.Module <- function(
         .parallel_method = .parallel_method,
         .progress = .progress,
         .return_format = .return_format
-      )
+      ),
+      list(...)  # Pass through additional arguments like .cache
     )
   )
 
