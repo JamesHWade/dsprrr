@@ -70,8 +70,8 @@ as_vitals_solver <- function(
         .progress = FALSE,
         .return_format = .return_format
       ),
-      solver_args,  # From as_vitals_solver(...) - e.g., .cache
-      list(...)     # From solver(inputs, ...) - runtime args
+      solver_args, # From as_vitals_solver(...) - e.g., .cache
+      list(...) # From solver(inputs, ...) - runtime args
     )
 
     results <- do.call(run_dataset, run_args)
