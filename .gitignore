@@ -23,3 +23,7 @@ gh-issue-optimizers.md
 
 # dsprrr LLM response cache
 .dsprrr_cache/
+
+# Claude Code - user-specific settings (commands are committed)
+.claude/settings*.json
+.claude/*.local.*
