@@ -101,7 +101,22 @@ Rscript -e "pkgdown::build_site(preview = FALSE)"
 4. Re-run specific reviews to verify fixes
 5. Create PR when all reviews pass
 
-**Note:** This workflow could potentially be automated with a git pre-push hook or a custom Claude Code hook that runs before PR creation. For now, run manually to ensure quality.
+**Automated Workflow (Recommended):**
+
+Use the custom command that runs all quality gates and reviews automatically:
+
+```
+/create-reviewed-pr
+```
+
+This command will:
+1. Check you're on a feature branch with all changes committed
+2. Run all quality gates (formatting, linting, R CMD check, pkgdown)
+3. Run comprehensive automated PR review
+4. Stop if critical issues found, warn if important issues found
+5. Create PR only when safe to proceed
+
+This ensures consistent quality and catches issues before they reach GitHub.
 
 **Example review output:**
 ```
