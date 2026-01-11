@@ -34,6 +34,9 @@ as_vitals_solver <- function(
 
   .return_format <- match.arg(.return_format, c("simple", "structured"))
 
+  # Capture additional arguments to pass through to run_dataset()
+  solver_args <- list(...)
+
   # Get signature's first input name if not overridden
   sig_input_names <- vapply(
     module$signature@inputs,
@@ -57,15 +60,21 @@ as_vitals_solver <- function(
       )
     }
 
-    results <- run_dataset(
-      module,
-      inputs,
-      .llm = .llm,
-      .parallel = .parallel,
-      .progress = FALSE,
-      .return_format = .return_format,
-      ...
+    # Merge solver_args (from outer function) with runtime args (from vitals)
+    run_args <- c(
+      list(
+        module = module,
+        dataset = inputs,
+        .llm = .llm,
+        .parallel = .parallel,
+        .progress = FALSE,
+        .return_format = .return_format
+      ),
+      solver_args,  # From as_vitals_solver(...) - e.g., .cache
+      list(...)     # From solver(inputs, ...) - runtime args
     )
+
+    results <- do.call(run_dataset, run_args)
 
     if (.return_format == "simple") {
       list(
