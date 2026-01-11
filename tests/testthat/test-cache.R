@@ -1,17 +1,5 @@
 # Tests for LLM response caching
-
-# Helper to reset cache state
-local_reset_cache <- function(.env = parent.frame()) {
-  withr::defer(
-    {
-      # Reset to defaults
-      dsprrr:::configure_cache()
-      dsprrr:::clear_cache()
-    },
-    envir = .env
-  )
-  dsprrr:::clear_cache()
-}
+# Note: local_reset_cache() helper is defined in helper-cache.R
 
 test_that("configure_cache sets default values", {
   local_reset_cache()
@@ -768,15 +756,31 @@ test_that("run() respects .cache = FALSE in batch processing", {
   mod <- module(sig, type = "predict")
 
   # First batch call - cache miss for both
-  results1 <- run(mod, text = c("Great!", "Awesome!"), .llm = mock_llm, .progress = FALSE)
+  results1 <- run(
+    mod,
+    text = c("Great!", "Awesome!"),
+    .llm = mock_llm,
+    .progress = FALSE
+  )
   expect_equal(call_count, 2)
 
   # Second batch call with same inputs - should hit cache
-  results2 <- run(mod, text = c("Great!", "Awesome!"), .llm = mock_llm, .progress = FALSE)
+  results2 <- run(
+    mod,
+    text = c("Great!", "Awesome!"),
+    .llm = mock_llm,
+    .progress = FALSE
+  )
   expect_equal(call_count, 2) # No new calls
 
   # Third batch call with .cache = FALSE - should bypass cache
-  results3 <- run(mod, text = c("Great!", "Awesome!"), .llm = mock_llm, .cache = FALSE, .progress = FALSE)
+  results3 <- run(
+    mod,
+    text = c("Great!", "Awesome!"),
+    .llm = mock_llm,
+    .cache = FALSE,
+    .progress = FALSE
+  )
   expect_equal(call_count, 4) # Two new calls
 })
 

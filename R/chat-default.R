@@ -775,8 +775,12 @@ dsprrr_sitrep <- function() {
   } else {
     # Show enabled tiers
     tiers <- character()
-    if (cache_config$enable_memory) tiers <- c(tiers, "memory")
-    if (cache_config$enable_disk) tiers <- c(tiers, "disk")
+    if (cache_config$enable_memory) {
+      tiers <- c(tiers, "memory")
+    }
+    if (cache_config$enable_disk) {
+      tiers <- c(tiers, "disk")
+    }
 
     cli::cli_bullets(c("v" = "Cache tiers: {paste(tiers, collapse = ', ')}"))
 
