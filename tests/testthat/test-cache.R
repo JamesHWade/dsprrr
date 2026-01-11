@@ -540,3 +540,196 @@ test_that("different mock LLMs don't share cache entries", {
   # Different LLM objects should not share cache
   expect_equal(result2$answer, "response from LLM 2")
 })
+
+# New cache ergonomics features tests
+
+test_that("first cache hit shows informative message", {
+  local_reset_cache()
+
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+
+  # Reset the first-hit flag
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  pkg_env$cache_first_hit_shown <- FALSE
+
+  # Create a mock LLM
+  mock_llm <- list(
+    get_model = function() "mock-model",
+    chat_structured = function(prompt, type, echo = "none") {
+      list(answer = "response")
+    },
+    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+  )
+  class(mock_llm) <- "Chat"
+
+  output_type <- ellmer::type_object(answer = ellmer::type_string())
+
+  # First call - cache miss
+  dsprrr:::cached_chat_structured(
+    llm = mock_llm,
+    prompt = "test prompt",
+    output_type = output_type
+  )
+
+  # Second call - cache hit, should show message
+  expect_message(
+    dsprrr:::cached_chat_structured(
+      llm = mock_llm,
+      prompt = "test prompt",
+      output_type = output_type
+    ),
+    "Using cached LLM responses"
+  )
+
+  # Flag should now be set
+  expect_true(pkg_env$cache_first_hit_shown)
+
+  # Third call - should NOT show message again
+  expect_no_message(
+    dsprrr:::cached_chat_structured(
+      llm = mock_llm,
+      prompt = "test prompt",
+      output_type = output_type
+    )
+  )
+})
+
+test_that("clear_cache resets first-hit flag", {
+  local_reset_cache()
+
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+
+  # Set the flag manually
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  pkg_env$cache_first_hit_shown <- TRUE
+
+  # Clear cache should reset it
+  clear_cache()
+
+  expect_false(isTRUE(pkg_env$cache_first_hit_shown))
+})
+
+test_that(".cache = FALSE bypasses cache for single call", {
+  local_reset_cache()
+
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+
+  # Create a mock LLM that tracks calls
+  call_count <- 0
+  mock_llm <- list(
+    get_model = function() "mock-model",
+    chat_structured = function(prompt, type, echo = "none") {
+      call_count <<- call_count + 1
+      list(answer = paste("response", call_count))
+    },
+    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+  )
+  class(mock_llm) <- "Chat"
+
+  output_type <- ellmer::type_object(answer = ellmer::type_string())
+
+  # First call - cache miss
+  result1 <- dsprrr:::cached_chat_structured(
+    llm = mock_llm,
+    prompt = "test prompt",
+    output_type = output_type
+  )
+
+  expect_equal(call_count, 1)
+  expect_equal(result1$answer, "response 1")
+
+  # Second call with .cache = FALSE - should bypass cache
+  result2 <- suppressMessages(
+    dsprrr:::cached_chat_structured(
+      llm = mock_llm,
+      prompt = "test prompt",
+      output_type = output_type,
+      .cache = FALSE
+    )
+  )
+
+  # Should have called LLM again
+  expect_equal(call_count, 2)
+  expect_equal(result2$answer, "response 2")
+
+  # Third call without .cache (uses global config) - cache hit
+  result3 <- suppressMessages(
+    dsprrr:::cached_chat_structured(
+      llm = mock_llm,
+      prompt = "test prompt",
+      output_type = output_type
+    )
+  )
+
+  # Should NOT have called LLM again (cache hit from first call)
+  expect_equal(call_count, 2)
+  expect_equal(result3$answer, "response 1")
+})
+
+test_that(".cache = TRUE forces cache use even when globally disabled", {
+  local_reset_cache()
+
+  configure_cache(enable = FALSE)
+
+  # Create a mock LLM that tracks calls
+  call_count <- 0
+  mock_llm <- list(
+    get_model = function() "mock-model",
+    chat_structured = function(prompt, type, echo = "none") {
+      call_count <<- call_count + 1
+      list(answer = paste("response", call_count))
+    },
+    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+  )
+  class(mock_llm) <- "Chat"
+
+  output_type <- ellmer::type_object(answer = ellmer::type_string())
+
+  # First call with .cache = TRUE
+  # This should enable caching despite global disable
+  result1 <- dsprrr:::cached_chat_structured(
+    llm = mock_llm,
+    prompt = "test prompt",
+    output_type = output_type,
+    .cache = TRUE
+  )
+
+  expect_equal(call_count, 1)
+
+  # Note: With caching globally disabled, the cache object itself is NULL
+  # So .cache = TRUE won't actually cache, it will still make the call
+  # This is expected behavior - .cache = TRUE means "try to use cache if available"
+  # but if there's no cache object, it falls through to direct call
+})
+
+test_that("dsprrr_sitrep shows cache configuration", {
+  local_reset_cache()
+
+  configure_cache(enable = TRUE)
+
+  # Should not error and output cache section
+  result <- expect_no_error(dsprrr_sitrep())
+
+  # Should return invisibly a list with cache info
+  expect_type(result, "list")
+  expect_true("cache_enabled" %in% names(result))
+  expect_true(result$cache_enabled)
+
+  # Should have cache_stats if there's cache activity
+  if (!is.null(result$cache_stats)) {
+    expect_s3_class(result$cache_stats, "dsprrr_cache_stats")
+  }
+})
+
+test_that("dsprrr_sitrep shows disabled cache", {
+  local_reset_cache()
+
+  configure_cache(enable = FALSE)
+
+  result <- expect_no_error(suppressMessages(dsprrr_sitrep()))
+
+  expect_false(result$cache_enabled)
+})

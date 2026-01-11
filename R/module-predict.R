@@ -49,9 +49,10 @@ PredictModule <- R6::R6Class(
     #' @param batch Named list or data frame of inputs
     #' @param .llm Optional ellmer chat object
     #' @param trace Logical whether to record trace information
+    #' @param .cache Logical or NULL. Per-call cache control
     #' @param ... Additional arguments
     #' @return Tibble with result, .chat, .metadata columns
-    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+    forward = function(batch, .llm = NULL, trace = TRUE, .cache = NULL, ...) {
       # Handle both list and data frame inputs
       if (is.data.frame(batch)) {
         inputs <- as.list(batch[1, , drop = FALSE])
@@ -76,7 +77,8 @@ PredictModule <- R6::R6Class(
             prompt = prompt,
             output_type = self$signature@output_type,
             instructions = self$signature@instructions,
-            inputs = inputs
+            inputs = inputs,
+            .cache = .cache
           )
         },
         error = function(e) {
@@ -205,6 +207,18 @@ PredictModule <- R6::R6Class(
         }
         if (!is.null(self$state$best_score)) {
           cli::cli_text("  Best score: {round(self$state$best_score, 3)}")
+        }
+      }
+
+      # Cache status
+      cache_config <- get_cache_config()
+      if (cache_config$enable) {
+        stats <- cache_stats()
+        if (stats$hits > 0 || stats$misses > 0) {
+          cli::cli_h3("Cache")
+          cli::cli_text(
+            "  Hit rate: {format(stats$hit_rate * 100, digits = 1)}% ({stats$hits} hits, {stats$misses} misses)"
+          )
         }
       }
 
@@ -504,7 +518,8 @@ PredictModule <- R6::R6Class(
       prompt,
       output_type,
       instructions = "",
-      inputs = list()
+      inputs = list(),
+      .cache = NULL
     ) {
       # Check for Content objects in inputs (images, PDFs)
       content_inputs <- Filter(
@@ -551,7 +566,8 @@ PredictModule <- R6::R6Class(
         result <- cached_chat_structured(
           llm = llm,
           prompt = full_prompt,
-          output_type = output_type
+          output_type = output_type,
+          .cache = .cache
         )
       }
 

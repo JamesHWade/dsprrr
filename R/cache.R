@@ -134,8 +134,9 @@ clear_cache <- function(which = c("all", "memory", "disk")) {
     .dsprrr_env$cache <- NULL
   }
 
-  # Reset stats
+  # Reset stats and first-hit flag
   .dsprrr_env$cache_stats <- list(hits = 0L, misses = 0L)
+  .dsprrr_env$cache_first_hit_shown <- FALSE
 
   invisible(TRUE)
 }
@@ -213,6 +214,7 @@ print.dsprrr_cache_stats <- function(x, ...) {
 
   invisible(x)
 }
+
 
 # ── Internal Cache Functions ─────────────────────────────────────────────────
 
@@ -470,6 +472,8 @@ increment_cache_stats <- function(type) {
 #' @param prompt Character. The prompt text.
 #' @param output_type An ellmer Type object.
 #' @param rollout_id Optional value for cache partitioning (will be converted to character).
+#' @param .cache Logical or NULL. Per-call cache control. If NULL (default), uses global config.
+#'   If TRUE, forces cache use. If FALSE, bypasses cache for this call only.
 #'
 #' @return The LLM response (from cache or fresh call).
 #'
@@ -478,10 +482,18 @@ cached_chat_structured <- function(
   llm,
   prompt,
   output_type,
-  rollout_id = NULL
+  rollout_id = NULL,
+  .cache = NULL
 ) {
-  # If caching disabled, make direct call
-  if (!cache_enabled()) {
+  # Per-call override takes precedence over global config
+  use_cache <- if (!is.null(.cache)) {
+    isTRUE(.cache)
+  } else {
+    cache_enabled()
+  }
+
+  # If caching disabled (globally or per-call), make direct call
+  if (!use_cache) {
     return(llm$chat_structured(prompt, type = output_type, echo = "none"))
   }
 
@@ -537,6 +549,16 @@ cached_chat_structured <- function(
   if (!cachem::is.key_missing(cached_result)) {
     # Cache hit
     increment_cache_stats("hits")
+
+    # Show first-hit message if this is the first cache hit this session
+    if (!isTRUE(.dsprrr_env$cache_first_hit_shown)) {
+      cli::cli_inform(c(
+        "i" = "Using cached LLM responses",
+        "i" = "Disable with {.code configure_cache(enable = FALSE)} or {.code .cache = FALSE}"
+      ))
+      .dsprrr_env$cache_first_hit_shown <- TRUE
+    }
+
     return(cached_result)
   }
 

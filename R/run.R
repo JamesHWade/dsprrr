@@ -23,6 +23,8 @@
 #'     \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 #'     \item{.return_format}{Character, either "simple" (default) or "structured".
 #'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
+#'     \item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
+#'       If TRUE, forces cache use. If FALSE, bypasses cache for this call only.}
 #'   }
 #'
 #' @details
@@ -106,7 +108,8 @@ run.PredictModule <- function(
   .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
-  .show_prompt = FALSE
+  .show_prompt = FALSE,
+  .cache = NULL
 ) {
   .parallel_method <- match.arg(.parallel_method)
   # Show prompt preview if requested
@@ -199,7 +202,7 @@ run.PredictModule <- function(
 
   # Single input processing
   # Note: ellmer handles retries internally (configurable via options(ellmer_max_tries))
-  result <- module$forward(inputs, .llm = .llm, trace = TRUE)
+  result <- module$forward(inputs, .llm = .llm, trace = TRUE, .cache = .cache)
 
   if (.verbose && !is.null(result$metadata[[1]]$prompt)) {
     cli::cli_h3("Generated Prompt")
