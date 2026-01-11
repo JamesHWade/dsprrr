@@ -103,7 +103,7 @@ Rscript -e "pkgdown::build_site(preview = FALSE)"
 
 **Automated Workflow (Recommended):**
 
-Use the **pr-workflow** plugin (installed globally) that runs all quality gates and reviews automatically:
+Use the custom `/create-reviewed-pr` command (in `.claude/commands/`) that automates the entire workflow:
 
 ```
 /create-reviewed-pr
@@ -122,7 +122,7 @@ This command will:
 
 This ensures consistent quality and catches issues before they reach GitHub.
 
-**Note**: The pr-workflow plugin is available globally across all your projects, not just dsprrr.
+**Sharing with other projects**: Copy `.claude/commands/create-reviewed-pr.md` to other projects' `.claude/commands/` directory. See `.claude/README.md` for details.
 
 **Example review output:**
 ```
