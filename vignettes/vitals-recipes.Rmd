@@ -363,7 +363,8 @@ task <- as_vitals_task(
   name = "news-classification",
   epochs = 3L,
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-4o-mini"),
+  .cache = FALSE  # Disable cache so each epoch gets fresh responses
 )
 
 task$eval()
