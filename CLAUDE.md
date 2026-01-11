@@ -53,7 +53,7 @@ GitHub Actions runs R CMD check across multiple R versions and OS platforms, wit
 
 ### PR Workflow
 
-Before creating a pull request, run these checks:
+**Before creating a pull request**, run quality gates and automated review:
 
 ```bash
 # 1. Format ALL code with air (entire project)
@@ -70,6 +70,58 @@ Rscript -e "pkgdown::build_site(preview = FALSE)"
 ```
 
 **Important**: The CI runs `air format --check` on both `R/` and `tests/` directories. Always format test files too!
+
+#### Automated PR Review (Recommended)
+
+**After passing quality gates**, use the pr-review-toolkit to catch issues before creating the PR:
+
+```bash
+# Run comprehensive automated review
+/pr-review-toolkit:review-pr all
+
+# Or run specific reviews based on changes:
+/pr-review-toolkit:review-pr code tests      # Code quality + test coverage
+/pr-review-toolkit:review-pr errors comments # Error handling + comment accuracy
+/pr-review-toolkit:review-pr simplify        # Simplify and refine code
+```
+
+**Available review aspects:**
+- `code` - General code quality, bugs, project guidelines (always run)
+- `tests` - Test coverage quality and completeness (if tests changed)
+- `errors` - Silent failures and error handling (if error handling changed)
+- `comments` - Comment accuracy and maintainability (if comments/docs added)
+- `types` - Type design and invariants (if new types added)
+- `simplify` - Code simplification and clarity (run after passing other reviews)
+- `all` - Run all applicable reviews (recommended)
+
+**Review workflow:**
+1. Make changes and commit locally
+2. Run `/pr-review-toolkit:review-pr all`
+3. Address any **critical** or **important** issues found
+4. Re-run specific reviews to verify fixes
+5. Create PR when all reviews pass
+
+**Note:** This workflow could potentially be automated with a git pre-push hook or a custom Claude Code hook that runs before PR creation. For now, run manually to ensure quality.
+
+**Example review output:**
+```
+# PR Review Summary
+
+## Critical Issues (0 found)
+(none - ready to proceed)
+
+## Important Issues (1 found)
+- [code-reviewer]: Missing error handling in cache_key() [R/cache.R:425]
+
+## Suggestions (2 found)
+- [comment-analyzer]: Comment could be clearer [R/module-predict.R:185]
+- [code-simplifier]: Consider extracting helper function [R/run.R:450]
+
+## Recommended Action
+1. Fix the important error handling issue
+2. Consider the suggestions
+3. Create PR
+```
 
 When adding new exported functions:
 1. Add roxygen documentation with `@export`
