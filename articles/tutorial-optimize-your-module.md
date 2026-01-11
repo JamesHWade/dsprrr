@@ -251,7 +251,6 @@ optimized <- compile_module(
   .llm = chat
 )
 #> Optimizing 1/3 | Score: 0.5000
-#> Optimizing 2/3 | Score: 0.5000
 #> Optimizing 3/3 | Score: 0.5000
 ```
 
@@ -269,9 +268,6 @@ test_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
-#> Processing 2/4 |  50% | ETA:  2s
-#> Processing 4/4 | 100% | ETA:  0s
-#> 
 
 test_results
 #> $mean_score
@@ -314,7 +310,7 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 753.2969
+#> [1] 738.7562
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 177
@@ -326,7 +322,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-11 13:46:03 UTC"
+#> [1] "2026-01-11 17:02:28 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -334,7 +330,7 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 758.0869
+#> [1] 741.0862
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 184
@@ -346,7 +342,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-11 13:46:04 UTC"
+#> [1] "2026-01-11 17:02:29 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -354,7 +350,7 @@ test_results
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 758.822
+#> [1] 748.7805
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 186
@@ -366,7 +362,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-11 13:46:05 UTC"
+#> [1] "2026-01-11 17:02:30 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -374,7 +370,7 @@ test_results
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 788.3008
+#> [1] 754.5891
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 194
@@ -386,7 +382,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-11 13:46:06 UTC"
+#> [1] "2026-01-11 17:02:30 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -417,6 +413,9 @@ baseline_results <- evaluate(
   metric = metric_exact_match(field = "sentiment"),
   .llm = chat
 )
+#> Processing 2/4 |  50% | ETA:  2s
+#> Processing 4/4 | 100% | ETA:  0s
+#> 
 
 cat("Baseline test accuracy:", scales::percent(baseline_results$mean_score), "\n")
 #> Baseline test accuracy: 100%
@@ -458,8 +457,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x5612315a2660>
-#> <environment: 0x5612315977b8>
+#> <bytecode: 0x5580b20381d0>
+#> <environment: 0x5580b2036dd8>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -479,8 +478,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x5612381c5e30>
-#> <environment: 0x56123bd7cd30>
+#> <bytecode: 0x5580b4238fe0>
+#> <environment: 0x5580b52b4fd0>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -508,8 +507,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x56123d1c6218>
-#> <environment: 0x56123d1c0880>
+#> <bytecode: 0x5580b4127708>
+#> <environment: 0x5580b2556e60>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -524,8 +523,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x56123c584bd0>
-#> <environment: 0x56123c57fd60>
+#> <bytecode: 0x5580b303b2f0>
+#> <environment: 0x5580b7598088>
 ```
 
 ## Step 10: Tracking Costs
