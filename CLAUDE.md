@@ -103,7 +103,7 @@ Rscript -e "pkgdown::build_site(preview = FALSE)"
 
 **Automated Workflow (Recommended):**
 
-Use the custom command that runs all quality gates and reviews automatically:
+Use the **pr-workflow** plugin (installed globally) that runs all quality gates and reviews automatically:
 
 ```
 /create-reviewed-pr
@@ -111,12 +111,18 @@ Use the custom command that runs all quality gates and reviews automatically:
 
 This command will:
 1. Check you're on a feature branch with all changes committed
-2. Run all quality gates (formatting, linting, R CMD check, pkgdown)
-3. Run comprehensive automated PR review
+2. Auto-detect R package project and run appropriate quality gates:
+   - `air format .` (formatting)
+   - `jarl check --fix` (linting)
+   - `devtools::check()` (R CMD check)
+   - `pkgdown::build_site()` (documentation)
+3. Run comprehensive automated PR review via pr-review-toolkit
 4. Stop if critical issues found, warn if important issues found
 5. Create PR only when safe to proceed
 
 This ensures consistent quality and catches issues before they reach GitHub.
+
+**Note**: The pr-workflow plugin is available globally across all your projects, not just dsprrr.
 
 **Example review output:**
 ```

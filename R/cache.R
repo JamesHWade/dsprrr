@@ -93,6 +93,10 @@ configure_cache <- function(
   .dsprrr_env$cache_memory <- NULL
   .dsprrr_env$cache_disk <- NULL
 
+  # Reset degraded state - reconfiguration might fix previous issues
+  .dsprrr_env$cache_degraded <- FALSE
+  .dsprrr_env$cache_degraded_reason <- NULL
+
   invisible(old_config)
 }
 
@@ -137,6 +141,8 @@ clear_cache <- function(which = c("all", "memory", "disk")) {
   # Reset stats and first-hit flag
   .dsprrr_env$cache_stats <- list(hits = 0L, misses = 0L)
   .dsprrr_env$cache_first_hit_shown <- FALSE
+  .dsprrr_env$cache_degraded <- FALSE
+  .dsprrr_env$cache_degraded_reason <- NULL
 
   invisible(TRUE)
 }
@@ -281,66 +287,10 @@ get_cache <- function() {
 
   # Disk tier
   if (config$enable_disk) {
-    disk_ok <- TRUE
-
-    # Create directory if needed
-    if (!dir.exists(config$disk_path)) {
-      dir_created <- tryCatch(
-        {
-          dir.create(config$disk_path, recursive = TRUE, showWarnings = TRUE)
-          TRUE
-        },
-        warning = function(w) {
-          # Check if directory exists despite the warning (race condition case)
-          # Another process may have created it between our check and mkdir
-          if (dir.exists(config$disk_path)) {
-            # Directory exists now - likely "already exists" warning from race
-            # This is benign, proceed with disk caching
-            return(TRUE)
-          }
-          # Directory still doesn't exist - this is a real problem
-          cli::cli_warn(c(
-            "Could not create cache directory: {.path {config$disk_path}}",
-            "i" = "Disk caching will be disabled for this session",
-            "x" = w$message
-          ))
-          FALSE
-        },
-        error = function(e) {
-          cli::cli_warn(c(
-            "Error creating cache directory: {.path {config$disk_path}}",
-            "i" = "Disk caching will be disabled for this session",
-            "x" = e$message
-          ))
-          FALSE
-        }
-      )
-      disk_ok <- dir_created
-    }
-
-    if (disk_ok) {
-      disk_cache_result <- tryCatch(
-        {
-          cachem::cache_disk(
-            dir = config$disk_path,
-            max_size = config$disk_max_size,
-            max_age = config$disk_max_age
-          )
-        },
-        error = function(e) {
-          cli::cli_warn(c(
-            "Failed to create disk cache at {.path {config$disk_path}}",
-            "i" = "Disk caching will be disabled for this session",
-            "x" = e$message
-          ))
-          NULL
-        }
-      )
-
-      if (!is.null(disk_cache_result)) {
-        .dsprrr_env$cache_disk <- disk_cache_result
-        caches <- c(caches, list(.dsprrr_env$cache_disk))
-      }
+    disk_cache <- create_disk_cache(config$disk_path, config)
+    if (!is.null(disk_cache)) {
+      .dsprrr_env$cache_disk <- disk_cache
+      caches <- c(caches, list(disk_cache))
     }
   }
 
@@ -399,30 +349,7 @@ cache_key <- function(
   llm_id = NULL
 ) {
   # Serialize output_type to stable representation
-  output_type_repr <- tryCatch(
-    {
-      if (
-        inherits(output_type, "TypeObject") ||
-          inherits(output_type, "TypeString") ||
-          inherits(output_type, "TypeEnum")
-      ) {
-        # Convert ellmer type to JSON representation
-        jsonlite::toJSON(output_type, auto_unbox = TRUE, force = TRUE)
-      } else {
-        as.character(output_type)
-      }
-    },
-    error = function(e) {
-      fallback <- as.character(class(output_type)[1])
-      cli::cli_warn(c(
-        "Failed to serialize output_type for cache key",
-        "i" = "Using class name as fallback: {.val {fallback}}",
-        "i" = "This may cause cache collisions for different output types",
-        "x" = "Original error: {e$message}"
-      ))
-      fallback
-    }
-  )
+  output_type_repr <- serialize_output_type(output_type)
 
   # Build key components
   key_parts <- list(
@@ -445,6 +372,164 @@ cache_key <- function(
   # Compute SHA256 hash
   key_json <- jsonlite::toJSON(key_parts, auto_unbox = TRUE)
   digest::digest(key_json, algo = "sha256")
+}
+
+#' Serialize Output Type to Stable Representation
+#'
+#' @description
+#' Convert an ellmer output_type to a stable JSON representation for cache keys.
+#' Handles ellmer Type objects and falls back gracefully on errors.
+#'
+#' @param output_type An ellmer Type object or other value
+#'
+#' @return Character representation suitable for cache key generation
+#'
+#' @noRd
+serialize_output_type <- function(output_type) {
+  tryCatch(
+    {
+      if (is_ellmer_type(output_type)) {
+        # Convert ellmer type to JSON representation
+        jsonlite::toJSON(output_type, auto_unbox = TRUE, force = TRUE)
+      } else {
+        as.character(output_type)
+      }
+    },
+    error = function(e) {
+      fallback <- as.character(class(output_type)[1])
+      cli::cli_warn(c(
+        "Failed to serialize output_type for cache key",
+        "i" = "Using class name as fallback: {.val {fallback}}",
+        "i" = "This may cause cache collisions for different output types",
+        "x" = "Original error: {e$message}"
+      ))
+      fallback
+    }
+  )
+}
+
+#' Check if Value is an Ellmer Type
+#'
+#' @description
+#' Determine if a value is an ellmer Type object that needs JSON serialization.
+#'
+#' @param x Value to check
+#'
+#' @return Logical TRUE if x is an ellmer Type
+#'
+#' @noRd
+is_ellmer_type <- function(x) {
+  inherits(x, "TypeObject") ||
+    inherits(x, "TypeString") ||
+    inherits(x, "TypeEnum")
+}
+
+#' Extract Temperature from LLM Configuration
+#'
+#' @description
+#' Safely extract the temperature setting from an ellmer LLM object.
+#' Returns NULL if temperature cannot be accessed.
+#'
+#' @param llm An ellmer Chat object
+#'
+#' @return Numeric temperature value or NULL
+#'
+#' @noRd
+extract_llm_temperature <- function(llm) {
+  tryCatch(
+    {
+      # Access provider's temperature setting from internal api_args
+      llm$.__enclos_env__$private$api_args$temperature
+    },
+    error = function(e) NULL
+  )
+}
+
+#' Create Disk Cache
+#'
+#' @description
+#' Attempt to create a disk cache, handling directory creation and errors.
+#'
+#' @param disk_path Character path for disk cache
+#' @param config Cache configuration list
+#'
+#' @return A disk cache object or NULL if creation failed
+#'
+#' @noRd
+create_disk_cache <- function(disk_path, config) {
+  # Create directory if needed
+  if (!dir.exists(disk_path)) {
+    dir_ok <- create_cache_directory(disk_path)
+    if (!dir_ok) {
+      return(NULL)
+    }
+  }
+
+  # Create the disk cache object
+  tryCatch(
+    {
+      cachem::cache_disk(
+        dir = disk_path,
+        max_size = config$disk_max_size,
+        max_age = config$disk_max_age
+      )
+    },
+    error = function(e) {
+      # Track degraded state for dsprrr_sitrep()
+      .dsprrr_env$cache_degraded <- TRUE
+      .dsprrr_env$cache_degraded_reason <- e$message
+
+      cli::cli_warn(c(
+        "!" = "Failed to create disk cache at {.path {disk_path}}",
+        "i" = "Falling back to memory-only cache (will not persist across R sessions)",
+        "x" = "Error: {e$message}",
+        "i" = "To fix: Check disk space, permissions, and filesystem health"
+      ))
+      NULL
+    }
+  )
+}
+
+#' Create Cache Directory
+#'
+#' @description
+#' Create cache directory, handling race conditions where another process
+#' creates the directory between our check and mkdir.
+#'
+#' @param disk_path Character path for disk cache directory
+#'
+#' @return Logical TRUE if directory exists or was created, FALSE if error
+#'
+#' @noRd
+create_cache_directory <- function(disk_path) {
+  tryCatch(
+    {
+      dir.create(disk_path, recursive = TRUE, showWarnings = TRUE)
+      TRUE
+    },
+    warning = function(w) {
+      # Race condition: another process created directory between our check and mkdir
+      if (dir.exists(disk_path)) {
+        # Directory now exists - this is benign, proceed with disk caching
+        return(TRUE)
+      }
+      # Directory still doesn't exist - this is a real problem
+      cli::cli_warn(c(
+        "Could not create cache directory: {.path {disk_path}}",
+        "i" = "Disk caching will be disabled for this session",
+        "x" = w$message
+      ))
+      FALSE
+    },
+    error = function(e) {
+      cli::cli_warn(c(
+        "Error creating cache directory: {.path {disk_path}}",
+        "i" = "Disk caching will be disabled for this session",
+        "x" = e$message
+      ))
+      FALSE
+    }
+  )
 }
 
 #' Increment Cache Statistics
@@ -473,7 +558,8 @@ increment_cache_stats <- function(type) {
 #' @param output_type An ellmer Type object.
 #' @param rollout_id Optional value for cache partitioning (will be converted to character).
 #' @param .cache Logical or NULL. Per-call cache control. If NULL (default), uses global config.
-#'   If TRUE, forces cache use. If FALSE, bypasses cache for this call only.
+#'   If TRUE, attempts to use cache (no effect if caching globally disabled).
+#'   If FALSE, bypasses cache for this call only.
 #'
 #' @return The LLM response (from cache or fresh call).
 #'
@@ -516,18 +602,10 @@ cached_chat_structured <- function(
   )
 
   # Get temperature from LLM config if available
-  temperature <- tryCatch(
-    {
-      # Try to access provider's temperature setting
-      llm$.__enclos_env__$private$api_args$temperature
-    },
-    error = function(e) NULL
-  )
+  temperature <- extract_llm_temperature(llm)
 
-  # Get LLM identity - use address for mock LLMs that don't have proper get_model()
-  # This ensures different mock LLM objects don't share cache entries
+  # Get LLM identity for mock LLMs to prevent cache collisions
   llm_id <- if (model == "unknown") {
-    # For mock/unknown LLMs, include object address to avoid collisions
     format(rlang::obj_address(llm))
   } else {
     NULL

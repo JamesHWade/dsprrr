@@ -24,7 +24,8 @@ so each worker can create an independent client).}
 \item{.return_format}{Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
 \item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
-If TRUE, forces cache use. If FALSE, bypasses cache for this call only.}
+If TRUE, attempts to use cache (no effect if caching globally disabled).
+If FALSE, bypasses cache for this call only.}
 }}
 }
 \value{

@@ -669,7 +669,7 @@ test_that(".cache = FALSE bypasses cache for single call", {
   expect_equal(result3$answer, "response 1")
 })
 
-test_that(".cache = TRUE forces cache use even when globally disabled", {
+test_that(".cache = TRUE has no effect when caching globally disabled", {
   local_reset_cache()
 
   configure_cache(enable = FALSE)
@@ -689,7 +689,8 @@ test_that(".cache = TRUE forces cache use even when globally disabled", {
   output_type <- ellmer::type_object(answer = ellmer::type_string())
 
   # First call with .cache = TRUE
-  # This should enable caching despite global disable
+  # With caching globally disabled, the cache object itself is NULL
+  # So .cache = TRUE won't actually cache - it will still make the call
   result1 <- dsprrr:::cached_chat_structured(
     llm = mock_llm,
     prompt = "test prompt",
@@ -699,10 +700,113 @@ test_that(".cache = TRUE forces cache use even when globally disabled", {
 
   expect_equal(call_count, 1)
 
-  # Note: With caching globally disabled, the cache object itself is NULL
-  # So .cache = TRUE won't actually cache, it will still make the call
-  # This is expected behavior - .cache = TRUE means "try to use cache if available"
-  # but if there's no cache object, it falls through to direct call
+  # Second call with same prompt and .cache = TRUE
+  # Should make a new call since cache is globally disabled
+  result2 <- dsprrr:::cached_chat_structured(
+    llm = mock_llm,
+    prompt = "test prompt",
+    output_type = output_type,
+    .cache = TRUE
+  )
+
+  # Verify no caching occurred - second call was made
+  expect_equal(call_count, 2)
+})
+
+# Integration tests for .cache parameter through run() API
+test_that("run() respects .cache = FALSE parameter (single input)", {
+  local_reset_cache()
+  configure_cache(enable = TRUE)
+
+  call_count <- 0
+  mock_llm <- list(
+    get_model = function() "mock-model",
+    chat_structured = function(prompt, type, echo = "none") {
+      call_count <<- call_count + 1
+      list(sentiment = "positive")
+    },
+    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+  )
+  class(mock_llm) <- "Chat"
+
+  sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+  mod <- module(sig, type = "predict")
+
+  # First call - cache miss
+  result1 <- run(mod, text = "Great!", .llm = mock_llm)
+  expect_equal(call_count, 1)
+
+  # Second call with same input - should hit cache
+  result2 <- run(mod, text = "Great!", .llm = mock_llm)
+  expect_equal(call_count, 1) # No new call
+
+  # Third call with .cache = FALSE - should bypass cache
+  result3 <- run(mod, text = "Great!", .llm = mock_llm, .cache = FALSE)
+  expect_equal(call_count, 2) # New call made
+
+  # Fourth call with .cache = TRUE - should use cache
+  result4 <- run(mod, text = "Great!", .llm = mock_llm, .cache = TRUE)
+  expect_equal(call_count, 2) # No new call
+})
+
+test_that("run() respects .cache = FALSE in batch processing", {
+  local_reset_cache()
+  configure_cache(enable = TRUE)
+
+  call_count <- 0
+  mock_llm <- list(
+    get_model = function() "mock-model",
+    chat_structured = function(prompt, type, echo = "none") {
+      call_count <<- call_count + 1
+      list(sentiment = "positive")
+    },
+    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+  )
+  class(mock_llm) <- "Chat"
+
+  sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+  mod <- module(sig, type = "predict")
+
+  # First batch call - cache miss for both
+  results1 <- run(mod, text = c("Great!", "Awesome!"), .llm = mock_llm, .progress = FALSE)
+  expect_equal(call_count, 2)
+
+  # Second batch call with same inputs - should hit cache
+  results2 <- run(mod, text = c("Great!", "Awesome!"), .llm = mock_llm, .progress = FALSE)
+  expect_equal(call_count, 2) # No new calls
+
+  # Third batch call with .cache = FALSE - should bypass cache
+  results3 <- run(mod, text = c("Great!", "Awesome!"), .llm = mock_llm, .cache = FALSE, .progress = FALSE)
+  expect_equal(call_count, 4) # Two new calls
+})
+
+test_that("run() validates invalid .cache parameter values", {
+  sig <- signature("text -> answer")
+  mod <- module(sig, type = "predict")
+
+  # Invalid: string instead of logical
+  expect_error(
+    run(mod, text = "test", .cache = "false"),
+    class = "rlang_error"
+  )
+
+  # Invalid: NA value
+  expect_error(
+    run(mod, text = "test", .cache = NA),
+    class = "rlang_error"
+  )
+
+  # Invalid: numeric instead of logical
+  expect_error(
+    run(mod, text = "test", .cache = 1),
+    class = "rlang_error"
+  )
+
+  # Invalid: vector of length > 1
+  expect_error(
+    run(mod, text = "test", .cache = c(TRUE, FALSE)),
+    class = "rlang_error"
+  )
 })
 
 test_that("dsprrr_sitrep shows cache configuration", {

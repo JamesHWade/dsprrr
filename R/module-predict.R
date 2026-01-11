@@ -49,7 +49,9 @@ PredictModule <- R6::R6Class(
     #' @param batch Named list or data frame of inputs
     #' @param .llm Optional ellmer chat object
     #' @param trace Logical whether to record trace information
-    #' @param .cache Logical or NULL. Per-call cache control
+    #' @param .cache Logical or NULL. Per-call cache control. If NULL (default),
+    #'   uses global cache configuration. If TRUE, attempts to use cache (no effect
+    #'   if caching globally disabled). If FALSE, bypasses cache for this call.
     #' @param ... Additional arguments
     #' @return Tibble with result, .chat, .metadata columns
     forward = function(batch, .llm = NULL, trace = TRUE, .cache = NULL, ...) {
@@ -216,8 +218,9 @@ PredictModule <- R6::R6Class(
         stats <- cache_stats()
         if (stats$hits > 0 || stats$misses > 0) {
           cli::cli_h3("Cache")
+          hit_pct <- format(stats$hit_rate * 100, digits = 1)
           cli::cli_text(
-            "  Hit rate: {format(stats$hit_rate * 100, digits = 1)}% ({stats$hits} hits, {stats$misses} misses)"
+            "  Hit rate: {hit_pct}% ({stats$hits} hits, {stats$misses} misses)"
           )
         }
       }
@@ -415,26 +418,23 @@ PredictModule <- R6::R6Class(
 
     # Format output for display
     format_output = function(output) {
-      if (is.list(output)) {
-        if (length(output) == 1 && !is.null(names(output))) {
-          # Single named field
-          paste0(names(output)[1], ": ", output[[1]])
-        } else {
-          # Multiple fields
-          paste(
-            vapply(
-              names(output),
-              function(name) {
-                paste0(name, ": ", output[[name]])
-              },
-              character(1)
-            ),
-            collapse = ", "
-          )
-        }
-      } else {
-        as.character(output)
+      if (!is.list(output)) {
+        return(as.character(output))
       }
+
+      # List output: format as name: value pairs
+      if (is.null(names(output)) || length(output) == 0) {
+        return(as.character(output))
+      }
+
+      # Format each field
+      formatted_pairs <- vapply(
+        names(output),
+        function(name) paste0(name, ": ", output[[name]]),
+        character(1)
+      )
+
+      paste(formatted_pairs, collapse = ", ")
     },
 
     # Get default LLM client
