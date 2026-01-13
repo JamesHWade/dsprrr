@@ -1119,6 +1119,9 @@ run_dataset.Module <- function(
 
   # Add results to data
   if (.return_format == "simple") {
+    if (length(results) != nrow(data)) {
+      results <- list(results)
+    }
     data$result <- results
   } else {
     # For structured format, extract outputs and add metadata columns
