@@ -287,19 +287,60 @@ process_batch_item <- function(
   if (.return_format == "simple") {
     extract_simple_output(response, module$signature@output_type)
   } else {
+    # Build full prompt (with instructions) for mock chat
+    instructions <- module$signature@instructions
+    full_prompt <- if (nchar(instructions) > 0) {
+      paste(instructions, prompt, sep = "\n\n")
+    } else {
+      prompt
+    }
+
     list(
       output = response,
-      chat = llm,
+      chat = mock_batch_chat(full_prompt, response, llm),
       metadata = list(
         latency_ms = latency_ms,
         prompt_length = nchar(prompt),
         prompt = prompt,
-        instructions = module$signature@instructions,
+        instructions = instructions,
         timestamp = end_time,
         batch_index = index
       )
     )
   }
+}
+
+#' Create a mock chat with recorded prompt/response for logging
+#'
+#' Creates a Chat object with synthetic turns representing the prompt and response.
+#' This is used when using parallel_chat_structured which doesn't return per-request
+#' chat histories. Follows the same pattern as vitals::generate_structured().
+#'
+#' @param prompt The prompt that was sent
+#' @param response The response received (will be JSON-serialized if not string)
+#' @param chat A Chat object to clone and populate with the mock turns
+#' @return A cloned Chat with UserTurn and AssistantTurn representing the exchange
+#' @noRd
+mock_batch_chat <- function(prompt, response, chat) {
+  mock <- chat$clone()
+
+  user_turn <- ellmer::UserTurn(
+    contents = list(ellmer::ContentText(as.character(prompt)))
+  )
+
+  # Serialize response to JSON if it's structured data
+  response_text <- if (is.character(response) && length(response) == 1) {
+    response
+  } else {
+    as.character(jsonlite::toJSON(response, auto_unbox = TRUE))
+  }
+
+  assistant_turn <- ellmer::AssistantTurn(
+    contents = list(ellmer::ContentText(response_text))
+  )
+
+  mock$set_turns(list(user_turn, assistant_turn))
+  mock
 }
 
 #' Extract simple output from LLM response
@@ -652,13 +693,15 @@ run_batch_ellmer_parallel <- function(
       extract_simple_output(response, module$signature@output_type)
     })
   } else {
+    # Create mock chats for each request with recorded prompt/response
+    # This follows the same pattern as vitals::generate_structured()
     results <- map2(
       responses_list,
       seq_along(responses_list),
       function(response, i) {
         list(
           output = response,
-          chat = chat,
+          chat = mock_batch_chat(prompts[[i]], response, chat),
           metadata = list(
             latency_ms = total_latency / n,
             prompt_length = nchar(prompts[[i]]),

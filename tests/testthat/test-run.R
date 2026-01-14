@@ -504,7 +504,12 @@ test_that("process_batch_item returns correct format for structured mode", {
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
   mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "response"),
+    list(
+      chat_structured = function(prompt, ...) "response",
+      clone = function(...) mock_llm,
+      set_turns = function(turns) invisible(NULL),
+      get_turns = function(...) list()
+    ),
     class = "Chat"
   )
 
@@ -520,7 +525,8 @@ test_that("process_batch_item returns correct format for structured mode", {
   expect_type(result, "list")
   expect_named(result, c("output", "chat", "metadata"))
   expect_equal(result$output, "response")
-  expect_identical(result$chat, mock_llm)
+  # Chat is now a mock chat with turns, not the original llm
+  expect_true(inherits(result$chat, "Chat"))
   expect_equal(result$metadata$batch_index, 5)
   expect_true("latency_ms" %in% names(result$metadata))
   expect_true("prompt" %in% names(result$metadata))
@@ -895,4 +901,93 @@ test_that("dsprrr_batch_result print method handles many items", {
   # Should show "and X more"
   output <- capture.output(print(results), type = "message")
   expect_true(any(grepl("and.*more", output)))
+})
+
+# --- mock_batch_chat tests ---
+
+test_that("mock_batch_chat creates chat with user and assistant turns", {
+  # Create a minimal mock chat that supports clone and set_turns
+  turns_stored <- NULL
+  mock_chat <- structure(
+    list(
+      clone = function(...) {
+        cloned <- structure(
+          list(
+            set_turns = function(turns) {
+              turns_stored <<- turns
+            },
+            get_turns = function(...) turns_stored
+          ),
+          class = "Chat"
+        )
+        cloned
+      }
+    ),
+    class = "Chat"
+  )
+
+  result <- dsprrr:::mock_batch_chat(
+    prompt = "What is 2+2?",
+    response = "4",
+    chat = mock_chat
+  )
+
+  expect_true(inherits(result, "Chat"))
+  stored_turns <- result$get_turns()
+  expect_length(stored_turns, 2)
+})
+
+test_that("mock_batch_chat handles structured response (JSON serializes)", {
+  turns_stored <- NULL
+  mock_chat <- structure(
+    list(
+      clone = function(...) {
+        cloned <- structure(
+          list(
+            set_turns = function(turns) turns_stored <<- turns,
+            get_turns = function(...) turns_stored
+          ),
+          class = "Chat"
+        )
+        cloned
+      }
+    ),
+    class = "Chat"
+  )
+
+  # Pass a list response (structured output)
+  result <- dsprrr:::mock_batch_chat(
+    prompt = "Analyze sentiment",
+    response = list(sentiment = "positive", confidence = 0.9),
+    chat = mock_chat
+  )
+
+  expect_true(inherits(result, "Chat"))
+})
+
+test_that("mock_batch_chat handles character response directly", {
+  turns_stored <- NULL
+  mock_chat <- structure(
+    list(
+      clone = function(...) {
+        cloned <- structure(
+          list(
+            set_turns = function(turns) turns_stored <<- turns,
+            get_turns = function(...) turns_stored
+          ),
+          class = "Chat"
+        )
+        cloned
+      }
+    ),
+    class = "Chat"
+  )
+
+  result <- dsprrr:::mock_batch_chat(
+    prompt = "Echo this",
+    response = "echoed text",
+    chat = mock_chat
+  )
+
+  expect_true(inherits(result, "Chat"))
 })

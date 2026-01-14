@@ -20,9 +20,9 @@ as_vitals_task(
 \arguments{
 \item{module}{A DSPrrr module (e.g., created via \code{\link[=module]{module()}}).}
 
-\item{dataset}{A tibble/data frame with columns \code{input} and \code{target}.
-The \code{input} column contains prompts and \code{target} contains expected
-values or grading guidance.}
+\item{dataset}{A tibble/data frame with columns matching the module's
+signature inputs plus a \code{target} column. The function will nest
+signature inputs into the \code{input} column format vitals requires.}
 
 \item{scorer}{A vitals scorer function (e.g., \code{vitals::model_graded_qa()},
 \code{vitals::detect_match()}). Defaults to \code{vitals::model_graded_qa()}.}
@@ -51,6 +51,10 @@ A vitals \link[vitals:Task]{vitals::Task} object ready for evaluation.
 Convenience function that builds a vitals \link[vitals:Task]{vitals::Task} from a dsprrr
 module and dataset. This makes it trivial to evaluate dsprrr modules
 using vitals infrastructure without manual solver wrapping.
+
+For multi-input modules, the function automatically nests all signature
+input columns into a single \code{input} list column that vitals expects.
+The solver then extracts these fields when processing each sample.
 }
 \details{
 The returned Task object can be evaluated by calling its \verb{$eval()} method,
@@ -59,24 +63,21 @@ Use \verb{$view()} to see results interactively.
 }
 \examples{
 \dontrun{
-# Create a simple QA module
+# Single-input module
 mod <- module(signature("question -> answer"))
-
-# Prepare test dataset
 test_data <- tibble::tibble(
-  input = c("What is 2+2?", "What is the capital of France?"),
+  question = c("What is 2+2?", "Capital of France?"),
   target = c("4", "Paris")
 )
+task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
 
-# Create task with string detection scorer
-task <- as_vitals_task(
-  module = mod,
-  dataset = test_data,
-  scorer = vitals::detect_includes(),
-  .llm = ellmer::chat_openai()
+# Multi-input module
+mod <- module(signature("shapes, pick -> answer"))
+test_data <- tibble::tibble(
+  shapes = c("square, circle", "triangle, star"),
+  pick = c("square", "star"),
+  target = c("square", "star")
 )
-
-# Run evaluation and view results
-task
+task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
 }
 }
