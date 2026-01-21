@@ -16,8 +16,9 @@
 #' (following the same pattern as vitals' `generate_structured()`).
 #'
 #' @param module A DSPrrr module (e.g., created via [module()]).
-#' @param .llm An ellmer chat object (required). This will be cloned for each
-#'   chat invocation.
+#' @param .llm An ellmer chat object. If `NULL` (default), uses the module's
+#'   stored chat or falls back to [get_default_chat()]. The chat is cloned
+#'   for each batch invocation.
 #' @param ... Additional arguments forwarded to [run_dataset()].
 #'
 #' @return A function accepting a list of input objects and returning a list
@@ -32,9 +33,8 @@ as_vitals_solver <- function(
     cli::cli_abort("as_vitals_solver() requires an R6 Module object")
   }
 
-  if (is.null(.llm)) {
-    cli::cli_abort("as_vitals_solver() requires a .llm chat object")
-  }
+  # Resolve LLM using standard dsprrr pattern: explicit > module > default
+  .llm <- .llm %||% module$chat %||% get_default_chat(create = TRUE)
 
   # Get signature info for extracting inputs from nested vitals format
 
@@ -134,7 +134,7 @@ as_vitals_solver <- function(
       list(
         result = result_strings,
         solver_chat = results$.chat,
-        solver_metadata = results$result
+        solver_metadata = results$.metadata
       )
     }
   }
