@@ -31,7 +31,9 @@ rlm_module(
 
 \item{verbose}{Logical. Print execution progress (default FALSE)}
 
-\item{tools}{Named list of user-defined R functions to inject into REPL}
+\item{tools}{Named list of user-defined R functions to inject into REPL.
+Each tool becomes available as a function in the code execution environment.
+Non-function values in the list will cause an error.}
 
 \item{...}{Additional arguments passed to the module}
 }

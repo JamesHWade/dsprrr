@@ -13,8 +13,12 @@ The prelude defines these functions in the execution environment:
 \item \code{SUBMIT(answer)}: Terminate and return final answer
 \item \code{peek(var, start, end)}: View a slice of a variable
 \item \code{search(var, pattern)}: Regex search in variable
-\item \code{rlm_query(query, context_slice)}: Placeholder for recursive LLM calls
-\item \code{rlm_query_batch(queries, slices)}: Placeholder for batched queries
+\item \code{rlm_query(query, context_slice)}: Request a recursive LLM call (returns marker for interception)
+\item \code{rlm_query_batch(queries, slices)}: Request batched LLM calls (returns marker for interception)
 }
+
+The \code{rlm_query} and \code{rlm_query_batch} functions return special marker objects
+that the main RLM process intercepts and handles. The actual LLM calls happen
+in the parent R process, not in the sandboxed code execution environment.
 }
 \keyword{internal}

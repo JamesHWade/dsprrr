@@ -69,7 +69,9 @@ NULL
 #' @param max_output_chars Maximum characters per execution output (default 100000)
 #' @param sub_lm Optional ellmer Chat for recursive queries. NULL = disabled.
 #' @param verbose Logical. Print execution progress (default FALSE)
-#' @param tools Named list of user-defined R functions to inject into REPL
+#' @param tools Named list of user-defined R functions to inject into REPL.
+#'   Each tool becomes available as a function in the code execution environment.
+#'   Non-function values in the list will cause an error.
 #' @param ... Additional arguments passed to the module
 #'
 #' @return An RLMModule object
@@ -121,8 +123,25 @@ rlm_module <- function(
     ))
   }
 
-  # Validate tools
+  # Validate bounds for iterations and calls
+  max_iterations <- as.integer(max_iterations)
+  max_llm_calls <- as.integer(max_llm_calls)
 
+  if (max_iterations < 1L) {
+    cli::cli_abort(c(
+      "max_iterations must be at least 1",
+      "x" = "You provided: {.val {max_iterations}}"
+    ))
+  }
+
+  if (max_llm_calls < 0L) {
+    cli::cli_abort(c(
+      "max_llm_calls must be non-negative",
+      "x" = "You provided: {.val {max_llm_calls}}"
+    ))
+  }
+
+  # Validate tools
   if (!is.list(tools)) {
     cli::cli_abort(c(
       "tools must be a named list of functions",
@@ -137,11 +156,23 @@ rlm_module <- function(
     ))
   }
 
+  # Validate all tools are functions
+  if (length(tools) > 0) {
+    non_functions <- vapply(tools, Negate(is.function), logical(1))
+    if (any(non_functions)) {
+      bad_names <- names(tools)[non_functions]
+      cli::cli_abort(c(
+        "All tools must be functions",
+        "x" = "Non-function tool{?s}: {.val {bad_names}}"
+      ))
+    }
+  }
+
   RLMModule$new(
     signature = signature,
     runner = runner,
-    max_iterations = as.integer(max_iterations),
-    max_llm_calls = as.integer(max_llm_calls),
+    max_iterations = max_iterations,
+    max_llm_calls = max_llm_calls,
     max_output_chars = as.integer(max_output_chars),
     sub_lm = sub_lm,
     verbose = verbose,
@@ -328,11 +359,11 @@ RLMModule <- R6::R6Class(
 
       # Fallback extract if no SUBMIT()
       if (is.null(final_answer)) {
-        if (self$verbose) {
-          cli::cli_alert_info(
-            "No SUBMIT() called, using fallback extraction"
-          )
-        }
+        cli::cli_warn(c(
+          "RLM reached max_iterations ({self$max_iterations}) without SUBMIT()",
+          "i" = "Using fallback extraction from trajectory",
+          "i" = "Consider increasing max_iterations or simplifying the query"
+        ))
         final_answer <- private$extract_fallback(inputs, history, llm)
       }
 
@@ -354,10 +385,12 @@ RLMModule <- R6::R6Class(
       # Build output matching signature
       output <- private$build_output(final_answer)
 
-      duration_ms <- as.numeric(
-        difftime(Sys.time(), start_time, units = "secs")
-      ) *
-        1000
+      duration_secs <- as.numeric(difftime(
+        Sys.time(),
+        start_time,
+        units = "secs"
+      ))
+      duration_ms <- duration_secs * 1000
 
       # Build metadata
       metadata <- list(
@@ -633,17 +666,6 @@ Code:
         custom_tools = self$tools
       )
 
-      # Execute with RLM prelude injected via context
-      # We pass the prelude as a setup string in context, then execute it first
-      context <- c(
-        inputs,
-        list(
-          .rlm_prelude = rlm_prelude,
-          .rlm_call_count = call_counter$count,
-          .rlm_max_calls = self$max_llm_calls
-        )
-      )
-
       # Build combined code: prelude + user code
       combined_code <- paste0(
         "# RLM Prelude\n",
@@ -652,26 +674,37 @@ Code:
         code
       )
 
-      # Execute
+      # Execute with inputs as context
       result <- self$runner$execute(combined_code, context = inputs)
 
-      # Detect SUBMIT termination
-      is_final <- inherits(result$result, "rlm_final")
+      # Validate runner result structure
+      if (!is.list(result)) {
+        cli::cli_abort(c(
+          "Runner returned invalid result",
+          "x" = "Expected list, got {.cls {class(result)[1]}}"
+        ))
+      }
+
+      required_fields <- c("success", "result")
+      missing_fields <- setdiff(required_fields, names(result))
+      if (length(missing_fields) > 0) {
+        cli::cli_abort(c(
+          "Runner result missing required fields",
+          "x" = "Missing: {.val {missing_fields}}"
+        ))
+      }
+
+      # Detect SUBMIT termination using helper function
+      is_final <- is_rlm_final(result$result)
       final_value <- if (is_final) {
-        # Extract the actual value, stripping rlm_final class
-        val <- result$result
-        class(val) <- setdiff(class(val), "rlm_final")
-        attr(val, "rlm_final") <- NULL
-        val
+        extract_rlm_final(result$result)
       } else {
         NULL
       }
 
       # Handle rlm_query requests (if sub_lm is available)
-      if (
-        inherits(result$result, "rlm_query_request") && !is.null(self$sub_lm)
-      ) {
-        # Process the recursive query
+      if (is_rlm_query_request(result$result) && !is.null(self$sub_lm)) {
+        # Process the recursive query (single or batch)
         query_result <- private$process_rlm_query(
           result$result,
           call_counter
@@ -679,11 +712,11 @@ Code:
 
         # Return the query result as the output
         return(list(
-          success = TRUE,
+          success = query_result$success,
           is_final = FALSE,
           final_value = NULL,
-          formatted_output = paste0("Query result: ", query_result),
-          error = NULL,
+          formatted_output = query_result$formatted_output,
+          error = query_result$error,
           raw_result = result
         ))
       }
@@ -692,7 +725,7 @@ Code:
       formatted_output <- if (result$success) {
         private$format_execution_output(result)
       } else {
-        paste("Error:", result$error)
+        paste("Error:", result$error %||% "Unknown error")
       }
 
       # Truncate if too long
@@ -713,14 +746,28 @@ Code:
       )
     },
 
-    #' Process an rlm_query request
+    #' Process an rlm_query request (single or batch)
+    #'
+    #' @return List with success, formatted_output, error fields
     process_rlm_query = function(request, call_counter) {
+      # Handle batch queries
+      if (isTRUE(request$batch)) {
+        return(private$process_rlm_query_batch(request, call_counter))
+      }
+
+      # Single query processing
       # Check call limit
       if (call_counter$count >= self$max_llm_calls) {
-        return(paste0(
-          "Error: Maximum LLM calls (",
+        error_msg <- paste0(
+          "Maximum LLM calls (",
           self$max_llm_calls,
           ") exceeded"
+        )
+        cli::cli_warn(error_msg)
+        return(list(
+          success = FALSE,
+          formatted_output = paste0("Error: ", error_msg),
+          error = error_msg
         ))
       }
 
@@ -735,13 +782,104 @@ Code:
         query
       }
 
-      tryCatch(
+      result <- tryCatch(
         {
-          self$sub_lm$chat(prompt)
+          response <- self$sub_lm$chat(prompt)
+          list(
+            success = TRUE,
+            formatted_output = paste0("Query result: ", response),
+            error = NULL
+          )
         },
         error = function(e) {
-          paste0("Query error: ", e$message)
+          cli::cli_warn(c(
+            "Recursive LLM query failed",
+            "x" = "Error: {e$message}",
+            "i" = "Query: {substr(query, 1, 100)}..."
+          ))
+          list(
+            success = FALSE,
+            formatted_output = paste0("Query error: ", e$message),
+            error = e$message
+          )
         }
+      )
+
+      result
+    },
+
+    #' Process batch rlm_query requests
+    #'
+    #' @return List with success, formatted_output, error fields
+    process_rlm_query_batch = function(request, call_counter) {
+      queries <- request$queries
+      slices <- request$slices
+      n_queries <- length(queries)
+
+      # Check if we have enough calls remaining
+      remaining_calls <- self$max_llm_calls - call_counter$count
+      if (n_queries > remaining_calls) {
+        error_msg <- paste0(
+          "Batch of ",
+          n_queries,
+          " queries would exceed limit. ",
+          "Remaining calls: ",
+          remaining_calls
+        )
+        cli::cli_warn(error_msg)
+        return(list(
+          success = FALSE,
+          formatted_output = paste0("Error: ", error_msg),
+          error = error_msg
+        ))
+      }
+
+      # Process each query
+      results <- vector("list", n_queries)
+      errors <- character()
+
+      for (i in seq_len(n_queries)) {
+        call_counter$count <- call_counter$count + 1L
+
+        query <- queries[[i]]
+        context_slice <- if (!is.null(slices)) slices[[i]] else NULL
+
+        prompt <- if (!is.null(context_slice)) {
+          paste0("Context:\n", context_slice, "\n\nQuestion: ", query)
+        } else {
+          query
+        }
+
+        results[[i]] <- tryCatch(
+          {
+            self$sub_lm$chat(prompt)
+          },
+          error = function(e) {
+            errors <<- c(errors, paste0("Query ", i, ": ", e$message))
+            paste0("[Error: ", e$message, "]")
+          }
+        )
+      }
+
+      # Format output
+      formatted_parts <- vapply(
+        seq_len(n_queries),
+        function(i) paste0("Query ", i, " result: ", results[[i]]),
+        character(1)
+      )
+      formatted_output <- paste(formatted_parts, collapse = "\n\n")
+
+      if (length(errors) > 0) {
+        cli::cli_warn(c(
+          "Some batch queries failed",
+          "x" = errors
+        ))
+      }
+
+      list(
+        success = length(errors) == 0,
+        formatted_output = formatted_output,
+        error = if (length(errors) > 0) paste(errors, collapse = "; ") else NULL
       )
     },
 
@@ -749,16 +887,34 @@ Code:
     format_execution_output = function(result) {
       parts <- character()
 
-      if (nchar(result$stdout) > 0) {
-        parts <- c(parts, paste0("stdout:\n", result$stdout))
+      # Safely check stdout (may be NULL or missing)
+      stdout_val <- result$stdout
+      if (
+        !is.null(stdout_val) &&
+          is.character(stdout_val) &&
+          nchar(stdout_val) > 0
+      ) {
+        parts <- c(parts, paste0("stdout:\n", stdout_val))
       }
 
-      if (nchar(result$messages) > 0) {
-        parts <- c(parts, paste0("messages:\n", result$messages))
+      # Safely check messages (may be NULL or missing)
+      messages_val <- result$messages
+      if (
+        !is.null(messages_val) &&
+          is.character(messages_val) &&
+          nchar(messages_val) > 0
+      ) {
+        parts <- c(parts, paste0("messages:\n", messages_val))
       }
 
-      if (nchar(result$warnings) > 0) {
-        parts <- c(parts, paste0("warnings:\n", result$warnings))
+      # Safely check warnings (may be NULL or missing)
+      warnings_val <- result$warnings
+      if (
+        !is.null(warnings_val) &&
+          is.character(warnings_val) &&
+          nchar(warnings_val) > 0
+      ) {
+        parts <- c(parts, paste0("warnings:\n", warnings_val))
       }
 
       if (!is.null(result$result)) {
@@ -830,7 +986,12 @@ answer possible with what was discovered.
       tryCatch(
         llm$chat(prompt),
         error = function(e) {
-          paste("Fallback extraction failed:", e$message)
+          cli::cli_warn(c(
+            "Fallback extraction failed",
+            "x" = "Error: {e$message}",
+            "i" = "Returning error message as answer"
+          ))
+          paste0("[Fallback extraction failed: ", e$message, "]")
         }
       )
     },
@@ -862,9 +1023,7 @@ answer possible with what was discovered.
       if (methods::.hasSlot(output_type, "properties")) {
         props <- output_type@properties
         if (length(props) == 1) {
-          output <- list()
-          output[[names(props)[1]]] <- answer
-          return(output)
+          return(setNames(list(answer), names(props)[1]))
         }
       }
 

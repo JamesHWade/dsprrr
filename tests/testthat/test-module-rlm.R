@@ -121,6 +121,64 @@ test_that("rlm_module validates tools parameter", {
   )
 })
 
+test_that("rlm_module validates all tools are functions", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 5)
+
+  # Non-function in tools list
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      runner = runner,
+      tools = list(good = function() {}, bad = "not a function")
+    ),
+    "All tools must be functions"
+  )
+
+  # Multiple non-functions
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      runner = runner,
+      tools = list(a = 1, b = "string", c = function() {})
+    ),
+    "All tools must be functions"
+  )
+})
+
+test_that("rlm_module validates max_iterations bounds", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 5)
+
+  expect_error(
+    rlm_module("question -> answer", runner = runner, max_iterations = 0),
+    "max_iterations must be at least 1"
+  )
+
+  expect_error(
+    rlm_module("question -> answer", runner = runner, max_iterations = -5),
+    "max_iterations must be at least 1"
+  )
+})
+
+test_that("rlm_module validates max_llm_calls bounds", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 5)
+
+  expect_error(
+    rlm_module("question -> answer", runner = runner, max_llm_calls = -1),
+    "max_llm_calls must be non-negative"
+  )
+
+  # Zero is allowed (disables recursive calls)
+  expect_no_error(
+    rlm_module("question -> answer", runner = runner, max_llm_calls = 0)
+  )
+})
+
 # ============================================================================
 # Module Structure Tests
 # ============================================================================
@@ -721,4 +779,157 @@ test_that("extract_rlm_final removes rlm_final class", {
   expect_false(dsprrr:::is_rlm_final(extracted))
   expect_equal(extracted, "answer")
   expect_null(attr(extracted, "rlm_final"))
+})
+
+# ============================================================================
+# Error Handling and Edge Case Tests
+# ============================================================================
+
+test_that("RLMModule warns when max_iterations reached without SUBMIT", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    max_iterations = 2
+  )
+
+  # LLM never calls SUBMIT
+  mock_llm <- create_mock_rlm_llm(list(
+    list(reasoning = "Step 1", code = "x <- 1"),
+    list(reasoning = "Step 2", code = "y <- 2")
+  ))
+
+  expect_warning(
+    rlm$forward(list(question = "test"), .llm = mock_llm),
+    "reached max_iterations"
+  )
+})
+
+test_that("RLMModule handles LLM response with missing code", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner
+  )
+
+  # Mock LLM that returns invalid response (missing code)
+  mock_llm <- list(
+    clone = function() mock_llm,
+    chat_structured = function(prompt, type, ...) {
+      list(reasoning = "Thinking")
+      # Missing 'code' field
+    },
+    chat = function(prompt, ...) "fallback"
+  )
+
+  expect_error(
+    rlm$forward(list(question = "test"), .llm = mock_llm),
+    "invalid"
+  )
+})
+
+test_that("RLMModule handles LLM response with non-string code", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner
+  )
+
+  # Mock LLM that returns code as number
+  mock_llm <- list(
+    clone = function() mock_llm,
+    chat_structured = function(prompt, type, ...) {
+      list(reasoning = "Thinking", code = 123)
+    },
+    chat = function(prompt, ...) "fallback"
+  )
+
+  expect_error(
+    rlm$forward(list(question = "test"), .llm = mock_llm),
+    "invalid"
+  )
+})
+
+# ============================================================================
+# rlm_query Batch Tests
+# ============================================================================
+
+test_that("is_rlm_query_request detects query requests", {
+  regular <- 42
+  expect_false(dsprrr:::is_rlm_query_request(regular))
+
+  request <- structure(
+    list(query = "test", context = NULL, batch = FALSE),
+    class = "rlm_query_request"
+  )
+  expect_true(dsprrr:::is_rlm_query_request(request))
+})
+
+test_that("rlm_query_batch generates batch request marker", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+
+  # Execute prelude in subprocess to test rlm_query_batch
+  prelude <- dsprrr:::create_rlm_prelude(
+    max_llm_calls = 50,
+    has_sub_lm = TRUE,
+    custom_tools = list()
+  )
+
+  result <- runner$execute(
+    paste0(prelude, "\nrlm_query_batch(c('q1', 'q2'))"),
+    context = list()
+  )
+
+  expect_true(result$success)
+  expect_s3_class(result$result, "rlm_query_request")
+  expect_true(result$result$batch)
+  expect_equal(result$result$queries, c("q1", "q2"))
+})
+
+test_that("rlm_query_batch validates queries is character", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+
+  prelude <- dsprrr:::create_rlm_prelude(
+    max_llm_calls = 50,
+    has_sub_lm = TRUE,
+    custom_tools = list()
+  )
+
+  result <- runner$execute(
+    paste0(prelude, "\nrlm_query_batch(123)"),
+    context = list()
+  )
+
+  expect_false(result$success)
+  expect_true(grepl("character vector", result$error))
+})
+
+test_that("rlm_query_batch validates slices length", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+
+  prelude <- dsprrr:::create_rlm_prelude(
+    max_llm_calls = 50,
+    has_sub_lm = TRUE,
+    custom_tools = list()
+  )
+
+  result <- runner$execute(
+    paste0(prelude, "\nrlm_query_batch(c('q1', 'q2'), slices = c('s1'))"),
+    context = list()
+  )
+
+  expect_false(result$success)
+  expect_true(grepl("same length", result$error))
 })

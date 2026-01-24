@@ -10,8 +10,12 @@
 #' - `SUBMIT(answer)`: Terminate and return final answer
 #' - `peek(var, start, end)`: View a slice of a variable
 #' - `search(var, pattern)`: Regex search in variable
-#' - `rlm_query(query, context_slice)`: Placeholder for recursive LLM calls
-#' - `rlm_query_batch(queries, slices)`: Placeholder for batched queries
+#' - `rlm_query(query, context_slice)`: Request a recursive LLM call (returns marker for interception)
+#' - `rlm_query_batch(queries, slices)`: Request batched LLM calls (returns marker for interception)
+#'
+#' The `rlm_query` and `rlm_query_batch` functions return special marker objects
+#' that the main RLM process intercepts and handles. The actual LLM calls happen
+#' in the parent R process, not in the sandboxed code execution environment.
 #'
 #' @keywords internal
 #' @name rlm-tools
@@ -161,8 +165,11 @@ rlm_query_batch <- function(queries, slices = NULL) {
       function(name) {
         fn <- custom_tools[[name]]
         if (!is.function(fn)) {
+          # This should not happen if rlm_module() validation is working
+          # but provide a clear error in the prelude as defense in depth
           return(sprintf(
-            "# %s: Not a function, skipping\n",
+            "%s <- function(...) stop('Tool %s is not a function')\n",
+            name,
             name
           ))
         }
