@@ -15,6 +15,7 @@
 #'   - `"multichain"`: MultiChainComparison module for ensemble reasoning
 #'   - `"program_of_thought"`: Code execution module (requires runner)
 #'   - `"codeact"`: Hybrid agent with tools + code execution (requires runner)
+#'   - `"rlm"`: Recursive Language Model for REPL-based context exploration (requires runner)
 #' @param tools Optional list of ellmer ToolDef objects for react modules.
 #'   If provided with `type = "predict"`, automatically upgrades to react.
 #' @param max_iterations Maximum ReAct iterations (default: 10, only for react)
@@ -124,7 +125,8 @@ module <- function(
       "chain_of_thought",
       "multichain",
       "program_of_thought",
-      "codeact"
+      "codeact",
+      "rlm"
     )
   )
 
@@ -193,6 +195,24 @@ module <- function(
         max_iterations = max_iterations,
         config = config,
         chat = chat
+      )
+    },
+    rlm = {
+      if (is.null(runner)) {
+        cli::cli_abort(c(
+          "rlm requires a runner",
+          "i" = "Create one with: {.code runner <- r_code_runner()}",
+          "i" = "Then pass it: {.code module(..., runner = runner)}"
+        ))
+      }
+      rlm_module(
+        signature = signature,
+        runner = runner,
+        max_iterations = max_iterations,
+        tools = tools %||% list(),
+        config = config,
+        chat = chat,
+        ...
       )
     },
     cli::cli_abort("Unknown module type: {type}")

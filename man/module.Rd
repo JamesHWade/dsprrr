@@ -32,6 +32,7 @@ module(
 \item \code{"multichain"}: MultiChainComparison module for ensemble reasoning
 \item \code{"program_of_thought"}: Code execution module (requires runner)
 \item \code{"codeact"}: Hybrid agent with tools + code execution (requires runner)
+\item \code{"rlm"}: Recursive Language Model for REPL-based context exploration (requires runner)
 }}
 
 \item{tools}{Optional list of ellmer ToolDef objects for react modules.
