@@ -539,10 +539,23 @@ test_that("as_vitals_task requires vitals package", {
     target = c("hello", "world")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(output = "hello"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   task <- as_vitals_task(
     module = mod,
     dataset = dataset,
-    scorer = vitals::detect_includes()
+    scorer = vitals::detect_includes(),
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
@@ -640,10 +653,23 @@ test_that("as_vitals_task works with non-standard input column names", {
     target = c("4", "Paris")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(answer = "4"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   task <- as_vitals_task(
     module = mod,
     dataset = dataset,
-    scorer = vitals::detect_includes()
+    scorer = vitals::detect_includes(),
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
@@ -654,7 +680,8 @@ test_that("as_vitals_task works with non-standard input column names", {
   expect_error(
     as_vitals_task(
       module = mod,
-      dataset = data.frame(input = "test", target = "test")
+      dataset = data.frame(input = "test", target = "test"),
+      .llm = mock_llm
     ),
     "Missing.*question"
   )
@@ -675,13 +702,26 @@ test_that("as_vitals_task accepts custom parameters", {
     target = c("hello", "world")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(output = "hello"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   # Create task with custom epochs and name
   task <- as_vitals_task(
     module = mod,
     dataset = dataset,
     scorer = vitals::detect_includes(),
     name = "custom_name",
-    epochs = 3L
+    epochs = 3L,
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
@@ -711,10 +751,23 @@ test_that("as_vitals_task uses default scorer when not provided", {
     target = c("hello")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(output = "hello"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   # Should not error when scorer is NULL (uses default)
   task <- as_vitals_task(
     module = mod,
-    dataset = dataset
+    dataset = dataset,
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
@@ -741,10 +794,23 @@ test_that("as_vitals_task nests multi-input columns correctly", {
     target = c("France", "Japan")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(answer = "France"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   task <- as_vitals_task(
     module = mod,
     dataset = dataset,
-    scorer = vitals::detect_includes()
+    scorer = vitals::detect_includes(),
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
@@ -779,10 +845,23 @@ test_that("as_vitals_task preserves extra columns", {
     id_col = c(1L, 2L)
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(output = "hello"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   task <- as_vitals_task(
     module = mod,
     dataset = dataset,
-    scorer = vitals::detect_includes()
+    scorer = vitals::detect_includes(),
+    .llm = mock_llm
   )
 
   samples <- task$get_samples()
