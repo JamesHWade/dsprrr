@@ -24,7 +24,7 @@ test_that("as_vitals_solver returns vitals-compatible results", {
     class = "Chat"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm)
+  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
 
   # as_vitals_solver expects nested inputs (list of tibbles/data.frames)
   # like what as_vitals_task creates
@@ -84,7 +84,7 @@ test_that("as_vitals_solver handles single-row inputs", {
     class = "Chat"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm)
+  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
   # Single nested input
   result <- solver(list(tibble::tibble(text = "single")))
 
@@ -113,7 +113,7 @@ test_that("as_vitals_solver handles multi-input modules", {
     class = "Chat"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm)
+  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
 
   # Multi-input: each element is a tibble with both columns
   inputs <- list(
