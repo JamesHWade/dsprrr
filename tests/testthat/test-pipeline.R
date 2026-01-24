@@ -231,6 +231,103 @@ test_that("PipelineModule errors on missing input", {
   )
 })
 
+test_that("Pipeline error includes step number and original message", {
+  mod1 <- create_mock_module_structured(
+    input_names = "q",
+    output_fields = list(a = "ok")
+  )
+
+  # Module that always fails
+  mod_fail <- list(
+    signature = signature("a -> b"),
+    chat = NULL,
+    forward = function(...) stop("Simulated LLM failure")
+  )
+  class(mod_fail) <- c("MockModule", "Module", "R6")
+
+  pipeline <- PipelineModule$new(steps = list(mod1, mod_fail))
+
+  expect_error(
+    pipeline$forward(list(q = "test")),
+    "Pipeline step 2 failed"
+  )
+})
+
+test_that("Pipeline errors on NULL output from step", {
+  # Module that returns NULL output
+  mod_null <- list(
+    signature = signature("q -> a"),
+    chat = NULL,
+    forward = function(...) {
+      tibble::tibble(
+        output = list(NULL),
+        chat = list(NULL),
+        metadata = list(list(total_tokens = 10))
+      )
+    }
+  )
+  class(mod_null) <- c("MockModule", "Module", "R6")
+
+  pipeline <- PipelineModule$new(steps = list(mod_null))
+
+  expect_error(
+    pipeline$forward(list(q = "test")),
+    "returned NULL output"
+  )
+})
+
+test_that("Pipeline warns when input mapping references non-existent field", {
+  # mod1 outputs 'answer' and 'extra'
+  mod1 <- create_mock_module_structured(
+    input_names = "q",
+    output_fields = list(answer = "42", extra = "more"),
+    transform_fn = function(inputs) list(answer = "the answer", extra = "more data")
+  )
+  # mod2 needs 'context' and 'data' inputs
+  mod2 <- create_mock_module_structured(
+    input_names = c("context", "data"),
+    output_fields = list(result = "done"),
+    transform_fn = function(inputs) {
+      list(result = paste0("Got: ", inputs$context, " and ", inputs$data))
+    }
+  )
+
+  # Map 'answer' -> 'context' (works) and 'nonexistent' -> 'data' (will warn)
+  # Also inject 'data' as static input so pipeline doesn't fail
+  pipeline <- pipeline(
+    mod1,
+    step(mod2, map = c(answer = "context", nonexistent = "data"), data = "fallback")
+  )
+
+  expect_warning(
+    pipeline$forward(list(q = "test")),
+    "non-existent field"
+  )
+})
+
+test_that("Pipeline warns when output selection requests non-existent fields", {
+  mod1 <- create_mock_module_structured(
+    input_names = "q",
+    output_fields = list(answer = "42"),
+    transform_fn = function(inputs) list(answer = "the answer")
+  )
+  mod2 <- create_mock_module_structured(
+    input_names = "answer",
+    output_fields = list(result = "done")
+  )
+
+  # Select 'nonexistent' field (will warn)
+  pipeline <- pipeline(
+    step(mod1, select = c("answer", "nonexistent")),
+    mod2
+  )
+
+  expect_warning(
+    pipeline$forward(list(q = "test")),
+    "non-existent fields"
+  )
+})
+
 test_that("PipelineModule print method works", {
   mod1 <- module(signature("question -> answer"))
   mod2 <- module(signature("answer -> formatted"))
@@ -413,8 +510,20 @@ test_that("map_inputs() validates module argument", {
 test_that("map_inputs() warns with no mappings", {
   mod <- module(signature("q -> a"))
   expect_warning(
-    map_inputs(mod),
+    result <- map_inputs(mod),
     "no mappings"
+  )
+  # Should return consistent PipelineMappedModule type
+
+  expect_s3_class(result, "PipelineMappedModule")
+})
+
+test_that("map_inputs() errors on unnamed arguments", {
+  mod <- module(signature("context -> a"))
+
+  expect_error(
+    map_inputs(mod, "context"),
+    "requires named arguments"
   )
 })
 
@@ -461,9 +570,11 @@ test_that("with_inputs() validates module argument", {
 test_that("with_inputs() warns with no inputs", {
   mod <- module(signature("q -> a"))
   expect_warning(
-    with_inputs(mod),
+    result <- with_inputs(mod),
     "no inputs"
   )
+  # Should return consistent PipelineMappedModule type
+  expect_s3_class(result, "PipelineMappedModule")
 })
 
 # ============================================================================
@@ -483,6 +594,53 @@ test_that("select_outputs() validates module argument", {
     select_outputs("not a module", "a"),
     "requires a Module"
   )
+})
+
+test_that("select_outputs() errors on non-character fields", {
+  mod <- module(signature("q -> a"))
+
+  expect_error(
+    select_outputs(mod, 1, 2, 3),
+    "requires character field names"
+  )
+})
+
+test_that("select_outputs() errors on empty fields", {
+  mod <- module(signature("q -> a"))
+
+  expect_error(
+    select_outputs(mod),
+    "requires at least one field name"
+  )
+})
+
+test_that("select_outputs() works with %>>%", {
+  # mod1 outputs both 'answer' and 'reasoning'
+  mod1 <- create_mock_module_structured(
+    input_names = "q",
+    output_fields = list(answer = "42", reasoning = "because"),
+    transform_fn = function(inputs) list(answer = "the answer", reasoning = "steps")
+  )
+  # mod2 only needs 'answer'
+  mod2 <- create_mock_module_structured(
+    input_names = "answer",
+    output_fields = list(result = "done"),
+    transform_fn = function(inputs) {
+      list(result = paste0("Got: ", inputs$answer))
+    }
+  )
+
+  # select_outputs on mod1 filters ITS outputs before passing downstream
+  # Syntax: select_outputs(producing_module, fields_to_keep) %>>% consuming_module
+  pipeline <- select_outputs(mod1, "answer") %>>% mod2
+
+  # Check that output_select is properly transferred to PipelineStep for mod1 (step 1)
+  expect_equal(pipeline$steps[[1]]@output_select, "answer")
+
+  # Execute the pipeline - mod2 receives only 'answer', not 'reasoning'
+  result <- pipeline$forward(list(q = "test"))
+  output <- result$output[[1]]
+  expect_equal(output$result, "Got: the answer")
 })
 
 # ============================================================================

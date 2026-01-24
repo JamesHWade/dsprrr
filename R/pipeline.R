@@ -190,6 +190,15 @@ PipelineModule <- R6::R6Class(
         metadata <- result$metadata[[1]]
         chat_obj <- result$chat[[1]]
 
+        # Validate output is not NULL
+        if (is.null(output)) {
+          cli::cli_abort(c(
+            "Pipeline step {i} returned NULL output",
+            "x" = "Module {.cls {class(step@module)[1]}} did not produce output",
+            "i" = "This may indicate an API failure or module error"
+          ))
+        }
+
         all_metadata[[i]] <- metadata
         all_chats[[i]] <- chat_obj
         step_outputs[[i]] <- output
@@ -201,10 +210,19 @@ PipelineModule <- R6::R6Class(
 
           # Apply output selection if specified
           if (length(step@output_select) > 0) {
-            current_data <- current_data[intersect(
-              names(current_data),
-              step@output_select
-            )]
+            available <- names(current_data)
+            missing_selected <- setdiff(step@output_select, available)
+
+            if (length(missing_selected) > 0) {
+              cli::cli_warn(c(
+                "Output selection requested non-existent fields at step {i}",
+                "x" = "Requested: {.field {missing_selected}}",
+                "i" = "Available: {.field {available}}",
+                "!" = "These fields will be missing from downstream inputs"
+              ))
+            }
+
+            current_data <- current_data[intersect(available, step@output_select)]
           }
         } else {
           # Simple output - wrap in list with output name from signature
@@ -446,15 +464,22 @@ PipelineModule <- R6::R6Class(
       }
 
       result <- data
+      available_fields <- names(data)
 
       for (from in names(mapping)) {
         to <- mapping[[from]]
-        if (from %in% names(data)) {
+        if (from %in% available_fields) {
           result[[to]] <- data[[from]]
           # Remove old name if different
           if (from != to) {
             result[[from]] <- NULL
           }
+        } else {
+          cli::cli_warn(c(
+            "Input mapping references non-existent field",
+            "x" = "Mapping {.field {from}} -> {.field {to}} ignored",
+            "i" = "Available fields: {.field {available_fields}}"
+          ))
         }
       }
 
@@ -524,11 +549,12 @@ PipelineModule <- R6::R6Class(
 #'   mod_summarize
 #' }
 `%>>%` <- function(lhs, rhs) {
-  # Handle PipelineMappedModule (from map_inputs)
+  # Handle PipelineMappedModule (from map_inputs, with_inputs, select_outputs)
   if (inherits(rhs, "PipelineMappedModule")) {
     rhs_step <- PipelineStep(
       module = rhs$module,
       input_map = rhs$mapping,
+      output_select = rhs$output_select %||% character(0),
       static_inputs = rhs$static_inputs %||% list()
     )
   } else if (inherits(rhs, "Module")) {
@@ -544,6 +570,15 @@ PipelineModule <- R6::R6Class(
   if (inherits(lhs, "PipelineModule")) {
     # Extend existing pipeline
     steps <- c(lhs$steps, list(rhs_step))
+  } else if (inherits(lhs, "PipelineMappedModule")) {
+    # Start new pipeline with mapped module on left
+    lhs_step <- PipelineStep(
+      module = lhs$module,
+      input_map = lhs$mapping,
+      output_select = lhs$output_select %||% character(0),
+      static_inputs = lhs$static_inputs %||% list()
+    )
+    steps <- list(lhs_step, rhs_step)
   } else if (inherits(lhs, "Module")) {
     # Start new pipeline
     lhs_step <- PipelineStep(module = lhs)
@@ -604,6 +639,7 @@ pipeline <- function(...) {
       PipelineStep(
         module = x$module,
         input_map = x$mapping,
+        output_select = x$output_select %||% character(0),
         static_inputs = x$static_inputs %||% list()
       )
     } else if (inherits(x, "Module")) {
@@ -715,8 +751,15 @@ map_inputs <- function(module, ...) {
   mapping <- list(...)
 
   if (length(mapping) == 0) {
-    cli::cli_warn("map_inputs() called with no mappings")
-    return(module)
+    cli::cli_warn(c(
+      "map_inputs() called with no mappings",
+      "i" = "Use map_inputs(module, upstream_field = 'input_field') to rename fields"
+    ))
+    # Return consistent type even with empty mapping
+    return(structure(
+      list(module = module, mapping = list(), static_inputs = list()),
+      class = "PipelineMappedModule"
+    ))
   }
 
   # Validate mapping format
@@ -768,8 +811,15 @@ with_inputs <- function(module, ...) {
   static <- list(...)
 
   if (length(static) == 0) {
-    cli::cli_warn("with_inputs() called with no inputs")
-    return(module)
+    cli::cli_warn(c(
+      "with_inputs() called with no inputs",
+      "i" = "Use with_inputs(module, input_name = value) to inject static values"
+    ))
+    # Return consistent type even with empty inputs
+    return(structure(
+      list(module = module, mapping = list(), static_inputs = list()),
+      class = "PipelineMappedModule"
+    ))
   }
 
   structure(
@@ -790,7 +840,7 @@ with_inputs <- function(module, ...) {
 #' By default, all fields are passed forward.
 #'
 #' @param module A Module object
-#' @param ... Field names to select (unquoted or as strings)
+#' @param ... Field names to select (as character strings)
 #'
 #' @return A PipelineMappedModule object for use with `%>>%`
 #'
@@ -811,8 +861,19 @@ select_outputs <- function(module, ...) {
   }
 
   fields <- c(...)
+
+  if (is.null(fields) || length(fields) == 0) {
+    cli::cli_abort(c(
+      "select_outputs() requires at least one field name",
+      "i" = "Use select_outputs(module, 'field1', 'field2') to filter outputs"
+    ))
+  }
+
   if (!is.character(fields)) {
-    cli::cli_abort("select_outputs() requires character field names")
+    cli::cli_abort(c(
+      "select_outputs() requires character field names",
+      "x" = "Got {.cls {class(fields)[1]}}"
+    ))
   }
 
   structure(

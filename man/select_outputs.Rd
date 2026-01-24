@@ -9,7 +9,7 @@ select_outputs(module, ...)
 \arguments{
 \item{module}{A Module object}
 
-\item{...}{Field names to select (unquoted or as strings)}
+\item{...}{Field names to select (as character strings)}
 }
 \value{
 A PipelineMappedModule object for use with \verb{\%>>\%}
