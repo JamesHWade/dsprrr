@@ -204,14 +204,19 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
   )
 
   # Mock LLM that always returns "correct"
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(answer = "correct")
-      }
-    ),
-    class = "Chat"
-  )
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          list(answer = "correct")
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   # Metric that returns 1.0 for "correct"
   exact_metric <- function(pred, row) {
@@ -257,14 +262,19 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
   valset <- data.frame(x = c("e", "f"), y = c("correct", "correct"))
 
   # Mock LLM that always returns "correct"
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(answer = "correct")
-      }
-    ),
-    class = "Chat"
-  )
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          list(answer = "correct")
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   tp <- BootstrapFewShotWithRandomSearch(
     # Always return 1.0 so early stopping triggers on first candidate
@@ -317,14 +327,19 @@ test_that("compile_module works with BootstrapFewShotWithRandomSearch", {
     summary = c("test")
   )
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(summary = "mocked")
-      }
-    ),
-    class = "Chat"
-  )
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          list(summary = "mocked")
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   tp <- BootstrapFewShotWithRandomSearch(
     metric = function(pred, exp) 0.5,
@@ -374,14 +389,19 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
   valset <- data.frame(x = c("c"), y = c("ok"))
 
   # Mock LLM that returns "ok"
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(answer = "ok")
-      }
-    ),
-    class = "Chat"
-  )
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          list(answer = "ok")
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   tp <- BootstrapFewShotWithRandomSearch(
     metric = function(pred, row) as.numeric(pred == row$y),

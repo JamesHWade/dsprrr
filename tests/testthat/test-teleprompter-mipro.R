@@ -49,26 +49,31 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
 
   # Create a mock LLM that returns predictable results based on input
   call_count <- 0L
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        call_count <<- call_count + 1L
-        # Extract the question from the prompt and return matching answer
-        if (grepl("2\\+2|2 \\+ 2", prompt)) {
-          list(answer = "4")
-        } else if (grepl("3\\+3|3 \\+ 3", prompt)) {
-          list(answer = "6")
-        } else if (grepl("4\\+4|4 \\+ 4", prompt)) {
-          list(answer = "8")
-        } else if (grepl("5\\+5|5 \\+ 5", prompt)) {
-          list(answer = "10")
-        } else {
-          list(answer = "unknown")
-        }
-      }
-    ),
-    class = "Chat"
-  )
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          call_count <<- call_count + 1L
+          # Extract the question from the prompt and return matching answer
+          if (grepl("2\\+2|2 \\+ 2", prompt)) {
+            list(answer = "4")
+          } else if (grepl("3\\+3|3 \\+ 3", prompt)) {
+            list(answer = "6")
+          } else if (grepl("4\\+4|4 \\+ 4", prompt)) {
+            list(answer = "8")
+          } else if (grepl("5\\+5|5 \\+ 5", prompt)) {
+            list(answer = "10")
+          } else {
+            list(answer = "unknown")
+          }
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   log_dir <- tempfile("mipro-log-")
   dir.create(log_dir)

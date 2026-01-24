@@ -210,12 +210,20 @@ test_that("epoch results are aggregated correctly", {
   # Epoch 1: score 0.5, Epoch 2: score 1.0, Epoch 3: score 0.0
   responses <- c("4", "wrong", "4", "4", "wrong", "wrong")
   call_idx <- 0
-  mock_llm <- list(
-    chat_structured = function(...) {
-      call_idx <<- call_idx + 1
-      responses[call_idx]
-    }
-  )
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) {
+          call_idx <<- call_idx + 1
+          responses[call_idx]
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   dataset <- tibble::tibble(
     question = c("Q1", "Q2"),

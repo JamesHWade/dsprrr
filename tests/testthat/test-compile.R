@@ -324,16 +324,21 @@ test_that("evaluate generic executes modules", {
 
   dataset <- data.frame(text = c("A", "B"), stringsAsFactors = FALSE)
 
-  eval_llm <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        # Return the final line of the prompt (the input text)
-        lines <- strsplit(prompt, "\n")[[1]]
-        tail(lines, 1L)
-      }
-    ),
-    class = "Chat"
-  )
+  eval_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(prompt, ...) {
+          # Return the final line of the prompt (the input text)
+          lines <- strsplit(prompt, "\n")[[1]]
+          tail(lines, 1L)
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   results <- evaluate(
     mod,

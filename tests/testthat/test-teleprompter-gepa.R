@@ -76,28 +76,33 @@ test_that("GEPA compiles with reflection-based mutation", {
   # Track mutation calls to verify LLM is being used
   mutation_calls <- 0L
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        # Check if this is a mutation call (reflection prompt) or regular inference
-        if (
-          grepl("improving system instructions", prompt, ignore.case = TRUE)
-        ) {
-          mutation_calls <<- mutation_calls + 1L
-          list(instructions = "Be accurate and explicit.")
-        } else {
-          # Regular inference - return correct answer only if prompt contains
-          # "accurate" (from mutated instructions)
-          if (grepl("accurate", prompt, ignore.case = TRUE)) {
-            list(answer = "yes")
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          # Check if this is a mutation call (reflection prompt) or regular inference
+          if (
+            grepl("improving system instructions", prompt, ignore.case = TRUE)
+          ) {
+            mutation_calls <<- mutation_calls + 1L
+            list(instructions = "Be accurate and explicit.")
           } else {
-            list(answer = "no") # Wrong answer for original instructions
+            # Regular inference - return correct answer only if prompt contains
+            # "accurate" (from mutated instructions)
+            if (grepl("accurate", prompt, ignore.case = TRUE)) {
+              list(answer = "yes")
+            } else {
+              list(answer = "no") # Wrong answer for original instructions
+            }
           }
-        }
-      }
-    ),
-    class = "Chat"
-  )
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   tp <- GEPA(
     metrics = list(quality = metric_fn),
