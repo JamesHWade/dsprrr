@@ -9,8 +9,9 @@ as_vitals_solver(module, .llm = NULL, ...)
 \arguments{
 \item{module}{A DSPrrr module (e.g., created via \code{\link[=module]{module()}}).}
 
-\item{.llm}{An ellmer chat object (required). This will be cloned for each
-chat invocation.}
+\item{.llm}{An ellmer chat object. If \code{NULL} (default), uses the module's
+stored chat or falls back to \code{\link[=get_default_chat]{get_default_chat()}}. The chat is cloned
+for each batch invocation.}
 
 \item{...}{Additional arguments forwarded to \code{\link[=run_dataset]{run_dataset()}}.}
 }

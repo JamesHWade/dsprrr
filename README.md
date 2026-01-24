@@ -52,6 +52,9 @@ A compact notation for defining LLM inputs and outputs:
 library(dsprrr)
 #> 
 #> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:stats':
+#> 
+#>     step
 #> The following object is masked from 'package:methods':
 #> 
 #>     signature
@@ -132,6 +135,26 @@ classifier <- chat_openai() |>
   as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 classifier$predict(text = "Terrible experience")
+```
+
+### Pipelines
+
+Chain modules together with the `%>>%` operator. Outputs flow
+automatically to inputs:
+
+``` r
+# Chain three modules together
+qa_pipeline <- mod_extract %>>% mod_answer %>>% mod_format
+
+# Run the pipeline
+result <- run(qa_pipeline, document = "...", .llm = chat_openai())
+
+# With explicit field mapping when names don't match
+rag_pipeline <- pipeline(
+  mod_retrieve,
+  step(mod_answer, map = c(documents = "context")),
+  mod_summarize
+)
 ```
 
 ### Optimization
