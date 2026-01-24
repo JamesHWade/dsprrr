@@ -22,3 +22,7 @@ Useful links:
 
 **Maintainer**: James Wade <github@jameshwade.com>
 ([ORCID](https://orcid.org/0000-0002-9740-1905))
+
+Authors:
+
+- Anatoliy Sokolov <ansokolov@dow.com>
