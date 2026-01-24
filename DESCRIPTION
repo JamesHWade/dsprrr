@@ -1,9 +1,11 @@
 Package: dsprrr
 Title: Declarative Self-Improving Language Programs for R
 Version: 0.0.0.9000
-Authors@R:
+Authors@R: c(
     person("James", "Wade", , "github@jameshwade.com", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0002-9740-1905"))
+           comment = c(ORCID = "0000-0002-9740-1905")),
+    person("Anatoliy", "Sokolov", , "ansokolov@dow.com", role = "aut")
+  )
 Description: Build principled, test-driven, and optimizable applications
     using Large Language Models (LLMs) in R. Based on the DSPy framework
     from Stanford NLP, 'dsprrr' moves beyond simple prompt engineering to

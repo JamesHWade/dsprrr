@@ -22,5 +22,10 @@ Useful links:
 \author{
 \strong{Maintainer}: James Wade \email{github@jameshwade.com} (\href{https://orcid.org/0000-0002-9740-1905}{ORCID})
 
+Authors:
+\itemize{
+  \item Anatoliy Sokolov \email{ansokolov@dow.com}
+}
+
 }
 \keyword{internal}
