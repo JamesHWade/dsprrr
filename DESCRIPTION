@@ -93,6 +93,7 @@ Collate:
     'orchestration.R'
     'pareto.R'
     'parsnip.R'
+    'pipeline.R'
     'r-code-runner.R'
     'ragnar.R'
     'run.R'

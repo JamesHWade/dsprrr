@@ -151,6 +151,16 @@ reference:
     - evaluate
     - evaluate_dsp
 
+  - title: Module Composition
+    desc: Chain modules into pipelines
+    contents:
+    - pipeline
+    - "`%>>%`"
+    - step
+    - map_inputs
+    - with_inputs
+    - select_outputs
+
   - title: Advanced Reasoning Modules
     desc: DSPy-inspired reasoning patterns for improved accuracy
     contents:
