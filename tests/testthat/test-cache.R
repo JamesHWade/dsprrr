@@ -704,18 +704,27 @@ test_that(".cache = TRUE has no effect when caching globally disabled", {
 # Integration tests for .cache parameter through run() API
 test_that("run() respects .cache = FALSE parameter (single input)", {
   local_reset_cache()
-  configure_cache(enable = TRUE)
+  # Use memory-only cache to avoid disk pollution from previous runs
+  configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
 
   call_count <- 0
-  mock_llm <- list(
-    get_model = function() "mock-model",
-    chat_structured = function(prompt, type, echo = "none") {
-      call_count <<- call_count + 1
-      list(sentiment = "positive")
-    },
-    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+  mock_env <- new.env()
+  mock_env$mock_llm <- structure(
+    list(
+      get_model = function() "mock-model",
+      chat_structured = function(prompt, type, echo = "none") {
+        call_count <<- call_count + 1
+        list(sentiment = "positive")
+      },
+      `.__enclos_env__` = list(
+        private = list(api_args = list(temperature = 0.7))
+      ),
+      clone = function(...) mock_env$mock_llm,
+      set_turns = function(turns) invisible(NULL)
+    ),
+    class = "Chat"
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- mock_env$mock_llm
 
   sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
   mod <- module(sig, type = "predict")
@@ -739,18 +748,27 @@ test_that("run() respects .cache = FALSE parameter (single input)", {
 
 test_that("run() respects .cache = FALSE in batch processing", {
   local_reset_cache()
-  configure_cache(enable = TRUE)
+  # Use memory-only cache to avoid disk pollution from previous runs
+  configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
 
   call_count <- 0
-  mock_llm <- list(
-    get_model = function() "mock-model",
-    chat_structured = function(prompt, type, echo = "none") {
-      call_count <<- call_count + 1
-      list(sentiment = "positive")
-    },
-    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+  mock_env <- new.env()
+  mock_env$mock_llm <- structure(
+    list(
+      get_model = function() "mock-model",
+      chat_structured = function(prompt, type, echo = "none") {
+        call_count <<- call_count + 1
+        list(sentiment = "positive")
+      },
+      `.__enclos_env__` = list(
+        private = list(api_args = list(temperature = 0.7))
+      ),
+      clone = function(...) mock_env$mock_llm,
+      set_turns = function(turns) invisible(NULL)
+    ),
+    class = "Chat"
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- mock_env$mock_llm
 
   sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
   mod <- module(sig, type = "predict")

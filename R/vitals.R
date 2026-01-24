@@ -2,91 +2,139 @@
 #'
 #' @description
 #' Creates a function compatible with vitals Tasks that executes a DSPrrr
-#' module against batches of inputs. The solver forwards arguments to
-#' [run_dataset()] and returns vitals-friendly objects containing results,
-#' chat logs, and metadata.
+#' module against batches of inputs. The solver uses [run_dataset()] internally,
+#' ensuring that the module's demos, templates, and input descriptions are
+#' properly used in prompt construction.
+#'
+#' For multi-input modules, the solver expects the vitals `input` column to
+#' contain nested data (list of tibbles/lists) where each element has fields
+#' matching the module's signature inputs. Use [as_vitals_task()] to
+#' automatically create this structure from a flat dataset.
+#'
+#' The solver uses ellmer's parallel processing for efficiency. For structured
+#' outputs, mock Chat objects are created for vitals logging compatibility
+#' (following the same pattern as vitals' `generate_structured()`).
 #'
 #' @param module A DSPrrr module (e.g., created via [module()]).
-#' @param .llm Optional ellmer chat object. When `NULL`, each invocation will
-#'   create a fresh default client.
-#' @param .parallel Logical; forwarded to [run_dataset()]. Defaults to `FALSE`
-#'   to avoid sharing LLM state across workers.
-#' @param .return_format One of `"structured"` (default) or `"simple"`.
-#' @param .input_column Column name to use for the module's input. Defaults to
-#'   the first input name from the module's signature. Used to map vitals'
-#'   "input" column to the module's expected input column.
+#' @param .llm An ellmer chat object. If `NULL` (default), uses the module's
+#'   stored chat or falls back to [get_default_chat()]. The chat is cloned
+#'   for each batch invocation.
 #' @param ... Additional arguments forwarded to [run_dataset()].
 #'
-#' @return A function accepting a data frame of inputs and returning a list with
-#'   components `result`, `solver_chat`, and `metadata`.
+#' @return A function accepting a list of input objects and returning a list
+#'   with components `result`, `solver_chat`, and optionally `solver_metadata`.
 #' @export
 as_vitals_solver <- function(
   module,
   .llm = NULL,
-  .parallel = FALSE,
-  .return_format = "structured",
-  .input_column = NULL,
   ...
 ) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("as_vitals_solver() requires an R6 Module object")
   }
 
-  .return_format <- match.arg(.return_format, c("simple", "structured"))
+  # Resolve LLM using standard dsprrr pattern: explicit > module > default
+  .llm <- .llm %||% module$chat %||% get_default_chat(create = TRUE)
 
-  # Capture additional arguments to pass through to run_dataset()
-  solver_args <- list(...)
+  # Get signature info for extracting inputs from nested vitals format
 
-  # Get signature's first input name if not overridden
-  sig_input_names <- vapply(
-    module$signature@inputs,
-    function(x) x$name,
-    character(1)
-  )
-  first_input_name <- if (length(sig_input_names) > 0) {
-    sig_input_names[[1]]
-  } else {
-    "input"
-  }
-  input_col_name <- .input_column %||% first_input_name
+  sig_inputs <- module$signature@inputs
+  sig_input_names <- vapply(sig_inputs, function(x) x$name, character(1))
+  output_type <- module$signature@output_type
 
-  function(inputs, ...) {
-    if (!is.data.frame(inputs)) {
-      # vitals passes just the "input" column values as a vector
-      # Map to the signature's expected input column name
-      inputs <- stats::setNames(
-        data.frame(inputs, stringsAsFactors = FALSE),
-        input_col_name
-      )
+  # Check if output type is simple string (single string field in TypeObject)
+  is_simple_string <- FALSE
+  if (inherits(output_type, "ellmer::TypeObject")) {
+    props <- output_type@properties
+    if (length(props) == 1) {
+      prop <- props[[1]]
+      if (
+        inherits(prop, "ellmer::TypeBasic") && identical(prop@type, "string")
+      ) {
+        is_simple_string <- TRUE
+      }
     }
+  } else if (inherits(output_type, "ellmer::TypeBasic")) {
+    is_simple_string <- identical(output_type@type, "string")
+  }
 
-    # Merge solver_args (from outer function) with runtime args (from vitals)
-    run_args <- c(
-      list(
-        module = module,
-        data = inputs,
-        .llm = .llm,
-        .parallel = .parallel,
-        .progress = FALSE,
-        .return_format = .return_format
-      ),
-      solver_args, # From as_vitals_solver(...) - e.g., .cache
-      list(...) # From solver(inputs, ...) - runtime args
+  # Capture extra args for run_dataset
+  extra_args <- list(...)
+
+  function(inputs, ..., solver_chat = .llm) {
+    # Convert vitals nested inputs back to flat data frame for run_dataset
+    # Each element in `inputs` is a tibble/list with signature input fields
+    rows <- lapply(inputs, function(inp) {
+      if (is.data.frame(inp)) {
+        as.list(inp[1, sig_input_names, drop = FALSE])
+      } else if (is.list(inp)) {
+        inp[sig_input_names]
+      } else {
+        stats::setNames(list(inp), sig_input_names[[1]])
+      }
+    })
+
+    # Build data frame from rows
+    data <- tibble::as_tibble(do.call(rbind, lapply(rows, as.data.frame)))
+
+    # Clone chat for this batch
+    ch <- if (is.function(solver_chat)) solver_chat() else solver_chat$clone()
+
+    # Merge extra args, with defaults for parallel processing
+    # User-provided args override defaults
+    call_args <- list(
+      module = module,
+      data = data,
+      .llm = ch,
+      .return_format = "structured",
+      .progress = FALSE
     )
 
-    results <- do.call(run_dataset, run_args)
+    # Add defaults for parallel processing (can be overridden by extra_args)
+    defaults <- list(.parallel = TRUE, .parallel_method = "ellmer")
+    for (nm in names(defaults)) {
+      if (!nm %in% names(extra_args) && !nm %in% names(list(...))) {
+        call_args[[nm]] <- defaults[[nm]]
+      }
+    }
 
-    if (.return_format == "simple") {
+    # Call run_dataset which properly uses demos, templates, and descriptions
+    results <- do.call(
+      run_dataset,
+      c(call_args, extra_args, list(...))
+    )
+
+    # Extract results in vitals format
+    if (is_simple_string) {
+      # For simple strings, extract the string value
+      result_values <- vapply(
+        results$result,
+        function(r) {
+          if (is.list(r) && length(r) == 1) {
+            as.character(r[[1]])
+          } else {
+            as.character(r)
+          }
+        },
+        character(1)
+      )
+
       list(
-        result = results$result,
-        solver_chat = replicate(nrow(results), NULL, simplify = FALSE),
-        metadata = replicate(nrow(results), list(), simplify = FALSE)
+        result = result_values,
+        solver_chat = results$.chat
       )
     } else {
+      # For structured outputs, JSON-serialize for scorer compatibility
+      result_strings <- vapply(
+        results$result,
+        function(r) as.character(jsonlite::toJSON(r, auto_unbox = TRUE)),
+        character(1)
+      )
+
       list(
-        result = results$result,
+        result = result_strings,
         solver_chat = results$.chat,
-        metadata = results$.metadata
+        solver_metadata = results$.metadata
       )
     }
   }
@@ -572,10 +620,14 @@ infer_provider_from_model <- function(model) {
 #' module and dataset. This makes it trivial to evaluate dsprrr modules
 #' using vitals infrastructure without manual solver wrapping.
 #'
+#' For multi-input modules, the function automatically nests all signature
+#' input columns into a single `input` list column that vitals expects.
+#' The solver then extracts these fields when processing each sample.
+#'
 #' @param module A DSPrrr module (e.g., created via [module()]).
-#' @param dataset A tibble/data frame with columns `input` and `target`.
-#'   The `input` column contains prompts and `target` contains expected
-#'   values or grading guidance.
+#' @param dataset A tibble/data frame with columns matching the module's
+#'   signature inputs plus a `target` column. The function will nest
+#'   signature inputs into the `input` column format vitals requires.
 #' @param scorer A vitals scorer function (e.g., `vitals::model_graded_qa()`,
 #'   `vitals::detect_match()`). Defaults to `vitals::model_graded_qa()`.
 #' @param .llm Optional ellmer chat object for the solver. When `NULL`,
@@ -599,25 +651,22 @@ infer_provider_from_model <- function(model) {
 #' @export
 #' @examples
 #' \dontrun{
-#' # Create a simple QA module
+#' # Single-input module
 #' mod <- module(signature("question -> answer"))
-#'
-#' # Prepare test dataset
 #' test_data <- tibble::tibble(
-#'   input = c("What is 2+2?", "What is the capital of France?"),
+#'   question = c("What is 2+2?", "Capital of France?"),
 #'   target = c("4", "Paris")
 #' )
+#' task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
 #'
-#' # Create task with string detection scorer
-#' task <- as_vitals_task(
-#'   module = mod,
-#'   dataset = test_data,
-#'   scorer = vitals::detect_includes(),
-#'   .llm = ellmer::chat_openai()
+#' # Multi-input module
+#' mod <- module(signature("shapes, pick -> answer"))
+#' test_data <- tibble::tibble(
+#'   shapes = c("square, circle", "triangle, star"),
+#'   pick = c("square", "star"),
+#'   target = c("square", "star")
 #' )
-#'
-#' # Run evaluation and view results
-#' task
+#' task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
 #' }
 as_vitals_task <- function(
   module,
@@ -665,30 +714,31 @@ as_vitals_task <- function(
     ))
   }
 
-  # vitals requires an "input" column - map from signature's first input
-  first_input_name <- if (length(sig_input_names) > 0) {
-    sig_input_names[[1]]
-  } else {
-    "input"
-  }
+  # Nest signature input columns into a single `input` list column for vitals
+  # Each element is a tibble with all signature inputs for that row
+  input_list <- lapply(seq_len(nrow(dataset)), function(i) {
+    dataset[i, sig_input_names, drop = FALSE]
+  })
 
-  # Create a copy of dataset with "input" column for vitals
-  vitals_dataset <- dataset
-  if (first_input_name != "input") {
-    # Rename signature's input column to "input" for vitals
-    vitals_dataset$input <- vitals_dataset[[first_input_name]]
+  vitals_dataset <- tibble::tibble(
+    input = input_list,
+    target = dataset$target
+  )
+
+  # Preserve any extra columns (excluding signature inputs and target)
+  extra_cols <- setdiff(names(dataset), c(sig_input_names, "target"))
+  for (col in extra_cols) {
+    vitals_dataset[[col]] <- dataset[[col]]
   }
 
   # Default scorer
   scorer <- scorer %||% vitals::model_graded_qa()
 
-  # Create solver from module - pass original column name so solver can map back
-
+  # Create solver from module
   solver <- as_vitals_solver(
     module = module,
     .llm = .llm,
     .parallel = .parallel,
-    .input_column = first_input_name,
     ...
   )
 

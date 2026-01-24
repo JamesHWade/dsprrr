@@ -184,22 +184,30 @@ test_that("SIMBA compile applies rules and demos when improved", {
   call_count <- 0L
 
   # Mock LLM that returns wrong answers initially, correct after SIMBA_RULE
-  mock_llm <- list(
-    chat_structured = function(prompt, type, ...) {
-      call_count <<- call_count + 1L
-      # Check if SIMBA_RULE has been applied by looking at the prompt
-      if (grepl("SIMBA_RULE", prompt)) {
-        # After rule is applied, return correct answers
-        if (grepl("2\\+2", prompt)) {
-          return("4")
-        } else if (grepl("3\\+3", prompt)) {
-          return("6")
-        }
-      }
-      # Before rule, return wrong answer
-      "wrong"
-    }
-  )
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          call_count <<- call_count + 1L
+          # Check if SIMBA_RULE has been applied by looking at the prompt
+          if (grepl("SIMBA_RULE", prompt)) {
+            # After rule is applied, return correct answers
+            if (grepl("2\\+2", prompt)) {
+              return("4")
+            } else if (grepl("3\\+3", prompt)) {
+              return("6")
+            }
+          }
+          # Before rule, return wrong answer
+          "wrong"
+        },
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
 
   sig <- Signature(
     inputs = list(input(name = "question", class = S7::class_character)),

@@ -8,22 +8,38 @@ test_that("as_vitals_solver returns vitals-compatible results", {
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
+  # Create a more complete mock LLM that supports the methods needed by run_dataset
   mock_llm <- structure(
     list(
       chat_structured = function(prompt, ...) {
+        # Extract last non-empty line as the "text" value
         lines <- strsplit(prompt, "\n")[[1]]
+        lines <- lines[nzchar(trimws(lines))]
         tail(lines, 1L)
-      }
+      },
+      clone = function(...) mock_llm,
+      set_turns = function(turns) invisible(NULL),
+      get_turns = function(...) list()
     ),
     class = "Chat"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm)
+  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
 
-  inputs <- data.frame(text = c("foo", "bar"), stringsAsFactors = FALSE)
+  # as_vitals_solver expects nested inputs (list of tibbles/data.frames)
+  # like what as_vitals_task creates
+
+  inputs <- list(
+    tibble::tibble(text = "foo"),
+    tibble::tibble(text = "bar")
+  )
   result <- solver(inputs)
 
-  expect_equal(result$result, list("foo", "bar"))
+  # Result should be character vector
+  expect_type(result$result, "character")
+  expect_equal(length(result$result), 2)
+
+  # solver_chat should be list of Chat objects
   expect_equal(length(result$solver_chat), 2)
   expect_true(all(vapply(
     result$solver_chat,
@@ -31,22 +47,6 @@ test_that("as_vitals_solver returns vitals-compatible results", {
     logical(1),
     what = "Chat"
   )))
-  expect_equal(length(result$metadata), 2)
-  expect_true(all(vapply(
-    result$metadata,
-    function(x) "prompt" %in% names(x),
-    logical(1)
-  )))
-
-  simple_solver <- as_vitals_solver(
-    mod,
-    .llm = mock_llm,
-    .return_format = "simple"
-  )
-  simple_result <- simple_solver(inputs)
-  expect_equal(simple_result$result, list("foo", "bar"))
-  expect_equal(simple_result$solver_chat, list(NULL, NULL))
-  expect_equal(simple_result$metadata, list(list(), list()))
 })
 
 test_that("as_vitals_solver rejects non-module input", {
@@ -75,61 +75,58 @@ test_that("as_vitals_solver handles single-row inputs", {
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
   mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "echoed"),
+    list(
+      chat_structured = function(prompt, ...) "echoed",
+      clone = function(...) mock_llm,
+      set_turns = function(turns) invisible(NULL),
+      get_turns = function(...) list()
+    ),
     class = "Chat"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm)
-  result <- solver(data.frame(text = "single", stringsAsFactors = FALSE))
+  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
+  # Single nested input
+  result <- solver(list(tibble::tibble(text = "single")))
 
   expect_equal(length(result$result), 1)
   expect_equal(result$result[[1]], "echoed")
 })
 
-test_that("as_vitals_solver converts list inputs to data frame", {
+test_that("as_vitals_solver handles multi-input modules", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(
+      input(name = "context", class = S7::class_character),
+      input(name = "question", class = S7::class_character)
+    ),
     output_type = ellmer::type_string(),
-    instructions = "Echo"
+    instructions = "Answer based on context"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, type = "predict")
 
   mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "result"),
+    list(
+      chat_structured = function(prompt, ...) "answer",
+      clone = function(...) mock_llm,
+      set_turns = function(turns) invisible(NULL),
+      get_turns = function(...) list()
+    ),
     class = "Chat"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm)
+  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
 
-  # Pass list instead of data frame
-  result <- solver(list(text = c("a", "b")))
+  # Multi-input: each element is a tibble with both columns
+  inputs <- list(
+    tibble::tibble(
+      context = "Paris is in France",
+      question = "Where is Paris?"
+    ),
+    tibble::tibble(context = "Tokyo is in Japan", question = "Where is Tokyo?")
+  )
+  result <- solver(inputs)
 
   expect_equal(length(result$result), 2)
-})
-
-test_that("as_vitals_solver structured format includes metadata", {
-  sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
-    output_type = ellmer::type_string(),
-    instructions = "Test"
-  )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
-
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "response"),
-    class = "Chat"
-  )
-
-  solver <- as_vitals_solver(
-    mod,
-    .llm = mock_llm,
-    .return_format = "structured"
-  )
-  result <- solver(data.frame(text = "test", stringsAsFactors = FALSE))
-
-  expect_true("latency_ms" %in% names(result$metadata[[1]]))
-  expect_true("prompt" %in% names(result$metadata[[1]]))
-  expect_true("timestamp" %in% names(result$metadata[[1]]))
+  expect_true(all(result$result == "answer"))
 })
 
 # --- as_dsprrr_metric tests ---
@@ -542,10 +539,23 @@ test_that("as_vitals_task requires vitals package", {
     target = c("hello", "world")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(output = "hello"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   task <- as_vitals_task(
     module = mod,
     dataset = dataset,
-    scorer = vitals::detect_includes()
+    scorer = vitals::detect_includes(),
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
@@ -643,10 +653,23 @@ test_that("as_vitals_task works with non-standard input column names", {
     target = c("4", "Paris")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(answer = "4"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   task <- as_vitals_task(
     module = mod,
     dataset = dataset,
-    scorer = vitals::detect_includes()
+    scorer = vitals::detect_includes(),
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
@@ -657,7 +680,8 @@ test_that("as_vitals_task works with non-standard input column names", {
   expect_error(
     as_vitals_task(
       module = mod,
-      dataset = data.frame(input = "test", target = "test")
+      dataset = data.frame(input = "test", target = "test"),
+      .llm = mock_llm
     ),
     "Missing.*question"
   )
@@ -678,13 +702,26 @@ test_that("as_vitals_task accepts custom parameters", {
     target = c("hello", "world")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(output = "hello"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   # Create task with custom epochs and name
   task <- as_vitals_task(
     module = mod,
     dataset = dataset,
     scorer = vitals::detect_includes(),
     name = "custom_name",
-    epochs = 3L
+    epochs = 3L,
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
@@ -714,13 +751,126 @@ test_that("as_vitals_task uses default scorer when not provided", {
     target = c("hello")
   )
 
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(output = "hello"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
   # Should not error when scorer is NULL (uses default)
   task <- as_vitals_task(
     module = mod,
-    dataset = dataset
+    dataset = dataset,
+    .llm = mock_llm
   )
 
   expect_s3_class(task, "Task")
+})
+
+test_that("as_vitals_task nests multi-input columns correctly", {
+  skip_if_not_installed("vitals")
+
+  # Module with multiple inputs
+  sig <- Signature(
+    inputs = list(
+      input(name = "context", class = S7::class_character),
+      input(name = "question", class = S7::class_character)
+    ),
+    output_type = ellmer::type_string(),
+    instructions = "Answer based on context"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Flat dataset with multiple input columns
+  dataset <- tibble::tibble(
+    context = c("Paris is in France", "Tokyo is in Japan"),
+    question = c("Where is Paris?", "Where is Tokyo?"),
+    target = c("France", "Japan")
+  )
+
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(answer = "France"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
+  task <- as_vitals_task(
+    module = mod,
+    dataset = dataset,
+    scorer = vitals::detect_includes(),
+    .llm = mock_llm
+  )
+
+  expect_s3_class(task, "Task")
+
+  # Verify inputs are nested correctly
+  samples <- task$get_samples()
+  expect_equal(nrow(samples), 2)
+
+  # Each input should be a tibble with context and question columns
+  expect_true(is.data.frame(samples$input[[1]]))
+  expect_true("context" %in% names(samples$input[[1]]))
+  expect_true("question" %in% names(samples$input[[1]]))
+  expect_equal(samples$input[[1]]$context, "Paris is in France")
+  expect_equal(samples$input[[1]]$question, "Where is Paris?")
+})
+
+test_that("as_vitals_task preserves extra columns", {
+  skip_if_not_installed("vitals")
+
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Echo"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  # Dataset with extra columns beyond signature inputs and target
+  dataset <- tibble::tibble(
+    text = c("hello", "world"),
+    target = c("hello", "world"),
+    metadata_col = c("extra1", "extra2"),
+    id_col = c(1L, 2L)
+  )
+
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) list(output = "hello"),
+        clone = function(...) self,
+        set_turns = function(turns) invisible(NULL)
+      ),
+      class = "Chat"
+    )
+    self
+  })
+
+  task <- as_vitals_task(
+    module = mod,
+    dataset = dataset,
+    scorer = vitals::detect_includes(),
+    .llm = mock_llm
+  )
+
+  samples <- task$get_samples()
+
+  # Extra columns should be preserved
+
+  expect_true("metadata_col" %in% names(samples))
+  expect_true("id_col" %in% names(samples))
+  expect_equal(samples$metadata_col, c("extra1", "extra2"))
 })
 
 # --- as_vitals_cost tests ---

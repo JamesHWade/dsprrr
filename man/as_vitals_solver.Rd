@@ -4,39 +4,32 @@
 \alias{as_vitals_solver}
 \title{Convert a dsprrr module into a vitals solver}
 \usage{
-as_vitals_solver(
-  module,
-  .llm = NULL,
-  .parallel = FALSE,
-  .return_format = "structured",
-  .input_column = NULL,
-  ...
-)
+as_vitals_solver(module, .llm = NULL, ...)
 }
 \arguments{
 \item{module}{A DSPrrr module (e.g., created via \code{\link[=module]{module()}}).}
 
-\item{.llm}{Optional ellmer chat object. When \code{NULL}, each invocation will
-create a fresh default client.}
-
-\item{.parallel}{Logical; forwarded to \code{\link[=run_dataset]{run_dataset()}}. Defaults to \code{FALSE}
-to avoid sharing LLM state across workers.}
-
-\item{.return_format}{One of \code{"structured"} (default) or \code{"simple"}.}
-
-\item{.input_column}{Column name to use for the module's input. Defaults to
-the first input name from the module's signature. Used to map vitals'
-"input" column to the module's expected input column.}
+\item{.llm}{An ellmer chat object (required). This will be cloned for each
+chat invocation.}
 
 \item{...}{Additional arguments forwarded to \code{\link[=run_dataset]{run_dataset()}}.}
 }
 \value{
-A function accepting a data frame of inputs and returning a list with
-components \code{result}, \code{solver_chat}, and \code{metadata}.
+A function accepting a list of input objects and returning a list
+with components \code{result}, \code{solver_chat}, and optionally \code{solver_metadata}.
 }
 \description{
 Creates a function compatible with vitals Tasks that executes a DSPrrr
-module against batches of inputs. The solver forwards arguments to
-\code{\link[=run_dataset]{run_dataset()}} and returns vitals-friendly objects containing results,
-chat logs, and metadata.
+module against batches of inputs. The solver uses \code{\link[=run_dataset]{run_dataset()}} internally,
+ensuring that the module's demos, templates, and input descriptions are
+properly used in prompt construction.
+
+For multi-input modules, the solver expects the vitals \code{input} column to
+contain nested data (list of tibbles/lists) where each element has fields
+matching the module's signature inputs. Use \code{\link[=as_vitals_task]{as_vitals_task()}} to
+automatically create this structure from a flat dataset.
+
+The solver uses ellmer's parallel processing for efficiency. For structured
+outputs, mock Chat objects are created for vitals logging compatibility
+(following the same pattern as vitals' \code{generate_structured()}).
 }

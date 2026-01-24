@@ -29,6 +29,11 @@ if (should_eval) {
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)
   }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
   vcr::setup_knitr()
 }
 ```
@@ -272,7 +277,9 @@ cat("Failed on", nrow(failures), "of", nrow(scores), "examples\n")
 if (nrow(failures) > 0) {
   cat("\nFailure analysis:\n")
   for (i in seq_len(nrow(failures))) {
-    cat("Input:", failures$input[i], "\n")
+    # Input is now a nested tibble with the signature's input columns
+    input_text <- failures$input[[i]]$text
+    cat("Input:", input_text, "\n")
     cat("Expected:", failures$target[i], "\n")
     cat("Got:", failures$answer[i], "\n\n")
   }
