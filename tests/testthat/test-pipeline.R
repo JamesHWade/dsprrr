@@ -281,7 +281,9 @@ test_that("Pipeline warns when input mapping references non-existent field", {
   mod1 <- create_mock_module_structured(
     input_names = "q",
     output_fields = list(answer = "42", extra = "more"),
-    transform_fn = function(inputs) list(answer = "the answer", extra = "more data")
+    transform_fn = function(inputs) {
+      list(answer = "the answer", extra = "more data")
+    }
   )
   # mod2 needs 'context' and 'data' inputs
   mod2 <- create_mock_module_structured(
@@ -296,7 +298,11 @@ test_that("Pipeline warns when input mapping references non-existent field", {
   # Also inject 'data' as static input so pipeline doesn't fail
   pipeline <- pipeline(
     mod1,
-    step(mod2, map = c(answer = "context", nonexistent = "data"), data = "fallback")
+    step(
+      mod2,
+      map = c(answer = "context", nonexistent = "data"),
+      data = "fallback"
+    )
   )
 
   expect_warning(
@@ -619,7 +625,9 @@ test_that("select_outputs() works with %>>%", {
   mod1 <- create_mock_module_structured(
     input_names = "q",
     output_fields = list(answer = "42", reasoning = "because"),
-    transform_fn = function(inputs) list(answer = "the answer", reasoning = "steps")
+    transform_fn = function(inputs) {
+      list(answer = "the answer", reasoning = "steps")
+    }
   )
   # mod2 only needs 'answer'
   mod2 <- create_mock_module_structured(

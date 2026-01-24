@@ -222,7 +222,10 @@ PipelineModule <- R6::R6Class(
               ))
             }
 
-            current_data <- current_data[intersect(available, step@output_select)]
+            current_data <- current_data[intersect(
+              available,
+              step@output_select
+            )]
           }
         } else {
           # Simple output - wrap in list with output name from signature
