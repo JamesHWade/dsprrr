@@ -295,6 +295,23 @@ Main functions for building LLM applications
 - [`evaluate_dsp()`](https://jameshwade.github.io/dsprrr/reference/evaluate_dsp.md)
   : Evaluate a Compiled Module
 
+## Module Composition
+
+Chain modules into pipelines
+
+- [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
+  : Pipeline Module for Sequential Module Composition
+- [`` `%>>%` ``](https://jameshwade.github.io/dsprrr/reference/grapes-greater-than-greater-than-grapes.md)
+  : Pipe Operator for Module Composition
+- [`step()`](https://jameshwade.github.io/dsprrr/reference/step.md) :
+  Create a Pipeline Step with Mappings
+- [`map_inputs()`](https://jameshwade.github.io/dsprrr/reference/map_inputs.md)
+  : Map Inputs for Pipeline Steps
+- [`with_inputs()`](https://jameshwade.github.io/dsprrr/reference/with_inputs.md)
+  : Inject Static Inputs for Pipeline Steps
+- [`select_outputs()`](https://jameshwade.github.io/dsprrr/reference/select_outputs.md)
+  : Select Outputs for Pipeline Steps
+
 ## Advanced Reasoning Modules
 
 DSPy-inspired reasoning patterns for improved accuracy

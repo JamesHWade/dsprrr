@@ -24,6 +24,9 @@ deployment
 library(dsprrr)
 #> 
 #> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:stats':
+#> 
+#>     step
 #> The following object is masked from 'package:methods':
 #> 
 #>     signature
@@ -82,7 +85,7 @@ board <- board_folder(tempdir())
 
 # Save the module configuration
 pin_module_config(board, "sentiment-classifier", classifier)
-#> Creating new version '20260124T173059Z-c1d71'
+#> Creating new version '20260124T183419Z-5d4ad'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned module configuration: "sentiment-classifier"
 #> ℹ Module type: <PredictModule>
@@ -104,21 +107,21 @@ board |> pin_list()
 board |> pin_meta("sentiment-classifier")
 #> List of 13
 #>  $ file       : chr "sentiment-classifier.rds"
-#>  $ file_size  : 'fs_bytes' int 491
-#>  $ pin_hash   : chr "c1d713546eeb7f18"
+#>  $ file_size  : 'fs_bytes' int 495
+#>  $ pin_hash   : chr "5d4adae6725c06db"
 #>  $ type       : chr "rds"
 #>  $ title      : chr "sentiment-classifier: a pinned list"
 #>  $ description: chr "dsprrr module config: sentiment-classifier"
 #>  $ tags       : NULL
 #>  $ urls       : NULL
-#>  $ created    : POSIXct[1:1], format: "2026-01-24 17:30:59"
+#>  $ created    : POSIXct[1:1], format: "2026-01-24 18:34:19"
 #>  $ api_version: int 1
 #>  $ user       : list()
 #>  $ name       : chr "sentiment-classifier"
 #>  $ local      :List of 3
-#>   ..$ dir    : 'fs_path' chr "/tmp/RtmpDztZaN/sentiment-classifier/20260124T173059Z-c1d71"
+#>   ..$ dir    : 'fs_path' chr "/tmp/RtmpX6uFnx/sentiment-classifier/20260124T183419Z-5d4ad"
 #>   ..$ url    : NULL
-#>   ..$ version: chr "20260124T173059Z-c1d71"
+#>   ..$ version: chr "20260124T183419Z-5d4ad"
 ```
 
 ## Step 4: Restore in a New Session
@@ -157,7 +160,7 @@ improved <- compile_module(
 
 # Save again - creates new version
 pin_module_config(board, "sentiment-classifier", improved)
-#> Creating new version '20260124T173100Z-fee0d'
+#> Creating new version '20260124T183420Z-992e3'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned module configuration: "sentiment-classifier"
 #> ℹ Module type: <PredictModule>
@@ -168,8 +171,8 @@ board |> pin_versions("sentiment-classifier")
 #> # A tibble: 2 × 3
 #>   version                created             hash 
 #>   <chr>                  <dttm>              <chr>
-#> 1 20260124T173059Z-c1d71 2026-01-24 17:30:59 c1d71
-#> 2 20260124T173100Z-fee0d 2026-01-24 17:31:00 fee0d
+#> 1 20260124T183419Z-5d4ad 2026-01-24 18:34:19 5d4ad
+#> 2 20260124T183420Z-992e3 2026-01-24 18:34:20 992e3
 ```
 
 ## Step 6: Roll Back to Previous Version

@@ -113,6 +113,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/get_metadata.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/get_output.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/get_tokens.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/grapes-greater-than-greater-than-grapes.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/has_ellmer_credentials.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/has_reasoning.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/index.html</loc></url>
@@ -124,6 +125,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/llm_predict.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/load_trial_log.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/local_lm.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/map_inputs.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/merge_optimization_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_contains.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_custom.html</loc></url>
@@ -151,6 +153,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/pin_module_config.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/pin_trace.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/pipeline.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict.Module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict_llm_class.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict_llm_numeric.html</loc></url>
@@ -188,11 +191,13 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/sample_dataset.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/select_outputs.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/session_cost.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/set_default_chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/signature-transforms.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/signature.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/split_dataset.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/step.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/stream_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/summarize_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/summarize_traces_df.html</loc></url>
@@ -205,6 +210,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/validate_workflow.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/vitals_metrics.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/with_assertions.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/with_inputs.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/with_lm.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/with_reasoning.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/without_reasoning.html</loc></url>

@@ -8,6 +8,9 @@ specific pattern.
 library(dsprrr)
 #> 
 #> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:stats':
+#> 
+#>     step
 #> The following object is masked from 'package:methods':
 #> 
 #>     signature
@@ -47,7 +50,7 @@ task <- as_vitals_task(
 # 4. Run evaluation
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [946ms]
+#> ✔ Solving [965ms]
 #> 
 #> ℹ Scoring
 #> ✔ Scoring [71ms]
@@ -122,10 +125,10 @@ eval_task <- as_vitals_task(
 
 eval_task$eval()
 #> ℹ Solving
-#> ✔ Solving [344ms]
+#> ✔ Solving [359ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [50ms]
+#> ✔ Scoring [54ms]
 #> 
 
 # Compare performance
@@ -158,10 +161,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [343ms]
+#> ✔ Solving [354ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [50ms]
+#> ✔ Scoring [53ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -200,7 +203,7 @@ task$eval()
 #> ✔ Solving [365ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [229ms]
+#> ✔ Scoring [237ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
@@ -235,10 +238,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [341ms]
+#> ✔ Solving [346ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [51ms]
+#> ✔ Scoring [50ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -282,10 +285,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [852ms]
+#> ✔ Solving [863ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [93ms]
+#> ✔ Scoring [98ms]
 #> 
 
 # Get detailed scores
@@ -383,16 +386,16 @@ for (name in c("basic", "cot")) {
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
 #> ℹ Solving
-#> ✔ Solving [340ms]
+#> ✔ Solving [345ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [202ms]
+#> ✔ Scoring [210ms]
 #> 
 #> ℹ Solving
-#> ✔ Solving [349ms]
+#> ✔ Solving [350ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [208ms]
+#> ✔ Scoring [210ms]
 #> 
 
 # Compare
@@ -439,7 +442,7 @@ task$eval()
 #> ✔ Solving [1.6s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [147ms]
+#> ✔ Scoring [149ms]
 #> 
 
 # Aggregate scores across epochs

@@ -25,6 +25,9 @@ through grid search.
 library(dsprrr)
 #> 
 #> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:stats':
+#> 
+#>     step
 #> The following object is masked from 'package:methods':
 #> 
 #>     signature
@@ -309,7 +312,7 @@ test_results
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 479.1312
+#> [1] 483.0685
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 172
@@ -321,7 +324,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-01-24 17:32:04 UTC"
+#> [1] "2026-01-24 18:35:24 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -329,7 +332,7 @@ test_results
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 488.0128
+#> [1] 491.0433
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 179
@@ -341,7 +344,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-01-24 17:32:05 UTC"
+#> [1] "2026-01-24 18:35:25 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -349,7 +352,7 @@ test_results
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 499.0714
+#> [1] 502.713
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 181
@@ -361,7 +364,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-01-24 17:32:05 UTC"
+#> [1] "2026-01-24 18:35:25 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -369,7 +372,7 @@ test_results
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 506.8347
+#> [1] 504.4141
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 189
@@ -381,7 +384,7 @@ test_results
 #> [1] "Classify the sentiment of this product review.  Respond with just the sentiment."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-01-24 17:32:06 UTC"
+#> [1] "2026-01-24 18:35:26 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -456,8 +459,8 @@ metric_f1()
 #>     f1 <- 2 * precision * recall/(precision + recall)
 #>     f1
 #> }
-#> <bytecode: 0x55d180a44818>
-#> <environment: 0x55d180a3fba0>
+#> <bytecode: 0x56474d834048>
+#> <environment: 0x56474d828440>
 
 # Check if output contains a string
 metric_contains("error", ignore_case = TRUE)
@@ -477,8 +480,8 @@ metric_contains("error", ignore_case = TRUE)
 #>         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)
 #>     }
 #> }
-#> <bytecode: 0x55d1808dc648>
-#> <environment: 0x55d1808ddd78>
+#> <bytecode: 0x56474d700d30>
+#> <environment: 0x56474d6f1868>
 
 # Custom logic
 metric_custom(function(prediction, expected) {
@@ -506,8 +509,8 @@ metric_custom(function(prediction, expected) {
 #>             x = e$message), parent = e)
 #>     })
 #> }
-#> <bytecode: 0x55d1807ef968>
-#> <environment: 0x55d1807edba0>
+#> <bytecode: 0x56474d649c20>
+#> <environment: 0x56474d6476d0>
 
 # Threshold wrapper
 metric_threshold(metric_f1(), threshold = 0.8)
@@ -522,8 +525,8 @@ metric_threshold(metric_f1(), threshold = 0.8)
 #>         `<=` = score <= threshold)
 #>     result
 #> }
-#> <bytecode: 0x55d1806e7a80>
-#> <environment: 0x55d1806e8998>
+#> <bytecode: 0x56474d545638>
+#> <environment: 0x56474d546550>
 ```
 
 ## Step 10: Tracking Costs

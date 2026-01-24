@@ -32,8 +32,10 @@ as_vitals_solver(module, .llm = NULL, ...)
 
 - .llm:
 
-  An ellmer chat object (required). This will be cloned for each chat
-  invocation.
+  An ellmer chat object. If `NULL` (default), uses the module's stored
+  chat or falls back to
+  [`get_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md).
+  The chat is cloned for each batch invocation.
 
 - ...:
 
