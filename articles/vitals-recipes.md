@@ -47,19 +47,19 @@ task <- as_vitals_task(
 # 4. Run evaluation
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [903ms]
+#> ✔ Solving [946ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [75ms]
+#> ✔ Scoring [71ms]
 #> 
 
 # 5. View results
 task$get_samples()
-#> # A tibble: 2 × 9
-#>   input              target    id result       solver_chat score scorer_metadata
-#>   <chr>              <chr>  <int> <list>       <list>      <ord> <list>         
-#> 1 I love this produ… posit…     1 <named list> <Chat>      C     <named list>   
-#> 2 Terrible experien… negat…     2 <named list> <Chat>      C     <named list>   
+#> # A tibble: 2 × 10
+#>   input    target    id result solver_chat solver_metadata score scorer_metadata
+#>   <list>   <chr>  <int> <chr>  <list>      <list>          <ord> <list>         
+#> 1 <tibble> posit…     1 "{\"l… <Chat>      <named list>    I     <named list>   
+#> 2 <tibble> negat…     2 "{\"l… <Chat>      <named list>    I     <named list>   
 #> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
@@ -122,10 +122,10 @@ eval_task <- as_vitals_task(
 
 eval_task$eval()
 #> ℹ Solving
-#> ✔ Solving [359ms]
+#> ✔ Solving [344ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [62ms]
+#> ✔ Scoring [50ms]
 #> 
 
 # Compare performance
@@ -158,17 +158,17 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [346ms]
+#> ✔ Solving [343ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [63ms]
+#> ✔ Scoring [50ms]
 #> 
 task$get_samples()
-#> # A tibble: 2 × 10
-#>   question     target input    id result       solver_chat score scorer_metadata
-#>   <chr>        <chr>  <chr> <int> <list>       <list>      <ord> <list>         
-#> 1 What is 5 *… 35     What…     1 <named list> <Chat>      C     <named list>   
-#> 2 What year d… 1945   What…     2 <named list> <Chat>      C     <named list>   
+#> # A tibble: 2 × 9
+#>   input            target    id result solver_chat score scorer_metadata 
+#>   <list>           <chr>  <int> <chr>  <list>      <ord> <list>          
+#> 1 <tibble [1 × 1]> 35         1 35     <Chat>      C     <named list [2]>
+#> 2 <tibble [1 × 1]> 1945       2 1945   <Chat>      C     <named list [2]>
 #> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
@@ -197,17 +197,17 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [351ms]
+#> ✔ Solving [365ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [355ms]
+#> ✔ Scoring [229ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
-#>   topic            target input    id result       solver_chat score scorer_chat
-#>   <chr>            <chr>  <chr> <int> <list>       <list>      <ord> <list>     
-#> 1 Why is the sky … Light… Why …     1 <named list> <Chat>      C     <Chat>     
-#> 2 How do plants m… Photo… How …     2 <named list> <Chat>      C     <Chat>     
+#>   input    target        id result solver_chat solver_metadata score scorer_chat
+#>   <list>   <chr>      <int> <chr>  <list>      <list>          <ord> <list>     
+#> 1 <tibble> Light sca…     1 "{\"r… <Chat>      <named list>    C     <Chat>     
+#> 2 <tibble> Photosynt…     2 "{\"r… <Chat>      <named list>    C     <Chat>     
 #> # ℹ 2 more variables: scorer_metadata <list>, scorer <chr>
 ```
 
@@ -235,17 +235,17 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [361ms]
+#> ✔ Solving [341ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [58ms]
+#> ✔ Scoring [51ms]
 #> 
 task$get_samples()
-#> # A tibble: 2 × 10
-#>   task         target input    id result       solver_chat score scorer_metadata
-#>   <chr>        <chr>  <chr> <int> <list>       <list>      <ord> <list>         
-#> 1 Write a fun… funct… Writ…     1 <named list> <Chat>      I     <named list>   
-#> 2 Create a lo… for    Crea…     2 <named list> <Chat>      C     <named list>   
+#> # A tibble: 2 × 9
+#>   input            target      id result       solver_chat score scorer_metadata
+#>   <list>           <chr>    <int> <chr>        <list>      <ord> <list>         
+#> 1 <tibble [1 × 1]> function     1 "def add_nu… <Chat>      I     <named list>   
+#> 2 <tibble [1 × 1]> for          2 "for i in r… <Chat>      C     <named list>   
 #> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
@@ -282,10 +282,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [893ms]
+#> ✔ Solving [852ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [130ms]
+#> ✔ Scoring [93ms]
 #> 
 
 # Get detailed scores
@@ -294,22 +294,50 @@ scores <- task$get_samples()
 # Find failures
 failures <- scores[scores$score == "I", ]
 cat("Failed on", nrow(failures), "of", nrow(scores), "examples\n")
-#> Failed on 0 of 5 examples
+#> Failed on 5 of 5 examples
 
 # Examine what went wrong
 if (nrow(failures) > 0) {
   cat("\nFailure analysis:\n")
   for (i in seq_len(nrow(failures))) {
-    cat("Input:", failures$input[i], "\n")
+    # Input is now a nested tibble with the signature's input columns
+    input_text <- failures$input[[i]]$text
+    cat("Input:", input_text, "\n")
     cat("Expected:", failures$target[i], "\n")
     cat("Got:", failures$answer[i], "\n\n")
   }
 }
+#> 
+#> Failure analysis:
+#> Input: Best purchase ever! 
+#> Expected: positive
+#> Warning: Unknown or uninitialised column: `answer`.
+#> Got: 
+#> 
+#> Input: Complete garbage 
+#> Expected: negative
+#> Warning: Unknown or uninitialised column: `answer`.
+#> Got: 
+#> 
+#> Input: It's okay I guess 
+#> Expected: neutral
+#> Warning: Unknown or uninitialised column: `answer`.
+#> Got: 
+#> 
+#> Input: Amazing quality! 
+#> Expected: positive
+#> Warning: Unknown or uninitialised column: `answer`.
+#> Got: 
+#> 
+#> Input: Never buying again 
+#> Expected: negative
+#> Warning: Unknown or uninitialised column: `answer`.
+#> Got:
 
 # Calculate accuracy
 accuracy <- mean(scores$score == "C")
 cat("Overall accuracy:", scales::percent(accuracy), "\n")
-#> Overall accuracy: 100%
+#> Overall accuracy: 0%
 ```
 
 ## Recipe 5: Comparing Module Variants
@@ -355,16 +383,16 @@ for (name in c("basic", "cot")) {
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
 #> ℹ Solving
-#> ✔ Solving [353ms]
+#> ✔ Solving [340ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [222ms]
+#> ✔ Scoring [202ms]
 #> 
 #> ℹ Solving
-#> ✔ Solving [375ms]
+#> ✔ Solving [349ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [227ms]
+#> ✔ Scoring [208ms]
 #> 
 
 # Compare
@@ -408,10 +436,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [1.7s]
+#> ✔ Solving [1.6s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [266ms]
+#> ✔ Scoring [147ms]
 #> 
 
 # Aggregate scores across epochs
@@ -425,7 +453,7 @@ cat(
 )
 #> Total evaluations: 9 (3 epochs x 3 examples)
 cat("Overall accuracy:", scales::percent(mean(scores$score == "C")), "\n")
-#> Overall accuracy: 100%
+#> Overall accuracy: 0%
 ```
 
 ## Recipe 7: Custom Evaluation Pipeline

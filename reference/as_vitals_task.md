@@ -5,6 +5,10 @@ Convenience function that builds a vitals
 dsprrr module and dataset. This makes it trivial to evaluate dsprrr
 modules using vitals infrastructure without manual solver wrapping.
 
+For multi-input modules, the function automatically nests all signature
+input columns into a single `input` list column that vitals expects. The
+solver then extracts these fields when processing each sample.
+
 ## Usage
 
 ``` r
@@ -31,9 +35,9 @@ as_vitals_task(
 
 - dataset:
 
-  A tibble/data frame with columns `input` and `target`. The `input`
-  column contains prompts and `target` contains expected values or
-  grading guidance.
+  A tibble/data frame with columns matching the module's signature
+  inputs plus a `target` column. The function will nest signature inputs
+  into the `input` column format vitals requires.
 
 - scorer:
 
@@ -92,24 +96,21 @@ logs output. Use `$view()` to see results interactively.
 
 ``` r
 if (FALSE) { # \dontrun{
-# Create a simple QA module
+# Single-input module
 mod <- module(signature("question -> answer"))
-
-# Prepare test dataset
 test_data <- tibble::tibble(
-  input = c("What is 2+2?", "What is the capital of France?"),
+  question = c("What is 2+2?", "Capital of France?"),
   target = c("4", "Paris")
 )
+task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
 
-# Create task with string detection scorer
-task <- as_vitals_task(
-  module = mod,
-  dataset = test_data,
-  scorer = vitals::detect_includes(),
-  .llm = ellmer::chat_openai()
+# Multi-input module
+mod <- module(signature("shapes, pick -> answer"))
+test_data <- tibble::tibble(
+  shapes = c("square, circle", "triangle, star"),
+  pick = c("square", "star"),
+  target = c("square", "star")
 )
-
-# Run evaluation and view results
-task
+task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
 } # }
 ```

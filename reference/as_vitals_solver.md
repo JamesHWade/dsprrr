@@ -1,22 +1,26 @@
 # Convert a dsprrr module into a vitals solver
 
 Creates a function compatible with vitals Tasks that executes a DSPrrr
-module against batches of inputs. The solver forwards arguments to
+module against batches of inputs. The solver uses
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-and returns vitals-friendly objects containing results, chat logs, and
-metadata.
+internally, ensuring that the module's demos, templates, and input
+descriptions are properly used in prompt construction.
+
+For multi-input modules, the solver expects the vitals `input` column to
+contain nested data (list of tibbles/lists) where each element has
+fields matching the module's signature inputs. Use
+[`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md)
+to automatically create this structure from a flat dataset.
+
+The solver uses ellmer's parallel processing for efficiency. For
+structured outputs, mock Chat objects are created for vitals logging
+compatibility (following the same pattern as vitals'
+`generate_structured()`).
 
 ## Usage
 
 ``` r
-as_vitals_solver(
-  module,
-  .llm = NULL,
-  .parallel = FALSE,
-  .return_format = "structured",
-  .input_column = NULL,
-  ...
-)
+as_vitals_solver(module, .llm = NULL, ...)
 ```
 
 ## Arguments
@@ -28,24 +32,8 @@ as_vitals_solver(
 
 - .llm:
 
-  Optional ellmer chat object. When `NULL`, each invocation will create
-  a fresh default client.
-
-- .parallel:
-
-  Logical; forwarded to
-  [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md).
-  Defaults to `FALSE` to avoid sharing LLM state across workers.
-
-- .return_format:
-
-  One of `"structured"` (default) or `"simple"`.
-
-- .input_column:
-
-  Column name to use for the module's input. Defaults to the first input
-  name from the module's signature. Used to map vitals' "input" column
-  to the module's expected input column.
+  An ellmer chat object (required). This will be cloned for each chat
+  invocation.
 
 - ...:
 
@@ -54,5 +42,5 @@ as_vitals_solver(
 
 ## Value
 
-A function accepting a data frame of inputs and returning a list with
-components `result`, `solver_chat`, and `metadata`.
+A function accepting a list of input objects and returning a list with
+components `result`, `solver_chat`, and optionally `solver_metadata`.
