@@ -689,13 +689,13 @@ run_batch_ellmer_parallel <- function(
 
   # Format results
   if (.return_format == "simple") {
-    results <- map(responses_list, function(response) {
+    results <- purrr::map(responses_list, function(response) {
       extract_simple_output(response, module$signature@output_type)
     })
   } else {
     # Create mock chats for each request with recorded prompt/response
     # This follows the same pattern as vitals::generate_structured()
-    results <- map2(
+    results <- purrr::map2(
       responses_list,
       seq_along(responses_list),
       function(response, i) {
