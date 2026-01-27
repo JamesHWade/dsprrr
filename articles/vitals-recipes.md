@@ -50,10 +50,10 @@ task <- as_vitals_task(
 # 4. Run evaluation
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [965ms]
+#> ✔ Solving [922ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [71ms]
+#> ✔ Scoring [67ms]
 #> 
 
 # 5. View results
@@ -125,10 +125,10 @@ eval_task <- as_vitals_task(
 
 eval_task$eval()
 #> ℹ Solving
-#> ✔ Solving [359ms]
+#> ✔ Solving [335ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [54ms]
+#> ✔ Scoring [49ms]
 #> 
 
 # Compare performance
@@ -161,10 +161,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [354ms]
+#> ✔ Solving [334ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [53ms]
+#> ✔ Scoring [49ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -200,10 +200,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [365ms]
+#> ✔ Solving [344ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [237ms]
+#> ✔ Scoring [304ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
@@ -238,10 +238,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [346ms]
+#> ✔ Solving [337ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [50ms]
+#> ✔ Scoring [49ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -285,10 +285,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [863ms]
+#> ✔ Solving [831ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [98ms]
+#> ✔ Scoring [97ms]
 #> 
 
 # Get detailed scores
@@ -386,16 +386,16 @@ for (name in c("basic", "cot")) {
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
 #> ℹ Solving
-#> ✔ Solving [345ms]
+#> ✔ Solving [338ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [210ms]
+#> ✔ Scoring [283ms]
 #> 
 #> ℹ Solving
-#> ✔ Solving [350ms]
+#> ✔ Solving [339ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [210ms]
+#> ✔ Scoring [290ms]
 #> 
 
 # Compare
@@ -442,7 +442,7 @@ task$eval()
 #> ✔ Solving [1.6s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [149ms]
+#> ✔ Scoring [148ms]
 #> 
 
 # Aggregate scores across epochs
