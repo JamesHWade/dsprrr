@@ -83,6 +83,7 @@ Collate:
     'module-program-of-thought.R'
     'module-rag.R'
     'module-react.R'
+    'module-react-doc.R'
     'module-wrapper.R'
     'module.R'
     'optimize.R'
