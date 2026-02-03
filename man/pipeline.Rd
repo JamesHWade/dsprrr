@@ -2,18 +2,12 @@
 % Please edit documentation in R/pipeline.R
 \name{pipeline}
 \alias{pipeline}
-\alias{\%>>\%}
 \title{Pipeline Module for Sequential Module Composition}
 \usage{
 pipeline(...)
-\%>>\%(lhs, rhs)
 }
 \arguments{
 \item{...}{Modules or steps (created with \code{step()}) to chain together}
-
-\item{lhs}{A Module or PipelineModule}
-
-\item{rhs}{A Module, PipelineModule, or module with mapping (via \code{map_inputs()})}
 }
 \value{
 A PipelineModule
