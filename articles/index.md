@@ -34,6 +34,8 @@ Solve specific problems
   Recipes](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md):
 - [RAG Workflows with
   ragnar](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md):
+- [Chaining Modules and
+  Pipelines](https://jameshwade.github.io/dsprrr/articles/chaining-modules.md):
 - [Production Workflows with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/orchestration.md):
 - [Integration with

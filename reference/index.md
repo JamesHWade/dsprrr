@@ -77,6 +77,15 @@ DSPy-inspired reasoning patterns for improved accuracy
 - [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
   : Best by Metric Reducer
 
+## Tool-Using Modules
+
+Modules that call tools or retrieve context
+
+- [`module-react`](https://jameshwade.github.io/dsprrr/reference/module-react.md)
+  : ReAct Module
+- [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md)
+  : Create a RAG Module
+
 ## Assertions
 
 Output validation with backtracking
@@ -180,6 +189,9 @@ Asynchronous and streaming operations
 
 Define module interfaces
 
+- [`Signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
+  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
+  : Create a Signature for LLM Operations
 - [`input()`](https://jameshwade.github.io/dsprrr/reference/input.md) :
   Create an input specification for a Signature
 - [`input_string()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
@@ -451,6 +463,12 @@ parsnip model specification and dials parameters
 
 - [`llm_predict()`](https://jameshwade.github.io/dsprrr/reference/llm_predict.md)
   : LLM Prediction Model Specification
+- [`fit_llm_predict()`](https://jameshwade.github.io/dsprrr/reference/fit_llm_predict.md)
+  : Fit LLM Predict Model
+- [`predict_llm_class()`](https://jameshwade.github.io/dsprrr/reference/predict_llm_class.md)
+  : Predict Class Labels with LLM
+- [`predict_llm_numeric()`](https://jameshwade.github.io/dsprrr/reference/predict_llm_numeric.md)
+  : Predict Numeric Values with LLM
 - [`register_dsprrr_engine()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_engine.md)
   : Register dsprrr Engine with parsnip
 - [`temperature()`](https://jameshwade.github.io/dsprrr/reference/temperature.md)
