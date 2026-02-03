@@ -58,6 +58,8 @@ navbar:
           href: articles/vitals-recipes.html
         - text: "Build RAG Pipelines"
           href: articles/rag-workflows.html
+        - text: "Chaining Modules"
+          href: articles/chaining-modules.html
         - text: "Deploy to Production"
           href: articles/orchestration.html
         - text: "---"
@@ -118,6 +120,7 @@ articles:
     - compilation-optimization
     - vitals-recipes
     - rag-workflows
+    - chaining-modules
     - orchestration
     - vitals-integration
     - tidymodels-integration
@@ -181,6 +184,12 @@ reference:
     - reduce_weighted_vote
     - reduce_first
     - reduce_best_by_metric
+
+  - title: Tool-Using Modules
+    desc: Modules that call tools or retrieve context
+    contents:
+    - module-react
+    - rag_module
 
   - title: Assertions
     desc: Output validation with backtracking
@@ -391,6 +400,9 @@ reference:
     desc: parsnip model specification and dials parameters
     contents:
     - llm_predict
+    - fit_llm_predict
+    - predict_llm_class
+    - predict_llm_numeric
     - register_dsprrr_engine
     - temperature
     - top_p
