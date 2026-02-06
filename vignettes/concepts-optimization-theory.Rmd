@@ -1,6 +1,9 @@
 ---
 title: "How Prompt Optimization Works"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    includes:
+      in_header: mermaid.html
 vignette: >
   %\VignetteIndexEntry{How Prompt Optimization Works}
   %\VignetteEngine{knitr::rmarkdown}
@@ -361,26 +364,15 @@ Uses evolutionary algorithms (selection, mutation, crossover) to explore the pro
 
 Use this decision tree:
 
-```
-Start
-  │
-  ├─ "I just want a quick baseline"
-  │   └─> LabeledFewShot
-  │
-  ├─ "I have a reliable metric and want better demos"
-  │   └─> BootstrapFewShot
-  │
-  ├─ "I have specific instruction variants to test"
-  │   └─> GridSearchTeleprompter
-  │
-  ├─ "I want best results, have compute budget"
-  │   └─> MIPROv2 or BootstrapFewShotWithRandomSearch
-  │
-  ├─ "My inputs are diverse, need adaptive demos"
-  │   └─> KNNFewShot
-  │
-  └─ "I want to explore creatively"
-      └─> GEPA
+```mermaid
+flowchart TB
+  Start["Choose an optimizer"]
+  Start -->|Quick baseline| Labeled["LabeledFewShot"]
+  Start -->|Reliable metric, want better demos| Bootstrap["BootstrapFewShot"]
+  Start -->|Specific instruction variants to test| Grid["GridSearchTeleprompter"]
+  Start -->|Best results with compute budget| MIPRO["MIPROv2 or BootstrapFewShotWithRandomSearch"]
+  Start -->|Diverse inputs, need adaptive demos| KNN["KNNFewShot"]
+  Start -->|Explore creatively| GEPA["GEPA"]
 ```
 
 ## The Evaluation Loop
