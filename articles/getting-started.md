@@ -140,34 +140,27 @@ OPENAI_API_KEY=sk-your-key-here
 
 ## Learning Path
 
-    ┌─────────────────────────────────────────────────────────────────────┐
-    │                         TUTORIALS                                    │
-    │  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐          │
-    │  │ 1. Hello │ → │ 2. Build │ → │ 3. Struct│ → │ 4. Demos │          │
-    │  │   World  │   │Classifier│   │ Outputs  │   │          │          │
-    │  └──────────┘   └──────────┘   └──────────┘   └──────────┘          │
-    │                                                      ↓               │
-    │                                ┌──────────┐   ┌──────────┐          │
-    │                                │ 5.Optim- │ → │ 6. Prod- │          │
-    │                                │   ize    │   │  uction  │          │
-    │                                └──────────┘   └──────────┘          │
-    │                                                      ↓               │
-    │                         ADVANCED TUTORIALS                           │
-    │                    ┌────────────────┐   ┌────────────────┐          │
-    │                    │ Text Adventure │   │  llms.txt Gen  │          │
-    │                    └────────────────┘   └────────────────┘          │
-    └─────────────────────────────────────────────────────────────────────┘
-                                       ↓
-                     ┌─────────────────┴─────────────────┐
-                     ↓                                   ↓
-            ┌────────────────┐                 ┌────────────────┐
-            │   HOW-TO       │                 │   CONCEPTS     │
-            │   GUIDES       │                 │                │
-            └────────────────┘                 └────────────────┘
-                     ↓                                   ↓
-            ┌────────────────┐                 ┌────────────────┐
-            │   REFERENCE    │ ←───────────────│   (cheatsheet) │
-            └────────────────┘                 └────────────────┘
+``` mermaid
+flowchart TB
+  subgraph Tutorials
+    T1["1. Hello World"] --> T2["2. Build Classifier"] --> T3["3. Structured Outputs"]
+    T3 --> T4["4. Demos"] --> T5["5. Optimize"] --> T6["6. Production"]
+  end
+
+  T6 --> Adv["Advanced Tutorials"]
+  Adv --> TA["Text Adventure"]
+  Adv --> LL["llms.txt Gen"]
+
+  TA --> Split["Next Steps"]
+  LL --> Split
+
+  Split --> HowTo["How-To Guides"]
+  Split --> Concepts["Concepts"]
+
+  HowTo --> Reference["Reference"]
+  Concepts --> Cheatsheet["Cheatsheet"]
+  Cheatsheet --> Reference
+```
 
 Start at the top and work your way down. Each tutorial builds on the
 previous one.

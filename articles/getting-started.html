@@ -271,34 +271,25 @@ Production</a></strong> — pins, targets, and Quarto</li>
 <div class="section level2">
 <h2 id="learning-path">Learning Path<a class="anchor" aria-label="anchor" href="#learning-path"></a>
 </h2>
-<pre><code>┌─────────────────────────────────────────────────────────────────────┐
-│                         TUTORIALS                                    │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐          │
-│  │ 1. Hello │ → │ 2. Build │ → │ 3. Struct│ → │ 4. Demos │          │
-│  │   World  │   │Classifier│   │ Outputs  │   │          │          │
-│  └──────────┘   └──────────┘   └──────────┘   └──────────┘          │
-│                                                      ↓               │
-│                                ┌──────────┐   ┌──────────┐          │
-│                                │ 5.Optim- │ → │ 6. Prod- │          │
-│                                │   ize    │   │  uction  │          │
-│                                └──────────┘   └──────────┘          │
-│                                                      ↓               │
-│                         ADVANCED TUTORIALS                           │
-│                    ┌────────────────┐   ┌────────────────┐          │
-│                    │ Text Adventure │   │  llms.txt Gen  │          │
-│                    └────────────────┘   └────────────────┘          │
-└─────────────────────────────────────────────────────────────────────┘
-                                   ↓
-                 ┌─────────────────┴─────────────────┐
-                 ↓                                   ↓
-        ┌────────────────┐                 ┌────────────────┐
-        │   HOW-TO       │                 │   CONCEPTS     │
-        │   GUIDES       │                 │                │
-        └────────────────┘                 └────────────────┘
-                 ↓                                   ↓
-        ┌────────────────┐                 ┌────────────────┐
-        │   REFERENCE    │ ←───────────────│   (cheatsheet) │
-        └────────────────┘                 └────────────────┘</code></pre>
+<pre class="mermaid"><code>flowchart TB
+  subgraph Tutorials
+    T1["1. Hello World"] --&gt; T2["2. Build Classifier"] --&gt; T3["3. Structured Outputs"]
+    T3 --&gt; T4["4. Demos"] --&gt; T5["5. Optimize"] --&gt; T6["6. Production"]
+  end
+
+  T6 --&gt; Adv["Advanced Tutorials"]
+  Adv --&gt; TA["Text Adventure"]
+  Adv --&gt; LL["llms.txt Gen"]
+
+  TA --&gt; Split["Next Steps"]
+  LL --&gt; Split
+
+  Split --&gt; HowTo["How-To Guides"]
+  Split --&gt; Concepts["Concepts"]
+
+  HowTo --&gt; Reference["Reference"]
+  Concepts --&gt; Cheatsheet["Cheatsheet"]
+  Cheatsheet --&gt; Reference</code></pre>
 <p>Start at the top and work your way down. Each tutorial builds on the
 previous one.</p>
 </div>

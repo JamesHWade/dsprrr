@@ -246,13 +246,14 @@ mod <- module(
 
 ## Module Types Decision Tree
 
-    What do you need?
-    │
-    ├─ Simple text in/out → type = "predict" (PredictModule)
-    │   └─ Q&A, classification, summarization, extraction
-    │
-    └─ Tool use / multi-step reasoning → type = "react" (ReactModule)
-        └─ Agents, search, calculations, API calls
+``` mermaid
+flowchart TB
+  Start["What do you need?"]
+  Start -->|Simple text in/out| Predict["type = predict (PredictModule)"]
+  Predict --> PredictUse["Q&A, classification, summarization, extraction"]
+  Start -->|Tool use / multi-step reasoning| React["type = react (ReactModule)"]
+  React --> ReactUse["Agents, search, calculations, API calls"]
+```
 
 | Type        | Class           | Use Case                 |
 |-------------|-----------------|--------------------------|
@@ -311,22 +312,20 @@ result <- run(mod, question = "Test", .llm = llm, .show_prompt = TRUE)
 
 ### Metric Selection Guide
 
-    What are you measuring?
-    │
-    ├─ Exact correctness → metric_exact_match()
-    │   └─ Facts, names, simple answers
-    │
-    ├─ Approximate match → metric_f1() or metric_threshold(metric_f1(), 0.8)
-    │   └─ Paraphrased answers, spelling tolerance
-    │
-    ├─ Contains key info → metric_contains()
-    │   └─ Important terms must appear
-    │
-    ├─ Specific fields → metric_field_match(c("answer", "score"))
-    │   └─ Multi-field outputs
-    │
-    └─ Custom logic → metric_custom(my_scorer_fn)
-        └─ Domain-specific evaluation
+``` mermaid
+flowchart TB
+  Start["What are you measuring?"]
+  Start -->|Exact correctness| Exact["metric_exact_match()"]
+  Exact --> ExactUse["Facts, names, simple answers"]
+  Start -->|Approximate match| F1["metric_f1() or metric_threshold(metric_f1(), 0.8)"]
+  F1 --> F1Use["Paraphrased answers, spelling tolerance"]
+  Start -->|Contains key info| Contains["metric_contains()"]
+  Contains --> ContainsUse["Important terms must appear"]
+  Start -->|Specific fields| Field["metric_field_match(c('answer', 'score'))"]
+  Field --> FieldUse["Multi-field outputs"]
+  Start -->|Custom logic| Custom["metric_custom(my_scorer_fn)"]
+  Custom --> CustomUse["Domain-specific evaluation"]
+```
 
 ### Metric by Task Type
 

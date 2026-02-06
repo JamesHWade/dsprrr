@@ -25,31 +25,22 @@ For basic optimization concepts, see
 
 ### Decision Tree
 
-    Start here: Do you have labeled training data?
-    │
-    ├─ NO → Use zero-shot or manually write demos
-    │
-    └─ YES → How much data?
-        │
-        ├─ < 30 examples → LabeledFewShot (simple few-shot)
-        │
-        └─ 30+ examples → What do you want to optimize?
-            │
-            ├─ Just add demos → BootstrapFewShot
-            │
-            ├─ Demos + search configs → BootstrapFewShotWithRandomSearch
-            │
-            ├─ Different demos per query → KNNFewShot
-            │
-            ├─ Improve instructions → COPRO
-            │
-            ├─ Both instructions + demos → MIPROv2
-            │
-            ├─ Handle hard cases better → SIMBA
-            │
-            ├─ Balance quality vs cost → GEPA
-            │
-            └─ Combine multiple optimized modules → Ensemble
+``` mermaid
+flowchart TB
+  Start["Do you have labeled training data?"]
+  Start -->|No| Zero["Use zero-shot or manually write demos"]
+  Start -->|Yes| Data["How much data?"]
+  Data -->|Fewer than 30 examples| Labeled["LabeledFewShot (simple few-shot)"]
+  Data -->|30+ examples| Optimize["What do you want to optimize?"]
+  Optimize -->|Just add demos| Bootstrap["BootstrapFewShot"]
+  Optimize -->|Demos + search configs| Random["BootstrapFewShotWithRandomSearch"]
+  Optimize -->|Different demos per query| KNN["KNNFewShot"]
+  Optimize -->|Improve instructions| COPRO["COPRO"]
+  Optimize -->|Both instructions + demos| MIPRO["MIPROv2"]
+  Optimize -->|Handle hard cases better| SIMBA["SIMBA"]
+  Optimize -->|Balance quality vs cost| GEPA["GEPA"]
+  Optimize -->|Combine multiple optimized modules| Ensemble["Ensemble"]
+```
 
 ## Dataset Sizing Guidance
 

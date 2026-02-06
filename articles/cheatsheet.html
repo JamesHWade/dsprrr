@@ -521,13 +521,12 @@
 <div class="section level2">
 <h2 id="module-types-decision-tree">Module Types Decision Tree<a class="anchor" aria-label="anchor" href="#module-types-decision-tree"></a>
 </h2>
-<pre><code>What do you need?
-│
-├─ Simple text in/out → type = "predict" (PredictModule)
-│   └─ Q&amp;A, classification, summarization, extraction
-│
-└─ Tool use / multi-step reasoning → type = "react" (ReactModule)
-    └─ Agents, search, calculations, API calls</code></pre>
+<pre class="mermaid"><code>flowchart TB
+  Start["What do you need?"]
+  Start --&gt;|Simple text in/out| Predict["type = predict (PredictModule)"]
+  Predict --&gt; PredictUse["Q&amp;A, classification, summarization, extraction"]
+  Start --&gt;|Tool use / multi-step reasoning| React["type = react (ReactModule)"]
+  React --&gt; ReactUse["Agents, search, calculations, API calls"]</code></pre>
 <table class="table">
 <thead><tr class="header">
 <th>Type</th>
@@ -627,22 +626,18 @@
 <div class="section level3">
 <h3 id="metric-selection-guide">Metric Selection Guide<a class="anchor" aria-label="anchor" href="#metric-selection-guide"></a>
 </h3>
-<pre><code>What are you measuring?
-│
-├─ Exact correctness → metric_exact_match()
-│   └─ Facts, names, simple answers
-│
-├─ Approximate match → metric_f1() or metric_threshold(metric_f1(), 0.8)
-│   └─ Paraphrased answers, spelling tolerance
-│
-├─ Contains key info → metric_contains()
-│   └─ Important terms must appear
-│
-├─ Specific fields → metric_field_match(c("answer", "score"))
-│   └─ Multi-field outputs
-│
-└─ Custom logic → metric_custom(my_scorer_fn)
-    └─ Domain-specific evaluation</code></pre>
+<pre class="mermaid"><code>flowchart TB
+  Start["What are you measuring?"]
+  Start --&gt;|Exact correctness| Exact["metric_exact_match()"]
+  Exact --&gt; ExactUse["Facts, names, simple answers"]
+  Start --&gt;|Approximate match| F1["metric_f1() or metric_threshold(metric_f1(), 0.8)"]
+  F1 --&gt; F1Use["Paraphrased answers, spelling tolerance"]
+  Start --&gt;|Contains key info| Contains["metric_contains()"]
+  Contains --&gt; ContainsUse["Important terms must appear"]
+  Start --&gt;|Specific fields| Field["metric_field_match(c('answer', 'score'))"]
+  Field --&gt; FieldUse["Multi-field outputs"]
+  Start --&gt;|Custom logic| Custom["metric_custom(my_scorer_fn)"]
+  Custom --&gt; CustomUse["Domain-specific evaluation"]</code></pre>
 </div>
 <div class="section level3">
 <h3 id="metric-by-task-type">Metric by Task Type<a class="anchor" aria-label="anchor" href="#metric-by-task-type"></a>

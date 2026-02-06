@@ -465,25 +465,14 @@ creative exploration.</p>
 <h2 id="choosing-an-optimizer">Choosing an Optimizer<a class="anchor" aria-label="anchor" href="#choosing-an-optimizer"></a>
 </h2>
 <p>Use this decision tree:</p>
-<pre><code>Start
-  │
-  ├─ "I just want a quick baseline"
-  │   └─&gt; LabeledFewShot
-  │
-  ├─ "I have a reliable metric and want better demos"
-  │   └─&gt; BootstrapFewShot
-  │
-  ├─ "I have specific instruction variants to test"
-  │   └─&gt; GridSearchTeleprompter
-  │
-  ├─ "I want best results, have compute budget"
-  │   └─&gt; MIPROv2 or BootstrapFewShotWithRandomSearch
-  │
-  ├─ "My inputs are diverse, need adaptive demos"
-  │   └─&gt; KNNFewShot
-  │
-  └─ "I want to explore creatively"
-      └─&gt; GEPA</code></pre>
+<pre class="mermaid"><code>flowchart TB
+  Start["Choose an optimizer"]
+  Start --&gt;|Quick baseline| Labeled["LabeledFewShot"]
+  Start --&gt;|Reliable metric, want better demos| Bootstrap["BootstrapFewShot"]
+  Start --&gt;|Specific instruction variants to test| Grid["GridSearchTeleprompter"]
+  Start --&gt;|Best results with compute budget| MIPRO["MIPROv2 or BootstrapFewShotWithRandomSearch"]
+  Start --&gt;|Diverse inputs, need adaptive demos| KNN["KNNFewShot"]
+  Start --&gt;|Explore creatively| GEPA["GEPA"]</code></pre>
 </div>
 <div class="section level2">
 <h2 id="the-evaluation-loop">The Evaluation Loop<a class="anchor" aria-label="anchor" href="#the-evaluation-loop"></a>
