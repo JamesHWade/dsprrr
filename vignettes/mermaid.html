@@ -1,0 +1,38 @@
+<style>
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/beautiful-mermaid@0.1.3/dist/beautiful-mermaid.browser.global.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const api = window.beautifulMermaid;
+  if (!api || typeof api.renderMermaid !== "function") {
+    return;
+  }
+
+  const blocks = document.querySelectorAll(
+    "pre > code.language-mermaid, pre > code.mermaid"
+  );
+
+  for (const block of blocks) {
+    const source = block.textContent.trim();
+    if (!source) {
+      continue;
+    }
+
+    try {
+      const svg = await api.renderMermaid(source);
+      const wrapper = document.createElement("div");
+      wrapper.className = "mermaid-diagram";
+      wrapper.innerHTML = svg;
+      const pre = block.parentElement;
+      pre.replaceWith(wrapper);
+    } catch (err) {
+      console.error("Failed to render mermaid diagram", err);
+    }
+  }
+});
+</script>
