@@ -970,7 +970,10 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
   )
   expect_true(ok$success)
   expect_true(dsprrr:::is_rlm_final(ok$result))
-  expect_equal(names(dsprrr:::extract_rlm_final(ok$result)), c("answer", "confidence"))
+  expect_equal(
+    names(dsprrr:::extract_rlm_final(ok$result)),
+    c("answer", "confidence")
+  )
 
   bad <- runner$execute(
     paste0(prelude, "\nSUBMIT(answer = 'ok')"),
@@ -1110,11 +1113,14 @@ with_mock_parallel_chat <- function(mock_fn, code) {
   assign("parallel_chat", mock_fn, envir = ns)
   lockBinding("parallel_chat", ns)
 
-  on.exit({
-    unlockBinding("parallel_chat", ns)
-    assign("parallel_chat", old_fn, envir = ns)
-    lockBinding("parallel_chat", ns)
-  }, add = TRUE)
+  on.exit(
+    {
+      unlockBinding("parallel_chat", ns)
+      assign("parallel_chat", old_fn, envir = ns)
+      lockBinding("parallel_chat", ns)
+    },
+    add = TRUE
+  )
 
   force(code)
 }
@@ -1243,7 +1249,13 @@ test_that("process_rlm_query_batch uses bounded parallelism and preserves order"
   warning_message <- NULL
   result <- withCallingHandlers(
     with_mock_parallel_chat(
-      function(chat, prompts, max_active = 10, rpm = 500, on_error = c("return", "continue", "stop")) {
+      function(
+        chat,
+        prompts,
+        max_active = 10,
+        rpm = 500,
+        on_error = c("return", "continue", "stop")
+      ) {
         captured$prompts <- prompts
         captured$max_active <- max_active
         captured$on_error <- on_error
@@ -1274,17 +1286,21 @@ test_that("process_rlm_query_batch uses bounded parallelism and preserves order"
   expect_match(result$formatted_output, "Query 3 result: third")
 
   pos1 <- regexpr("Query 1 result: first", result$formatted_output)[1]
-  pos2 <- regexpr("Query 2 result: \\[Error: boom\\]", result$formatted_output)[1]
+  pos2 <- regexpr("Query 2 result: \\[Error: boom\\]", result$formatted_output)[
+    1
+  ]
   pos3 <- regexpr("Query 3 result: third", result$formatted_output)[1]
   expect_true(pos1 < pos2 && pos2 < pos3)
 })
 
-test_that("process_rlm_query_batch falls back to sequential execution", {
+test_that("process_rlm_query_batch does not retry sequentially after parallel infrastructure failure", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
+  chat_calls <- 0L
   sub_lm <- list(
     chat = function(prompt, ...) {
+      chat_calls <<- chat_calls + 1L
       paste0("ok: ", prompt)
     }
   )
@@ -1297,22 +1313,42 @@ test_that("process_rlm_query_batch falls back to sequential execution", {
 
   call_counter <- new.env(parent = emptyenv())
   call_counter$count <- 0L
-  request <- list(queries = c("good", "better", "fine"), slices = NULL, batch = TRUE)
+  request <- list(
+    queries = c("good", "better", "fine"),
+    slices = NULL,
+    batch = TRUE
+  )
 
   expect_warning(
     result <- with_mock_parallel_chat(
-      function(chat, prompts, max_active = 10, rpm = 500, on_error = c("return", "continue", "stop")) {
+      function(
+        chat,
+        prompts,
+        max_active = 10,
+        rpm = 500,
+        on_error = c("return", "continue", "stop")
+      ) {
         stop("parallel unavailable")
       },
       rlm$.__enclos_env__$private$process_rlm_query_batch(request, call_counter)
     ),
-    "falling back to sequential"
+    "Some batch queries failed"
   )
 
   expect_equal(call_counter$count, 3L)
-  expect_true(result$success)
-  expect_null(result$error)
-  expect_match(result$formatted_output, "Query 1 result: ok: good")
-  expect_match(result$formatted_output, "Query 2 result: ok: better")
-  expect_match(result$formatted_output, "Query 3 result: ok: fine")
+  expect_equal(chat_calls, 0L)
+  expect_false(result$success)
+  expect_match(result$error, "queries not retried")
+  expect_match(
+    result$formatted_output,
+    "Query 1 result: \\[Error: Parallel batch infrastructure error"
+  )
+  expect_match(
+    result$formatted_output,
+    "Query 2 result: \\[Error: Parallel batch infrastructure error"
+  )
+  expect_match(
+    result$formatted_output,
+    "Query 3 result: \\[Error: Parallel batch infrastructure error"
+  )
 })

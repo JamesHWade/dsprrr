@@ -416,7 +416,10 @@ RLMModule <- R6::R6Class(
             timestamp = start_time,
             inputs = inputs,
             history = history,
-            final_answer = private$build_output(final_answer, source = final_source),
+            final_answer = private$build_output(
+              final_answer,
+              source = final_source
+            ),
             iterations_used = length(history),
             llm_calls_used = call_counter$count
           ))
@@ -963,7 +966,7 @@ Code:
       )
     },
 
-    #' Run a batch of sub-LM prompts with bounded parallelism and fallback
+    #' Run a batch of sub-LM prompts with bounded parallelism
     run_batched_sub_lm_queries = function(prompts) {
       n_queries <- length(prompts)
 
@@ -994,18 +997,26 @@ Code:
           )
         },
         error = function(e) {
-          cli::cli_warn(c(
-            "Parallel batch query failed, falling back to sequential execution",
-            "x" = e$message
-          ))
-          NULL
+          e
         }
       )
 
-      if (is.null(parallel_turns) ||
-        !is.list(parallel_turns) ||
-        length(parallel_turns) != n_queries) {
-        return(private$run_batched_sub_lm_queries_sequential(prompts))
+      if (inherits(parallel_turns, "error")) {
+        return(private$build_parallel_batch_failure(
+          n_queries = n_queries,
+          message = conditionMessage(parallel_turns)
+        ))
+      }
+
+      if (
+        is.null(parallel_turns) ||
+          !is.list(parallel_turns) ||
+          length(parallel_turns) != n_queries
+      ) {
+        return(private$build_parallel_batch_failure(
+          n_queries = n_queries,
+          message = "parallel_chat() returned an invalid response shape"
+        ))
       }
 
       results <- vector("list", n_queries)
@@ -1018,6 +1029,23 @@ Code:
           errors <- c(errors, parsed$error)
         }
       }
+
+      list(results = results, errors = errors)
+    },
+
+    #' Build per-query failures for infrastructure-level parallel errors
+    build_parallel_batch_failure = function(n_queries, message) {
+      error_msg <- paste0(
+        "Parallel batch infrastructure error (queries not retried): ",
+        message
+      )
+
+      results <- rep(list(paste0("[Error: ", error_msg, "]")), n_queries)
+      errors <- vapply(
+        seq_len(n_queries),
+        function(i) paste0("Query ", i, ": ", error_msg),
+        character(1)
+      )
 
       list(results = results, errors = errors)
     },
@@ -1073,7 +1101,12 @@ Code:
         error = function(e) NULL
       )
 
-      if (is.null(text) || !is.character(text) || length(text) < 1 || is.na(text[[1]])) {
+      if (
+        is.null(text) ||
+          !is.character(text) ||
+          length(text) < 1 ||
+          is.na(text[[1]])
+      ) {
         msg <- "Failed to extract response text"
         return(list(
           result = paste0("[Error: ", msg, "]"),
@@ -1087,10 +1120,12 @@ Code:
     #' Determine bounded parallelism for RLM batch calls
     get_rlm_batch_max_active = function(n_queries) {
       max_active <- getOption("dsprrr.rlm_batch_max_active", 10L)
-      if (!is.numeric(max_active) ||
-        length(max_active) != 1L ||
-        is.na(max_active) ||
-        max_active < 1) {
+      if (
+        !is.numeric(max_active) ||
+          length(max_active) != 1L ||
+          is.na(max_active) ||
+          max_active < 1
+      ) {
         max_active <- 10L
       }
       as.integer(min(n_queries, floor(max_active)))
@@ -1246,7 +1281,10 @@ answer possible with what was discovered.
     },
 
     #' Coerce final answer payload into named signature fields
-    normalize_final_answer = function(answer, source = c("submit", "fallback")) {
+    normalize_final_answer = function(
+      answer,
+      source = c("submit", "fallback")
+    ) {
       source <- match.arg(source)
       output_specs <- private$get_output_specs()
       output_fields <- names(output_specs)
@@ -1273,7 +1311,10 @@ answer possible with what was discovered.
             if (length(missing) == 0 && length(extra) == 0) {
               normalized <- answer[output_fields]
             } else if (source == "fallback") {
-              normalized <- setNames(vector("list", length(output_fields)), output_fields)
+              normalized <- setNames(
+                vector("list", length(output_fields)),
+                output_fields
+              )
               for (field in output_fields) {
                 if (field %in% answer_names) {
                   normalized[[field]] <- answer[[field]]
@@ -1296,7 +1337,10 @@ answer possible with what was discovered.
         } else if (length(output_fields) == 1 && length(answer) >= 1) {
           normalized <- setNames(list(answer[[1]]), output_fields)
         } else if (source == "fallback") {
-          normalized <- setNames(vector("list", length(output_fields)), output_fields)
+          normalized <- setNames(
+            vector("list", length(output_fields)),
+            output_fields
+          )
           for (i in seq_along(output_fields)) {
             if (i <= length(answer)) {
               normalized[[output_fields[[i]]]] <- answer[[i]]
@@ -1317,7 +1361,10 @@ answer possible with what was discovered.
       } else if (length(output_fields) == 1) {
         normalized <- setNames(list(answer), output_fields)
       } else if (source == "fallback") {
-        normalized <- setNames(vector("list", length(output_fields)), output_fields)
+        normalized <- setNames(
+          vector("list", length(output_fields)),
+          output_fields
+        )
         normalized[[output_fields[[1]]]] <- answer
         if (length(output_fields) > 1) {
           for (i in 2:length(output_fields)) {
@@ -1394,7 +1441,13 @@ answer possible with what was discovered.
           function(item) private$coerce_value_to_type(item, type_spec@items)
         )
 
-        if (all(vapply(coerced, function(x) is.atomic(x) && length(x) == 1, logical(1)))) {
+        if (
+          all(vapply(
+            coerced,
+            function(x) is.atomic(x) && length(x) == 1,
+            logical(1)
+          ))
+        ) {
           return(unlist(coerced, use.names = FALSE))
         }
         coerced
