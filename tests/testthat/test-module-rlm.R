@@ -1107,6 +1107,9 @@ test_that("RLMModule handles LLM response with non-string code", {
 
 with_mock_parallel_chat <- function(mock_fn, code) {
   ns <- asNamespace("ellmer")
+  if (!exists("parallel_chat", envir = ns, inherits = FALSE)) {
+    skip("ellmer::parallel_chat not available in this ellmer version")
+  }
   old_fn <- get("parallel_chat", envir = ns, inherits = FALSE)
 
   unlockBinding("parallel_chat", ns)

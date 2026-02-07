@@ -982,6 +982,10 @@ Code:
       )
 
       if (!has_parallel_chat) {
+        cli::cli_inform(c(
+          "i" = "Falling back to sequential batch queries.",
+          "i" = "{.fn ellmer::parallel_chat} not available; upgrade ellmer for parallel execution."
+        ))
         return(private$run_batched_sub_lm_queries_sequential(prompts))
       }
 
@@ -996,6 +1000,7 @@ Code:
             on_error = "return"
           )
         },
+        interrupt = function(i) stop(i),
         error = function(e) {
           e
         }
@@ -1088,7 +1093,7 @@ Code:
       text <- tryCatch(
         {
           turn <- turn_or_error$last_turn()
-          if (isS4(turn) && methods::.hasSlot(turn, "text")) {
+          if (inherits(turn, "S7_object")) {
             turn@text
           } else if (is.list(turn) && !is.null(turn$text)) {
             turn$text
@@ -1098,7 +1103,13 @@ Code:
             NULL
           }
         },
-        error = function(e) NULL
+        error = function(e) {
+          cli::cli_warn(c(
+            "Failed to extract text from parallel query result {index}.",
+            "x" = "{e$message}"
+          ))
+          NULL
+        }
       )
 
       if (
