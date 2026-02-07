@@ -222,6 +222,8 @@ reference:
     - module-program-of-thought
     - code_act
     - module-codeact
+    - rlm_module
+    - module-rlm
 
   - title: Chat-Centric API
     desc: ellmer-style pipe-friendly functions
