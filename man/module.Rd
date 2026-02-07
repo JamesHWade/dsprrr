@@ -35,7 +35,11 @@ module(
 \item \code{"rlm"}: Recursive Language Model for REPL-based context exploration (requires runner)
 }}
 
-\item{tools}{Optional list of ellmer ToolDef objects for react modules.
+\item{tools}{Optional tools configuration:
+\itemize{
+\item for \code{type = "react"} or \code{type = "codeact"}: list of ellmer ToolDef objects.
+\item for \code{type = "rlm"}: named list of R functions injected into the REPL.
+}
 If provided with \code{type = "predict"}, automatically upgrades to react.}
 
 \item{max_iterations}{Maximum ReAct iterations (default: 10, only for react)}

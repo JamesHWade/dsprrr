@@ -18,11 +18,11 @@
 #' 6. If max_iterations reached without SUBMIT(), fallback extraction is used
 #'
 #' Available REPL tools:
-#' - `SUBMIT(answer)`: Terminate and return final answer
+#' - `SUBMIT(...)`: Terminate and return final output values
 #' - `peek(var, start, end)`: View a slice of a variable (default: first 1000 chars)
 #' - `search(var, pattern)`: Regex search in variable
-#' - `rlm_query(query, context_slice)`: Recursive LLM call (requires sub_lm)
-#' - `rlm_query_batch(queries, slices)`: Batched recursive calls
+#' - `llm_query(query, context_slice)`: Recursive LLM call (requires sub_lm)
+#' - `llm_query_batched(queries, slices)`: Batched recursive calls
 #'
 #' Security: Code execution requires explicit opt-in via a runner parameter.
 #' The runner provides subprocess isolation but is NOT a security sandbox.
@@ -158,6 +158,44 @@ rlm_module <- function(
 
   # Validate all tools are functions
   if (length(tools) > 0) {
+    # Names must be present and non-empty
+    tool_names <- names(tools)
+    if (is.null(tool_names) || any(!nzchar(tool_names))) {
+      cli::cli_abort(c(
+        "tools must have non-empty names",
+        "i" = "Example: {.code tools = list(my_tool = function(...) ...)}"
+      ))
+    }
+
+    # Names must be valid identifiers for assignment in prelude code
+    invalid_names <- tool_names[make.names(tool_names) != tool_names]
+    if (length(invalid_names) > 0) {
+      cli::cli_abort(c(
+        "Tool names must be valid R identifiers",
+        "x" = "Invalid name{?s}: {.val {invalid_names}}",
+        "i" = "Use letters, numbers, '.' and '_' only; start with a letter or '.'"
+      ))
+    }
+
+    # Prevent collision with built-in RLM helpers
+    reserved_names <- c(
+      "SUBMIT",
+      "print",
+      "peek",
+      "search",
+      "llm_query",
+      "llm_query_batched",
+      "rlm_query",
+      "rlm_query_batch"
+    )
+    collisions <- intersect(tool_names, reserved_names)
+    if (length(collisions) > 0) {
+      cli::cli_abort(c(
+        "Tool names conflict with built-in RLM tools",
+        "x" = "Reserved name{?s}: {.val {collisions}}"
+      ))
+    }
+
     non_functions <- vapply(tools, Negate(is.function), logical(1))
     if (any(non_functions)) {
       bad_names <- names(tools)[non_functions]
@@ -357,8 +395,11 @@ RLMModule <- R6::R6Class(
         }
       }
 
+      final_source <- "submit"
+
       # Fallback extract if no SUBMIT()
       if (is.null(final_answer)) {
+        final_source <- "fallback"
         cli::cli_warn(c(
           "RLM reached max_iterations ({self$max_iterations}) without SUBMIT()",
           "i" = "Using fallback extraction from trajectory",
@@ -375,7 +416,7 @@ RLMModule <- R6::R6Class(
             timestamp = start_time,
             inputs = inputs,
             history = history,
-            final_answer = final_answer,
+            final_answer = private$build_output(final_answer, source = final_source),
             iterations_used = length(history),
             llm_calls_used = call_counter$count
           ))
@@ -383,7 +424,7 @@ RLMModule <- R6::R6Class(
       }
 
       # Build output matching signature
-      output <- private$build_output(final_answer)
+      output <- private$build_output(final_answer, source = final_source)
 
       duration_secs <- as.numeric(difftime(
         Sys.time(),
@@ -464,16 +505,26 @@ RLMModule <- R6::R6Class(
   ),
 
   private = list(
-    #' Get output field names from signature
+    #' Get output field names from signature for display
     get_output_names = function() {
+      paste(private$get_output_field_names(), collapse = ", ")
+    },
+
+    #' Get output field specs from signature
+    get_output_specs = function() {
       output_type <- self$signature@output_type
       if (methods::.hasSlot(output_type, "properties")) {
         props <- output_type@properties
         if (length(props) > 0) {
-          return(paste(names(props), collapse = ", "))
+          return(props)
         }
       }
-      "answer"
+      list(answer = output_type)
+    },
+
+    #' Get output field names from signature
+    get_output_field_names = function() {
+      names(private$get_output_specs())
     },
 
     #' Describe context variables for the system prompt
@@ -531,10 +582,26 @@ RLMModule <- R6::R6Class(
     #' Build the system prompt for RLM
     build_system_prompt = function(context_desc) {
       has_sub_lm <- !is.null(self$sub_lm)
+      output_fields <- private$get_output_field_names()
+      submit_usage <- if (length(output_fields) == 1) {
+        paste0("SUBMIT(", output_fields[[1]], ")")
+      } else {
+        paste0(
+          "SUBMIT(",
+          paste(output_fields, collapse = ", "),
+          ") or SUBMIT(",
+          paste0(output_fields, " = ...", collapse = ", "),
+          ")"
+        )
+      }
 
       # Build tool descriptions
       tool_desc <- c(
-        "- `SUBMIT(answer)`: Submit your final answer and terminate",
+        paste0(
+          "- `",
+          submit_usage,
+          "`: Submit final output field values and terminate"
+        ),
         "- `peek(var, start = 1, end = 1000)`: View a character slice of a variable",
         "- `search(var, pattern)`: Regex search in variable, returns matches"
       )
@@ -542,8 +609,8 @@ RLMModule <- R6::R6Class(
       if (has_sub_lm) {
         tool_desc <- c(
           tool_desc,
-          "- `rlm_query(query, context_slice = NULL)`: Ask a sub-question to another LLM",
-          "- `rlm_query_batch(queries, slices = NULL)`: Batch multiple sub-questions"
+          "- `llm_query(query, context_slice = NULL)`: Ask a sub-question to another LLM",
+          "- `llm_query_batched(queries, slices = NULL)`: Batch multiple sub-questions"
         )
       }
 
@@ -571,8 +638,8 @@ writing R code to explore and analyze the provided context.
 1. Explore the context programmatically - don't ask to see all content at once
 2. Use peek() to examine slices of large text
 3. Use search() to find specific patterns
-4. Break complex queries into smaller sub-questions{if (has_sub_lm) ' using rlm_query()' else ''}
-5. Call SUBMIT(answer) when you have the final answer
+4. Break complex queries into smaller sub-questions{if (has_sub_lm) ' using llm_query()' else ''}
+5. Call {submit_usage} when you have the final answer
 6. You have {self$max_iterations} iterations{if (has_sub_lm) paste0(' and ', self$max_llm_calls, ' LLM calls') else ''}
 
 ## Response Format
@@ -653,17 +720,20 @@ Code:
 
       list(
         reasoning = result$reasoning %||% "",
-        code = result$code
+        code = strip_rlm_code_fences(result$code)
       )
     },
 
     #' Execute code with RLM tools injected
     execute_with_rlm_tools = function(code, inputs, call_counter) {
+      code <- strip_rlm_code_fences(code)
+
       # Build RLM prelude that defines tools
       rlm_prelude <- create_rlm_prelude(
         max_llm_calls = self$max_llm_calls,
         has_sub_lm = !is.null(self$sub_lm),
-        custom_tools = self$tools
+        custom_tools = self$tools,
+        output_fields = private$get_output_field_names()
       )
 
       # Build combined code: prelude + user code
@@ -983,6 +1053,22 @@ answer possible with what was discovered.
 "
       )
 
+      structured_result <- tryCatch(
+        llm$chat_structured(prompt, type = self$signature@output_type),
+        error = function(e) {
+          cli::cli_warn(c(
+            "Structured fallback extraction failed",
+            "x" = "Error: {e$message}",
+            "i" = "Falling back to unstructured extraction"
+          ))
+          NULL
+        }
+      )
+
+      if (!is.null(structured_result)) {
+        return(structured_result)
+      }
+
       tryCatch(
         llm$chat(prompt),
         error = function(e) {
@@ -1016,18 +1102,168 @@ answer possible with what was discovered.
       paste(parts, collapse = "\n")
     },
 
-    #' Build output matching signature
-    build_output = function(answer) {
-      output_type <- self$signature@output_type
+    #' Coerce final answer payload into named signature fields
+    normalize_final_answer = function(answer, source = c("submit", "fallback")) {
+      source <- match.arg(source)
+      output_specs <- private$get_output_specs()
+      output_fields <- names(output_specs)
 
-      if (methods::.hasSlot(output_type, "properties")) {
-        props <- output_type@properties
-        if (length(props) == 1) {
-          return(setNames(list(answer), names(props)[1]))
+      # Convert arbitrary value into named list of output fields
+      normalized <- NULL
+
+      if (is.list(answer)) {
+        answer_names <- names(answer)
+
+        # Named list: align by field names
+        if (!is.null(answer_names) && all(nzchar(answer_names))) {
+          # Special compatibility case for legacy single-field answer payloads
+          if (
+            length(output_fields) == 1 &&
+              !output_fields[[1]] %in% answer_names &&
+              "answer" %in% answer_names
+          ) {
+            normalized <- setNames(list(answer[["answer"]]), output_fields)
+          } else {
+            missing <- setdiff(output_fields, answer_names)
+            extra <- setdiff(answer_names, output_fields)
+
+            if (length(missing) == 0 && length(extra) == 0) {
+              normalized <- answer[output_fields]
+            } else if (source == "fallback") {
+              normalized <- setNames(vector("list", length(output_fields)), output_fields)
+              for (field in output_fields) {
+                if (field %in% answer_names) {
+                  normalized[[field]] <- answer[[field]]
+                } else {
+                  normalized[[field]] <- NA
+                }
+              }
+            } else {
+              cli::cli_abort(c(
+                "SUBMIT output does not match signature fields",
+                "x" = "Expected fields: {.val {output_fields}}",
+                "x" = "Received fields: {.val {answer_names}}"
+              ))
+            }
+          }
+        } else if (length(answer) == length(output_fields)) {
+          # Positional list
+          normalized <- answer
+          names(normalized) <- output_fields
+        } else if (length(output_fields) == 1 && length(answer) >= 1) {
+          normalized <- setNames(list(answer[[1]]), output_fields)
+        } else if (source == "fallback") {
+          normalized <- setNames(vector("list", length(output_fields)), output_fields)
+          for (i in seq_along(output_fields)) {
+            if (i <= length(answer)) {
+              normalized[[output_fields[[i]]]] <- answer[[i]]
+            } else {
+              normalized[[output_fields[[i]]]] <- NA
+            }
+          }
+        } else {
+          cli::cli_abort(c(
+            "SUBMIT output has invalid length",
+            "x" = "Expected {length(output_fields)} value(s), got {length(answer)}"
+          ))
         }
+      } else if (is.atomic(answer) && length(answer) == length(output_fields)) {
+        # Positional atomic vector for multi-output
+        normalized <- as.list(answer)
+        names(normalized) <- output_fields
+      } else if (length(output_fields) == 1) {
+        normalized <- setNames(list(answer), output_fields)
+      } else if (source == "fallback") {
+        normalized <- setNames(vector("list", length(output_fields)), output_fields)
+        normalized[[output_fields[[1]]]] <- answer
+        if (length(output_fields) > 1) {
+          for (i in 2:length(output_fields)) {
+            normalized[[output_fields[[i]]]] <- NA
+          }
+        }
+      } else {
+        cli::cli_abort(c(
+          "SUBMIT output could not be aligned to signature fields",
+          "x" = "Expected fields: {.val {output_fields}}"
+        ))
       }
 
-      list(answer = answer)
+      # Coerce to declared output types where practical
+      for (field in output_fields) {
+        normalized[[field]] <- private$coerce_value_to_type(
+          normalized[[field]],
+          output_specs[[field]]
+        )
+      }
+
+      normalized
+    },
+
+    #' Coerce a value to an ellmer type when practical
+    coerce_value_to_type = function(value, type_spec) {
+      if (is.null(type_spec)) {
+        return(value)
+      }
+
+      if (inherits(type_spec, "ellmer::TypeBasic")) {
+        type_name <- type_spec@type
+        if (identical(type_name, "string")) {
+          return(value)
+        }
+        if (identical(type_name, "number")) {
+          return(suppressWarnings(as.numeric(value)[1]))
+        }
+        if (identical(type_name, "integer")) {
+          return(suppressWarnings(as.integer(value)[1]))
+        }
+        if (identical(type_name, "boolean")) {
+          return(suppressWarnings(as.logical(value)[1]))
+        }
+        return(value)
+      }
+
+      if (inherits(type_spec, "ellmer::TypeEnum")) {
+        allowed <- as.character(type_spec@values)
+        candidate <- if (length(value) == 0 || is.null(value)) {
+          ""
+        } else {
+          as.character(value)[1]
+        }
+
+        if (candidate %in% allowed || length(allowed) == 0) {
+          return(candidate)
+        }
+
+        idx <- match(tolower(candidate), tolower(allowed))
+        if (!is.na(idx)) {
+          return(allowed[idx])
+        }
+
+        candidate
+      } else if (inherits(type_spec, "ellmer::TypeArray")) {
+        items <- if (is.list(value)) value else as.list(value)
+        if (length(items) == 0) {
+          return(items)
+        }
+
+        coerced <- lapply(
+          items,
+          function(item) private$coerce_value_to_type(item, type_spec@items)
+        )
+
+        if (all(vapply(coerced, function(x) is.atomic(x) && length(x) == 1, logical(1)))) {
+          return(unlist(coerced, use.names = FALSE))
+        }
+        coerced
+      } else {
+        value
+      }
+    },
+
+    #' Build output matching signature
+    build_output = function(answer, source = c("submit", "fallback")) {
+      source <- match.arg(source)
+      private$normalize_final_answer(answer, source = source)
     }
   )
 )

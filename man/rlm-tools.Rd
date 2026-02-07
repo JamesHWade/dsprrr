@@ -10,14 +10,15 @@ This code is run before user-generated code via RCodeRunner.
 \details{
 The prelude defines these functions in the execution environment:
 \itemize{
-\item \code{SUBMIT(answer)}: Terminate and return final answer
+\item \code{SUBMIT(...)}: Terminate and return final output values
 \item \code{peek(var, start, end)}: View a slice of a variable
 \item \code{search(var, pattern)}: Regex search in variable
-\item \code{rlm_query(query, context_slice)}: Request a recursive LLM call (returns marker for interception)
-\item \code{rlm_query_batch(queries, slices)}: Request batched LLM calls (returns marker for interception)
+\item \code{llm_query(query, context_slice)}: Request a recursive LLM call (returns marker for interception)
+\item \code{llm_query_batched(queries, slices)}: Request batched LLM calls (returns marker for interception)
+\item \code{rlm_query()} / \code{rlm_query_batch()}: Backward-compatible aliases
 }
 
-The \code{rlm_query} and \code{rlm_query_batch} functions return special marker objects
+The recursive-query helper functions return special marker objects
 that the main RLM process intercepts and handles. The actual LLM calls happen
 in the parent R process, not in the sandboxed code execution environment.
 }

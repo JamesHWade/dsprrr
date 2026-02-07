@@ -7,13 +7,14 @@
 #' @details
 #' The prelude defines these functions in the execution environment:
 #'
-#' - `SUBMIT(answer)`: Terminate and return final answer
+#' - `SUBMIT(...)`: Terminate and return final output values
 #' - `peek(var, start, end)`: View a slice of a variable
 #' - `search(var, pattern)`: Regex search in variable
-#' - `rlm_query(query, context_slice)`: Request a recursive LLM call (returns marker for interception)
-#' - `rlm_query_batch(queries, slices)`: Request batched LLM calls (returns marker for interception)
+#' - `llm_query(query, context_slice)`: Request a recursive LLM call (returns marker for interception)
+#' - `llm_query_batched(queries, slices)`: Request batched LLM calls (returns marker for interception)
+#' - `rlm_query()` / `rlm_query_batch()`: Backward-compatible aliases
 #'
-#' The `rlm_query` and `rlm_query_batch` functions return special marker objects
+#' The recursive-query helper functions return special marker objects
 #' that the main RLM process intercepts and handles. The actual LLM calls happen
 #' in the parent R process, not in the sandboxed code execution environment.
 #'
@@ -30,6 +31,7 @@ NULL
 #' @param max_llm_calls Maximum allowed recursive LLM calls
 #' @param has_sub_lm Logical indicating if recursive queries are enabled
 #' @param custom_tools Named list of user-defined R functions
+#' @param output_fields Character vector of required output field names for SUBMIT()
 #'
 #' @return Character string of R code defining RLM tools
 #'
@@ -38,23 +40,82 @@ NULL
 create_rlm_prelude <- function(
   max_llm_calls = 50L,
   has_sub_lm = FALSE,
-  custom_tools = list()
+  custom_tools = list(),
+  output_fields = "answer"
 ) {
+  if (!is.character(output_fields) || length(output_fields) < 1) {
+    output_fields <- "answer"
+  }
+
+  output_fields <- trimws(output_fields)
+  output_fields <- output_fields[nzchar(output_fields)]
+  if (length(output_fields) < 1) {
+    output_fields <- "answer"
+  }
+
+  quoted_fields <- paste(sprintf("\"%s\"", output_fields), collapse = ", ")
+
+  submit_prelude <- sprintf(
+    '
+# Required output fields for this signature
+.rlm_output_fields <- c(%s)
+
+# SUBMIT: Terminate and return final answer
+# Supports positional args (SUBMIT(v1, v2)) or named args
+# (SUBMIT(field1 = v1, field2 = v2)).
+SUBMIT <- function(...) {
+  args <- list(...)
+  if (length(args) == 0) {
+    stop("SUBMIT() requires at least one output value")
+  }
+
+  arg_names <- names(args)
+  if (is.null(arg_names)) {
+    arg_names <- rep("", length(args))
+  }
+  has_any_names <- any(nzchar(arg_names))
+
+  if (!has_any_names) {
+    if (length(args) != length(.rlm_output_fields)) {
+      stop(
+        "SUBMIT() expected ",
+        length(.rlm_output_fields),
+        " output(s): ",
+        paste(.rlm_output_fields, collapse = ", ")
+      )
+    }
+    names(args) <- .rlm_output_fields
+  } else {
+    if (any(!nzchar(arg_names))) {
+      stop("SUBMIT() cannot mix named and unnamed outputs")
+    }
+
+    missing <- setdiff(.rlm_output_fields, arg_names)
+    extra <- setdiff(arg_names, .rlm_output_fields)
+
+    if (length(missing) > 0) {
+      stop("SUBMIT() missing outputs: ", paste(missing, collapse = ", "))
+    }
+    if (length(extra) > 0) {
+      stop("SUBMIT() unknown outputs: ", paste(extra, collapse = ", "))
+    }
+
+    args <- args[.rlm_output_fields]
+  }
+
+  class(args) <- c("rlm_final", class(args))
+  attr(args, "rlm_final") <- TRUE
+  args
+}
+',
+    quoted_fields
+  )
+
   # Base tools (always available)
   base_prelude <- '
 # ============================================
 # RLM Tools - Injected by dsprrr
 # ============================================
-
-# SUBMIT: Terminate and return final answer
-# When code calls SUBMIT(answer), it returns a special object
-# that the main process detects to stop iteration
-SUBMIT <- function(answer) {
-  result <- answer
-  class(result) <- c("rlm_final", class(result))
-  attr(result, "rlm_final") <- TRUE
-  result
-}
 
 # peek: View a slice of a character variable
 # Useful for exploring large text contexts
@@ -109,9 +170,9 @@ search <- function(var, pattern, ignore_case = FALSE) {
   if (has_sub_lm) {
     recursive_prelude <- sprintf(
       '
-# rlm_query: Recursive LLM query
+# llm_query: Recursive LLM query
 # Returns a request marker - main process will intercept and handle
-rlm_query <- function(query, context_slice = NULL) {
+llm_query <- function(query, context_slice = NULL) {
   # Note: This function returns a marker that the main process intercepts
 
   # The actual LLM call happens in the parent R process
@@ -121,9 +182,9 @@ rlm_query <- function(query, context_slice = NULL) {
   )
 }
 
-# rlm_query_batch: Batched recursive queries
+# llm_query_batched: Batched recursive queries
 # Returns a request marker for batch processing
-rlm_query_batch <- function(queries, slices = NULL) {
+llm_query_batched <- function(queries, slices = NULL) {
   if (!is.character(queries)) {
     stop("queries must be a character vector")
   }
@@ -138,6 +199,10 @@ rlm_query_batch <- function(queries, slices = NULL) {
   )
 }
 
+# Backward-compatible aliases
+rlm_query <- llm_query
+rlm_query_batch <- llm_query_batched
+
 # Note: Maximum LLM calls allowed: %d
 # Exceeding this limit will result in an error
 ',
@@ -145,14 +210,18 @@ rlm_query_batch <- function(queries, slices = NULL) {
     )
   } else {
     recursive_prelude <- '
-# rlm_query: Disabled (no sub_lm provided)
-rlm_query <- function(query, context_slice = NULL) {
+# llm_query: Disabled (no sub_lm provided)
+llm_query <- function(query, context_slice = NULL) {
   stop("Recursive LLM queries are disabled. Provide sub_lm to enable.")
 }
 
-rlm_query_batch <- function(queries, slices = NULL) {
+llm_query_batched <- function(queries, slices = NULL) {
   stop("Recursive LLM queries are disabled. Provide sub_lm to enable.")
 }
+
+# Backward-compatible aliases
+rlm_query <- llm_query
+rlm_query_batch <- llm_query_batched
 '
   }
 
@@ -189,6 +258,8 @@ rlm_query_batch <- function(queries, slices = NULL) {
 
   # Combine all parts
   paste0(
+    submit_prelude,
+    "\n",
     base_prelude,
     recursive_prelude,
     custom_prelude,
@@ -236,4 +307,28 @@ extract_rlm_final <- function(x) {
   class(x) <- setdiff(class(x), "rlm_final")
   attr(x, "rlm_final") <- NULL
   x
+}
+
+
+#' Strip markdown code fences from RLM-generated code
+#'
+#' @param code Character string potentially wrapped in markdown fences
+#' @return Character string without surrounding code fences
+#'
+#' @keywords internal
+#' @noRd
+strip_rlm_code_fences <- function(code) {
+  if (!is.character(code) || length(code) != 1) {
+    return(code)
+  }
+
+  trimmed <- trimws(code)
+  match <- regexec("^```(?:r|R)?\\s*\\n([\\s\\S]*)\\n```\\s*$", trimmed, perl = TRUE)
+  groups <- regmatches(trimmed, match)[[1]]
+
+  if (length(groups) >= 2) {
+    return(groups[2])
+  }
+
+  trimmed
 }

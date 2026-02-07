@@ -16,7 +16,9 @@
 #'   - `"program_of_thought"`: Code execution module (requires runner)
 #'   - `"codeact"`: Hybrid agent with tools + code execution (requires runner)
 #'   - `"rlm"`: Recursive Language Model for REPL-based context exploration (requires runner)
-#' @param tools Optional list of ellmer ToolDef objects for react modules.
+#' @param tools Optional tools configuration:
+#'   - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef objects.
+#'   - for `type = "rlm"`: named list of R functions injected into the REPL.
 #'   If provided with `type = "predict"`, automatically upgrades to react.
 #' @param max_iterations Maximum ReAct iterations (default: 10, only for react)
 #' @param M Number of reasoning chains for multichain (default: 3)

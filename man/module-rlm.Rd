@@ -24,11 +24,11 @@ The execution flow is:
 
 Available REPL tools:
 \itemize{
-\item \code{SUBMIT(answer)}: Terminate and return final answer
+\item \code{SUBMIT(...)}: Terminate and return final output values
 \item \code{peek(var, start, end)}: View a slice of a variable (default: first 1000 chars)
 \item \code{search(var, pattern)}: Regex search in variable
-\item \code{rlm_query(query, context_slice)}: Recursive LLM call (requires sub_lm)
-\item \code{rlm_query_batch(queries, slices)}: Batched recursive calls
+\item \code{llm_query(query, context_slice)}: Recursive LLM call (requires sub_lm)
+\item \code{llm_query_batched(queries, slices)}: Batched recursive calls
 }
 
 Security: Code execution requires explicit opt-in via a runner parameter.

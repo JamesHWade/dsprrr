@@ -1,26 +1,49 @@
 # Tests for RLMModule (Recursive Language Model)
 
 # Helper: Create a mock LLM for RLM testing
-create_mock_rlm_llm <- function(code_responses = list()) {
+create_mock_rlm_llm <- function(
+  code_responses = list(),
+  fallback_chat = "fallback answer",
+  fallback_structured = list(answer = fallback_chat)
+) {
   call_count <- 0
   mock <- list(
     clone = function() {
-      create_mock_rlm_llm(code_responses)
+      create_mock_rlm_llm(code_responses, fallback_chat, fallback_structured)
     },
     chat_structured = function(prompt, type, ...) {
-      call_count <<- call_count + 1
-      if (call_count <= length(code_responses)) {
-        code_responses[[call_count]]
+      type_fields <- if (
+        inherits(type, "ellmer::TypeObject") &&
+          methods::.hasSlot(type, "properties")
+      ) {
+        names(type@properties)
       } else {
+        character()
+      }
+
+      is_code_gen <- all(c("reasoning", "code") %in% type_fields)
+
+      if (is_code_gen) {
+        call_count <<- call_count + 1
+        if (call_count <= length(code_responses)) {
+          return(code_responses[[call_count]])
+        }
+
         # Default: simple SUBMIT
-        list(
+        return(list(
           reasoning = "Returning default answer",
           code = "SUBMIT('default answer')"
-        )
+        ))
+      }
+
+      if (!is.null(fallback_structured)) {
+        fallback_structured
+      } else {
+        stop("structured fallback unavailable")
       }
     },
     chat = function(prompt, ...) {
-      "fallback answer"
+      fallback_chat
     }
   )
   mock
@@ -144,6 +167,48 @@ test_that("rlm_module validates all tools are functions", {
       tools = list(a = 1, b = "string", c = function() {})
     ),
     "All tools must be functions"
+  )
+})
+
+test_that("rlm_module validates tool names", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 5)
+
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      runner = runner,
+      tools = list(`bad-name` = function() 1)
+    ),
+    "valid R identifiers"
+  )
+
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      runner = runner,
+      tools = list(SUBMIT = function() 1)
+    ),
+    "conflict with built-in RLM tools"
+  )
+
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      runner = runner,
+      tools = list(llm_query = function() "x")
+    ),
+    "conflict with built-in RLM tools"
+  )
+
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      runner = runner,
+      tools = list(print = function(...) NULL)
+    ),
+    "conflict with built-in RLM tools"
   )
 })
 
@@ -318,6 +383,108 @@ test_that("RLMModule SUBMIT works with complex values", {
   expect_equal(result$output[[1]]$answer$value, 42)
 })
 
+test_that("RLMModule strips markdown code fences before execution", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module("question -> answer", runner = runner)
+
+  mock_llm <- create_mock_rlm_llm(list(
+    list(
+      reasoning = "Return fenced code block",
+      code = "```r\nx <- 40 + 2\nSUBMIT(x)\n```"
+    )
+  ))
+
+  result <- rlm$forward(
+    list(question = "What is 40 + 2?"),
+    .llm = mock_llm
+  )
+
+  expect_equal(result$output[[1]]$answer, 42)
+})
+
+test_that("RLMModule supports multi-output SUBMIT with named arguments", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module(
+    "question -> answer, confidence: number",
+    runner = runner
+  )
+
+  mock_llm <- create_mock_rlm_llm(list(
+    list(
+      reasoning = "Return named outputs",
+      code = "SUBMIT(answer = 'Paris', confidence = '0.95')"
+    )
+  ))
+
+  result <- rlm$forward(
+    list(question = "What is the capital of France?"),
+    .llm = mock_llm
+  )
+
+  expect_equal(result$output[[1]]$answer, "Paris")
+  expect_equal(result$output[[1]]$confidence, 0.95)
+})
+
+test_that("RLMModule supports multi-output SUBMIT with positional arguments", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module(
+    "question -> answer, confidence: number",
+    runner = runner
+  )
+
+  mock_llm <- create_mock_rlm_llm(list(
+    list(
+      reasoning = "Return positional outputs",
+      code = "SUBMIT('Paris', 0.8)"
+    )
+  ))
+
+  result <- rlm$forward(
+    list(question = "What is the capital of France?"),
+    .llm = mock_llm
+  )
+
+  expect_equal(result$output[[1]]$answer, "Paris")
+  expect_equal(result$output[[1]]$confidence, 0.8)
+})
+
+test_that("RLMModule retries after invalid multi-output SUBMIT payload", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module(
+    "question -> answer, confidence: number",
+    runner = runner,
+    max_iterations = 3
+  )
+
+  mock_llm <- create_mock_rlm_llm(list(
+    list(
+      reasoning = "Missing one required output field",
+      code = "SUBMIT(answer = 'Paris')"
+    ),
+    list(
+      reasoning = "Now provide both fields",
+      code = "SUBMIT(answer = 'Paris', confidence = 0.9)"
+    )
+  ))
+
+  result <- rlm$forward(
+    list(question = "What is the capital of France?"),
+    .llm = mock_llm
+  )
+
+  expect_equal(result$metadata[[1]]$iterations, 2)
+  expect_equal(result$output[[1]]$answer, "Paris")
+  expect_equal(result$output[[1]]$confidence, 0.9)
+})
+
 # ============================================================================
 # REPL Tools Tests
 # ============================================================================
@@ -459,6 +626,37 @@ test_that("RLMModule uses fallback when no SUBMIT", {
 
   # Should have used fallback extraction
   expect_equal(result$output[[1]]$answer, "fallback answer")
+})
+
+test_that("RLMModule normalizes structured fallback to signature fields and types", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module(
+    "question -> score: number, label: enum('positive', 'negative'), tags: array(string)",
+    runner = runner,
+    max_iterations = 1
+  )
+
+  mock_llm <- create_mock_rlm_llm(
+    code_responses = list(
+      list(reasoning = "No final output yet", code = "x <- 1")
+    ),
+    fallback_structured = list(
+      score = "0.75",
+      label = "POSITIVE",
+      tags = c(1, 2, "ok")
+    )
+  )
+
+  result <- rlm$forward(
+    list(question = "Classify this"),
+    .llm = mock_llm
+  )
+
+  expect_equal(result$output[[1]]$score, 0.75)
+  expect_equal(result$output[[1]]$label, "positive")
+  expect_equal(result$output[[1]]$tags, c("1", "2", "ok"))
 })
 
 # ============================================================================
@@ -755,6 +953,50 @@ test_that("create_rlm_prelude includes custom tools", {
   expect_true(grepl("another_tool <-", prelude))
 })
 
+test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  prelude <- dsprrr:::create_rlm_prelude(
+    max_llm_calls = 50,
+    has_sub_lm = FALSE,
+    custom_tools = list(),
+    output_fields = c("answer", "confidence")
+  )
+
+  ok <- runner$execute(
+    paste0(prelude, "\nSUBMIT('ok', 0.9)"),
+    context = list()
+  )
+  expect_true(ok$success)
+  expect_true(dsprrr:::is_rlm_final(ok$result))
+  expect_equal(names(dsprrr:::extract_rlm_final(ok$result)), c("answer", "confidence"))
+
+  bad <- runner$execute(
+    paste0(prelude, "\nSUBMIT(answer = 'ok')"),
+    context = list()
+  )
+  expect_false(bad$success)
+  expect_true(grepl("missing outputs", bad$error))
+})
+
+test_that("strip_rlm_code_fences removes markdown fences", {
+  expect_equal(
+    dsprrr:::strip_rlm_code_fences("```r\nx <- 1\nSUBMIT(x)\n```"),
+    "x <- 1\nSUBMIT(x)"
+  )
+
+  expect_equal(
+    dsprrr:::strip_rlm_code_fences("```\n1 + 1\n```"),
+    "1 + 1"
+  )
+
+  expect_equal(
+    dsprrr:::strip_rlm_code_fences("x <- 1\nx"),
+    "x <- 1\nx"
+  )
+})
+
 test_that("is_rlm_final detects rlm_final class", {
   # Regular value
   expect_false(dsprrr:::is_rlm_final(42))
@@ -892,6 +1134,33 @@ test_that("rlm_query_batch generates batch request marker", {
   expect_s3_class(result$result, "rlm_query_request")
   expect_true(result$result$batch)
   expect_equal(result$result$queries, c("q1", "q2"))
+})
+
+test_that("llm_query_batched works and rlm_query_batch alias is preserved", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  prelude <- dsprrr:::create_rlm_prelude(
+    max_llm_calls = 50,
+    has_sub_lm = TRUE,
+    custom_tools = list()
+  )
+
+  result_primary <- runner$execute(
+    paste0(prelude, "\nllm_query_batched(c('q1', 'q2'))"),
+    context = list()
+  )
+  expect_true(result_primary$success)
+  expect_s3_class(result_primary$result, "rlm_query_request")
+  expect_true(result_primary$result$batch)
+
+  result_alias <- runner$execute(
+    paste0(prelude, "\nrlm_query_batch(c('q1', 'q2'))"),
+    context = list()
+  )
+  expect_true(result_alias$success)
+  expect_s3_class(result_alias$result, "rlm_query_request")
+  expect_true(result_alias$result$batch)
 })
 
 test_that("rlm_query_batch validates queries is character", {
