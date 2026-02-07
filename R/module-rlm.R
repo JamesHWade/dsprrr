@@ -416,7 +416,10 @@ RLMModule <- R6::R6Class(
             timestamp = start_time,
             inputs = inputs,
             history = history,
-            final_answer = private$build_output(final_answer, source = final_source),
+            final_answer = private$build_output(
+              final_answer,
+              source = final_source
+            ),
             iterations_used = length(history),
             llm_calls_used = call_counter$count
           ))
@@ -904,37 +907,47 @@ Code:
         ))
       }
 
-      # Process each query
-      results <- vector("list", n_queries)
-      errors <- character()
-
-      for (i in seq_len(n_queries)) {
-        call_counter$count <- call_counter$count + 1L
-
-        query <- queries[[i]]
-        context_slice <- if (!is.null(slices)) slices[[i]] else NULL
-
-        prompt <- if (!is.null(context_slice)) {
-          paste0("Context:\n", context_slice, "\n\nQuestion: ", query)
-        } else {
-          query
-        }
-
-        results[[i]] <- tryCatch(
-          {
-            self$sub_lm$chat(prompt)
-          },
-          error = function(e) {
-            errors <<- c(errors, paste0("Query ", i, ": ", e$message))
-            paste0("[Error: ", e$message, "]")
-          }
-        )
+      if (n_queries == 0L) {
+        return(list(
+          success = TRUE,
+          formatted_output = "",
+          error = NULL
+        ))
       }
+
+      # Reserve call budget up-front to ensure consistent accounting
+      call_counter$count <- call_counter$count + n_queries
+
+      prompts <- vapply(
+        seq_len(n_queries),
+        function(i) {
+          query <- queries[[i]]
+          context_slice <- if (!is.null(slices)) slices[[i]] else NULL
+          if (!is.null(context_slice)) {
+            paste0("Context:\n", context_slice, "\n\nQuestion: ", query)
+          } else {
+            query
+          }
+        },
+        character(1)
+      )
+
+      batch_result <- private$run_batched_sub_lm_queries(prompts)
+      results <- batch_result$results
+      errors <- batch_result$errors
 
       # Format output
       formatted_parts <- vapply(
         seq_len(n_queries),
-        function(i) paste0("Query ", i, " result: ", results[[i]]),
+        function(i) {
+          result_i <- results[[i]]
+          result_text <- if (is.null(result_i)) {
+            ""
+          } else {
+            paste(as.character(result_i), collapse = "\n")
+          }
+          paste0("Query ", i, " result: ", result_text)
+        },
         character(1)
       )
       formatted_output <- paste(formatted_parts, collapse = "\n\n")
@@ -951,6 +964,182 @@ Code:
         formatted_output = formatted_output,
         error = if (length(errors) > 0) paste(errors, collapse = "; ") else NULL
       )
+    },
+
+    #' Run a batch of sub-LM prompts with bounded parallelism
+    run_batched_sub_lm_queries = function(prompts) {
+      n_queries <- length(prompts)
+
+      # For a single query, avoid parallel overhead
+      if (n_queries <= 1L) {
+        return(private$run_batched_sub_lm_queries_sequential(prompts))
+      }
+
+      has_parallel_chat <- exists(
+        "parallel_chat",
+        envir = asNamespace("ellmer"),
+        inherits = FALSE
+      )
+
+      if (!has_parallel_chat) {
+        cli::cli_inform(c(
+          "i" = "Falling back to sequential batch queries.",
+          "i" = "{.fn ellmer::parallel_chat} not available; upgrade ellmer for parallel execution."
+        ))
+        return(private$run_batched_sub_lm_queries_sequential(prompts))
+      }
+
+      max_active <- private$get_rlm_batch_max_active(n_queries)
+
+      parallel_turns <- tryCatch(
+        {
+          ellmer::parallel_chat(
+            chat = self$sub_lm,
+            prompts = as.list(prompts),
+            max_active = max_active,
+            on_error = "return"
+          )
+        },
+        interrupt = function(i) stop(i),
+        error = function(e) {
+          e
+        }
+      )
+
+      if (inherits(parallel_turns, "error")) {
+        return(private$build_parallel_batch_failure(
+          n_queries = n_queries,
+          message = conditionMessage(parallel_turns)
+        ))
+      }
+
+      if (
+        is.null(parallel_turns) ||
+          !is.list(parallel_turns) ||
+          length(parallel_turns) != n_queries
+      ) {
+        return(private$build_parallel_batch_failure(
+          n_queries = n_queries,
+          message = "parallel_chat() returned an invalid response shape"
+        ))
+      }
+
+      results <- vector("list", n_queries)
+      errors <- character()
+
+      for (i in seq_len(n_queries)) {
+        parsed <- private$extract_parallel_query_result(parallel_turns[[i]], i)
+        results[[i]] <- parsed$result
+        if (!is.null(parsed$error)) {
+          errors <- c(errors, parsed$error)
+        }
+      }
+
+      list(results = results, errors = errors)
+    },
+
+    #' Build per-query failures for infrastructure-level parallel errors
+    build_parallel_batch_failure = function(n_queries, message) {
+      error_msg <- paste0(
+        "Parallel batch infrastructure error (queries not retried): ",
+        message
+      )
+
+      results <- rep(list(paste0("[Error: ", error_msg, "]")), n_queries)
+      errors <- vapply(
+        seq_len(n_queries),
+        function(i) paste0("Query ", i, ": ", error_msg),
+        character(1)
+      )
+
+      list(results = results, errors = errors)
+    },
+
+    #' Sequential fallback for batched sub-LM queries
+    run_batched_sub_lm_queries_sequential = function(prompts) {
+      n_queries <- length(prompts)
+      results <- vector("list", n_queries)
+      errors <- character()
+
+      for (i in seq_len(n_queries)) {
+        results[[i]] <- tryCatch(
+          {
+            self$sub_lm$chat(prompts[[i]])
+          },
+          error = function(e) {
+            errors <<- c(errors, paste0("Query ", i, ": ", e$message))
+            paste0("[Error: ", e$message, "]")
+          }
+        )
+      }
+
+      list(results = results, errors = errors)
+    },
+
+    #' Extract a text result from ellmer::parallel_chat() output
+    extract_parallel_query_result = function(turn_or_error, index) {
+      if (is.null(turn_or_error) || inherits(turn_or_error, "error")) {
+        msg <- if (inherits(turn_or_error, "error")) {
+          conditionMessage(turn_or_error)
+        } else {
+          "Unknown error"
+        }
+        return(list(
+          result = paste0("[Error: ", msg, "]"),
+          error = paste0("Query ", index, ": ", msg)
+        ))
+      }
+
+      text <- tryCatch(
+        {
+          turn <- turn_or_error$last_turn()
+          if (inherits(turn, "S7_object")) {
+            turn@text
+          } else if (is.list(turn) && !is.null(turn$text)) {
+            turn$text
+          } else if (is.character(turn)) {
+            turn[[1]]
+          } else {
+            NULL
+          }
+        },
+        error = function(e) {
+          cli::cli_warn(c(
+            "Failed to extract text from parallel query result {index}.",
+            "x" = "{e$message}"
+          ))
+          NULL
+        }
+      )
+
+      if (
+        is.null(text) ||
+          !is.character(text) ||
+          length(text) < 1 ||
+          is.na(text[[1]])
+      ) {
+        msg <- "Failed to extract response text"
+        return(list(
+          result = paste0("[Error: ", msg, "]"),
+          error = paste0("Query ", index, ": ", msg)
+        ))
+      }
+
+      list(result = text[[1]], error = NULL)
+    },
+
+    #' Determine bounded parallelism for RLM batch calls
+    get_rlm_batch_max_active = function(n_queries) {
+      max_active <- getOption("dsprrr.rlm_batch_max_active", 10L)
+      if (
+        !is.numeric(max_active) ||
+          length(max_active) != 1L ||
+          is.na(max_active) ||
+          max_active < 1
+      ) {
+        max_active <- 10L
+      }
+      as.integer(min(n_queries, floor(max_active)))
     },
 
     #' Format execution output for history
@@ -1103,7 +1292,10 @@ answer possible with what was discovered.
     },
 
     #' Coerce final answer payload into named signature fields
-    normalize_final_answer = function(answer, source = c("submit", "fallback")) {
+    normalize_final_answer = function(
+      answer,
+      source = c("submit", "fallback")
+    ) {
       source <- match.arg(source)
       output_specs <- private$get_output_specs()
       output_fields <- names(output_specs)
@@ -1130,7 +1322,10 @@ answer possible with what was discovered.
             if (length(missing) == 0 && length(extra) == 0) {
               normalized <- answer[output_fields]
             } else if (source == "fallback") {
-              normalized <- setNames(vector("list", length(output_fields)), output_fields)
+              normalized <- setNames(
+                vector("list", length(output_fields)),
+                output_fields
+              )
               for (field in output_fields) {
                 if (field %in% answer_names) {
                   normalized[[field]] <- answer[[field]]
@@ -1153,7 +1348,10 @@ answer possible with what was discovered.
         } else if (length(output_fields) == 1 && length(answer) >= 1) {
           normalized <- setNames(list(answer[[1]]), output_fields)
         } else if (source == "fallback") {
-          normalized <- setNames(vector("list", length(output_fields)), output_fields)
+          normalized <- setNames(
+            vector("list", length(output_fields)),
+            output_fields
+          )
           for (i in seq_along(output_fields)) {
             if (i <= length(answer)) {
               normalized[[output_fields[[i]]]] <- answer[[i]]
@@ -1174,7 +1372,10 @@ answer possible with what was discovered.
       } else if (length(output_fields) == 1) {
         normalized <- setNames(list(answer), output_fields)
       } else if (source == "fallback") {
-        normalized <- setNames(vector("list", length(output_fields)), output_fields)
+        normalized <- setNames(
+          vector("list", length(output_fields)),
+          output_fields
+        )
         normalized[[output_fields[[1]]]] <- answer
         if (length(output_fields) > 1) {
           for (i in 2:length(output_fields)) {
@@ -1251,7 +1452,13 @@ answer possible with what was discovered.
           function(item) private$coerce_value_to_type(item, type_spec@items)
         )
 
-        if (all(vapply(coerced, function(x) is.atomic(x) && length(x) == 1, logical(1)))) {
+        if (
+          all(vapply(
+            coerced,
+            function(x) is.atomic(x) && length(x) == 1,
+            logical(1)
+          ))
+        ) {
           return(unlist(coerced, use.names = FALSE))
         }
         coerced

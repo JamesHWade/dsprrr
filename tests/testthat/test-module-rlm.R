@@ -970,7 +970,10 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
   )
   expect_true(ok$success)
   expect_true(dsprrr:::is_rlm_final(ok$result))
-  expect_equal(names(dsprrr:::extract_rlm_final(ok$result)), c("answer", "confidence"))
+  expect_equal(
+    names(dsprrr:::extract_rlm_final(ok$result)),
+    c("answer", "confidence")
+  )
 
   bad <- runner$execute(
     paste0(prelude, "\nSUBMIT(answer = 'ok')"),
@@ -1102,6 +1105,29 @@ test_that("RLMModule handles LLM response with non-string code", {
 # rlm_query Batch Tests
 # ============================================================================
 
+with_mock_parallel_chat <- function(mock_fn, code) {
+  ns <- asNamespace("ellmer")
+  if (!exists("parallel_chat", envir = ns, inherits = FALSE)) {
+    skip("ellmer::parallel_chat not available in this ellmer version")
+  }
+  old_fn <- get("parallel_chat", envir = ns, inherits = FALSE)
+
+  unlockBinding("parallel_chat", ns)
+  assign("parallel_chat", mock_fn, envir = ns)
+  lockBinding("parallel_chat", ns)
+
+  on.exit(
+    {
+      unlockBinding("parallel_chat", ns)
+      assign("parallel_chat", old_fn, envir = ns)
+      lockBinding("parallel_chat", ns)
+    },
+    add = TRUE
+  )
+
+  force(code)
+}
+
 test_that("is_rlm_query_request detects query requests", {
   regular <- 42
   expect_false(dsprrr:::is_rlm_query_request(regular))
@@ -1201,4 +1227,131 @@ test_that("rlm_query_batch validates slices length", {
 
   expect_false(result$success)
   expect_true(grepl("same length", result$error))
+})
+
+test_that("process_rlm_query_batch uses bounded parallelism and preserves order", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    sub_lm = list()
+  )
+
+  call_counter <- new.env(parent = emptyenv())
+  call_counter$count <- 0L
+  request <- list(queries = c("q1", "q2", "q3"), slices = NULL, batch = TRUE)
+  captured <- new.env(parent = emptyenv())
+
+  make_fake_chat <- function(text) {
+    list(last_turn = function() list(text = text))
+  }
+
+  withr::local_options(list(dsprrr.rlm_batch_max_active = 2L))
+  warning_message <- NULL
+  result <- withCallingHandlers(
+    with_mock_parallel_chat(
+      function(
+        chat,
+        prompts,
+        max_active = 10,
+        rpm = 500,
+        on_error = c("return", "continue", "stop")
+      ) {
+        captured$prompts <- prompts
+        captured$max_active <- max_active
+        captured$on_error <- on_error
+        list(
+          make_fake_chat("first"),
+          simpleError("boom"),
+          make_fake_chat("third")
+        )
+      },
+      rlm$.__enclos_env__$private$process_rlm_query_batch(request, call_counter)
+    ),
+    warning = function(w) {
+      warning_message <<- conditionMessage(w)
+      invokeRestart("muffleWarning")
+    }
+  )
+
+  expect_equal(call_counter$count, 3L)
+  expect_equal(captured$max_active, 2L)
+  expect_equal(captured$prompts, as.list(c("q1", "q2", "q3")))
+  expect_equal(captured$on_error, "return")
+  expect_match(warning_message, "Some batch queries failed")
+
+  expect_false(result$success)
+  expect_match(result$error, "Query 2: boom")
+  expect_match(result$formatted_output, "Query 1 result: first")
+  expect_match(result$formatted_output, "Query 2 result: \\[Error: boom\\]")
+  expect_match(result$formatted_output, "Query 3 result: third")
+
+  pos1 <- regexpr("Query 1 result: first", result$formatted_output)[1]
+  pos2 <- regexpr("Query 2 result: \\[Error: boom\\]", result$formatted_output)[
+    1
+  ]
+  pos3 <- regexpr("Query 3 result: third", result$formatted_output)[1]
+  expect_true(pos1 < pos2 && pos2 < pos3)
+})
+
+test_that("process_rlm_query_batch does not retry sequentially after parallel infrastructure failure", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  chat_calls <- 0L
+  sub_lm <- list(
+    chat = function(prompt, ...) {
+      chat_calls <<- chat_calls + 1L
+      paste0("ok: ", prompt)
+    }
+  )
+
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    sub_lm = sub_lm
+  )
+
+  call_counter <- new.env(parent = emptyenv())
+  call_counter$count <- 0L
+  request <- list(
+    queries = c("good", "better", "fine"),
+    slices = NULL,
+    batch = TRUE
+  )
+
+  expect_warning(
+    result <- with_mock_parallel_chat(
+      function(
+        chat,
+        prompts,
+        max_active = 10,
+        rpm = 500,
+        on_error = c("return", "continue", "stop")
+      ) {
+        stop("parallel unavailable")
+      },
+      rlm$.__enclos_env__$private$process_rlm_query_batch(request, call_counter)
+    ),
+    "Some batch queries failed"
+  )
+
+  expect_equal(call_counter$count, 3L)
+  expect_equal(chat_calls, 0L)
+  expect_false(result$success)
+  expect_match(result$error, "queries not retried")
+  expect_match(
+    result$formatted_output,
+    "Query 1 result: \\[Error: Parallel batch infrastructure error"
+  )
+  expect_match(
+    result$formatted_output,
+    "Query 2 result: \\[Error: Parallel batch infrastructure error"
+  )
+  expect_match(
+    result$formatted_output,
+    "Query 3 result: \\[Error: Parallel batch infrastructure error"
+  )
 })
