@@ -139,6 +139,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-multichain.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-react.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/module-rlm.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-wrapper.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_demos_as_tibble.html</loc></url>
@@ -189,6 +190,8 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/register_dsprrr_engine.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/register_dsprrr_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/restore_module_config.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/rlm-tools.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/rlm_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_dataset.html</loc></url>

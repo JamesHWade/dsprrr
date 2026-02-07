@@ -367,7 +367,7 @@ eval_result
 #> $metadata
 #> $metadata[[1]]
 #> $metadata[[1]]$latency_ms
-#> [1] 0.7286072
+#> [1] 0.7061958
 #> 
 #> $metadata[[1]]$prompt_length
 #> [1] 272
@@ -379,7 +379,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[1]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[1]]$batch_index
 #> [1] 1
@@ -387,7 +387,7 @@ eval_result
 #> 
 #> $metadata[[2]]
 #> $metadata[[2]]$latency_ms
-#> [1] 0.5521774
+#> [1] 0.6878376
 #> 
 #> $metadata[[2]]$prompt_length
 #> [1] 269
@@ -399,7 +399,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[2]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[2]]$batch_index
 #> [1] 2
@@ -407,7 +407,7 @@ eval_result
 #> 
 #> $metadata[[3]]
 #> $metadata[[3]]$latency_ms
-#> [1] 0.5972385
+#> [1] 0.7026196
 #> 
 #> $metadata[[3]]$prompt_length
 #> [1] 269
@@ -419,7 +419,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[3]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[3]]$batch_index
 #> [1] 3
@@ -427,7 +427,7 @@ eval_result
 #> 
 #> $metadata[[4]]
 #> $metadata[[4]]$latency_ms
-#> [1] 0.556469
+#> [1] 0.6144047
 #> 
 #> $metadata[[4]]$prompt_length
 #> [1] 272
@@ -439,7 +439,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[4]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[4]]$batch_index
 #> [1] 4
@@ -447,7 +447,7 @@ eval_result
 #> 
 #> $metadata[[5]]
 #> $metadata[[5]]$latency_ms
-#> [1] 0.5440712
+#> [1] 0.6027222
 #> 
 #> $metadata[[5]]$prompt_length
 #> [1] 259
@@ -459,7 +459,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[5]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[5]]$batch_index
 #> [1] 5
@@ -467,7 +467,7 @@ eval_result
 #> 
 #> $metadata[[6]]
 #> $metadata[[6]]$latency_ms
-#> [1] 0.5664825
+#> [1] 0.5745888
 #> 
 #> $metadata[[6]]$prompt_length
 #> [1] 268
@@ -479,7 +479,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[6]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[6]]$batch_index
 #> [1] 6
@@ -487,7 +487,7 @@ eval_result
 #> 
 #> $metadata[[7]]
 #> $metadata[[7]]$latency_ms
-#> [1] 0.5297661
+#> [1] 0.5478859
 #> 
 #> $metadata[[7]]$prompt_length
 #> [1] 262
@@ -499,7 +499,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[7]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[7]]$batch_index
 #> [1] 7
@@ -507,7 +507,7 @@ eval_result
 #> 
 #> $metadata[[8]]
 #> $metadata[[8]]$latency_ms
-#> [1] 0.5271435
+#> [1] 0.5440712
 #> 
 #> $metadata[[8]]$prompt_length
 #> [1] 270
@@ -519,7 +519,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[8]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[8]]$batch_index
 #> [1] 8
@@ -527,7 +527,7 @@ eval_result
 #> 
 #> $metadata[[9]]
 #> $metadata[[9]]$latency_ms
-#> [1] 0.528574
+#> [1] 0.5486012
 #> 
 #> $metadata[[9]]$prompt_length
 #> [1] 269
@@ -539,7 +539,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[9]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[9]]$batch_index
 #> [1] 9
@@ -547,7 +547,7 @@ eval_result
 #> 
 #> $metadata[[10]]
 #> $metadata[[10]]$latency_ms
-#> [1] 0.5292892
+#> [1] 0.5350113
 #> 
 #> $metadata[[10]]$prompt_length
 #> [1] 264
@@ -559,7 +559,7 @@ eval_result
 #> [1] "Classify the customer support ticket."
 #> 
 #> $metadata[[10]]$timestamp
-#> [1] "2026-02-06 23:31:38 UTC"
+#> [1] "2026-02-07 00:55:36 UTC"
 #> 
 #> $metadata[[10]]$batch_index
 #> [1] 10

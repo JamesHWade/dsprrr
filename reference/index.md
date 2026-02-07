@@ -135,6 +135,10 @@ Execute LLM-generated R code safely
   : Create a CodeAct Module
 - [`module-codeact`](https://jameshwade.github.io/dsprrr/reference/module-codeact.md)
   : CodeAct Module
+- [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+  : Create a Recursive Language Model (RLM) Module
+- [`module-rlm`](https://jameshwade.github.io/dsprrr/reference/module-rlm.md)
+  : Recursive Language Model (RLM) Module
 
 ## Chat-Centric API
 

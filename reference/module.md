@@ -50,10 +50,20 @@ module(
   - `"codeact"`: Hybrid agent with tools + code execution (requires
     runner)
 
+  - `"rlm"`: Recursive Language Model for REPL-based context exploration
+    (requires runner)
+
 - tools:
 
-  Optional list of ellmer ToolDef objects for react modules. If provided
-  with `type = "predict"`, automatically upgrades to react.
+  Optional tools configuration:
+
+  - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef
+    objects.
+
+  - for `type = "rlm"`: named list of R functions injected into the
+    REPL.
+
+  If provided with `type = "predict"`, automatically upgrades to react.
 
 - max_iterations:
 

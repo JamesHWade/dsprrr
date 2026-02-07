@@ -132,12 +132,14 @@ code execution modules.</p>
 <li><p><code>"multichain"</code>: MultiChainComparison module for ensemble reasoning</p></li>
 <li><p><code>"program_of_thought"</code>: Code execution module (requires runner)</p></li>
 <li><p><code>"codeact"</code>: Hybrid agent with tools + code execution (requires runner)</p></li>
+<li><p><code>"rlm"</code>: Recursive Language Model for REPL-based context exploration (requires runner)</p></li>
 </ul></dd>
 
 
 <dt id="arg-tools">tools<a class="anchor" aria-label="anchor" href="#arg-tools"></a></dt>
-<dd><p>Optional list of ellmer ToolDef objects for react modules.
-If provided with <code>type = "predict"</code>, automatically upgrades to react.</p></dd>
+<dd><p>Optional tools configuration:</p><ul><li><p>for <code>type = "react"</code> or <code>type = "codeact"</code>: list of ellmer ToolDef objects.</p></li>
+<li><p>for <code>type = "rlm"</code>: named list of R functions injected into the REPL.</p></li>
+</ul><p>If provided with <code>type = "predict"</code>, automatically upgrades to react.</p></dd>
 
 
 <dt id="arg-max-iterations">max_iterations<a class="anchor" aria-label="anchor" href="#arg-max-iterations"></a></dt>
