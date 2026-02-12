@@ -88,6 +88,22 @@ PredictModule <- R6::R6Class(
         }
       )
 
+      if (length(llm$get_turns()) == 0) {
+        full_prompt <- if (nchar(self$signature@instructions) > 0) {
+          paste(self$signature@instructions, prompt, sep = "\n\n")
+        } else {
+          prompt
+        }
+        response_text <- as.character(jsonlite::toJSON(result, auto_unbox = TRUE))
+        user_turn_mock <- ellmer::UserTurn(
+          contents = list(ellmer::ContentText(full_prompt))
+        )
+        assistant_turn_mock <- ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText(response_text))
+        )
+        llm$set_turns(list(user_turn_mock, assistant_turn_mock))
+      }
+
       # Calculate metrics
       end_time <- Sys.time()
       latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
