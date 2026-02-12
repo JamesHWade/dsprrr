@@ -50,10 +50,10 @@ task <- as_vitals_task(
 # 4. Run evaluation
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [769ms]
+#> ✔ Solving [793ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [140ms]
+#> ✔ Scoring [150ms]
 #> 
 
 # 5. View results
@@ -125,10 +125,10 @@ eval_task <- as_vitals_task(
 
 eval_task$eval()
 #> ℹ Solving
-#> ✔ Solving [643ms]
+#> ✔ Solving [610ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [52ms]
+#> ✔ Scoring [62ms]
 #> 
 
 # Compare performance
@@ -161,10 +161,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [427ms]
+#> ✔ Solving [345ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [49ms]
+#> ✔ Scoring [52ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -200,10 +200,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [426ms]
+#> ✔ Solving [350ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [306ms]
+#> ✔ Scoring [234ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
@@ -238,10 +238,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [351ms]
+#> ✔ Solving [344ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [53ms]
+#> ✔ Scoring [52ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -285,10 +285,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [965ms]
+#> ✔ Solving [874ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [102ms]
+#> ✔ Scoring [99ms]
 #> 
 
 # Get detailed scores
@@ -307,35 +307,30 @@ if (nrow(failures) > 0) {
     input_text <- failures$input[[i]]$text
     cat("Input:", input_text, "\n")
     cat("Expected:", failures$target[i], "\n")
-    cat("Got:", failures$answer[i], "\n\n")
+    cat("Got:", failures$result[i], "\n\n")
   }
 }
 #> 
 #> Failure analysis:
 #> Input: Best purchase ever! 
-#> Expected: positive
-#> Warning: Unknown or uninitialised column: `answer`.
-#> Got: 
+#> Expected: positive 
+#> Got: {"sentiment":"positive"} 
 #> 
 #> Input: Complete garbage 
-#> Expected: negative
-#> Warning: Unknown or uninitialised column: `answer`.
-#> Got: 
+#> Expected: negative 
+#> Got: {"sentiment":"negative"} 
 #> 
 #> Input: It's okay I guess 
-#> Expected: neutral
-#> Warning: Unknown or uninitialised column: `answer`.
-#> Got: 
+#> Expected: neutral 
+#> Got: {"sentiment":"neutral"} 
 #> 
 #> Input: Amazing quality! 
-#> Expected: positive
-#> Warning: Unknown or uninitialised column: `answer`.
-#> Got: 
+#> Expected: positive 
+#> Got: {"sentiment":"positive"} 
 #> 
 #> Input: Never buying again 
-#> Expected: negative
-#> Warning: Unknown or uninitialised column: `answer`.
-#> Got:
+#> Expected: negative 
+#> Got: {"sentiment":"negative"}
 
 # Calculate accuracy
 accuracy <- mean(scores$score == "C")
@@ -386,16 +381,16 @@ for (name in c("basic", "cot")) {
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
 #> ℹ Solving
-#> ✔ Solving [444ms]
+#> ✔ Solving [352ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [290ms]
+#> ✔ Scoring [211ms]
 #> 
 #> ℹ Solving
-#> ✔ Solving [350ms]
+#> ✔ Solving [348ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [216ms]
+#> ✔ Scoring [209ms]
 #> 
 
 # Compare
@@ -439,10 +434,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [1.7s]
+#> ✔ Solving [1.6s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [162ms]
+#> ✔ Scoring [146ms]
 #> 
 
 # Aggregate scores across epochs

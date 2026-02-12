@@ -243,6 +243,9 @@ tibble where input columns are matched with expected output columns.</p>
 <p>Before improving, let’s measure current performance:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">baseline_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Processing 5/10 |  50% | ETA:  1s</span></span>
+<span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="va">baseline_results</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 10 × 3</span></span></span>
 <span><span class="co">#&gt;    ticket                                category  result   </span></span>
@@ -467,7 +470,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; $metadata</span></span>
 <span><span class="co">#&gt; $metadata[[1]]</span></span>
 <span><span class="co">#&gt; $metadata[[1]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.7264614</span></span>
+<span><span class="co">#&gt; [1] 0.8301735</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 272</span></span>
@@ -479,7 +482,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[1]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
@@ -487,7 +490,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]</span></span>
 <span><span class="co">#&gt; $metadata[[2]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.756979</span></span>
+<span><span class="co">#&gt; [1] 0.7240772</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 269</span></span>
@@ -499,7 +502,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[2]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 2</span></span>
@@ -507,7 +510,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]</span></span>
 <span><span class="co">#&gt; $metadata[[3]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.7646084</span></span>
+<span><span class="co">#&gt; [1] 0.8454323</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 269</span></span>
@@ -519,7 +522,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[3]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 3</span></span>
@@ -527,7 +530,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]</span></span>
 <span><span class="co">#&gt; $metadata[[4]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.597477</span></span>
+<span><span class="co">#&gt; [1] 0.733614</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 272</span></span>
@@ -539,7 +542,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[4]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 4</span></span>
@@ -547,7 +550,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[5]]</span></span>
 <span><span class="co">#&gt; $metadata[[5]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.5302429</span></span>
+<span><span class="co">#&gt; [1] 0.6725788</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[5]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 259</span></span>
@@ -559,7 +562,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[5]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[5]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 5</span></span>
@@ -567,7 +570,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[6]]</span></span>
 <span><span class="co">#&gt; $metadata[[6]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.5300045</span></span>
+<span><span class="co">#&gt; [1] 0.629425</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[6]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 268</span></span>
@@ -579,7 +582,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[6]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[6]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 6</span></span>
@@ -587,7 +590,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[7]]</span></span>
 <span><span class="co">#&gt; $metadata[[7]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.5216599</span></span>
+<span><span class="co">#&gt; [1] 0.5853176</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[7]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 262</span></span>
@@ -599,7 +602,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[7]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[7]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 7</span></span>
@@ -607,7 +610,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[8]]</span></span>
 <span><span class="co">#&gt; $metadata[[8]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.5354881</span></span>
+<span><span class="co">#&gt; [1] 0.5483627</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[8]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 270</span></span>
@@ -619,7 +622,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[8]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[8]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 8</span></span>
@@ -627,7 +630,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[9]]</span></span>
 <span><span class="co">#&gt; $metadata[[9]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.5259514</span></span>
+<span><span class="co">#&gt; [1] 0.5333424</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[9]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 269</span></span>
@@ -639,7 +642,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[9]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[9]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 9</span></span>
@@ -647,7 +650,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[10]]</span></span>
 <span><span class="co">#&gt; $metadata[[10]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 0.55933</span></span>
+<span><span class="co">#&gt; [1] 0.5440712</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[10]]$prompt_length</span></span>
 <span><span class="co">#&gt; [1] 264</span></span>
@@ -659,7 +662,7 @@ with automatically selected demonstrations.</p>
 <span><span class="co">#&gt; [1] "Classify the customer support ticket."</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[10]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-07 01:57:17 UTC"</span></span>
+<span><span class="co">#&gt; [1] "2026-02-12 13:18:37 UTC"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $metadata[[10]]$batch_index</span></span>
 <span><span class="co">#&gt; [1] 10</span></span>
@@ -706,16 +709,18 @@ the model predicted</p>
 <span>    accuracy <span class="op">=</span> <span class="va">eval_k</span><span class="op">$</span><span class="va">mean_score</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  2s</span></span>
-<span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Processing 7/10 |  70% | ETA:  1s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Processing 4/10 |  40% | ETA:  3s</span></span>
+<span><span class="co">#&gt; Processing 5/10 |  50% | ETA:  2s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Processing 6/10 |  60% | ETA:  2s</span></span>
+<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  3s</span></span>
+<span><span class="co">#&gt; Processing 7/10 |  70% | ETA:  1s</span></span>
+<span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Processing 3/10 |  30% | ETA:  3s</span></span>
+<span><span class="co">#&gt; Processing 9/10 |  90% | ETA:  1s</span></span>
 <span><span class="co">#&gt; Processing 10/10 | 100% | ETA:  0s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
