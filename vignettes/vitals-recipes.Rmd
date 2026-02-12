@@ -281,7 +281,7 @@ if (nrow(failures) > 0) {
     input_text <- failures$input[[i]]$text
     cat("Input:", input_text, "\n")
     cat("Expected:", failures$target[i], "\n")
-    cat("Got:", failures$answer[i], "\n\n")
+    cat("Got:", failures$result[i], "\n\n")
   }
 }
 

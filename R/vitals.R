@@ -42,20 +42,23 @@ as_vitals_solver <- function(
   sig_input_names <- vapply(sig_inputs, function(x) x$name, character(1))
   output_type <- module$signature@output_type
 
-  # Check if output type is simple string (single string field in TypeObject)
-  is_simple_string <- FALSE
-  if (inherits(output_type, "ellmer::TypeObject")) {
+  # Check if output type produces a scalar string value that can be compared
+
+  # directly by vitals scorers like detect_match(). Types that produce scalar
+
+  # strings don't need JSON serialization; complex types (multi-field objects)
+  # are JSON-encoded for scorer compatibility.
+  is_scalar_output <- inherits(output_type, "ellmer::TypeEnum") ||
+    (inherits(output_type, "ellmer::TypeBasic") &&
+      identical(output_type@type, "string"))
+
+  if (!is_scalar_output && inherits(output_type, "ellmer::TypeObject")) {
     props <- output_type@properties
     if (length(props) == 1) {
       prop <- props[[1]]
-      if (
-        inherits(prop, "ellmer::TypeBasic") && identical(prop@type, "string")
-      ) {
-        is_simple_string <- TRUE
-      }
+      is_scalar_output <- inherits(prop, "ellmer::TypeBasic") &&
+        identical(prop@type, "string")
     }
-  } else if (inherits(output_type, "ellmer::TypeBasic")) {
-    is_simple_string <- identical(output_type@type, "string")
   }
 
   # Capture extra args for run_dataset
@@ -105,8 +108,8 @@ as_vitals_solver <- function(
     )
 
     # Extract results in vitals format
-    if (is_simple_string) {
-      # For simple strings, extract the string value
+    if (is_scalar_output) {
+      # For scalar outputs (strings, enums), extract the value directly
       result_values <- vapply(
         results$result,
         function(r) {

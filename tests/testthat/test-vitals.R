@@ -129,6 +129,36 @@ test_that("as_vitals_solver handles multi-input modules", {
   expect_true(all(result$result == "answer"))
 })
 
+test_that("as_vitals_solver returns plain strings for enum outputs", {
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_enum(
+      values = c("positive", "negative", "neutral")
+    ),
+    instructions = "Classify sentiment"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  mock_llm <- structure(
+    list(
+      chat_structured = function(prompt, ...) "positive",
+      clone = function(...) mock_llm,
+      set_turns = function(turns) invisible(NULL),
+      get_turns = function(...) list()
+    ),
+    class = "Chat"
+  )
+
+  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
+  result <- solver(list(tibble::tibble(text = "I love this!")))
+
+  # Enum values should be returned as plain strings, not JSON-encoded
+
+  # (i.e., "positive" not "\"positive\"")
+  expect_equal(result$result[[1]], "positive")
+  expect_equal(nchar(result$result[[1]]), nchar("positive"))
+})
+
 # --- as_dsprrr_metric tests ---
 
 test_that("as_dsprrr_metric wraps vitals scorers", {
