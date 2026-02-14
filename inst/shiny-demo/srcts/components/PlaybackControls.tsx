@@ -140,7 +140,7 @@ export function PlaybackControls({
               className="flex-1 h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
             />
             <span className="text-xs font-mono text-muted-foreground whitespace-nowrap text-right">
-              {currentIndex + 1}/{totalIterations}
+              {currentIndex < 0 ? "\u2014" : currentIndex + 1}/{totalIterations}
             </span>
           </div>
 
