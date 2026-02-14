@@ -1,55 +1,169 @@
-import type { Iteration } from "@/lib/types";
+import type { Iteration, TokenUsage } from "@/lib/types";
 import { formatChars } from "@/lib/utils";
 
 interface TokenBudgetProps {
   totalContextChars: number;
   iterations: Iteration[];
   currentIndex: number;
+  totalTokens?: TokenUsage;
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
 }
 
 export function TokenBudget({
   totalContextChars,
   iterations,
   currentIndex,
+  totalTokens,
 }: TokenBudgetProps) {
-  // Estimate characters actually transferred to token space
+  // ---- Context window economy ----
+  // Chars actually pulled into token space by peek/search
   const transferredChars = iterations
     .slice(0, currentIndex + 1)
-    .reduce((sum, iter) => {
-      return sum + iter.output.length + iter.code.length;
-    }, 0);
+    .reduce((sum, iter) => sum + iter.output.length + iter.code.length, 0);
 
-  const ratio = totalContextChars > 0 ? transferredChars / totalContextChars : 0;
-  const percentage = (ratio * 100).toFixed(1);
+  const contextRatio = totalContextChars > 0 ? transferredChars / totalContextChars : 0;
+  const contextPct = (contextRatio * 100).toFixed(1);
+
+  // Hypothetical: if you crammed the whole context in, how many tokens?
+  // ~4 chars per token is a common approximation
+  const hypotheticalTokens = Math.round(totalContextChars / 4);
+
+  // ---- Actual token usage ----
+  let inputSoFar = 0;
+  let outputSoFar = 0;
+  for (let i = 0; i <= Math.min(currentIndex, iterations.length - 1); i++) {
+    const t = iterations[i].tokens;
+    if (t) {
+      inputSoFar += t.input;
+      outputSoFar += t.output;
+    }
+  }
+
+  let inputTotal = totalTokens?.input ?? 0;
+  let outputTotal = totalTokens?.output ?? 0;
+  if (!inputTotal && !outputTotal) {
+    for (const iter of iterations) {
+      if (iter.tokens) {
+        inputTotal += iter.tokens.input;
+        outputTotal += iter.tokens.output;
+      }
+    }
+  }
+
+  const totalSoFar = inputSoFar + outputSoFar;
+  const grandTotal = inputTotal + outputTotal;
+  const hasTokenData = grandTotal > 0;
+
+  // Savings: hypothetical full-context tokens vs actual tokens used
+  const savings = hasTokenData && hypotheticalTokens > 0
+    ? Math.max(0, ((hypotheticalTokens - grandTotal) / hypotheticalTokens) * 100)
+    : 0;
 
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-3">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-        Token Economy
-      </h3>
-
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Total context</span>
-          <span className="font-mono font-medium">{formatChars(totalContextChars)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Actually transferred</span>
-          <span className="font-mono font-medium text-primary">{formatChars(transferredChars)}</span>
-        </div>
+    <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="px-4 py-3 border-b bg-muted/30">
+        <h3 className="text-sm font-semibold">Token Economy</h3>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          RLMs read selectively instead of stuffing context windows
+        </p>
       </div>
 
-      {/* Visual comparison bar */}
-      <div className="space-y-1">
-        <div className="h-3 rounded-full bg-muted overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary transition-all duration-500"
-            style={{ width: `${Math.min(100, Number(percentage))}%` }}
-          />
+      <div className="p-4 space-y-5">
+        {/* Context Window comparison */}
+        <div className="space-y-3">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Context Window
+          </div>
+
+          {/* Stacked bar: full context vs actually read */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-6 rounded bg-muted/80 relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center px-2">
+                  <span className="text-[10px] font-mono text-muted-foreground z-10">
+                    Full context: {formatChars(totalContextChars)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-6 rounded relative overflow-hidden"
+                style={{ maxWidth: `${Math.max(3, Number(contextPct))}%` }}
+              >
+                <div className="absolute inset-0 bg-primary rounded" />
+                <div className="absolute inset-0 flex items-center px-2">
+                  <span className="text-[10px] font-mono text-primary-foreground z-10 whitespace-nowrap">
+                    {formatChars(transferredChars)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <span className="text-2xl font-bold tabular-nums text-primary">{contextPct}%</span>
+            <span className="text-xs text-muted-foreground ml-1.5">of context entered token space</span>
+          </div>
         </div>
-        <div className="text-xs text-muted-foreground text-center">
-          {percentage}% of context entered token space
-        </div>
+
+        {/* Token consumption */}
+        {hasTokenData && (
+          <div className="space-y-3 pt-2 border-t">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Token Consumption
+            </div>
+
+            {/* Running total with progress */}
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-bold tabular-nums">{formatTokens(totalSoFar)}</span>
+              <span className="text-xs text-muted-foreground">
+                of {formatTokens(grandTotal)} total
+              </span>
+            </div>
+
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${grandTotal > 0 ? Math.min((totalSoFar / grandTotal) * 100, 100) : 0}%` }}
+              />
+            </div>
+
+            {/* Input / Output breakdown */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-center p-2 rounded-lg bg-muted/50">
+                <div className="text-sm font-semibold tabular-nums">{formatTokens(inputSoFar)}</div>
+                <div className="text-[10px] text-muted-foreground">input</div>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-muted/50">
+                <div className="text-sm font-semibold tabular-nums">{formatTokens(outputSoFar)}</div>
+                <div className="text-[10px] text-muted-foreground">output</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Savings callout */}
+        {hasTokenData && savings > 0 && totalContextChars > 0 && (
+          <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 p-3 space-y-1">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-green-700 dark:text-green-400 tabular-nums">
+                {savings.toFixed(0)}%
+              </span>
+              <span className="text-xs text-green-700 dark:text-green-400 font-medium">
+                fewer tokens than stuffing
+              </span>
+            </div>
+            <p className="text-[11px] text-green-600 dark:text-green-500">
+              Naively cramming {formatChars(totalContextChars)} would use ~{formatTokens(hypotheticalTokens)} tokens.
+              The RLM used {formatTokens(grandTotal)}.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

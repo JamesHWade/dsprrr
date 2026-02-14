@@ -36,6 +36,13 @@ function getConceptCallout(
     };
   }
 
+  if (/llm_query\s*\(/.test(code)) {
+    return {
+      title: "Recursive Sub-Query",
+      body: "llm_query() delegates a sub-question to another LLM. The RLM can orchestrate multiple models — analyzing code snippets, comparing patterns, or synthesizing findings from different angles.",
+    };
+  }
+
   if (!iter.success && !iter.is_final) {
     return {
       title: "Self-Correction",
@@ -85,6 +92,12 @@ export function IterationCard({ iteration, isNew }: IterationCardProps) {
               style={{ backgroundColor: phaseInfo.color }}
             >
               {phaseInfo.label}
+            </span>
+          )}
+
+          {/llm_query\s*\(/.test(iteration.code) && (
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400">
+              Sub-LM
             </span>
           )}
 

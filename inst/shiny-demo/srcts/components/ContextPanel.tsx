@@ -1,7 +1,6 @@
 import type { ContextVariable, Iteration, TokenUsage } from "@/lib/types";
 import { formatChars } from "@/lib/utils";
 import { TokenBudget } from "./TokenBudget";
-import { TokenTally } from "./TokenTally";
 
 interface ContextPanelProps {
   contextVariables: ContextVariable[];
@@ -47,6 +46,14 @@ export function ContextPanel({
 
   return (
     <div className="sticky top-20 space-y-4">
+      {/* Token Economy — the centerpiece */}
+      <TokenBudget
+        totalContextChars={totalChars}
+        iterations={iterations}
+        currentIndex={currentIndex}
+        totalTokens={totalTokens}
+      />
+
       {/* Context variables */}
       <div className="rounded-xl border bg-card p-4 space-y-3">
         <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -78,20 +85,6 @@ export function ContextPanel({
           })}
         </div>
       </div>
-
-      {/* Token budget comparison */}
-      <TokenBudget
-        totalContextChars={totalChars}
-        iterations={iterations}
-        currentIndex={currentIndex}
-      />
-
-      {/* Token usage tally */}
-      <TokenTally
-        iterations={iterations}
-        currentIndex={currentIndex}
-        totalTokens={totalTokens}
-      />
 
       {/* Tool usage */}
       <div className="rounded-xl border bg-card p-4 space-y-3">

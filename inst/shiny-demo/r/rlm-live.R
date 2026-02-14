@@ -89,7 +89,7 @@ run_live_rlm <- function(session, config) {
         verbose = FALSE
       )
 
-      result <- run(rlm, question = config$question, .llm = llm)
+      result <- dsprrr::run(rlm, question = config$question, .llm = llm)
 
       history <- rlm$get_repl_history()
       last_run <- history[[length(history)]]
@@ -135,7 +135,7 @@ run_live_rlm <- function(session, config) {
         model = config$model %||% "gpt-5-mini",
         context_variables = list(),
         iterations = iterations_out,
-        final_answer = get_output(result)$answer,
+        final_answer = dsprrr::get_output(result)$answer,
         iterations_used = last_run$iterations_used,
         llm_calls_used = last_run$llm_calls_used,
         total_tokens = list(input = total_input, output = total_output)

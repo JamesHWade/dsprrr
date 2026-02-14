@@ -129,6 +129,7 @@ export function App() {
                 contextVariables={activeTrace.context_variables}
                 iterations={iterations}
                 currentIndex={playback.currentIndex}
+                totalTokens={activeTrace.total_tokens}
               />
             )}
           </div>
