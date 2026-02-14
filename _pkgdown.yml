@@ -118,7 +118,7 @@ articles:
     - tutorial-deploy-to-production
     - text-adventure
     - llms-txt
-    - tutorial-rlm-dsprrr
+    - "tutorial-rlm-dsprrr"
 
   - title: How-to Guides
     desc: Task-oriented guides for specific workflows
@@ -140,7 +140,7 @@ articles:
     - concepts-signatures-modules
     - concepts-optimization-theory
     - concepts-why-metrics-matter
-    - how-rlm-works
+    - "how-rlm-works"
     - advanced-modules
     - advanced-optimization
     - reasoning-models
