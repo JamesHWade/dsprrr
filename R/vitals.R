@@ -43,21 +43,22 @@ as_vitals_solver <- function(
   output_type <- module$signature@output_type
 
   # Check if output type produces a scalar string value that can be compared
-
   # directly by vitals scorers like detect_match(). Types that produce scalar
-
   # strings don't need JSON serialization; complex types (multi-field objects)
   # are JSON-encoded for scorer compatibility.
-  is_scalar_output <- inherits(output_type, "ellmer::TypeEnum") ||
-    (inherits(output_type, "ellmer::TypeBasic") &&
-      identical(output_type@type, "string"))
+  is_scalar_string_type <- function(type) {
+    inherits(type, "ellmer::TypeEnum") ||
+      (inherits(type, "ellmer::TypeBasic") &&
+        identical(type@type, "string"))
+  }
+  is_scalar_output <- is_scalar_string_type(output_type)
 
   if (!is_scalar_output && inherits(output_type, "ellmer::TypeObject")) {
     props <- output_type@properties
     if (length(props) == 1) {
-      prop <- props[[1]]
-      is_scalar_output <- inherits(prop, "ellmer::TypeBasic") &&
-        identical(prop@type, "string")
+      # Signatures like "text -> sentiment: enum(...)" compile to a single
+      # object field; unwrap it so detect_match() compares plain values.
+      is_scalar_output <- is_scalar_string_type(props[[1]])
     }
   }
 
