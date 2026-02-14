@@ -13,8 +13,10 @@ local_reset_cache <- function(.env = parent.frame()) {
       # Reset to defaults
       dsprrr:::configure_cache()
       dsprrr:::clear_cache()
+      dsprrr::clear_prompt_history()
     },
     envir = .env
   )
   dsprrr:::clear_cache()
+  dsprrr::clear_prompt_history()
 }
