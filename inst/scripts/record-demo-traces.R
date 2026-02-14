@@ -15,7 +15,9 @@ library(ellmer)
 library(jsonlite)
 
 output_dir <- file.path("inst", "shiny-demo", "data", "runs")
-if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
 
 # ---- Helper: Read package source ----
 read_package_source <- function(pkg_path) {
@@ -34,9 +36,13 @@ read_package_source <- function(pkg_path) {
   )
 
   all_files <- c(r_files, scss_files)
-  contents <- vapply(all_files, function(f) {
-    paste(readLines(f, warn = FALSE), collapse = "\n")
-  }, character(1))
+  contents <- vapply(
+    all_files,
+    function(f) {
+      paste(readLines(f, warn = FALSE), collapse = "\n")
+    },
+    character(1)
+  )
 
   paste(
     sprintf("# ---- FILE: %s ----\n%s", all_files, contents),
@@ -45,8 +51,14 @@ read_package_source <- function(pkg_path) {
 }
 
 # ---- Helper: Convert repl_history to TraceData JSON ----
-trace_to_json <- function(run_id, history_entry, question, model,
-                          context_vars, llm_calls = 0L) {
+trace_to_json <- function(
+  run_id,
+  history_entry,
+  question,
+  model,
+  context_vars,
+  llm_calls = 0L
+) {
   iterations <- lapply(history_entry$history, function(h) {
     list(
       iteration = h$iteration,

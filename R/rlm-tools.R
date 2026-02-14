@@ -323,7 +323,11 @@ strip_rlm_code_fences <- function(code) {
   }
 
   trimmed <- trimws(code)
-  match <- regexec("^```(?:r|R)?\\s*\\n([\\s\\S]*)\\n```\\s*$", trimmed, perl = TRUE)
+  match <- regexec(
+    "^```(?:r|R)?\\s*\\n([\\s\\S]*)\\n```\\s*$",
+    trimmed,
+    perl = TRUE
+  )
   groups <- regmatches(trimmed, match)[[1]]
 
   if (length(groups) >= 2) {

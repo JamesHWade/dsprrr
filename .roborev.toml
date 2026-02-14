@@ -8,8 +8,12 @@ refine_reasoning = "standard"
 review_guidelines = """
 This is an R package using S7 (immutable Signature), R6 (stateful Module), and ellmer for LLM calls.
 
+Automated checks (run these on changed .R files):
+- Run `air format --check .` and flag any unformatted files as a Medium finding
+- Check for snake_case naming violations in new/changed code
+
 Quality gates that must pass:
-- air format (R/ and tests/testthat/) - tidyverse-style formatting
+- air format (entire repo) - tidyverse-style formatting
 - jarl check --fix - linting
 - devtools::check() - R CMD check with no errors/warnings
 - pkgdown::build_site() - documentation site builds
