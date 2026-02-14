@@ -47,6 +47,8 @@ navbar:
           href: articles/text-adventure.html
         - text: "Generate Package Docs"
           href: articles/llms-txt.html
+        - text: "Explore Codebases with RLMs"
+          href: articles/tutorial-rlm-dsprrr.html
     howto:
       text: How-to Guides
       menu:
@@ -79,6 +81,8 @@ navbar:
           href: articles/concepts-signatures-modules.html
         - text: "How Optimization Works"
           href: articles/concepts-optimization-theory.html
+        - text: "Why Metrics Matter"
+          href: articles/concepts-why-metrics-matter.html
         - text: "---"
         - text: "Deep Dives"
         - text: "Advanced Reasoning"
@@ -87,6 +91,8 @@ navbar:
           href: articles/advanced-optimization.html
         - text: "Reasoning Models"
           href: articles/reasoning-models.html
+        - text: "How RLMs Work"
+          href: articles/how-rlm-works.html
     reference:
       text: Reference
       menu:
@@ -101,7 +107,7 @@ logo:
 
 articles:
   - title: Tutorials
-    desc: Learn dsprrr step by step
+    desc: Learn dsprrr step by step, from first LLM call to production deployment
     contents:
     - getting-started
     - tutorial-hello-world
@@ -112,9 +118,10 @@ articles:
     - tutorial-deploy-to-production
     - text-adventure
     - llms-txt
+    - tutorial-rlm-dsprrr
 
   - title: How-to Guides
-    desc: Solve specific problems
+    desc: Task-oriented guides for specific workflows
     contents:
     - troubleshooting
     - compilation-optimization
@@ -127,7 +134,7 @@ articles:
     - advanced-ellmer
 
   - title: Concepts
-    desc: Understand the philosophy and design
+    desc: Understand the philosophy, design, and theory behind dsprrr
     contents:
     - concepts-dspy-philosophy
     - concepts-signatures-modules
@@ -136,26 +143,49 @@ articles:
     - advanced-modules
     - advanced-optimization
     - reasoning-models
+    - articles/how-rlm-works
 
   - title: Reference
     desc: Quick lookup
     contents:
     - cheatsheet
 
+# ── Reference ──────────────────────────────────────────────────────────────────
+# Organized as: Define → Build → Compose → Validate → Evaluate →
+#               Optimize → Configure → Deploy → Integrate
+
 reference:
-  - title: Core Functions
-    desc: Main functions for building LLM applications
+  - title: Signatures & Inputs
+    desc: Declare typed schemas for LLM operations
     contents:
     - signature
+    - Signature
+    - input
+    - starts_with("input_")
+    - dsp_trainset
+
+  - title: Signature Transforms
+    desc: Add reasoning, chain-of-thought, and other prompt-level behaviors
+    contents:
+    - signature-transforms
+    - with_reasoning
+    - without_reasoning
+    - has_reasoning
+    - chain_of_thought
+
+  - title: Modules
+    desc: Create, run, and inspect LLM modules
+    contents:
     - module
     - run
     - run_dataset
     - predict.Module
-    - evaluate
-    - evaluate_dsp
+    - dsp
+    - as_module
+    - get_last_trace
 
-  - title: Module Composition
-    desc: Chain modules into pipelines
+  - title: Pipelines
+    desc: Chain modules into multi-step workflows
     contents:
     - pipeline
     - "%>>%"
@@ -164,14 +194,9 @@ reference:
     - with_inputs
     - select_outputs
 
-  - title: Advanced Reasoning Modules
-    desc: DSPy-inspired reasoning patterns for improved accuracy
+  - title: Reasoning & Ensemble Modules
+    desc: Combine and refine outputs for improved accuracy
     contents:
-    - signature-transforms
-    - with_reasoning
-    - without_reasoning
-    - has_reasoning
-    - chain_of_thought
     - module-wrapper
     - best_of_n
     - refine
@@ -186,14 +211,22 @@ reference:
     - reduce_first
     - reduce_best_by_metric
 
-  - title: Tool-Using Modules
-    desc: Modules that call tools or retrieve context
+  - title: Agentic Modules
+    desc: Tool use, code execution, RAG, and recursive language models
     contents:
     - module-react
     - rag_module
+    - r_code_runner
+    - r-code-runner
+    - program_of_thought
+    - module-program-of-thought
+    - code_act
+    - module-codeact
+    - rlm_module
+    - module-rlm
 
   - title: Assertions
-    desc: Output validation with backtracking
+    desc: Validate outputs and retry with automatic backtracking
     contents:
     - assertions
     - Assertion
@@ -213,57 +246,15 @@ reference:
     - assert_not_empty
     - assert_range
 
-  - title: Code Execution Modules
-    desc: Execute LLM-generated R code safely
+  - title: Evaluation & Metrics
+    desc: Score module outputs and measure performance
     contents:
-    - r_code_runner
-    - r-code-runner
-    - program_of_thought
-    - module-program-of-thought
-    - code_act
-    - module-codeact
-    - rlm_module
-    - module-rlm
-
-  - title: Chat-Centric API
-    desc: ellmer-style pipe-friendly functions
-    contents:
-    - dsp
-    - as_module
-    - get_last_trace
-
-  - title: Configuration
-    desc: Setup and configure dsprrr
-    contents:
-    - dsp_configure
-    - dsprrr_sitrep
-    - default-chat
-    - get_default_chat
-    - set_default_chat
-    - clear_default_chat
-    - with_lm
-    - local_lm
-    - configure_cache
-    - clear_cache
-    - cache_stats
-
-  - title: Async and Streaming
-    desc: Asynchronous and streaming operations
-    contents:
-    - async
-    - run_async
-    - stream_async
-
-  - title: Signatures and Inputs
-    desc: Define module interfaces
-    contents:
-    - Signature
-    - input
-    - starts_with("input_")
-    - dsp_trainset
+    - evaluate
+    - evaluate_dsp
+    - starts_with("metric_")
 
   - title: Teleprompters
-    desc: Optimization strategies
+    desc: Automated prompt optimization strategies
     contents:
     - Teleprompter
     - LabeledFewShot
@@ -280,7 +271,7 @@ reference:
     - ensemble_from_programs
 
   - title: Optimization
-    desc: Functions for optimizing module performance
+    desc: Compile modules and tune parameters
     contents:
     - optimize_grid
     - compile
@@ -289,8 +280,8 @@ reference:
     - module_trials
     - module_metrics
 
-  - title: Optimizer Accessors
-    desc: Convenience functions for working with optimization results
+  - title: Optimization Results
+    desc: Inspect trials, extract best configurations, and export
     contents:
     - optimizer-accessors
     - best_params
@@ -304,7 +295,7 @@ reference:
     - print.dsprrr_optimization_summary
 
   - title: Optimizer Infrastructure
-    desc: Low-level optimizer building blocks
+    desc: Low-level building blocks for custom optimizers
     contents:
     - OptimizerControl
     - optimizer_control
@@ -319,32 +310,41 @@ reference:
     - read_trials_jsonl
     - load_trial_log
 
-  - title: Metrics
-    desc: Evaluation metrics
+  - title: Configuration
+    desc: Set up LLM providers, caching, and global options
     contents:
-    - starts_with("metric_")
+    - dsp_configure
+    - dsprrr_sitrep
+    - default-chat
+    - get_default_chat
+    - set_default_chat
+    - clear_default_chat
+    - with_lm
+    - local_lm
+    - configure_cache
+    - clear_cache
+    - cache_stats
 
-  - title: Orchestration
-    desc: Production workflow helpers
+  - title: Async & Streaming
+    desc: Non-blocking execution and streaming responses
     contents:
-    - orchestration
-    - pin_module_config
-    - restore_module_config
-    - pin_trace
-    - pin_vitals_log
-    - use_dsprrr_template
-    - validate_workflow
+    - async
+    - run_async
+    - stream_async
 
-  - title: Debugging & Inspection
-    desc: Prompt inspection and history
+  - title: Debugging & Traces
+    desc: Inspect prompts, execution history, and traces
     contents:
     - prompt-visibility
     - get_last_prompt
     - inspect_history
     - clear_prompt_history
+    - export_traces
+    - summarize_traces
+    - clear_traces
 
-  - title: Result Accessors
-    desc: Extract data from structured results
+  - title: Results & Printing
+    desc: Extract outputs, costs, and display formatted results
     contents:
     - accessors
     - get_output
@@ -363,15 +363,19 @@ reference:
     - print.SIMBA
     - print.COPRO
 
-  - title: Traces
-    desc: Execution trace utilities
+  - title: Production & Deployment
+    desc: Pin configurations, validate workflows, and deploy to production
     contents:
-    - export_traces
-    - summarize_traces
-    - clear_traces
+    - orchestration
+    - pin_module_config
+    - restore_module_config
+    - pin_trace
+    - pin_vitals_log
+    - use_dsprrr_template
+    - validate_workflow
 
   - title: Vitals Integration
-    desc: Integration with vitals package
+    desc: Bridge to the vitals evaluation framework
     contents:
     - as_vitals_solver
     - as_vitals_task
@@ -386,22 +390,17 @@ reference:
     - metric_detect_includes
     - metric_detect_pattern
 
-  - title: ellmer Integration
-    desc: Deep integration with ellmer
+  - title: ellmer & RAG
+    desc: Tool registration with ellmer and retrieval with ragnar
     contents:
     - as_ellmer_tool
     - register_dsprrr_tool
-
-  - title: RAG Integration
-    desc: Retrieval-Augmented Generation with ragnar
-    contents:
-    - rag_module
     - ragnar_tool
     - create_search_tool
     - print.ragnar_tool
 
   - title: tidymodels Integration
-    desc: parsnip model specification and dials parameters
+    desc: Use LLM modules as parsnip model engines with dials parameters
     contents:
     - llm_predict
     - fit_llm_predict
@@ -412,14 +411,15 @@ reference:
     - top_p
     - reasoning_effort
 
-  - title: Model Utilities
-    desc: Model detection and provider defaults
+  - title: Demo & Interactive Tools
+    desc: Interactive demonstrations and exploration tools
+    contents:
+    - run_demo
+
+  - title: Utilities
+    desc: Model detection, provider defaults, and helper functions
     contents:
     - is_reasoning_model
     - provider_defaults
-
-  - title: Utilities
-    desc: Helper functions
-    contents:
     - eval_vignette
     - has_ellmer_credentials

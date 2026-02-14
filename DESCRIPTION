@@ -38,6 +38,7 @@ Imports:
     tibble,
     withr
 Suggests:
+    future,
     lifecycle,
     callr,
     coro,
@@ -46,6 +47,7 @@ Suggests:
     parsnip,
     pins,
     promises,
+    shiny (>= 1.8.0),
     quarto,
     ragnar,
     rmarkdown,
@@ -66,6 +68,7 @@ Collate:
     'cache.R'
     'chat-default.R'
     'compile.R'
+    'demo.R'
     'dsp.R'
     'dsprrr-package.R'
     'ellmer.R'
@@ -82,8 +85,8 @@ Collate:
     'module-predict.R'
     'module-program-of-thought.R'
     'module-rag.R'
-    'module-react.R'
     'module-react-doc.R'
+    'module-react.R'
     'module-rlm.R'
     'module-wrapper.R'
     'module.R'

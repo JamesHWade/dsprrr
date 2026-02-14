@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "es2022",
+    "noEmit": true,
+    "moduleResolution": "node",
+    "lib": ["es2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": { "@/*": ["./srcts/*"] }
+  },
+  "include": ["srcts/**/*.ts", "srcts/**/*.tsx", "srcts/**/*.d.ts"]
+}

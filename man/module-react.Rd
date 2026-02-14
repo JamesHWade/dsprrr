@@ -38,11 +38,12 @@ result <- run(agent, question = "What is ReAct?", .llm = llm)
 questions <- tibble::tibble(question = c("Q1", "Q2"))
 results <- run_dataset(agent, questions, .llm = llm)
 }
+
 }
 \seealso{
 \itemize{
-\item \code{\link{module}} for creating modules
-\item \code{\link{ragnar_tool}} and \code{\link{create_search_tool}} for search tools
-\item \code{\link{code_act}} for tool + code execution agents
+\item \code{\link[=module]{module()}} for creating modules
+\item \code{\link[=ragnar_tool]{ragnar_tool()}} and \code{\link[=create_search_tool]{create_search_tool()}} for search tools
+\item \code{\link[=code_act]{code_act()}} for tool + code execution agents
 }
 }
