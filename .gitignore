@@ -27,6 +27,10 @@ gh-issue-optimizers.md
 # Shiny demo build artifacts
 inst/shiny-demo/node_modules/
 
+# Posit Connect deployment artifacts
+.posit/
+renv.lock
+
 # Claude Code - user-specific settings (commands are committed)
 .claude/settings*.json
 .claude/*.local.*
