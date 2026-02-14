@@ -3,7 +3,7 @@
 #
 # Requirements:
 # - OPENAI_API_KEY environment variable set
-# - bslib, shiny, and brand.yml source packages available
+# - git available (to clone bslib source)
 #
 # Usage:
 #   Rscript inst/scripts/record-demo-traces.R
@@ -19,35 +19,59 @@ if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
 
-# ---- Helper: Read package source ----
+# ---- Helper: Read package source from a directory ----
 read_package_source <- function(pkg_path) {
   r_files <- list.files(
     file.path(pkg_path, "R"),
-    pattern = "\\.[rR]$",
+    pattern = "[.][rR]$",
     full.names = TRUE,
     recursive = TRUE
   )
 
   scss_files <- list.files(
     pkg_path,
-    pattern = "\\.(scss|sass|css)$",
+    pattern = "[.](scss|sass|css)$",
     full.names = TRUE,
     recursive = TRUE
   )
 
   all_files <- c(r_files, scss_files)
+  # Use paths relative to pkg_path for cleaner file labels
+  rel_paths <- sub(paste0("^", normalizePath(pkg_path), "/?"), "", all_files)
   contents <- vapply(
     all_files,
-    function(f) {
-      paste(readLines(f, warn = FALSE), collapse = "\n")
-    },
+    function(f) paste(readLines(f, warn = FALSE), collapse = "\n"),
     character(1)
   )
 
   paste(
-    sprintf("# ---- FILE: %s ----\n%s", all_files, contents),
+    sprintf("# ---- FILE: %s ----\n%s", rel_paths, contents),
     collapse = "\n\n"
   )
+}
+
+# ---- Helper: Clone a GitHub repo to a temp directory ----
+clone_source <- function(repo, ref = "main") {
+  dest <- file.path(tempdir(), basename(repo))
+  if (dir.exists(dest)) {
+    unlink(dest, recursive = TRUE)
+  }
+  system2(
+    "git",
+    c(
+      "clone",
+      "--depth=1",
+      paste0("--branch=", ref),
+      paste0("https://github.com/", repo, ".git"),
+      dest
+    ),
+    stdout = FALSE,
+    stderr = FALSE
+  )
+  if (!dir.exists(dest)) {
+    cli::cli_abort("Failed to clone {repo}")
+  }
+  dest
 }
 
 # ---- Helper: Convert repl_history to TraceData JSON ----
@@ -102,30 +126,29 @@ main <- function() {
     "final CSS output. What happens to this color during Sass compilation?"
   )
 
-  # Load source packages (adjust paths as needed)
-  cli::cli_alert_info("Loading source packages...")
+  # Clone source repos
+  cli::cli_alert_info("Cloning bslib source from GitHub...")
+  bslib_path <- clone_source("rstudio/bslib")
+  cli::cli_alert_success("Cloned bslib to {bslib_path}")
 
-  # You'll need to adjust these paths to where the packages are installed
-  bslib_source <- read_package_source(system.file(package = "bslib"))
-  shiny_source <- read_package_source(system.file(package = "shiny"))
+  cli::cli_alert_info("Reading source files...")
+  bslib_source <- read_package_source(bslib_path)
+  bslib_r_files <- list.files(file.path(bslib_path, "R"), pattern = "[.][rR]$")
+  bslib_scss <- list.files(
+    bslib_path,
+    pattern = "[.](scss|sass|css)$",
+    recursive = TRUE
+  )
 
   context_vars <- list(
     list(
       name = "bslib_source",
       size_chars = nchar(bslib_source),
-      n_files = length(list.files(
-        file.path(system.file(package = "bslib"), "R"),
-        recursive = TRUE
-      ))
-    ),
-    list(
-      name = "shiny_source",
-      size_chars = nchar(shiny_source),
-      n_files = length(list.files(
-        file.path(system.file(package = "shiny"), "R"),
-        recursive = TRUE
-      ))
+      n_files = length(bslib_r_files) + length(bslib_scss)
     )
+  )
+  cli::cli_alert_info(
+    "bslib: {nchar(bslib_source)} chars, {length(bslib_r_files)} R + {length(bslib_scss)} scss files"
   )
 
   runner <- r_code_runner(timeout = 30)
@@ -136,7 +159,7 @@ main <- function() {
 
     llm <- chat_openai(model = "gpt-5-mini")
     rlm <- rlm_module(
-      signature = "bslib_source, shiny_source, question -> answer",
+      signature = "bslib_source, question -> answer",
       runner = runner,
       max_iterations = 15L,
       verbose = TRUE
@@ -147,7 +170,6 @@ main <- function() {
         result <- run(
           rlm,
           bslib_source = bslib_source,
-          shiny_source = shiny_source,
           question = question,
           .llm = llm
         )
@@ -180,7 +202,7 @@ main <- function() {
   sub_llm <- chat_openai(model = "gpt-5-mini")
 
   rlm_recursive <- rlm_module(
-    signature = "bslib_source, shiny_source, question -> answer",
+    signature = "bslib_source, question -> answer",
     runner = runner,
     max_iterations = 15L,
     sub_lm = sub_llm,
@@ -193,7 +215,6 @@ main <- function() {
       result <- run(
         rlm_recursive,
         bslib_source = bslib_source,
-        shiny_source = shiny_source,
         question = question,
         .llm = llm
       )
