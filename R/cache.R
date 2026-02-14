@@ -641,6 +641,10 @@ cached_chat_structured <- function(
       .dsprrr_env$cache_first_hit_shown <- TRUE
     }
 
+    # Inject synthetic turns so callers see a valid user/assistant exchange
+    # even though the LLM was not actually called.
+    inject_cache_hit_turns(llm, prompt, cached_result)
+
     return(cached_result)
   }
 
@@ -653,4 +657,56 @@ cached_chat_structured <- function(
   cache$set(key, result)
 
   result
+}
+
+#' Inject synthetic turns into a Chat after a cache hit
+#'
+#' When `cached_chat_structured()` returns a cached result the underlying Chat
+#' object has no record of the exchange. This helper appends a synthetic
+#' user/assistant turn pair so that downstream code (trace recording, metadata
+#' extraction via `last_turn()`, `inspect_history()`) sees a valid conversation.
+#'
+#' The function is intentionally defensive: if the Chat lacks `get_turns` or
+#' `set_turns` (e.g. a minimal mock), it silently does nothing.
+#'
+#' @param llm An ellmer Chat object (or mock).
+#' @param prompt Character. The full prompt that was sent (already includes
+#'   instructions if any).
+#' @param result The cached LLM response.
+#'
+#' @noRd
+inject_cache_hit_turns <- function(llm, prompt, result) {
+  # Bail out if the Chat doesn't support turn manipulation.
+  # Both get_turns and set_turns are required — without get_turns we can't
+
+  # preserve existing history, so calling set_turns would silently wipe it.
+  set_turns_fn <- tryCatch(llm$set_turns, error = function(e) NULL)
+  if (!is.function(set_turns_fn)) {
+    return(invisible(NULL))
+  }
+
+  get_turns_fn <- tryCatch(llm$get_turns, error = function(e) NULL)
+  if (!is.function(get_turns_fn)) {
+    return(invisible(NULL))
+  }
+
+  existing_turns <- tryCatch(get_turns_fn(), error = function(e) list())
+
+  # Serialize the cached response for the assistant content
+
+  response_text <- if (is.character(result) && length(result) == 1) {
+    result
+  } else {
+    as.character(jsonlite::toJSON(result, auto_unbox = TRUE))
+  }
+
+  user_turn <- ellmer::UserTurn(
+    contents = list(ellmer::ContentText(as.character(prompt)))
+  )
+  assistant_turn <- ellmer::AssistantTurn(
+    contents = list(ellmer::ContentText(response_text))
+  )
+
+  set_turns_fn(c(existing_turns, list(user_turn, assistant_turn)))
+  invisible(NULL)
 }

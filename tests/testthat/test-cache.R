@@ -746,6 +746,270 @@ test_that("run() respects .cache = FALSE parameter (single input)", {
   expect_equal(call_count, 2) # No new call
 })
 
+# --- Cache-hit synthetic turn injection tests ---------------------------------
+
+test_that("cache hit injects synthetic turns into the Chat object", {
+  local_reset_cache()
+  configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
+
+  turns <- list()
+  mock_env <- new.env()
+  mock_env$mock_llm <- structure(
+    list(
+      get_model = function() "mock-model",
+      chat_structured = function(prompt, type, echo = "none") {
+        user_turn <- ellmer::UserTurn(
+          contents = list(ellmer::ContentText(prompt))
+        )
+        assistant_turn <- ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText("{\"sentiment\":\"positive\"}"))
+        )
+        turns <<- c(turns, list(user_turn, assistant_turn))
+        list(sentiment = "positive")
+      },
+      `.__enclos_env__` = list(
+        private = list(api_args = list(temperature = 0.7))
+      ),
+      clone = function(...) mock_env$mock_llm,
+      set_turns = function(new_turns) {
+        turns <<- new_turns
+        invisible(NULL)
+      },
+      get_turns = function(...) turns,
+      last_turn = function(role = c("assistant", "user"), ...) {
+        role <- match.arg(role)
+        class_name <- if (role == "assistant") {
+          "ellmer::AssistantTurn"
+        } else {
+          "ellmer::UserTurn"
+        }
+        role_turns <- turns[vapply(
+          turns,
+          inherits,
+          logical(1),
+          what = class_name
+        )]
+        if (length(role_turns) == 0) {
+          stop("no turns")
+        }
+        role_turns[[length(role_turns)]]
+      }
+    ),
+    class = "Chat"
+  )
+
+  sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+  mod <- module(sig, type = "predict")
+
+  # First call — cache miss, real LLM call adds turns
+
+  invisible(run(mod, text = "Great!", .llm = mock_env$mock_llm))
+  expect_equal(length(turns), 2) # user + assistant from real call
+
+  # Second call — cache hit, synthetic turns should be injected
+  mod$state$traces <- list()
+  invisible(run(mod, text = "Great!", .llm = mock_env$mock_llm))
+  expect_equal(length(turns), 4) # original 2 + synthetic 2
+
+  # Verify the synthetic turns contain correct content
+  last_user <- turns[[3]]
+  last_assistant <- turns[[4]]
+  expect_s3_class(last_user, "ellmer::UserTurn")
+  expect_s3_class(last_assistant, "ellmer::AssistantTurn")
+  expect_match(last_user@contents[[1]]@text, "Great!")
+  expect_match(last_assistant@contents[[1]]@text, "positive")
+
+  # Verify trace was recorded with turns (not NULL)
+  trace <- mod$state$traces[[1]]
+  expect_s3_class(trace$user_turn, "ellmer::UserTurn")
+  expect_s3_class(trace$assistant_turn, "ellmer::AssistantTurn")
+})
+
+test_that("cache hit preserves pre-existing turn history", {
+  local_reset_cache()
+  configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
+
+  make_mock_chat <- function(initial_turns = list()) {
+    turns <- initial_turns
+    mock_env <- new.env()
+    mock_env$mock_llm <- structure(
+      list(
+        get_model = function() "mock-model",
+        chat_structured = function(prompt, type, echo = "none") {
+          user_turn <- ellmer::UserTurn(
+            contents = list(ellmer::ContentText(prompt))
+          )
+          assistant_turn <- ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("{\"sentiment\":\"positive\"}"))
+          )
+          turns <<- c(turns, list(user_turn, assistant_turn))
+          list(sentiment = "positive")
+        },
+        `.__enclos_env__` = list(
+          private = list(api_args = list(temperature = 0.7))
+        ),
+        clone = function(...) mock_env$mock_llm,
+        set_turns = function(new_turns) {
+          turns <<- new_turns
+          invisible(NULL)
+        },
+        get_turns = function(...) turns,
+        last_turn = function(role = c("assistant", "user"), ...) {
+          role <- match.arg(role)
+          class_name <- if (role == "assistant") {
+            "ellmer::AssistantTurn"
+          } else {
+            "ellmer::UserTurn"
+          }
+          role_turns <- turns[vapply(
+            turns,
+            inherits,
+            logical(1),
+            what = class_name
+          )]
+          if (length(role_turns) == 0) {
+            stop("no turns")
+          }
+          role_turns[[length(role_turns)]]
+        }
+      ),
+      class = "Chat"
+    )
+    mock_env$mock_llm
+  }
+
+  sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+  mod <- module(sig, type = "predict")
+
+  # Warm cache
+  llm_warm <- make_mock_chat()
+  invisible(run(mod, text = "Great!", .llm = llm_warm))
+
+  # Use a different chat with stale pre-existing history
+  old_user <- ellmer::UserTurn(
+    contents = list(ellmer::ContentText("OLD PROMPT"))
+  )
+  old_assistant <- ellmer::AssistantTurn(
+    contents = list(ellmer::ContentText("OLD RESPONSE"))
+  )
+  llm_with_history <- make_mock_chat(
+    initial_turns = list(old_user, old_assistant)
+  )
+
+  mod$state$traces <- list()
+  invisible(run(mod, text = "Great!", .llm = llm_with_history))
+
+  # Pre-existing turns preserved + new synthetic pair appended
+  expect_equal(length(llm_with_history$get_turns()), 4)
+
+  # Trace points to the new synthetic turns, not the old ones
+  trace <- mod$state$traces[[1]]
+  expect_match(trace$user_turn@contents[[1]]@text, "Great!")
+  expect_false(
+    identical(trace$user_turn@contents[[1]]@text, "OLD PROMPT")
+  )
+  expect_match(trace$assistant_turn@contents[[1]]@text, "positive")
+})
+
+test_that("cache hit works when Chat mock has no get_turns/set_turns", {
+  local_reset_cache()
+  configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
+
+  mock_env <- new.env()
+  mock_env$mock_llm <- structure(
+    list(
+      get_model = function() "mock-model",
+      chat_structured = function(prompt, type, echo = "none") {
+        list(sentiment = "positive")
+      },
+      `.__enclos_env__` = list(
+        private = list(api_args = list(temperature = 0.7))
+      ),
+      clone = function(...) mock_env$mock_llm
+    ),
+    class = "Chat"
+  )
+
+  sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+  mod <- module(sig, type = "predict")
+
+  # Should not error even without get_turns/set_turns
+  expect_no_error(run(mod, text = "Great!", .llm = mock_env$mock_llm))
+
+  # Second call hits cache — still no error
+  expect_no_error(run(mod, text = "Great!", .llm = mock_env$mock_llm))
+})
+
+test_that("synthetic turn tokens/cost/duration are NA (not 0)", {
+  local_reset_cache()
+  configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
+
+  turns <- list()
+  mock_env <- new.env()
+  mock_env$mock_llm <- structure(
+    list(
+      get_model = function() "mock-model",
+      chat_structured = function(prompt, type, echo = "none") {
+        user_turn <- ellmer::UserTurn(
+          contents = list(ellmer::ContentText(prompt))
+        )
+        assistant_turn <- ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText("{\"answer\":\"42\"}")),
+          tokens = c(10, 5, 0),
+          cost = 0.001,
+          duration = 1.5
+        )
+        turns <<- c(turns, list(user_turn, assistant_turn))
+        list(answer = "42")
+      },
+      `.__enclos_env__` = list(
+        private = list(api_args = list(temperature = 0.7))
+      ),
+      clone = function(...) mock_env$mock_llm,
+      set_turns = function(new_turns) {
+        turns <<- new_turns
+        invisible(NULL)
+      },
+      get_turns = function(...) turns,
+      last_turn = function(role = c("assistant", "user"), ...) {
+        role <- match.arg(role)
+        class_name <- if (role == "assistant") {
+          "ellmer::AssistantTurn"
+        } else {
+          "ellmer::UserTurn"
+        }
+        role_turns <- turns[vapply(
+          turns,
+          inherits,
+          logical(1),
+          what = class_name
+        )]
+        if (length(role_turns) == 0) {
+          stop("no turns")
+        }
+        role_turns[[length(role_turns)]]
+      }
+    ),
+    class = "Chat"
+  )
+
+  sig <- signature("question -> answer: string")
+  mod <- module(sig, type = "predict")
+
+  # Cache miss — real call
+  invisible(run(mod, question = "What?", .llm = mock_env$mock_llm))
+
+  # Cache hit — synthetic turn
+  mod$state$traces <- list()
+  invisible(run(mod, question = "What?", .llm = mock_env$mock_llm))
+
+  # Synthetic assistant turn should have NA tokens/cost/duration (not 0)
+  synthetic_assistant <- turns[[4]]
+  expect_true(all(is.na(synthetic_assistant@tokens)))
+  expect_true(is.na(synthetic_assistant@cost))
+  expect_true(is.na(synthetic_assistant@duration))
+})
+
 test_that("run() respects .cache = FALSE in batch processing", {
   local_reset_cache()
   # Use memory-only cache to avoid disk pollution from previous runs
