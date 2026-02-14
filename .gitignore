@@ -30,3 +30,7 @@ inst/shiny-demo/node_modules/
 # Claude Code - user-specific settings (commands are committed)
 .claude/settings*.json
 .claude/*.local.*
+.claude/worktrees/
+
+# Knitr cache
+vignettes/*_cache/
