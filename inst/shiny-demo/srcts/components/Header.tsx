@@ -18,6 +18,8 @@ interface HeaderProps {
   onRunChange: (runId: string) => void;
   availableRuns: RunMeta[];
   currentQuestion?: string;
+  onNavigateHome?: () => void;
+  onNavigateToolkit?: () => void;
 }
 
 export function Header({
@@ -27,6 +29,8 @@ export function Header({
   onRunChange,
   availableRuns,
   currentQuestion,
+  onNavigateHome,
+  onNavigateToolkit,
 }: HeaderProps) {
   const replayRuns = availableRuns.filter((r) => !r.is_live);
   const liveRuns = availableRuns.filter((r) => r.is_live);
@@ -38,12 +42,29 @@ export function Header({
           {/* Left: title + caption */}
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold tracking-tight">
-                How RLMs Work
-              </h1>
+              {onNavigateHome ? (
+                <button
+                  onClick={onNavigateHome}
+                  className="text-lg font-semibold tracking-tight hover:text-muted-foreground transition-colors"
+                >
+                  How RLMs Work
+                </button>
+              ) : (
+                <h1 className="text-lg font-semibold tracking-tight">
+                  How RLMs Work
+                </h1>
+              )}
               <span className="hidden sm:inline text-xs text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded">
                 dsprrr
               </span>
+              {onNavigateToolkit && (
+                <button
+                  onClick={onNavigateToolkit}
+                  className="hidden sm:inline text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Toolkit
+                </button>
+              )}
             </div>
             {mode === "replay" && availableRuns.length > 1 && (
               <p className="hidden sm:block text-xs text-muted-foreground mt-0.5 italic">

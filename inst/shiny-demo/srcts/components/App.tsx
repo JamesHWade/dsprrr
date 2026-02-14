@@ -3,6 +3,7 @@ import { useShinyInput, useShinyOutput, useShinyMessageHandler } from "@posit/sh
 import type { TraceData, RunMeta, AppMode, LiveConfig, LiveStatus } from "@/lib/types";
 import { Header } from "./Header";
 import { IntroPanel } from "./IntroPanel";
+import { ToolkitPanel } from "./ToolkitPanel";
 import { REPLTimeline } from "./REPLTimeline";
 import { PhaseTimeline } from "./PhaseTimeline";
 import { ContextPanel } from "./ContextPanel";
@@ -19,6 +20,7 @@ import {
 
 export function App() {
   const [showIntro, setShowIntro] = useState(true);
+  const [showToolkit, setShowToolkit] = useState(false);
   const [showOrientation, setShowOrientation] = useState(true);
   const [liveTrace, setLiveTrace] = useState<TraceData | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>({ status: "idle" });
@@ -84,7 +86,24 @@ export function App() {
 
   const handleStartExploring = useCallback(() => {
     setShowIntro(false);
+    setShowToolkit(true);
+  }, []);
+
+  const handleStartTraces = useCallback(() => {
+    setShowIntro(false);
+    setShowToolkit(false);
     playback.play();
+  }, [playback]);
+
+  const handleShowToolkit = useCallback(() => {
+    setShowToolkit(true);
+    playback.pause();
+  }, [playback]);
+
+  const handleNavigateHome = useCallback(() => {
+    setShowIntro(true);
+    setShowToolkit(false);
+    playback.pause();
   }, [playback]);
 
   const handleRunChange = useCallback(
@@ -110,7 +129,16 @@ export function App() {
   const orientationVisible = showOrientation && playback.state !== "done";
 
   if (showIntro) {
-    return <IntroPanel onStart={handleStartExploring} />;
+    return (
+      <IntroPanel
+        onLearnToolkit={handleStartExploring}
+        onJumpToTraces={handleStartTraces}
+      />
+    );
+  }
+
+  if (showToolkit) {
+    return <ToolkitPanel onContinue={handleStartTraces} onBack={handleNavigateHome} />;
   }
 
   return (
@@ -122,6 +150,8 @@ export function App() {
         onRunChange={handleRunChange}
         availableRuns={allRuns}
         currentQuestion={activeTrace?.question}
+        onNavigateHome={handleNavigateHome}
+        onNavigateToolkit={handleShowToolkit}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
