@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/collapsible";
 
 export function App() {
-  const [showIntro, setShowIntro] = useState(true);
-  const [showToolkit, setShowToolkit] = useState(false);
+  type View = "intro" | "toolkit" | "traces";
+  const [view, setView] = useState<View>("intro");
   const [showOrientation, setShowOrientation] = useState(true);
   const [liveTrace, setLiveTrace] = useState<TraceData | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>({ status: "idle" });
@@ -85,24 +85,22 @@ export function App() {
   const phaseProgress = usePhaseDetection(iterations, playback.currentIndex);
 
   const handleStartExploring = useCallback(() => {
-    setShowIntro(false);
-    setShowToolkit(true);
-  }, []);
+    setView("toolkit");
+    playback.pause();
+  }, [playback]);
 
   const handleStartTraces = useCallback(() => {
-    setShowIntro(false);
-    setShowToolkit(false);
+    setView("traces");
     playback.play();
   }, [playback]);
 
   const handleShowToolkit = useCallback(() => {
-    setShowToolkit(true);
+    setView("toolkit");
     playback.pause();
   }, [playback]);
 
   const handleNavigateHome = useCallback(() => {
-    setShowIntro(true);
-    setShowToolkit(false);
+    setView("intro");
     playback.pause();
   }, [playback]);
 
@@ -128,7 +126,7 @@ export function App() {
   // Auto-hide orientation banner when playback completes
   const orientationVisible = showOrientation && playback.state !== "done";
 
-  if (showIntro) {
+  if (view === "intro") {
     return (
       <IntroPanel
         onLearnToolkit={handleStartExploring}
@@ -137,7 +135,7 @@ export function App() {
     );
   }
 
-  if (showToolkit) {
+  if (view === "toolkit") {
     return <ToolkitPanel onContinue={handleStartTraces} onBack={handleNavigateHome} />;
   }
 

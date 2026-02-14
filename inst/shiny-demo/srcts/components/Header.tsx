@@ -42,18 +42,18 @@ export function Header({
           {/* Left: title + caption */}
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              {onNavigateHome ? (
-                <button
-                  onClick={onNavigateHome}
-                  className="text-lg font-semibold tracking-tight hover:text-muted-foreground transition-colors"
-                >
-                  How RLMs Work
-                </button>
-              ) : (
-                <h1 className="text-lg font-semibold tracking-tight">
-                  How RLMs Work
-                </h1>
-              )}
+              <h1 className="text-lg font-semibold tracking-tight">
+                {onNavigateHome ? (
+                  <button
+                    onClick={onNavigateHome}
+                    className="hover:text-muted-foreground transition-colors"
+                  >
+                    How RLMs Work
+                  </button>
+                ) : (
+                  "How RLMs Work"
+                )}
+              </h1>
               <span className="hidden sm:inline text-xs text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded">
                 dsprrr
               </span>
