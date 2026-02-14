@@ -223,6 +223,7 @@ reference:
     - code_act
     - module-codeact
     - rlm_module
+    - rlm
     - module-rlm
 
   - title: Assertions

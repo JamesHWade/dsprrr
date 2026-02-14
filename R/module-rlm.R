@@ -1474,3 +1474,90 @@ answer possible with what was discovered.
     }
   )
 )
+
+
+#' Run a Recursive Language Model in one call
+#'
+#' @description
+#' Convenience wrapper that creates a runner, module, and executes an RLM
+#' in a single call. Equivalent to:
+#'
+#' ```r
+#' runner <- r_code_runner(timeout = timeout)
+#' mod <- rlm_module(signature, runner = runner, ...)
+#' run(mod, ..., .llm = .llm)
+#' ```
+#'
+#' For repeated use or optimization, prefer creating a module with
+#' [rlm_module()] and calling [run()] separately.
+#'
+#' @param signature A Signature object or string notation defining inputs/outputs
+#'   (e.g., `"question -> answer"`)
+#' @param ... Named arguments matching the signature's inputs. These are passed
+#'   to [run()].
+#' @param .llm An ellmer Chat object. If `NULL`, uses the default Chat from
+#'   [get_default_chat()].
+#' @param .timeout Numeric. Maximum execution time in seconds per code
+#'   evaluation. Default 30.
+#' @param .max_iterations Integer. Maximum REPL iterations before fallback.
+#'   Default 20.
+#' @param .max_llm_calls Integer. Maximum recursive LLM calls allowed.
+#'   Default 50.
+#' @param .sub_lm Optional ellmer Chat for recursive `llm_query()` calls.
+#'   `NULL` disables recursive queries.
+#' @param .tools Named list of user-defined R functions available in the REPL.
+#' @param .verbose Logical. Print execution progress. Default `FALSE`.
+#'
+#' @return The module output according to the signature.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # One-liner RLM call
+#' result <- rlm(
+#'   "document, question -> answer",
+#'   document = readLines("big_file.txt") |> paste(collapse = "\n"),
+#'   question = "What are the main themes?",
+#'   .llm = ellmer::chat_openai()
+#' )
+#'
+#' # With recursive sub-queries
+#' result <- rlm(
+#'   "codebase, question -> answer",
+#'   codebase = source_code,
+#'   question = "How does auth work?",
+#'   .llm = ellmer::chat_openai(),
+#'   .sub_lm = ellmer::chat_openai(model = "gpt-4o-mini")
+#' )
+#' }
+#'
+#' @seealso
+#' * [rlm_module()] for creating reusable RLM modules
+#' * [r_code_runner()] for configuring the code execution backend
+#' * [run()] for executing modules
+#' * [dsp()] for simple one-shot LLM calls (no code execution)
+rlm <- function(
+  signature,
+  ...,
+  .llm = NULL,
+  .timeout = 30,
+  .max_iterations = 20L,
+  .max_llm_calls = 50L,
+  .sub_lm = NULL,
+  .tools = list(),
+  .verbose = FALSE
+) {
+  runner <- r_code_runner(timeout = .timeout)
+
+  mod <- rlm_module(
+    signature = signature,
+    runner = runner,
+    max_iterations = .max_iterations,
+    max_llm_calls = .max_llm_calls,
+    sub_lm = .sub_lm,
+    verbose = .verbose,
+    tools = .tools
+  )
+
+  run(mod, ..., .llm = .llm)
+}
