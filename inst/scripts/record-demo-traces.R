@@ -119,7 +119,7 @@ main <- function() {
   for (i in 1:4) {
     cli::cli_alert_info("Recording Run {i}/5...")
 
-    llm <- chat_openai(model = "gpt-4o-mini")
+    llm <- chat_openai(model = "gpt-5-mini")
     rlm <- rlm_module(
       signature = "bslib_source, shiny_source, question -> answer",
       runner = runner,
@@ -144,7 +144,7 @@ main <- function() {
           run_id = paste0("bslib-run-", i),
           history_entry = last_run,
           question = question,
-          model = "gpt-4o-mini",
+          model = "gpt-5-mini",
           context_vars = context_vars
         )
 
@@ -161,8 +161,8 @@ main <- function() {
   # ---- Run 5: Recursive (with sub_lm) ----
   cli::cli_alert_info("Recording Run 5/5 (recursive)...")
 
-  llm <- chat_openai(model = "gpt-4o-mini")
-  sub_llm <- chat_openai(model = "gpt-4o-mini")
+  llm <- chat_openai(model = "gpt-5-mini")
+  sub_llm <- chat_openai(model = "gpt-5-mini")
 
   rlm_recursive <- rlm_module(
     signature = "bslib_source, shiny_source, question -> answer",
@@ -190,7 +190,7 @@ main <- function() {
         run_id = "bslib-recursive",
         history_entry = last_run,
         question = question,
-        model = "gpt-4o-mini",
+        model = "gpt-5-mini",
         context_vars = context_vars,
         llm_calls = last_run$llm_calls_used
       )

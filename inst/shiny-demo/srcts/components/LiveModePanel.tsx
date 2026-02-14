@@ -1,5 +1,6 @@
-import { useState } from "react";
-import type { LiveConfig, LiveStatus, TraceData } from "@/lib/types";
+import { useState, useMemo } from "react";
+import type { LiveConfig, LiveStatus, TraceData, ProviderOption } from "@/lib/types";
+import { PROVIDERS } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface LiveModePanelProps {
@@ -12,18 +13,38 @@ export function LiveModePanel({
   onStartRun,
   liveStatus,
 }: LiveModePanelProps) {
+  const [providerKey, setProviderKey] = useState("openai");
+  const [model, setModel] = useState("gpt-5-mini");
   const [apiKey, setApiKey] = useState("");
   const [question, setQuestion] = useState(
     "How does bslib process the foreground color from brand.yml?",
   );
-  const [model, setModel] = useState("gpt-4o-mini");
+
+  const provider = useMemo(
+    () => PROVIDERS.find((p) => p.provider === providerKey) as ProviderOption,
+    [providerKey],
+  );
 
   const isRunning = liveStatus.status === "running";
 
+  const handleProviderChange = (newProvider: string) => {
+    setProviderKey(newProvider);
+    setApiKey("");
+    const p = PROVIDERS.find((pr) => pr.provider === newProvider);
+    if (p && p.models.length > 0) {
+      setModel(p.models[0].value);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!apiKey.trim() || !question.trim() || isRunning) return;
-    onStartRun({ api_key: apiKey, question, model });
+    if (!question.trim() || isRunning) return;
+    onStartRun({
+      provider: providerKey,
+      model,
+      api_key: apiKey || undefined,
+      question,
+    });
   };
 
   return (
@@ -31,21 +52,26 @@ export function LiveModePanel({
       <h3 className="text-sm font-semibold mb-4">Live RLM Execution</h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="api-key">
-              OpenAI API Key
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="provider">
+              Provider
             </label>
-            <input
-              id="api-key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
+            <select
+              id="provider"
+              value={providerKey}
+              onChange={(e) => handleProviderChange(e.target.value)}
               className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
               disabled={isRunning}
-            />
+            >
+              {PROVIDERS.map((p) => (
+                <option key={p.provider} value={p.provider}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
           </div>
+
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground" htmlFor="model">
               Model
@@ -57,9 +83,30 @@ export function LiveModePanel({
               className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
               disabled={isRunning}
             >
-              <option value="gpt-4o-mini">gpt-4o-mini</option>
-              <option value="gpt-4o">gpt-4o</option>
+              {provider.models.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
             </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="api-key">
+              API Key
+              <span className="ml-1 text-[10px] opacity-60">
+                or set {provider.env_var}
+              </span>
+            </label>
+            <input
+              id="api-key"
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={`${provider.env_var} or paste key...`}
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+              disabled={isRunning}
+            />
           </div>
         </div>
 
@@ -80,7 +127,7 @@ export function LiveModePanel({
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={!apiKey.trim() || !question.trim() || isRunning}
+            disabled={!question.trim() || isRunning}
             className={cn(
               "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors",
               isRunning
@@ -128,7 +175,9 @@ export function LiveModePanel({
       </form>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Your API key is sent directly to OpenAI and is never stored. Live mode requires network access and an API key with GPT-4o access.
+        Your API key is sent directly to the provider and is never stored.
+        Alternatively, set the environment variable ({provider.env_var}) before launching the app and leave the key field empty.
+        Powered by <a href="https://ellmer.tidyverse.org" className="underline" target="_blank" rel="noopener">ellmer</a> — any provider it supports works here.
       </p>
     </div>
   );

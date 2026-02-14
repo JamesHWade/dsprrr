@@ -2,7 +2,7 @@
   "run_id": "bslib-run-2",
   "timestamp": "2026-02-13T14:25:41Z",
   "question": "How does bslib process the `foreground` color from brand.yml? Specifically, trace the path from `_brand.yml` foreground to the final CSS output. What happens to this color during Sass compilation?",
-  "model": "gpt-4o-mini",
+  "model": "gpt-5-mini",
   "context_variables": [
     {
       "name": "bslib_source",

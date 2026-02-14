@@ -1,8 +1,46 @@
 # rlm-live.R - Live mode: async RLM execution
 
+#' Create an ellmer chat object from provider config
+#' @param config List with provider, model, and optional api_key
+#' @return An ellmer Chat object
+create_chat <- function(config) {
+  provider <- config$provider %||% "openai"
+  model <- config$model %||% "gpt-5-mini"
+  api_key <- config$api_key
+
+  switch(provider,
+    openai = {
+      args <- list(model = model)
+      if (!is.null(api_key) && nzchar(api_key)) args$api_key <- api_key
+      do.call(ellmer::chat_openai, args)
+    },
+    anthropic = {
+      args <- list(model = model)
+      if (!is.null(api_key) && nzchar(api_key)) args$api_key <- api_key
+      do.call(ellmer::chat_anthropic, args)
+    },
+    google = {
+      args <- list(model = model)
+      if (!is.null(api_key) && nzchar(api_key)) args$api_key <- api_key
+      do.call(ellmer::chat_google_gemini, args)
+    },
+    groq = {
+      args <- list(model = model)
+      if (!is.null(api_key) && nzchar(api_key)) args$api_key <- api_key
+      do.call(ellmer::chat_groq, args)
+    },
+    github = {
+      args <- list(model = model)
+      if (!is.null(api_key) && nzchar(api_key)) args$api_key <- api_key
+      do.call(ellmer::chat_github, args)
+    },
+    cli::cli_abort("Unknown provider: {provider}")
+  )
+}
+
 #' Run an RLM query asynchronously
 #' @param session Shiny session
-#' @param config List with api_key, question, model, context fields
+#' @param config List with provider, model, api_key, question fields
 run_live_rlm <- function(session, config) {
   post_message(session, "live_status", list(status = "running"))
 
@@ -11,10 +49,7 @@ run_live_rlm <- function(session, config) {
       library(dsprrr)
       library(ellmer)
 
-      llm <- ellmer::chat_openai(
-        model = config$model %||% "gpt-4o-mini",
-        api_key = config$api_key
-      )
+      llm <- create_chat(config)
 
       runner <- r_code_runner(timeout = 30)
 
@@ -34,7 +69,7 @@ run_live_rlm <- function(session, config) {
         run_id = paste0("live-", format(Sys.time(), "%H%M%S")),
         timestamp = as.character(Sys.time()),
         question = config$question,
-        model = config$model %||% "gpt-4o-mini",
+        model = config$model %||% "gpt-5-mini",
         context_variables = list(),
         iterations = lapply(last_run$history, function(h) {
           list(
