@@ -68,6 +68,11 @@ export function App() {
   const allRuns = [...(availableRuns ?? []), ...sessionRuns];
 
   // Active trace: session live run > current live > server replay
+  // Note: sessionTracesRef is a useRef (not useState) for performance. Reading it
+  // during render is safe here because the ref is only populated in the same handler
+  // that calls setSessionRuns, which triggers the re-render that makes the matching
+  // selectedRun available in the dropdown. Users can't select a session run before
+  // the re-render that adds it to allRuns.
   const sessionTrace = sessionTracesRef.current.get(selectedRun);
   const activeTrace = sessionTrace
     ?? (mode === "live" && liveTrace ? liveTrace : traceData);
