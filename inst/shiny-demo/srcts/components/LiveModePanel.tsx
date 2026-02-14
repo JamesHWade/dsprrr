@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import type { LiveConfig, LiveStatus, ProviderOption } from "@/lib/types";
+import type { LiveConfig, LiveStatus } from "@/lib/types";
 import { PROVIDERS } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ export function LiveModePanel({
   );
 
   const provider = useMemo(
-    () => PROVIDERS.find((p) => p.provider === providerKey) as ProviderOption,
+    () => PROVIDERS.find((p) => p.provider === providerKey) ?? PROVIDERS[0],
     [providerKey],
   );
 

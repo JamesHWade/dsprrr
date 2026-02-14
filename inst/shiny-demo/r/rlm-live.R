@@ -131,20 +131,21 @@ run_live_rlm <- function(session, config) {
       chat_args <- list(model = model)
       if (!is.null(api_key) && nzchar(api_key)) chat_args$api_key <- api_key
 
-      llm <- switch(provider,
-        openai = do.call(ellmer::chat_openai, chat_args),
-        anthropic = do.call(ellmer::chat_anthropic, chat_args),
-        google = do.call(ellmer::chat_google_gemini, chat_args),
-        groq = do.call(ellmer::chat_groq, chat_args),
-        deepseek = do.call(ellmer::chat_deepseek, chat_args),
-        mistral = do.call(ellmer::chat_mistral, chat_args),
-        perplexity = do.call(ellmer::chat_perplexity, chat_args),
-        openrouter = do.call(ellmer::chat_openrouter, chat_args),
-        huggingface = do.call(ellmer::chat_huggingface, chat_args),
-        github = do.call(ellmer::chat_github, chat_args),
-        ollama = do.call(ellmer::chat_ollama, list(model = model)),
+      chat_fn <- switch(provider,
+        openai = ellmer::chat_openai,
+        anthropic = ellmer::chat_anthropic,
+        google = ellmer::chat_google_gemini,
+        groq = ellmer::chat_groq,
+        deepseek = ellmer::chat_deepseek,
+        mistral = ellmer::chat_mistral,
+        perplexity = ellmer::chat_perplexity,
+        openrouter = ellmer::chat_openrouter,
+        huggingface = ellmer::chat_huggingface,
+        github = ellmer::chat_github,
+        ollama = ellmer::chat_ollama,
         stop(paste("Unknown provider:", provider))
       )
+      llm <- do.call(chat_fn, chat_args)
 
       runner <- r_code_runner(timeout = 30)
 

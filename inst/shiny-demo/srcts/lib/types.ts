@@ -63,7 +63,6 @@ export interface ProviderOption {
   label: string;
   models: { value: string; label: string }[];
   env_var: string;
-  needs_api_key_input?: boolean;
 }
 
 export const PROVIDERS: ProviderOption[] = [
@@ -78,7 +77,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "o4-mini", label: "o4-mini" },
     ],
     env_var: "OPENAI_API_KEY",
-    needs_api_key_input: true,
   },
   {
     provider: "anthropic",
@@ -88,7 +86,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
     ],
     env_var: "ANTHROPIC_API_KEY",
-    needs_api_key_input: true,
   },
   {
     provider: "google",
@@ -100,7 +97,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
     ],
     env_var: "GOOGLE_API_KEY",
-    needs_api_key_input: true,
   },
   {
     provider: "groq",
@@ -111,7 +107,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "qwen-qwq-32b", label: "QwQ 32B" },
     ],
     env_var: "GROQ_API_KEY",
-    needs_api_key_input: true,
   },
   {
     provider: "deepseek",
@@ -121,7 +116,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "deepseek-reasoner", label: "DeepSeek V3.2 (reasoning)" },
     ],
     env_var: "DEEPSEEK_API_KEY",
-    needs_api_key_input: true,
   },
   {
     provider: "mistral",
@@ -132,7 +126,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "devstral-small-latest", label: "Devstral Small" },
     ],
     env_var: "MISTRAL_API_KEY",
-    needs_api_key_input: true,
   },
   {
     provider: "perplexity",
@@ -144,7 +137,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "sonar-reasoning", label: "Sonar Reasoning" },
     ],
     env_var: "PERPLEXITY_API_KEY",
-    needs_api_key_input: true,
   },
   {
     provider: "openrouter",
@@ -156,7 +148,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "deepseek/deepseek-chat", label: "DeepSeek V3.2" },
     ],
     env_var: "OPENROUTER_API_KEY",
-    needs_api_key_input: true,
   },
   {
     provider: "huggingface",
@@ -166,7 +157,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "Qwen/Qwen2.5-72B-Instruct", label: "Qwen 2.5 72B" },
     ],
     env_var: "HF_TOKEN",
-    needs_api_key_input: true,
   },
   {
     provider: "github",
@@ -177,7 +167,6 @@ export const PROVIDERS: ProviderOption[] = [
       { value: "o4-mini", label: "o4-mini" },
     ],
     env_var: "GITHUB_PAT",
-    needs_api_key_input: true,
   },
   {
     provider: "ollama",
