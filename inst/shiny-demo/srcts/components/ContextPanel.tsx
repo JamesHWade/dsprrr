@@ -1,11 +1,13 @@
-import type { ContextVariable, Iteration } from "@/lib/types";
+import type { ContextVariable, Iteration, TokenUsage } from "@/lib/types";
 import { formatChars } from "@/lib/utils";
 import { TokenBudget } from "./TokenBudget";
+import { TokenTally } from "./TokenTally";
 
 interface ContextPanelProps {
   contextVariables: ContextVariable[];
   iterations: Iteration[];
   currentIndex: number;
+  totalTokens?: TokenUsage;
 }
 
 function extractAccessedVars(iterations: Iteration[], upTo: number): Set<string> {
@@ -37,6 +39,7 @@ export function ContextPanel({
   contextVariables,
   iterations,
   currentIndex,
+  totalTokens,
 }: ContextPanelProps) {
   const accessedVars = extractAccessedVars(iterations, currentIndex);
   const toolCounts = countToolCalls(iterations, currentIndex);
@@ -81,6 +84,13 @@ export function ContextPanel({
         totalContextChars={totalChars}
         iterations={iterations}
         currentIndex={currentIndex}
+      />
+
+      {/* Token usage tally */}
+      <TokenTally
+        iterations={iterations}
+        currentIndex={currentIndex}
+        totalTokens={totalTokens}
       />
 
       {/* Tool usage */}

@@ -4,6 +4,11 @@ export interface ContextVariable {
   n_files: number;
 }
 
+export interface TokenUsage {
+  input: number;
+  output: number;
+}
+
 export interface Iteration {
   iteration: number;
   reasoning: string;
@@ -12,6 +17,7 @@ export interface Iteration {
   success: boolean;
   is_final: boolean;
   phase?: Phase;
+  tokens?: TokenUsage;
 }
 
 export type Phase =
@@ -31,6 +37,7 @@ export interface TraceData {
   final_answer: string;
   iterations_used: number;
   llm_calls_used: number;
+  total_tokens?: TokenUsage;
 }
 
 export interface RunMeta {
@@ -39,6 +46,7 @@ export interface RunMeta {
   question: string;
   model: string;
   iterations: number;
+  total_tokens?: TokenUsage;
 }
 
 export interface LiveConfig {
@@ -100,6 +108,58 @@ export const PROVIDERS: ProviderOption[] = [
     needs_api_key_input: true,
   },
   {
+    provider: "deepseek",
+    label: "DeepSeek",
+    models: [
+      { value: "deepseek-chat", label: "DeepSeek V3" },
+      { value: "deepseek-reasoner", label: "DeepSeek R1" },
+    ],
+    env_var: "DEEPSEEK_API_KEY",
+    needs_api_key_input: true,
+  },
+  {
+    provider: "mistral",
+    label: "Mistral",
+    models: [
+      { value: "mistral-large-latest", label: "Mistral Large" },
+      { value: "mistral-small-latest", label: "Mistral Small" },
+    ],
+    env_var: "MISTRAL_API_KEY",
+    needs_api_key_input: true,
+  },
+  {
+    provider: "perplexity",
+    label: "Perplexity",
+    models: [
+      { value: "llama-3.1-sonar-large-128k-online", label: "Sonar Large (online)" },
+      { value: "llama-3.1-sonar-small-128k-online", label: "Sonar Small (online)" },
+    ],
+    env_var: "PERPLEXITY_API_KEY",
+    needs_api_key_input: true,
+  },
+  {
+    provider: "openrouter",
+    label: "OpenRouter",
+    models: [
+      { value: "anthropic/claude-sonnet-4-5", label: "Claude Sonnet 4.5" },
+      { value: "openai/gpt-4o", label: "GPT-4o" },
+      { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
+      { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B" },
+    ],
+    env_var: "OPENROUTER_API_KEY",
+    needs_api_key_input: true,
+  },
+  {
+    provider: "huggingface",
+    label: "HuggingFace",
+    models: [
+      { value: "meta-llama/Llama-3.3-70B-Instruct", label: "Llama 3.3 70B" },
+      { value: "mistralai/Mistral-7B-Instruct-v0.3", label: "Mistral 7B" },
+    ],
+    env_var: "HF_TOKEN",
+    needs_api_key_input: true,
+  },
+  {
     provider: "github",
     label: "GitHub Models",
     models: [
@@ -108,6 +168,16 @@ export const PROVIDERS: ProviderOption[] = [
     ],
     env_var: "GITHUB_PAT",
     needs_api_key_input: true,
+  },
+  {
+    provider: "ollama",
+    label: "Ollama (local)",
+    models: [
+      { value: "llama3.2", label: "Llama 3.2" },
+      { value: "qwen2.5-coder", label: "Qwen 2.5 Coder" },
+      { value: "mistral", label: "Mistral" },
+    ],
+    env_var: "OLLAMA_HOST",
   },
 ];
 

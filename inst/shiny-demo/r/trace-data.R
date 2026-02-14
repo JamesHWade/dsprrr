@@ -29,7 +29,8 @@ list_available_runs <- function() {
           label = data$run_id,
           question = data$question %||% "",
           model = data$model %||% "",
-          iterations = data$iterations_used %||% length(data$iterations)
+          iterations = data$iterations_used %||% length(data$iterations),
+          total_tokens = data$total_tokens %||% NULL
         )
       },
       error = function(e) NULL
