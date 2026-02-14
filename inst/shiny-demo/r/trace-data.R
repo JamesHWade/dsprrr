@@ -52,7 +52,10 @@ list_available_runs <- function() {
 #' @return Parsed trace data as list, or NULL
 load_trace <- function(run_id) {
   # Validate run_id to prevent path traversal
-  if (!grepl("^[A-Za-z0-9_-]+$", run_id)) return(NULL)
+  if (!grepl("^[A-Za-z0-9_-]+$", run_id)) {
+    message("[load_trace] Invalid run_id: ", run_id)
+    return(NULL)
+  }
 
   pkg_dir <- system.file("shiny-demo", package = "dsprrr")
   data_dir <- if (nzchar(pkg_dir)) {

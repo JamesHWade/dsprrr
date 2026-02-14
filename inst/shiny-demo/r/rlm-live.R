@@ -107,10 +107,17 @@ run_live_rlm <- function(session, config) {
   model <- config$model %||% "gpt-5-mini"
   api_key <- config$api_key
 
-  if (!requireNamespace("future", quietly = TRUE)) {
+  missing_pkgs <- c("future", "promises")[
+    !vapply(c("future", "promises"), requireNamespace, logical(1), quietly = TRUE)
+  ]
+  if (length(missing_pkgs) > 0) {
     post_message(session, "live_status", list(
       status = "error",
-      message = "The 'future' package is required for live mode. Install it with: install.packages('future')"
+      message = sprintf(
+        "Live mode requires: %s. Install with: install.packages(c(%s))",
+        paste(missing_pkgs, collapse = ", "),
+        paste(sprintf("'%s'", missing_pkgs), collapse = ", ")
+      )
     ))
     return(invisible())
   }
