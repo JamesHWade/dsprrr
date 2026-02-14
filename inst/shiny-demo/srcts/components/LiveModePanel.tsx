@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
-import type { LiveConfig, LiveStatus, TraceData, ProviderOption } from "@/lib/types";
+import type { LiveConfig, LiveStatus, ProviderOption } from "@/lib/types";
 import { PROVIDERS } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface LiveModePanelProps {
   onStartRun: (config: LiveConfig) => void;
   liveStatus: LiveStatus;
-  liveTrace: TraceData | null;
 }
 
 export function LiveModePanel({

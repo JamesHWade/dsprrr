@@ -158,7 +158,6 @@ export function App() {
           <LiveModePanel
             onStartRun={handleStartLive}
             liveStatus={liveStatus}
-            liveTrace={liveTrace}
           />
         ) : null}
 

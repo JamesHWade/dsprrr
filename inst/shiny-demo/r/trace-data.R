@@ -3,15 +3,12 @@
 #' List available pre-recorded runs
 #' @return Named list of run metadata
 list_available_runs <- function() {
-  data_dir <- file.path(
-    system.file("shiny-demo", package = "dsprrr"),
-    "data", "runs"
-  )
-
-  # Fallback for development (running from inst/shiny-demo/r/)
-
-  if (!nzchar(data_dir) || !dir.exists(data_dir)) {
-    data_dir <- file.path("..", "data", "runs")
+  pkg_dir <- system.file("shiny-demo", package = "dsprrr")
+  data_dir <- if (nzchar(pkg_dir)) {
+    file.path(pkg_dir, "data", "runs")
+  } else {
+    # Fallback for development (running from inst/shiny-demo/r/)
+    file.path("..", "data", "runs")
   }
 
   if (!dir.exists(data_dir)) {
@@ -54,15 +51,15 @@ list_available_runs <- function() {
 #' @param run_id Character string identifying the run
 #' @return Parsed trace data as list, or NULL
 load_trace <- function(run_id) {
-  data_dir <- file.path(
-    system.file("shiny-demo", package = "dsprrr"),
-    "data", "runs"
-  )
+  # Validate run_id to prevent path traversal
+  if (!grepl("^[A-Za-z0-9_-]+$", run_id)) return(NULL)
 
-  if (!nzchar(data_dir) || !dir.exists(data_dir)) {
-    data_dir <- file.path("..", "data", "runs")
+  pkg_dir <- system.file("shiny-demo", package = "dsprrr")
+  data_dir <- if (nzchar(pkg_dir)) {
+    file.path(pkg_dir, "data", "runs")
+  } else {
+    file.path("..", "data", "runs")
   }
-
 
   filename <- paste0(run_id, ".json")
   filepath <- file.path(data_dir, filename)

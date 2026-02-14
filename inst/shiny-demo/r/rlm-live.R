@@ -107,6 +107,14 @@ run_live_rlm <- function(session, config) {
   model <- config$model %||% "gpt-5-mini"
   api_key <- config$api_key
 
+  if (!requireNamespace("future", quietly = TRUE)) {
+    post_message(session, "live_status", list(
+      status = "error",
+      message = "The 'future' package is required for live mode. Install it with: install.packages('future')"
+    ))
+    return(invisible())
+  }
+
   promises::future_promise(
     {
       library(dsprrr)

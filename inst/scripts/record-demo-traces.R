@@ -38,7 +38,10 @@ read_package_source <- function(pkg_path) {
     paste(readLines(f, warn = FALSE), collapse = "\n")
   }, character(1))
 
-  paste(contents, collapse = "\n\n# ---- FILE: %s ----\n\n")
+  paste(
+    sprintf("# ---- FILE: %s ----\n%s", all_files, contents),
+    collapse = "\n\n"
+  )
 }
 
 # ---- Helper: Convert repl_history to TraceData JSON ----
