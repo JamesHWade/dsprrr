@@ -142,6 +142,7 @@ export function App() {
         currentIndex={playback.currentIndex}
         totalIterations={iterations.length}
         speed={playback.speed}
+        runLabel={activeTrace?.run_id}
         onPlay={playback.play}
         onPause={playback.pause}
         onStep={playback.step}

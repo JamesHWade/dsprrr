@@ -25,6 +25,16 @@ export function usePlayback(totalIterations: number): PlaybackControls {
   stateRef.current = state;
   indexRef.current = currentIndex;
 
+  // Reset when total iterations changes (e.g., switching runs)
+  const prevTotalRef = useRef(totalIterations);
+  useEffect(() => {
+    if (prevTotalRef.current !== totalIterations) {
+      prevTotalRef.current = totalIterations;
+      setCurrentIndex(-1);
+      setState("idle");
+    }
+  }, [totalIterations]);
+
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);

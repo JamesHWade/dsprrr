@@ -6,6 +6,7 @@ interface PlaybackControlsProps {
   currentIndex: number;
   totalIterations: number;
   speed: PlaybackSpeed;
+  runLabel?: string;
   onPlay: () => void;
   onPause: () => void;
   onStep: () => void;
@@ -20,6 +21,7 @@ export function PlaybackControls({
   currentIndex,
   totalIterations,
   speed,
+  runLabel,
   onPlay,
   onPause,
   onStep,
@@ -111,7 +113,8 @@ export function PlaybackControls({
               onChange={(e) => onJumpTo(Number(e.target.value))}
               className="flex-1 h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
             />
-            <span className="text-xs font-mono text-muted-foreground whitespace-nowrap min-w-[3rem] text-right">
+            <span className="text-xs font-mono text-muted-foreground whitespace-nowrap text-right">
+              {runLabel && <span className="mr-2 opacity-60">{runLabel}</span>}
               {currentIndex + 1}/{totalIterations}
             </span>
           </div>

@@ -29,9 +29,12 @@ export function TokenBudget({
   const contextRatio = totalContextChars > 0 ? transferredChars / totalContextChars : 0;
   const contextPct = (contextRatio * 100).toFixed(1);
 
-  // Hypothetical: if you crammed the whole context in, how many tokens?
-  // ~4 chars per token is a common approximation
-  const hypotheticalTokens = Math.round(totalContextChars / 4);
+  // Hypothetical: without an RLM, you'd need to dump search results and file
+  // contents into the conversation. Estimate: each iteration's output averages
+  // the data that WOULD have gone into the prompt as context. The RLM keeps it
+  // out of the context window by running code in a separate R process.
+  // The "full context" number represents what you'd need in the prompt to give
+  // the LLM equivalent access — but no model's context window is that large.
 
   // ---- Actual token usage ----
   let inputSoFar = 0;
@@ -59,47 +62,48 @@ export function TokenBudget({
   const grandTotal = inputTotal + outputTotal;
   const hasTokenData = grandTotal > 0;
 
-  // Savings: hypothetical full-context tokens vs actual tokens used
-  const savings = hasTokenData && hypotheticalTokens > 0
-    ? Math.max(0, ((hypotheticalTokens - grandTotal) / hypotheticalTokens) * 100)
-    : 0;
-
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
       <div className="px-4 py-3 border-b bg-muted/30">
         <h3 className="text-sm font-semibold">Token Economy</h3>
         <p className="text-[11px] text-muted-foreground mt-0.5">
-          RLMs read selectively instead of stuffing context windows
+          Code runs in a separate R process — only small slices enter the context window
         </p>
       </div>
 
       <div className="p-4 space-y-5">
-        {/* Context Window comparison */}
+        {/* Context Window Preservation */}
         <div className="space-y-3">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Context Window
+            Context Window Preservation
           </div>
 
-          {/* Stacked bar: full context vs actually read */}
+          {/* Two-row comparison */}
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-6 rounded bg-muted/80 relative overflow-hidden">
-                <div className="absolute inset-0 flex items-center px-2">
-                  <span className="text-[10px] font-mono text-muted-foreground z-10">
-                    Full context: {formatChars(totalContextChars)}
-                  </span>
+            <div className="space-y-0.5">
+              <div className="text-[10px] text-muted-foreground">In R environment (accessible by code)</div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-6 rounded bg-muted/80 relative overflow-hidden">
+                  <div className="absolute inset-0 flex items-center px-2">
+                    <span className="text-[10px] font-mono text-muted-foreground z-10">
+                      {formatChars(totalContextChars)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-6 rounded relative overflow-hidden"
-                style={{ maxWidth: `${Math.max(3, Number(contextPct))}%` }}
-              >
-                <div className="absolute inset-0 bg-primary rounded" />
-                <div className="absolute inset-0 flex items-center px-2">
-                  <span className="text-[10px] font-mono text-primary-foreground z-10 whitespace-nowrap">
-                    {formatChars(transferredChars)}
-                  </span>
+            <div className="space-y-0.5">
+              <div className="text-[10px] text-muted-foreground">In LLM context window (token space)</div>
+              <div className="flex items-center gap-2">
+                <div className="h-6 rounded relative overflow-hidden"
+                  style={{ width: `${Math.max(3, Number(contextPct))}%` }}
+                >
+                  <div className="absolute inset-0 bg-primary rounded" />
+                  <div className="absolute inset-0 flex items-center px-2">
+                    <span className="text-[10px] font-mono text-primary-foreground z-10 whitespace-nowrap">
+                      {formatChars(transferredChars)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -107,7 +111,7 @@ export function TokenBudget({
 
           <div className="text-center">
             <span className="text-2xl font-bold tabular-nums text-primary">{contextPct}%</span>
-            <span className="text-xs text-muted-foreground ml-1.5">of context entered token space</span>
+            <span className="text-xs text-muted-foreground ml-1.5">of source data entered the context window</span>
           </div>
         </div>
 
@@ -147,20 +151,16 @@ export function TokenBudget({
           </div>
         )}
 
-        {/* Savings callout */}
-        {hasTokenData && savings > 0 && totalContextChars > 0 && (
-          <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 p-3 space-y-1">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-green-700 dark:text-green-400 tabular-nums">
-                {savings.toFixed(0)}%
-              </span>
-              <span className="text-xs text-green-700 dark:text-green-400 font-medium">
-                fewer tokens than stuffing
-              </span>
+        {/* Context window insight */}
+        {totalContextChars > 0 && (
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 p-3 space-y-1">
+            <div className="text-xs font-medium text-blue-700 dark:text-blue-400">
+              Why this matters
             </div>
-            <p className="text-[11px] text-green-600 dark:text-green-500">
-              Naively cramming {formatChars(totalContextChars)} would use ~{formatTokens(hypotheticalTokens)} tokens.
-              The RLM used {formatTokens(grandTotal)}.
+            <p className="text-[11px] text-blue-600 dark:text-blue-500">
+              {formatChars(totalContextChars)} of source code sits in the R environment, not the prompt.
+              The LLM explores it through code — only peek() and search() results
+              enter the context window. This preserves context for reasoning.
             </p>
           </div>
         )}
