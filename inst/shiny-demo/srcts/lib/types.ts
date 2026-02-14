@@ -17,7 +17,6 @@ export interface Iteration {
   success: boolean;
   is_final: boolean;
   phase?: Phase;
-  tokens?: TokenUsage;
 }
 
 export type Phase =

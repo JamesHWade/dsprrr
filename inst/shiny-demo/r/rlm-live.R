@@ -127,11 +127,8 @@ run_live_rlm <- function(session, config) {
       library(dsprrr)
       library(ellmer)
 
-      # Create chat inside the future (no closure dependency)
-      chat_args <- list(model = model)
-      if (!is.null(api_key) && nzchar(api_key)) chat_args$api_key <- api_key
-
-      chat_fn <- switch(provider,
+      # Provider → ellmer constructor lookup
+      chat_fns <- list(
         openai = ellmer::chat_openai,
         anthropic = ellmer::chat_anthropic,
         google = ellmer::chat_google_gemini,
@@ -142,10 +139,14 @@ run_live_rlm <- function(session, config) {
         openrouter = ellmer::chat_openrouter,
         huggingface = ellmer::chat_huggingface,
         github = ellmer::chat_github,
-        ollama = ellmer::chat_ollama,
-        stop(paste("Unknown provider:", provider))
+        ollama = ellmer::chat_ollama
       )
-      if (provider == "ollama") chat_args$api_key <- NULL
+
+      chat_fn <- chat_fns[[provider]]
+      if (is.null(chat_fn)) stop(paste("Unknown provider:", provider))
+
+      chat_args <- list(model = model)
+      if (!is.null(api_key) && nzchar(api_key)) chat_args$api_key <- api_key
       llm <- do.call(chat_fn, chat_args)
 
       runner <- r_code_runner(timeout = 30)
@@ -168,26 +169,21 @@ run_live_rlm <- function(session, config) {
       history <- rlm$get_repl_history()
       last_run <- history[[length(history)]]
 
-      # Extract token usage from the chat object
+      # Extract total token usage from the chat object.
+      # Note: token rows may not map 1:1 to iterations (retries, sub-queries),
+      # so we only report totals rather than per-iteration attribution.
       token_tbl <- tryCatch(llm$get_tokens(), error = function(e) NULL)
-      per_iter_tokens <- list()
       total_input <- 0L
       total_output <- 0L
 
       if (!is.null(token_tbl) && nrow(token_tbl) > 0) {
         total_input <- sum(token_tbl$input, na.rm = TRUE)
         total_output <- sum(token_tbl$output, na.rm = TRUE)
-        for (j in seq_len(min(nrow(token_tbl), length(last_run$history)))) {
-          per_iter_tokens[[j]] <- list(
-            input = token_tbl$input[j],
-            output = token_tbl$output[j]
-          )
-        }
       }
 
       iterations_out <- lapply(seq_along(last_run$history), function(j) {
         h <- last_run$history[[j]]
-        iter <- list(
+        list(
           iteration = h$iteration,
           reasoning = h$reasoning,
           code = h$code,
@@ -195,10 +191,6 @@ run_live_rlm <- function(session, config) {
           success = h$success,
           is_final = h$is_final
         )
-        if (j <= length(per_iter_tokens)) {
-          iter$tokens <- per_iter_tokens[[j]]
-        }
-        iter
       })
 
       list(

@@ -1,16 +1,10 @@
-import { cn } from "@/lib/utils";
+import { cn, formatTokens } from "@/lib/utils";
 import type { RunMeta } from "@/lib/types";
 
 interface RunComparisonProps {
   runs: RunMeta[];
   currentRun: string;
   onRunChange?: (runId: string) => void;
-}
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return String(n);
 }
 
 export function RunComparison({ runs, currentRun, onRunChange }: RunComparisonProps) {
