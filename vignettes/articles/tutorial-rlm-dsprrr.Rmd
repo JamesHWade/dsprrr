@@ -1,10 +1,6 @@
 ---
 title: "Recursive Language Models: Exploring Codebases with dsprrr"
 output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Recursive Language Models: Exploring Codebases with dsprrr}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r}
@@ -47,7 +43,7 @@ The model writes R code to read files, search for patterns, and accumulate
 relevant excerpts iteratively, turning long-context problems into coding
 problems. For the conceptual background (what context rot is, how the ecosystem
 evolved, and how dsprrr's internals work), see
-`vignette("how-rlm-works", package = "dsprrr")`.
+the [How the RLM Works](how-rlm-works.html) article.
 
 ```
 Traditional:  [entire document] -> LLM -> answer
@@ -561,7 +557,7 @@ and formalize into a deterministic pipeline.
 
 For guidance on when RLMs are the right tool (and when simpler approaches
 win), see the decision framework in
-`vignette("how-rlm-works", package = "dsprrr")`.
+the [How the RLM Works](how-rlm-works.html) article.
 
 ## Try It Yourself
 

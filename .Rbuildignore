@@ -33,3 +33,4 @@
 ^inst/shiny-demo/tsconfig\.json$
 ^inst/shiny-demo/build\.ts$
 ^inst/shiny-demo/components\.json$
+^vignettes/articles$

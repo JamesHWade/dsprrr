@@ -25,12 +25,17 @@ read_package_source <- function(pkg_path) {
 
   # Use relative paths for file headers
   rel_paths <- sub(
-    paste0("^", normalizePath(pkg_path), "/?"), "",
+    paste0("^", normalizePath(pkg_path), "/?"),
+    "",
     normalizePath(all_files)
   )
-  contents <- vapply(all_files, function(f) {
-    paste(readLines(f, warn = FALSE), collapse = "\n")
-  }, character(1))
+  contents <- vapply(
+    all_files,
+    function(f) {
+      paste(readLines(f, warn = FALSE), collapse = "\n")
+    },
+    character(1)
+  )
 
   combined <- paste(
     sprintf("# ---- FILE: %s ----\n%s", rel_paths, contents),
@@ -108,17 +113,26 @@ run_live_rlm <- function(session, config) {
   api_key <- config$api_key
 
   missing_pkgs <- c("future", "promises")[
-    !vapply(c("future", "promises"), requireNamespace, logical(1), quietly = TRUE)
+    !vapply(
+      c("future", "promises"),
+      requireNamespace,
+      logical(1),
+      quietly = TRUE
+    )
   ]
   if (length(missing_pkgs) > 0) {
-    post_message(session, "live_status", list(
-      status = "error",
-      message = sprintf(
-        "Live mode requires: %s. Install with: install.packages(c(%s))",
-        paste(missing_pkgs, collapse = ", "),
-        paste(sprintf("'%s'", missing_pkgs), collapse = ", ")
+    post_message(
+      session,
+      "live_status",
+      list(
+        status = "error",
+        message = sprintf(
+          "Live mode requires: %s. Install with: install.packages(c(%s))",
+          paste(missing_pkgs, collapse = ", "),
+          paste(sprintf("'%s'", missing_pkgs), collapse = ", ")
+        )
       )
-    ))
+    )
     return(invisible())
   }
 
@@ -143,7 +157,9 @@ run_live_rlm <- function(session, config) {
       )
 
       chat_fn <- chat_fns[[provider]]
-      if (is.null(chat_fn)) stop(paste("Unknown provider:", provider))
+      if (is.null(chat_fn)) {
+        stop(paste("Unknown provider:", provider))
+      }
 
       chat_args <- list(model = model)
       if (provider != "ollama" && !is.null(api_key) && nzchar(api_key)) {
@@ -209,16 +225,21 @@ run_live_rlm <- function(session, config) {
       )
     },
     seed = NULL
-  ) |> promises::then(
-    onFulfilled = function(trace_result) {
-      post_message(session, "live_result", trace_result)
-      post_message(session, "live_status", list(status = "complete"))
-    },
-    onRejected = function(err) {
-      post_message(session, "live_status", list(
-        status = "error",
-        message = conditionMessage(err)
-      ))
-    }
-  )
+  ) |>
+    promises::then(
+      onFulfilled = function(trace_result) {
+        post_message(session, "live_result", trace_result)
+        post_message(session, "live_status", list(status = "complete"))
+      },
+      onRejected = function(err) {
+        post_message(
+          session,
+          "live_status",
+          list(
+            status = "error",
+            message = conditionMessage(err)
+          )
+        )
+      }
+    )
 }

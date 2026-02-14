@@ -6,10 +6,6 @@ description: >
 author: "James H. Wade"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{How the Recursive Language Model (RLM) Works}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 bibliography: references.bib
 ---
 
