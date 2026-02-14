@@ -145,6 +145,7 @@ run_live_rlm <- function(session, config) {
         ollama = ellmer::chat_ollama,
         stop(paste("Unknown provider:", provider))
       )
+      if (provider == "ollama") chat_args$api_key <- NULL
       llm <- do.call(chat_fn, chat_args)
 
       runner <- r_code_runner(timeout = 30)

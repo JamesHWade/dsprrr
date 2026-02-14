@@ -19,10 +19,13 @@ export function LiveModePanel({
     "How does bslib process the foreground color from brand.yml?",
   );
 
-  const provider = useMemo(
-    () => PROVIDERS.find((p) => p.provider === providerKey) ?? PROVIDERS[0],
-    [providerKey],
-  );
+  const provider = useMemo(() => {
+    const found = PROVIDERS.find((p) => p.provider === providerKey);
+    if (!found) {
+      console.warn(`Unknown provider key "${providerKey}", falling back to "${PROVIDERS[0].provider}"`);
+    }
+    return found ?? PROVIDERS[0];
+  }, [providerKey]);
 
   const isRunning = liveStatus.status === "running";
 
