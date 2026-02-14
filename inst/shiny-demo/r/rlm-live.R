@@ -146,7 +146,9 @@ run_live_rlm <- function(session, config) {
       if (is.null(chat_fn)) stop(paste("Unknown provider:", provider))
 
       chat_args <- list(model = model)
-      if (!is.null(api_key) && nzchar(api_key)) chat_args$api_key <- api_key
+      if (provider != "ollama" && !is.null(api_key) && nzchar(api_key)) {
+        chat_args$api_key <- api_key
+      }
       llm <- do.call(chat_fn, chat_args)
 
       runner <- r_code_runner(timeout = 30)
