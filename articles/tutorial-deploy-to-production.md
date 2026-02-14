@@ -85,7 +85,7 @@ board <- board_folder(tempdir())
 
 # Save the module configuration
 pin_module_config(board, "sentiment-classifier", classifier)
-#> Creating new version '20260212T131816Z-5c167'
+#> Creating new version '20260214T010536Z-2066b'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned module configuration: "sentiment-classifier"
 #> ℹ Module type: <PredictModule>
@@ -108,20 +108,20 @@ board |> pin_meta("sentiment-classifier")
 #> List of 13
 #>  $ file       : chr "sentiment-classifier.rds"
 #>  $ file_size  : 'fs_bytes' int 493
-#>  $ pin_hash   : chr "5c167abb3da176ba"
+#>  $ pin_hash   : chr "2066b207291c91df"
 #>  $ type       : chr "rds"
 #>  $ title      : chr "sentiment-classifier: a pinned list"
 #>  $ description: chr "dsprrr module config: sentiment-classifier"
 #>  $ tags       : NULL
 #>  $ urls       : NULL
-#>  $ created    : POSIXct[1:1], format: "2026-02-12 13:18:16"
+#>  $ created    : POSIXct[1:1], format: "2026-02-14 01:05:36"
 #>  $ api_version: int 1
 #>  $ user       : list()
 #>  $ name       : chr "sentiment-classifier"
 #>  $ local      :List of 3
-#>   ..$ dir    : 'fs_path' chr "/tmp/RtmpZ4Ik1y/sentiment-classifier/20260212T131816Z-5c167"
+#>   ..$ dir    : 'fs_path' chr "/tmp/RtmpyhhQgf/sentiment-classifier/20260214T010536Z-2066b"
 #>   ..$ url    : NULL
-#>   ..$ version: chr "20260212T131816Z-5c167"
+#>   ..$ version: chr "20260214T010536Z-2066b"
 ```
 
 ## Step 4: Restore in a New Session
@@ -160,7 +160,7 @@ improved <- compile_module(
 
 # Save again - creates new version
 pin_module_config(board, "sentiment-classifier", improved)
-#> Creating new version '20260212T131817Z-dc0ba'
+#> Creating new version '20260214T010536Z-20ead'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned module configuration: "sentiment-classifier"
 #> ℹ Module type: <PredictModule>
@@ -171,8 +171,8 @@ board |> pin_versions("sentiment-classifier")
 #> # A tibble: 2 × 3
 #>   version                created             hash 
 #>   <chr>                  <dttm>              <chr>
-#> 1 20260212T131816Z-5c167 2026-02-12 13:18:16 5c167
-#> 2 20260212T131817Z-dc0ba 2026-02-12 13:18:17 dc0ba
+#> 1 20260214T010536Z-2066b 2026-02-14 01:05:36 2066b
+#> 2 20260214T010536Z-20ead 2026-02-14 01:05:36 20ead
 ```
 
 ## Step 6: Roll Back to Previous Version

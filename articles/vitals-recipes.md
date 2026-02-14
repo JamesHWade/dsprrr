@@ -50,19 +50,19 @@ task <- as_vitals_task(
 # 4. Run evaluation
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [793ms]
+#> ✔ Solving [738ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [150ms]
+#> ✔ Scoring [121ms]
 #> 
 
 # 5. View results
 task$get_samples()
-#> # A tibble: 2 × 10
-#>   input    target    id result solver_chat solver_metadata score scorer_metadata
-#>   <list>   <chr>  <int> <chr>  <list>      <list>          <ord> <list>         
-#> 1 <tibble> posit…     1 "{\"l… <Chat>      <named list>    I     <named list>   
-#> 2 <tibble> negat…     2 "{\"l… <Chat>      <named list>    I     <named list>   
+#> # A tibble: 2 × 9
+#>   input            target      id result   solver_chat score scorer_metadata 
+#>   <list>           <chr>    <int> <chr>    <list>      <ord> <list>          
+#> 1 <tibble [1 × 1]> positive     1 positive <Chat>      C     <named list [2]>
+#> 2 <tibble [1 × 1]> negative     2 negative <Chat>      C     <named list [2]>
 #> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
@@ -125,10 +125,10 @@ eval_task <- as_vitals_task(
 
 eval_task$eval()
 #> ℹ Solving
-#> ✔ Solving [610ms]
+#> ✔ Solving [532ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [62ms]
+#> ✔ Scoring [48ms]
 #> 
 
 # Compare performance
@@ -161,10 +161,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [345ms]
+#> ✔ Solving [330ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [52ms]
+#> ✔ Scoring [49ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -200,10 +200,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [350ms]
+#> ✔ Solving [374ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [234ms]
+#> ✔ Scoring [231ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
@@ -238,10 +238,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [344ms]
+#> ✔ Solving [333ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [52ms]
+#> ✔ Scoring [54ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -285,10 +285,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [874ms]
+#> ✔ Solving [846ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [99ms]
+#> ✔ Scoring [81ms]
 #> 
 
 # Get detailed scores
@@ -297,7 +297,7 @@ scores <- task$get_samples()
 # Find failures
 failures <- scores[scores$score == "I", ]
 cat("Failed on", nrow(failures), "of", nrow(scores), "examples\n")
-#> Failed on 5 of 5 examples
+#> Failed on 0 of 5 examples
 
 # Examine what went wrong
 if (nrow(failures) > 0) {
@@ -310,32 +310,11 @@ if (nrow(failures) > 0) {
     cat("Got:", failures$result[i], "\n\n")
   }
 }
-#> 
-#> Failure analysis:
-#> Input: Best purchase ever! 
-#> Expected: positive 
-#> Got: {"sentiment":"positive"} 
-#> 
-#> Input: Complete garbage 
-#> Expected: negative 
-#> Got: {"sentiment":"negative"} 
-#> 
-#> Input: It's okay I guess 
-#> Expected: neutral 
-#> Got: {"sentiment":"neutral"} 
-#> 
-#> Input: Amazing quality! 
-#> Expected: positive 
-#> Got: {"sentiment":"positive"} 
-#> 
-#> Input: Never buying again 
-#> Expected: negative 
-#> Got: {"sentiment":"negative"}
 
 # Calculate accuracy
 accuracy <- mean(scores$score == "C")
 cat("Overall accuracy:", scales::percent(accuracy), "\n")
-#> Overall accuracy: 0%
+#> Overall accuracy: 100%
 ```
 
 ## Recipe 5: Comparing Module Variants
@@ -381,16 +360,16 @@ for (name in c("basic", "cot")) {
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
 #> ℹ Solving
-#> ✔ Solving [352ms]
+#> ✔ Solving [339ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [211ms]
+#> ✔ Scoring [201ms]
 #> 
 #> ℹ Solving
-#> ✔ Solving [348ms]
+#> ✔ Solving [343ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [209ms]
+#> ✔ Scoring [205ms]
 #> 
 
 # Compare
@@ -437,7 +416,7 @@ task$eval()
 #> ✔ Solving [1.6s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [146ms]
+#> ✔ Scoring [123ms]
 #> 
 
 # Aggregate scores across epochs
@@ -451,7 +430,7 @@ cat(
 )
 #> Total evaluations: 9 (3 epochs x 3 examples)
 cat("Overall accuracy:", scales::percent(mean(scores$score == "C")), "\n")
-#> Overall accuracy: 0%
+#> Overall accuracy: 100%
 ```
 
 ## Recipe 7: Custom Evaluation Pipeline
