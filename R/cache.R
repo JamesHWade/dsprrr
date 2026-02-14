@@ -676,18 +676,21 @@ cached_chat_structured <- function(
 #'
 #' @noRd
 inject_cache_hit_turns <- function(llm, prompt, result) {
-  # Bail out if the Chat doesn't support turn manipulation
+  # Bail out if the Chat doesn't support turn manipulation.
+  # Both get_turns and set_turns are required — without get_turns we can't
+
+  # preserve existing history, so calling set_turns would silently wipe it.
   set_turns_fn <- tryCatch(llm$set_turns, error = function(e) NULL)
   if (!is.function(set_turns_fn)) {
     return(invisible(NULL))
   }
 
   get_turns_fn <- tryCatch(llm$get_turns, error = function(e) NULL)
-  existing_turns <- if (is.function(get_turns_fn)) {
-    tryCatch(get_turns_fn(), error = function(e) list())
-  } else {
-    list()
+  if (!is.function(get_turns_fn)) {
+    return(invisible(NULL))
   }
+
+  existing_turns <- tryCatch(get_turns_fn(), error = function(e) list())
 
   # Serialize the cached response for the assistant content
 
