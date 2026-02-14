@@ -159,6 +159,35 @@ test_that("as_vitals_solver returns plain strings for enum outputs", {
   expect_equal(nchar(result$result[[1]]), nchar("positive"))
 })
 
+test_that(
+  "as_vitals_solver unwraps single-field enum object outputs for vitals",
+  {
+    sig <- signature(
+      "text -> sentiment: enum('positive', 'negative', 'neutral')"
+    )
+    mod <- module(signature = sig, type = "predict")
+
+    mock_llm <- structure(
+      list(
+        chat_structured = function(prompt, ...) {
+          list(sentiment = "positive")
+        },
+        clone = function(...) mock_llm,
+        set_turns = function(turns) invisible(NULL),
+        get_turns = function(...) list()
+      ),
+      class = "Chat"
+    )
+
+    solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
+    result <- solver(list(tibble::tibble(text = "I love this!")))
+
+    # Must be unwrapped for detect_match() compatibility
+    expect_equal(result$result[[1]], "positive")
+    expect_false(grepl("^\\{", result$result[[1]]))
+  }
+)
+
 # --- as_dsprrr_metric tests ---
 
 test_that("as_dsprrr_metric wraps vitals scorers", {
