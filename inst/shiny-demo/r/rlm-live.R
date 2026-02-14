@@ -24,11 +24,8 @@ read_package_source <- function(pkg_path) {
   }
 
   # Use relative paths for file headers
-  rel_paths <- sub(
-    paste0("^", normalizePath(pkg_path), "/?"),
-    "",
-    normalizePath(all_files)
-  )
+  prefix <- paste0(normalizePath(pkg_path), "/")
+  rel_paths <- sub(prefix, "", normalizePath(all_files), fixed = TRUE)
   contents <- vapply(
     all_files,
     function(f) {

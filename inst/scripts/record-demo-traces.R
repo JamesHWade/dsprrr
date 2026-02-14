@@ -37,7 +37,8 @@ read_package_source <- function(pkg_path) {
 
   all_files <- c(r_files, scss_files)
   # Use paths relative to pkg_path for cleaner file labels
-  rel_paths <- sub(paste0("^", normalizePath(pkg_path), "/?"), "", all_files)
+  prefix <- paste0(normalizePath(pkg_path), "/")
+  rel_paths <- sub(prefix, "", all_files, fixed = TRUE)
   contents <- vapply(
     all_files,
     function(f) paste(readLines(f, warn = FALSE), collapse = "\n"),
@@ -56,7 +57,7 @@ clone_source <- function(repo, ref = "main") {
   if (dir.exists(dest)) {
     unlink(dest, recursive = TRUE)
   }
-  system2(
+  err <- system2(
     "git",
     c(
       "clone",
@@ -66,10 +67,10 @@ clone_source <- function(repo, ref = "main") {
       dest
     ),
     stdout = FALSE,
-    stderr = FALSE
+    stderr = TRUE
   )
   if (!dir.exists(dest)) {
-    cli::cli_abort("Failed to clone {repo}")
+    cli::cli_abort("Failed to clone {repo}: {paste(err, collapse = '\n')}")
   }
   dest
 }
@@ -101,10 +102,12 @@ trace_to_json <- function(
     model = model,
     context_variables = context_vars,
     iterations = iterations,
-    final_answer = if (is.list(history_entry$final_answer)) {
-      history_entry$final_answer$answer
-    } else {
-      as.character(history_entry$final_answer)
+    final_answer = {
+      ans <- history_entry$final_answer
+      if (is.list(ans)) {
+        ans <- ans$answer %||% ans[[1]]
+      }
+      as.character(ans)
     },
     iterations_used = history_entry$iterations_used,
     llm_calls_used = llm_calls
