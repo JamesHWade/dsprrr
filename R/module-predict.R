@@ -71,6 +71,25 @@ PredictModule <- R6::R6Class(
       # Record start time
       start_time <- Sys.time()
 
+      # Track whether the LLM call adds any turns; cache hits may return a value
+      # without mutating chat history.
+      get_turns_safe <- function(chat) {
+        turns <- tryCatch(
+          {
+            get_turns_fn <- chat$get_turns
+            if (!is.function(get_turns_fn)) {
+              return(NULL)
+            }
+            get_turns_fn()
+          },
+          error = function(e) NULL
+        )
+
+        if (is.null(turns)) list() else turns
+      }
+      turns_before <- get_turns_safe(llm)
+      n_turns_before <- length(turns_before)
+
       # Make LLM call (pass inputs for multimodal support)
       result <- tryCatch(
         {
@@ -88,20 +107,38 @@ PredictModule <- R6::R6Class(
         }
       )
 
-      if (length(llm$get_turns()) == 0) {
+      turns_after <- get_turns_safe(llm)
+      n_turns_after <- length(turns_after)
+
+      # If call didn't append turns (common on cache hit), synthesize a matching
+      # user/assistant pair so traces and metadata point to the current request.
+      if (n_turns_after <= n_turns_before) {
         full_prompt <- if (nchar(self$signature@instructions) > 0) {
           paste(self$signature@instructions, prompt, sep = "\n\n")
         } else {
           prompt
         }
-        response_text <- as.character(jsonlite::toJSON(result, auto_unbox = TRUE))
+        response_text <- as.character(jsonlite::toJSON(
+          result,
+          auto_unbox = TRUE
+        ))
         user_turn_mock <- ellmer::UserTurn(
           contents = list(ellmer::ContentText(full_prompt))
         )
         assistant_turn_mock <- ellmer::AssistantTurn(
-          contents = list(ellmer::ContentText(response_text))
+          contents = list(ellmer::ContentText(response_text)),
+          tokens = c(0, 0, 0),
+          cost = 0,
+          duration = 0
         )
-        llm$set_turns(list(user_turn_mock, assistant_turn_mock))
+
+        set_turns_fn <- tryCatch(llm$set_turns, error = function(e) NULL)
+        if (is.function(set_turns_fn)) {
+          set_turns_fn(c(
+            turns_after,
+            list(user_turn_mock, assistant_turn_mock)
+          ))
+        }
       }
 
       # Calculate metrics
