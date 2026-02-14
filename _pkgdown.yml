@@ -83,6 +83,8 @@ navbar:
           href: articles/concepts-optimization-theory.html
         - text: "Why Metrics Matter"
           href: articles/concepts-why-metrics-matter.html
+        - text: "How RLMs Work"
+          href: articles/how-rlm-works.html
         - text: "---"
         - text: "Deep Dives"
         - text: "Advanced Reasoning"
@@ -138,6 +140,7 @@ articles:
     - concepts-signatures-modules
     - concepts-optimization-theory
     - concepts-why-metrics-matter
+    - how-rlm-works
     - advanced-modules
     - advanced-optimization
     - reasoning-models
