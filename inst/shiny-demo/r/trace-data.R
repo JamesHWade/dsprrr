@@ -24,12 +24,22 @@ list_available_runs <- function() {
     tryCatch(
       {
         data <- jsonlite::fromJSON(f, simplifyVector = FALSE)
+        n_iter <- data$iterations_used %||% length(data$iterations)
+        llm_calls <- data$llm_calls_used %||% 1L
+
+        description <- if (llm_calls > 1L) {
+          sprintf("%d iterations, %d LLM calls", n_iter, llm_calls)
+        } else {
+          sprintf("%d iterations", n_iter)
+        }
+
         list(
           id = data$run_id,
           label = data$run_id,
+          description = description,
           question = data$question %||% "",
           model = data$model %||% "",
-          iterations = data$iterations_used %||% length(data$iterations),
+          iterations = n_iter,
           total_tokens = data$total_tokens %||% NULL
         )
       },

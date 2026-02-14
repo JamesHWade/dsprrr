@@ -4,6 +4,7 @@ import type { RunMeta } from "@/lib/types";
 interface RunComparisonProps {
   runs: RunMeta[];
   currentRun: string;
+  onRunChange?: (runId: string) => void;
 }
 
 function formatTokens(n: number): string {
@@ -12,7 +13,7 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-export function RunComparison({ runs, currentRun }: RunComparisonProps) {
+export function RunComparison({ runs, currentRun, onRunChange }: RunComparisonProps) {
   const anyHasTokens = runs.some(
     (r) => r.total_tokens && (r.total_tokens.input > 0 || r.total_tokens.output > 0),
   );
@@ -55,12 +56,16 @@ export function RunComparison({ runs, currentRun }: RunComparisonProps) {
                 run.total_tokens
                   ? run.total_tokens.input + run.total_tokens.output
                   : 0;
+              const isCurrent = run.id === currentRun;
+              const isClickable = !isCurrent && !!onRunChange;
               return (
                 <tr
                   key={run.id}
+                  onClick={isClickable ? () => onRunChange(run.id) : undefined}
                   className={cn(
                     "border-b last:border-b-0 transition-colors",
-                    run.id === currentRun && "bg-primary/5",
+                    isCurrent && "bg-primary/5",
+                    isClickable && "cursor-pointer hover:bg-muted/50",
                   )}
                 >
                   <td className="px-4 py-2">
@@ -72,7 +77,7 @@ export function RunComparison({ runs, currentRun }: RunComparisonProps) {
                   {anyHasTokens && (
                     <td className="px-4 py-2 text-center">
                       <span className="font-mono text-xs tabular-nums">
-                        {total > 0 ? formatTokens(total) : "—"}
+                        {total > 0 ? formatTokens(total) : "\u2014"}
                       </span>
                     </td>
                   )}
@@ -80,13 +85,18 @@ export function RunComparison({ runs, currentRun }: RunComparisonProps) {
                     <span className="text-xs text-muted-foreground">{run.model}</span>
                   </td>
                   <td className="px-4 py-2 text-center">
-                    {run.id === currentRun ? (
+                    {isCurrent ? (
                       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary">
                         Viewing
                       </span>
                     ) : (
-                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
-                        Available
+                      <span className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                        isClickable
+                          ? "bg-primary/5 text-primary"
+                          : "bg-muted text-muted-foreground",
+                      )}>
+                        {isClickable ? "Switch" : "Available"}
                       </span>
                     )}
                   </td>

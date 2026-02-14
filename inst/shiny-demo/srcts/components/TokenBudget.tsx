@@ -66,52 +66,48 @@ export function TokenBudget({
     <div className="rounded-xl border bg-card overflow-hidden">
       <div className="px-4 py-3 border-b bg-muted/30">
         <h3 className="text-sm font-semibold">Token Economy</h3>
-        <p className="text-[11px] text-muted-foreground mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           Code runs in a separate R process — only small slices enter the context window
         </p>
       </div>
 
       <div className="p-4 space-y-5">
-        {/* Context Window Preservation */}
+        {/* Source Data Efficiency */}
         <div className="space-y-3">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Context Window Preservation
+            Source Data Efficiency
           </div>
 
           {/* Two-row comparison */}
-          <div className="space-y-1.5">
-            <div className="space-y-0.5">
-              <div className="text-[10px] text-muted-foreground">In R environment (accessible by code)</div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-6 rounded bg-muted/80 relative overflow-hidden">
-                  <div className="absolute inset-0 flex items-center px-2">
-                    <span className="text-[10px] font-mono text-muted-foreground z-10">
-                      {formatChars(totalContextChars)}
-                    </span>
-                  </div>
-                </div>
+          <div className="space-y-2">
+            <div className="space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-muted-foreground">Available in R environment</span>
+                <span className="text-xs font-mono font-medium tabular-nums">
+                  {formatChars(totalContextChars)}
+                </span>
               </div>
+              <div className="h-5 rounded bg-foreground/15" />
             </div>
-            <div className="space-y-0.5">
-              <div className="text-[10px] text-muted-foreground">In LLM context window (token space)</div>
+            <div className="space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-muted-foreground">Transferred via peek/search</span>
+                <span className="text-xs font-mono font-medium tabular-nums">
+                  {formatChars(transferredChars)}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
-                <div className="h-6 rounded relative overflow-hidden"
+                <div
+                  className="h-5 rounded bg-primary transition-all duration-300"
                   style={{ width: `${Math.max(3, Number(contextPct))}%` }}
-                >
-                  <div className="absolute inset-0 bg-primary rounded" />
-                  <div className="absolute inset-0 flex items-center px-2">
-                    <span className="text-[10px] font-mono text-primary-foreground z-10 whitespace-nowrap">
-                      {formatChars(transferredChars)}
-                    </span>
-                  </div>
-                </div>
+                />
               </div>
             </div>
           </div>
 
           <div className="text-center">
             <span className="text-2xl font-bold tabular-nums text-primary">{contextPct}%</span>
-            <span className="text-xs text-muted-foreground ml-1.5">of source data entered the context window</span>
+            <span className="text-xs text-muted-foreground ml-1.5">of source data needed by the LLM</span>
           </div>
         </div>
 
@@ -141,11 +137,11 @@ export function TokenBudget({
             <div className="grid grid-cols-2 gap-2">
               <div className="text-center p-2 rounded-lg bg-muted/50">
                 <div className="text-sm font-semibold tabular-nums">{formatTokens(inputSoFar)}</div>
-                <div className="text-[10px] text-muted-foreground">input</div>
+                <div className="text-xs text-muted-foreground">input</div>
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/50">
                 <div className="text-sm font-semibold tabular-nums">{formatTokens(outputSoFar)}</div>
-                <div className="text-[10px] text-muted-foreground">output</div>
+                <div className="text-xs text-muted-foreground">output</div>
               </div>
             </div>
           </div>
@@ -157,10 +153,10 @@ export function TokenBudget({
             <div className="text-xs font-medium text-blue-700 dark:text-blue-400">
               Why this matters
             </div>
-            <p className="text-[11px] text-blue-600 dark:text-blue-500">
-              {formatChars(totalContextChars)} of source code sits in the R environment, not the prompt.
-              The LLM explores it through code — only peek() and search() results
-              enter the context window. This preserves context for reasoning.
+            <p className="text-xs text-blue-600 dark:text-blue-500 leading-relaxed">
+              {formatChars(totalContextChars)} of source code sits in the R environment as variables.
+              The LLM writes code to peek() and search() what it needs — only
+              those small fragments enter the prompt, leaving room for reasoning.
             </p>
           </div>
         )}

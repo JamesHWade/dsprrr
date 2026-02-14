@@ -43,9 +43,11 @@ export interface TraceData {
 export interface RunMeta {
   id: string;
   label: string;
+  description: string;
   question: string;
   model: string;
   iterations: number;
+  is_live?: boolean;
   total_tokens?: TokenUsage;
 }
 
@@ -69,10 +71,11 @@ export const PROVIDERS: ProviderOption[] = [
     provider: "openai",
     label: "OpenAI",
     models: [
+      { value: "gpt-5.2", label: "GPT-5.2" },
       { value: "gpt-5-mini", label: "GPT-5 Mini" },
-      { value: "gpt-4o", label: "GPT-4o" },
-      { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-      { value: "o3-mini", label: "o3-mini" },
+      { value: "gpt-4.1", label: "GPT-4.1" },
+      { value: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
+      { value: "o4-mini", label: "o4-mini" },
     ],
     env_var: "OPENAI_API_KEY",
     needs_api_key_input: true,
@@ -91,8 +94,10 @@ export const PROVIDERS: ProviderOption[] = [
     provider: "google",
     label: "Google Gemini",
     models: [
-      { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-      { value: "gemini-2.0-pro", label: "Gemini 2.0 Pro" },
+      { value: "gemini-3-pro-preview", label: "Gemini 3 Pro (preview)" },
+      { value: "gemini-3-flash-preview", label: "Gemini 3 Flash (preview)" },
+      { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
     ],
     env_var: "GOOGLE_API_KEY",
     needs_api_key_input: true,
@@ -102,7 +107,8 @@ export const PROVIDERS: ProviderOption[] = [
     label: "Groq",
     models: [
       { value: "llama-3.3-70b-versatile", label: "Llama 3.3 70B" },
-      { value: "gemma2-9b-it", label: "Gemma 2 9B" },
+      { value: "deepseek-r1-distill-llama-70b", label: "DeepSeek R1 Distill 70B" },
+      { value: "qwen-qwq-32b", label: "QwQ 32B" },
     ],
     env_var: "GROQ_API_KEY",
     needs_api_key_input: true,
@@ -111,8 +117,8 @@ export const PROVIDERS: ProviderOption[] = [
     provider: "deepseek",
     label: "DeepSeek",
     models: [
-      { value: "deepseek-chat", label: "DeepSeek V3" },
-      { value: "deepseek-reasoner", label: "DeepSeek R1" },
+      { value: "deepseek-chat", label: "DeepSeek V3.2" },
+      { value: "deepseek-reasoner", label: "DeepSeek V3.2 (reasoning)" },
     ],
     env_var: "DEEPSEEK_API_KEY",
     needs_api_key_input: true,
@@ -121,8 +127,9 @@ export const PROVIDERS: ProviderOption[] = [
     provider: "mistral",
     label: "Mistral",
     models: [
-      { value: "mistral-large-latest", label: "Mistral Large" },
-      { value: "mistral-small-latest", label: "Mistral Small" },
+      { value: "mistral-large-latest", label: "Mistral Large 3" },
+      { value: "mistral-small-latest", label: "Mistral Small 3.2" },
+      { value: "devstral-small-latest", label: "Devstral Small" },
     ],
     env_var: "MISTRAL_API_KEY",
     needs_api_key_input: true,
@@ -131,8 +138,10 @@ export const PROVIDERS: ProviderOption[] = [
     provider: "perplexity",
     label: "Perplexity",
     models: [
-      { value: "llama-3.1-sonar-large-128k-online", label: "Sonar Large (online)" },
-      { value: "llama-3.1-sonar-small-128k-online", label: "Sonar Small (online)" },
+      { value: "sonar-pro", label: "Sonar Pro" },
+      { value: "sonar", label: "Sonar" },
+      { value: "sonar-reasoning-pro", label: "Sonar Reasoning Pro" },
+      { value: "sonar-reasoning", label: "Sonar Reasoning" },
     ],
     env_var: "PERPLEXITY_API_KEY",
     needs_api_key_input: true,
@@ -142,9 +151,9 @@ export const PROVIDERS: ProviderOption[] = [
     label: "OpenRouter",
     models: [
       { value: "anthropic/claude-sonnet-4-5", label: "Claude Sonnet 4.5" },
-      { value: "openai/gpt-4o", label: "GPT-4o" },
-      { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
-      { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B" },
+      { value: "openai/gpt-5.2", label: "GPT-5.2" },
+      { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { value: "deepseek/deepseek-chat", label: "DeepSeek V3.2" },
     ],
     env_var: "OPENROUTER_API_KEY",
     needs_api_key_input: true,
@@ -154,7 +163,7 @@ export const PROVIDERS: ProviderOption[] = [
     label: "HuggingFace",
     models: [
       { value: "meta-llama/Llama-3.3-70B-Instruct", label: "Llama 3.3 70B" },
-      { value: "mistralai/Mistral-7B-Instruct-v0.3", label: "Mistral 7B" },
+      { value: "Qwen/Qwen2.5-72B-Instruct", label: "Qwen 2.5 72B" },
     ],
     env_var: "HF_TOKEN",
     needs_api_key_input: true,
@@ -163,8 +172,9 @@ export const PROVIDERS: ProviderOption[] = [
     provider: "github",
     label: "GitHub Models",
     models: [
-      { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-      { value: "gpt-4o", label: "GPT-4o" },
+      { value: "gpt-4.1", label: "GPT-4.1" },
+      { value: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
+      { value: "o4-mini", label: "o4-mini" },
     ],
     env_var: "GITHUB_PAT",
     needs_api_key_input: true,
@@ -174,6 +184,7 @@ export const PROVIDERS: ProviderOption[] = [
     label: "Ollama (local)",
     models: [
       { value: "llama3.2", label: "Llama 3.2" },
+      { value: "qwen3", label: "Qwen 3" },
       { value: "qwen2.5-coder", label: "Qwen 2.5 Coder" },
       { value: "mistral", label: "Mistral" },
     ],

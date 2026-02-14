@@ -1,6 +1,12 @@
 import { cn } from "@/lib/utils";
 import type { Phase } from "@/lib/types";
 import { PHASE_INFO } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const PHASES_ORDER: Phase[] = [
   "orient",
@@ -39,46 +45,55 @@ export function PhaseTimeline({
         )}
       </div>
 
-      <div className="flex gap-1.5">
-        {PHASES_ORDER.map((phase) => {
-          const info = PHASE_INFO[phase];
-          const isSeen = seenPhases.has(phase);
-          const isCurrent = phase === currentPhase;
+      <TooltipProvider>
+        <div className="flex gap-1.5">
+          {PHASES_ORDER.map((phase) => {
+            const info = PHASE_INFO[phase];
+            const isSeen = seenPhases.has(phase);
+            const isCurrent = phase === currentPhase;
 
-          return (
-            <div key={phase} className="flex-1 space-y-1.5">
-              <div
-                className={cn(
-                  "h-2 rounded-full transition-all duration-500",
-                  isCurrent && "ring-2 ring-offset-1 ring-offset-background",
-                )}
-                style={{
-                  backgroundColor: isSeen ? info.color : undefined,
-                  ringColor: isCurrent ? info.color : undefined,
-                }}
-              >
-                {!isSeen && (
-                  <div className="h-full rounded-full bg-muted" />
-                )}
-              </div>
-              <div className="text-center">
-                <span
-                  className={cn(
-                    "text-[10px] font-medium transition-colors",
-                    isCurrent
-                      ? "text-foreground"
-                      : isSeen
-                        ? "text-muted-foreground"
-                        : "text-muted-foreground/50",
-                  )}
-                >
-                  {info.label}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            return (
+              <Tooltip key={phase}>
+                <TooltipTrigger asChild>
+                  <div className="flex-1 space-y-1.5 cursor-default">
+                    <div
+                      className={cn(
+                        "h-2 rounded-full transition-all duration-500",
+                        isCurrent && "ring-2 ring-offset-1 ring-offset-background",
+                      )}
+                      style={{
+                        backgroundColor: isSeen ? info.color : undefined,
+                        ringColor: isCurrent ? info.color : undefined,
+                      }}
+                    >
+                      {!isSeen && (
+                        <div className="h-full rounded-full bg-muted" />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <span
+                        className={cn(
+                          "text-[10px] font-medium transition-colors",
+                          isCurrent
+                            ? "text-foreground"
+                            : isSeen
+                              ? "text-muted-foreground"
+                              : "text-muted-foreground/50",
+                        )}
+                      >
+                        {info.label}
+                      </span>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" sideOffset={4}>
+                  {info.description}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }

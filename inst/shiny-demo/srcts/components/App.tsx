@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useShinyInput, useShinyOutput, useShinyMessageHandler } from "@posit/shiny-react";
 import type { TraceData, RunMeta, AppMode, LiveConfig, LiveStatus } from "@/lib/types";
 import { Header } from "./Header";
@@ -11,11 +11,22 @@ import { LiveModePanel } from "./LiveModePanel";
 import { RunComparison } from "./RunComparison";
 import { usePlayback } from "@/hooks/usePlayback";
 import { usePhaseDetection } from "@/hooks/usePhaseDetection";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export function App() {
   const [showIntro, setShowIntro] = useState(true);
+  const [showOrientation, setShowOrientation] = useState(true);
   const [liveTrace, setLiveTrace] = useState<TraceData | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>({ status: "idle" });
+
+  // Session-local storage for completed live runs
+  const sessionTracesRef = useRef<Map<string, TraceData>>(new Map());
+  const [sessionRuns, setSessionRuns] = useState<RunMeta[]>([]);
+  const liveRunCounterRef = useRef(0);
 
   // Shiny communication
   const [traceData] = useShinyOutput<TraceData>("trace_data", undefined);
@@ -29,14 +40,37 @@ export function App() {
   // Live mode message handlers
   useShinyMessageHandler("live_result", (data: TraceData) => {
     setLiveTrace(data);
+
+    // Store completed live trace as a session run
+    liveRunCounterRef.current += 1;
+    const sessionId = `live-${liveRunCounterRef.current}`;
+    const traceWithId = { ...data, run_id: sessionId };
+    sessionTracesRef.current.set(sessionId, traceWithId);
+
+    const meta: RunMeta = {
+      id: sessionId,
+      label: `Live #${liveRunCounterRef.current}`,
+      description: `${data.iterations?.length ?? 0} iterations, ${data.model}`,
+      question: data.question ?? "",
+      model: data.model ?? "",
+      iterations: data.iterations?.length ?? 0,
+      is_live: true,
+      total_tokens: data.total_tokens,
+    };
+    setSessionRuns((prev) => [...prev, meta]);
   });
 
   useShinyMessageHandler("live_status", (status: LiveStatus) => {
     setLiveStatus(status);
   });
 
-  // Active trace: either from replay or live mode
-  const activeTrace = mode === "live" && liveTrace ? liveTrace : traceData;
+  // Merge server runs + session live runs
+  const allRuns = [...(availableRuns ?? []), ...sessionRuns];
+
+  // Active trace: session live run > current live > server replay
+  const sessionTrace = sessionTracesRef.current.get(selectedRun);
+  const activeTrace = sessionTrace
+    ?? (mode === "live" && liveTrace ? liveTrace : traceData);
   const iterations = activeTrace?.iterations ?? [];
 
   // Playback controls
@@ -51,9 +85,11 @@ export function App() {
   const handleRunChange = useCallback(
     (runId: string) => {
       setSelectedRun(runId);
+      // Switch to replay mode so the run selector + trace render
+      setMode("replay");
       playback.reset();
     },
-    [setSelectedRun, playback],
+    [setSelectedRun, setMode, playback],
   );
 
   const handleStartLive = useCallback(
@@ -64,6 +100,9 @@ export function App() {
     },
     [setStartLiveRun, playback],
   );
+
+  // Auto-hide orientation banner when playback completes
+  const orientationVisible = showOrientation && playback.state !== "done";
 
   if (showIntro) {
     return <IntroPanel onStart={handleStartExploring} />;
@@ -76,7 +115,8 @@ export function App() {
         onModeChange={setMode}
         selectedRun={selectedRun}
         onRunChange={handleRunChange}
-        availableRuns={availableRuns ?? []}
+        availableRuns={allRuns}
+        currentQuestion={activeTrace?.question}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
@@ -90,6 +130,29 @@ export function App() {
             currentIndex={playback.currentIndex}
           />
         </div>
+
+        {/* Orientation banner */}
+        {orientationVisible && (
+          <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 flex items-start gap-3">
+            <div className="flex-1 text-sm text-blue-700 dark:text-blue-400">
+              <span className="font-semibold">Watch the LLM think in code.</span>{" "}
+              <span className="text-blue-600 dark:text-blue-500">
+                Each card below is one REPL iteration &mdash; the model writes R code,
+                executes it, reads the output, and decides what to do next. The sidebar
+                tracks how little source data actually enters the context window.
+              </span>
+            </div>
+            <button
+              onClick={() => setShowOrientation(false)}
+              className="shrink-0 p-1 rounded hover:bg-blue-200/50 dark:hover:bg-blue-800/30 text-blue-400 hover:text-blue-600 transition-colors"
+              aria-label="Dismiss"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {mode === "live" ? (
           <LiveModePanel
@@ -116,9 +179,35 @@ export function App() {
               </div>
             )}
 
+            {/* Mobile sidebar collapsible */}
+            {activeTrace && (
+              <div className="lg:hidden">
+                <Collapsible>
+                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm font-medium hover:bg-muted/50 transition-colors">
+                    <span>Token Economy &amp; Context</span>
+                    <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <ContextPanel
+                      contextVariables={activeTrace.context_variables}
+                      iterations={iterations}
+                      currentIndex={playback.currentIndex}
+                      totalTokens={activeTrace.total_tokens}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
+
             {/* Run comparison - show after completing a run */}
-            {playback.state === "done" && availableRuns && availableRuns.length > 1 && (
-              <RunComparison runs={availableRuns} currentRun={selectedRun} />
+            {playback.state === "done" && allRuns.length > 1 && (
+              <RunComparison
+                runs={allRuns}
+                currentRun={selectedRun}
+                onRunChange={handleRunChange}
+              />
             )}
           </div>
 

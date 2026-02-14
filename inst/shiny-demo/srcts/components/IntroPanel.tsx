@@ -23,36 +23,35 @@ export function IntroPanel({ onStart }: IntroPanelProps) {
               Traditional
             </div>
             <div className="font-mono text-sm text-muted-foreground leading-relaxed">
-              <span className="text-foreground">llm(</span>
+              <span className="text-foreground">llm</span>$<span className="text-foreground">chat</span>(
               <br />
-              &nbsp;&nbsp;prompt,
+              &nbsp;&nbsp;<span className="text-orange-600 dark:text-orange-400">paste</span>(question, <span className="text-destructive">all_source_code</span>)
               <br />
-              &nbsp;&nbsp;context = <span className="text-destructive">4M chars</span>
-              <br />
-              <span className="text-foreground">)</span>
+              )
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mt-2">
               Stuff everything into the prompt. Hope the model finds the needle.
             </p>
           </div>
 
           <div className="rounded-xl border-2 border-primary/30 bg-card p-6 space-y-3">
             <div className="text-sm font-medium text-primary uppercase tracking-wider">
-              RLM
+              RLM (dsprrr)
             </div>
             <div className="font-mono text-sm leading-relaxed">
-              <span className="text-foreground">rlm(</span>
+              <span className="text-foreground">rlm</span>(
               <br />
-              &nbsp;&nbsp;question,
+              &nbsp;&nbsp;<span className="text-muted-foreground">"question -&gt; answer"</span>,
               <br />
-              &nbsp;&nbsp;context = <span className="text-primary font-semibold">R variables</span>
+              &nbsp;&nbsp;question, <span className="text-primary font-semibold">.llm</span>
               <br />
-              <span className="text-foreground">)</span>
+              )
             </div>
-            <p className="text-sm text-muted-foreground">
-              Context becomes <strong>environment</strong>. The model writes R code to{" "}
-              <code className="text-xs bg-muted px-1 rounded">peek()</code>,{" "}
-              <code className="text-xs bg-muted px-1 rounded">search()</code>, and explore.
+            <p className="text-sm text-muted-foreground mt-2">
+              Source code lives in <code className="text-xs bg-muted px-1 rounded">.context</code> variables.
+              The model writes R to{" "}
+              <code className="text-xs bg-muted px-1 rounded">search()</code> and{" "}
+              <code className="text-xs bg-muted px-1 rounded">peek()</code> what it needs.
             </p>
           </div>
         </div>
