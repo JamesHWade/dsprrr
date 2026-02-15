@@ -1,0 +1,618 @@
+---
+title: "Recursive Language Models: Exploring Codebases with dsprrr"
+output: rmarkdown::html_vignette
+---
+
+```{r}
+#| include: false
+# Replay recorded HTTP responses (VCR cassettes) during site builds;
+# skip evaluation entirely during R CMD check to avoid API dependencies.
+force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+in_check <- !force_eval &&
+  (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
+    identical(Sys.getenv("NOT_CRAN"), "false"))
+
+should_eval <- !in_check && dsprrr:::eval_vignette()
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = should_eval
+)
+
+if (should_eval) {
+  if (!is.null(vcr::current_cassette())) {
+    try(vcr::eject_cassette(), silent = TRUE)
+  }
+  vcr::vcr_configure(
+    dir = "_vcr",
+    filter_request_headers = c("Authorization", "x-api-key"),
+    match_requests_on = c("method", "uri")
+  )
+  vcr::setup_knitr()
+}
+```
+
+LLM context windows have a hard ceiling. A large codebase either doesn't fit,
+or, if it does, accuracy degrades silently: the model keeps producing confident
+output while dropping details buried in the middle.
+
+Recursive Language Models (RLMs) take a different approach. Instead of pasting
+context into the prompt, they give the model programmatic tools to explore it.
+The model writes R code to read files, search for patterns, and accumulate
+relevant excerpts iteratively, turning long-context problems into coding
+problems. For the conceptual background (what context rot is, how the ecosystem
+evolved, and how dsprrr's internals work), see
+the [How the RLM Works](how-rlm-works.html) article.
+
+```
+Traditional:  [entire document] -> LLM -> answer
+RLM:          [query only]      -> LLM -> code -> [selective reads] -> LLM -> ...
+```
+
+This tutorial uses `rlm_module()` to explore three interconnected R package
+codebases (bslib, shiny, and brand.yml) and investigate a real open issue
+that spans all three. By Step 8, we show that repeated RLM runs converge on
+the same five-phase exploration pattern, a finding you can use to design
+deterministic pipelines.
+
+**Time**: 30--45 minutes
+
+**Topics covered:**
+
+- Setting up an RLM module for codebase exploration
+- Comparing RLM results against a curated-context baseline
+- Tracing a real bug across three interconnected R packages
+- Delegating interpretive work with recursive sub-queries
+- Extracting stable exploration patterns from RLM traces
+
+## The Problem: Contributing to bslib
+
+[bslib issue #1123](https://github.com/rstudio/bslib/issues/1123): setting
+the `primary` color in `bs_theme()` changes the navbar in `page_navbar()` but
+is ignored by `page_sidebar()`. A user reported it with this example:
+
+```r
+# This changes the navbar color:
+page_navbar(theme = bs_theme(preset = "flatly", primary = "#95a5a6"))
+
+# This does NOT:
+page_sidebar(theme = bs_theme(preset = "flatly", primary = "#95a5a6"))
+```
+
+Fixing this requires tracing how a brand color flows through three packages:
+
+- **brand.yml**: reads `_brand.yml` files and generates Sass variables
+- **bslib**: compiles those variables into Bootstrap CSS
+- **shiny**: renders the themed UI components
+
+The bslib package alone has over 500 R and SCSS files. Adding shiny and
+brand.yml pushes the total context to nearly 4 million characters, well
+beyond what fits in a single prompt.
+
+## Step 1: Setup and Load the Codebases
+
+```{r setup}
+library(dsprrr)
+library(ellmer)
+```
+
+Create an `RCodeRunner` for executing the code the RLM generates:
+
+```{r runner-setup}
+runner <- r_code_runner(timeout = 30)
+```
+
+Pull the source code for all three packages. The `read_package_source()`
+helper below clones a repo, concatenates its R and SCSS files into a single
+string (preserving file paths), and returns the result. Expand the fold to
+see the implementation, or skip ahead; the important thing is what the
+function returns, not how it works.
+
+<details>
+<summary>Definition of <code>read_package_source()</code></summary>
+
+```{r read-package-source, cache = TRUE}
+read_package_source <- function(repo, ref = "main", subdirs = c("R", "inst")) {
+  dir <- tempfile()
+  status <- system2(
+    "git",
+    c(
+      "clone",
+      "--depth=1",
+      "--branch",
+      ref,
+      paste0("https://github.com/", repo, ".git"),
+      dir
+    ),
+    stdout = FALSE,
+    stderr = FALSE
+  )
+  if (status != 0) {
+    stop("git clone failed for ", repo, " (exit code ", status, ")")
+  }
+
+  files <- unlist(lapply(subdirs, function(subdir) {
+    list.files(
+      file.path(dir, subdir),
+      pattern = "\\.(R|r|scss)$",
+      recursive = TRUE,
+      full.names = TRUE
+    )
+  }))
+
+  contents <- vapply(
+    files,
+    function(f) {
+      path <- sub(paste0(dir, "/"), "", f)
+      paste0("--- FILE: ", path, " ---\n", paste(readLines(f), collapse = "\n"))
+    },
+    character(1),
+    USE.NAMES = FALSE
+  )
+
+  paste(contents, collapse = "\n\n")
+}
+```
+
+</details>
+
+```{r load-code, cache = TRUE}
+bslib_source <- read_package_source("rstudio/bslib")
+shiny_source <- read_package_source("rstudio/shiny")
+brandyml_source <- read_package_source(
+  "posit-dev/brand-yml",
+  subdirs = "pkg-r/R"
+)
+```
+
+These three strings sit in programmatic space; none enter the context window
+until the model requests a specific slice:
+
+```{r context-sizes}
+format_size <- function(source, label) {
+  n_files <- length(gregexpr("--- FILE:", source)[[1]])
+  cli::cli_li("{.strong {label}}: {format(nchar(source), big.mark = ',')} characters ({n_files} files)")
+}
+cli::cli_ul()
+format_size(bslib_source, "bslib")
+format_size(shiny_source, "shiny")
+format_size(brandyml_source, "brand.yml")
+cli::cli_end()
+```
+
+Nearly 4 million characters total, well beyond what any model handles
+accurately in a single pass.
+
+## Step 2: Baseline, What a Developer Would Try First
+
+Before reaching for an RLM, a competent developer would grep for the relevant
+functions and feed the results to a model. Let's try that:
+
+```{r baseline}
+#| cassette: true
+# Extract the context a developer would actually assemble:
+# definitions and nearby code for both page functions, plus Sass variable usage
+relevant_lines <- function(source, patterns, context_chars = 3000) {
+  slices <- lapply(patterns, function(pat) {
+    positions <- gregexpr(pat, source, perl = TRUE)[[1]]
+    positions <- positions[positions > 0]
+    if (length(positions) == 0) {
+      return(character(0))
+    }
+    # Take first 3 matches, with surrounding context
+    positions <- head(positions, 3)
+    vapply(
+      positions,
+      function(pos) {
+        start <- max(1, pos - context_chars %/% 2)
+        substr(source, start, start + context_chars)
+      },
+      character(1)
+    )
+  })
+  paste(unlist(slices), collapse = "\n\n---\n\n")
+}
+
+curated_context <- paste(
+  relevant_lines(bslib_source, c("page_navbar", "page_sidebar", "\\$primary")),
+  relevant_lines(shiny_source, c("navbarPage", "navbar")),
+  sep = "\n\n=== shiny ===\n\n"
+)
+
+baseline <- module(
+  signature(
+    "codebase, question -> analysis",
+    instructions = "You are an expert R developer analyzing package source code."
+  )
+)
+
+result <- run(
+  baseline,
+  codebase = curated_context,
+  question = paste(
+    "In bslib, why does setting primary in bs_theme() change the navbar",
+    "in page_navbar() but not in page_sidebar()? Trace the Sass variable",
+    "chain from primary through to the navbar background."
+  ),
+  .llm = chat_openai(model = "gpt-5-mini")
+)
+
+result$analysis
+```
+
+The model gets targeted context: function definitions for both `page_navbar()`
+and `page_sidebar()`, plus Sass variable references and relevant shiny code.
+Better than stuffing in a random 50K prefix, but still incomplete. The grep
+captures mentions of `$primary` but not the chain of SCSS imports and mixins
+that connect it (or fail to connect it) to `$navbar-bg`. The model can see the
+endpoints but not the plumbing between them.
+
+A coding agent could search files iteratively, but it needs files on disk. An
+RLM works on arbitrary in-memory data: combined source strings from multiple
+repos, API responses, scraped content, anything you can load into a variable.
+And because `rlm_module()` is a dsprrr module, its traces feed into
+`compile()`, `evaluate()`, and the rest of the optimization framework.
+
+## Step 3: Set Up the RLM
+
+```{r rlm-setup}
+investigator <- rlm_module(
+  signature(
+    "bslib_source, shiny_source, brandyml_source, question -> analysis",
+    instructions = paste(
+      "You are an expert R/Sass developer investigating a theming bug across",
+      "three interconnected R packages. Explore the source code systematically",
+      "to trace how Sass variables flow between packages."
+    )
+  ),
+  runner = runner,
+  max_iterations = 15,
+  verbose = TRUE
+)
+```
+
+The module takes three context variables (one per package) plus a question.
+Inside the REPL, these mechanisms are available:
+
+| Mechanism | Purpose |
+|-----------|---------|
+| `.context$<var>` | Access a context variable (e.g., `.context$bslib_source`) |
+| `peek(var, start, end)` | View a slice of a variable; dispatches on type (character positions for strings, element indices for vectors). Default: first 1000 chars |
+| `search(var, pattern)` | Perl-compatible regex search; returns all matching substrings |
+| `llm_query(query, context_slice)` | Delegate a sub-question to a secondary model (requires `sub_lm`) |
+| `llm_query_batched(queries, slices)` | Batch multiple sub-questions in parallel (requires `sub_lm`) |
+| `SUBMIT(...)` | Return the final answer and terminate the REPL loop; validates against signature output fields |
+
+The model writes R code using these mechanisms. Each iteration, the code
+executes and the output feeds back as context for the next step.
+
+## Step 4: Run the Investigation
+
+```{r run-rlm}
+#| cassette: true
+result <- run(
+  investigator,
+  bslib_source = bslib_source,
+  shiny_source = shiny_source,
+  brandyml_source = brandyml_source,
+  question = paste(
+    "In bslib, setting `primary` in bs_theme() changes the navbar color in",
+    "page_navbar() but NOT in page_sidebar(). This is GitHub issue #1123.",
+    "Trace the complete Sass variable chain from `$primary` to the navbar",
+    "background in both page functions. Identify exactly where and why the",
+    "chain breaks for page_sidebar(). Include specific file names and line",
+    "references."
+  ),
+  .llm = chat_openai(model = "gpt-5-mini")
+)
+
+cli::cli_h3("Analysis")
+cli::cli_verbatim(result$analysis)
+```
+
+With `verbose = TRUE`, each iteration prints as it runs.
+
+## Step 5: Inside the REPL
+
+The RLM runs a loop: generate code, execute it, observe results, repeat. It
+does not read everything at once:
+
+```{r repl-history}
+history <- investigator$get_repl_history()
+latest <- history[[length(history)]]
+
+cli::cli_alert_info("Iterations used: {latest$iterations_used} / {investigator$max_iterations}")
+
+# Helper for displaying iteration history
+show_iteration <- function(entry, n, label = NULL) {
+  header <- if (!is.null(label)) {
+    paste0("Iteration ", n, " (", label, ")")
+  } else {
+    paste0("Iteration ", n)
+  }
+  cli::cli_h3(header)
+  cli::cli_text("{.strong Reasoning}:")
+  cli::cli_verbatim(entry$reasoning)
+  cli::cli_text("{.strong Code}:")
+  cli::cli_code(entry$code)
+  if (!isTRUE(entry$success)) {
+    cli::cli_alert_danger("Failed")
+    if (!is.null(entry$output) && nzchar(entry$output)) {
+      cli::cli_text("{.strong Output}:")
+      cli::cli_verbatim(entry$output)
+    }
+  }
+}
+```
+
+Each iteration records the model's reasoning and the code it wrote. The
+walkthrough below is drawn from the recorded run above. Not every iteration
+succeeds: the model makes wrong turns, hits R string-escaping errors, and
+occasionally wastes a step. That is normal. The REPL loop is designed around
+the assumption that individual steps will fail.
+
+### Early iterations: Broad search
+
+Nearly 4 million characters sit in programmatic space; zero are in token
+space. The model typically starts by mapping the terrain:
+
+```{r iter-early, echo = FALSE}
+show_iteration(latest$history[[2]], 2)
+```
+
+`search()` returns only matching substrings, not entire files. Each result is
+a targeted transfer from programmatic to token space.
+
+### Mid-iterations: Locate definitions, trace variables
+
+As the model accumulates results, it narrows in on specific definitions and
+the surrounding code:
+
+```{r iter-mid, echo = FALSE}
+show_iteration(latest$history[[4]], 4)
+```
+
+The model has access to all of R, not just the provided REPL tools. It
+frequently uses base R functions like `gregexpr()`, `grepl()`, or
+`regmatches()` to refine its searches, and sometimes writes helper functions
+or splits files by header.
+
+### Failures and recovery
+
+Not every iteration succeeds. Let's find one that failed and see how the
+model recovered:
+
+```{r iter-fail, echo = FALSE}
+failed <- which(!vapply(latest$history, function(h) h$success, logical(1)))
+if (length(failed) > 0) {
+  i <- failed[1]
+  show_iteration(latest$history[[i]], i, label = "failed")
+  if (i < length(latest$history)) {
+    show_iteration(latest$history[[i + 1]], i + 1, label = "recovery")
+  }
+} else {
+  cli::cli_alert_success("This run had no failed iterations (unusual but possible).")
+}
+```
+
+Across multiple runs, two failure modes recur:
+
+**String escaping errors.** The model writes `"\("` instead of `"\\("`, or
+`"\$"` instead of `"\\$"`. R rejects the code, the error feeds back, and the
+model self-corrects on the next iteration.
+
+**Lost state.** Each iteration runs in a fresh environment. A helper function
+or parsed data structure defined in iteration 7 does not exist in iteration 8.
+The model encounters this empirically: after a "not found" error, it re-creates
+the object. This costs iterations but is part of the REPL's design. Stateless
+execution prevents accumulated errors from compounding.
+
+A typical run includes 2--4 failed iterations out of 10--15 total.
+
+### Final iteration: SUBMIT
+
+Once the model has gathered enough evidence, it calls `SUBMIT()` with the
+answer:
+
+```{r iter-final, echo = FALSE}
+show_iteration(latest$history[[length(latest$history)]], length(latest$history), label = "final")
+```
+
+`SUBMIT()` returns the final analysis and terminates the REPL loop. If
+`max_iterations` is reached without a `SUBMIT()` call, dsprrr extracts a
+best-effort answer from the full exploration history.
+
+## Step 6: Add Recursive Sub-queries
+
+The analysis above identifies the broken Sass variable chain. To go further
+(proposing a specific code fix, say), the root model may need help
+interpreting complex SCSS mixins or Bootstrap conventions from raw character
+slices. A secondary model handles these focused sub-questions:
+
+```{r rlm-recursive}
+#| cassette: true
+deep_investigator <- rlm_module(
+  signature(
+    "bslib_source, shiny_source, brandyml_source, question -> analysis, fix_proposal",
+    instructions = paste(
+      "You are an expert R/Sass developer. Investigate the bug and propose a",
+      "specific code fix. Use llm_query() to get help interpreting complex",
+      "Sass logic or understanding Bootstrap conventions."
+    )
+  ),
+  runner = runner,
+  max_iterations = 20,
+  sub_lm = chat_openai(model = "gpt-5-mini"), # Secondary model for sub-queries
+  max_llm_calls = 10,
+  verbose = TRUE
+)
+
+result <- run(
+  deep_investigator,
+  bslib_source = bslib_source,
+  shiny_source = shiny_source,
+  brandyml_source = brandyml_source,
+  question = paste(
+    "Investigate bslib issue #1123 and propose a fix.",
+    "The page_sidebar() title bar should respect the primary color the same",
+    "way page_navbar() does. What's the minimal change to fix this?"
+  ),
+  .llm = chat_openai(model = "gpt-5-mini")
+)
+
+cli::cli_h3("Analysis")
+cli::cli_verbatim(result$analysis)
+cli::cli_h3("Proposed Fix")
+cli::cli_verbatim(result$fix_proposal)
+```
+
+With `sub_lm` set, the root model can delegate interpretive tasks to a
+secondary model. For example, when it encounters a complex SCSS mixin:
+
+```r
+llm_query(
+  "In Bootstrap 5 Sass, what is the difference between $navbar-bg and
+   $navbar-light-bg? When would each be used?",
+  context_slice = scss_snippet
+)
+```
+
+The root model orchestrates exploration; the sub-model handles focused
+interpretation. A smaller, cheaper model is usually sufficient for these
+queries, since the sub-questions are narrow and well-scoped.
+
+`llm_query_batched()` sends multiple sub-questions in parallel.
+
+## Step 7: Inspect Costs and Trajectory
+
+RLMs trade latency for accuracy:
+
+```{r costs}
+history <- deep_investigator$get_repl_history()
+latest <- history[[length(history)]]
+
+cli::cli_ul()
+cli::cli_li("Iterations used: {latest$iterations_used} / {deep_investigator$max_iterations}")
+cli::cli_li("LLM sub-calls: {latest$llm_calls_used} / {deep_investigator$max_llm_calls}")
+cli::cli_end()
+```
+
+A typical run uses 10--15 iterations. Each involves one call to generate
+code plus the execution itself; 2--4 of those iterations will fail (string
+escaping errors, lost state, timeouts) and self-correct. Recursive sub-queries
+add additional calls. Total token usage is a fraction of what stuffing all
+three codebases into one prompt would require.
+
+The tradeoff is wall-clock time. Each iteration is a sequential round-trip
+(generate code, execute, observe result): expect 2--5 minutes for a full run,
+depending on model latency and how many iterations the model needs.
+
+## Step 8: From Traces to Agent Designs
+
+There is a secondary use for `get_repl_history()` beyond debugging. As
+[Breunig (2026)](https://www.dbreunig.com/2026/02/09/the-potential-of-rlms.html)
+observes, running an RLM on the same task multiple times reveals repeatable
+exploration patterns.
+
+We ran the bslib investigation four times with `gpt-5-mini`. The code varied
+across runs, but the exploration structure converged:
+
+| Phase | Run 1 | Run 2 | Run 3 | Run 4 |
+|-------|-------|-------|-------|-------|
+| 1. Orient | `search("page_navbar")` | `search("page_navbar")` | `peek(bslib, 1, 5000)` | `search("page_sidebar")` |
+| 2. Locate definitions | `gregexpr("page_navbar")` + `peek` | `search("page_sidebar")` + `peek` | `search("page_navbar\\b")` | `gregexpr("page_navbar")` + `peek` |
+| 3. Find Sass chain | `search("\\$navbar-bg")` | `search("navbar-bg")` | `search("\\$primary")` | `search("\\$navbar-bg")` |
+| 4. Cross-reference | `search(shiny, "navbar")` | `search(shiny, "navbarPage")` | `search(shiny, "navbar")` | `search(brandyml, "primary")` |
+| 5. Identify gap | Compare page_navbar vs page_sidebar SCSS | Compare $navbar-bg vs sidebar vars | Compare preset mappings | Compare $navbar-bg chain |
+
+All four runs searched for `page_navbar` and `$navbar-bg` within the first
+four iterations. All four cross-referenced at least one other package. All four
+converged on the same diagnosis. The specific code and ordering differed, but
+the five-phase structure (orient, locate, trace Sass, cross-reference, identify
+gap) was stable.
+
+That stable structure is a specification you can extract and formalize into a
+deterministic pipeline, trading the RLM's flexibility for speed and
+reliability.
+
+This connects to dsprrr's optimization story. A `compile()` call with a
+teleprompter tunes a module's parameters against a dataset. RLM traces offer a
+complementary path: instead of optimizing *within* a module, you observe the
+module's behavior to design a *new* module, or a chain of modules, that
+encodes the discovered strategy directly.
+
+## Summary
+
+The investigation traced how `bs_theme(primary = ...)` flows through bslib's
+Sass pipeline and found the gap: `page_navbar()` picks up `$primary` via the
+flatly preset's mapping to `$navbar-bg`, but `page_sidebar()`'s title bar
+defaults to `$secondary` with no equivalent link. Three packages, nearly
+4 million characters of source, and the model identified the disconnect in
+a handful of iterations.
+
+More importantly, the traces revealed a stable five-phase exploration pattern
+that converged across multiple runs, the kind of structure you can extract
+and formalize into a deterministic pipeline.
+
+For guidance on when RLMs are the right tool (and when simpler approaches
+win), see the decision framework in
+the [How the RLM Works](how-rlm-works.html) article.
+
+## Try It Yourself
+
+The snippet below uses `read_package_source()` from Step 1. You already have
+the bslib, shiny, and brand.yml source loaded; try a second investigation
+with the same data. There are several
+[open theming issues](https://github.com/rstudio/bslib/issues?q=is%3Aopen+label%3A%22theming%22)
+in bslib that require the same kind of cross-package tracing. For example:
+
+```{r try-it, eval = FALSE}
+# Investigate another theming issue with the same data
+run(
+  investigator,
+  bslib_source = bslib_source,
+  shiny_source = shiny_source,
+  brandyml_source = brandyml_source,
+  question = paste(
+    "How does bs_theme()'s `font_scale` argument propagate through bslib's",
+    "Sass pipeline? Which components respect it and which ignore it?"
+  ),
+  .llm = chat_openai(model = "gpt-5-mini")
+)
+```
+
+Or load your own package source:
+
+```{r try-it-own, eval = FALSE}
+my_source <- read_package_source("your-org/your-package")
+
+explorer <- rlm_module(
+  "codebase, question -> answer",
+  runner = r_code_runner(timeout = 30),
+  max_iterations = 10
+)
+
+run(
+  explorer,
+  codebase = my_source,
+  question = "How does the authentication middleware work?",
+  .llm = chat_openai(model = "gpt-5-mini")
+)
+```
+
+## Further Reading
+
+- [Zhang, Kraska & Khattab (2025). "Recursive Language Models."](https://arxiv.org/abs/2512.24601)
+  The paper introducing the RLM approach.
+- [Breunig (2026). "The Potential of RLMs."](https://www.dbreunig.com/2026/02/09/the-potential-of-rlms.html)
+  Practical experience with RLMs at scale (400MB+ contexts), plus the
+  trace-to-pipeline idea. Breunig draws a useful analogy: RLMs are to
+  long-context problems what chain-of-thought was to reasoning, a test-time
+  strategy that works today and will improve as models are trained to exploit it.
+- `vignette("advanced-modules", package = "dsprrr")`: ChainOfThought,
+  BestOfN, and other reasoning patterns in dsprrr
+- `vignette("reasoning-models", package = "dsprrr")`: Using reasoning
+  models (o1, o3, GPT-5) with dsprrr
+- `vignette("rag-workflows", package = "dsprrr")`: When retrieval-based
+  approaches are a better fit

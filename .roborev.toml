@@ -1,0 +1,33 @@
+agent = "claude-code"
+display_name = "dsprrr"
+
+# Use thorough reviews, standard for refine iterations
+review_reasoning = "thorough"
+refine_reasoning = "standard"
+
+review_guidelines = """
+This is an R package using S7 (immutable Signature), R6 (stateful Module), and ellmer for LLM calls.
+
+Automated checks (run these on changed .R files):
+- Run `air format --check .` and flag any unformatted files as a Medium finding
+- Check for snake_case naming violations in new/changed code
+
+Quality gates that must pass:
+- air format (entire repo) - tidyverse-style formatting
+- jarl check --fix - linting
+- devtools::check() - R CMD check with no errors/warnings
+- pkgdown::build_site() - documentation site builds
+
+Conventions:
+- Use cli::cli_abort() for errors, cli::cli_warn() for warnings
+- Use @noRd (not @keywords internal) for internal S7 classes to avoid codoc mismatches
+- snake_case naming, tidyverse style throughout
+- Prefer editing existing files over creating new ones
+- Tests use testthat 3e with VCR cassettes for HTTP recording
+- Never commit directly to main; feature branches + PRs only
+"""
+
+# Create beads issues for failed reviews
+[[hooks]]
+event = "review.failed"
+type = "beads"

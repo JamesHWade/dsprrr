@@ -106,13 +106,10 @@ optimized <- compile_module(
 
 Before you begin:
 
-1. **Install R** (4.1 or later)
-
 2. **Install the packages**:
 ```r
-install.packages("pak")
+# install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
-pak::pak("tidyverse/ellmer")
 ```
 
 3. **Set your API key**:
@@ -123,7 +120,7 @@ OPENAI_API_KEY=sk-your-key-here
 
 ## Learning Path
 
-```mermaid
+```{mermaid}
 flowchart TB
   subgraph Tutorials
     T1["1. Hello World"] --> T2["2. Build Classifier"] --> T3["3. Structured Outputs"]

@@ -24,6 +24,17 @@ gh-issue-optimizers.md
 # dsprrr LLM response cache
 .dsprrr_cache/
 
+# Shiny demo build artifacts
+inst/shiny-demo/node_modules/
+
+# Posit Connect deployment artifacts
+.posit/
+renv.lock
+
 # Claude Code - user-specific settings (commands are committed)
 .claude/settings*.json
 .claude/*.local.*
+.claude/worktrees/
+
+# Knitr cache
+vignettes/*_cache/

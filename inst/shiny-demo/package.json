@@ -1,0 +1,32 @@
+{
+  "name": "rlm-demo",
+  "private": true,
+  "scripts": {
+    "build": "npx tsx build.ts --production",
+    "watch": "npx tsx build.ts --watch",
+    "dev": "concurrently \"npm run watch\" \"npm run shinyapp-r\"",
+    "shinyapp-r": "Rscript -e \"options(shiny.autoreload = TRUE); shiny::runApp('r/app.R', port=${R_PORT:-8000})\""
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "chokidar": "^4.0.3",
+    "concurrently": "^9.0.1",
+    "esbuild": "^0.25.9",
+    "esbuild-plugin-tailwindcss": "^2.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "tailwindcss": "^4.1.6",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@posit/shiny-react": "^0.0.16",
+    "@radix-ui/react-slot": "^1.0.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.462.0",
+    "radix-ui": "^1.4.3",
+    "tailwind-merge": "^2.2.0"
+  }
+}
