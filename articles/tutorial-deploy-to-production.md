@@ -85,7 +85,7 @@ board <- board_folder(tempdir())
 
 # Save the module configuration
 pin_module_config(board, "sentiment-classifier", classifier)
-#> Creating new version '20260214T194830Z-3a2d6'
+#> Creating new version '20260215T015419Z-c8191'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned module configuration: "sentiment-classifier"
 #> ℹ Module type: <PredictModule>
@@ -107,21 +107,21 @@ board |> pin_list()
 board |> pin_meta("sentiment-classifier")
 #> List of 13
 #>  $ file       : chr "sentiment-classifier.rds"
-#>  $ file_size  : 'fs_bytes' int 492
-#>  $ pin_hash   : chr "3a2d6a0c78020d95"
+#>  $ file_size  : 'fs_bytes' int 490
+#>  $ pin_hash   : chr "c8191750c8d32279"
 #>  $ type       : chr "rds"
 #>  $ title      : chr "sentiment-classifier: a pinned list"
 #>  $ description: chr "dsprrr module config: sentiment-classifier"
 #>  $ tags       : NULL
 #>  $ urls       : NULL
-#>  $ created    : POSIXct[1:1], format: "2026-02-14 19:48:30"
+#>  $ created    : POSIXct[1:1], format: "2026-02-15 01:54:19"
 #>  $ api_version: int 1
 #>  $ user       : list()
 #>  $ name       : chr "sentiment-classifier"
 #>  $ local      :List of 3
-#>   ..$ dir    : 'fs_path' chr "/tmp/Rtmp3ZMVKq/sentiment-classifier/20260214T194830Z-3a2d6"
+#>   ..$ dir    : 'fs_path' chr "/tmp/RtmpVPw6EE/sentiment-classifier/20260215T015419Z-c8191"
 #>   ..$ url    : NULL
-#>   ..$ version: chr "20260214T194830Z-3a2d6"
+#>   ..$ version: chr "20260215T015419Z-c8191"
 ```
 
 ## Step 4: Restore in a New Session
@@ -160,7 +160,7 @@ improved <- compile_module(
 
 # Save again - creates new version
 pin_module_config(board, "sentiment-classifier", improved)
-#> Creating new version '20260214T194831Z-0c1c7'
+#> Creating new version '20260215T015419Z-69c6e'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned module configuration: "sentiment-classifier"
 #> ℹ Module type: <PredictModule>
@@ -171,8 +171,8 @@ board |> pin_versions("sentiment-classifier")
 #> # A tibble: 2 × 3
 #>   version                created             hash 
 #>   <chr>                  <dttm>              <chr>
-#> 1 20260214T194830Z-3a2d6 2026-02-14 19:48:30 3a2d6
-#> 2 20260214T194831Z-0c1c7 2026-02-14 19:48:31 0c1c7
+#> 1 20260215T015419Z-69c6e 2026-02-15 01:54:19 69c6e
+#> 2 20260215T015419Z-c8191 2026-02-15 01:54:19 c8191
 ```
 
 ## Step 6: Roll Back to Previous Version

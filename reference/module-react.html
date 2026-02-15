@@ -33,6 +33,7 @@ tool calls, and observations before producing a final structured answer."><meta 
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -53,6 +54,8 @@ tool calls, and observations before producing a final structured answer."><meta 
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
@@ -102,9 +105,9 @@ upgrades to <code>react</code>. The module runs a loop of tool calls up to
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index">
-<ul><li><p><code><a href="module.html">module</a></code> for creating modules</p></li>
-<li><p><code><a href="ragnar_tool.html">ragnar_tool</a></code> and <code><a href="create_search_tool.html">create_search_tool</a></code> for search tools</p></li>
-<li><p><code><a href="code_act.html">code_act</a></code> for tool + code execution agents</p></li>
+<ul><li><p><code><a href="module.html">module()</a></code> for creating modules</p></li>
+<li><p><code><a href="ragnar_tool.html">ragnar_tool()</a></code> and <code><a href="create_search_tool.html">create_search_tool()</a></code> for search tools</p></li>
+<li><p><code><a href="code_act.html">code_act()</a></code> for tool + code execution agents</p></li>
 </ul></div>
     </div>
 
@@ -133,6 +136,7 @@ upgrades to <code>react</code>. The module runs a loop of tool calls up to
 <span class="r-in"><span><span class="va">questions</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Q1"</span>, <span class="st">"Q2"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">agent</span>, <span class="va">questions</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

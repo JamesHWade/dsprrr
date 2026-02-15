@@ -13,6 +13,7 @@ articles:
   concepts-signatures-modules: concepts-signatures-modules.html
   concepts-why-metrics-matter: concepts-why-metrics-matter.html
   getting-started: getting-started.html
+  articles/how-rlm-works: how-rlm-works.html
   llms-txt: llms-txt.html
   orchestration: orchestration.html
   rag-workflows: rag-workflows.html
@@ -25,10 +26,11 @@ articles:
   tutorial-hello-world: tutorial-hello-world.html
   tutorial-improve-with-demos: tutorial-improve-with-demos.html
   tutorial-optimize-your-module: tutorial-optimize-your-module.html
+  articles/tutorial-rlm-dsprrr: tutorial-rlm-dsprrr.html
   tutorial-structured-outputs: tutorial-structured-outputs.html
   vitals-integration: vitals-integration.html
   vitals-recipes: vitals-recipes.html
-last_built: 2026-02-14T19:46Z
+last_built: 2026-02-15T01:51Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles

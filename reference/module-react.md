@@ -13,15 +13,15 @@ upgrades to `react`. The module runs a loop of tool calls up to
 
 ## See also
 
-- [`module`](https://jameshwade.github.io/dsprrr/reference/module.md)
+- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
   for creating modules
 
-- [`ragnar_tool`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md)
+- [`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md)
   and
-  [`create_search_tool`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md)
+  [`create_search_tool()`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md)
   for search tools
 
-- [`code_act`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
+- [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
   for tool + code execution agents
 
 ## Examples

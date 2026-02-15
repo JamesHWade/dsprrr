@@ -29,6 +29,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -49,6 +50,8 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
@@ -80,9 +83,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="core-functions">Core Functions<a class="anchor" aria-label="anchor" href="#core-functions"></a></h2>
+      <h2 id="signatures-inputs">Signatures &amp; Inputs<a class="anchor" aria-label="anchor" href="#signatures-inputs"></a></h2>
 
-      <div class="section-desc"><p>Main functions for building LLM applications</p></div>
+      <div class="section-desc"><p>Declare typed schemas for LLM operations</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -97,6 +100,80 @@
         <dd>Create a Signature for LLM Operations</dd>
 
         <dt>
+
+          <code><a href="input.html">input()</a></code>
+
+        </dt>
+        <dd>Create an input specification for a Signature</dd>
+
+        <dt>
+
+          <code><a href="input_helpers.html">input_string()</a></code> <code><a href="input_helpers.html">input_number()</a></code> <code><a href="input_helpers.html">input_boolean()</a></code> <code><a href="input_helpers.html">input_integer()</a></code> <code><a href="input_helpers.html">input_enum()</a></code> <code><a href="input_helpers.html">input_array()</a></code> <code><a href="input_helpers.html">input_object()</a></code>
+
+        </dt>
+        <dd>Create typed input helpers for common cases</dd>
+
+        <dt>
+
+          <code><a href="dsp_trainset.html">dsp_trainset()</a></code>
+
+        </dt>
+        <dd>Create Training Data for DSPrrr</dd>
+      </dl></div><div class="section level2">
+      <h2 id="signature-transforms">Signature Transforms<a class="anchor" aria-label="anchor" href="#signature-transforms"></a></h2>
+
+      <div class="section-desc"><p>Add reasoning, chain-of-thought, and other prompt-level behaviors</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="signature-transforms.html">signature-transforms</a></code>
+
+        </dt>
+        <dd>Signature Transforms for Advanced Reasoning Modules</dd>
+
+        <dt>
+
+          <code><a href="with_reasoning.html">with_reasoning()</a></code>
+
+        </dt>
+        <dd>Add Chain-of-Thought Reasoning to a Signature</dd>
+
+        <dt>
+
+          <code><a href="without_reasoning.html">without_reasoning()</a></code>
+
+        </dt>
+        <dd>Remove Chain-of-Thought from a Signature</dd>
+
+        <dt>
+
+          <code><a href="has_reasoning.html">has_reasoning()</a></code>
+
+        </dt>
+        <dd>Check if a Signature has Chain-of-Thought</dd>
+
+        <dt>
+
+          <code><a href="chain_of_thought.html">chain_of_thought()</a></code>
+
+        </dt>
+        <dd>Create a Chain-of-Thought Module</dd>
+      </dl></div><div class="section level2">
+      <h2 id="modules">Modules<a class="anchor" aria-label="anchor" href="#modules"></a></h2>
+
+      <div class="section-desc"><p>Create, run, and inspect LLM modules</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="module.html">module()</a></code>
 
@@ -126,21 +203,28 @@
 
         <dt>
 
-          <code><a href="evaluate.html">evaluate()</a></code>
+          <code><a href="dsp.html">dsp()</a></code>
 
         </dt>
-        <dd>Evaluate a DSPrrr module</dd>
+        <dd>Declarative Structured Prediction</dd>
 
         <dt>
 
-          <code><a href="evaluate_dsp.html">evaluate_dsp()</a></code>
+          <code><a href="as_module.html">as_module()</a></code>
 
         </dt>
-        <dd>Evaluate a Compiled Module</dd>
-      </dl></div><div class="section level2">
-      <h2 id="module-composition">Module Composition<a class="anchor" aria-label="anchor" href="#module-composition"></a></h2>
+        <dd>Create a Module from a Chat</dd>
 
-      <div class="section-desc"><p>Chain modules into pipelines</p></div>
+        <dt>
+
+          <code><a href="get_last_trace.html">get_last_trace()</a></code>
+
+        </dt>
+        <dd>Get the Last DSP Trace</dd>
+      </dl></div><div class="section level2">
+      <h2 id="pipelines">Pipelines<a class="anchor" aria-label="anchor" href="#pipelines"></a></h2>
+
+      <div class="section-desc"><p>Chain modules into multi-step workflows</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -189,9 +273,9 @@
         </dt>
         <dd>Select Outputs for Pipeline Steps</dd>
       </dl></div><div class="section level2">
-      <h2 id="advanced-reasoning-modules">Advanced Reasoning Modules<a class="anchor" aria-label="anchor" href="#advanced-reasoning-modules"></a></h2>
+      <h2 id="reasoning-ensemble-modules">Reasoning &amp; Ensemble Modules<a class="anchor" aria-label="anchor" href="#reasoning-ensemble-modules"></a></h2>
 
-      <div class="section-desc"><p>DSPy-inspired reasoning patterns for improved accuracy</p></div>
+      <div class="section-desc"><p>Combine and refine outputs for improved accuracy</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -199,41 +283,6 @@
 
 
       <dl><dt>
-
-          <code><a href="signature-transforms.html">signature-transforms</a></code>
-
-        </dt>
-        <dd>Signature Transforms for Advanced Reasoning Modules</dd>
-
-        <dt>
-
-          <code><a href="with_reasoning.html">with_reasoning()</a></code>
-
-        </dt>
-        <dd>Add Chain-of-Thought Reasoning to a Signature</dd>
-
-        <dt>
-
-          <code><a href="without_reasoning.html">without_reasoning()</a></code>
-
-        </dt>
-        <dd>Remove Chain-of-Thought from a Signature</dd>
-
-        <dt>
-
-          <code><a href="has_reasoning.html">has_reasoning()</a></code>
-
-        </dt>
-        <dd>Check if a Signature has Chain-of-Thought</dd>
-
-        <dt>
-
-          <code><a href="chain_of_thought.html">chain_of_thought()</a></code>
-
-        </dt>
-        <dd>Create a Chain-of-Thought Module</dd>
-
-        <dt>
 
           <code><a href="module-wrapper.html">module-wrapper</a></code>
 
@@ -317,9 +366,9 @@
         </dt>
         <dd>Best by Metric Reducer</dd>
       </dl></div><div class="section level2">
-      <h2 id="tool-using-modules">Tool-Using Modules<a class="anchor" aria-label="anchor" href="#tool-using-modules"></a></h2>
+      <h2 id="agentic-modules">Agentic Modules<a class="anchor" aria-label="anchor" href="#agentic-modules"></a></h2>
 
-      <div class="section-desc"><p>Modules that call tools or retrieve context</p></div>
+      <div class="section-desc"><p>Tool use, code execution, RAG, and recursive language models</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -339,10 +388,73 @@
 
         </dt>
         <dd>Create a RAG Module</dd>
+
+        <dt>
+
+          <code><a href="r_code_runner.html">r_code_runner()</a></code>
+
+        </dt>
+        <dd>Create an R Code Runner</dd>
+
+        <dt>
+
+          <code><a href="r-code-runner.html">r-code-runner</a></code>
+
+        </dt>
+        <dd>R Code Execution Backend</dd>
+
+        <dt>
+
+          <code><a href="program_of_thought.html">program_of_thought()</a></code>
+
+        </dt>
+        <dd>Create a Program of Thought Module</dd>
+
+        <dt>
+
+          <code><a href="module-program-of-thought.html">module-program-of-thought</a></code>
+
+        </dt>
+        <dd>Program of Thought Module</dd>
+
+        <dt>
+
+          <code><a href="code_act.html">code_act()</a></code>
+
+        </dt>
+        <dd>Create a CodeAct Module</dd>
+
+        <dt>
+
+          <code><a href="module-codeact.html">module-codeact</a></code>
+
+        </dt>
+        <dd>CodeAct Module</dd>
+
+        <dt>
+
+          <code><a href="rlm_module.html">rlm_module()</a></code>
+
+        </dt>
+        <dd>Create a Recursive Language Model (RLM) Module</dd>
+
+        <dt>
+
+          <code><a href="rlm.html">rlm()</a></code>
+
+        </dt>
+        <dd>Run a Recursive Language Model in one call</dd>
+
+        <dt>
+
+          <code><a href="module-rlm.html">module-rlm</a></code>
+
+        </dt>
+        <dd>Recursive Language Model (RLM) Module</dd>
       </dl></div><div class="section level2">
       <h2 id="assertions">Assertions<a class="anchor" aria-label="anchor" href="#assertions"></a></h2>
 
-      <div class="section-desc"><p>Output validation with backtracking</p></div>
+      <div class="section-desc"><p>Validate outputs and retry with automatic backtracking</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -433,74 +545,9 @@
         </dt>
         <dd>Assert Numeric Value in Range</dd>
       </dl></div><div class="section level2">
-      <h2 id="code-execution-modules">Code Execution Modules<a class="anchor" aria-label="anchor" href="#code-execution-modules"></a></h2>
+      <h2 id="evaluation-metrics">Evaluation &amp; Metrics<a class="anchor" aria-label="anchor" href="#evaluation-metrics"></a></h2>
 
-      <div class="section-desc"><p>Execute LLM-generated R code safely</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="r_code_runner.html">r_code_runner()</a></code>
-
-        </dt>
-        <dd>Create an R Code Runner</dd>
-
-        <dt>
-
-          <code><a href="r-code-runner.html">r-code-runner</a></code>
-
-        </dt>
-        <dd>R Code Execution Backend</dd>
-
-        <dt>
-
-          <code><a href="program_of_thought.html">program_of_thought()</a></code>
-
-        </dt>
-        <dd>Create a Program of Thought Module</dd>
-
-        <dt>
-
-          <code><a href="module-program-of-thought.html">module-program-of-thought</a></code>
-
-        </dt>
-        <dd>Program of Thought Module</dd>
-
-        <dt>
-
-          <code><a href="code_act.html">code_act()</a></code>
-
-        </dt>
-        <dd>Create a CodeAct Module</dd>
-
-        <dt>
-
-          <code><a href="module-codeact.html">module-codeact</a></code>
-
-        </dt>
-        <dd>CodeAct Module</dd>
-
-        <dt>
-
-          <code><a href="rlm_module.html">rlm_module()</a></code>
-
-        </dt>
-        <dd>Create a Recursive Language Model (RLM) Module</dd>
-
-        <dt>
-
-          <code><a href="module-rlm.html">module-rlm</a></code>
-
-        </dt>
-        <dd>Recursive Language Model (RLM) Module</dd>
-      </dl></div><div class="section level2">
-      <h2 id="chat-centric-api">Chat-Centric API<a class="anchor" aria-label="anchor" href="#chat-centric-api"></a></h2>
-
-      <div class="section-desc"><p>ellmer-style pipe-friendly functions</p></div>
+      <div class="section-desc"><p>Score module outputs and measure performance</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -509,181 +556,70 @@
 
       <dl><dt>
 
-          <code><a href="dsp.html">dsp()</a></code>
+          <code><a href="evaluate.html">evaluate()</a></code>
 
         </dt>
-        <dd>Declarative Structured Prediction</dd>
+        <dd>Evaluate a DSPrrr module</dd>
 
         <dt>
 
-          <code><a href="as_module.html">as_module()</a></code>
+          <code><a href="evaluate_dsp.html">evaluate_dsp()</a></code>
 
         </dt>
-        <dd>Create a Module from a Chat</dd>
+        <dd>Evaluate a Compiled Module</dd>
 
         <dt>
 
-          <code><a href="get_last_trace.html">get_last_trace()</a></code>
+          <code><a href="metric_contains.html">metric_contains()</a></code>
 
         </dt>
-        <dd>Get the Last DSP Trace</dd>
-      </dl></div><div class="section level2">
-      <h2 id="configuration">Configuration<a class="anchor" aria-label="anchor" href="#configuration"></a></h2>
-
-      <div class="section-desc"><p>Setup and configure dsprrr</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="dsp_configure.html">dsp_configure()</a></code>
-
-        </dt>
-        <dd>Configure dsprrr Default Settings</dd>
+        <dd>Create a Contains Metric</dd>
 
         <dt>
 
-          <code><a href="dsprrr_sitrep.html">dsprrr_sitrep()</a></code>
+          <code><a href="metric_custom.html">metric_custom()</a></code>
 
         </dt>
-        <dd>dsprrr Situation Report</dd>
+        <dd>Create a Custom Metric</dd>
 
         <dt>
 
-          <code><a href="default-chat.html">default-chat</a></code>
+          <code><a href="metric_exact_match.html">metric_exact_match()</a></code>
 
         </dt>
-        <dd>Default Chat Configuration</dd>
+        <dd>Create an Exact Match Metric</dd>
 
         <dt>
 
-          <code><a href="get_default_chat.html">get_default_chat()</a></code>
+          <code><a href="metric_f1.html">metric_f1()</a></code>
 
         </dt>
-        <dd>Get the Default Chat</dd>
+        <dd>Create an F1 Score Metric</dd>
 
         <dt>
 
-          <code><a href="set_default_chat.html">set_default_chat()</a></code>
+          <code><a href="metric_field_match.html">metric_field_match()</a></code>
 
         </dt>
-        <dd>Set the Default Chat</dd>
+        <dd>Create a Field Equality Metric</dd>
 
         <dt>
 
-          <code><a href="clear_default_chat.html">clear_default_chat()</a></code>
+          <code><a href="metric_threshold.html">metric_threshold()</a></code>
 
         </dt>
-        <dd>Clear Cached Default Chat</dd>
+        <dd>Create a Threshold Metric</dd>
 
         <dt>
 
-          <code><a href="with_lm.html">with_lm()</a></code>
+          <code><a href="vitals_metrics.html">metric_model_graded_qa()</a></code> <code><a href="vitals_metrics.html">metric_model_graded_fact()</a></code> <code><a href="vitals_metrics.html">metric_detect_match()</a></code> <code><a href="vitals_metrics.html">metric_detect_includes()</a></code> <code><a href="vitals_metrics.html">metric_detect_pattern()</a></code>
 
         </dt>
-        <dd>Execute Code with a Scoped LM Override</dd>
-
-        <dt>
-
-          <code><a href="local_lm.html">local_lm()</a></code>
-
-        </dt>
-        <dd>Set Local LM Override</dd>
-
-        <dt>
-
-          <code><a href="configure_cache.html">configure_cache()</a></code>
-
-        </dt>
-        <dd>Configure dsprrr Cache</dd>
-
-        <dt>
-
-          <code><a href="clear_cache.html">clear_cache()</a></code>
-
-        </dt>
-        <dd>Clear dsprrr Cache</dd>
-
-        <dt>
-
-          <code><a href="cache_stats.html">cache_stats()</a></code>
-
-        </dt>
-        <dd>Get Cache Statistics</dd>
-      </dl></div><div class="section level2">
-      <h2 id="async-and-streaming">Async and Streaming<a class="anchor" aria-label="anchor" href="#async-and-streaming"></a></h2>
-
-      <div class="section-desc"><p>Asynchronous and streaming operations</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="async.html">async</a></code>
-
-        </dt>
-        <dd>Asynchronous Module Operations</dd>
-
-        <dt>
-
-          <code><a href="run_async.html">run_async()</a></code>
-
-        </dt>
-        <dd>Run a module asynchronously</dd>
-
-        <dt>
-
-          <code><a href="stream_async.html">stream_async()</a></code>
-
-        </dt>
-        <dd>Stream module output asynchronously</dd>
-      </dl></div><div class="section level2">
-      <h2 id="signatures-and-inputs">Signatures and Inputs<a class="anchor" aria-label="anchor" href="#signatures-and-inputs"></a></h2>
-
-      <div class="section-desc"><p>Define module interfaces</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="signature.html">Signature()</a></code> <code><a href="signature.html">signature()</a></code>
-
-        </dt>
-        <dd>Create a Signature for LLM Operations</dd>
-
-        <dt>
-
-          <code><a href="input.html">input()</a></code>
-
-        </dt>
-        <dd>Create an input specification for a Signature</dd>
-
-        <dt>
-
-          <code><a href="input_helpers.html">input_string()</a></code> <code><a href="input_helpers.html">input_number()</a></code> <code><a href="input_helpers.html">input_boolean()</a></code> <code><a href="input_helpers.html">input_integer()</a></code> <code><a href="input_helpers.html">input_enum()</a></code> <code><a href="input_helpers.html">input_array()</a></code> <code><a href="input_helpers.html">input_object()</a></code>
-
-        </dt>
-        <dd>Create typed input helpers for common cases</dd>
-
-        <dt>
-
-          <code><a href="dsp_trainset.html">dsp_trainset()</a></code>
-
-        </dt>
-        <dd>Create Training Data for DSPrrr</dd>
+        <dd>Pre-built Vitals-backed Metrics</dd>
       </dl></div><div class="section level2">
       <h2 id="teleprompters">Teleprompters<a class="anchor" aria-label="anchor" href="#teleprompters"></a></h2>
 
-      <div class="section-desc"><p>Optimization strategies</p></div>
+      <div class="section-desc"><p>Automated prompt optimization strategies</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -783,7 +719,7 @@
       </dl></div><div class="section level2">
       <h2 id="optimization">Optimization<a class="anchor" aria-label="anchor" href="#optimization"></a></h2>
 
-      <div class="section-desc"><p>Functions for optimizing module performance</p></div>
+      <div class="section-desc"><p>Compile modules and tune parameters</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -832,9 +768,9 @@
         </dt>
         <dd>Summarise optimisation metrics per trial</dd>
       </dl></div><div class="section level2">
-      <h2 id="optimizer-accessors">Optimizer Accessors<a class="anchor" aria-label="anchor" href="#optimizer-accessors"></a></h2>
+      <h2 id="optimization-results">Optimization Results<a class="anchor" aria-label="anchor" href="#optimization-results"></a></h2>
 
-      <div class="section-desc"><p>Convenience functions for working with optimization results</p></div>
+      <div class="section-desc"><p>Inspect trials, extract best configurations, and export</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -913,7 +849,7 @@
       </dl></div><div class="section level2">
       <h2 id="optimizer-infrastructure">Optimizer Infrastructure<a class="anchor" aria-label="anchor" href="#optimizer-infrastructure"></a></h2>
 
-      <div class="section-desc"><p>Low-level optimizer building blocks</p></div>
+      <div class="section-desc"><p>Low-level building blocks for custom optimizers</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1004,67 +940,9 @@
         </dt>
         <dd>Load Trial Log from Directory</dd>
       </dl></div><div class="section level2">
-      <h2 id="metrics">Metrics<a class="anchor" aria-label="anchor" href="#metrics"></a></h2>
+      <h2 id="configuration">Configuration<a class="anchor" aria-label="anchor" href="#configuration"></a></h2>
 
-      <div class="section-desc"><p>Evaluation metrics</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="metric_contains.html">metric_contains()</a></code>
-
-        </dt>
-        <dd>Create a Contains Metric</dd>
-
-        <dt>
-
-          <code><a href="metric_custom.html">metric_custom()</a></code>
-
-        </dt>
-        <dd>Create a Custom Metric</dd>
-
-        <dt>
-
-          <code><a href="metric_exact_match.html">metric_exact_match()</a></code>
-
-        </dt>
-        <dd>Create an Exact Match Metric</dd>
-
-        <dt>
-
-          <code><a href="metric_f1.html">metric_f1()</a></code>
-
-        </dt>
-        <dd>Create an F1 Score Metric</dd>
-
-        <dt>
-
-          <code><a href="metric_field_match.html">metric_field_match()</a></code>
-
-        </dt>
-        <dd>Create a Field Equality Metric</dd>
-
-        <dt>
-
-          <code><a href="metric_threshold.html">metric_threshold()</a></code>
-
-        </dt>
-        <dd>Create a Threshold Metric</dd>
-
-        <dt>
-
-          <code><a href="vitals_metrics.html">metric_model_graded_qa()</a></code> <code><a href="vitals_metrics.html">metric_model_graded_fact()</a></code> <code><a href="vitals_metrics.html">metric_detect_match()</a></code> <code><a href="vitals_metrics.html">metric_detect_includes()</a></code> <code><a href="vitals_metrics.html">metric_detect_pattern()</a></code>
-
-        </dt>
-        <dd>Pre-built Vitals-backed Metrics</dd>
-      </dl></div><div class="section level2">
-      <h2 id="orchestration">Orchestration<a class="anchor" aria-label="anchor" href="#orchestration"></a></h2>
-
-      <div class="section-desc"><p>Production workflow helpers</p></div>
+      <div class="section-desc"><p>Set up LLM providers, caching, and global options</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1073,56 +951,114 @@
 
       <dl><dt>
 
-          <code><a href="orchestration.html">orchestration</a></code>
+          <code><a href="dsp_configure.html">dsp_configure()</a></code>
 
         </dt>
-        <dd>Orchestration Helpers for Production Workflows</dd>
+        <dd>Configure dsprrr Default Settings</dd>
 
         <dt>
 
-          <code><a href="pin_module_config.html">pin_module_config()</a></code>
+          <code><a href="dsprrr_sitrep.html">dsprrr_sitrep()</a></code>
 
         </dt>
-        <dd>Pin a Module Configuration</dd>
+        <dd>dsprrr Situation Report</dd>
 
         <dt>
 
-          <code><a href="restore_module_config.html">restore_module_config()</a></code>
+          <code><a href="default-chat.html">default-chat</a></code>
 
         </dt>
-        <dd>Restore a Module from Pinned Configuration</dd>
+        <dd>Default Chat Configuration</dd>
 
         <dt>
 
-          <code><a href="pin_trace.html">pin_trace()</a></code>
+          <code><a href="get_default_chat.html">get_default_chat()</a></code>
 
         </dt>
-        <dd>Pin Module Traces</dd>
+        <dd>Get the Default Chat</dd>
 
         <dt>
 
-          <code><a href="pin_vitals_log.html">pin_vitals_log()</a></code>
+          <code><a href="set_default_chat.html">set_default_chat()</a></code>
 
         </dt>
-        <dd>Pin Vitals Evaluation Log</dd>
+        <dd>Set the Default Chat</dd>
 
         <dt>
 
-          <code><a href="use_dsprrr_template.html">use_dsprrr_template()</a></code>
+          <code><a href="clear_default_chat.html">clear_default_chat()</a></code>
 
         </dt>
-        <dd>Use dsprrr Workflow Templates</dd>
+        <dd>Clear Cached Default Chat</dd>
 
         <dt>
 
-          <code><a href="validate_workflow.html">validate_workflow()</a></code>
+          <code><a href="with_lm.html">with_lm()</a></code>
 
         </dt>
-        <dd>Validate Workflow Configuration</dd>
+        <dd>Execute Code with a Scoped LM Override</dd>
+
+        <dt>
+
+          <code><a href="local_lm.html">local_lm()</a></code>
+
+        </dt>
+        <dd>Set Local LM Override</dd>
+
+        <dt>
+
+          <code><a href="configure_cache.html">configure_cache()</a></code>
+
+        </dt>
+        <dd>Configure dsprrr Cache</dd>
+
+        <dt>
+
+          <code><a href="clear_cache.html">clear_cache()</a></code>
+
+        </dt>
+        <dd>Clear dsprrr Cache</dd>
+
+        <dt>
+
+          <code><a href="cache_stats.html">cache_stats()</a></code>
+
+        </dt>
+        <dd>Get Cache Statistics</dd>
       </dl></div><div class="section level2">
-      <h2 id="debugging-inspection">Debugging &amp; Inspection<a class="anchor" aria-label="anchor" href="#debugging-inspection"></a></h2>
+      <h2 id="async-streaming">Async &amp; Streaming<a class="anchor" aria-label="anchor" href="#async-streaming"></a></h2>
 
-      <div class="section-desc"><p>Prompt inspection and history</p></div>
+      <div class="section-desc"><p>Non-blocking execution and streaming responses</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="async.html">async</a></code>
+
+        </dt>
+        <dd>Asynchronous Module Operations</dd>
+
+        <dt>
+
+          <code><a href="run_async.html">run_async()</a></code>
+
+        </dt>
+        <dd>Run a module asynchronously</dd>
+
+        <dt>
+
+          <code><a href="stream_async.html">stream_async()</a></code>
+
+        </dt>
+        <dd>Stream module output asynchronously</dd>
+      </dl></div><div class="section level2">
+      <h2 id="debugging-traces">Debugging &amp; Traces<a class="anchor" aria-label="anchor" href="#debugging-traces"></a></h2>
+
+      <div class="section-desc"><p>Inspect prompts, execution history, and traces</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1156,10 +1092,31 @@
 
         </dt>
         <dd>Clear Prompt History</dd>
-      </dl></div><div class="section level2">
-      <h2 id="result-accessors">Result Accessors<a class="anchor" aria-label="anchor" href="#result-accessors"></a></h2>
 
-      <div class="section-desc"><p>Extract data from structured results</p></div>
+        <dt>
+
+          <code><a href="export_traces.html">export_traces()</a></code>
+
+        </dt>
+        <dd>Export Module Traces</dd>
+
+        <dt>
+
+          <code><a href="summarize_traces.html">summarize_traces()</a></code>
+
+        </dt>
+        <dd>Summarize Module Traces</dd>
+
+        <dt>
+
+          <code><a href="clear_traces.html">clear_traces()</a></code>
+
+        </dt>
+        <dd>Clear Module Traces</dd>
+      </dl></div><div class="section level2">
+      <h2 id="results-printing">Results &amp; Printing<a class="anchor" aria-label="anchor" href="#results-printing"></a></h2>
+
+      <div class="section-desc"><p>Extract outputs, costs, and display formatted results</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1278,9 +1235,9 @@
         </dt>
         <dd>Print method for COPRO</dd>
       </dl></div><div class="section level2">
-      <h2 id="traces">Traces<a class="anchor" aria-label="anchor" href="#traces"></a></h2>
+      <h2 id="production-deployment">Production &amp; Deployment<a class="anchor" aria-label="anchor" href="#production-deployment"></a></h2>
 
-      <div class="section-desc"><p>Execution trace utilities</p></div>
+      <div class="section-desc"><p>Pin configurations, validate workflows, and deploy to production</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1289,28 +1246,56 @@
 
       <dl><dt>
 
-          <code><a href="export_traces.html">export_traces()</a></code>
+          <code><a href="orchestration.html">orchestration</a></code>
 
         </dt>
-        <dd>Export Module Traces</dd>
+        <dd>Orchestration Helpers for Production Workflows</dd>
 
         <dt>
 
-          <code><a href="summarize_traces.html">summarize_traces()</a></code>
+          <code><a href="pin_module_config.html">pin_module_config()</a></code>
 
         </dt>
-        <dd>Summarize Module Traces</dd>
+        <dd>Pin a Module Configuration</dd>
 
         <dt>
 
-          <code><a href="clear_traces.html">clear_traces()</a></code>
+          <code><a href="restore_module_config.html">restore_module_config()</a></code>
 
         </dt>
-        <dd>Clear Module Traces</dd>
+        <dd>Restore a Module from Pinned Configuration</dd>
+
+        <dt>
+
+          <code><a href="pin_trace.html">pin_trace()</a></code>
+
+        </dt>
+        <dd>Pin Module Traces</dd>
+
+        <dt>
+
+          <code><a href="pin_vitals_log.html">pin_vitals_log()</a></code>
+
+        </dt>
+        <dd>Pin Vitals Evaluation Log</dd>
+
+        <dt>
+
+          <code><a href="use_dsprrr_template.html">use_dsprrr_template()</a></code>
+
+        </dt>
+        <dd>Use dsprrr Workflow Templates</dd>
+
+        <dt>
+
+          <code><a href="validate_workflow.html">validate_workflow()</a></code>
+
+        </dt>
+        <dd>Validate Workflow Configuration</dd>
       </dl></div><div class="section level2">
       <h2 id="vitals-integration">Vitals Integration<a class="anchor" aria-label="anchor" href="#vitals-integration"></a></h2>
 
-      <div class="section-desc"><p>Integration with vitals package</p></div>
+      <div class="section-desc"><p>Bridge to the vitals evaluation framework</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1373,9 +1358,9 @@
         </dt>
         <dd>Pre-built Vitals-backed Metrics</dd>
       </dl></div><div class="section level2">
-      <h2 id="ellmer-integration">ellmer Integration<a class="anchor" aria-label="anchor" href="#ellmer-integration"></a></h2>
+      <h2 id="ellmer-rag">ellmer &amp; RAG<a class="anchor" aria-label="anchor" href="#ellmer-rag"></a></h2>
 
-      <div class="section-desc"><p>Deep integration with ellmer</p></div>
+      <div class="section-desc"><p>Tool registration with ellmer and retrieval with ragnar</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1395,22 +1380,6 @@
 
         </dt>
         <dd>Register a DSPrrr Module as a Tool in a Chat</dd>
-      </dl></div><div class="section level2">
-      <h2 id="rag-integration">RAG Integration<a class="anchor" aria-label="anchor" href="#rag-integration"></a></h2>
-
-      <div class="section-desc"><p>Retrieval-Augmented Generation with ragnar</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="rag_module.html">rag_module()</a></code>
-
-        </dt>
-        <dd>Create a RAG Module</dd>
 
         <dt>
 
@@ -1435,7 +1404,7 @@
       </dl></div><div class="section level2">
       <h2 id="tidymodels-integration">tidymodels Integration<a class="anchor" aria-label="anchor" href="#tidymodels-integration"></a></h2>
 
-      <div class="section-desc"><p>parsnip model specification and dials parameters</p></div>
+      <div class="section-desc"><p>Use LLM modules as parsnip model engines with dials parameters</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1498,9 +1467,25 @@
         </dt>
         <dd>Reasoning Effort Parameter for dials</dd>
       </dl></div><div class="section level2">
-      <h2 id="model-utilities">Model Utilities<a class="anchor" aria-label="anchor" href="#model-utilities"></a></h2>
+      <h2 id="demo-interactive-tools">Demo &amp; Interactive Tools<a class="anchor" aria-label="anchor" href="#demo-interactive-tools"></a></h2>
 
-      <div class="section-desc"><p>Model detection and provider defaults</p></div>
+      <div class="section-desc"><p>Interactive demonstrations and exploration tools</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="run_demo.html">run_demo()</a></code>
+
+        </dt>
+        <dd>Run the Interactive RLM Demo</dd>
+      </dl></div><div class="section level2">
+      <h2 id="utilities">Utilities<a class="anchor" aria-label="anchor" href="#utilities"></a></h2>
+
+      <div class="section-desc"><p>Model detection, provider defaults, and helper functions</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1520,17 +1505,8 @@
 
         </dt>
         <dd>Get default parameters for a provider</dd>
-      </dl></div><div class="section level2">
-      <h2 id="utilities">Utilities<a class="anchor" aria-label="anchor" href="#utilities"></a></h2>
 
-      <div class="section-desc"><p>Helper functions</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
+        <dt>
 
           <code><a href="eval_vignette.html">eval_vignette()</a></code>
 

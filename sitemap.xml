@@ -17,6 +17,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/getting-started.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/llms-txt.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/orchestration.html</loc></url>
@@ -30,6 +31,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/vitals-integration.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/vitals-recipes.html</loc></url>
@@ -191,10 +193,12 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/register_dsprrr_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/restore_module_config.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/rlm-tools.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/rlm.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/rlm_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_dataset.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/run_demo.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/sample_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/select_outputs.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/session_cost.html</loc></url>

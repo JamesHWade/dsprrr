@@ -121,14 +121,11 @@ optimized <- compile_module(
 
 Before you begin:
 
-1.  **Install R** (4.1 or later)
-
 2.  **Install the packages**:
 
 ``` r
-install.packages("pak")
+# install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
-pak::pak("tidyverse/ellmer")
 ```
 
 3.  **Set your API key**:

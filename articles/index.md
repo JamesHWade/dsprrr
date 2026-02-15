@@ -2,7 +2,7 @@
 
 ### Tutorials
 
-Learn dsprrr step by step
+Learn dsprrr step by step, from first LLM call to production deployment
 
 - [Getting Started with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/getting-started.md):
@@ -22,10 +22,12 @@ Learn dsprrr step by step
   Game](https://jameshwade.github.io/dsprrr/articles/text-adventure.md):
 - [Generating llms.txt for R
   Packages](https://jameshwade.github.io/dsprrr/articles/llms-txt.md):
+- [Recursive Language Models: Exploring Codebases with
+  dsprrr](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md):
 
 ### How-to Guides
 
-Solve specific problems
+Task-oriented guides for specific workflows
 
 - [Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md):
 - [Automatic Prompt Optimization with
@@ -47,20 +49,32 @@ Solve specific problems
 
 ### Concepts
 
-Understand the philosophy and design
+Understand the philosophy, design, and theory behind dsprrr
 
 - [The DSPy Philosophy: Programs, Not
   Prompts](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.md):
+
 - [Understanding Signatures and
   Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md):
+
 - [How Prompt Optimization
   Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md):
+
 - [Why Metrics Drive Better LLM
   Applications](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md):
+
+- [How the Recursive Language Model (RLM)
+  Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md):
+
+  From the research origins to dsprrr’s R implementation: what Recursive
+  Language Models are, why they matter, and how the internals work.
+
 - [Advanced Reasoning
   Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
+
 - [Advanced Optimizer
   Guide](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md):
+
 - [Working with Reasoning
   Models](https://jameshwade.github.io/dsprrr/articles/reasoning-models.md):
 

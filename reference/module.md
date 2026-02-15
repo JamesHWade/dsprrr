@@ -61,9 +61,8 @@ module(
     objects.
 
   - for `type = "rlm"`: named list of R functions injected into the
-    REPL.
-
-  If provided with `type = "predict"`, automatically upgrades to react.
+    REPL. If provided with `type = "predict"`, automatically upgrades to
+    react.
 
 - max_iterations:
 
