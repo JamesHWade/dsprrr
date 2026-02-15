@@ -105,7 +105,7 @@ trace_to_json <- function(
     final_answer = {
       ans <- history_entry$final_answer
       if (is.list(ans)) {
-        ans <- ans$answer %||% ans[[1]]
+        ans <- ans$answer %||% if (length(ans) > 0) ans[[1]] else ""
       }
       as.character(ans)
     },
