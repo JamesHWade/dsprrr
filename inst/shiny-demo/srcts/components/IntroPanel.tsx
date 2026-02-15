@@ -21,6 +21,9 @@ export function IntroPanel({ onLearnToolkit, onJumpToTraces }: IntroPanelProps) 
         {/* Comparison */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="text-xs text-destructive/80 uppercase tracking-wider font-medium">
+              Traditional Approach
+            </div>
             <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               Paste everything
             </div>
@@ -30,7 +33,10 @@ export function IntroPanel({ onLearnToolkit, onJumpToTraces }: IntroPanelProps) 
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card p-6 space-y-3">
+          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6 space-y-3">
+            <div className="text-xs text-primary uppercase tracking-wider font-medium">
+              Recursive Language Model
+            </div>
             <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               Explore incrementally
             </div>
@@ -53,6 +59,45 @@ export function IntroPanel({ onLearnToolkit, onJumpToTraces }: IntroPanelProps) 
           <p className="text-sm text-muted-foreground">
             The LLM only sees variable names and sizes. It writes code to transfer exactly what
             it needs into the context window.
+          </p>
+        </div>
+
+        {/* Agents callout */}
+        <div className="rounded-xl border border-dashed border-muted-foreground/25 p-6 space-y-3">
+          <p className="text-sm font-medium">
+            Isn&rsquo;t this just agents with tools?
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Sort of. The difference is constraint. An agent framework gives the model
+            an R interpreter and says &ldquo;figure it out.&rdquo; An RLM gives the model
+            a small, fixed toolkit (<code className="text-xs bg-muted px-1 rounded">peek</code>,{" "}
+            <code className="text-xs bg-muted px-1 rounded">search</code>,{" "}
+            <code className="text-xs bg-muted px-1 rounded">llm_query</code>,{" "}
+            <code className="text-xs bg-muted px-1 rounded">SUBMIT</code>) and a compiler that
+            can optimize how those tools get used. Constraints make the program
+            optimizable; optimizability is what separates a program from a script.
+          </p>
+        </div>
+
+        {/* Khattab attribution */}
+        <div className="text-sm text-muted-foreground space-y-2 px-2">
+          <p className="leading-relaxed">
+            The idea of <em>symbolic recursion</em> comes from{" "}
+            <a
+              href="https://x.com/lateinteraction"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground transition-colors"
+            >
+              Omar Khattab
+            </a>
+            &rsquo;s work on DSPy: instead of stuffing data into the prompt,
+            externalize inputs as variables and let the model write code that
+            references them. In R that looks like{" "}
+            <code className="text-xs bg-muted px-1 rounded">lapply(chunks, llm_query, ...)</code>{" "}
+            rather than pasting every chunk into the context. Each chunk is processed
+            in a separate call that scales linearly, instead of quadratic attention
+            over the concatenated text.
           </p>
         </div>
 

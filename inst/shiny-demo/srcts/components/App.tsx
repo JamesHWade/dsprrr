@@ -87,21 +87,24 @@ export function App() {
   const handleStartExploring = useCallback(() => {
     setView("toolkit");
     playback.pause();
+    window.scrollTo(0, 0);
   }, [playback]);
 
   const handleStartTraces = useCallback(() => {
     setView("traces");
-    playback.play();
-  }, [playback]);
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleShowToolkit = useCallback(() => {
     setView("toolkit");
     playback.pause();
+    window.scrollTo(0, 0);
   }, [playback]);
 
   const handleNavigateHome = useCallback(() => {
     setView("intro");
     playback.pause();
+    window.scrollTo(0, 0);
   }, [playback]);
 
   const handleRunChange = useCallback(
@@ -166,18 +169,16 @@ export function App() {
 
         {/* Orientation banner */}
         {orientationVisible && (
-          <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 flex items-start gap-3">
-            <div className="flex-1 text-sm text-blue-700 dark:text-blue-400">
-              <span className="font-semibold">Watch the LLM think in code.</span>{" "}
-              <span className="text-blue-600 dark:text-blue-500">
-                Each card below is one REPL iteration &mdash; the model writes R code,
-                executes it, reads the output, and decides what to do next. The sidebar
-                tracks how little source data actually enters the context window.
-              </span>
+          <div className="mb-4 rounded-lg border border-dashed border-muted-foreground/25 px-4 py-3 flex items-start gap-3">
+            <div className="flex-1 text-sm text-muted-foreground">
+              <span className="text-foreground font-medium">Watch the LLM think in code.</span>{" "}
+              Each card below is one REPL iteration. The model writes R code,
+              executes it, reads the output, and decides what to do next. The sidebar
+              tracks how little source data actually enters the context window.
             </div>
             <button
               onClick={() => setShowOrientation(false)}
-              className="shrink-0 p-1 rounded hover:bg-blue-200/50 dark:hover:bg-blue-800/30 text-blue-400 hover:text-blue-600 transition-colors"
+              className="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-colors"
               aria-label="Dismiss"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -199,7 +200,7 @@ export function App() {
           <div className="space-y-4">
             {activeTrace ? (
               <REPLTimeline
-                iterations={iterations}
+                iterations={phaseProgress.annotatedIterations}
                 currentIndex={playback.currentIndex}
                 question={activeTrace.question}
               />

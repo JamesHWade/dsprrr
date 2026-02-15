@@ -1,6 +1,8 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { CodeBlock } from "./CodeBlock";
+import { Eye, Search, MessageCircle, CheckCircle2 } from "lucide-react";
+import type { ComponentType } from "react";
 
 interface ToolkitPanelProps {
   onContinue: () => void;
@@ -11,6 +13,7 @@ const actions = [
   {
     tab: "peek",
     name: "peek()",
+    icon: Eye,
     signature: "peek(variable, start, end)",
     oneLiner: "Read a slice of a variable",
     example: 'peek(bslib_source, 100, 200)',
@@ -22,6 +25,7 @@ const actions = [
   {
     tab: "search",
     name: "search()",
+    icon: Search,
     signature: "search(variable, pattern)",
     oneLiner: "Regex search across a variable",
     example: 'search(bslib_source, "brand_color")',
@@ -33,6 +37,7 @@ const actions = [
   {
     tab: "ask",
     name: "llm_query()",
+    icon: MessageCircle,
     signature: "llm_query(question, context)",
     oneLiner: "Send a sub-question to another LLM call",
     example: 'llm_query("What CSS class sets the foreground?", snippet)',
@@ -44,6 +49,7 @@ const actions = [
   {
     tab: "submit",
     name: "SUBMIT()",
+    icon: CheckCircle2,
     signature: "SUBMIT(answer = ...)",
     oneLiner: "Return the final answer and stop",
     example: 'SUBMIT(answer = "The color propagates via ...")',
@@ -64,7 +70,7 @@ const loopSteps = [
 export function ToolkitPanel({ onContinue, onBack }: ToolkitPanelProps) {
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 space-y-12">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 pb-32 space-y-12">
         {/* 1. Header */}
         <div className="space-y-3">
           <button
@@ -89,37 +95,45 @@ export function ToolkitPanel({ onContinue, onBack }: ToolkitPanelProps) {
         {/* 2. Tabbed action cards */}
         <Tabs defaultValue="peek" className="w-full">
           <TabsList className="w-full grid grid-cols-4">
-            {actions.map((a) => (
-              <TabsTrigger key={a.tab} value={a.tab} className="text-xs sm:text-sm">
-                {a.tab === "ask" ? "Ask" : a.tab.charAt(0).toUpperCase() + a.tab.slice(1)}
-              </TabsTrigger>
-            ))}
+            {actions.map((a) => {
+              const Icon = a.icon as ComponentType<{ className?: string }>;
+              return (
+                <TabsTrigger key={a.tab} value={a.tab} className="text-xs sm:text-sm gap-1.5">
+                  <Icon className="w-4 h-4 hidden sm:block" />
+                  {a.tab === "ask" ? "Ask" : a.tab.charAt(0).toUpperCase() + a.tab.slice(1)}
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
-          {actions.map((a) => (
-            <TabsContent key={a.tab} value={a.tab}>
-              <div className="rounded-xl border bg-card p-6 space-y-4 mt-2">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Badge variant="secondary" className="font-mono text-xs">
-                    {a.name}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {a.oneLiner}
-                  </span>
+          {actions.map((a) => {
+            const Icon = a.icon as ComponentType<{ className?: string }>;
+            return (
+              <TabsContent key={a.tab} value={a.tab}>
+                <div className="rounded-xl border bg-card p-6 space-y-4 mt-2">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Icon className="w-5 h-5 text-muted-foreground" />
+                    <Badge variant="secondary" className="font-mono text-xs">
+                      {a.name}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {a.oneLiner}
+                    </span>
+                  </div>
+
+                  <div className="font-mono text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                    {a.signature}
+                  </div>
+
+                  <p className="text-sm">{a.description}</p>
+
+                  <CodeBlock code={a.example} className="text-xs" />
+
+                  <p className="text-xs text-muted-foreground">{a.note}</p>
                 </div>
-
-                <div className="font-mono text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-                  {a.signature}
-                </div>
-
-                <p className="text-sm">{a.description}</p>
-
-                <CodeBlock code={a.example} className="text-xs" />
-
-                <p className="text-xs text-muted-foreground">{a.note}</p>
-              </div>
-            </TabsContent>
-          ))}
+              </TabsContent>
+            );
+          })}
         </Tabs>
 
         {/* 3. The loop */}
@@ -127,7 +141,7 @@ export function ToolkitPanel({ onContinue, onBack }: ToolkitPanelProps) {
           <h2 className="text-lg font-semibold">The REPL loop</h2>
           <p className="text-sm text-muted-foreground max-w-lg">
             Each iteration follows the same cycle. Code executes in a
-            separate R process &mdash; the model only sees the printed output.
+            separate R process. The model only sees the printed output.
           </p>
 
           <div className="flex items-center justify-center gap-0 py-4 overflow-x-auto">
@@ -162,9 +176,11 @@ export function ToolkitPanel({ onContinue, onBack }: ToolkitPanelProps) {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* 4. Continue */}
-        <div className="pt-4">
+      {/* Sticky "Continue to traces" bar */}
+      <div className="fixed bottom-0 inset-x-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-30">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex justify-center">
           <button
             onClick={onContinue}
             className="inline-flex items-center justify-center rounded-lg bg-primary px-8 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"

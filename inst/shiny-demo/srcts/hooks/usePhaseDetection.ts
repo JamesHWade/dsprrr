@@ -3,6 +3,7 @@ import type { Iteration, Phase } from "@/lib/types";
 import { annotatePhases } from "@/lib/phases";
 
 interface PhaseProgress {
+  annotatedIterations: Iteration[];
   phases: Phase[];
   currentPhase: Phase | null;
   phaseCounts: Record<Phase, number>;
@@ -44,6 +45,6 @@ export function usePhaseDetection(
       }
     }
 
-    return { phases, currentPhase, phaseCounts, phaseTransitions };
+    return { annotatedIterations: annotated, phases, currentPhase, phaseCounts, phaseTransitions };
   }, [annotated, currentIndex]);
 }

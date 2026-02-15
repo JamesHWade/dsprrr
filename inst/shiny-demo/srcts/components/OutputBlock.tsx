@@ -14,19 +14,19 @@ export function OutputBlock({ output, success, className }: OutputBlockProps) {
 
   return (
     <div className={cn("rounded-lg border text-sm", className)}>
-      {/* Status badge */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/50">
+      {/* Status dot */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/30">
         <span
           className={cn(
-            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+            "w-1.5 h-1.5 rounded-full",
             success
-              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+              ? "bg-green-500"
+              : "bg-red-500",
           )}
-        >
-          {success ? "OK" : "Error"}
+        />
+        <span className="text-xs text-muted-foreground">
+          {success ? "Output" : "Error"}
         </span>
-        <span className="text-xs text-muted-foreground">Output</span>
       </div>
 
       {/* Output content */}
