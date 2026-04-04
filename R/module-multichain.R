@@ -140,12 +140,18 @@ MultiChainComparisonModule <- R6::R6Class(
 
       # Phase 1: Generate M reasoning chains
       for (i in seq_len(self$M)) {
+        # Clone chat per attempt so each chain starts with fresh state
+        iter_llm <- tryCatch(
+          attempt_llm$clone(deep = TRUE),
+          error = function(e) attempt_llm
+        )
+
         # Run inner module
         result <- tryCatch(
           {
             self$inner_module$forward(
               batch,
-              .llm = attempt_llm,
+              .llm = iter_llm,
               trace = FALSE,
               ...
             )
