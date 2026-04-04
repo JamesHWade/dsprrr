@@ -26,7 +26,7 @@ Imports:
     cachem,
     cli,
     digest,
-    ellmer,
+    ellmer (>= 0.4.0.9000),
     glue,
     jsonlite,
     methods,
@@ -60,6 +60,8 @@ Suggests:
     vcr (>= 2.0.0),
     vitals,
     yardstick
+Remotes:
+    tidyverse/ellmer
 Collate:
     'accessors.R'
     'assertion-helpers.R'

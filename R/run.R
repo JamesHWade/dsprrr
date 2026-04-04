@@ -241,6 +241,260 @@ run.PredictModule <- function(
   }
 }
 
+#' Normalize module runtime configuration
+#' @noRd
+normalize_module_config <- function(config) {
+  if (is.null(config)) {
+    config <- list()
+  }
+
+  if (!is.list(config)) {
+    cli::cli_abort("{.arg config} must be a list")
+  }
+
+  params <- config$params %||% list()
+  for (name in runtime_param_names()) {
+    if (is.null(params[[name]]) && !is.null(config[[name]])) {
+      params[[name]] <- config[[name]]
+    }
+  }
+
+  if (length(params) > 0) {
+    config$params <- params
+  }
+
+  config
+}
+
+#' Runtime parameter names forwarded through ellmer
+#' @noRd
+runtime_param_names <- function() {
+  c(
+    "temperature",
+    "top_p",
+    "reasoning_effort",
+    "frequency_penalty",
+    "presence_penalty",
+    "max_tokens",
+    "max_output_tokens",
+    "service_tier"
+  )
+}
+
+#' Legacy config fields that should no longer create Chat clients
+#' @noRd
+legacy_chat_config_fields <- function() {
+  c("provider", "model", "api_args", "base_url", "credentials")
+}
+
+#' Infer the logical module kind
+#' @noRd
+module_kind <- function(module) {
+  module$config$.module_kind %||%
+    switch(
+      class(module)[1],
+      "ReactModule" = "react",
+      "MultiChainComparisonModule" = "multichain",
+      "PredictModule" = "predict",
+      "predict"
+    )
+}
+
+#' Resolve the Chat to use for module execution
+#' @noRd
+resolve_module_llm <- function(
+  module,
+  .llm = NULL,
+  create = TRUE,
+  extra_params = NULL
+) {
+  ignored_fields <- intersect(
+    names(module$config %||% list()),
+    legacy_chat_config_fields()
+  )
+  llm <- .llm %||% module$chat %||% get_default_chat(create = FALSE)
+
+  if (is.null(llm)) {
+    if (length(ignored_fields) > 0) {
+      cli::cli_abort(c(
+        "Module config no longer creates Chat clients",
+        "i" = "Ignored fields: {.field {ignored_fields}}",
+        "i" = "Attach a Chat with {.code module(..., chat = chat)} or pass {.code .llm = chat}",
+        "i" = "Or configure a default Chat with {.code set_default_chat()} or {.code dsp_configure()}"
+      ))
+    }
+
+    if (!create) {
+      return(NULL)
+    }
+
+    llm <- get_default_chat(create = TRUE)
+  } else if (length(ignored_fields) > 0) {
+    cli::cli_warn(
+      c(
+        "Ignoring module config fields that no longer create Chats",
+        "i" = "Ignored fields: {.field {ignored_fields}}",
+        "i" = "Runtime now comes from {.arg .llm}, {.code module$chat}, or the default Chat"
+      ),
+      .frequency = "once",
+      .frequency_id = paste0("legacy-chat-config-", module_kind(module))
+    )
+  }
+
+  params <- module_runtime_params(module, extra_params = extra_params)
+  if (length(params) == 0) {
+    return(llm)
+  }
+
+  apply_chat_params(llm, params)
+}
+
+#' Collect runtime params from module config
+#' @noRd
+module_runtime_params <- function(module, extra_params = NULL) {
+  config <- normalize_module_config(module$config %||% list())
+  params <- config$params %||% list()
+
+  if (!is.null(extra_params) && length(extra_params) > 0) {
+    for (name in names(extra_params)) {
+      params[[name]] <- extra_params[[name]]
+    }
+  }
+
+  params[!vapply(params, is.null, logical(1))]
+}
+
+#' Clone a Chat and apply runtime params to its provider
+#' @noRd
+apply_chat_params <- function(chat, params) {
+  if (is.null(chat) || length(params) == 0) {
+    return(chat)
+  }
+
+  cloned <- tryCatch(
+    {
+      if (is.function(chat$clone)) {
+        chat$clone(deep = TRUE)
+      } else {
+        cli::cli_warn(
+          c(
+            "Chat object does not support cloning",
+            "i" = "Runtime parameters will be applied to the original Chat",
+            "i" = "This may cause unexpected behavior in batch/optimization contexts"
+          ),
+          .frequency = "once",
+          .frequency_id = "chat-clone-unsupported"
+        )
+        chat
+      }
+    },
+    error = function(e) {
+      cli::cli_warn(
+        c(
+          "Failed to clone Chat for parameter isolation",
+          "x" = e$message,
+          "i" = "Runtime parameters will be applied to the original Chat"
+        ),
+        .frequency = "once",
+        .frequency_id = "chat-clone-failed"
+      )
+      chat
+    }
+  )
+
+  provider <- tryCatch(
+    cloned$.__enclos_env__$private$provider,
+    error = function(e) NULL
+  )
+  if (is.null(provider)) {
+    return(cloned)
+  }
+
+  existing_args <- tryCatch(provider@extra_args, error = function(e) list())
+  if (is.null(existing_args)) {
+    existing_args <- list()
+  }
+
+  for (name in names(params)) {
+    existing_args[[name]] <- params[[name]]
+  }
+
+  tryCatch(
+    {
+      cloned$.__enclos_env__$private$provider@extra_args <- existing_args
+    },
+    error = function(e) {
+      param_names <- paste(names(params), collapse = ", ")
+      cli::cli_warn(
+        c(
+          "Failed to apply runtime parameters to Chat provider",
+          "x" = "Parameters not applied: {.field {param_names}}",
+          "i" = "The module will run with the provider's default settings",
+          "i" = "Error: {e$message}"
+        ),
+        .frequency = "once",
+        .frequency_id = "chat-params-failed"
+      )
+    }
+  )
+
+  cloned
+}
+
+#' Determine if a value is an ellmer content object
+#' @noRd
+is_content_input <- function(x) {
+  inherits(x, "Content") || any(grepl("^Content", class(x)))
+}
+
+#' Build the canonical request payload for a module execution
+#' @noRd
+build_module_request <- function(module, inputs) {
+  prompt <- build_prompt(module, inputs)
+  instructions <- module$signature@instructions %||% ""
+  full_prompt <- if (nzchar(instructions) && nzchar(prompt)) {
+    paste(instructions, prompt, sep = "\n\n")
+  } else if (nzchar(instructions)) {
+    instructions
+  } else {
+    prompt
+  }
+
+  content_inputs <- unname(Filter(is_content_input, inputs))
+  payload <- if (length(content_inputs) > 0) {
+    c(list(ellmer::ContentText(full_prompt)), content_inputs)
+  } else {
+    full_prompt
+  }
+
+  list(
+    prompt = prompt,
+    instructions = instructions,
+    full_prompt = full_prompt,
+    payload = payload,
+    is_multimodal = length(content_inputs) > 0
+  )
+}
+
+#' Execute a structured ellmer call from a prepared request
+#' @noRd
+call_llm_request <- function(llm, request, output_type, .cache = NULL) {
+  if (isTRUE(request$is_multimodal)) {
+    llm$chat_structured(
+      request$payload,
+      type = output_type,
+      echo = "none"
+    )
+  } else {
+    cached_chat_structured(
+      llm = llm,
+      prompt = request$full_prompt,
+      output_type = output_type,
+      .cache = .cache
+    )
+  }
+}
+
 #' Process a single batch item
 #'
 #' Core processing logic shared by both parallel and sequential execution.
@@ -262,7 +516,8 @@ process_batch_item <- function(
   .return_format,
   .cache = NULL
 ) {
-  prompt <- build_prompt(module, input_set)
+  request <- build_module_request(module, input_set)
+  prompt <- request$prompt
 
   if (.verbose) {
     cli::cli_h3("Prompt {index}")
@@ -271,12 +526,10 @@ process_batch_item <- function(
 
   start_time <- Sys.time()
 
-  response <- call_llm(
+  response <- call_llm_request(
     llm = llm,
-    prompt = prompt,
+    request = request,
     output_type = module$signature@output_type,
-    instructions = module$signature@instructions,
-    verbose = .verbose,
     .cache = .cache
   )
 
@@ -287,17 +540,11 @@ process_batch_item <- function(
   if (.return_format == "simple") {
     extract_simple_output(response, module$signature@output_type)
   } else {
-    # Build full prompt (with instructions) for mock chat
-    instructions <- module$signature@instructions
-    full_prompt <- if (nchar(instructions) > 0) {
-      paste(instructions, prompt, sep = "\n\n")
-    } else {
-      prompt
-    }
+    instructions <- request$instructions
 
     list(
       output = response,
-      chat = mock_batch_chat(full_prompt, response, llm),
+      chat = mock_batch_chat(request$payload, response, llm),
       metadata = list(
         latency_ms = latency_ms,
         prompt_length = nchar(prompt),
@@ -322,11 +569,24 @@ process_batch_item <- function(
 #' @return A cloned Chat with UserTurn and AssistantTurn representing the exchange
 #' @noRd
 mock_batch_chat <- function(prompt, response, chat) {
-  mock <- chat$clone()
-
-  user_turn <- ellmer::UserTurn(
-    contents = list(ellmer::ContentText(as.character(prompt)))
+  mock <- tryCatch(
+    {
+      if (is.function(chat$clone)) chat$clone() else chat
+    },
+    error = function(e) chat
   )
+
+  prompt_contents <- if (
+    is.list(prompt) &&
+      length(prompt) > 0 &&
+      all(vapply(prompt, is_content_input, logical(1)))
+  ) {
+    prompt
+  } else {
+    list(ellmer::ContentText(as.character(prompt)))
+  }
+
+  user_turn <- ellmer::UserTurn(contents = prompt_contents)
 
   # Serialize response to JSON if it's structured data
   response_text <- if (is.character(response) && length(response) == 1) {
@@ -339,7 +599,9 @@ mock_batch_chat <- function(prompt, response, chat) {
     contents = list(ellmer::ContentText(response_text))
   )
 
-  mock$set_turns(list(user_turn, assistant_turn))
+  if (is.function(mock$set_turns)) {
+    mock$set_turns(list(user_turn, assistant_turn))
+  }
   mock
 }
 
@@ -483,7 +745,7 @@ run_batch_sequential <- function(
   .progress,
   .cache = NULL
 ) {
-  shared_llm <- .llm %||% module$chat %||% get_default_llm(module)
+  shared_llm <- resolve_module_llm(module, .llm = .llm)
   results <- vector("list", n)
 
   # Create progress bar if requested
@@ -497,7 +759,7 @@ run_batch_sequential <- function(
   }
 
   for (i in seq_len(n)) {
-    prompt <- build_prompt(module, input_sets[[i]])
+    prompt <- build_module_request(module, input_sets[[i]])$prompt
 
     results[[i]] <- tryCatch(
       {
@@ -554,21 +816,13 @@ run_batch_ellmer_parallel <- function(
   .cache = NULL
 ) {
   # Build prompts for all inputs (as list, required by ellmer::parallel_chat_structured)
-  prompts <- lapply(
-    input_sets,
-    function(input_set) {
-      prompt <- build_prompt(module, input_set)
-      instructions <- module$signature@instructions
-      if (nchar(instructions) > 0) {
-        paste(instructions, prompt, sep = "\n\n")
-      } else {
-        prompt
-      }
-    }
-  )
+  requests <- lapply(input_sets, function(input_set) {
+    build_module_request(module, input_set)
+  })
+  prompts <- lapply(requests, `[[`, "payload")
 
   # Get the Chat provider - need to clone for parallel use
-  chat <- .llm %||% module$chat %||% get_default_llm(module)
+  chat <- resolve_module_llm(module, .llm = .llm)
 
   # Check if ellmer has parallel_chat_structured
   if (!exists("parallel_chat_structured", envir = asNamespace("ellmer"))) {
@@ -704,9 +958,9 @@ run_batch_ellmer_parallel <- function(
           chat = mock_batch_chat(prompts[[i]], response, chat),
           metadata = list(
             latency_ms = total_latency / n,
-            prompt_length = nchar(prompts[[i]]),
-            prompt = prompts[[i]],
-            instructions = module$signature@instructions,
+            prompt_length = nchar(requests[[i]]$prompt),
+            prompt = requests[[i]]$prompt,
+            instructions = requests[[i]]$instructions,
             timestamp = end_time,
             batch_index = i,
             parallel_method = "ellmer"
@@ -732,11 +986,11 @@ run_batch_parallel <- function(
   .cache = NULL
 ) {
   llm_factory <- if (!is.null(.llm)) {
-    function() .llm
-  } else if (!is.null(module$chat)) {
-    # Use the module's stored Chat - note: each worker gets the same reference
-    # For true parallel isolation, users should not provide a Chat
-    function() module$chat
+    function() resolve_module_llm(module, .llm = .llm)
+  } else if (
+    !is.null(module$chat) || !is.null(get_default_chat(create = FALSE))
+  ) {
+    function() resolve_module_llm(module)
   } else {
     function() get_default_llm(module)
   }
@@ -899,13 +1153,19 @@ build_prompt <- function(module, inputs) {
 
   # Add the main template with inputs
   if (nchar(module$template) > 0) {
-    filled_template <- glue::glue_data(
-      .x = inputs,
-      module$template,
-      .open = "{",
-      .close = "}",
-      .envir = parent.frame()
-    )
+    if (grepl("\\{\\{[^}]+\\}\\}", module$template)) {
+      filled_template <- rlang::inject(
+        ellmer::interpolate(module$template, !!!inputs)
+      )
+    } else {
+      filled_template <- glue::glue_data(
+        .x = inputs,
+        module$template,
+        .open = "{",
+        .close = "}",
+        .envir = parent.frame()
+      )
+    }
     prompt_parts <- c(prompt_parts, filled_template)
   } else {
     # Auto-generate template from inputs
@@ -929,7 +1189,10 @@ format_demos <- function(demos, signature) {
     # Format inputs
     if (!is.null(demo$inputs)) {
       for (name in names(demo$inputs)) {
-        demo_lines <- c(demo_lines, paste0(name, ": ", demo$inputs[[name]]))
+        demo_lines <- c(
+          demo_lines,
+          paste0(name, ": ", format_prompt_value(demo$inputs[[name]]))
+        )
       }
     }
 
@@ -954,7 +1217,7 @@ format_inputs <- function(inputs, sig_inputs) {
   input_lines <- character()
 
   for (name in names(inputs)) {
-    value <- inputs[[name]]
+    value <- format_prompt_value(inputs[[name]])
     # Find the corresponding signature input for description
     sig_input <- Find(function(x) x$name == name, sig_inputs)
 
@@ -979,6 +1242,20 @@ format_output <- function(output) {
   }
 }
 
+#' Format a value for prompt rendering
+#' @noRd
+format_prompt_value <- function(value) {
+  if (is_content_input(value)) {
+    return(paste0("<", class(value)[1], ">"))
+  }
+
+  if (is.list(value) && !is.null(names(value))) {
+    return(jsonlite::toJSON(value, auto_unbox = TRUE, pretty = FALSE))
+  }
+
+  paste(value, collapse = ", ")
+}
+
 #' Get default LLM configuration
 #'
 #' Checks module's stored Chat, then auto-detects from environment
@@ -988,13 +1265,7 @@ format_output <- function(output) {
 #' @return An ellmer Chat object
 #' @noRd
 get_default_llm <- function(module) {
-  # Check for Chat stored on module
-  if (!is.null(module$chat)) {
-    return(module$chat)
-  }
-
-  # Use the new auto-detection from chat-default.R
-  get_default_chat(create = TRUE)
+  resolve_module_llm(module, create = TRUE)
 }
 
 #' Call the LLM with structured output
@@ -1006,28 +1277,45 @@ call_llm <- function(
   output_type,
   instructions = "",
   verbose = FALSE,
+  inputs = list(),
   .cache = NULL
 ) {
-  # Build the full prompt with instructions
-  full_prompt <- if (nchar(instructions) > 0) {
-    paste(instructions, prompt, sep = "\n\n")
-  } else {
-    prompt
-  }
-
-  # Make the API call through cached wrapper
-  tryCatch(
-    {
-      # Use cached_chat_structured to respect caching configuration
-      result <- cached_chat_structured(
-        llm = llm,
-        prompt = full_prompt,
-        output_type = output_type,
-        .cache = .cache
-      )
-
-      result
+  request <- list(
+    prompt = prompt,
+    instructions = instructions,
+    full_prompt = if (nchar(instructions) > 0) {
+      paste(instructions, prompt, sep = "\n\n")
+    } else {
+      prompt
     },
+    payload = if (length(Filter(is_content_input, inputs)) > 0) {
+      c(
+        list(ellmer::ContentText(
+          if (nchar(instructions) > 0) {
+            paste(instructions, prompt, sep = "\n\n")
+          } else {
+            prompt
+          }
+        )),
+        unname(Filter(is_content_input, inputs))
+      )
+    } else {
+      if (nchar(instructions) > 0) {
+        paste(instructions, prompt, sep = "\n\n")
+      } else {
+        prompt
+      }
+    },
+    is_multimodal = length(Filter(is_content_input, inputs)) > 0
+  )
+
+  tryCatch(
+    call_llm_request(
+      llm = llm,
+      request = request,
+      output_type = output_type,
+      .cache = .cache
+    ),
     error = function(e) {
       cli::cli_abort(
         "LLM call failed: {e$message}",

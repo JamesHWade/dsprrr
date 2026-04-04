@@ -146,6 +146,55 @@ test_that("restore_module_config accepts custom signature", {
   expect_equal(restored$signature@inputs[[1]]$name, "custom_input")
 })
 
+test_that("restore_module_config rejects legacy pinned configs", {
+  legacy_config <- list(
+    signature = list(
+      inputs = list(),
+      output_type = "string",
+      instructions = ""
+    ),
+    config = list()
+  )
+
+  expect_error(
+    restore_module_config(legacy_config),
+    "Re-pin this module using the v2 format"
+  )
+})
+
+test_that("pin_module_config round-trips chain_of_thought kind", {
+  skip_if_not_installed("pins")
+
+  mod <- module(signature("question -> answer"), type = "chain_of_thought")
+  board <- pins::board_temp()
+
+  pin_module_config(board, "cot", mod)
+  config <- pins::pin_read(board, "cot")
+  restored <- restore_module_config(config)
+
+  expect_equal(config$module_kind, "chain_of_thought")
+  expect_equal(restored$config$.module_kind, "chain_of_thought")
+  expect_true("reasoning" %in% names(restored$signature@output_type@properties))
+})
+
+test_that("pin_module_config round-trips multichain core state", {
+  skip_if_not_installed("pins")
+
+  mod <- multi_chain_comparison("question -> answer", M = 4, temperature = 0.9)
+  board <- pins::board_temp()
+
+  pin_module_config(board, "mcc", mod)
+  config <- pins::pin_read(board, "mcc")
+  restored <- restore_module_config(config)
+
+  expect_equal(config$module_kind, "multichain")
+  expect_s3_class(restored, "Module")
+  expect_equal(restored$config$.module_kind, "multichain")
+  expect_equal(restored$M, 4)
+  expect_equal(restored$temperature, 0.9)
+  expect_equal(restored$inner_module$config$.module_kind, "chain_of_thought")
+})
+
 # ---- pin_trace tests ----
 
 test_that("pin_trace requires pins package", {

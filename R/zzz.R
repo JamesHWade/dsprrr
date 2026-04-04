@@ -2,6 +2,9 @@
 #' @noRd
 
 .onLoad <- function(libname, pkgname) {
+  registerS3method("print", "dsprrr_batch_result", print.dsprrr_batch_result)
+  registerS3method("print", "dsprrr_trace_summary", print.dsprrr_trace_summary)
+
   # Register S7 methods for Signature (still S7)
   S7::method(print, Signature) <- print_signature
 

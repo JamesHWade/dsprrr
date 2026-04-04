@@ -259,6 +259,19 @@ module_parameters <- function(
   config_values <- module$config
   if (length(config_values) > 0) {
     for (name in names(config_values)) {
+      if (identical(name, "params") && is.list(config_values[[name]])) {
+        for (param_name in names(config_values[[name]])) {
+          param_value <- config_values[[name]][[param_name]]
+          if (is.atomic(param_value) && length(param_value) == 1) {
+            param_values[[param_name]] <- c(
+              param_values[[param_name]],
+              param_value
+            )
+          }
+        }
+        next
+      }
+
       value <- config_values[[name]]
       if (is.atomic(value) && length(value) == 1) {
         param_values[[name]] <- c(param_values[[name]], value)

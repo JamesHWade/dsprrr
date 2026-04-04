@@ -92,8 +92,7 @@ MultiChainComparisonModule <- R6::R6Class(
         self$inner_module <- inner_module
       } else {
         # Default: use ChainOfThought for better reasoning
-        cot_sig <- with_reasoning(sig)
-        self$inner_module <- module(cot_sig, type = "predict", chat = chat)
+        self$inner_module <- module(sig, type = "chain_of_thought", chat = chat)
       }
 
       self$M <- as.integer(M)
@@ -130,14 +129,32 @@ MultiChainComparisonModule <- R6::R6Class(
       start_time <- Sys.time()
       attempts <- list()
       total_tokens <- 0
+      total_input_tokens <- 0
+      total_output_tokens <- 0
       total_cost <- 0
+      attempt_llm <- resolve_module_llm(
+        self,
+        .llm = .llm,
+        extra_params = list(temperature = self$temperature)
+      )
 
       # Phase 1: Generate M reasoning chains
       for (i in seq_len(self$M)) {
+        # Clone chat per attempt so each chain starts with fresh state
+        iter_llm <- tryCatch(
+          attempt_llm$clone(deep = TRUE),
+          error = function(e) attempt_llm
+        )
+
         # Run inner module
         result <- tryCatch(
           {
-            self$inner_module$forward(batch, .llm = .llm, trace = FALSE, ...)
+            self$inner_module$forward(
+              batch,
+              .llm = iter_llm,
+              trace = FALSE,
+              ...
+            )
           },
           error = function(e) {
             cli::cli_warn(c(
@@ -155,6 +172,12 @@ MultiChainComparisonModule <- R6::R6Class(
           # Accumulate costs
           if (!is.null(metadata$total_tokens)) {
             total_tokens <- total_tokens + metadata$total_tokens
+          }
+          if (!is.null(metadata$input_tokens)) {
+            total_input_tokens <- total_input_tokens + metadata$input_tokens
+          }
+          if (!is.null(metadata$output_tokens)) {
+            total_output_tokens <- total_output_tokens + metadata$output_tokens
           }
           if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
             total_cost <- total_cost + metadata$cost
@@ -188,6 +211,14 @@ MultiChainComparisonModule <- R6::R6Class(
       if (!is.null(comparison_metadata$total_tokens)) {
         total_tokens <- total_tokens + comparison_metadata$total_tokens
       }
+      if (!is.null(comparison_metadata$input_tokens)) {
+        total_input_tokens <- total_input_tokens +
+          comparison_metadata$input_tokens
+      }
+      if (!is.null(comparison_metadata$output_tokens)) {
+        total_output_tokens <- total_output_tokens +
+          comparison_metadata$output_tokens
+      }
       if (
         !is.null(comparison_metadata$cost) && !is.na(comparison_metadata$cost)
       ) {
@@ -209,7 +240,10 @@ MultiChainComparisonModule <- R6::R6Class(
         n_successful_attempts = length(attempts),
         n_failed_attempts = self$M - length(attempts),
         n_llm_calls = length(attempts) + 1, # M attempts + 1 comparison
+        input_tokens = total_input_tokens,
+        output_tokens = total_output_tokens,
         total_tokens = total_tokens,
+        cost = total_cost,
         total_cost = total_cost,
         latency_ms = latency_ms
       )
@@ -220,11 +254,22 @@ MultiChainComparisonModule <- R6::R6Class(
           timestamp = end_time,
           inputs = inputs,
           output = final_output,
+          prompt = comparison_metadata$prompt %||% NA_character_,
           attempts = attempts,
           comparison_output = final_output,
           M = self$M,
           n_successful_attempts = length(attempts),
           n_failed_attempts = self$M - length(attempts),
+          user_turn = comparison_metadata$user_turn %||% NULL,
+          assistant_turn = comparison_metadata$assistant_turn %||% NULL,
+          turns = comparison_metadata$turns %||% list(),
+          latency_ms = latency_ms,
+          tokens = list(
+            input_tokens = total_input_tokens,
+            output_tokens = total_output_tokens,
+            total_tokens = total_tokens
+          ),
+          cost = total_cost,
           model = comparison_metadata$model
         )
         self$state$traces <- append(self$state$traces, list(trace_entry))
@@ -328,11 +373,16 @@ MultiChainComparisonModule <- R6::R6Class(
     #' @description
     #' Apply optimization parameters
     apply_optimization_params = function(params) {
+      super$apply_optimization_params(params)
+
       if (!is.null(params$M)) {
         self$M <- as.integer(params$M)
       }
       if (!is.null(params$temperature)) {
         self$temperature <- params$temperature
+        self$config$params <- self$config$params %||% list()
+        self$config$params$temperature <- params$temperature
+        self$config$temperature <- params$temperature
       }
       # Forward other params to inner module
       inner_params <- params[!names(params) %in% c("M", "temperature")]
@@ -436,8 +486,11 @@ MultiChainComparisonModule <- R6::R6Class(
         }
       )
 
-      # Get LLM
-      llm <- .llm %||% self$chat %||% private$get_default_llm()
+      llm <- resolve_module_llm(self, .llm = .llm)
+      start_turn_count <- tryCatch(
+        length(llm$get_turns()),
+        error = function(e) 0L
+      )
 
       # Build comparison signature
       comparison_sig <- private$build_comparison_signature()
@@ -456,6 +509,10 @@ MultiChainComparisonModule <- R6::R6Class(
         1000
 
       # Get token info
+      user_turn <- tryCatch(
+        llm$last_turn(role = "user"),
+        error = function(e) NULL
+      )
       assistant_turn <- tryCatch(
         llm$last_turn(role = "assistant"),
         error = function(e) NULL
@@ -485,6 +542,22 @@ MultiChainComparisonModule <- R6::R6Class(
         timestamp = end_time,
         model = model,
         prompt = as.character(comparison_prompt),
+        user_turn = user_turn,
+        assistant_turn = assistant_turn,
+        turns = tryCatch(
+          {
+            current_turns <- llm$get_turns()
+            new_start <- start_turn_count + 1L
+            if (new_start <= length(current_turns)) {
+              current_turns[seq.int(new_start, length(current_turns))]
+            } else {
+              list()
+            }
+          },
+          error = function(e) list(user_turn, assistant_turn)
+        ),
+        input_tokens = token_info$input_tokens,
+        output_tokens = token_info$output_tokens,
         total_tokens = token_info$total_tokens,
         cost = cost,
         latency_ms = latency_ms
@@ -499,36 +572,11 @@ MultiChainComparisonModule <- R6::R6Class(
 
     #' Get default LLM client
     get_default_llm = function() {
-      # Check for configured provider
-      provider <- self$config$provider %||%
-        Sys.getenv("DSPRRR_PROVIDER", "openai")
-      provider <- switch(provider, anthropic = "claude", provider)
-
-      model_name <- self$config$model
-
-      llm <- switch(
-        provider,
-        openai = ellmer::chat_openai(
-          model = model_name %||% "gpt-4o-mini",
-          api_args = list(temperature = self$temperature)
-        ),
-        claude = ellmer::chat_claude(
-          model = model_name %||% "claude-sonnet-4-20250514",
-          max_tokens = self$config$max_tokens %||% 4096,
-          api_args = list(temperature = self$temperature)
-        ),
-        gemini = ellmer::chat_google_gemini(
-          model = model_name %||% "gemini-2.0-flash",
-          api_args = list(temperature = self$temperature)
-        ),
-        ollama = ellmer::chat_ollama(
-          model = model_name %||% "llama3.2:3b",
-          api_args = list(temperature = self$temperature)
-        ),
-        cli::cli_abort("Unknown provider: {provider}")
+      resolve_module_llm(
+        self,
+        create = TRUE,
+        extra_params = list(temperature = self$temperature)
       )
-
-      llm
     }
   )
 )

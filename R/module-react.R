@@ -125,21 +125,19 @@ ReactModule <- R6::R6Class(
         inputs <- batch
       }
 
-      # Get LLM client
-      llm <- .llm %||% self$chat %||% private$get_default_llm()
+      request <- build_module_request(self, inputs)
+      llm <- resolve_module_llm(self, .llm = .llm)
+      start_turn_count <- tryCatch(
+        length(llm$get_turns()),
+        error = function(e) 0L
+      )
 
       # Register all tools on the Chat
       for (tool in self$tools) {
         llm$register_tool(tool)
       }
 
-      # Build initial prompt
-      prompt <- private$build_prompt(inputs)
-
-      # Add instructions if present
-      if (nchar(self$signature@instructions) > 0) {
-        prompt <- paste(self$signature@instructions, prompt, sep = "\n\n")
-      }
+      prompt <- request$full_prompt
 
       # Record start time
       start_time <- Sys.time()
@@ -245,6 +243,18 @@ ReactModule <- R6::R6Class(
         llm$last_turn(role = "user"),
         error = function(e) NULL
       )
+      turns <- tryCatch(
+        {
+          current_turns <- llm$get_turns()
+          new_start <- start_turn_count + 1L
+          if (new_start <= length(current_turns)) {
+            current_turns[seq.int(new_start, length(current_turns))]
+          } else {
+            list()
+          }
+        },
+        error = function(e) c(list(user_turn), all_turns, list(final_turn))
+      )
 
       # Aggregate token info from all turns
       total_input <- 0
@@ -302,11 +312,22 @@ ReactModule <- R6::R6Class(
           timestamp = end_time,
           inputs = inputs,
           output = result,
+          prompt = request$full_prompt,
+          instructions = self$signature@instructions,
           user_turn = user_turn,
           assistant_turn = final_turn,
+          turns = turns,
           all_turns = all_turns,
           tool_calls = tool_calls,
           iterations = iterations,
+          latency_ms = latency_ms,
+          tokens = list(
+            input_tokens = total_input,
+            output_tokens = total_output,
+            cached_input_tokens = total_cached,
+            total_tokens = total_input + total_output
+          ),
+          cost = total_cost,
           model = model
         )
 

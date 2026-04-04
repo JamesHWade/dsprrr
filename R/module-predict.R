@@ -62,11 +62,13 @@ PredictModule <- R6::R6Class(
         inputs <- batch
       }
 
-      # Build prompt
-      prompt <- private$build_prompt(inputs)
-
-      # Get LLM client: prefer passed .llm, then stored chat, then auto-detect
-      llm <- .llm %||% self$chat %||% private$get_default_llm()
+      request <- build_module_request(self, inputs)
+      prompt <- request$prompt
+      llm <- resolve_module_llm(self, .llm = .llm)
+      start_turn_count <- tryCatch(
+        length(llm$get_turns()),
+        error = function(e) 0L
+      )
 
       # Record start time
       start_time <- Sys.time()
@@ -76,10 +78,8 @@ PredictModule <- R6::R6Class(
         {
           private$call_llm(
             llm = llm,
-            prompt = prompt,
+            request = request,
             output_type = self$signature@output_type,
-            instructions = self$signature@instructions,
-            inputs = inputs,
             .cache = .cache
           )
         },
@@ -103,6 +103,18 @@ PredictModule <- R6::R6Class(
       user_turn <- tryCatch(
         llm$last_turn(role = "user"),
         error = function(e) NULL
+      )
+      turns <- tryCatch(
+        {
+          current_turns <- llm$get_turns()
+          new_start <- start_turn_count + 1L
+          if (new_start <= length(current_turns)) {
+            current_turns[seq.int(new_start, length(current_turns))]
+          } else {
+            list()
+          }
+        },
+        error = function(e) list(user_turn, assistant_turn)
       )
 
       # Extract token info from ellmer's AssistantTurn (has @tokens vector)
@@ -157,8 +169,14 @@ PredictModule <- R6::R6Class(
           timestamp = end_time,
           inputs = inputs,
           output = result,
+          prompt = request$full_prompt,
+          instructions = self$signature@instructions,
           user_turn = user_turn,
           assistant_turn = assistant_turn,
+          turns = turns,
+          latency_ms = latency_ms,
+          tokens = token_info,
+          cost = cost,
           model = model
         )
 
@@ -168,10 +186,7 @@ PredictModule <- R6::R6Class(
         }
 
         self$state$traces <- append(self$state$traces, list(trace_entry))
-
         # Also add to global prompt history for inspect_history()
-        # Include the prompt text in the trace for history extraction
-        trace_entry$prompt <- prompt
         add_to_global_history(trace_entry, source = "PredictModule")
       }
 
@@ -300,6 +315,8 @@ PredictModule <- R6::R6Class(
     #' @description
     #' Apply optimisation parameters (instructions/template) to the module
     apply_optimization_params = function(params) {
+      super$apply_optimization_params(params)
+
       if (!is.null(params$id)) {
         self$config$current_variant <- params$id
       }
@@ -324,25 +341,7 @@ PredictModule <- R6::R6Class(
     # Build prompt from inputs
     # Supports both glue-style { } and ellmer-style {{ }} delimiters
     build_prompt = function(inputs) {
-      prompt_parts <- character()
-
-      # Add demonstrations if present
-      if (length(self$demos) > 0) {
-        demo_text <- private$format_demos()
-        prompt_parts <- c(prompt_parts, demo_text, "")
-      }
-
-      # Add the main template with inputs
-      if (nchar(self$template) > 0) {
-        filled_template <- private$interpolate_template(self$template, inputs)
-        prompt_parts <- c(prompt_parts, filled_template)
-      } else {
-        # Auto-generate template from inputs
-        input_text <- private$format_inputs(inputs)
-        prompt_parts <- c(prompt_parts, input_text)
-      }
-
-      paste(prompt_parts, collapse = "\n")
+      build_prompt(self, inputs)
     },
 
     # Interpolate template with inputs, supporting both { } and {{ }} syntax
@@ -439,139 +438,23 @@ PredictModule <- R6::R6Class(
 
     # Get default LLM client
     get_default_llm = function() {
-      # Check for configured provider
-      provider <- self$config$provider %||%
-        Sys.getenv("DSPRRR_PROVIDER", "openai")
-      provider <- switch(provider, anthropic = "claude", provider)
-
-      # Get model name for reasoning model detection
-      model_name <- self$config$model
-
-      build_api_args <- function(model) {
-        args <- self$config$api_args
-        if (is.null(args)) {
-          args <- list()
-        }
-
-        # Check if this is a reasoning model
-        is_reasoning <- is_reasoning_model(model)
-
-        append_arg <- function(name, value, allow_zero = TRUE) {
-          if (is.null(value)) {
-            return()
-          }
-          if (!allow_zero && identical(value, 0)) {
-            return()
-          }
-          if (is.null(args[[name]])) {
-            args[[name]] <<- value
-          }
-        }
-
-        if (is_reasoning) {
-          # Reasoning models use reasoning_effort instead of temperature/top_p
-          # ellmer passes this via params(reasoning_effort = ...)
-          append_arg("reasoning_effort", self$config$reasoning_effort)
-        } else {
-          # Traditional models use temperature and top_p
-          append_arg("temperature", self$config$temperature, allow_zero = FALSE)
-          append_arg("top_p", self$config$top_p)
-        }
-
-        # These parameters work for all models
-        append_arg("frequency_penalty", self$config$frequency_penalty)
-        append_arg("presence_penalty", self$config$presence_penalty)
-        append_arg("max_output_tokens", self$config$max_output_tokens)
-
-        args
-      }
-
-      llm <- switch(
-        provider,
-        openai = ellmer::chat_openai(
-          model = model_name %||% "gpt-4o-mini",
-          api_args = build_api_args(model_name %||% "gpt-4o-mini")
-        ),
-        claude = ellmer::chat_claude(
-          model = model_name %||% "claude-sonnet-4-20250514",
-          max_tokens = self$config$max_tokens %||% 4096,
-          api_args = build_api_args(model_name %||% "claude-sonnet-4-20250514")
-        ),
-        gemini = ellmer::chat_google_gemini(
-          model = model_name %||% "gemini-2.0-flash",
-          api_args = build_api_args(model_name %||% "gemini-2.0-flash")
-        ),
-        ollama = ellmer::chat_ollama(
-          model = model_name %||% "llama3.2:3b",
-          api_args = build_api_args(model_name %||% "llama3.2:3b")
-        ),
-        cli::cli_abort("Unknown provider: {provider}")
-      )
-
-      llm
+      resolve_module_llm(self, create = TRUE)
     },
 
     # Call LLM with structured output
     # Supports multimodal inputs (images, PDFs) via ellmer Content objects
     call_llm = function(
       llm,
-      prompt,
+      request,
       output_type,
-      instructions = "",
-      inputs = list(),
       .cache = NULL
     ) {
-      # Check for Content objects in inputs (images, PDFs)
-      content_inputs <- Filter(
-        function(x) {
-          inherits(x, "Content") ||
-            inherits(x, "ContentImageRemote") ||
-            inherits(x, "ContentImageInline") ||
-            inherits(x, "ContentPDF")
-        },
-        inputs
+      call_llm_request(
+        llm = llm,
+        request = request,
+        output_type = output_type,
+        .cache = .cache
       )
-
-      if (length(content_inputs) > 0) {
-        # Multimodal request - build content list
-        # Instructions go in system turn, prompt and content in user turn
-        full_prompt <- if (nchar(instructions) > 0) {
-          paste(instructions, prompt, sep = "\n\n")
-        } else {
-          prompt
-        }
-
-        # Build content list: text prompt followed by multimodal content
-        contents <- c(
-          list(ellmer::ContentText(full_prompt)),
-          unname(content_inputs)
-        )
-
-        # Make multimodal API call
-        result <- llm$chat_structured(
-          contents,
-
-          type = output_type,
-          echo = "none"
-        )
-      } else {
-        # Text-only request (current path)
-        full_prompt <- if (nchar(instructions) > 0) {
-          paste(instructions, prompt, sep = "\n\n")
-        } else {
-          prompt
-        }
-
-        # Use cached wrapper for LLM call
-        result <- cached_chat_structured(
-          llm = llm,
-          prompt = full_prompt,
-          output_type = output_type,
-          .cache = .cache
-        )
-      }
-
-      result
     }
   ),
 

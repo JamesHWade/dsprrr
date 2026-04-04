@@ -94,3 +94,41 @@ test_that("run_async returns a promise", {
   result <- mod$run_async(text = "Hello")
   expect_s3_class(result, "promise")
 })
+
+test_that("run, run_async, and stream_async share prompt assembly", {
+  captured <- new.env(parent = emptyenv())
+
+  mock_chat <- structure(
+    list(
+      get_turns = function() list(),
+      last_turn = function(...) NULL,
+      chat_structured = function(prompt, type, ...) {
+        captured$run <- prompt
+        "ok"
+      },
+      chat_structured_async = function(prompt, type, ...) {
+        captured$async <- prompt
+        "async"
+      },
+      stream_async = function(prompt, ...) {
+        captured$stream <- prompt
+        "stream"
+      }
+    ),
+    class = "Chat"
+  )
+
+  mod <- module(
+    signature("text -> result", instructions = "Be concise"),
+    type = "predict",
+    template = "Text: {text}",
+    chat = mock_chat
+  )
+
+  run(mod, text = "hello")
+  run_async(mod, text = "hello")
+  stream_async(mod, text = "hello")
+
+  expect_identical(captured$run, captured$async)
+  expect_identical(captured$run, captured$stream)
+})

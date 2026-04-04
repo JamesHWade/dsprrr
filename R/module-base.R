@@ -36,7 +36,7 @@ Module <- R6::R6Class(
       }
 
       self$signature <- signature
-      self$config <- config
+      self$config <- normalize_module_config(config)
       self$chat <- chat
       self$state <- list(
         traces = list(),
@@ -442,56 +442,42 @@ Module <- R6::R6Class(
           timestamp = .POSIXct(numeric(0)),
           latency_ms = numeric(0),
           input_tokens = integer(0),
+          cached_input_tokens = integer(0),
           output_tokens = integer(0),
           total_tokens = integer(0),
           cost = numeric(0),
           model = character(0),
-          prompt_length = integer(0)
+          prompt_length = integer(0),
+          prompt = character(0),
+          response = character(0)
         ))
       }
 
       # Convert list of traces to tibble
       tibble::tibble(
         timestamp = vapply(traces, function(x) x$timestamp, .POSIXct(1)),
-        latency_ms = vapply(
-          traces,
-          function(x) x$latency_ms %||% NA_real_,
-          numeric(1)
-        ),
+        latency_ms = vapply(traces, trace_latency_ms, numeric(1)),
         input_tokens = vapply(
           traces,
-          function(x) {
-            if (is.list(x$tokens)) {
-              as.integer(x$tokens$input_tokens %||% NA)
-            } else {
-              NA_integer_
-            }
-          },
+          function(x) trace_tokens(x)$input_tokens,
+          integer(1)
+        ),
+        cached_input_tokens = vapply(
+          traces,
+          function(x) trace_tokens(x)$cached_input_tokens,
           integer(1)
         ),
         output_tokens = vapply(
           traces,
-          function(x) {
-            if (is.list(x$tokens)) {
-              as.integer(x$tokens$output_tokens %||% NA)
-            } else {
-              NA_integer_
-            }
-          },
+          function(x) trace_tokens(x)$output_tokens,
           integer(1)
         ),
         total_tokens = vapply(
           traces,
-          function(x) {
-            if (is.list(x$tokens)) {
-              as.integer(x$tokens$total_tokens %||% NA)
-            } else {
-              NA_integer_
-            }
-          },
+          function(x) trace_tokens(x)$total_tokens,
           integer(1)
         ),
-        cost = vapply(traces, function(x) x$cost %||% NA_real_, numeric(1)),
+        cost = vapply(traces, trace_cost, numeric(1)),
         model = vapply(
           traces,
           function(x) x$model %||% NA_character_,
@@ -500,10 +486,13 @@ Module <- R6::R6Class(
         prompt_length = vapply(
           traces,
           function(x) {
-            if (!is.null(x$prompt)) nchar(x$prompt) else NA_integer_
+            prompt <- trace_prompt_text(x)
+            if (!is.na(prompt)) nchar(prompt) else NA_integer_
           },
           integer(1)
-        )
+        ),
+        prompt = vapply(traces, trace_prompt_text, character(1)),
+        response = vapply(traces, trace_response_text, character(1))
       )
     },
 
@@ -522,22 +511,18 @@ Module <- R6::R6Class(
         ))
       }
 
-      # Extract metrics from ellmer AssistantTurn objects
-      # AssistantTurn@tokens is c(input, output, cached_input)
-      # AssistantTurn@cost and @duration are also available
-      extract_tokens <- function(trace) {
-        turn <- trace$assistant_turn
-        if (is.null(turn) || is.null(turn@tokens)) {
-          return(c(input = 0, output = 0, cached = 0))
-        }
-        c(
-          input = turn@tokens[1] %||% 0,
-          output = turn@tokens[2] %||% 0,
-          cached = turn@tokens[3] %||% 0
-        )
-      }
-
-      all_tokens <- vapply(traces, extract_tokens, numeric(3))
+      all_tokens <- vapply(
+        traces,
+        function(trace) {
+          tokens <- trace_tokens(trace)
+          c(
+            input = tokens$input_tokens %||% 0,
+            output = tokens$output_tokens %||% 0,
+            cached = tokens$cached_input_tokens %||% 0
+          )
+        },
+        numeric(3)
+      )
 
       list(
         n_traces = length(traces),
@@ -550,42 +535,22 @@ Module <- R6::R6Class(
           vapply(
             traces,
             function(x) {
-              if (!is.null(x$assistant_turn)) {
-                x$assistant_turn@duration %||% 0
-              } else {
-                0
-              }
+              duration <- tryCatch(
+                x$assistant_turn@duration,
+                error = function(e) NULL
+              )
+              duration %||% ((trace_latency_ms(x) %||% 0) / 1000)
             },
             numeric(1)
           ),
           na.rm = TRUE
         ),
         total_latency_ms = sum(
-          vapply(
-            traces,
-            function(x) {
-              if (!is.null(x$assistant_turn)) {
-                (x$assistant_turn@duration %||% 0) * 1000
-              } else {
-                0
-              }
-            },
-            numeric(1)
-          ),
+          vapply(traces, trace_latency_ms, numeric(1)),
           na.rm = TRUE
         ),
         total_cost = sum(
-          vapply(
-            traces,
-            function(x) {
-              if (!is.null(x$assistant_turn)) {
-                x$assistant_turn@cost %||% 0
-              } else {
-                0
-              }
-            },
-            numeric(1)
-          ),
+          vapply(traces, trace_cost, numeric(1)),
           na.rm = TRUE
         )
       )
@@ -815,34 +780,9 @@ Module <- R6::R6Class(
         cli::cli_h3("Last Prompt")
         last_trace <- self$state$traces[[length(self$state$traces)]]
 
-        # Try to extract prompt
-        prompt_text <- NULL
-        if (!is.null(last_trace$prompt)) {
-          prompt_text <- last_trace$prompt
-        } else if (!is.null(last_trace$user_turn)) {
-          # Try to extract from ellmer Turn
-          tryCatch(
-            {
-              if (
-                !is.null(last_trace$user_turn@contents) &&
-                  length(last_trace$user_turn@contents) > 0
-              ) {
-                contents <- last_trace$user_turn@contents
-                texts <- vapply(
-                  contents,
-                  function(c) {
-                    if (inherits(c, "ContentText")) c@text else ""
-                  },
-                  character(1)
-                )
-                prompt_text <- paste(texts, collapse = "\n")
-              }
-            },
-            error = function(e) NULL
-          )
-        }
+        prompt_text <- trace_prompt_text(last_trace)
 
-        if (!is.null(prompt_text) && nzchar(prompt_text)) {
+        if (!is.na(prompt_text) && nzchar(prompt_text)) {
           # Truncate if very long
           if (nchar(prompt_text) > 300) {
             prompt_text <- paste0(
@@ -857,19 +797,9 @@ Module <- R6::R6Class(
 
         # Show response preview
         cli::cli_h3("Last Response")
-        if (!is.null(last_trace$output)) {
-          response_text <- if (is.character(last_trace$output)) {
-            last_trace$output
-          } else if (is.list(last_trace$output)) {
-            jsonlite::toJSON(
-              last_trace$output,
-              auto_unbox = TRUE,
-              pretty = FALSE
-            )
-          } else {
-            as.character(last_trace$output)
-          }
+        response_text <- trace_response_text(last_trace)
 
+        if (!is.na(response_text) && nzchar(response_text)) {
           if (nchar(response_text) > 200) {
             response_text <- paste0(substr(response_text, 1, 200), "...")
           }
@@ -919,18 +849,12 @@ Module <- R6::R6Class(
     #' @return If callback is NULL, returns a coro generator. Otherwise, returns
     #'   the full response text invisibly after streaming completes.
     stream = function(..., .llm = NULL, callback = NULL) {
-      llm <- .llm %||% self$chat %||% get_default_chat(create = TRUE)
-
       inputs <- list(...)
-      prompt <- private$build_prompt(inputs)
-
-      # Add instructions if present
-      if (nchar(self$signature@instructions) > 0) {
-        prompt <- paste(self$signature@instructions, prompt, sep = "\n\n")
-      }
+      request <- build_module_request(self, inputs)
+      llm <- resolve_module_llm(self, .llm = .llm)
 
       # Get stream generator from ellmer
-      gen <- llm$stream(prompt)
+      gen <- llm$stream(request$payload)
 
       if (!is.null(callback)) {
         # Consume stream with callback
@@ -1062,6 +986,15 @@ Module <- R6::R6Class(
 )
 
 Module$set("public", "apply_optimization_params", function(params) {
+  runtime_params <- intersect(names(params), runtime_param_names())
+  if (length(runtime_params) > 0) {
+    self$config$params <- self$config$params %||% list()
+    for (name in runtime_params) {
+      self$config$params[[name]] <- params[[name]]
+      self$config[[name]] <- params[[name]]
+    }
+  }
+
   invisible(self)
 })
 
