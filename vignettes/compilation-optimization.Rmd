@@ -524,7 +524,8 @@ grid_teleprompter <- GridSearchTeleprompter(
 optimized_qa <- compile_module(
   program = qa_module,
   teleprompter = grid_teleprompter,
-  trainset = qa_trainset
+  trainset = qa_trainset,
+  .llm = llm
 )
 
 # Check which variant performed best
@@ -622,7 +623,8 @@ grid_optimizer <- GridSearchTeleprompter(
 optimized_grid <- compile_module(
   program = email_classifier,
   teleprompter = grid_optimizer,
-  trainset = email_trainset
+  trainset = email_trainset,
+  .llm = llm
 )
 
 # Step 4: Use the optimized module
@@ -853,7 +855,8 @@ grid_optimizer <- GridSearchTeleprompter(
 best_analyzer <- compile_module(
   program = doc_analyzer,
   teleprompter = grid_optimizer,
-  trainset = doc_trainset
+  trainset = doc_trainset,
+  .llm = llm
 )
 
 # 5. Use the optimized analyzer

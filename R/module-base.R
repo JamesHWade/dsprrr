@@ -535,7 +535,10 @@ Module <- R6::R6Class(
           vapply(
             traces,
             function(x) {
-              duration <- tryCatch(x$assistant_turn@duration, error = function(e) NULL)
+              duration <- tryCatch(
+                x$assistant_turn@duration,
+                error = function(e) NULL
+              )
               duration %||% ((trace_latency_ms(x) %||% 0) / 1000)
             },
             numeric(1)
@@ -779,7 +782,7 @@ Module <- R6::R6Class(
 
         prompt_text <- trace_prompt_text(last_trace)
 
-        if (!is.null(prompt_text) && nzchar(prompt_text)) {
+        if (!is.na(prompt_text) && nzchar(prompt_text)) {
           # Truncate if very long
           if (nchar(prompt_text) > 300) {
             prompt_text <- paste0(

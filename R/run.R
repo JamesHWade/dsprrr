@@ -275,6 +275,7 @@ runtime_param_names <- function() {
     "reasoning_effort",
     "frequency_penalty",
     "presence_penalty",
+    "max_tokens",
     "max_output_tokens",
     "service_tier"
   )
@@ -283,19 +284,20 @@ runtime_param_names <- function() {
 #' Legacy config fields that should no longer create Chat clients
 #' @noRd
 legacy_chat_config_fields <- function() {
-  c("provider", "model", "api_args", "base_url", "credentials", "max_tokens")
+  c("provider", "model", "api_args", "base_url", "credentials")
 }
 
 #' Infer the logical module kind
 #' @noRd
 module_kind <- function(module) {
-  module$config$.module_kind %||% switch(
-    class(module)[1],
-    "ReactModule" = "react",
-    "MultiChainComparisonModule" = "multichain",
-    "PredictModule" = "predict",
-    "predict"
-  )
+  module$config$.module_kind %||%
+    switch(
+      class(module)[1],
+      "ReactModule" = "react",
+      "MultiChainComparisonModule" = "multichain",
+      "PredictModule" = "predict",
+      "predict"
+    )
 }
 
 #' Resolve the Chat to use for module execution
@@ -306,7 +308,10 @@ resolve_module_llm <- function(
   create = TRUE,
   extra_params = NULL
 ) {
-  ignored_fields <- intersect(names(module$config %||% list()), legacy_chat_config_fields())
+  ignored_fields <- intersect(
+    names(module$config %||% list()),
+    legacy_chat_config_fields()
+  )
   llm <- .llm %||% module$chat %||% get_default_chat(create = FALSE)
 
   if (is.null(llm)) {
@@ -371,10 +376,30 @@ apply_chat_params <- function(chat, params) {
       if (is.function(chat$clone)) {
         chat$clone(deep = TRUE)
       } else {
+        cli::cli_warn(
+          c(
+            "Chat object does not support cloning",
+            "i" = "Runtime parameters will be applied to the original Chat",
+            "i" = "This may cause unexpected behavior in batch/optimization contexts"
+          ),
+          .frequency = "once",
+          .frequency_id = "chat-clone-unsupported"
+        )
         chat
       }
     },
-    error = function(e) chat
+    error = function(e) {
+      cli::cli_warn(
+        c(
+          "Failed to clone Chat for parameter isolation",
+          "x" = e$message,
+          "i" = "Runtime parameters will be applied to the original Chat"
+        ),
+        .frequency = "once",
+        .frequency_id = "chat-clone-failed"
+      )
+      chat
+    }
   )
 
   provider <- tryCatch(
@@ -398,7 +423,19 @@ apply_chat_params <- function(chat, params) {
     {
       cloned$.__enclos_env__$private$provider@extra_args <- existing_args
     },
-    error = function(e) NULL
+    error = function(e) {
+      param_names <- paste(names(params), collapse = ", ")
+      cli::cli_warn(
+        c(
+          "Failed to apply runtime parameters to Chat provider",
+          "x" = "Parameters not applied: {.field {param_names}}",
+          "i" = "The module will run with the provider's default settings",
+          "i" = "Error: {e$message}"
+        ),
+        .frequency = "once",
+        .frequency_id = "chat-params-failed"
+      )
+    }
   )
 
   cloned
@@ -950,7 +987,9 @@ run_batch_parallel <- function(
 ) {
   llm_factory <- if (!is.null(.llm)) {
     function() resolve_module_llm(module, .llm = .llm)
-  } else if (!is.null(module$chat) || !is.null(get_default_chat(create = FALSE))) {
+  } else if (
+    !is.null(module$chat) || !is.null(get_default_chat(create = FALSE))
+  ) {
     function() resolve_module_llm(module)
   } else {
     function() get_default_llm(module)
@@ -1251,11 +1290,13 @@ call_llm <- function(
     },
     payload = if (length(Filter(is_content_input, inputs)) > 0) {
       c(
-        list(ellmer::ContentText(if (nchar(instructions) > 0) {
-          paste(instructions, prompt, sep = "\n\n")
-        } else {
-          prompt
-        })),
+        list(ellmer::ContentText(
+          if (nchar(instructions) > 0) {
+            paste(instructions, prompt, sep = "\n\n")
+          } else {
+            prompt
+          }
+        )),
         unname(Filter(is_content_input, inputs))
       )
     } else {

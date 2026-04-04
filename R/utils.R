@@ -220,7 +220,12 @@ render_turn_content <- function(turn, format = c("text", "markdown", "html")) {
     return(NA_character_)
   }
 
-  parts <- vapply(contents, render_content_summary, character(1), format = format)
+  parts <- vapply(
+    contents,
+    render_content_summary,
+    character(1),
+    format = format
+  )
   parts <- parts[nzchar(parts)]
 
   if (length(parts) == 0) {
@@ -232,7 +237,10 @@ render_turn_content <- function(turn, format = c("text", "markdown", "html")) {
 
 #' Summarise a single ellmer content object
 #' @noRd
-render_content_summary <- function(content, format = c("text", "markdown", "html")) {
+render_content_summary <- function(
+  content,
+  format = c("text", "markdown", "html")
+) {
   format <- match.arg(format)
 
   wrap <- function(text) {
@@ -246,14 +254,20 @@ render_content_summary <- function(content, format = c("text", "markdown", "html
     }
   }
 
-  is_content_class <- function(name) any(grepl(paste0(name, "$"), class(content)))
+  is_content_class <- function(name) {
+    any(grepl(paste0(name, "$"), class(content)))
+  }
 
   if (is_content_class("ContentText")) {
     return(content@text %||% "")
   }
 
   if (is_content_class("ContentToolRequest")) {
-    args <- jsonlite::toJSON(content@arguments, auto_unbox = TRUE, pretty = FALSE)
+    args <- jsonlite::toJSON(
+      content@arguments,
+      auto_unbox = TRUE,
+      pretty = FALSE
+    )
     return(wrap(paste0("[tool request] ", content@name, " ", args)))
   }
 
@@ -267,7 +281,10 @@ render_content_summary <- function(content, format = c("text", "markdown", "html
     return(wrap(paste0("[tool result] ", tool_name, " ", result)))
   }
 
-  if (is_content_class("ContentImageRemote") || is_content_class("ContentImageInline")) {
+  if (
+    is_content_class("ContentImageRemote") ||
+      is_content_class("ContentImageInline")
+  ) {
     label <- paste0("[image] ", class(content)[1])
     return(wrap(label))
   }
@@ -286,7 +303,9 @@ trace_tokens <- function(trace) {
     return(list(
       input_tokens = as.integer(trace$tokens$input_tokens %||% NA_integer_),
       output_tokens = as.integer(trace$tokens$output_tokens %||% NA_integer_),
-      cached_input_tokens = as.integer(trace$tokens$cached_input_tokens %||% NA_integer_),
+      cached_input_tokens = as.integer(
+        trace$tokens$cached_input_tokens %||% NA_integer_
+      ),
       total_tokens = as.integer(trace$tokens$total_tokens %||% NA_integer_)
     ))
   }
@@ -305,7 +324,9 @@ trace_tokens <- function(trace) {
   list(
     input_tokens = as.integer(trace$input_tokens %||% NA_integer_),
     output_tokens = as.integer(trace$output_tokens %||% NA_integer_),
-    cached_input_tokens = as.integer(trace$cached_input_tokens %||% NA_integer_),
+    cached_input_tokens = as.integer(
+      trace$cached_input_tokens %||% NA_integer_
+    ),
     total_tokens = as.integer(trace$total_tokens %||% NA_integer_)
   )
 }
@@ -313,13 +334,19 @@ trace_tokens <- function(trace) {
 #' Extract cost from a trace entry
 #' @noRd
 trace_cost <- function(trace) {
-  trace$cost %||% trace$total_cost %||% tryCatch(trace$assistant_turn@cost, error = function(e) NA_real_)
+  trace$cost %||%
+    trace$total_cost %||%
+    tryCatch(trace$assistant_turn@cost, error = function(e) NA_real_)
 }
 
 #' Extract latency from a trace entry
 #' @noRd
 trace_latency_ms <- function(trace) {
-  trace$latency_ms %||% tryCatch((trace$assistant_turn@duration %||% NA_real_) * 1000, error = function(e) NA_real_)
+  trace$latency_ms %||%
+    tryCatch(
+      (trace$assistant_turn@duration %||% NA_real_) * 1000,
+      error = function(e) NA_real_
+    )
 }
 
 #' Extract prompt text from a trace entry

@@ -206,10 +206,12 @@ MultiChainComparisonModule <- R6::R6Class(
         total_tokens <- total_tokens + comparison_metadata$total_tokens
       }
       if (!is.null(comparison_metadata$input_tokens)) {
-        total_input_tokens <- total_input_tokens + comparison_metadata$input_tokens
+        total_input_tokens <- total_input_tokens +
+          comparison_metadata$input_tokens
       }
       if (!is.null(comparison_metadata$output_tokens)) {
-        total_output_tokens <- total_output_tokens + comparison_metadata$output_tokens
+        total_output_tokens <- total_output_tokens +
+          comparison_metadata$output_tokens
       }
       if (
         !is.null(comparison_metadata$cost) && !is.na(comparison_metadata$cost)
@@ -479,7 +481,10 @@ MultiChainComparisonModule <- R6::R6Class(
       )
 
       llm <- resolve_module_llm(self, .llm = .llm)
-      start_turn_count <- tryCatch(length(llm$get_turns()), error = function(e) 0L)
+      start_turn_count <- tryCatch(
+        length(llm$get_turns()),
+        error = function(e) 0L
+      )
 
       # Build comparison signature
       comparison_sig <- private$build_comparison_signature()
@@ -536,7 +541,12 @@ MultiChainComparisonModule <- R6::R6Class(
         turns = tryCatch(
           {
             current_turns <- llm$get_turns()
-            current_turns[seq.int(start_turn_count + 1L, length(current_turns))]
+            new_start <- start_turn_count + 1L
+            if (new_start <= length(current_turns)) {
+              current_turns[seq.int(new_start, length(current_turns))]
+            } else {
+              list()
+            }
           },
           error = function(e) list(user_turn, assistant_turn)
         ),

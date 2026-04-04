@@ -247,7 +247,10 @@ deserialize_input_v2 <- function(inp) {
 
 sanitize_module_config_v2 <- function(config) {
   config <- normalize_module_config(config %||% list())
-  config <- config[setdiff(names(config), c(".module_kind", legacy_chat_config_fields()))]
+  config <- config[setdiff(
+    names(config),
+    c(".module_kind", legacy_chat_config_fields())
+  )]
   cleaned <- lapply(config, sanitize_persisted_value_v2)
   cleaned[!vapply(cleaned, is.null, logical(1))]
 }

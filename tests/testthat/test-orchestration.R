@@ -148,7 +148,11 @@ test_that("restore_module_config accepts custom signature", {
 
 test_that("restore_module_config rejects legacy pinned configs", {
   legacy_config <- list(
-    signature = list(inputs = list(), output_type = "string", instructions = ""),
+    signature = list(
+      inputs = list(),
+      output_type = "string",
+      instructions = ""
+    ),
     config = list()
   )
 

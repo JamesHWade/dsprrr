@@ -32,7 +32,11 @@ test_that("export_traces renders turn content with tool fallbacks", {
   traces <- export_traces(mod, include_prompts = TRUE, include_outputs = TRUE)
 
   expect_true(grepl("Question", traces$prompt[[1]], fixed = TRUE))
-  expect_true(grepl("tool result", traces$response_text[[1]], ignore.case = TRUE))
+  expect_true(grepl(
+    "tool result",
+    traces$response_text[[1]],
+    ignore.case = TRUE
+  ))
   expect_true(grepl("lookup", traces$response_text[[1]], fixed = TRUE))
   expect_true(grepl("<p>", traces$prompt_html[[1]], fixed = TRUE))
 })

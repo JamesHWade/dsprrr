@@ -65,7 +65,10 @@ PredictModule <- R6::R6Class(
       request <- build_module_request(self, inputs)
       prompt <- request$prompt
       llm <- resolve_module_llm(self, .llm = .llm)
-      start_turn_count <- tryCatch(length(llm$get_turns()), error = function(e) 0L)
+      start_turn_count <- tryCatch(
+        length(llm$get_turns()),
+        error = function(e) 0L
+      )
 
       # Record start time
       start_time <- Sys.time()
@@ -104,7 +107,12 @@ PredictModule <- R6::R6Class(
       turns <- tryCatch(
         {
           current_turns <- llm$get_turns()
-          current_turns[seq.int(start_turn_count + 1L, length(current_turns))]
+          new_start <- start_turn_count + 1L
+          if (new_start <= length(current_turns)) {
+            current_turns[seq.int(new_start, length(current_turns))]
+          } else {
+            list()
+          }
         },
         error = function(e) list(user_turn, assistant_turn)
       )
