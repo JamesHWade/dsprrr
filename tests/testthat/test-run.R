@@ -167,6 +167,31 @@ test_that("get_default_llm returns ellmer chat object", {
   expect_identical(llm, mock_llm)
 })
 
+test_that("module config no longer synthesizes chats from provider fields", {
+  old_opt <- options(dsprrr.default_chat = NULL)
+  on.exit(options(old_opt), add = TRUE)
+  clear_default_chat()
+
+  old_env <- Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))
+  on.exit(do.call(Sys.setenv, as.list(old_env)), add = TRUE)
+  Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
+
+  mod <- module(
+    signature("text -> result"),
+    type = "predict",
+    config = list(provider = "openai", model = "gpt-4o-mini")
+  )
+
+  expect_error(
+    run(mod, text = "hello"),
+    "no longer creates Chat clients"
+  )
+})
+
 test_that("batch processing works with multiple inputs", {
   sig <- Signature(
     inputs = list(

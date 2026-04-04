@@ -438,8 +438,9 @@ is_ellmer_type <- function(x) {
 extract_llm_temperature <- function(llm) {
   tryCatch(
     {
-      # Access provider's temperature setting from internal api_args
-      llm$.__enclos_env__$private$api_args$temperature
+      provider <- llm$.__enclos_env__$private$provider
+      args <- provider@extra_args %||% list()
+      args$temperature %||% provider@params$temperature
     },
     error = function(e) NULL
   )

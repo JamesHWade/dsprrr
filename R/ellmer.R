@@ -1,3 +1,9 @@
+#' Deep-copy an ellmer type object
+#' @noRd
+copy_ellmer_type <- function(type) {
+  unserialize(serialize(type, NULL))
+}
+
 #' Convert a DSPrrr Module to an ellmer Tool
 #'
 #' @description
@@ -87,18 +93,11 @@ as_ellmer_tool <- function(
   for (input_spec in sig_inputs) {
     input_name <- input_spec$name
     input_desc <- input_spec$description %||% paste("The", input_name, "value")
-    input_type <- input_spec$type
+    ellmer_type <- copy_ellmer_type(input_spec$type)
 
-    # Map to ellmer type_ functions based on input type class
-    type_class <- class(input_type)[1]
-    ellmer_type <- switch(
-      type_class,
-      "ellmer_type_number" = ellmer::type_number(input_desc),
-      "ellmer_type_integer" = ellmer::type_integer(input_desc),
-      "ellmer_type_boolean" = ellmer::type_boolean(input_desc),
-      # Default to string for unknown types
-      ellmer::type_string(input_desc)
-    )
+    if (is.null(ellmer_type@description) && !is.null(input_desc)) {
+      ellmer_type@description <- input_desc
+    }
 
     arg_specs[[input_name]] <- ellmer_type
   }
@@ -136,14 +135,7 @@ as_ellmer_tool <- function(
       )
     )
 
-    # Format result for LLM consumption
-    if (is.list(result) && !is.null(names(result))) {
-      jsonlite::toJSON(result, auto_unbox = TRUE)
-    } else if (is.character(result)) {
-      result
-    } else {
-      as.character(result)
-    }
+    result
   })
 
   # Create the function with proper signature

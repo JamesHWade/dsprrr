@@ -76,10 +76,38 @@ test_that("as_ellmer_tool function can be invoked with mock LLM", {
   # Actually invoke the tool function (ToolDef IS the function)
   result <- tool(text = "I love this!")
 
-  # Should return JSON-formatted result
-  expect_type(result, "character")
-  parsed <- jsonlite::fromJSON(result)
-  expect_equal(parsed$sentiment, "positive")
+  # Native structured values should flow through unchanged
+  expect_type(result, "list")
+  expect_equal(result$sentiment, "positive")
+})
+
+test_that("as_ellmer_tool preserves structured argument schemas", {
+  skip_if_not_installed("ellmer")
+
+  sig <- Signature(
+    inputs = list(
+      input(
+        "payload",
+        ellmer::type_object(
+          query = ellmer::type_string(),
+          limit = ellmer::type_integer(),
+          ignored = ellmer::type_ignore()
+        )
+      )
+    ),
+    output_type = ellmer::type_string()
+  )
+
+  tool <- as_ellmer_tool(module(sig, type = "predict"), name = "structured")
+
+  payload_type <- tool@arguments@properties$payload
+
+  expect_s3_class(payload_type, "ellmer::TypeObject")
+  expect_true("ignored" %in% names(payload_type@properties))
+  expect_s3_class(
+    payload_type@properties$ignored,
+    "ellmer::TypeIgnore"
+  )
 })
 
 test_that("as_ellmer_tool generates description from signature if not provided", {

@@ -57,15 +57,31 @@ export_traces <- function(
 
   # Add optional fields
   if (include_prompts) {
-    result$prompt <- vapply(
+    result$prompt <- vapply(traces, trace_prompt_text, character(1))
+    result$prompt_markdown <- vapply(
       traces,
-      function(x) x$prompt %||% NA_character_,
+      trace_prompt_markdown,
       character(1)
     )
+    result$prompt_html <- vapply(traces, trace_prompt_html, character(1))
   }
 
   if (include_outputs) {
     result$output <- lapply(traces, function(x) x$output)
+    result$turns <- lapply(traces, function(x) {
+      x$turns %||% Filter(Negate(is.null), list(x$user_turn, x$assistant_turn))
+    })
+    result$response_text <- vapply(traces, trace_response_text, character(1))
+    result$response_markdown <- vapply(
+      traces,
+      trace_response_markdown,
+      character(1)
+    )
+    result$response_html <- vapply(
+      traces,
+      trace_response_html,
+      character(1)
+    )
   }
 
   result

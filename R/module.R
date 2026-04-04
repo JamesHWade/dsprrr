@@ -133,7 +133,7 @@ module <- function(
   )
 
   # Create the appropriate R6 module based on type
-  switch(
+  mod <- switch(
     type,
     predict = PredictModule$new(
       signature = signature,
@@ -219,4 +219,9 @@ module <- function(
     },
     cli::cli_abort("Unknown module type: {type}")
   )
+
+  mod$config <- normalize_module_config(mod$config)
+  mod$config$.module_kind <- type
+
+  mod
 }

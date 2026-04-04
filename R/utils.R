@@ -171,3 +171,203 @@ provider_defaults <- function(provider) {
   )
   defaults[[tolower(provider)]] %||% list(temperature = 0.7)
 }
+
+#' Render an ellmer Turn as plain text
+#' @noRd
+render_turn_text <- function(turn) {
+  render_turn_content(turn, format = "text")
+}
+
+#' Render an ellmer Turn as markdown
+#' @noRd
+render_turn_markdown <- function(turn) {
+  render_turn_content(turn, format = "markdown")
+}
+
+#' Render an ellmer Turn as HTML
+#' @noRd
+render_turn_html <- function(turn) {
+  render_turn_content(turn, format = "html")
+}
+
+#' Render an ellmer Turn with fallbacks for non-text content
+#' @noRd
+render_turn_content <- function(turn, format = c("text", "markdown", "html")) {
+  format <- match.arg(format)
+
+  if (is.null(turn)) {
+    return(NA_character_)
+  }
+
+  rendered <- tryCatch(
+    {
+      switch(
+        format,
+        text = ellmer::contents_text(turn),
+        markdown = ellmer::contents_markdown(turn),
+        html = ellmer::contents_html(turn)
+      )
+    },
+    error = function(e) NULL
+  )
+
+  if (!is.null(rendered) && length(rendered) == 1 && nzchar(rendered)) {
+    return(as.character(rendered))
+  }
+
+  contents <- tryCatch(turn@contents, error = function(e) list())
+  if (length(contents) == 0) {
+    return(NA_character_)
+  }
+
+  parts <- vapply(contents, render_content_summary, character(1), format = format)
+  parts <- parts[nzchar(parts)]
+
+  if (length(parts) == 0) {
+    NA_character_
+  } else {
+    paste(parts, collapse = if (identical(format, "html")) "" else "\n")
+  }
+}
+
+#' Summarise a single ellmer content object
+#' @noRd
+render_content_summary <- function(content, format = c("text", "markdown", "html")) {
+  format <- match.arg(format)
+
+  wrap <- function(text) {
+    if (identical(format, "html")) {
+      safe_text <- gsub("&", "&amp;", text, fixed = TRUE)
+      safe_text <- gsub("<", "&lt;", safe_text, fixed = TRUE)
+      safe_text <- gsub(">", "&gt;", safe_text, fixed = TRUE)
+      paste0("<p>", safe_text, "</p>")
+    } else {
+      text
+    }
+  }
+
+  is_content_class <- function(name) any(grepl(paste0(name, "$"), class(content)))
+
+  if (is_content_class("ContentText")) {
+    return(content@text %||% "")
+  }
+
+  if (is_content_class("ContentToolRequest")) {
+    args <- jsonlite::toJSON(content@arguments, auto_unbox = TRUE, pretty = FALSE)
+    return(wrap(paste0("[tool request] ", content@name, " ", args)))
+  }
+
+  if (is_content_class("ContentToolResult")) {
+    result <- if (!is.null(content@error)) {
+      paste0("error: ", content@error)
+    } else {
+      format_output(content@value)
+    }
+    tool_name <- tryCatch(content@request@name, error = function(e) "tool")
+    return(wrap(paste0("[tool result] ", tool_name, " ", result)))
+  }
+
+  if (is_content_class("ContentImageRemote") || is_content_class("ContentImageInline")) {
+    label <- paste0("[image] ", class(content)[1])
+    return(wrap(label))
+  }
+
+  if (is_content_class("ContentPDF")) {
+    return(wrap("[pdf]"))
+  }
+
+  wrap(paste0("[content] ", class(content)[1]))
+}
+
+#' Extract token metrics from a trace entry
+#' @noRd
+trace_tokens <- function(trace) {
+  if (is.list(trace$tokens)) {
+    return(list(
+      input_tokens = as.integer(trace$tokens$input_tokens %||% NA_integer_),
+      output_tokens = as.integer(trace$tokens$output_tokens %||% NA_integer_),
+      cached_input_tokens = as.integer(trace$tokens$cached_input_tokens %||% NA_integer_),
+      total_tokens = as.integer(trace$tokens$total_tokens %||% NA_integer_)
+    ))
+  }
+
+  assistant_turn <- trace$assistant_turn
+  if (!is.null(assistant_turn) && !is.null(assistant_turn@tokens)) {
+    tokens <- assistant_turn@tokens
+    return(list(
+      input_tokens = as.integer(tokens[1] %||% NA_integer_),
+      output_tokens = as.integer(tokens[2] %||% NA_integer_),
+      cached_input_tokens = as.integer(tokens[3] %||% NA_integer_),
+      total_tokens = as.integer(sum(tokens[1:2], na.rm = TRUE))
+    ))
+  }
+
+  list(
+    input_tokens = as.integer(trace$input_tokens %||% NA_integer_),
+    output_tokens = as.integer(trace$output_tokens %||% NA_integer_),
+    cached_input_tokens = as.integer(trace$cached_input_tokens %||% NA_integer_),
+    total_tokens = as.integer(trace$total_tokens %||% NA_integer_)
+  )
+}
+
+#' Extract cost from a trace entry
+#' @noRd
+trace_cost <- function(trace) {
+  trace$cost %||% trace$total_cost %||% tryCatch(trace$assistant_turn@cost, error = function(e) NA_real_)
+}
+
+#' Extract latency from a trace entry
+#' @noRd
+trace_latency_ms <- function(trace) {
+  trace$latency_ms %||% tryCatch((trace$assistant_turn@duration %||% NA_real_) * 1000, error = function(e) NA_real_)
+}
+
+#' Extract prompt text from a trace entry
+#' @noRd
+trace_prompt_text <- function(trace) {
+  trace$prompt %||% render_turn_text(trace$user_turn)
+}
+
+#' Extract prompt markdown from a trace entry
+#' @noRd
+trace_prompt_markdown <- function(trace) {
+  render_turn_markdown(trace$user_turn)
+}
+
+#' Extract prompt HTML from a trace entry
+#' @noRd
+trace_prompt_html <- function(trace) {
+  render_turn_html(trace$user_turn)
+}
+
+#' Extract response text from a trace entry
+#' @noRd
+trace_response_text <- function(trace) {
+  if (!is.null(trace$assistant_turn)) {
+    render_turn_text(trace$assistant_turn)
+  } else if (!is.null(trace$output)) {
+    format_output(trace$output)
+  } else {
+    NA_character_
+  }
+}
+
+#' Extract response markdown from a trace entry
+#' @noRd
+trace_response_markdown <- function(trace) {
+  if (!is.null(trace$assistant_turn)) {
+    render_turn_markdown(trace$assistant_turn)
+  } else {
+    NA_character_
+  }
+}
+
+#' Extract response HTML from a trace entry
+#' @noRd
+trace_response_html <- function(trace) {
+  if (!is.null(trace$assistant_turn)) {
+    render_turn_html(trace$assistant_turn)
+  } else {
+    NA_character_
+  }
+}

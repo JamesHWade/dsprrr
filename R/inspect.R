@@ -332,28 +332,7 @@ extract_turn_text <- function(turn) {
   }
 
   tryCatch(
-    {
-      # ellmer turns have @contents which is a list of Content objects
-      if (!is.null(turn@contents) && length(turn@contents) > 0) {
-        # ContentText has @text property
-        texts <- vapply(
-          turn@contents,
-          function(c) {
-            if (inherits(c, "ContentText")) {
-              c@text
-            } else if (!is.null(c$text)) {
-              c$text
-            } else {
-              ""
-            }
-          },
-          character(1)
-        )
-        paste(texts, collapse = "\n")
-      } else {
-        NA_character_
-      }
-    },
+    render_turn_text(turn),
     error = function(e) {
       # Warn in verbose mode to help with debugging during development
       if (getOption("dsprrr.verbose", FALSE)) {

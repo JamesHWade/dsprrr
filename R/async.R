@@ -40,24 +40,13 @@ run_async <- function(module, ..., .llm = NULL) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
 
-  llm <- .llm %||% module$chat %||% get_default_chat(create = TRUE)
-
   inputs <- list(...)
-  prompt <- module$signature@instructions
-
-  # Build prompt using module's private method (accessed via environment)
-  # We need to build the prompt the same way forward() does
-  input_text <- build_simple_prompt(inputs, module$signature@inputs)
-
-  if (nchar(prompt) > 0) {
-    full_prompt <- paste(prompt, input_text, sep = "\n\n")
-  } else {
-    full_prompt <- input_text
-  }
+  request <- build_module_request(module, inputs)
+  llm <- resolve_module_llm(module, .llm = .llm)
 
   # Use ellmer's async method
   llm$chat_structured_async(
-    full_prompt,
+    request$payload,
     type = module$signature@output_type
   )
 }
@@ -87,22 +76,12 @@ stream_async <- function(module, ..., .llm = NULL) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
 
-  llm <- .llm %||% module$chat %||% get_default_chat(create = TRUE)
-
   inputs <- list(...)
-
-  # Build prompt
-  input_text <- build_simple_prompt(inputs, module$signature@inputs)
-  prompt <- module$signature@instructions
-
-  if (nchar(prompt) > 0) {
-    full_prompt <- paste(prompt, input_text, sep = "\n\n")
-  } else {
-    full_prompt <- input_text
-  }
+  request <- build_module_request(module, inputs)
+  llm <- resolve_module_llm(module, .llm = .llm)
 
   # Use ellmer's async stream method
-  llm$stream_async(full_prompt)
+  llm$stream_async(request$payload)
 }
 
 #' Build a simple prompt from inputs
