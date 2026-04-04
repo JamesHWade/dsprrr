@@ -27,14 +27,6 @@ pak::pak("tidyverse/ellmer")
 
 ``` r
 library(dsprrr)
-#> 
-#> Attaching package: 'dsprrr'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
-#> The following object is masked from 'package:methods':
-#> 
-#>     signature
 library(ellmer)
 ```
 
@@ -47,7 +39,6 @@ Connect to OpenAI:
 
 ``` r
 chat <- chat_openai()
-#> Using model = "gpt-4.1".
 ```
 
 This creates a chat object you’ll use for all your LLM calls.
@@ -59,7 +50,6 @@ Let’s ask a simple question using
 
 ``` r
 chat |> dsp("question -> answer", question = "What is the capital of France?")
-#> [1] "The capital of France is Paris."
 ```
 
 You should see `"Paris"` returned. Let’s break down what happened:
@@ -75,10 +65,8 @@ The same signature works for any question:
 
 ``` r
 chat |> dsp("question -> answer", question = "What is 7 * 8?")
-#> [1] "7 multiplied by 8 is 56."
 
 chat |> dsp("question -> answer", question = "Who wrote Romeo and Juliet?")
-#> [1] "Romeo and Juliet was written by William Shakespeare."
 ```
 
 Notice how you get clean, direct answers—no extra prose.
@@ -95,7 +83,6 @@ chat |> dsp(
   "math_problem -> result: number",
   math_problem = "What is 15% of 200?"
 )
-#> [1] 30
 ```
 
 The `: number` after `result` tells dsprrr you want a numeric value, not
@@ -108,7 +95,6 @@ chat |> dsp(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   text = "I absolutely loved this movie!"
 )
-#> [1] "positive"
 ```
 
 The LLM must pick from exactly those three options. Try changing the
@@ -119,13 +105,11 @@ chat |> dsp(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   text = "This was a complete waste of time."
 )
-#> [1] "negative"
 
 chat |> dsp(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   text = "It was okay, I guess."
 )
-#> [1] "neutral"
 ```
 
 ### Getting True/False
@@ -135,13 +119,11 @@ chat |> dsp(
   "statement -> is_true: bool",
   statement = "The Earth orbits the Sun."
 )
-#> [1] TRUE
 
 chat |> dsp(
   "statement -> is_true: bool",
   statement = "Cats are larger than elephants."
 )
-#> [1] FALSE
 ```
 
 ## Step 6: Multiple Inputs
@@ -154,7 +136,6 @@ chat |> dsp(
   context = "R was created in 1993 by Ross Ihaka and Robert Gentleman at the University of Auckland.",
   question = "When was R created?"
 )
-#> [1] "R was created in 1993."
 ```
 
 Now the LLM uses your context to answer the question:
@@ -165,7 +146,6 @@ chat |> dsp(
   context = "The bakery opens at 7am and closes at 6pm. They sell croissants for $3 each.",
   question = "How much do croissants cost?"
 )
-#> [1] "Croissants cost $3 each."
 ```
 
 ## Step 7: Adding Instructions
@@ -177,13 +157,11 @@ chat |> dsp(
   signature("question -> answer", instructions = "Answer in exactly one word."),
   question = "What color is the sky on a clear day?"
 )
-#> [1] "Blue"
 
 chat |> dsp(
   signature("question -> answer", instructions = "Answer like a pirate."),
   question = "What is the capital of France?"
 )
-#> [1] "Arrr, matey! The capital of France be Paris!"
 ```
 
 ## What You Learned

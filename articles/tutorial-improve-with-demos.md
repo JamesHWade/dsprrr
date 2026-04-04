@@ -24,14 +24,6 @@ improvement.
 
 ``` r
 library(dsprrr)
-#> 
-#> Attaching package: 'dsprrr'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
-#> The following object is masked from 'package:methods':
-#> 
-#>     signature
 library(ellmer)
 library(tibble)
 
@@ -55,16 +47,10 @@ Test it:
 
 ``` r
 run(classifier, ticket = "My package hasn't arrived yet", .llm = chat)
-#> $category
-#> [1] "shipping"
 
 run(classifier, ticket = "I was charged twice for my order", .llm = chat)
-#> $category
-#> [1] "billing"
 
 run(classifier, ticket = "The app keeps crashing when I try to login", .llm = chat)
-#> $category
-#> [1] "technical"
 ```
 
 This works, but how do we know it’s accurate? And how do we improve it?
@@ -103,17 +89,6 @@ trainset <- dsp_trainset(
 )
 
 trainset
-#>                                   ticket  category
-#> 1  I was charged twice for the same item   billing
-#> 2     How do I update my payment method?   billing
-#> 3     The website won't load on my phone technical
-#> 4  My password reset email never arrived technical
-#> 5               When will my order ship?  shipping
-#> 6      Can I change my delivery address?  shipping
-#> 7            The product arrived damaged  shipping
-#> 8    I need a refund for my subscription   billing
-#> 9     How do I contact customer service?   general
-#> 10         What are your business hours?   general
 ```
 
 The
@@ -128,19 +103,6 @@ Before improving, let’s measure current performance:
 ``` r
 baseline_results <- run_dataset(classifier, trainset, .llm = chat)
 baseline_results
-#> # A tibble: 10 × 3
-#>    ticket                                category  result   
-#>    <chr>                                 <chr>     <list>   
-#>  1 I was charged twice for the same item billing   <chr [1]>
-#>  2 How do I update my payment method?    billing   <chr [1]>
-#>  3 The website won't load on my phone    technical <chr [1]>
-#>  4 My password reset email never arrived technical <chr [1]>
-#>  5 When will my order ship?              shipping  <chr [1]>
-#>  6 Can I change my delivery address?     shipping  <chr [1]>
-#>  7 The product arrived damaged           shipping  <chr [1]>
-#>  8 I need a refund for my subscription   billing   <chr [1]>
-#>  9 How do I contact customer service?    general   <chr [1]>
-#> 10 What are your business hours?         general   <chr [1]>
 ```
 
 Calculate accuracy:
@@ -151,9 +113,7 @@ total <- nrow(trainset)
 baseline_accuracy <- correct / total
 
 cat("Baseline accuracy:", scales::percent(baseline_accuracy), "\n")
-#> Baseline accuracy: 100%
 cat("Correct:", correct, "out of", total, "\n")
-#> Correct: 10 out of 10
 ```
 
 ## Step 4: Add Manual Demonstrations
@@ -189,12 +149,8 @@ Test the improved classifier:
 
 ``` r
 run(classifier_with_demos, ticket = "I need a receipt for my purchase", .llm = chat)
-#> $category
-#> [1] "billing"
 
 run(classifier_with_demos, ticket = "The button doesn't respond when clicked", .llm = chat)
-#> $category
-#> [1] "technical"
 ```
 
 ## Step 5: Measure Improvement
@@ -203,19 +159,13 @@ Run on the same test set:
 
 ``` r
 improved_results <- run_dataset(classifier_with_demos, trainset, .llm = chat)
-#> Processing 4/10 |  40% | ETA:  2s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
 
 correct_improved <- sum(improved_results$category == trainset$category)
 improved_accuracy <- correct_improved / total
 
 cat("Baseline accuracy:", scales::percent(baseline_accuracy), "\n")
-#> Baseline accuracy: 100%
 cat("Improved accuracy:", scales::percent(improved_accuracy), "\n")
-#> Improved accuracy: 100%
 cat("Improvement:", scales::percent(improved_accuracy - baseline_accuracy), "\n")
-#> Improvement: 0%
 ```
 
 ## Step 6: Automatic Demo Selection with LabeledFewShot
@@ -248,7 +198,6 @@ See which examples the teleprompter chose:
 ``` r
 # The compiled module now has demos
 compiled$config$demos
-#> NULL
 ```
 
 ## Step 8: Compare All Three Versions
@@ -258,12 +207,8 @@ Let’s see how each version performs:
 ``` r
 # Run all three on the test set
 results_baseline <- run_dataset(classifier, trainset, .llm = chat)
-#> ℹ Using cached LLM responses
-#> ℹ Disable with `configure_cache(enable = FALSE)` or `.cache = FALSE`
 results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
 results_compiled <- run_dataset(compiled, trainset, .llm = chat)
-#> Processing 4/10 |  40% | ETA:  2s
-#> Processing 10/10 | 100% | ETA:  0s
 
 # Calculate accuracies
 acc_baseline <- mean(results_baseline$category == trainset$category)
@@ -276,12 +221,6 @@ comparison <- tibble(
 )
 
 comparison
-#> # A tibble: 3 × 2
-#>   Version             Accuracy
-#>   <chr>               <chr>   
-#> 1 Baseline (no demos) 100%    
-#> 2 Manual demos (3)    100%    
-#> 3 LabeledFewShot (3)  100%
 ```
 
 ## Step 9: Using Built-in Metrics
@@ -297,292 +236,6 @@ metric <- metric_exact_match(field = "category")
 eval_result <- evaluate(compiled, trainset, metric = metric, .llm = chat)
 
 eval_result
-#> $mean_score
-#> [1] 1
-#> 
-#> $scores
-#>  [1] 1 1 1 1 1 1 1 1 1 1
-#> 
-#> $predictions
-#> $predictions[[1]]
-#> $predictions[[1]]$category
-#> [1] "billing"
-#> 
-#> 
-#> $predictions[[2]]
-#> $predictions[[2]]$category
-#> [1] "billing"
-#> 
-#> 
-#> $predictions[[3]]
-#> $predictions[[3]]$category
-#> [1] "technical"
-#> 
-#> 
-#> $predictions[[4]]
-#> $predictions[[4]]$category
-#> [1] "technical"
-#> 
-#> 
-#> $predictions[[5]]
-#> $predictions[[5]]$category
-#> [1] "shipping"
-#> 
-#> 
-#> $predictions[[6]]
-#> $predictions[[6]]$category
-#> [1] "shipping"
-#> 
-#> 
-#> $predictions[[7]]
-#> $predictions[[7]]$category
-#> [1] "shipping"
-#> 
-#> 
-#> $predictions[[8]]
-#> $predictions[[8]]$category
-#> [1] "billing"
-#> 
-#> 
-#> $predictions[[9]]
-#> $predictions[[9]]$category
-#> [1] "general"
-#> 
-#> 
-#> $predictions[[10]]
-#> $predictions[[10]]$category
-#> [1] "general"
-#> 
-#> 
-#> 
-#> $n_evaluated
-#> [1] 10
-#> 
-#> $n_errors
-#> [1] 0
-#> 
-#> $errors
-#> character(0)
-#> 
-#> $metadata
-#> $metadata[[1]]
-#> $metadata[[1]]$latency_ms
-#> [1] 2.706766
-#> 
-#> $metadata[[1]]$prompt_length
-#> [1] 272
-#> 
-#> $metadata[[1]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: I was charged twice for the same item"
-#> 
-#> $metadata[[1]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[1]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[1]]$batch_index
-#> [1] 1
-#> 
-#> 
-#> $metadata[[2]]
-#> $metadata[[2]]$latency_ms
-#> [1] 2.480984
-#> 
-#> $metadata[[2]]$prompt_length
-#> [1] 269
-#> 
-#> $metadata[[2]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: How do I update my payment method?"
-#> 
-#> $metadata[[2]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[2]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[2]]$batch_index
-#> [1] 2
-#> 
-#> 
-#> $metadata[[3]]
-#> $metadata[[3]]$latency_ms
-#> [1] 2.574205
-#> 
-#> $metadata[[3]]$prompt_length
-#> [1] 269
-#> 
-#> $metadata[[3]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: The website won't load on my phone"
-#> 
-#> $metadata[[3]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[3]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[3]]$batch_index
-#> [1] 3
-#> 
-#> 
-#> $metadata[[4]]
-#> $metadata[[4]]$latency_ms
-#> [1] 2.367973
-#> 
-#> $metadata[[4]]$prompt_length
-#> [1] 272
-#> 
-#> $metadata[[4]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: My password reset email never arrived"
-#> 
-#> $metadata[[4]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[4]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[4]]$batch_index
-#> [1] 4
-#> 
-#> 
-#> $metadata[[5]]
-#> $metadata[[5]]$latency_ms
-#> [1] 2.349377
-#> 
-#> $metadata[[5]]$prompt_length
-#> [1] 259
-#> 
-#> $metadata[[5]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: When will my order ship?"
-#> 
-#> $metadata[[5]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[5]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[5]]$batch_index
-#> [1] 5
-#> 
-#> 
-#> $metadata[[6]]
-#> $metadata[[6]]$latency_ms
-#> [1] 2.375126
-#> 
-#> $metadata[[6]]$prompt_length
-#> [1] 268
-#> 
-#> $metadata[[6]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: Can I change my delivery address?"
-#> 
-#> $metadata[[6]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[6]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[6]]$batch_index
-#> [1] 6
-#> 
-#> 
-#> $metadata[[7]]
-#> $metadata[[7]]$latency_ms
-#> [1] 2.428293
-#> 
-#> $metadata[[7]]$prompt_length
-#> [1] 262
-#> 
-#> $metadata[[7]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: The product arrived damaged"
-#> 
-#> $metadata[[7]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[7]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[7]]$batch_index
-#> [1] 7
-#> 
-#> 
-#> $metadata[[8]]
-#> $metadata[[8]]$latency_ms
-#> [1] 2.423286
-#> 
-#> $metadata[[8]]$prompt_length
-#> [1] 270
-#> 
-#> $metadata[[8]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: I need a refund for my subscription"
-#> 
-#> $metadata[[8]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[8]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[8]]$batch_index
-#> [1] 8
-#> 
-#> 
-#> $metadata[[9]]
-#> $metadata[[9]]$latency_ms
-#> [1] 2.460241
-#> 
-#> $metadata[[9]]$prompt_length
-#> [1] 269
-#> 
-#> $metadata[[9]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: How do I contact customer service?"
-#> 
-#> $metadata[[9]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[9]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[9]]$batch_index
-#> [1] 9
-#> 
-#> 
-#> $metadata[[10]]
-#> $metadata[[10]]$latency_ms
-#> [1] 2.464056
-#> 
-#> $metadata[[10]]$prompt_length
-#> [1] 264
-#> 
-#> $metadata[[10]]$prompt
-#> [1] "Example 1:\nticket: The website won't load on my phone\nOutput: technical\n\nExample 2:\nticket: What are your business hours?\nOutput: general\n\nExample 3:\nticket: How do I update my payment method?\nOutput: billing\n\n\n# Input: ticket\nticket: What are your business hours?"
-#> 
-#> $metadata[[10]]$instructions
-#> [1] "Classify the customer support ticket."
-#> 
-#> $metadata[[10]]$timestamp
-#> [1] "2026-02-15 01:54:39 UTC"
-#> 
-#> $metadata[[10]]$batch_index
-#> [1] 10
-#> 
-#> 
-#> 
-#> $data
-#> # A tibble: 10 × 5
-#>    ticket                              category result       .metadata    .chat 
-#>    <chr>                               <chr>    <list>       <list>       <list>
-#>  1 I was charged twice for the same i… billing  <named list> <named list> <Chat>
-#>  2 How do I update my payment method?  billing  <named list> <named list> <Chat>
-#>  3 The website won't load on my phone  technic… <named list> <named list> <Chat>
-#>  4 My password reset email never arri… technic… <named list> <named list> <Chat>
-#>  5 When will my order ship?            shipping <named list> <named list> <Chat>
-#>  6 Can I change my delivery address?   shipping <named list> <named list> <Chat>
-#>  7 The product arrived damaged         shipping <named list> <named list> <Chat>
-#>  8 I need a refund for my subscription billing  <named list> <named list> <Chat>
-#>  9 How do I contact customer service?  general  <named list> <named list> <Chat>
-#> 10 What are your business hours?       general  <named list> <named list> <Chat>
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_evaluation"
 ```
 
 The
@@ -609,32 +262,8 @@ for (k in c(1L, 2L, 3L, 4L, 5L)) {
     accuracy = eval_k$mean_score
   )
 }
-#> Processing 3/10 |  30% | ETA:  3s
-#> Processing 7/10 |  70% | ETA:  1s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
-#> Processing 3/10 |  30% | ETA:  3s
-#> Processing 9/10 |  90% | ETA:  1s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
-#> Processing 4/10 |  40% | ETA:  4s
-#> Processing 9/10 |  90% | ETA:  1s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
-#> Processing 4/10 |  40% | ETA:  4s
-#> Processing 9/10 |  90% | ETA:  1s
-#> Processing 10/10 | 100% | ETA:  0s
-#> 
 
 do.call(rbind, results)
-#> # A tibble: 5 × 2
-#>       k accuracy
-#> * <int>    <dbl>
-#> 1     1        1
-#> 2     2        1
-#> 3     3        1
-#> 4     4        1
-#> 5     5        1
 ```
 
 You’ll often find that 2-4 examples works best. Too many can confuse the

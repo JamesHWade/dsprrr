@@ -132,14 +132,6 @@ modules with vitals evaluation. Each recipe is self-contained and
 demonstrates a specific pattern.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     step</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidyverse/vitals" class="external-link">vitals</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span></code></pre></div>
@@ -173,21 +165,9 @@ demonstrates a specific pattern.</p>
 <span></span>
 <span><span class="co"># 4. Run evaluation</span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[750ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[122ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># 5. View results</span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 9</span></span></span>
-<span><span class="co">#&gt;   input            target      id result   solver_chat score scorer_metadata </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> positive     1 positive <span style="color: #949494;">&lt;Chat&gt;</span>      C     <span style="color: #949494;">&lt;named list [2]&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> negative     2 negative <span style="color: #949494;">&lt;Chat&gt;</span>      C     <span style="color: #949494;">&lt;named list [2]&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: scorer_explanation &lt;chr&gt;, scorer &lt;chr&gt;</span></span></span></code></pre></div>
+<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>That’s it! The <code><a href="../reference/as_vitals_task.html">as_vitals_task()</a></code> helper handles the
 integration details.</p>
 </div>
@@ -245,16 +225,9 @@ test data.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">eval_task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[537ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[55ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># Compare performance</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Test accuracy:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">eval_task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Test accuracy: 1</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Test accuracy:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">eval_task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="recipe-3-using-different-vitals-scorers">Recipe 3: Using Different Vitals Scorers<a class="anchor" aria-label="anchor" href="#recipe-3-using-different-vitals-scorers"></a>
@@ -280,19 +253,7 @@ test data.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[340ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[56ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 9</span></span></span>
-<span><span class="co">#&gt;   input            target    id result solver_chat score scorer_metadata </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> 35         1 35     <span style="color: #949494;">&lt;Chat&gt;</span>      C     <span style="color: #949494;">&lt;named list [2]&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> 1945       2 1945   <span style="color: #949494;">&lt;Chat&gt;</span>      C     <span style="color: #949494;">&lt;named list [2]&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: scorer_explanation &lt;chr&gt;, scorer &lt;chr&gt;</span></span></span></code></pre></div>
+<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="model-graded-qa-model_graded_qa">Model-Graded QA (model_graded_qa)<a class="anchor" aria-label="anchor" href="#model-graded-qa-model_graded_qa"></a>
@@ -319,19 +280,7 @@ correct:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[346ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[236ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 10</span></span></span>
-<span><span class="co">#&gt;   input    target        id result solver_chat solver_metadata score scorer_chat</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;tibble&gt;</span> Light sca…     1 <span style="color: #949494;">"</span>{\"r… <span style="color: #949494;">&lt;Chat&gt;</span>      <span style="color: #949494;">&lt;named list&gt;</span>    C     <span style="color: #949494;">&lt;Chat&gt;</span>     </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;tibble&gt;</span> Photosynt…     2 <span style="color: #949494;">"</span>{\"r… <span style="color: #949494;">&lt;Chat&gt;</span>      <span style="color: #949494;">&lt;named list&gt;</span>    C     <span style="color: #949494;">&lt;Chat&gt;</span>     </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: scorer_metadata &lt;list&gt;, scorer &lt;chr&gt;</span></span></span></code></pre></div>
+<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="substring-match-detect_includes">Substring Match (detect_includes)<a class="anchor" aria-label="anchor" href="#substring-match-detect_includes"></a>
@@ -356,19 +305,7 @@ correct:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[345ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[57ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 9</span></span></span>
-<span><span class="co">#&gt;   input            target      id result       solver_chat score scorer_metadata</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>         </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> function     1 <span style="color: #949494;">"</span>def add_nu… <span style="color: #949494;">&lt;Chat&gt;</span>      I     <span style="color: #949494;">&lt;named list&gt;</span>   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> for          2 <span style="color: #949494;">"</span>for i in r… <span style="color: #949494;">&lt;Chat&gt;</span>      C     <span style="color: #949494;">&lt;named list&gt;</span>   </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: scorer_explanation &lt;chr&gt;, scorer &lt;chr&gt;</span></span></span></code></pre></div>
+<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -403,12 +340,6 @@ correct:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[858ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[88ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># Get detailed scores</span></span>
 <span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
@@ -416,7 +347,6 @@ correct:</p>
 <span><span class="co"># Find failures</span></span>
 <span><span class="va">failures</span> <span class="op">&lt;-</span> <span class="va">scores</span><span class="op">[</span><span class="va">scores</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"I"</span>, <span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Failed on"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">failures</span><span class="op">)</span>, <span class="st">"of"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">scores</span><span class="op">)</span>, <span class="st">"examples\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Failed on 0 of 5 examples</span></span>
 <span></span>
 <span><span class="co"># Examine what went wrong</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">failures</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
@@ -432,8 +362,7 @@ correct:</p>
 <span></span>
 <span><span class="co"># Calculate accuracy</span></span>
 <span><span class="va">accuracy</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">scores</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Overall accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">accuracy</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Overall accuracy: 100%</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Overall accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">accuracy</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="recipe-5-comparing-module-variants">Recipe 5: Comparing Module Variants<a class="anchor" aria-label="anchor" href="#recipe-5-comparing-module-variants"></a>
@@ -477,24 +406,10 @@ correct:</p>
 <span></span>
 <span>  <span class="va">results</span><span class="op">[[</span><span class="va">name</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[429ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[207ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[343ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[200ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># Compare</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Basic accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">basic</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Basic accuracy: 100%</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"CoT accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">cot</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; CoT accuracy: 100%</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"CoT accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">cot</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="recipe-6-multiple-epochs-for-confidence">Recipe 6: Multiple Epochs for Confidence<a class="anchor" aria-label="anchor" href="#recipe-6-multiple-epochs-for-confidence"></a>
@@ -529,12 +444,6 @@ correct:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.6s]</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[130ms]</span></span></span>
-<span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="co"># Aggregate scores across epochs</span></span>
 <span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
@@ -545,9 +454,7 @@ correct:</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test_data</span><span class="op">)</span>,</span>
 <span>  <span class="st">"examples)\n"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Total evaluations: 9 (3 epochs x 3 examples)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Overall accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">scores</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Overall accuracy: 100%</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Overall accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">scores</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="recipe-7-custom-evaluation-pipeline">Recipe 7: Custom Evaluation Pipeline<a class="anchor" aria-label="anchor" href="#recipe-7-custom-evaluation-pipeline"></a>

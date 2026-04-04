@@ -152,19 +152,10 @@ articles and emails.</p>
 </ul>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     step</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span></span></code></pre></div>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-1-multiple-output-fields">Step 1: Multiple Output Fields<a class="anchor" aria-label="anchor" href="#step-1-multiple-output-fields"></a>
@@ -176,22 +167,12 @@ articles and emails.</p>
 <span></span>
 <span><span class="va">extractor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">extractor</span>, text <span class="op">=</span> <span class="st">"This product is absolutely fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $confidence</span></span>
-<span><span class="co">#&gt; [1] 0.98</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">extractor</span>, text <span class="op">=</span> <span class="st">"This product is absolutely fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <p>You get back both <code>sentiment</code> and <code>confidence</code>
 in a structured result.</p>
 <p>Try another:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">extractor</span>, text <span class="op">=</span> <span class="st">"It was okay, nothing special."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "neutral"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $confidence</span></span>
-<span><span class="co">#&gt; [1] 0.85</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">extractor</span>, text <span class="op">=</span> <span class="st">"It was okay, nothing special."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <p>Notice the confidence is lower for ambiguous text.</p>
 </div>
 <div class="section level2">
@@ -211,15 +192,7 @@ in a structured result.</p>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $stars</span></span>
-<span><span class="co">#&gt; [1] 4</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $summary</span></span>
-<span><span class="co">#&gt; [1] "Powerful and easy-to-clean blender, but a bit loud."</span></span></code></pre></div>
+<span><span class="va">result</span></span></code></pre></div>
 <p>You get sentiment, a star rating, <em>and</em> a summary—all typed
 correctly.</p>
 </div>
@@ -251,15 +224,7 @@ correctly.</p>
 <span><span class="st">commercial applications within 3-5 years.</span></span>
 <span><span class="st">"</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">article_analyzer</span>, article <span class="op">=</span> <span class="va">article</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $headline</span></span>
-<span><span class="co">#&gt; [1] "MIT Scientists Achieve Breakthrough in Solar Panel Efficiency"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $word_count</span></span>
-<span><span class="co">#&gt; [1] 54</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">article_analyzer</span>, article <span class="op">=</span> <span class="va">article</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-arrays-of-values">Step 4: Arrays of Values<a class="anchor" aria-label="anchor" href="#step-4-arrays-of-values"></a>
@@ -290,21 +255,11 @@ correctly.</p>
 <span><span class="st">"</span></span>
 <span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">entity_extractor</span>, text <span class="op">=</span> <span class="va">news</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="va">result</span></span>
-<span><span class="co">#&gt; $people</span></span>
-<span><span class="co">#&gt; [1] "Tim Cook"        "President Biden" "Janet Yellen"    "Gina Raimondo"  </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $organizations</span></span>
-<span><span class="co">#&gt; [1] "Apple"       "White House" "Treasury"    "Commerce"   </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $locations</span></span>
-<span><span class="co">#&gt; [1] "United States"</span></span></code></pre></div>
+<span><span class="va">result</span></span></code></pre></div>
 <p>Access the arrays directly:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span><span class="op">$</span><span class="va">people</span></span>
-<span><span class="co">#&gt; [1] "Tim Cook"        "President Biden" "Janet Yellen"    "Gina Raimondo"</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">organizations</span></span>
-<span><span class="co">#&gt; [1] "Apple"       "White House" "Treasury"    "Commerce"</span></span></code></pre></div>
+<span><span class="va">result</span><span class="op">$</span><span class="va">organizations</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-5-nested-objects">Step 5: Nested Objects<a class="anchor" aria-label="anchor" href="#step-5-nested-objects"></a>
@@ -349,40 +304,12 @@ correctly.</p>
 <span><span class="st">"</span></span>
 <span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">email_parser</span>, email <span class="op">=</span> <span class="va">email</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="va">result</span></span>
-<span><span class="co">#&gt; $sender</span></span>
-<span><span class="co">#&gt; $sender$name</span></span>
-<span><span class="co">#&gt; [1] "Sarah Johnson"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $sender$email</span></span>
-<span><span class="co">#&gt; [1] "sarah.johnson@techcorp.com"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $subject</span></span>
-<span><span class="co">#&gt; [1] "Q4 Budget Review - Action Required"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $priority</span></span>
-<span><span class="co">#&gt; [1] "urgent"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $action_items</span></span>
-<span><span class="co">#&gt; [1] "Review the attached Q4 budget proposal by Friday"</span></span>
-<span><span class="co">#&gt; [2] "Confirm department allocations"                  </span></span>
-<span><span class="co">#&gt; [3] "Identify any cost-saving opportunities"          </span></span>
-<span><span class="co">#&gt; [4] "Submit final numbers to finance"                 </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $requires_response</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<span><span class="va">result</span></span></code></pre></div>
 <p>Access nested fields:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span><span class="op">$</span><span class="va">sender</span><span class="op">$</span><span class="va">name</span></span>
-<span><span class="co">#&gt; [1] "Sarah Johnson"</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">action_items</span></span>
-<span><span class="co">#&gt; [1] "Review the attached Q4 budget proposal by Friday"</span></span>
-<span><span class="co">#&gt; [2] "Confirm department allocations"                  </span></span>
-<span><span class="co">#&gt; [3] "Identify any cost-saving opportunities"          </span></span>
-<span><span class="co">#&gt; [4] "Submit final numbers to finance"</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">priority</span></span>
-<span><span class="co">#&gt; [1] "urgent"</span></span></code></pre></div>
+<span><span class="va">result</span><span class="op">$</span><span class="va">priority</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-6-building-an-email-triage-system">Step 6: Building an Email Triage System<a class="anchor" aria-label="anchor" href="#step-6-building-an-email-triage-system"></a>
@@ -421,13 +348,7 @@ correctly.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">triage</span>, <span class="va">emails</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="va">results</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
-<span><span class="co">#&gt;      id email                                                       result      </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                                       <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>     1 Meeting tomorrow at 3pm to discuss Q1 results. Please conf… <span style="color: #949494;">&lt;named list&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>     2 FYI - The office will be closed on Monday for the holiday.  <span style="color: #949494;">&lt;named list&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>     3 URGENT: Server down! Need immediate assistance to restore … <span style="color: #949494;">&lt;named list&gt;</span></span></span></code></pre></div>
+<span><span class="va">results</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-7-handling-optional-fields">Step 7: Handling Optional Fields<a class="anchor" aria-label="anchor" href="#step-7-handling-optional-fields"></a>

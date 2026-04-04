@@ -154,14 +154,6 @@ programs</li>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     step</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Configure OpenAI (gpt-5-mini for cost-effective cassette recording)</span></span>
@@ -204,38 +196,9 @@ tidymodels <code>dials</code> parameters) and records the results in
 <span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>progress <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">PredictModule</span> ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Signature</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">Signature</span> ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Inputs</span></span>
-<span><span class="co">#&gt; • <span style="color: #00BB00;">review</span>: <span style="color: #0000BB;">"string"</span> - Input: review</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Output</span></span>
-<span><span class="co">#&gt; Type: <span style="color: #0000BB;">"object(sentiment: string)"</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Instructions</span></span>
-<span><span class="co">#&gt; Respond with the sentiment label only.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Template</span></span>
-<span><span class="co">#&gt; Review: {review}</span></span>
-<span><span class="co">#&gt; Sentiment:</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Compilation Status</span></span>
-<span><span class="co">#&gt; ✔ Compiled</span></span>
-<span><span class="co">#&gt; Best score: 1</span></span>
 <span></span>
 <span><span class="va">sentiment_module</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">trials</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trial_id"</span>, <span class="st">"score"</span>, <span class="st">"n_evaluated"</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 3</span></span></span>
-<span><span class="co">#&gt;   trial_id score n_evaluated</span></span>
-<span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        1     1           1</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>        2     1           1</span></span>
-<span><span class="va">sentiment_module</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_score</span></span>
-<span><span class="co">#&gt; [1] 1</span></span></code></pre></div>
+<span><span class="va">sentiment_module</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_score</span></span></code></pre></div>
 <p>If you do have tidymodels installed, you can also describe the search
 space with <code>dials</code>, build a grid (regular or random), and
 pass it to <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>. The helper automatically
@@ -418,22 +381,18 @@ allows you to create custom ones.</p>
 <span></span>
 <span><span class="co"># Test the metric</span></span>
 <span><span class="fu">metric</span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"positive"</span><span class="op">)</span> <span class="co"># TRUE</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
 <span><span class="fu">metric</span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span><span class="op">)</span> <span class="co"># FALSE</span></span>
-<span><span class="co">#&gt; [1] FALSE</span></span>
 <span></span>
 <span><span class="co"># Case-insensitive matching</span></span>
 <span><span class="va">metric_ignore_case</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu">metric_ignore_case</span><span class="op">(</span><span class="st">"Positive"</span>, <span class="st">"positive"</span><span class="op">)</span> <span class="co"># TRUE</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
 <span></span>
 <span><span class="co"># Extract specific field from structured output</span></span>
 <span><span class="va">metric_field</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span></span>
 <span><span class="fu">metric_field</span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span>, confidence <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span>, confidence <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
-<span><span class="op">)</span> <span class="co"># TRUE - only compares sentiment field</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<span><span class="op">)</span> <span class="co"># TRUE - only compares sentiment field</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="f1-score">F1 Score<a class="anchor" aria-label="anchor" href="#f1-score"></a>
@@ -449,7 +408,6 @@ allows you to create custom ones.</p>
 <span>  <span class="st">"Paris is the capital city of France"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">score</span><span class="op">)</span> <span class="co"># ~0.67 (good overlap but not perfect)</span></span>
-<span><span class="co">#&gt; [1] 0.9230769</span></span>
 <span></span>
 <span><span class="co"># With field extraction</span></span>
 <span><span class="va">metric_f1_field</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
@@ -466,24 +424,19 @@ allows you to create custom ones.</p>
 <code class="sourceCode R"><span><span class="co"># Check for substring</span></span>
 <span><span class="va">metric_has_positive</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"positive"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu">metric_has_positive</span><span class="op">(</span><span class="st">"The result is POSITIVE"</span>, <span class="cn">NULL</span><span class="op">)</span> <span class="co"># TRUE</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
 <span><span class="fu">metric_has_positive</span><span class="op">(</span><span class="st">"The result is negative"</span>, <span class="cn">NULL</span><span class="op">)</span> <span class="co"># FALSE</span></span>
-<span><span class="co">#&gt; [1] FALSE</span></span>
 <span></span>
 <span><span class="co"># Regular expression patterns</span></span>
 <span><span class="va">metric_has_number</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"\\d+"</span>, fixed <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu">metric_has_number</span><span class="op">(</span><span class="st">"The answer is 42"</span>, <span class="cn">NULL</span><span class="op">)</span> <span class="co"># TRUE</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
 <span><span class="fu">metric_has_number</span><span class="op">(</span><span class="st">"No numbers here"</span>, <span class="cn">NULL</span><span class="op">)</span> <span class="co"># FALSE</span></span>
-<span><span class="co">#&gt; [1] FALSE</span></span>
 <span></span>
 <span><span class="co"># Check specific field</span></span>
 <span><span class="va">metric_field_contains</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"urgent"</span>, field <span class="op">=</span> <span class="st">"priority"</span><span class="op">)</span></span>
 <span><span class="fu">metric_field_contains</span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>priority <span class="op">=</span> <span class="st">"urgent - needs immediate attention"</span><span class="op">)</span>,</span>
 <span>  <span class="cn">NULL</span></span>
-<span><span class="op">)</span> <span class="co"># TRUE</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<span><span class="op">)</span> <span class="co"># TRUE</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level3">
@@ -553,7 +506,6 @@ allows you to create custom ones.</p>
 <span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span>, confidence <span class="op">=</span> <span class="st">"high"</span>, extra <span class="op">=</span> <span class="st">"ignored"</span><span class="op">)</span></span>
 <span><span class="va">exp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span>, confidence <span class="op">=</span> <span class="st">"high"</span>, other <span class="op">=</span> <span class="st">"data"</span><span class="op">)</span></span>
 <span><span class="fu">metric_all</span><span class="op">(</span><span class="va">pred</span>, <span class="va">exp</span><span class="op">)</span> <span class="co"># TRUE - both fields match</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
 <span></span>
 <span><span class="co"># Check if any field matches</span></span>
 <span><span class="va">metric_any</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_field_match.html">metric_field_match</a></span><span class="op">(</span></span>
@@ -609,32 +561,12 @@ training data as demonstrations:</p>
 <span></span>
 <span><span class="co"># The optimized module now includes demonstrations</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">optimized_classifier</span><span class="op">$</span><span class="va">demos</span><span class="op">)</span> <span class="co"># Shows the 2 selected examples</span></span>
-<span><span class="co">#&gt; [[1]]</span></span>
-<span><span class="co">#&gt; [[1]]$inputs</span></span>
-<span><span class="co">#&gt; [[1]]$inputs$text</span></span>
-<span><span class="co">#&gt; [1] "This product is amazing! Best purchase ever!"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[1]]$output</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[2]]</span></span>
-<span><span class="co">#&gt; [[2]]$inputs</span></span>
-<span><span class="co">#&gt; [[2]]$inputs$text</span></span>
-<span><span class="co">#&gt; [1] "It's okay, nothing special but works."</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[2]]$output</span></span>
-<span><span class="co">#&gt; [1] "neutral"</span></span>
 <span></span>
 <span><span class="co"># Use the optimized classifier</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">optimized_classifier</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"This is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="co"># "positive"</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="co"># "positive"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="gridsearchteleprompter">GridSearchTeleprompter<a class="anchor" aria-label="anchor" href="#gridsearchteleprompter"></a>
@@ -690,17 +622,14 @@ find the best performing one:</p>
 <span><span class="va">optimized_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
 <span>  program <span class="op">=</span> <span class="va">qa_module</span>,</span>
 <span>  teleprompter <span class="op">=</span> <span class="va">grid_teleprompter</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">qa_trainset</span></span>
+<span>  trainset <span class="op">=</span> <span class="va">qa_trainset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Check which variant performed best</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">optimized_qa</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">best_variant</span><span class="op">)</span> <span class="co"># e.g., "analytical"</span></span>
-<span><span class="co">#&gt; [1] "concise"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">optimized_qa</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">best_score</span><span class="op">)</span> <span class="co"># e.g., 0.85</span></span>
-<span><span class="co">#&gt; [1] 1</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">optimized_qa</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">all_scores</span><span class="op">)</span> <span class="co"># Scores for all variants</span></span>
-<span><span class="co">#&gt;      concise     detailed   analytical step_by_step </span></span>
-<span><span class="co">#&gt;            1            1            1            1</span></span>
 <span></span>
 <span><span class="co"># Use the optimized module</span></span>
 <span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="va">optimized_qa</span> <span class="op">|&gt;</span></span>
@@ -770,9 +699,6 @@ optimizing your programs:</p>
 <span>  teleprompter <span class="op">=</span> <span class="va">simple_optimizer</span>,</span>
 <span>  trainset <span class="op">=</span> <span class="va">email_trainset</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Multiple potential output columns found</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using: category</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Other columns: priority and needs_response</span></span>
 <span></span>
 <span><span class="co"># Option B: Grid search with custom variants</span></span>
 <span><span class="va">email_variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -795,11 +721,9 @@ optimizing your programs:</p>
 <span><span class="va">optimized_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
 <span>  program <span class="op">=</span> <span class="va">email_classifier</span>,</span>
 <span>  teleprompter <span class="op">=</span> <span class="va">grid_optimizer</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">email_trainset</span></span>
+<span>  trainset <span class="op">=</span> <span class="va">email_trainset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Multiple potential output columns found</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using: category</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Other columns: priority and needs_response</span></span>
 <span></span>
 <span><span class="co"># Step 4: Use the optimized module</span></span>
 <span><span class="va">new_email</span> <span class="op">&lt;-</span> <span class="st">"I've been waiting for 2 hours on hold! This is unacceptable!"</span></span>
@@ -807,11 +731,8 @@ optimizing your programs:</p>
 <span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span>email <span class="op">=</span> <span class="va">new_email</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">category</span><span class="op">)</span> <span class="co"># "complaint"</span></span>
-<span><span class="co">#&gt; [1] "complaint"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">priority</span><span class="op">)</span> <span class="co"># "urgent"</span></span>
-<span><span class="co">#&gt; [1] "urgent"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">needs_response</span><span class="op">)</span> <span class="co"># TRUE</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">needs_response</span><span class="op">)</span> <span class="co"># TRUE</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="part-4-evaluation-framework">Part 4: Evaluation Framework<a class="anchor" aria-label="anchor" href="#part-4-evaluation-framework"></a>
@@ -853,18 +774,12 @@ performance:</p>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Evaluated 3/3 examples</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Mean score: 1</span></span>
 <span></span>
 <span><span class="co"># Examine results</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span> <span class="co"># e.g., 0.67 (2/3 correct)</span></span>
-<span><span class="co">#&gt; [1] 1</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">scores</span><span class="op">)</span> <span class="co"># Individual scores per example</span></span>
-<span><span class="co">#&gt; [1] 1 1 1</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">n_evaluated</span><span class="op">)</span> <span class="co"># 3</span></span>
-<span><span class="co">#&gt; [1] 3</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">n_errors</span><span class="op">)</span> <span class="co"># 0 (no runtime errors)</span></span>
-<span><span class="co">#&gt; [1] 0</span></span>
 <span></span>
 <span><span class="co"># Evaluate multiple aspects</span></span>
 <span><span class="va">multi_metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_field_match.html">metric_field_match</a></span><span class="op">(</span></span>
@@ -879,11 +794,8 @@ performance:</p>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Evaluated 3/3 examples</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Mean score: 0.333</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">full_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span> <span class="co"># Lower, as all fields must match</span></span>
-<span><span class="co">#&gt; [1] 0.3333333</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">full_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span> <span class="co"># Lower, as all fields must match</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="part-5-complete-workflow-example">Part 5: Complete Workflow Example<a class="anchor" aria-label="anchor" href="#part-5-complete-workflow-example"></a>
@@ -1010,31 +922,8 @@ performance:</p>
 <span></span>
 <span>  <span class="va">results_by_k</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"k_"</span>, <span class="va">k</span><span class="op">)</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">eval_result</span><span class="op">$</span><span class="va">mean_score</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; Warning: Multiple potential output columns found</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using: summary</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Other columns: topics, sentiment, key_facts, and recommendation</span></span>
-<span><span class="co">#&gt; Multiple potential output columns found</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using: summary</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Other columns: topics, sentiment, key_facts, and recommendation</span></span>
-<span><span class="co">#&gt; Multiple potential output columns found</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using: summary</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Other columns: topics, sentiment, key_facts, and recommendation</span></span>
-<span><span class="co">#&gt; Multiple potential output columns found</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using: summary</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Other columns: topics, sentiment, key_facts, and recommendation</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_by_k</span><span class="op">)</span> <span class="co"># See which k works best</span></span>
-<span><span class="co">#&gt; $k_1</span></span>
-<span><span class="co">#&gt; [1] 0.7622253</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $k_2</span></span>
-<span><span class="co">#&gt; [1] 0.7840854</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $k_3</span></span>
-<span><span class="co">#&gt; [1] 0.7640367</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $k_4</span></span>
-<span><span class="co">#&gt; [1] 0.8172435</span></span>
 <span></span>
 <span><span class="co"># Strategy B: Grid search over different instruction styles</span></span>
 <span><span class="va">instruction_variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -1061,11 +950,9 @@ performance:</p>
 <span><span class="va">best_analyzer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
 <span>  program <span class="op">=</span> <span class="va">doc_analyzer</span>,</span>
 <span>  teleprompter <span class="op">=</span> <span class="va">grid_optimizer</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">doc_trainset</span></span>
+<span>  trainset <span class="op">=</span> <span class="va">doc_trainset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Multiple potential output columns found</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using: summary</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Other columns: topics, sentiment, key_facts, and recommendation</span></span>
 <span></span>
 <span><span class="co"># 5. Use the optimized analyzer</span></span>
 <span><span class="va">new_document</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
@@ -1079,15 +966,9 @@ performance:</p>
 <span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span>document <span class="op">=</span> <span class="va">new_document</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Merger offers $5M annual synergies; regulatory approval expected in 6–8 months; employee survey indicates 60% job-security concern; cultural integration risk is high. Financial upside appears to outweigh risks if integration and change management are executed promptly and effectively."</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">topics</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "financial synergies"       "cultural integration risk"</span></span>
-<span><span class="co">#&gt; [3] "regulatory timeline"       "employee sentiment"       </span></span>
-<span><span class="co">#&gt; [5] "change management"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">sentiment</span><span class="op">)</span> <span class="co"># Likely "mixed"</span></span>
-<span><span class="co">#&gt; [1] "mixed"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">recommendation</span><span class="op">)</span> <span class="co"># Likely "review"</span></span>
-<span><span class="co">#&gt; [1] "review"</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">$</span><span class="va">recommendation</span><span class="op">)</span> <span class="co"># Likely "review"</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="part-6-advanced-patterns-and-best-practices">Part 6: Advanced Patterns and Best Practices<a class="anchor" aria-label="anchor" href="#part-6-advanced-patterns-and-best-practices"></a>
@@ -1365,9 +1246,6 @@ performance:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu">check_diversity</span><span class="op">(</span><span class="va">trainset</span>, <span class="st">"sentiment"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; values</span></span>
-<span><span class="co">#&gt; negative  neutral positive </span></span>
-<span><span class="co">#&gt;        1        1        1</span></span>
 <span></span>
 <span><span class="co"># Balance classes if needed</span></span>
 <span><span class="va">balance_trainset</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span>, <span class="va">label_col</span>, <span class="va">max_per_class</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">{</span></span>

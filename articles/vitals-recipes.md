@@ -6,14 +6,6 @@ specific pattern.
 
 ``` r
 library(dsprrr)
-#> 
-#> Attaching package: 'dsprrr'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
-#> The following object is masked from 'package:methods':
-#> 
-#>     signature
 library(vitals)
 library(ellmer)
 library(tibble)
@@ -49,21 +41,9 @@ task <- as_vitals_task(
 
 # 4. Run evaluation
 task$eval()
-#> ℹ Solving
-#> ✔ Solving [750ms]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [122ms]
-#> 
 
 # 5. View results
 task$get_samples()
-#> # A tibble: 2 × 9
-#>   input            target      id result   solver_chat score scorer_metadata 
-#>   <list>           <chr>    <int> <chr>    <list>      <ord> <list>          
-#> 1 <tibble [1 × 1]> positive     1 positive <Chat>      C     <named list [2]>
-#> 2 <tibble [1 × 1]> negative     2 negative <Chat>      C     <named list [2]>
-#> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
 That’s it! The
@@ -124,16 +104,9 @@ eval_task <- as_vitals_task(
 )
 
 eval_task$eval()
-#> ℹ Solving
-#> ✔ Solving [537ms]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [55ms]
-#> 
 
 # Compare performance
 cat("Test accuracy:", mean(eval_task$get_samples()$score == "C"), "\n")
-#> Test accuracy: 1
 ```
 
 ## Recipe 3: Using Different Vitals Scorers
@@ -160,19 +133,7 @@ task <- as_vitals_task(
 )
 
 task$eval()
-#> ℹ Solving
-#> ✔ Solving [340ms]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [56ms]
-#> 
 task$get_samples()
-#> # A tibble: 2 × 9
-#>   input            target    id result solver_chat score scorer_metadata 
-#>   <list>           <chr>  <int> <chr>  <list>      <ord> <list>          
-#> 1 <tibble [1 × 1]> 35         1 35     <Chat>      C     <named list [2]>
-#> 2 <tibble [1 × 1]> 1945       2 1945   <Chat>      C     <named list [2]>
-#> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
 ### Model-Graded QA (model_graded_qa)
@@ -199,19 +160,7 @@ task <- as_vitals_task(
 )
 
 task$eval()
-#> ℹ Solving
-#> ✔ Solving [346ms]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [236ms]
-#> 
 task$get_samples()
-#> # A tibble: 2 × 10
-#>   input    target        id result solver_chat solver_metadata score scorer_chat
-#>   <list>   <chr>      <int> <chr>  <list>      <list>          <ord> <list>     
-#> 1 <tibble> Light sca…     1 "{\"r… <Chat>      <named list>    C     <Chat>     
-#> 2 <tibble> Photosynt…     2 "{\"r… <Chat>      <named list>    C     <Chat>     
-#> # ℹ 2 more variables: scorer_metadata <list>, scorer <chr>
 ```
 
 ### Substring Match (detect_includes)
@@ -237,19 +186,7 @@ task <- as_vitals_task(
 )
 
 task$eval()
-#> ℹ Solving
-#> ✔ Solving [345ms]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [57ms]
-#> 
 task$get_samples()
-#> # A tibble: 2 × 9
-#>   input            target      id result       solver_chat score scorer_metadata
-#>   <list>           <chr>    <int> <chr>        <list>      <ord> <list>         
-#> 1 <tibble [1 × 1]> function     1 "def add_nu… <Chat>      I     <named list>   
-#> 2 <tibble [1 × 1]> for          2 "for i in r… <Chat>      C     <named list>   
-#> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
 ## Recipe 4: Analyzing Evaluation Results
@@ -284,12 +221,6 @@ task <- as_vitals_task(
 )
 
 task$eval()
-#> ℹ Solving
-#> ✔ Solving [858ms]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [88ms]
-#> 
 
 # Get detailed scores
 scores <- task$get_samples()
@@ -297,7 +228,6 @@ scores <- task$get_samples()
 # Find failures
 failures <- scores[scores$score == "I", ]
 cat("Failed on", nrow(failures), "of", nrow(scores), "examples\n")
-#> Failed on 0 of 5 examples
 
 # Examine what went wrong
 if (nrow(failures) > 0) {
@@ -314,7 +244,6 @@ if (nrow(failures) > 0) {
 # Calculate accuracy
 accuracy <- mean(scores$score == "C")
 cat("Overall accuracy:", scales::percent(accuracy), "\n")
-#> Overall accuracy: 100%
 ```
 
 ## Recipe 5: Comparing Module Variants
@@ -359,24 +288,10 @@ for (name in c("basic", "cot")) {
 
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
-#> ℹ Solving
-#> ✔ Solving [429ms]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [207ms]
-#> 
-#> ℹ Solving
-#> ✔ Solving [343ms]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [200ms]
-#> 
 
 # Compare
 cat("Basic accuracy:", scales::percent(results$basic), "\n")
-#> Basic accuracy: 100%
 cat("CoT accuracy:", scales::percent(results$cot), "\n")
-#> CoT accuracy: 100%
 ```
 
 ## Recipe 6: Multiple Epochs for Confidence
@@ -412,12 +327,6 @@ task <- as_vitals_task(
 )
 
 task$eval()
-#> ℹ Solving
-#> ✔ Solving [1.6s]
-#> 
-#> ℹ Scoring
-#> ✔ Scoring [130ms]
-#> 
 
 # Aggregate scores across epochs
 scores <- task$get_samples()
@@ -428,9 +337,7 @@ cat(
   nrow(test_data),
   "examples)\n"
 )
-#> Total evaluations: 9 (3 epochs x 3 examples)
 cat("Overall accuracy:", scales::percent(mean(scores$score == "C")), "\n")
-#> Overall accuracy: 100%
 ```
 
 ## Recipe 7: Custom Evaluation Pipeline

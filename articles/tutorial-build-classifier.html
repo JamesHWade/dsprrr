@@ -151,14 +151,6 @@ Remembers its configuration - Can be saved and reused</p>
 </ul>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     step</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -180,27 +172,11 @@ want to change the signature, you have to change it everywhere.</p>
 reusable object:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span></span>
 <span></span>
 <span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="va">chat</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">PredictModule</span> ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Signature </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">Signature</span> ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Inputs </span></span>
-<span><span class="co">#&gt; • <span style="color: #00BB00;">text</span>: <span style="color: #0000BB;">"string"</span> - Input: text</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Output </span></span>
-<span><span class="co">#&gt; Type: <span style="color: #0000BB;">"object(sentiment: enum(positive, negative, neutral))"</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Instructions </span></span>
-<span><span class="co">#&gt; Given the fields `text`, produce the fields `sentiment`.</span></span></code></pre></div>
+<span><span class="va">classifier</span></span></code></pre></div>
 <p>Now <code>classifier</code> is an object you can use repeatedly.</p>
 </div>
 <div class="section level2">
@@ -208,22 +184,14 @@ reusable object:</p>
 </h2>
 <p>Use the <code>$predict()</code> method to classify:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"I absolutely loved this movie!"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"I absolutely loved this movie!"</span><span class="op">)</span></span></code></pre></div>
 <p>Try a few more:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"This was a complete waste of time."</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "negative"</span></span>
 <span></span>
 <span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"It was okay, I guess."</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "neutral"</span></span>
 <span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"The service was terrible but the food was amazing."</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "neutral"</span></span></code></pre></div>
+<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"The service was terrible but the food was amazing."</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-batch-processing">Step 4: Batch Processing<a class="anchor" aria-label="anchor" href="#step-4-batch-processing"></a>
@@ -239,30 +207,7 @@ a vector:</p>
 <span>  <span class="st">"Would not recommend to anyone."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="va">reviews</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [[1]]</span></span>
-<span><span class="co">#&gt; [[1]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[2]]</span></span>
-<span><span class="co">#&gt; [[2]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "negative"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[3]]</span></span>
-<span><span class="co">#&gt; [[3]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "neutral"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[4]]</span></span>
-<span><span class="co">#&gt; [[4]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[5]]</span></span>
-<span><span class="co">#&gt; [[5]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "negative"</span></span></code></pre></div>
+<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="va">reviews</span><span class="op">)</span></span></code></pre></div>
 <p>All five classifications came back in a single call. Much more
 efficient than five separate calls.</p>
 </div>
@@ -279,41 +224,12 @@ gives you that:</p>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify the overall sentiment. If mixed, choose the dominant emotion."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">sig</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">Signature</span> ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Inputs</span></span>
-<span><span class="co">#&gt; • <span style="color: #00BB00;">text</span>: <span style="color: #0000BB;">"string"</span> - Input: text</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Output</span></span>
-<span><span class="co">#&gt; Type: <span style="color: #0000BB;">"object(sentiment: enum(positive, negative, neutral))"</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Instructions</span></span>
-<span><span class="co">#&gt; Classify the overall sentiment. If mixed, choose the dominant emotion.</span></span></code></pre></div>
+<span><span class="va">sig</span></span></code></pre></div>
 <p>Now create a module from the signature:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier2</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">PredictModule</span> ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Signature</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">Signature</span> ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Inputs</span></span>
-<span><span class="co">#&gt; • <span style="color: #00BB00;">text</span>: <span style="color: #0000BB;">"string"</span> - Input: text</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Output</span></span>
-<span><span class="co">#&gt; Type: <span style="color: #0000BB;">"object(sentiment: enum(positive, negative, neutral))"</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Instructions</span></span>
-<span><span class="co">#&gt; Classify the overall sentiment. If mixed, choose the dominant emotion.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Cache</span></span>
-<span><span class="co">#&gt; Hit rate: 0% (0 hits, 9 misses)</span></span></code></pre></div>
+<span><span class="va">classifier2</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-6-running-with-run">Step 6: Running with <code>run()</code><a class="anchor" aria-label="anchor" href="#step-6-running-with-run"></a>
@@ -321,9 +237,7 @@ gives you that:</p>
 <p>With the full control approach, use <code><a href="../reference/run.html">run()</a></code> to
 execute:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier2</span>, text <span class="op">=</span> <span class="st">"This is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier2</span>, text <span class="op">=</span> <span class="st">"This is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <p>Notice you pass the chat object via <code>.llm</code>. This gives you
 flexibility—you can use different LLMs for different calls.</p>
 <p>Batch processing works the same way:</p>
@@ -332,15 +246,7 @@ flexibility—you can use different LLMs for different calls.</p>
 <span>  <span class="va">classifier2</span>,</span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Love it!"</span>, <span class="st">"Hate it!"</span>, <span class="st">"It's fine"</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [[1]]</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[2]]</span></span>
-<span><span class="co">#&gt; [1] "negative"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[3]]</span></span>
-<span><span class="co">#&gt; [1] "neutral"</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-7-working-with-data-frames">Step 7: Working with Data Frames<a class="anchor" aria-label="anchor" href="#step-7-working-with-data-frames"></a>
@@ -361,14 +267,7 @@ flexibility—you can use different LLMs for different calls.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier2</span>, <span class="va">reviews_df</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="va">results</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 3</span></span></span>
-<span><span class="co">#&gt;      id text                             result   </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>     1 Absolutely wonderful experience! <span style="color: #949494;">&lt;chr [1]&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>     2 Never buying from them again.    <span style="color: #949494;">&lt;chr [1]&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>     3 Solid product, fair price.       <span style="color: #949494;">&lt;chr [1]&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>     4 Changed my life for the better.  <span style="color: #949494;">&lt;chr [1]&gt;</span></span></span></code></pre></div>
+<span><span class="va">results</span></span></code></pre></div>
 <p>The results include your original columns plus the
 classification.</p>
 </div>
@@ -391,8 +290,7 @@ classification.</p>
 <span>  <span class="va">detailed_classifier</span>,</span>
 <span>  review_text <span class="op">=</span> <span class="st">"Five stars! Would buy again!"</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 <p>Descriptions help the LLM understand what it’s working with.</p>
 </div>
 <div class="section level2">

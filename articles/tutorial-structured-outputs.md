@@ -23,19 +23,10 @@ and emails.
 
 ``` r
 library(dsprrr)
-#> 
-#> Attaching package: 'dsprrr'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
-#> The following object is masked from 'package:methods':
-#> 
-#>     signature
 library(ellmer)
 library(tibble)
 
 chat <- chat_openai()
-#> Using model = "gpt-4.1".
 ```
 
 ## Step 1: Multiple Output Fields
@@ -49,11 +40,6 @@ sig <- signature("text -> sentiment, confidence: number")
 extractor <- module(sig, type = "predict")
 
 run(extractor, text = "This product is absolutely fantastic!", .llm = chat)
-#> $sentiment
-#> [1] "positive"
-#> 
-#> $confidence
-#> [1] 0.98
 ```
 
 You get back both `sentiment` and `confidence` in a structured result.
@@ -62,11 +48,6 @@ Try another:
 
 ``` r
 run(extractor, text = "It was okay, nothing special.", .llm = chat)
-#> $sentiment
-#> [1] "neutral"
-#> 
-#> $confidence
-#> [1] 0.85
 ```
 
 Notice the confidence is lower for ambiguous text.
@@ -89,14 +70,6 @@ result <- run(
 )
 
 result
-#> $sentiment
-#> [1] "positive"
-#> 
-#> $stars
-#> [1] 4
-#> 
-#> $summary
-#> [1] "Powerful and easy-to-clean blender, but a bit loud."
 ```
 
 You get sentiment, a star rating, *and* a summary—all typed correctly.
@@ -133,14 +106,6 @@ commercial applications within 3-5 years.
 "
 
 run(article_analyzer, article = article, .llm = chat)
-#> $headline
-#> [1] "MIT Scientists Achieve Breakthrough in Solar Panel Efficiency"
-#> 
-#> $sentiment
-#> [1] "positive"
-#> 
-#> $word_count
-#> [1] 54
 ```
 
 ## Step 4: Arrays of Values
@@ -177,23 +142,13 @@ and Commerce Secretary Gina Raimondo.
 
 result <- run(entity_extractor, text = news, .llm = chat)
 result
-#> $people
-#> [1] "Tim Cook"        "President Biden" "Janet Yellen"    "Gina Raimondo"  
-#> 
-#> $organizations
-#> [1] "Apple"       "White House" "Treasury"    "Commerce"   
-#> 
-#> $locations
-#> [1] "United States"
 ```
 
 Access the arrays directly:
 
 ``` r
 result$people
-#> [1] "Tim Cook"        "President Biden" "Janet Yellen"    "Gina Raimondo"
 result$organizations
-#> [1] "Apple"       "White House" "Treasury"    "Commerce"
 ```
 
 ## Step 5: Nested Objects
@@ -245,42 +200,14 @@ Sarah
 
 result <- run(email_parser, email = email, .llm = chat)
 result
-#> $sender
-#> $sender$name
-#> [1] "Sarah Johnson"
-#> 
-#> $sender$email
-#> [1] "sarah.johnson@techcorp.com"
-#> 
-#> 
-#> $subject
-#> [1] "Q4 Budget Review - Action Required"
-#> 
-#> $priority
-#> [1] "urgent"
-#> 
-#> $action_items
-#> [1] "Review the attached Q4 budget proposal by Friday"
-#> [2] "Confirm department allocations"                  
-#> [3] "Identify any cost-saving opportunities"          
-#> [4] "Submit final numbers to finance"                 
-#> 
-#> $requires_response
-#> [1] TRUE
 ```
 
 Access nested fields:
 
 ``` r
 result$sender$name
-#> [1] "Sarah Johnson"
 result$action_items
-#> [1] "Review the attached Q4 budget proposal by Friday"
-#> [2] "Confirm department allocations"                  
-#> [3] "Identify any cost-saving opportunities"          
-#> [4] "Submit final numbers to finance"
 result$priority
-#> [1] "urgent"
 ```
 
 ## Step 6: Building an Email Triage System
@@ -324,12 +251,6 @@ emails <- tibble(
 
 results <- run_dataset(triage, emails, .llm = chat)
 results
-#> # A tibble: 3 × 3
-#>      id email                                                       result      
-#>   <int> <chr>                                                       <list>      
-#> 1     1 Meeting tomorrow at 3pm to discuss Q1 results. Please conf… <named list>
-#> 2     2 FYI - The office will be closed on Monday for the holiday.  <named list>
-#> 3     3 URGENT: Server down! Need immediate assistance to restore … <named list>
 ```
 
 ## Step 7: Handling Optional Fields

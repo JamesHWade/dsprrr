@@ -6,14 +6,6 @@ A quick reference for common dsprrr operations.
 
 ``` r
 library(dsprrr)
-#> 
-#> Attaching package: 'dsprrr'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
-#> The following object is masked from 'package:methods':
-#> 
-#>     signature
 library(ellmer)
 ```
 
@@ -201,7 +193,6 @@ sig <- signature(
 # With explicit Chat
 chat <- chat_openai(model = "gpt-5-mini")
 chat |> dsp("question -> answer", question = "What is 2+2?")
-#> [1] "4"
 ```
 
 The auto-detected form (when you have a default Chat configured):
@@ -220,11 +211,7 @@ classifier <- chat_openai(model = "gpt-5-mini") |>
 
 # Use repeatedly
 classifier$predict(text = "Love it!")
-#> $sentiment
-#> [1] "positive"
 classifier$predict(text = "Hate it!")
-#> $sentiment
-#> [1] "negative"
 ```
 
 ### Full Control: `signature()` + `module()`

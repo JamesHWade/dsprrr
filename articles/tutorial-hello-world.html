@@ -156,14 +156,6 @@ variable)</li>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     step</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span></code></pre></div>
 <p>You should see no errors. If you do, check that your API key is set
 correctly.</p>
@@ -173,8 +165,7 @@ correctly.</p>
 </h2>
 <p>Connect to OpenAI:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>This creates a chat object you’ll use for all your LLM calls.</p>
 </div>
 <div class="section level2">
@@ -182,8 +173,7 @@ correctly.</p>
 </h2>
 <p>Let’s ask a simple question using <code><a href="../reference/dsp.html">dsp()</a></code>:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is the capital of France?"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "The capital of France is Paris."</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is the capital of France?"</span><span class="op">)</span></span></code></pre></div>
 <p>You should see <code>"Paris"</code> returned. Let’s break down what
 happened:</p>
 <ul>
@@ -201,10 +191,8 @@ and one output (<code>answer</code>)</li>
 <p>The same signature works for any question:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 7 * 8?"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "7 multiplied by 8 is 56."</span></span>
 <span></span>
-<span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"Who wrote Romeo and Juliet?"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Romeo and Juliet was written by William Shakespeare."</span></span></code></pre></div>
+<span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"Who wrote Romeo and Juliet?"</span><span class="op">)</span></span></code></pre></div>
 <p>Notice how you get clean, direct answers—no extra prose.</p>
 </div>
 <div class="section level2">
@@ -219,8 +207,7 @@ specific choice?</p>
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span></span>
 <span>  <span class="st">"math_problem -&gt; result: number"</span>,</span>
 <span>  math_problem <span class="op">=</span> <span class="st">"What is 15% of 200?"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 30</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 <p>The <code>: number</code> after <code>result</code> tells dsprrr you
 want a numeric value, not a string.</p>
 </div>
@@ -231,8 +218,7 @@ want a numeric value, not a string.</p>
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span></span>
 <span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
 <span>  text <span class="op">=</span> <span class="st">"I absolutely loved this movie!"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 <p>The LLM must pick from exactly those three options. Try changing the
 text to see different results:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
@@ -240,13 +226,11 @@ text to see different results:</p>
 <span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
 <span>  text <span class="op">=</span> <span class="st">"This was a complete waste of time."</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "negative"</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span></span>
 <span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
 <span>  text <span class="op">=</span> <span class="st">"It was okay, I guess."</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "neutral"</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="getting-truefalse">Getting True/False<a class="anchor" aria-label="anchor" href="#getting-truefalse"></a>
@@ -256,13 +240,11 @@ text to see different results:</p>
 <span>  <span class="st">"statement -&gt; is_true: bool"</span>,</span>
 <span>  statement <span class="op">=</span> <span class="st">"The Earth orbits the Sun."</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span></span>
 <span>  <span class="st">"statement -&gt; is_true: bool"</span>,</span>
 <span>  statement <span class="op">=</span> <span class="st">"Cats are larger than elephants."</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -274,16 +256,14 @@ text to see different results:</p>
 <span>  <span class="st">"context, question -&gt; answer"</span>,</span>
 <span>  context <span class="op">=</span> <span class="st">"R was created in 1993 by Ross Ihaka and Robert Gentleman at the University of Auckland."</span>,</span>
 <span>  question <span class="op">=</span> <span class="st">"When was R created?"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "R was created in 1993."</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 <p>Now the LLM uses your context to answer the question:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span></span>
 <span>  <span class="st">"context, question -&gt; answer"</span>,</span>
 <span>  context <span class="op">=</span> <span class="st">"The bakery opens at 7am and closes at 6pm. They sell croissants for $3 each."</span>,</span>
 <span>  question <span class="op">=</span> <span class="st">"How much do croissants cost?"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Croissants cost $3 each."</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-7-adding-instructions">Step 7: Adding Instructions<a class="anchor" aria-label="anchor" href="#step-7-adding-instructions"></a>
@@ -294,13 +274,11 @@ text to see different results:</p>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, instructions <span class="op">=</span> <span class="st">"Answer in exactly one word."</span><span class="op">)</span>,</span>
 <span>  question <span class="op">=</span> <span class="st">"What color is the sky on a clear day?"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Blue"</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, instructions <span class="op">=</span> <span class="st">"Answer like a pirate."</span><span class="op">)</span>,</span>
 <span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Arrr, matey! The capital of France be Paris!"</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="what-you-learned">What You Learned<a class="anchor" aria-label="anchor" href="#what-you-learned"></a>

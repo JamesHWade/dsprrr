@@ -151,20 +151,11 @@ deployment</p>
 </ul>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     step</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pins.rstudio.com/" class="external-link">pins</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span></span></code></pre></div>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-1-create-an-optimized-module">Step 1: Create an Optimized Module<a class="anchor" aria-label="anchor" href="#step-1-create-an-optimized-module"></a>
@@ -197,9 +188,7 @@ deployment</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Verify it works</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-2-save-configuration-with-pins">Step 2: Save Configuration with Pins<a class="anchor" aria-label="anchor" href="#step-2-save-configuration-with-pins"></a>
@@ -211,12 +200,7 @@ module configuration:</p>
 <span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_folder</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Save the module configuration</span></span>
-<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260215T015419Z-c8191'</span></span>
-<span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned module configuration: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Module type: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compiled: <span style="color: #0000BB;">TRUE</span></span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
 <p>Your optimized configuration—including demos, parameters, and
 instructions—is now saved.</p>
 </div>
@@ -226,27 +210,9 @@ instructions—is now saved.</p>
 <p>See what’s stored:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_list.html" class="external-link">pin_list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "sentiment-classifier"</span></span>
 <span></span>
 <span><span class="co"># Get metadata</span></span>
-<span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_meta.html" class="external-link">pin_meta</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 13</span></span>
-<span><span class="co">#&gt;  $ file       : chr "sentiment-classifier.rds"</span></span>
-<span><span class="co">#&gt;  $ file_size  : 'fs_bytes' int 490</span></span>
-<span><span class="co">#&gt;  $ pin_hash   : chr "c8191750c8d32279"</span></span>
-<span><span class="co">#&gt;  $ type       : chr "rds"</span></span>
-<span><span class="co">#&gt;  $ title      : chr "sentiment-classifier: a pinned list"</span></span>
-<span><span class="co">#&gt;  $ description: chr "dsprrr module config: sentiment-classifier"</span></span>
-<span><span class="co">#&gt;  $ tags       : NULL</span></span>
-<span><span class="co">#&gt;  $ urls       : NULL</span></span>
-<span><span class="co">#&gt;  $ created    : POSIXct[1:1], format: "2026-02-15 01:54:19"</span></span>
-<span><span class="co">#&gt;  $ api_version: int 1</span></span>
-<span><span class="co">#&gt;  $ user       : list()</span></span>
-<span><span class="co">#&gt;  $ name       : chr "sentiment-classifier"</span></span>
-<span><span class="co">#&gt;  $ local      :List of 3</span></span>
-<span><span class="co">#&gt;   ..$ dir    : 'fs_path' chr "/tmp/RtmpVPw6EE/sentiment-classifier/20260215T015419Z-c8191"</span></span>
-<span><span class="co">#&gt;   ..$ url    : NULL</span></span>
-<span><span class="co">#&gt;   ..$ version: chr "20260215T015419Z-c8191"</span></span></code></pre></div>
+<span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_meta.html" class="external-link">pin_meta</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-restore-in-a-new-session">Step 4: Restore in a New Session<a class="anchor" aria-label="anchor" href="#step-4-restore-in-a-new-session"></a>
@@ -256,13 +222,9 @@ instructions—is now saved.</p>
 <code class="sourceCode R"><span><span class="co"># Later, in a new session...</span></span>
 <span><span class="va">config</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
 <span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">config</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Restored module from configuration</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Module type: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Original dsprrr version: <span style="color: #0000BB;">"0.0.0.9000"</span></span></span>
 <span></span>
 <span><span class="co"># It works immediately</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">restored</span>, review <span class="op">=</span> <span class="st">"Worst product ever!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "negative"</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">restored</span>, review <span class="op">=</span> <span class="st">"Worst product ever!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <p>The restored module has all the optimization work preserved.</p>
 </div>
 <div class="section level2">
@@ -276,25 +238,12 @@ instructions—is now saved.</p>
 <span>  teleprompter <span class="op">=</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span>,  <span class="co"># Try more examples</span></span>
 <span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Program appears to be already compiled</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Previous teleprompter: LabeledFewShot</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Recompiling with: dsprrr::LabeledFewShot</span></span>
 <span></span>
 <span><span class="co"># Save again - creates new version</span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">improved</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260215T015419Z-69c6e'</span></span>
-<span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned module configuration: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Module type: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compiled: <span style="color: #0000BB;">TRUE</span></span></span>
 <span></span>
 <span><span class="co"># List versions</span></span>
-<span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_versions.html" class="external-link">pin_versions</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 3</span></span></span>
-<span><span class="co">#&gt;   version                created             hash </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dttm&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 20260215T015419Z-69c6e 2026-02-15 <span style="color: #949494;">01:54:19</span> 69c6e</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 20260215T015419Z-c8191 2026-02-15 <span style="color: #949494;">01:54:19</span> c8191</span></span></code></pre></div>
+<span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_versions.html" class="external-link">pin_versions</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-6-roll-back-to-previous-version">Step 6: Roll Back to Previous Version<a class="anchor" aria-label="anchor" href="#step-6-roll-back-to-previous-version"></a>
@@ -308,10 +257,7 @@ instructions—is now saved.</p>
 <span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">versions</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">config</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, version <span class="op">=</span> <span class="va">versions</span><span class="op">$</span><span class="va">version</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
 <span>  <span class="va">original</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">config</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Restored module from configuration</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Module type: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Original dsprrr version: <span style="color: #0000BB;">"0.0.0.9000"</span></span></span></code></pre></div>
+<span><span class="op">}</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-7-save-execution-traces">Step 7: Save Execution Traces<a class="anchor" aria-label="anchor" href="#step-7-save-execution-traces"></a>
@@ -351,41 +297,8 @@ ready:</p>
 <span>  module <span class="op">=</span> <span class="va">classifier</span>,</span>
 <span>  board <span class="op">=</span> <span class="va">board</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">Workflow Validation</span> ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> module: Module type: PredictModule</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> signature: 1 input(s) defined</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> board: Board type: pins_board_folder</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Workflow validation passed</span></span>
 <span></span>
-<span><span class="va">validation</span></span>
-<span><span class="co">#&gt; $valid</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $checks</span></span>
-<span><span class="co">#&gt; $checks$module</span></span>
-<span><span class="co">#&gt; $checks$module$passed</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $checks$module$message</span></span>
-<span><span class="co">#&gt; [1] "Module type: PredictModule"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $checks$signature</span></span>
-<span><span class="co">#&gt; $checks$signature$passed</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $checks$signature$message</span></span>
-<span><span class="co">#&gt; [1] "1 input(s) defined"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $checks$board</span></span>
-<span><span class="co">#&gt; $checks$board$passed</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $checks$board$message</span></span>
-<span><span class="co">#&gt; [1] "Board type: pins_board_folder"</span></span></code></pre></div>
+<span><span class="va">validation</span></span></code></pre></div>
 <p>This checks: - Module is a valid DSPrrr module - Signature has inputs
 defined - Board is accessible (if provided)</p>
 </div>

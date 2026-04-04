@@ -151,14 +151,6 @@ through grid search.</p>
 </ul>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     step</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     signature</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span></span>
@@ -223,9 +215,7 @@ more creative. Let’s find the best value:</p>
 <span>    temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span>, <span class="fl">1.0</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Using cached LLM responses</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Disable with `configure_cache(enable = FALSE)` or `.cache = FALSE`</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-3-view-optimization-results">Step 3: View Optimization Results<a class="anchor" aria-label="anchor" href="#step-3-view-optimization-results"></a>
@@ -233,42 +223,18 @@ more creative. Let’s find the best value:</p>
 <p>See what happened:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># All trials</span></span>
-<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 7</span></span></span>
-<span><span class="co">#&gt;   n_trials best_trial best_score mean_score std_error best_params      trials  </span></span>
-<span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1        0.9        0.9         0 <span style="color: #949494;">&lt;named list [1]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
 <p>Get the summary:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Metrics summary</span></span>
-<span><span class="fu"><a href="../reference/module_metrics.html">module_metrics</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 10</span></span></span>
-<span><span class="co">#&gt;   trial_id score mean_score median_score std_dev n_evaluated n_errors</span></span>
-<span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        1   0.9        0.9            1   0.316          10        0</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>        2   0.9        0.9            1   0.316          10        0</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>        3   0.9        0.9            1   0.316          10        0</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>        4   0.9        0.9            1   0.316          10        0</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 3 more variables: params &lt;list&gt;, scores &lt;list&gt;, yardstick &lt;list&gt;</span></span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/module_metrics.html">module_metrics</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
 <p>Check the best configuration:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Best score achieved</span></span>
 <span><span class="va">classifier</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_score</span></span>
-<span><span class="co">#&gt; [1] 0.9</span></span>
 <span></span>
 <span><span class="co"># Best parameters</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_params</span></span>
-<span><span class="co">#&gt; $temperature</span></span>
-<span><span class="co">#&gt; [1] 0</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; attr(,"out.attrs")</span></span>
-<span><span class="co">#&gt; attr(,"out.attrs")$dim</span></span>
-<span><span class="co">#&gt; temperature </span></span>
-<span><span class="co">#&gt;           4 </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; attr(,"out.attrs")$dimnames</span></span>
-<span><span class="co">#&gt; attr(,"out.attrs")$dimnames$temperature</span></span>
-<span><span class="co">#&gt; [1] "temperature=0.0" "temperature=0.3" "temperature=0.7" "temperature=1.0"</span></span></code></pre></div>
+<span><span class="va">classifier</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_params</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-the-module-remembers">Step 4: The Module Remembers<a class="anchor" aria-label="anchor" href="#step-4-the-module-remembers"></a>
@@ -277,9 +243,7 @@ more creative. Let’s find the best value:</p>
 configuration:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># This uses the best temperature found</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product changed my life!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product changed my life!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-5-grid-search-over-instructions">Step 5: Grid Search Over Instructions<a class="anchor" aria-label="anchor" href="#step-5-grid-search-over-instructions"></a>
@@ -303,11 +267,7 @@ configuration:</p>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 7</span></span></span>
-<span><span class="co">#&gt;   n_trials best_trial best_score mean_score std_error best_params      trials  </span></span>
-<span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1        0.9        0.9         0 <span style="color: #949494;">&lt;named list [1]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier2</span><span class="op">)</span></span></code></pre></div>
 <p>The <code>instructions_suffix</code> is appended to your base
 instructions.</p>
 </div>
@@ -328,11 +288,7 @@ instructions.</p>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier3</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 7</span></span></span>
-<span><span class="co">#&gt;   n_trials best_trial best_score mean_score std_error best_params      trials  </span></span>
-<span><span class="co">#&gt;      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>        4          1        0.9        0.9         0 <span style="color: #949494;">&lt;named list [2]&gt;</span> <span style="color: #949494;">&lt;tibble&gt;</span></span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier3</span><span class="op">)</span></span></code></pre></div>
 <p>This tests all combinations: 2 temperatures × 2 instruction variants
 = 4 total configurations.</p>
 </div>
@@ -362,10 +318,7 @@ explicit variants:</p>
 <span>  teleprompter <span class="op">=</span> <span class="va">teleprompter</span>,</span>
 <span>  trainset <span class="op">=</span> <span class="va">trainset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; Optimizing 1/3 | Score: 0.5000</span></span>
-<span><span class="co">#&gt; Optimizing 2/3 | Score: 0.5000</span></span>
-<span><span class="co">#&gt; Optimizing 3/3 | Score: 0.5000</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 <p>This combines instruction optimization with few-shot example
 selection.</p>
 </div>
@@ -381,141 +334,8 @@ selection.</p>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Processing 2/4 |  50% | ETA:  1s</span></span>
-<span><span class="co">#&gt; Processing 4/4 | 100% | ETA:  0s</span></span>
-<span><span class="co">#&gt; </span></span>
 <span></span>
-<span><span class="va">test_results</span></span>
-<span><span class="co">#&gt; $mean_score</span></span>
-<span><span class="co">#&gt; [1] 1</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $scores</span></span>
-<span><span class="co">#&gt; [1] 1 1 1 1</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $predictions</span></span>
-<span><span class="co">#&gt; $predictions[[1]]</span></span>
-<span><span class="co">#&gt; $predictions[[1]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $predictions[[2]]</span></span>
-<span><span class="co">#&gt; $predictions[[2]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "negative"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $predictions[[3]]</span></span>
-<span><span class="co">#&gt; $predictions[[3]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "neutral"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $predictions[[4]]</span></span>
-<span><span class="co">#&gt; $predictions[[4]]$sentiment</span></span>
-<span><span class="co">#&gt; [1] "positive"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $n_evaluated</span></span>
-<span><span class="co">#&gt; [1] 4</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $n_errors</span></span>
-<span><span class="co">#&gt; [1] 0</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $errors</span></span>
-<span><span class="co">#&gt; character(0)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata</span></span>
-<span><span class="co">#&gt; $metadata[[1]]</span></span>
-<span><span class="co">#&gt; $metadata[[1]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 675.3764</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[1]]$prompt_length</span></span>
-<span><span class="co">#&gt; [1] 172</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[1]]$prompt</span></span>
-<span><span class="co">#&gt; [1] "Example 1:\nreview: Decent for the price.\nOutput: neutral\n\nExample 2:\nreview: Nothing special, but it works.\nOutput: neutral\n\n\n# Input: review\nreview: Great value for money!"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[1]]$instructions</span></span>
-<span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[1]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-15 01:55:36 UTC"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[1]]$batch_index</span></span>
-<span><span class="co">#&gt; [1] 1</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[2]]</span></span>
-<span><span class="co">#&gt; $metadata[[2]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 689.6319</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[2]]$prompt_length</span></span>
-<span><span class="co">#&gt; [1] 179</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[2]]$prompt</span></span>
-<span><span class="co">#&gt; [1] "Example 1:\nreview: Decent for the price.\nOutput: neutral\n\nExample 2:\nreview: Nothing special, but it works.\nOutput: neutral\n\n\n# Input: review\nreview: Stopped working after a week."</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[2]]$instructions</span></span>
-<span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[2]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-15 01:55:36 UTC"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[2]]$batch_index</span></span>
-<span><span class="co">#&gt; [1] 2</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[3]]</span></span>
-<span><span class="co">#&gt; $metadata[[3]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 677.1235</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[3]]$prompt_length</span></span>
-<span><span class="co">#&gt; [1] 181</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[3]]$prompt</span></span>
-<span><span class="co">#&gt; [1] "Example 1:\nreview: Decent for the price.\nOutput: neutral\n\nExample 2:\nreview: Nothing special, but it works.\nOutput: neutral\n\n\n# Input: review\nreview: Average product, average price."</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[3]]$instructions</span></span>
-<span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[3]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-15 01:55:37 UTC"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[3]]$batch_index</span></span>
-<span><span class="co">#&gt; [1] 3</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[4]]</span></span>
-<span><span class="co">#&gt; $metadata[[4]]$latency_ms</span></span>
-<span><span class="co">#&gt; [1] 708.7743</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[4]]$prompt_length</span></span>
-<span><span class="co">#&gt; [1] 189</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[4]]$prompt</span></span>
-<span><span class="co">#&gt; [1] "Example 1:\nreview: Decent for the price.\nOutput: neutral\n\nExample 2:\nreview: Nothing special, but it works.\nOutput: neutral\n\n\n# Input: review\nreview: Couldn't be happier with this purchase!"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[4]]$instructions</span></span>
-<span><span class="co">#&gt; [1] "Classify the sentiment of this product review.  Respond with just the sentiment."</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[4]]$timestamp</span></span>
-<span><span class="co">#&gt; [1] "2026-02-15 01:55:38 UTC"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $metadata[[4]]$batch_index</span></span>
-<span><span class="co">#&gt; [1] 4</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $data</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 5</span></span></span>
-<span><span class="co">#&gt;   review                              sentiment result       .metadata    .chat </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                               <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;list&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Great value for money!              positive  <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Stopped working after a week.       negative  <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Average product, average price.     neutral   <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Couldn't be happier with this purc… positive  <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #949494;">&lt;Chat&gt;</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; attr(,"class")</span></span>
-<span><span class="co">#&gt; [1] "dsprrr_evaluation"</span></span></code></pre></div>
+<span><span class="va">test_results</span></span></code></pre></div>
 <p>Compare to baseline:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
@@ -526,14 +346,9 @@ selection.</p>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Processing 2/4 |  50% | ETA:  1s</span></span>
-<span><span class="co">#&gt; Processing 4/4 | 100% | ETA:  0s</span></span>
-<span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Baseline test accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">baseline_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Baseline test accuracy: 100%</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Optimized test accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">test_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Optimized test accuracy: 100%</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Optimized test accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">test_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-9-different-metrics-for-different-tasks">Step 9: Different Metrics for Different Tasks<a class="anchor" aria-label="anchor" href="#step-9-different-metrics-for-different-tasks"></a>
@@ -542,101 +357,18 @@ selection.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># For text generation - token overlap</span></span>
 <span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; function (prediction, expected) </span></span>
-<span><span class="co">#&gt; {</span></span>
-<span><span class="co">#&gt;     if (!is.null(field)) {</span></span>
-<span><span class="co">#&gt;         prediction &lt;- extract_field(prediction, field)</span></span>
-<span><span class="co">#&gt;         expected &lt;- extract_field(expected, field)</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt;     pred_str &lt;- as.character(prediction)</span></span>
-<span><span class="co">#&gt;     exp_str &lt;- as.character(expected)</span></span>
-<span><span class="co">#&gt;     if (normalize) {</span></span>
-<span><span class="co">#&gt;         pred_str &lt;- normalize_text(pred_str)</span></span>
-<span><span class="co">#&gt;         exp_str &lt;- normalize_text(exp_str)</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt;     pred_tokens &lt;- unlist(strsplit(pred_str, "\\s+"))</span></span>
-<span><span class="co">#&gt;     exp_tokens &lt;- unlist(strsplit(exp_str, "\\s+"))</span></span>
-<span><span class="co">#&gt;     common &lt;- intersect(pred_tokens, exp_tokens)</span></span>
-<span><span class="co">#&gt;     num_common &lt;- length(common)</span></span>
-<span><span class="co">#&gt;     if (length(pred_tokens) == 0 &amp;&amp; length(exp_tokens) == 0) {</span></span>
-<span><span class="co">#&gt;         return(1)</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt;     if (num_common == 0) {</span></span>
-<span><span class="co">#&gt;         return(0)</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt;     precision &lt;- num_common/length(pred_tokens)</span></span>
-<span><span class="co">#&gt;     recall &lt;- num_common/length(exp_tokens)</span></span>
-<span><span class="co">#&gt;     f1 &lt;- 2 * precision * recall/(precision + recall)</span></span>
-<span><span class="co">#&gt;     f1</span></span>
-<span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x5629583ba400&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x5629583ff060&gt;</span></span>
 <span></span>
 <span><span class="co"># Check if output contains a string</span></span>
 <span><span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"error"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; function (prediction, expected = NULL) </span></span>
-<span><span class="co">#&gt; {</span></span>
-<span><span class="co">#&gt;     if (!is.null(field)) {</span></span>
-<span><span class="co">#&gt;         prediction &lt;- extract_field(prediction, field)</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt;     pred_str &lt;- as.character(prediction)</span></span>
-<span><span class="co">#&gt;     if (fixed &amp;&amp; ignore_case) {</span></span>
-<span><span class="co">#&gt;         grepl(tolower(pattern), tolower(pred_str), fixed = TRUE)</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt;     else if (fixed) {</span></span>
-<span><span class="co">#&gt;         grepl(pattern, pred_str, fixed = TRUE)</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt;     else {</span></span>
-<span><span class="co">#&gt;         grepl(pattern, pred_str, ignore.case = ignore_case, fixed = FALSE)</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x56295cce47f8&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x56295cce2050&gt;</span></span>
 <span></span>
 <span><span class="co"># Custom logic</span></span>
 <span><span class="fu"><a href="../reference/metric_custom.html">metric_custom</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="co"># Return TRUE/FALSE or 0-1 score</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">100</span></span>
 <span><span class="op">}</span>, name <span class="op">=</span> <span class="st">"concise"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; function (prediction, expected) </span></span>
-<span><span class="co">#&gt; {</span></span>
-<span><span class="co">#&gt;     tryCatch({</span></span>
-<span><span class="co">#&gt;         result &lt;- fn(prediction, expected)</span></span>
-<span><span class="co">#&gt;         if (!is.logical(result) &amp;&amp; !is.numeric(result)) {</span></span>
-<span><span class="co">#&gt;             cli::cli_abort(c("Metric {.fn {metric_name}} must return logical or numeric value", </span></span>
-<span><span class="co">#&gt;                 x = "Got {.cls {class(result)}}"))</span></span>
-<span><span class="co">#&gt;         }</span></span>
-<span><span class="co">#&gt;         if (is.numeric(result)) {</span></span>
-<span><span class="co">#&gt;             if (result &lt; 0 || result &gt; 1) {</span></span>
-<span><span class="co">#&gt;                 cli::cli_warn(c("Metric {.fn {metric_name}} returned value outside [0, 1]", </span></span>
-<span><span class="co">#&gt;                   i = "Value: {result}"))</span></span>
-<span><span class="co">#&gt;                 result &lt;- max(0, min(1, result))</span></span>
-<span><span class="co">#&gt;             }</span></span>
-<span><span class="co">#&gt;         }</span></span>
-<span><span class="co">#&gt;         result</span></span>
-<span><span class="co">#&gt;     }, error = function(e) {</span></span>
-<span><span class="co">#&gt;         cli::cli_abort(c(paste0("Error in metric ", metric_name), </span></span>
-<span><span class="co">#&gt;             x = e$message), parent = e)</span></span>
-<span><span class="co">#&gt;     })</span></span>
-<span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x562960fee7c0&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x562961013950&gt;</span></span>
 <span></span>
 <span><span class="co"># Threshold wrapper</span></span>
-<span><span class="fu"><a href="../reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
-<span><span class="co">#&gt; function (prediction, expected) </span></span>
-<span><span class="co">#&gt; {</span></span>
-<span><span class="co">#&gt;     score &lt;- metric(prediction, expected)</span></span>
-<span><span class="co">#&gt;     if (!is.numeric(score)) {</span></span>
-<span><span class="co">#&gt;         cli::cli_abort("Base metric must return numeric value for threshold comparison")</span></span>
-<span><span class="co">#&gt;     }</span></span>
-<span><span class="co">#&gt;     result &lt;- switch(comparison, `&gt;=` = score &gt;= threshold, `&gt;` = score &gt; </span></span>
-<span><span class="co">#&gt;         threshold, `==` = score == threshold, `&lt;` = score &lt; threshold, </span></span>
-<span><span class="co">#&gt;         `&lt;=` = score &lt;= threshold)</span></span>
-<span><span class="co">#&gt;     result</span></span>
-<span><span class="co">#&gt; }</span></span>
-<span><span class="co">#&gt; &lt;bytecode: 0x5629617dafe8&gt;</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x5629617dbf00&gt;</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-10-tracking-costs">Step 10: Tracking Costs<a class="anchor" aria-label="anchor" href="#step-10-tracking-costs"></a>

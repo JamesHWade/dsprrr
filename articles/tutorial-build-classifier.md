@@ -25,14 +25,6 @@ Remembers its configuration - Can be saved and reused
 
 ``` r
 library(dsprrr)
-#> 
-#> Attaching package: 'dsprrr'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
-#> The following object is masked from 'package:methods':
-#> 
-#>     signature
 library(ellmer)
 ```
 
@@ -58,27 +50,11 @@ function wraps a signature into a reusable object:
 
 ``` r
 chat <- chat_openai()
-#> Using model = "gpt-4.1".
 
 classifier <- chat |>
   as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 classifier
-#> 
-#> ── PredictModule ──
-#> 
-#> ── Signature 
-#> 
-#> ── Signature ──
-#> 
-#> ── Inputs 
-#> • text: "string" - Input: text
-#> 
-#> ── Output 
-#> Type: "object(sentiment: enum(positive, negative, neutral))"
-#> 
-#> ── Instructions 
-#> Given the fields `text`, produce the fields `sentiment`.
 ```
 
 Now `classifier` is an object you can use repeatedly.
@@ -89,24 +65,16 @@ Use the `$predict()` method to classify:
 
 ``` r
 classifier$predict(text = "I absolutely loved this movie!")
-#> $sentiment
-#> [1] "positive"
 ```
 
 Try a few more:
 
 ``` r
 classifier$predict(text = "This was a complete waste of time.")
-#> $sentiment
-#> [1] "negative"
 
 classifier$predict(text = "It was okay, I guess.")
-#> $sentiment
-#> [1] "neutral"
 
 classifier$predict(text = "The service was terrible but the food was amazing.")
-#> $sentiment
-#> [1] "neutral"
 ```
 
 ## Step 4: Batch Processing
@@ -124,29 +92,6 @@ reviews <- c(
 )
 
 classifier$predict(text = reviews)
-#> [[1]]
-#> [[1]]$sentiment
-#> [1] "positive"
-#> 
-#> 
-#> [[2]]
-#> [[2]]$sentiment
-#> [1] "negative"
-#> 
-#> 
-#> [[3]]
-#> [[3]]$sentiment
-#> [1] "neutral"
-#> 
-#> 
-#> [[4]]
-#> [[4]]$sentiment
-#> [1] "positive"
-#> 
-#> 
-#> [[5]]
-#> [[5]]$sentiment
-#> [1] "negative"
 ```
 
 All five classifications came back in a single call. Much more efficient
@@ -168,17 +113,6 @@ sig <- signature(
 )
 
 sig
-#> 
-#> ── Signature ──
-#> 
-#> ── Inputs
-#> • text: "string" - Input: text
-#> 
-#> ── Output
-#> Type: "object(sentiment: enum(positive, negative, neutral))"
-#> 
-#> ── Instructions
-#> Classify the overall sentiment. If mixed, choose the dominant emotion.
 ```
 
 Now create a module from the signature:
@@ -187,24 +121,6 @@ Now create a module from the signature:
 classifier2 <- module(sig, type = "predict")
 
 classifier2
-#> 
-#> ── PredictModule ──
-#> 
-#> ── Signature
-#> 
-#> ── Signature ──
-#> 
-#> ── Inputs
-#> • text: "string" - Input: text
-#> 
-#> ── Output
-#> Type: "object(sentiment: enum(positive, negative, neutral))"
-#> 
-#> ── Instructions
-#> Classify the overall sentiment. If mixed, choose the dominant emotion.
-#> 
-#> ── Cache
-#> Hit rate: 0% (0 hits, 9 misses)
 ```
 
 ## Step 6: Running with `run()`
@@ -215,8 +131,6 @@ execute:
 
 ``` r
 run(classifier2, text = "This is fantastic!", .llm = chat)
-#> $sentiment
-#> [1] "positive"
 ```
 
 Notice you pass the chat object via `.llm`. This gives you
@@ -230,14 +144,6 @@ run(
   text = c("Love it!", "Hate it!", "It's fine"),
   .llm = chat
 )
-#> [[1]]
-#> [1] "positive"
-#> 
-#> [[2]]
-#> [1] "negative"
-#> 
-#> [[3]]
-#> [1] "neutral"
 ```
 
 ## Step 7: Working with Data Frames
@@ -260,13 +166,6 @@ reviews_df <- tibble(
 
 results <- run_dataset(classifier2, reviews_df, .llm = chat)
 results
-#> # A tibble: 4 × 3
-#>      id text                             result   
-#>   <int> <chr>                            <list>   
-#> 1     1 Absolutely wonderful experience! <chr [1]>
-#> 2     2 Never buying from them again.    <chr [1]>
-#> 3     3 Solid product, fair price.       <chr [1]>
-#> 4     4 Changed my life for the better.  <chr [1]>
 ```
 
 The results include your original columns plus the classification.
@@ -291,7 +190,6 @@ run(
   review_text = "Five stars! Would buy again!",
   .llm = chat
 )
-#> [1] "positive"
 ```
 
 Descriptions help the LLM understand what it’s working with.

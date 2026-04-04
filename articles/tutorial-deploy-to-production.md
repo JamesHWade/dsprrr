@@ -22,20 +22,11 @@ deployment
 
 ``` r
 library(dsprrr)
-#> 
-#> Attaching package: 'dsprrr'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
-#> The following object is masked from 'package:methods':
-#> 
-#>     signature
 library(ellmer)
 library(pins)
 library(tibble)
 
 chat <- chat_openai()
-#> Using model = "gpt-4.1".
 ```
 
 ## Step 1: Create an Optimized Module
@@ -70,8 +61,6 @@ classifier <- compile_module(
 
 # Verify it works
 run(classifier, review = "This product is fantastic!", .llm = chat)
-#> $sentiment
-#> [1] "positive"
 ```
 
 ## Step 2: Save Configuration with Pins
@@ -85,11 +74,6 @@ board <- board_folder(tempdir())
 
 # Save the module configuration
 pin_module_config(board, "sentiment-classifier", classifier)
-#> Creating new version '20260215T015419Z-c8191'
-#> Writing to pin 'sentiment-classifier'
-#> ✔ Pinned module configuration: "sentiment-classifier"
-#> ℹ Module type: <PredictModule>
-#> ℹ Compiled: TRUE
 ```
 
 Your optimized configuration—including demos, parameters, and
@@ -101,27 +85,9 @@ See what’s stored:
 
 ``` r
 board |> pin_list()
-#> [1] "sentiment-classifier"
 
 # Get metadata
 board |> pin_meta("sentiment-classifier")
-#> List of 13
-#>  $ file       : chr "sentiment-classifier.rds"
-#>  $ file_size  : 'fs_bytes' int 490
-#>  $ pin_hash   : chr "c8191750c8d32279"
-#>  $ type       : chr "rds"
-#>  $ title      : chr "sentiment-classifier: a pinned list"
-#>  $ description: chr "dsprrr module config: sentiment-classifier"
-#>  $ tags       : NULL
-#>  $ urls       : NULL
-#>  $ created    : POSIXct[1:1], format: "2026-02-15 01:54:19"
-#>  $ api_version: int 1
-#>  $ user       : list()
-#>  $ name       : chr "sentiment-classifier"
-#>  $ local      :List of 3
-#>   ..$ dir    : 'fs_path' chr "/tmp/RtmpVPw6EE/sentiment-classifier/20260215T015419Z-c8191"
-#>   ..$ url    : NULL
-#>   ..$ version: chr "20260215T015419Z-c8191"
 ```
 
 ## Step 4: Restore in a New Session
@@ -132,13 +98,9 @@ Imagine you restart R or deploy to a different machine:
 # Later, in a new session...
 config <- pins::pin_read(board, "sentiment-classifier")
 restored <- restore_module_config(config)
-#> ✔ Restored module from configuration
-#> ℹ Module type: <PredictModule>
-#> ℹ Original dsprrr version: "0.0.0.9000"
 
 # It works immediately
 run(restored, review = "Worst product ever!", .llm = chat)
-#> [1] "negative"
 ```
 
 The restored module has all the optimization work preserved.
@@ -154,25 +116,12 @@ improved <- compile_module(
   teleprompter = LabeledFewShot(k = 4L),  # Try more examples
   trainset = trainset
 )
-#> Warning: Program appears to be already compiled
-#> ℹ Previous teleprompter: LabeledFewShot
-#> ℹ Recompiling with: dsprrr::LabeledFewShot
 
 # Save again - creates new version
 pin_module_config(board, "sentiment-classifier", improved)
-#> Creating new version '20260215T015419Z-69c6e'
-#> Writing to pin 'sentiment-classifier'
-#> ✔ Pinned module configuration: "sentiment-classifier"
-#> ℹ Module type: <PredictModule>
-#> ℹ Compiled: TRUE
 
 # List versions
 board |> pin_versions("sentiment-classifier")
-#> # A tibble: 2 × 3
-#>   version                created             hash 
-#>   <chr>                  <dttm>              <chr>
-#> 1 20260215T015419Z-69c6e 2026-02-15 01:54:19 69c6e
-#> 2 20260215T015419Z-c8191 2026-02-15 01:54:19 c8191
 ```
 
 ## Step 6: Roll Back to Previous Version
@@ -188,9 +137,6 @@ if (nrow(versions) > 1) {
   config <- pins::pin_read(board, "sentiment-classifier", version = versions$version[1])
   original <- restore_module_config(config)
 }
-#> ✔ Restored module from configuration
-#> ℹ Module type: <PredictModule>
-#> ℹ Original dsprrr version: "0.0.0.9000"
 ```
 
 ## Step 7: Save Execution Traces
@@ -235,41 +181,8 @@ validation <- validate_workflow(
   module = classifier,
   board = board
 )
-#> 
-#> ── Workflow Validation ──
-#> 
-#> ✔ module: Module type: PredictModule
-#> ✔ signature: 1 input(s) defined
-#> ✔ board: Board type: pins_board_folder
-#> ✔ Workflow validation passed
 
 validation
-#> $valid
-#> [1] TRUE
-#> 
-#> $checks
-#> $checks$module
-#> $checks$module$passed
-#> [1] TRUE
-#> 
-#> $checks$module$message
-#> [1] "Module type: PredictModule"
-#> 
-#> 
-#> $checks$signature
-#> $checks$signature$passed
-#> [1] TRUE
-#> 
-#> $checks$signature$message
-#> [1] "1 input(s) defined"
-#> 
-#> 
-#> $checks$board
-#> $checks$board$passed
-#> [1] TRUE
-#> 
-#> $checks$board$message
-#> [1] "Board type: pins_board_folder"
 ```
 
 This checks: - Module is a valid DSPrrr module - Signature has inputs
