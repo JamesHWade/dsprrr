@@ -276,6 +276,12 @@ test_that("MultiChainComparisonModule forward calls inner module M times", {
 })
 
 test_that("MultiChainComparisonModule forward handles partial failures", {
+  # Minimal mock LLM so resolve_module_llm doesn't try to create one
+  mock_llm <- list(
+    get_turns = function() list(),
+    clone = function(deep = FALSE) mock_llm
+  )
+
   # First call succeeds, second fails, third succeeds
   call_count <- 0
   mock_mod <- list(
@@ -328,7 +334,10 @@ test_that("MultiChainComparisonModule forward handles partial failures", {
   )
 
   expect_error(
-    suppressWarnings(mcc_fail$forward(list(question = "test?"))),
+    suppressWarnings(mcc_fail$forward(
+      list(question = "test?"),
+      .llm = mock_llm
+    )),
     "All.*attempts failed"
   )
 })

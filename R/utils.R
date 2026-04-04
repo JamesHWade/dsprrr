@@ -20,8 +20,11 @@ is_ellmer_type <- function(x) {
 #' @export
 #' @keywords internal
 eval_vignette <- function() {
-  # Skip during R CMD check (cassettes may not match current code)
+  # Skip during R CMD check or CI (cassettes may not match current code)
   if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
+    return(FALSE)
+  }
+  if (nzchar(Sys.getenv("CI"))) {
     return(FALSE)
   }
 
