@@ -182,7 +182,7 @@ ReactModule <- R6::R6Class(
 
         turn_tool_calls <- list()
         for (content in turn@contents) {
-          if (inherits(content, "ContentToolRequest")) {
+          if (inherits(content, "ellmer::ContentToolRequest")) {
             turn_tool_calls <- c(
               turn_tool_calls,
               list(list(
