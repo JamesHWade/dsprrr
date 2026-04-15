@@ -167,10 +167,13 @@ ReactModule <- R6::R6Class(
       )
 
       all_conversation_turns <- get_turns_safe(llm)
-      new_turns <- all_conversation_turns[seq(
-        n_turns_before + 1L,
-        length(all_conversation_turns)
-      )]
+      n_turns_after <- length(all_conversation_turns)
+
+      new_turns <- if (n_turns_after > n_turns_before) {
+        all_conversation_turns[seq(n_turns_before + 1L, n_turns_after)]
+      } else {
+        list()
+      }
 
       tool_calls <- list()
       iterations <- 0L
