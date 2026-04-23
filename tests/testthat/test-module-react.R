@@ -144,6 +144,80 @@ test_that("ReactModule max_iterations is configurable", {
   expect_equal(mod$max_iterations, 20L)
 })
 
+test_that("ReactModule forward tracks tool calls from ellmer turns", {
+  turns <- list()
+
+  last_turn <- function(role = c("assistant", "user"), ...) {
+    role <- match.arg(role)
+    role_turns <- Filter(function(turn) identical(turn@role, role), turns)
+
+    if (length(role_turns) == 0) {
+      stop("no turns")
+    }
+
+    role_turns[[length(role_turns)]]
+  }
+
+  mock_llm <- structure(
+    list(
+      register_tool = function(tool) invisible(NULL),
+      get_turns = function(...) turns,
+      last_turn = last_turn,
+      chat = function(prompt, echo = "none", ...) {
+        user_turn <- ellmer::UserTurn(
+          contents = list(ellmer::ContentText(prompt))
+        )
+        first_tool_turn <- ellmer::AssistantTurn(
+          contents = list(ellmer::ContentToolRequest(
+            id = "call_1",
+            name = "lookup",
+            arguments = list(query = "alpha")
+          ))
+        )
+        second_tool_turn <- ellmer::AssistantTurn(
+          contents = list(ellmer::ContentToolRequest(
+            id = "call_2",
+            name = "summarize",
+            arguments = list(value = "beta")
+          ))
+        )
+
+        turns <<- c(
+          turns,
+          list(user_turn, first_tool_turn, second_tool_turn)
+        )
+        invisible(NULL)
+      },
+      chat_structured = function(prompt, type, echo = "none", ...) {
+        final_turn <- ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+        )
+        turns <<- c(turns, list(final_turn))
+        list(answer = "done")
+      },
+      get_model = function() "mock-model"
+    ),
+    class = "Chat"
+  )
+
+  sig <- signature("question -> answer")
+  mod <- module(sig, type = "react")
+
+  result <- mod$forward(list(question = "test"), .llm = mock_llm, trace = TRUE)
+  metadata <- result$metadata[[1]]
+
+  expect_equal(metadata$iterations, 2L)
+  expect_length(metadata$tool_calls, 2)
+  expect_equal(
+    vapply(metadata$tool_calls, `[[`, character(1), "tool_name"),
+    c("lookup", "summarize")
+  )
+  expect_equal(metadata$tool_calls[[1]]$arguments$query, "alpha")
+  expect_equal(metadata$tool_calls[[2]]$arguments$value, "beta")
+  expect_equal(metadata$tools_used, c("lookup", "summarize"))
+  expect_equal(mod$state$traces[[1]]$iterations, 2L)
+})
+
 test_that("ReactModule print includes tool info", {
   skip_if_not_installed("ellmer")
 

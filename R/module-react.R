@@ -20,14 +20,16 @@ ReactModule <- R6::R6Class(
     #' @field tools List of ToolDef objects for the module
     tools = NULL,
 
-    #' @field max_iterations Maximum number of ReAct iterations
+    #' @field max_iterations Maximum expected number of ReAct tool iterations
     max_iterations = 10L,
 
     #' @description
     #' Initialize a new ReactModule
     #' @param signature S7 Signature object
     #' @param tools List of ellmer ToolDef objects
-    #' @param max_iterations Maximum iterations for ReAct loop (default: 10)
+    #' @param max_iterations Maximum expected tool-call iterations before
+    #'   warning. ellmer executes the tool loop internally, so this is checked
+    #'   after the chat call completes.
     #' @param template Optional glue template string
     #' @param demos Optional list of demonstrations
     #' @param config Optional configuration list
@@ -145,7 +147,9 @@ ReactModule <- R6::R6Class(
         tryCatch(
           {
             fn <- chat$get_turns
-            if (!is.function(fn)) return(list())
+            if (!is.function(fn)) {
+              return(list())
+            }
             fn()
           },
           error = function(e) list()
@@ -180,7 +184,9 @@ ReactModule <- R6::R6Class(
       all_turns <- list()
 
       for (turn in new_turns) {
-        if (turn@role != "assistant") next
+        if (turn@role != "assistant") {
+          next
+        }
         all_turns <- c(all_turns, list(turn))
 
         turn_tool_calls <- list()
@@ -204,7 +210,9 @@ ReactModule <- R6::R6Class(
         }
       }
 
-      if (iterations == 0L) iterations <- 1L
+      if (iterations == 0L) {
+        iterations <- 1L
+      }
 
       if (iterations > self$max_iterations) {
         cli::cli_warn(c(
