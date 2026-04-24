@@ -229,7 +229,10 @@ format_history_transcript <- function(entries) {
     if (!is.na(cost) || (!is.na(tokens_in) && !is.na(tokens_out))) {
       metadata <- character()
       if (!is.na(tokens_in) && !is.na(tokens_out)) {
-        metadata <- c(metadata, paste0("Tokens: ", tokens_in, " in, ", tokens_out, " out"))
+        metadata <- c(
+          metadata,
+          paste0("Tokens: ", tokens_in, " in, ", tokens_out, " out")
+        )
       }
       if (!is.na(cost)) {
         metadata <- c(metadata, paste0("Cost: $", format(cost, digits = 4)))

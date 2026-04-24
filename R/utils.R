@@ -173,7 +173,9 @@ validate_signature_inputs <- function(
     }
   }
 
-  if (type == "warn" && isTRUE(getOption("dsprrr.warn_on_type_mismatch", TRUE))) {
+  if (
+    type == "warn" && isTRUE(getOption("dsprrr.warn_on_type_mismatch", TRUE))
+  ) {
     warn_signature_type_mismatches(sig, inputs)
   }
 
@@ -246,7 +248,9 @@ warn_signature_type_mismatches <- function(sig, inputs) {
 #' Check whether an R value is compatible with an ellmer type
 #' @noRd
 input_value_matches_type <- function(value, expected_type) {
-  if (is.null(expected_type) || inherits(expected_type, "ellmer::TypeJsonSchema")) {
+  if (
+    is.null(expected_type) || inherits(expected_type, "ellmer::TypeJsonSchema")
+  ) {
     return(TRUE)
   }
 
@@ -264,7 +268,9 @@ input_value_matches_type <- function(value, expected_type) {
   }
 
   if (inherits(expected_type, "ellmer::TypeEnum")) {
-    return(is.character(value) && all(is.na(value) | value %in% expected_type@values))
+    return(
+      is.character(value) && all(is.na(value) | value %in% expected_type@values)
+    )
   }
 
   if (inherits(expected_type, "ellmer::TypeArray")) {

@@ -55,12 +55,15 @@ input <- function(name, type = NULL, description = NULL, ...) {
 
   # Create the input specification
   structure(
-    c(list(
-      name = name,
-      type = normalized_type, # Store the ellmer type
-      description = description,
-      .type_explicit = isTRUE(type_explicit)
-    ), dots),
+    c(
+      list(
+        name = name,
+        type = normalized_type, # Store the ellmer type
+        description = description,
+        .type_explicit = isTRUE(type_explicit)
+      ),
+      dots
+    ),
     class = "dsprrr_input"
   )
 }

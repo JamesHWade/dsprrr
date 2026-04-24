@@ -14,3 +14,4 @@
 \description{
 Print method for BetterTogether
 }
+\keyword{internal}

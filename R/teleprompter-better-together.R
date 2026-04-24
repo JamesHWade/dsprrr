@@ -204,8 +204,10 @@ compile_better_together <- function(
   }
 
   if (length(optimizer_compile_args) > 0) {
-    if (is.null(names(optimizer_compile_args)) ||
-      any(!nzchar(names(optimizer_compile_args)))) {
+    if (
+      is.null(names(optimizer_compile_args)) ||
+        any(!nzchar(names(optimizer_compile_args)))
+    ) {
       cli::cli_abort("{.arg optimizer_compile_args} must be named")
     }
   }
@@ -255,12 +257,15 @@ compile_better_together <- function(
     max_errors = teleprompter@max_errors,
     verbose = FALSE
   )
-  candidates <- append(candidates, list(better_together_candidate(
-    program = current,
-    strategy = "",
-    step = 0L,
-    score = baseline_score
-  )))
+  candidates <- append(
+    candidates,
+    list(better_together_candidate(
+      program = current,
+      strategy = "",
+      step = 0L,
+      score = baseline_score
+    ))
+  )
 
   if (teleprompter@verbose) {
     display_score <- format_better_together_score(baseline_score)
@@ -322,12 +327,15 @@ compile_better_together <- function(
       max_errors = teleprompter@max_errors,
       verbose = FALSE
     )
-    candidates <- append(candidates, list(better_together_candidate(
-      program = current,
-      strategy = current_strategy,
-      step = as.integer(i),
-      score = score
-    )))
+    candidates <- append(
+      candidates,
+      list(better_together_candidate(
+        program = current,
+        strategy = current_strategy,
+        step = as.integer(i),
+        score = score
+      ))
+    )
 
     if (teleprompter@verbose) {
       display_score <- format_better_together_score(score)
@@ -385,7 +393,11 @@ better_together_optimizers <- function(teleprompter) {
 }
 
 parse_better_together_strategy <- function(strategy, optimizers) {
-  if (!is.character(strategy) || length(strategy) != 1 || !nzchar(trimws(strategy))) {
+  if (
+    !is.character(strategy) ||
+      length(strategy) != 1 ||
+      !nzchar(trimws(strategy))
+  ) {
     cli::cli_abort("{.arg strategy} must be a non-empty string")
   }
 
@@ -413,8 +425,12 @@ better_together_train_val_split <- function(
   valset_ratio = 0.1,
   seed = NULL
 ) {
-  if (length(valset_ratio) != 1 || is.na(valset_ratio) ||
-    valset_ratio < 0 || valset_ratio >= 1) {
+  if (
+    length(valset_ratio) != 1 ||
+      is.na(valset_ratio) ||
+      valset_ratio < 0 ||
+      valset_ratio >= 1
+  ) {
     cli::cli_abort("{.arg valset_ratio} must be in [0, 1)")
   }
 
@@ -438,13 +454,16 @@ better_together_train_val_split <- function(
     } else {
       NULL
     }
-    on.exit({
-      if (is.null(old_seed)) {
-        rm(".Random.seed", envir = globalenv())
-      } else {
-        assign(".Random.seed", old_seed, envir = globalenv())
-      }
-    }, add = TRUE)
+    on.exit(
+      {
+        if (is.null(old_seed)) {
+          rm(".Random.seed", envir = globalenv())
+        } else {
+          assign(".Random.seed", old_seed, envir = globalenv())
+        }
+      },
+      add = TRUE
+    )
     set.seed(seed)
   }
 
@@ -467,7 +486,10 @@ better_together_compile_step <- function(
     cli::cli_abort("Each optimizer_compile_args entry must be a list")
   }
 
-  blocked <- intersect(names(step_args), c("teleprompter", "program", "student"))
+  blocked <- intersect(
+    names(step_args),
+    c("teleprompter", "program", "student")
+  )
   if (length(blocked) > 0) {
     cli::cli_abort(c(
       "Optimizer compile arguments cannot override the current program",
@@ -531,10 +553,14 @@ sort_better_together_candidates <- function(candidates) {
   }
 
   order_idx <- order(
-    vapply(candidates, function(x) {
-      score <- x$score
-      if (is.na(score)) -Inf else score
-    }, numeric(1)),
+    vapply(
+      candidates,
+      function(x) {
+        score <- x$score
+        if (is.na(score)) -Inf else score
+      },
+      numeric(1)
+    ),
     seq_along(candidates) * -1,
     decreasing = TRUE
   )
@@ -561,6 +587,7 @@ format_better_together_score <- function(score) {
 #' Print method for BetterTogether
 #' @param x A BetterTogether object
 #' @param ... Additional arguments
+#' @keywords internal
 #' @export
 print.BetterTogether <- function(x, ...) {
   cli::cli_h3("BetterTogether Teleprompter")
