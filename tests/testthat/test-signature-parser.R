@@ -15,6 +15,13 @@ test_that("parse_signature handles multiple inputs", {
   expect_equal(sig@inputs[[2]]$name, "question")
 })
 
+test_that("parse_signature marks only annotated input types explicit", {
+  sig <- parse_signature("context, age: integer -> answer")
+
+  expect_false(sig@inputs[[1]]$.type_explicit)
+  expect_true(sig@inputs[[2]]$.type_explicit)
+})
+
 test_that("parse_signature handles output type annotations", {
   # Float type - wrapped in TypeObject
   sig1 <- parse_signature("question -> answer: float")

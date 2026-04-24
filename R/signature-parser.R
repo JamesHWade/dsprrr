@@ -137,6 +137,8 @@ parse_inputs <- function(inputs_str) {
   # Create input objects
   inputs <- lapply(input_specs, function(spec) {
     spec <- trimws(spec)
+    type_explicit <- FALSE
+
     # Check for type annotation (e.g., "text: string" or "choices: list[string]")
     if (grepl(":", spec, fixed = TRUE)) {
       # Find the first colon not inside brackets
@@ -161,6 +163,7 @@ parse_inputs <- function(inputs_str) {
         type_str <- trimws(substr(spec, colon_pos + 1, nchar(spec)))
         # Parse the type string to get the ellmer type
         type <- parse_type_string(type_str)
+        type_explicit <- TRUE
       } else {
         name <- spec
         type <- NULL
@@ -173,7 +176,8 @@ parse_inputs <- function(inputs_str) {
     input(
       name = trimws(name),
       type = type,
-      description = paste("Input:", trimws(name))
+      description = paste("Input:", trimws(name)),
+      .type_explicit = type_explicit
     )
   })
 

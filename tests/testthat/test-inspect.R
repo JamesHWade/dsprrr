@@ -184,6 +184,35 @@ test_that("inspect_history respects include_prompts parameter", {
   clear_prompt_history()
 })
 
+test_that("inspect_history writes a plain transcript to file", {
+  clear_prompt_history()
+  on.exit(clear_prompt_history())
+
+  trace <- list(
+    timestamp = as.POSIXct("2026-04-21 12:00:00", tz = "UTC"),
+    prompt = "Test prompt",
+    output = "Test response",
+    model = "test-model",
+    input_tokens = 10L,
+    output_tokens = 5L,
+    cost = 0.001
+  )
+  add_to_global_history(trace, source = "test")
+
+  tmp <- tempfile(fileext = ".txt")
+  on.exit(unlink(tmp), add = TRUE)
+
+  result <- inspect_history(n = 1, file = tmp)
+  transcript <- paste(readLines(tmp), collapse = "\n")
+
+  expect_s3_class(result, "tbl_df")
+  expect_match(transcript, "Prompt:")
+  expect_match(transcript, "Test prompt")
+  expect_match(transcript, "Response:")
+  expect_match(transcript, "Test response")
+  expect_match(transcript, "Model: test-model")
+})
+
 test_that("print.dsprrr_prompt_inspection works", {
   clear_prompt_history()
 

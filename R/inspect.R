@@ -72,6 +72,9 @@ get_last_prompt <- function() {
 #'   Default is TRUE.
 #' @param include_responses Logical; whether to include full response text.
 #'   Default is TRUE.
+#' @param file Optional file path or writable connection. When supplied, a
+#'   human-readable transcript of the selected history is written without ANSI
+#'   styling.
 #'
 #' @return A tibble with one row per LLM call containing:
 #'   - `timestamp`: When the call was made
@@ -97,7 +100,8 @@ get_last_prompt <- function() {
 inspect_history <- function(
   n = 10,
   include_prompts = TRUE,
-  include_responses = TRUE
+  include_responses = TRUE,
+  file = NULL
 ) {
   history <- .dsprrr_env$prompt_history
   if (is.null(history) || length(history) == 0) {
@@ -110,6 +114,10 @@ inspect_history <- function(
   n_to_get <- min(n, n_available)
   start_idx <- n_available - n_to_get + 1
   entries <- history[start_idx:n_available]
+
+  if (!is.null(file)) {
+    write_history_transcript(entries, file = file)
+  }
 
   # Build tibble from entries
   result <- tibble::tibble(
@@ -167,6 +175,72 @@ inspect_history <- function(
   }
 
   result
+}
+
+# Internal: Write selected history entries to a file path or connection
+write_history_transcript <- function(entries, file) {
+  transcript <- format_history_transcript(entries)
+
+  if (inherits(file, "connection")) {
+    writeLines(transcript, con = file)
+    return(invisible(file))
+  }
+
+  if (!is.character(file) || length(file) != 1 || !nzchar(file)) {
+    cli::cli_abort("{.arg file} must be a file path or writable connection")
+  }
+
+  con <- base::file(file, open = "w", encoding = "UTF-8")
+  on.exit(close(con), add = TRUE)
+  writeLines(transcript, con = con)
+  invisible(file)
+}
+
+# Internal: Format prompt history as a plain transcript
+format_history_transcript <- function(entries) {
+  if (length(entries) == 0) {
+    return(character())
+  }
+
+  blocks <- lapply(entries, function(entry) {
+    timestamp <- entry$timestamp %||% Sys.time()
+    timestamp <- format(timestamp, "%Y-%m-%d %H:%M:%S")
+    source <- entry$source %||% "unknown"
+    model <- entry$model %||% NA_character_
+
+    lines <- c(
+      paste0("[", timestamp, "] ", source),
+      if (!is.na(model)) paste0("Model: ", model) else NULL
+    )
+
+    prompt <- entry$prompt %||% NA_character_
+    if (!is.na(prompt) && nzchar(prompt)) {
+      lines <- c(lines, "", "Prompt:", prompt)
+    }
+
+    response <- entry$response %||% NA_character_
+    if (!is.na(response) && nzchar(response)) {
+      lines <- c(lines, "", "Response:", response)
+    }
+
+    cost <- entry$cost %||% NA_real_
+    tokens_in <- entry$tokens_in %||% NA_integer_
+    tokens_out <- entry$tokens_out %||% NA_integer_
+    if (!is.na(cost) || (!is.na(tokens_in) && !is.na(tokens_out))) {
+      metadata <- character()
+      if (!is.na(tokens_in) && !is.na(tokens_out)) {
+        metadata <- c(metadata, paste0("Tokens: ", tokens_in, " in, ", tokens_out, " out"))
+      }
+      if (!is.na(cost)) {
+        metadata <- c(metadata, paste0("Cost: $", format(cost, digits = 4)))
+      }
+      lines <- c(lines, "", "Metadata:", paste(metadata, collapse = " | "))
+    }
+
+    paste(lines, collapse = "\n")
+  })
+
+  paste(blocks, collapse = "\n\n---\n\n")
 }
 
 #' Clear Prompt History

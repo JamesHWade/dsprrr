@@ -37,6 +37,14 @@
 #'
 #' @export
 input <- function(name, type = NULL, description = NULL, ...) {
+  dots <- list(...)
+  type_explicit <- dots$.type_explicit
+  dots$.type_explicit <- NULL
+
+  if (is.null(type_explicit)) {
+    type_explicit <- !missing(type) && !is.null(type)
+  }
+
   # Normalize the type specification, passing description if needed
   normalized_type <- normalize_input_type(type, description)
 
@@ -47,12 +55,12 @@ input <- function(name, type = NULL, description = NULL, ...) {
 
   # Create the input specification
   structure(
-    list(
+    c(list(
       name = name,
       type = normalized_type, # Store the ellmer type
       description = description,
-      ... # Additional metadata
-    ),
+      .type_explicit = isTRUE(type_explicit)
+    ), dots),
     class = "dsprrr_input"
   )
 }

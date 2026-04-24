@@ -88,18 +88,14 @@ Module <- R6::R6Class(
       inputs <- list(...)
 
       # Validate inputs against signature
-      if (length(self$signature@inputs) > 0) {
-        required_names <- vapply(
-          self$signature@inputs,
-          function(x) x$name,
-          character(1)
-        )
-        missing_inputs <- setdiff(required_names, names(inputs))
-
-        if (length(missing_inputs) > 0) {
-          cli::cli_abort("Missing required inputs: {.field {missing_inputs}}")
-        }
-      }
+      validate_signature_inputs(
+        self$signature,
+        inputs,
+        missing = "error",
+        extra = "warn",
+        type = "warn",
+        context = "inputs"
+      )
 
       # Check for batch inputs - warn if parallel requested but using $run()
       input_lengths <- lengths(inputs)

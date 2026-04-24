@@ -4,6 +4,31 @@ test_that("run generic exists and works with modules", {
   expect_true("run" %in% ls("package:dsprrr"))
 })
 
+test_that("run.PredictModule warns about input type mismatches", {
+  sig <- signature(
+    inputs = list(input_integer("count")),
+    output_type = ellmer::type_object(answer = ellmer::type_string())
+  )
+  mod <- module(sig, type = "predict")
+  mock_chat <- structure(
+    list(
+      chat_structured = function(...) list(answer = "ok"),
+      get_model = function() "mock-model",
+      get_turns = function() list(),
+      last_turn = function(role = NULL) NULL
+    ),
+    class = "Chat"
+  )
+
+  old <- options(dsprrr.warn_on_type_mismatch = TRUE)
+  on.exit(options(old))
+
+  expect_warning(
+    run(mod, count = "many", .llm = mock_chat, .cache = FALSE),
+    "Type mismatch"
+  )
+})
+
 test_that("run validates required inputs", {
   sig <- Signature(
     inputs = list(

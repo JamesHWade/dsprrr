@@ -95,6 +95,31 @@ test_that("dsp.Chat warns about extra inputs", {
   )
 })
 
+test_that("dsp.Chat warns about signature input type mismatches", {
+  mock_chat <- structure(
+    list(chat_structured = function(...) list(answer = "x")),
+    class = "Chat"
+  )
+
+  sig <- signature(
+    inputs = list(input_number("score")),
+    output_type = ellmer::type_object(answer = ellmer::type_string())
+  )
+
+  old <- options(dsprrr.warn_on_type_mismatch = TRUE)
+  on.exit(options(old))
+
+  expect_warning(
+    dsp(mock_chat, sig, score = "high"),
+    "Type mismatch"
+  )
+
+  options(dsprrr.warn_on_type_mismatch = FALSE)
+  expect_no_warning(
+    dsp(mock_chat, sig, score = "high")
+  )
+})
+
 test_that("dsp.Chat stores trace for get_last_trace()", {
   mock_chat <- structure(
     list(chat_structured = function(...) list(answer = "traced")),

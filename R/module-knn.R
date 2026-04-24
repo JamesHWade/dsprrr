@@ -209,7 +209,13 @@ KNNFewShotModule <- R6::R6Class(
       }
 
       # Find k nearest neighbors
-      nn_indices <- find_knn(query_embedding, self$train_embeddings, self$k)
+      neighbors <- find_knn_with_scores(
+        query_embedding,
+        self$train_embeddings,
+        self$k
+      )
+      nn_indices <- neighbors$indices
+      nn_scores <- neighbors$scores
 
       # Select demos from training set
       selected_demos <- self$trainset_demos[nn_indices]
@@ -228,6 +234,7 @@ KNNFewShotModule <- R6::R6Class(
       selection_info <- list(
         query_text = query_text,
         indices = nn_indices,
+        scores = nn_scores,
         n_demos = length(all_demos)
       )
       self$state$demo_selections <- c(
@@ -242,6 +249,7 @@ KNNFewShotModule <- R6::R6Class(
       if ("metadata" %in% names(result)) {
         result$metadata <- lapply(result$metadata, function(m) {
           m$knn_indices <- nn_indices
+          m$knn_scores <- nn_scores
           m$knn_n_demos <- length(all_demos)
           m
         })

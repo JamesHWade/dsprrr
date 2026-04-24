@@ -4,7 +4,12 @@
 \alias{inspect_history}
 \title{Inspect LLM Call History}
 \usage{
-inspect_history(n = 10, include_prompts = TRUE, include_responses = TRUE)
+inspect_history(
+  n = 10,
+  include_prompts = TRUE,
+  include_responses = TRUE,
+  file = NULL
+)
 }
 \arguments{
 \item{n}{Number of recent calls to return. Default is 10.}
@@ -14,6 +19,10 @@ Default is TRUE.}
 
 \item{include_responses}{Logical; whether to include full response text.
 Default is TRUE.}
+
+\item{file}{Optional file path or writable connection. When supplied, a
+human-readable transcript of the selected history is written without ANSI
+styling.}
 }
 \value{
 A tibble with one row per LLM call containing:
