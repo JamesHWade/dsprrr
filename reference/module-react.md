@@ -8,7 +8,8 @@ and observations before producing a final structured answer.
 
 Create a ReAct module with `module(type = "react", tools = list(...))`.
 If you pass `tools` with `type = "predict"`, the module automatically
-upgrades to `react`. The module runs a loop of tool calls up to
+upgrades to `react`. ellmer executes the tool-calling loop internally;
+dsprrr records the observed tool-call rounds and warns if they exceed
 `max_iterations`, then produces output based on the module signature.
 
 ## See also

@@ -99,7 +99,8 @@ tool calls, and observations before producing a final structured answer.</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Create a ReAct module with <code>module(type = "react", tools = list(...))</code>.
 If you pass <code>tools</code> with <code>type = "predict"</code>, the module automatically
-upgrades to <code>react</code>. The module runs a loop of tool calls up to
+upgrades to <code>react</code>. ellmer executes the tool-calling loop internally; dsprrr
+records the observed tool-call rounds and warns if they exceed
 <code>max_iterations</code>, then produces output based on the module signature.</p>
     </div>
     <div class="section level2">
