@@ -20,14 +20,16 @@ ReactModule <- R6::R6Class(
     #' @field tools List of ToolDef objects for the module
     tools = NULL,
 
-    #' @field max_iterations Maximum number of ReAct iterations
+    #' @field max_iterations Maximum expected number of ReAct tool iterations
     max_iterations = 10L,
 
     #' @description
     #' Initialize a new ReactModule
     #' @param signature S7 Signature object
     #' @param tools List of ellmer ToolDef objects
-    #' @param max_iterations Maximum iterations for ReAct loop (default: 10)
+    #' @param max_iterations Maximum expected tool-call iterations before
+    #'   warning. ellmer executes the tool loop internally, so this is checked
+    #'   after the chat call completes.
     #' @param template Optional glue template string
     #' @param demos Optional list of demonstrations
     #' @param config Optional configuration list
@@ -139,64 +141,61 @@ ReactModule <- R6::R6Class(
 
       prompt <- request$full_prompt
 
-      # Record start time
       start_time <- Sys.time()
 
-      # Track iterations and tool calls
-      iterations <- 0L
-      tool_calls <- list()
-      all_turns <- list()
-
-      # ReAct loop
-      repeat {
-        iterations <- iterations + 1L
-
-        if (iterations > self$max_iterations) {
-          cli::cli_warn(c(
-            "Maximum iterations ({self$max_iterations}) reached",
-            "i" = "Increase max_iterations if more reasoning steps are needed"
-          ))
-          break
-        }
-
-        # Make LLM call (non-structured to allow tool use)
+      get_turns_safe <- function(chat) {
         tryCatch(
           {
-            llm$chat(prompt, echo = "none")
+            fn <- chat$get_turns
+            if (!is.function(fn)) {
+              return(list())
+            }
+            fn()
           },
-          error = function(e) {
-            cli::cli_abort(
-              "LLM call failed in ReAct loop: {e$message}",
-              parent = e
-            )
-          }
+          error = function(e) list()
         )
+      }
 
-        # Get the last assistant turn
-        last_turn <- llm$last_turn(role = "assistant")
-        all_turns <- c(all_turns, list(last_turn))
+      n_turns_before <- length(get_turns_safe(llm))
 
-        # Check if there's a tool request in the response
-        has_tool_request <- any(vapply(
-          last_turn@contents,
-          function(c) {
-            inherits(c, "ContentToolRequest")
-          },
-          logical(1)
-        ))
-
-        if (!has_tool_request) {
-          # No more tool calls - we're done with reasoning
-          break
+      tryCatch(
+        {
+          llm$chat(prompt, echo = "none")
+        },
+        error = function(e) {
+          cli::cli_abort(
+            "LLM call failed in ReAct loop: {e$message}",
+            parent = e
+          )
         }
+      )
 
-        # Extract tool calls for tracing
-        for (content in last_turn@contents) {
-          if (inherits(content, "ContentToolRequest")) {
-            tool_calls <- c(
-              tool_calls,
+      all_conversation_turns <- get_turns_safe(llm)
+      n_turns_after <- length(all_conversation_turns)
+
+      new_turns <- if (n_turns_after > n_turns_before) {
+        all_conversation_turns[seq(n_turns_before + 1L, n_turns_after)]
+      } else {
+        list()
+      }
+
+      tool_calls <- list()
+      iterations <- 0L
+      all_turns <- list()
+
+      for (turn in new_turns) {
+        if (turn@role != "assistant") {
+          next
+        }
+        all_turns <- c(all_turns, list(turn))
+
+        turn_tool_calls <- list()
+        for (content in turn@contents) {
+          if (inherits(content, "ellmer::ContentToolRequest")) {
+            turn_tool_calls <- c(
+              turn_tool_calls,
               list(list(
-                iteration = iterations,
+                iteration = iterations + 1L,
                 tool_name = content@name,
                 tool_id = content@id,
                 arguments = content@arguments
@@ -205,9 +204,21 @@ ReactModule <- R6::R6Class(
           }
         }
 
-        # Continue the conversation (empty prompt continues with tool results)
-        # ellmer automatically handles tool execution and result injection
-        prompt <- ""
+        if (length(turn_tool_calls) > 0) {
+          iterations <- iterations + 1L
+          tool_calls <- c(tool_calls, turn_tool_calls)
+        }
+      }
+
+      if (iterations == 0L) {
+        iterations <- 1L
+      }
+
+      if (iterations > self$max_iterations) {
+        cli::cli_warn(c(
+          "Tool-calling loop ran {iterations} iterations (max: {self$max_iterations})",
+          "i" = "Increase max_iterations if more reasoning steps are needed"
+        ))
       }
 
       # Get final structured output

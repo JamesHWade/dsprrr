@@ -11,7 +11,8 @@ tool calls, and observations before producing a final structured answer.
 \details{
 Create a ReAct module with \code{module(type = "react", tools = list(...))}.
 If you pass \code{tools} with \code{type = "predict"}, the module automatically
-upgrades to \code{react}. The module runs a loop of tool calls up to
+upgrades to \code{react}. ellmer executes the tool-calling loop internally; dsprrr
+records the observed tool-call rounds and warns if they exceed
 \code{max_iterations}, then produces output based on the module signature.
 }
 \examples{
