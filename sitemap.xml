@@ -37,6 +37,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/vitals-recipes.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/authors.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/index.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/BetterTogether.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/COPRO.html</loc></url>
@@ -163,6 +164,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict_llm_class.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/predict_llm_numeric.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/prepare_candidate_grid.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/print.BetterTogether.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShotWithRandomSearch.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.COPRO.html</loc></url>

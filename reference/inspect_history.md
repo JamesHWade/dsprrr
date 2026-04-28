@@ -7,7 +7,12 @@ Similar to DSPy's `dspy.inspect_history(n)`.
 ## Usage
 
 ``` r
-inspect_history(n = 10, include_prompts = TRUE, include_responses = TRUE)
+inspect_history(
+  n = 10,
+  include_prompts = TRUE,
+  include_responses = TRUE,
+  file = NULL
+)
 ```
 
 ## Arguments
@@ -23,6 +28,12 @@ inspect_history(n = 10, include_prompts = TRUE, include_responses = TRUE)
 - include_responses:
 
   Logical; whether to include full response text. Default is TRUE.
+
+- file:
+
+  Optional file path or writable connection. When supplied, a
+  human-readable transcript of the selected history is written without
+  ANSI styling.
 
 ## Value
 

@@ -478,6 +478,8 @@ Automated prompt optimization strategies
   : BootstrapFewShotWithRandomSearch Teleprompter
 - [`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md)
   : KNNFewShot Teleprompter
+- [`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md)
+  : BetterTogether Teleprompter
 - [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
   SIMBA Teleprompter
 - [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) :

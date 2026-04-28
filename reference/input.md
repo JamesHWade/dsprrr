@@ -60,6 +60,9 @@ input("text", ellmer::type_string())
 #> $description
 #> NULL
 #> 
+#> $.type_explicit
+#> [1] TRUE
+#> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
 input("age", ellmer::type_number())
@@ -75,6 +78,9 @@ input("age", ellmer::type_number())
 #> $description
 #> NULL
 #> 
+#> $.type_explicit
+#> [1] TRUE
+#> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
 input("active", ellmer::type_boolean())
@@ -89,6 +95,9 @@ input("active", ellmer::type_boolean())
 #> 
 #> $description
 #> NULL
+#> 
+#> $.type_explicit
+#> [1] TRUE
 #> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
@@ -107,6 +116,9 @@ input("text", "string")
 #> $description
 #> NULL
 #> 
+#> $.type_explicit
+#> [1] TRUE
+#> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
 input("count", "integer")
@@ -122,6 +134,9 @@ input("count", "integer")
 #> $description
 #> NULL
 #> 
+#> $.type_explicit
+#> [1] TRUE
+#> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
 input("score", "number")
@@ -136,6 +151,9 @@ input("score", "number")
 #> 
 #> $description
 #> NULL
+#> 
+#> $.type_explicit
+#> [1] TRUE
 #> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
@@ -154,6 +172,9 @@ input("name")
 #> $description
 #> NULL
 #> 
+#> $.type_explicit
+#> [1] FALSE
+#> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
 input("name", description = "User's name")
@@ -168,6 +189,9 @@ input("name", description = "User's name")
 #> 
 #> $description
 #> [1] "User's name"
+#> 
+#> $.type_explicit
+#> [1] FALSE
 #> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
@@ -189,6 +213,9 @@ input("tags", ellmer::type_array(ellmer::type_string()))
 #> $description
 #> NULL
 #> 
+#> $.type_explicit
+#> [1] TRUE
+#> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
 input("status", ellmer::type_enum(c("pending", "active", "done")))
@@ -203,6 +230,9 @@ input("status", ellmer::type_enum(c("pending", "active", "done")))
 #> 
 #> $description
 #> NULL
+#> 
+#> $.type_explicit
+#> [1] TRUE
 #> 
 #> attr(,"class")
 #> [1] "dsprrr_input"
