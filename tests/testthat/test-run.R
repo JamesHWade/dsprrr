@@ -56,6 +56,30 @@ test_that("run validates required inputs", {
   )
 })
 
+test_that("run and Module$run preserve dotted signature input names", {
+  DottedModule <- R6::R6Class(
+    "DottedModule",
+    inherit = dsprrr:::Module,
+    public = list(
+      initialize = function() {
+        super$initialize(signature(".context -> answer"))
+      },
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        tibble::tibble(
+          output = list(batch$.context),
+          chat = list(NULL),
+          metadata = list(list())
+        )
+      }
+    )
+  )
+
+  mod <- DottedModule$new()
+
+  expect_equal(run(mod, .context = "from-run"), "from-run")
+  expect_equal(mod$run(.context = "from-module-run"), "from-module-run")
+})
+
 test_that("build_prompt creates proper prompt", {
   sig <- Signature(
     inputs = list(

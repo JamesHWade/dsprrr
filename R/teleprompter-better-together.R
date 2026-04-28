@@ -68,6 +68,9 @@ BetterTogether <- S7::new_class(
         if (is.null(names(value)) || any(!nzchar(names(value)))) {
           return("optimizers must be named")
         }
+        if (anyDuplicated(names(value))) {
+          return("optimizer names must be unique")
+        }
         bad <- !vapply(value, is_teleprompter, logical(1))
         if (any(bad)) {
           return("all optimizers must be Teleprompter objects")
@@ -109,8 +112,9 @@ BetterTogether <- S7::new_class(
       S7::class_any,
       default = NULL,
       validator = function(value) {
-        if (!is.null(value) && (!is.numeric(value) || length(value) != 1)) {
-          return("seed must be a single numeric value or NULL")
+        error <- validate_better_together_seed(value, arg = "seed")
+        if (!is.null(error)) {
+          return(error)
         }
         NULL
       }
@@ -145,7 +149,17 @@ BetterTogether <- S7::new_class(
           "Optimizer arguments in {.arg ...} must be named strategy keys"
         )
       }
-      optimizers <- c(optimizers, dots)
+      if (anyDuplicated(names(dots))) {
+        cli::cli_abort("Optimizer names in {.arg ...} must be unique")
+      }
+    }
+
+    if (length(optimizers) > 0 && anyDuplicated(names(optimizers))) {
+      cli::cli_abort("Optimizer names in {.arg optimizers} must be unique")
+    }
+
+    if (length(dots) > 0) {
+      optimizers[names(dots)] <- dots
     }
 
     S7::new_object(
@@ -212,6 +226,11 @@ compile_better_together <- function(
     }
   }
 
+  seed_error <- validate_better_together_seed(seed, arg = "seed")
+  if (!is.null(seed_error)) {
+    cli::cli_abort(seed_error)
+  }
+
   optimizers <- better_together_optimizers(teleprompter)
   strategy <- strategy %||% teleprompter@default_strategy
   parsed_strategy <- parse_better_together_strategy(strategy, optimizers)
@@ -242,7 +261,22 @@ compile_better_together <- function(
   }
 
   if (!is.null(seed)) {
+    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
+      get(".Random.seed", envir = globalenv())
+    } else {
+      NULL
+    }
     set.seed(seed)
+    on.exit(
+      {
+        if (is.null(old_seed)) {
+          rm(".Random.seed", envir = globalenv())
+        } else {
+          assign(".Random.seed", old_seed, envir = globalenv())
+        }
+      },
+      add = TRUE
+    )
   }
 
   current <- copy_module(program)
@@ -375,6 +409,16 @@ is_teleprompter <- function(x) {
   inherits(x, "dsprrr::Teleprompter") || inherits(x, "Teleprompter")
 }
 
+validate_better_together_seed <- function(seed, arg = "seed") {
+  if (is.null(seed)) {
+    return(NULL)
+  }
+  if (!is.numeric(seed) || length(seed) != 1 || is.na(seed)) {
+    return(paste0(arg, " must be a single non-missing numeric value or NULL"))
+  }
+  NULL
+}
+
 better_together_optimizers <- function(teleprompter) {
   optimizers <- teleprompter@optimizers
   if (length(optimizers) > 0) {
@@ -488,11 +532,11 @@ better_together_compile_step <- function(
 
   blocked <- intersect(
     names(step_args),
-    c("teleprompter", "program", "student")
+    c("teleprompter", "program", "student", "trainset", "valset", ".llm")
   )
   if (length(blocked) > 0) {
     cli::cli_abort(c(
-      "Optimizer compile arguments cannot override the current program",
+      "Optimizer compile arguments cannot override BetterTogether core inputs",
       "x" = "Blocked arguments: {.field {blocked}}"
     ))
   }

@@ -79,10 +79,13 @@ run.Module <- function(
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
+  .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
   .show_prompt = FALSE
 ) {
+  .parallel_method <- match.arg(.parallel_method)
+
   # Show prompt preview if requested
   if (.show_prompt) {
     show_prompt_preview(module)

@@ -129,7 +129,6 @@ validate_signature_inputs <- function(
 
   required_names <- vapply(sig@inputs, function(x) x$name, character(1))
   provided_names <- names(inputs) %||% character()
-  provided_names <- provided_names[!grepl("^\\.", provided_names)]
 
   missing_names <- setdiff(required_names, provided_names)
   if (length(missing_names) > 0 && missing != "ignore") {
@@ -163,7 +162,7 @@ validate_signature_inputs <- function(
       } else {
         cli::cli_warn(
           c(
-            "Ignoring unknown input: {.field {field}}",
+            "Extra input not declared in the signature: {.field {field}}",
             "i" = "The field remains available to custom templates but is not declared in the signature.",
             "i" = "Signature fields: {.field {required_names}}"
           ),

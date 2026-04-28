@@ -78,6 +78,53 @@ test_that("BetterTogether accepts named optimizers and validates strategy", {
   )
 })
 
+test_that("BetterTogether lets named arguments override optimizer list entries", {
+  tp <- BetterTogether(
+    metric = bt_metric,
+    optimizers = list(p = BTMarkingTeleprompter(marker = "from-list")),
+    p = BTMarkingTeleprompter(marker = "from-dots"),
+    verbose = FALSE
+  )
+
+  expect_named(tp@optimizers, "p")
+  expect_equal(tp@optimizers$p@marker, "from-dots")
+
+  expect_error(
+    BetterTogether(
+      metric = bt_metric,
+      optimizers = list(
+        p = BTMarkingTeleprompter(marker = "first"),
+        p = BTMarkingTeleprompter(marker = "second")
+      )
+    ),
+    "must be unique"
+  )
+})
+
+test_that("BetterTogether rejects invalid seeds before compilation", {
+  expect_error(
+    BetterTogether(metric = bt_metric, seed = NA_real_),
+    "non-missing numeric"
+  )
+
+  tp <- BetterTogether(
+    metric = bt_metric,
+    p = BTMarkingTeleprompter(marker = "p"),
+    verbose = FALSE
+  )
+
+  expect_error(
+    compile(
+      tp,
+      make_bt_mock_module(),
+      data.frame(x = c("a", "b"), target = c("p", "p")),
+      valset_ratio = 0,
+      seed = NA_real_
+    ),
+    "non-missing numeric"
+  )
+})
+
 test_that("BetterTogether returns best validation candidate when valset exists", {
   tp <- BetterTogether(
     metric = bt_metric,
@@ -169,5 +216,54 @@ test_that("BetterTogether marks compilation errors and returns prior candidate",
   )
 
   expect_equal(compiled$config$marker, "p")
+  expect_true(compiled$config$optimizer$flag_compilation_error_occurred)
+})
+
+test_that("BetterTogether restores caller RNG state after seeded compilation", {
+  set.seed(123)
+  seed_before <- .Random.seed
+  on.exit(assign(".Random.seed", seed_before, envir = globalenv()), add = TRUE)
+  expected_after <- runif(1)
+  assign(".Random.seed", seed_before, envir = globalenv())
+
+  tp <- BetterTogether(
+    metric = bt_metric,
+    p = BTMarkingTeleprompter(marker = "p"),
+    w = BTMarkingTeleprompter(marker = "w"),
+    seed = 42,
+    verbose = FALSE
+  )
+
+  compile(
+    tp,
+    make_bt_mock_module(),
+    data.frame(x = c("a", "b", "c", "d"), target = c("p", "p", "p", "p")),
+    strategy = "p -> w",
+    valset_ratio = 0.5
+  )
+
+  expect_equal(runif(1), expected_after)
+})
+
+test_that("BetterTogether blocks step args from overriding core compile inputs", {
+  tp <- BetterTogether(
+    metric = bt_metric,
+    p = BTMarkingTeleprompter(marker = "p"),
+    verbose = FALSE
+  )
+
+  expect_warning(
+    compiled <- compile(
+      tp,
+      make_bt_mock_module(),
+      data.frame(x = "a", target = "p"),
+      valset_ratio = 0,
+      optimizer_compile_args = list(
+        p = list(trainset = data.frame(x = "b", target = "p"))
+      )
+    ),
+    "core inputs"
+  )
+
   expect_true(compiled$config$optimizer$flag_compilation_error_occurred)
 })
