@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dsprrr × deputy — Integration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Barlow:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/r.min.js"></script>
+
+  <style>
+    :root {
+      --bg:        #FAFAF8;
+      --surface:   #F3F1EC;
+      --border:    #E2DDD5;
+      --text:      #1C1917;
+      --muted:     #78716C;
+      --accent:    #B45309;
+      --accent-bg: #FEF3C7;
+      --code-bg:   #1C1917;
+      --code-text: #F5F5F4;
+      --dsprrr:    #1D4ED8;
+      --deputy:    #7C3AED;
+      --ellmer:    #B45309;
+      --r: 'Barlow', sans-serif;
+      --serif: 'Playfair Display', Georgia, serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--r);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250, 250, 248, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-logo .pkg-d { color: var(--dsprrr); }
+    .nav-logo .sep { color: var(--muted); }
+    .nav-logo .pkg-dep { color: var(--deputy); }
+    .nav-logo .status {
+      background: var(--accent-bg);
+      color: var(--accent);
+      font-size: 0.65rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 2px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.75rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    /* ── HERO ── */
+    #hero {
+      padding: 6rem 2rem 5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-title {
+      font-family: var(--serif);
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title .pkg-d { color: var(--dsprrr); }
+    .hero-title .times { color: var(--muted); font-weight: 300; margin: 0 0.15em; }
+    .hero-title .pkg-dep { color: var(--deputy); }
+
+    .hero-lead {
+      font-size: 1.1rem;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 52ch;
+      margin-bottom: 2rem;
+    }
+
+    .hero-lead strong { color: var(--text); font-weight: 600; }
+
+    .hero-principle {
+      border-left: 3px solid var(--accent);
+      padding: 0.75rem 1.25rem;
+      background: var(--accent-bg);
+      border-radius: 0 4px 4px 0;
+      font-size: 0.9rem;
+      font-style: italic;
+      color: var(--accent);
+      line-height: 1.5;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: 4px;
+      font-family: var(--r);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg);
+      border: 1px solid var(--text);
+    }
+
+    .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover { border-color: var(--text); }
+
+    /* Hero right: stat cards */
+    .hero-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding-top: 5.5rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .stat-number {
+      font-family: var(--serif);
+      font-size: 2.5rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .stat-card.accent { border-color: var(--accent); }
+    .stat-card.accent .stat-number { color: var(--accent); }
+
+    /* ── SECTION COMMON ── */
+    .section {
+      padding: 5rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    .section-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-family: var(--serif);
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+
+    .section-lead {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 58ch;
+      line-height: 1.7;
+      margin-bottom: 3rem;
+    }
+
+    /* ── ARCHITECTURE ── */
+    #architecture .arch-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .arch-diagram {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .arch-directions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .direction-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+    }
+
+    .direction-num {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--bg);
+      background: var(--muted);
+      border-radius: 2px;
+      padding: 0.15rem 0.4rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .direction-card h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .direction-card p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── WORKFLOWS (TABS) ── */
+    #workflows .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+      gap: 0;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      font-family: var(--r);
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      margin-bottom: -1px;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+
+    .panel-text h3 {
+      font-family: var(--serif);
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .panel-text p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 1rem;
+    }
+
+    .flow-steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 0.82rem;
+    }
+
+    .step-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+
+    .step-text { color: var(--muted); line-height: 1.4; }
+    .step-text strong { color: var(--text); }
+
+    /* ── CODE BLOCK ── */
+    .code-wrap {
+      background: var(--code-bg);
+      border-radius: 6px;
+      overflow: hidden;
+      font-size: 0.78rem;
+    }
+
+    .code-header {
+      background: #2C2926;
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .code-lang {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: #A8A29E;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .code-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .code-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #44403C;
+    }
+
+    .code-wrap pre {
+      margin: 0;
+      padding: 1.25rem 1rem;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+
+    .code-wrap code {
+      font-family: var(--mono);
+      font-size: 0.76rem;
+    }
+
+    /* Override hljs theme to fit our palette */
+    .hljs { background: transparent !important; }
+
+    /* Value pill tags */
+    .value-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.2rem 0.5rem;
+      border-radius: 2px;
+      margin: 0.15rem;
+    }
+
+    .pill-d { background: #DBEAFE; color: var(--dsprrr); }
+    .pill-dep { background: #EDE9FE; color: var(--deputy); }
+    .pill-e { background: var(--accent-bg); color: var(--accent); }
+
+    /* ── PHASES ── */
+    #phases .timeline {
+      position: relative;
+      padding-left: 0;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 22px;
+      top: 8px;
+      bottom: 8px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .phase-item {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .phase-marker {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      z-index: 1;
+    }
+
+    .phase-num {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .phase-num.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .phase-content {
+      padding-top: 0.5rem;
+      padding-bottom: 1rem;
+    }
+
+    .phase-header {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin-bottom: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .phase-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .phase-badge {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .badge-start { background: var(--accent-bg); color: var(--accent); }
+    .badge-doc { background: #DBEAFE; color: var(--dsprrr); }
+    .badge-core { background: #FCE7F3; color: #BE185D; }
+
+    .phase-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 0.6rem;
+    }
+
+    .phase-deliverables {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .deliverable-tag {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 2px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .phase-unlock {
+      margin-top: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* ── DONE ── */
+    #done .done-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .done-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    .done-check {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      border: 1.5px solid var(--border);
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .done-check svg { display: none; }
+
+    .done-item.checked .done-check {
+      background: #166534;
+      border-color: #166534;
+    }
+
+    .done-item.checked .done-check svg { display: block; }
+
+    .done-item.checked { border-color: #BBF7D0; background: #F0FDF4; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-left {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .footer-left .ver { color: var(--accent); font-weight: 600; }
+
+    .footer-tags {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .footer-tag {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      #hero { grid-template-columns: 1fr; gap: 2rem; }
+      .hero-stats { padding-top: 0; flex-direction: row; overflow-x: auto; }
+      .stat-card { min-width: 140px; }
+      .tab-panel.active { grid-template-columns: 1fr; }
+      .arch-directions { grid-template-columns: 1fr; }
+      #done .done-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">
+      <span class="pkg-d">dsprrr</span>
+      <span class="sep">×</span>
+      <span class="pkg-dep">deputy</span>
+      <span class="status">v0.2 Draft</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#workflows">Workflows</a></li>
+      <li><a href="#phases">Phases</a></li>
+      <li><a href="#done">Done When</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-main">
+      <p class="hero-eyebrow">Integration Proposal · April 2026</p>
+      <h1 class="hero-title">
+        <span class="pkg-d">dsprrr</span><span class="times">×</span><span class="pkg-dep">deputy</span>
+      </h1>
+      <p class="hero-lead">
+        Two packages, one lifecycle. <strong>dsprrr</strong> defines, evaluates, and optimizes
+        LLM skills. <strong>deputy</strong> deploys them inside governed agents.
+        Both are already built on <strong>ellmer</strong> — the integration is closer than you think.
+      </p>
+      <blockquote class="hero-principle">
+        Use ellmer as the interoperability contract. Let dsprrr produce optimized, typed
+        LLM skills. Let deputy deploy those skills inside governed agents.
+        Let each package remain useful independently.
+      </blockquote>
+      <div class="hero-ctas">
+        <a href="#workflows" class="btn btn-primary">See the workflows →</a>
+        <a href="#phases" class="btn btn-ghost">Implementation phases</a>
+      </div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-card accent">
+        <div class="stat-number">4</div>
+        <div class="stat-label">Integration directions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">6</div>
+        <div class="stat-label">Implementation phases</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">0</div>
+        <div class="stat-label">Circular dependencies</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture" class="section">
+    <p class="section-eyebrow">System design</p>
+    <h2 class="section-title">ellmer as the bridge</h2>
+    <p class="section-lead">
+      Both packages already speak ellmer. Tools, types, chat objects, and structured output
+      schemas flow between the layers without either package importing the other.
+    </p>
+
+    <div class="arch-container">
+      <!-- SVG Architecture Diagram -->
+      <svg class="arch-diagram" viewBox="0 0 860 320" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono', monospace">
+        <!-- Background grid -->
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E2DDD5" stroke-width="0.5"/>
+          </pattern>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#A8A29E"/>
+          </marker>
+          <marker id="arr-acc" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#B45309"/>
+          </marker>
+          <marker id="arr-d" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#1D4ED8"/>
+          </marker>
+          <marker id="arr-dep" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#7C3AED"/>
+          </marker>
+        </defs>
+        <rect width="860" height="320" fill="url(#grid)" rx="4"/>
+
+        <!-- dsprrr box -->
+        <rect x="30" y="60" width="220" height="220" rx="6" fill="white" stroke="#1D4ED8" stroke-width="1.5"/>
+        <rect x="30" y="60" width="220" height="36" rx="6" fill="#1D4ED8"/>
+        <rect x="30" y="84" width="220" height="12" rx="0" fill="#1D4ED8"/>
+        <text x="140" y="83" text-anchor="middle" fill="white" font-size="13" font-weight="600">dsprrr</text>
+        <text x="50" y="120" fill="#44403C" font-size="11">→ signature()</text>
+        <text x="50" y="139" fill="#44403C" font-size="11">→ module()</text>
+        <text x="50" y="158" fill="#44403C" font-size="11">→ evaluate()</text>
+        <text x="50" y="177" fill="#44403C" font-size="11">→ compile()</text>
+        <text x="50" y="196" fill="#44403C" font-size="11">→ as_ellmer_tool()</text>
+        <text x="50" y="215" fill="#44403C" font-size="11">→ module_fn()</text>
+        <text x="50" y="234" fill="#44403C" font-size="11">→ signature_to_json_schema()</text>
+        <text x="50" y="260" fill="#1D4ED8" font-size="10" font-style="italic">skill development layer</text>
+
+        <!-- ellmer box (center, elevated) -->
+        <rect x="320" y="100" width="220" height="140" rx="6" fill="white" stroke="#B45309" stroke-width="2"/>
+        <rect x="320" y="100" width="220" height="36" rx="6" fill="#B45309"/>
+        <rect x="320" y="124" width="220" height="12" rx="0" fill="#B45309"/>
+        <text x="430" y="123" text-anchor="middle" fill="white" font-size="13" font-weight="600">ellmer</text>
+        <text x="340" y="160" fill="#44403C" font-size="11">· Chat objects</text>
+        <text x="340" y="178" fill="#44403C" font-size="11">· tool() / tool_annotations()</text>
+        <text x="340" y="196" fill="#44403C" font-size="11">· type_string / type_object…</text>
+        <text x="340" y="214" fill="#44403C" font-size="11">· Structured output types</text>
+        <text x="430" y="230" text-anchor="middle" fill="#B45309" font-size="10" font-style="italic">common substrate</text>
+
+        <!-- deputy box -->
+        <rect x="610" y="60" width="220" height="220" rx="6" fill="white" stroke="#7C3AED" stroke-width="1.5"/>
+        <rect x="610" y="60" width="220" height="36" rx="6" fill="#7C3AED"/>
+        <rect x="610" y="84" width="220" height="12" rx="0" fill="#7C3AED"/>
+        <text x="720" y="83" text-anchor="middle" fill="white" font-size="13" font-weight="600">deputy</text>
+        <text x="630" y="120" fill="#44403C" font-size="11">→ Agent$new()</text>
+        <text x="630" y="139" fill="#44403C" font-size="11">→ tool_dsprrr_module()</text>
+        <text x="630" y="158" fill="#44403C" font-size="11">→ agent_as_module()</text>
+        <text x="630" y="177" fill="#44403C" font-size="11">→ output_format_from_sig()</text>
+        <text x="630" y="196" fill="#44403C" font-size="11">→ permissions_readonly()</text>
+        <text x="630" y="215" fill="#44403C" font-size="11">→ tools_preset()</text>
+        <text x="630" y="234" fill="#44403C" font-size="11">→ run_sync()</text>
+        <text x="720" y="260" fill="#7C3AED" font-size="10" font-style="italic">agent runtime layer</text>
+
+        <!-- Arrows: dsprrr → ellmer (module as tool) -->
+        <path d="M 252 130 L 318 148" stroke="#1D4ED8" stroke-width="1.5" stroke-dasharray="4,2" fill="none" marker-end="url(#arr-d)"/>
+        <text x="272" y="125" fill="#1D4ED8" font-size="9">module → tool</text>
+
+        <!-- Arrows: ellmer → deputy (tool to agent) -->
+        <path d="M 540 148 L 608 130" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="4,2" fill="none" marker-end="url(#arr-dep)"/>
+        <text x="548" y="125" fill="#7C3AED" font-size="9">tool registration</text>
+
+        <!-- Arrows: deputy → ellmer (tools to react) -->
+        <path d="M 608 200 L 542 200" stroke="#7C3AED" stroke-width="1.5" fill="none" marker-end="url(#arr-dep)"/>
+
+        <!-- Arrows: ellmer → dsprrr (tools to react module) -->
+        <path d="M 318 200 L 252 200" stroke="#1D4ED8" stroke-width="1.5" fill="none" marker-end="url(#arr-d)"/>
+        <text x="282" y="215" fill="#44403C" font-size="9" text-anchor="middle">tools → react</text>
+
+        <!-- Arrows: dsprrr signature → schema (bottom) -->
+        <path d="M 140 282 L 430 282" stroke="#B45309" stroke-width="1.5" stroke-dasharray="3,2" fill="none" marker-end="url(#arr-acc)"/>
+        <path d="M 430 282 L 720 282" stroke="#B45309" stroke-width="1.5" stroke-dasharray="3,2" fill="none" marker-end="url(#arr-acc)"/>
+        <text x="430" y="300" text-anchor="middle" fill="#B45309" font-size="9">signature → json_schema → output_format</text>
+
+        <!-- Agent evaluation loop -->
+        <path d="M 720 282 C 770 310 800 50 430 50 C 200 50 120 60 120 60" stroke="#44403C" stroke-width="1" stroke-dasharray="2,3" fill="none" marker-end="url(#arr)"/>
+        <text x="700" y="44" fill="#44403C" font-size="9" text-anchor="end">agent_as_module() → evaluate()</text>
+      </svg>
+    </div>
+
+    <div class="arch-directions">
+      <div class="direction-card">
+        <div class="direction-num">①</div>
+        <div>
+          <h4>Module → ellmer tool → deputy</h4>
+          <p>An optimized dsprrr module becomes an ellmer tool, registered in a deputy agent. Permissions and annotations govern its use at runtime.</p>
+        </div>
+      </div>
+      <div class="direction-card">
+        <div class="direction-num">②</div>
+        <div>
+          <h4>deputy tools → react module</h4>
+          <p>deputy tool bundles are ellmer tools. Pass them directly to a dsprrr react module to evaluate and optimize tool-using behavior.</p>
+        </div>
+      </div>
+      <div class="direction-card">
+        <div class="direction-num">③</div>
+        <div>
+          <h4>deputy agent → dsprrr module</h4>
+          <p>A full deputy Agent is wrapped as a dsprrr module via <code>agent_as_module()</code>. Evaluate it on datasets; permissions are preserved.</p>
+        </div>
+      </div>
+      <div class="direction-card">
+        <div class="direction-num">④</div>
+        <div>
+          <h4>Signature → JSON schema → output_format</h4>
+          <p>Define the output contract once in a dsprrr signature. Convert to a deputy output format for structured agent responses.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- WORKFLOWS -->
+  <section id="workflows" class="section">
+    <p class="section-eyebrow">Four directions</p>
+    <h2 class="section-title">Integrated workflows</h2>
+    <p class="section-lead">Each direction solves a real problem. Pick the one that matches your current pain, or compose them for the full lifecycle.</p>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="t1">① Module as tool</button>
+      <button class="tab-btn" data-tab="t2">② Tools in module</button>
+      <button class="tab-btn" data-tab="t3">③ Agent evaluation</button>
+      <button class="tab-btn" data-tab="t4">④ Signature schemas</button>
+    </div>
+
+    <!-- TAB 1 -->
+    <div id="t1" class="tab-panel active">
+      <div class="panel-text">
+        <h3>Deploy an optimized skill as a deputy tool</h3>
+        <p>Stop embedding one-off prompts in agent system prompts. Define the skill in dsprrr, measure it, improve it, then deploy it as a typed tool inside a deputy agent.</p>
+        <p>The optimized module runs under deputy permissions and hooks. The agent can call it, inspect its output, and recover from failures — all within the permission envelope you define.</p>
+        <ul class="flow-steps">
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Define</strong> the skill with a dsprrr signature</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Evaluate</strong> baseline accuracy on labeled examples</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Optimize</strong> with LabeledFewShot or MIPROv2</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Convert</strong> via <code>tool_dsprrr_module()</code> with read-only annotations</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Deploy</strong> inside a permissioned deputy agent</div></li>
+        </ul>
+        <div style="margin-top: 1rem;">
+          <span class="value-pill pill-d">as_ellmer_tool()</span>
+          <span class="value-pill pill-dep">tool_dsprrr_module()</span>
+          <span class="value-pill pill-e">tool_annotations()</span>
+        </div>
+      </div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-dots"><span></span><span></span><span></span></div>
+          <span class="code-lang">R</span>
+        </div>
+        <pre><code class="language-r"># 1. Define the skill
+sig <- dsprrr::signature(
+  "ticket -> category: enum('bug','billing','feature','other'),
+             urgency: enum('low','medium','high')"
+)
+triage <- dsprrr::module(
+  sig,
+  chat = ellmer::chat("openai/gpt-4o-mini")
+)
+
+# 2. Evaluate baseline
+score_before <- dsprrr::evaluate(
+  triage, train_tickets,
+  metric = metric_exact_match()
+)
+
+# 3. Optimize with few-shot examples
+triage_opt <- dsprrr::compile(
+  dsprrr::LabeledFewShot(k = 4),
+  triage,
+  trainset = train_tickets
+)
+
+# 4. Convert to a deputy tool (read-only by default)
+triage_tool <- deputy::tool_dsprrr_module(
+  triage_opt,
+  name = "triage_ticket",
+  description = "Classify a support ticket."
+)
+
+# 5. Deploy in a permissioned agent
+agent <- deputy::Agent$new(
+  chat = ellmer::chat("openai/gpt-4o"),
+  tools = list(triage_tool),
+  permissions = deputy::permissions_readonly()
+)
+
+result <- agent$run_sync(
+  "Triage: customer cannot access invoice history."
+)
+cat(result$response)</code></pre>
+      </div>
+    </div>
+
+    <!-- TAB 2 -->
+    <div id="t2" class="tab-panel">
+      <div class="panel-text">
+        <h3>Use deputy tools inside a dsprrr react module</h3>
+        <p>deputy tools are ellmer tools. They can be passed directly into a dsprrr <code>react</code> module today — no adapter needed.</p>
+        <p>This lets you benchmark and optimize tool-using behavior before deployment. Which tools does the model overuse? Which prompts lead to fewer unnecessary calls?</p>
+        <ul class="flow-steps">
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Grab</strong> a deputy tool preset or build a custom bundle</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Pass</strong> tools to a dsprrr react module</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Run and trace</strong> tool-using behavior</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Evaluate</strong> on a task dataset</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Note</strong>: deputy permissions are not active outside a deputy-managed runtime</div></li>
+        </ul>
+        <div style="margin-top: 1rem;">
+          <span class="value-pill pill-dep">tools_preset()</span>
+          <span class="value-pill pill-d">module(type = "react")</span>
+          <span class="value-pill pill-d">trace_summary()</span>
+        </div>
+      </div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-dots"><span></span><span></span><span></span></div>
+          <span class="code-lang">R</span>
+        </div>
+        <pre><code class="language-r"># deputy tools are ellmer tools — pass them directly
+mod <- dsprrr::module(
+  dsprrr::signature("question -> answer"),
+  type = "react",
+  tools = deputy::tools_preset("minimal"),
+  chat = ellmer::chat("openai/gpt-4o")
+)
+
+# Run and inspect traces
+result <- dsprrr::run(
+  mod,
+  question = "What exported functions does this package have?"
+)
+
+# Trace shows tool calls, reasoning steps, outputs
+mod$trace_summary()
+
+# Evaluate tool-use quality across many questions
+eval_results <- dsprrr::evaluate(
+  mod,
+  data = file_qa_dataset,
+  metric = metric_exact_match()
+)
+
+# Note the caveat:
+# deputy permissions are enforced by the deputy runtime.
+# Tools used here run outside that runtime — no permission checks.
+# For governed execution, run via a deputy Agent instead.</code></pre>
+      </div>
+    </div>
+
+    <!-- TAB 3 -->
+    <div id="t3" class="tab-panel">
+      <div class="panel-text">
+        <h3>Evaluate a full deputy agent with dsprrr</h3>
+        <p>Wrap a complete deputy Agent as a dsprrr module. Now you can evaluate it on a labeled dataset just like any other module — tracking correctness, cost, latency, and stop reasons across runs.</p>
+        <p>By default the agent is cloned per evaluation row, so turn history from row 1 cannot contaminate row 2. Deputy permissions are fully preserved inside the wrapper.</p>
+        <ul class="flow-steps">
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Create</strong> a deputy agent with tools and permissions</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Wrap</strong> via <code>agent_as_module()</code> with a dsprrr signature</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Evaluate</strong> against a labeled task dataset</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Inspect</strong> <code>stop_reason</code> to separate quality failures from policy failures</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Compare</strong> two agent configs before deploying either</div></li>
+        </ul>
+        <div style="margin-top: 1rem;">
+          <span class="value-pill pill-dep">agent_as_module()</span>
+          <span class="value-pill pill-d">evaluate()</span>
+          <span class="value-pill pill-d">module_fn()</span>
+        </div>
+      </div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-dots"><span></span><span></span><span></span></div>
+          <span class="code-lang">R</span>
+        </div>
+        <pre><code class="language-r">eval_set <- tibble::tibble(
+  task     = c("Which files define exports?", "Are there tests?"),
+  expected = c("R/", "tests/")
+)
+
+agent <- deputy::Agent$new(
+  chat = ellmer::chat("openai/gpt-4o-mini"),
+  tools = deputy::tools_preset("minimal"),
+  permissions = deputy::permissions_readonly()
+)
+
+# Wrap as a dsprrr module (agent cloned per row by default)
+agent_mod <- deputy::agent_as_module(
+  agent,
+  signature = dsprrr::signature("task -> answer"),
+  max_turns = 8,
+  clone_agent = TRUE     # prevents turn-history contamination
+)
+
+results <- dsprrr::evaluate(
+  agent_mod,
+  data = eval_set,
+  metric = function(example, prediction) {
+    grepl(example$expected, prediction$answer, fixed = TRUE)
+  }
+)
+
+# Each result includes compact deputy metadata:
+# stop_reason, duration, cost, n_turns, n_events
+results$metadata[[1]]$deputy</code></pre>
+      </div>
+    </div>
+
+    <!-- TAB 4 -->
+    <div id="t4" class="tab-panel">
+      <div class="panel-text">
+        <h3>One output contract, two systems</h3>
+        <p>Define structured output once in a dsprrr signature. Convert it to a deputy output format for use in agent calls. The same schema validates both the optimized module and the deployed agent.</p>
+        <p>No more maintaining two copies of the same JSON schema. The dsprrr signature <em>is</em> the schema — <code>output_type</code> is already an ellmer type object; conversion is straightforward traversal.</p>
+        <ul class="flow-steps">
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Define</strong> signature with typed multi-field output</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Convert</strong> via <code>output_format_from_signature()</code></div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Run</strong> agent with structured output requested</div></li>
+          <li class="flow-step"><div class="step-dot"></div><div class="step-text"><strong>Read</strong> parsed output from <code>result$structured_output$parsed</code></div></li>
+        </ul>
+        <div style="margin-top: 1rem;">
+          <span class="value-pill pill-d">signature_to_json_schema()</span>
+          <span class="value-pill pill-dep">output_format_from_signature()</span>
+        </div>
+      </div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-dots"><span></span><span></span><span></span></div>
+          <span class="code-lang">R</span>
+        </div>
+        <pre><code class="language-r"># Define output contract once
+review_sig <- dsprrr::signature(
+  "document -> summary,
+               risks: array(string),
+               confidence: number",
+  instructions = "Return structured findings only."
+)
+
+# Use in dsprrr module (skill development)
+review_mod <- dsprrr::module(review_sig)
+# ... evaluate, optimize ...
+
+# Use same schema in deputy agent call
+output_format <- deputy::output_format_from_signature(review_sig)
+# => list(type = "json_schema",
+#         schema = list(type = "object",
+#                       properties = list(
+#                         summary = list(type = "string"),
+#                         risks   = list(type = "array",
+#                                        items = list(type = "string")),
+#                         confidence = list(type = "number")),
+#                       required = c("summary","risks","confidence"),
+#                       additionalProperties = FALSE))
+
+result <- agent$run_sync(
+  "Review this technical note: ...",
+  output_format = output_format
+)
+
+# Parsed R list — not raw JSON
+result$structured_output$parsed
+#> $summary      "The study shows..."
+#> $risks        c("Small sample size", "No control group")
+#> $confidence   0.74</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- PHASES -->
+  <section id="phases" class="section">
+    <p class="section-eyebrow">Roadmap</p>
+    <h2 class="section-title">Six implementation phases</h2>
+    <p class="section-lead">Ordered by dependency. Each phase unlocks the next. Phases 1–3 can begin immediately with the current codebase.</p>
+
+    <div class="timeline">
+
+      <div class="phase-item">
+        <div class="phase-marker">
+          <div class="phase-num active">P1</div>
+        </div>
+        <div class="phase-content">
+          <div class="phase-header">
+            <span class="phase-title">Make existing interop explicit</span>
+            <span class="phase-badge badge-doc">Documentation</span>
+          </div>
+          <p class="phase-desc">No API changes. Formalize what already nearly works: deputy tools in dsprrr react modules, dsprrr modules as ellmer tools in deputy agents. Add minimal regression tests.</p>
+          <div class="phase-deliverables">
+            <span class="deliverable-tag">vignette: deputy-tools.Rmd</span>
+            <span class="deliverable-tag">tests: prevent regressions</span>
+            <span class="deliverable-tag">permission caveat documented</span>
+          </div>
+          <div class="phase-unlock">→ Unblocks: teams can start using both packages together today</div>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-marker">
+          <div class="phase-num active">P2</div>
+        </div>
+        <div class="phase-content">
+          <div class="phase-header">
+            <span class="phase-title">Harden <code>dsprrr::as_ellmer_tool()</code></span>
+            <span class="phase-badge badge-core">Highest priority</span>
+          </div>
+          <p class="phase-desc">Add <code>annotations</code>, <code>output</code>, <code>copy</code>, and <code>error</code> arguments. Stable JSON serialization. Recoverable error behavior. Deep copy via <code>module$copy(deep = TRUE)</code> (already implemented in Module base class).</p>
+          <div class="phase-deliverables">
+            <span class="deliverable-tag">annotations passthrough</span>
+            <span class="deliverable-tag">output = "json"|"text"|"auto"</span>
+            <span class="deliverable-tag">copy = "deep"|"none"</span>
+            <span class="deliverable-tag">error = "reject"|"abort"|"return"</span>
+            <span class="deliverable-tag">test-ellmer-tool-adapter.R</span>
+          </div>
+          <div class="phase-unlock">→ Unblocks: Phase 3 (deputy wrapper)</div>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-marker">
+          <div class="phase-num">P3</div>
+        </div>
+        <div class="phase-content">
+          <div class="phase-header">
+            <span class="phase-title">Add <code>deputy::tool_dsprrr_module()</code></span>
+            <span class="phase-badge badge-doc">Deputy</span>
+          </div>
+          <p class="phase-desc">Thin convenience wrapper over <code>as_ellmer_tool()</code> with deputy-safe defaults: <code>copy = "deep"</code>, read-only annotations. <code>dsprrr</code> in <code>Suggests</code> only — no hard import.</p>
+          <div class="phase-deliverables">
+            <span class="deliverable-tag">R/tools-dsprrr.R</span>
+            <span class="deliverable-tag">read-only default annotations</span>
+            <span class="deliverable-tag">permission mode tests</span>
+            <span class="deliverable-tag">vignette: dsprrr-integration.Rmd</span>
+          </div>
+          <div class="phase-unlock">→ Unblocks: clean UX for direction ①</div>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-marker">
+          <div class="phase-num">P4</div>
+        </div>
+        <div class="phase-content">
+          <div class="phase-header">
+            <span class="phase-title">Add <code>dsprrr::module_fn()</code></span>
+            <span class="phase-badge badge-doc">dsprrr</span>
+          </div>
+          <p class="phase-desc">New <code>FnModule</code> R6 class inheriting from <code>Module</code>. Override only <code>forward()</code>. Gets <code>run()</code>, <code>evaluate()</code>, and <code>copy()</code> for free via inheritance. Optimizers error clearly on FnModule in v1.</p>
+          <div class="phase-deliverables">
+            <span class="deliverable-tag">R/module-fn.R (FnModule R6)</span>
+            <span class="deliverable-tag">module_fn() factory</span>
+            <span class="deliverable-tag">run() + evaluate() work</span>
+            <span class="deliverable-tag">optimizer guard with clear error</span>
+          </div>
+          <div class="phase-unlock">→ Unblocks: Phase 5 (agent_as_module)</div>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-marker">
+          <div class="phase-num">P5</div>
+        </div>
+        <div class="phase-content">
+          <div class="phase-header">
+            <span class="phase-title">Add <code>deputy::agent_as_module()</code></span>
+            <span class="phase-badge badge-doc">Deputy</span>
+          </div>
+          <p class="phase-desc">Wrap a deputy Agent as a dsprrr module via <code>module_fn()</code>. Clones agent per evaluation row by default (<code>clone_agent = TRUE</code>). Reads <code>result$structured_output$parsed</code>. Preserves <code>stop_reason</code> for policy-vs-quality failure diagnosis.</p>
+          <div class="phase-deliverables">
+            <span class="deliverable-tag">R/agent-dsprrr.R</span>
+            <span class="deliverable-tag">clone_agent = TRUE default</span>
+            <span class="deliverable-tag">structured_output$parsed extraction</span>
+            <span class="deliverable-tag">stop_reason in metadata</span>
+            <span class="deliverable-tag">vignette: agent-evaluation.Rmd</span>
+          </div>
+          <div class="phase-unlock">→ Unblocks: direction ③ (full agent evaluation)</div>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-marker">
+          <div class="phase-num">P6</div>
+        </div>
+        <div class="phase-content">
+          <div class="phase-header">
+            <span class="phase-title">Signature-to-schema bridge</span>
+            <span class="phase-badge badge-doc">Both</span>
+          </div>
+          <p class="phase-desc">Add <code>dsprrr::signature_to_json_schema()</code> (traverse <code>output_type</code> ellmer types) and <code>deputy::output_format_from_signature()</code> (thin wrapper). <code>additionalProperties = FALSE</code>. Warn on unsupported types, never fail silently.</p>
+          <div class="phase-deliverables">
+            <span class="deliverable-tag">R/signature-json-schema.R</span>
+            <span class="deliverable-tag">R/output-format-dsprrr.R</span>
+            <span class="deliverable-tag">all ellmer types covered</span>
+            <span class="deliverable-tag">vignette: signature-output-format.Rmd</span>
+          </div>
+          <div class="phase-unlock">→ Unblocks: direction ④ (shared output contracts)</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- DONE -->
+  <section id="done" class="section">
+    <p class="section-eyebrow">Definition of done</p>
+    <h2 class="section-title">Ready when all ten ship</h2>
+    <p class="section-lead">The integration is complete for v1 when these ten criteria are verifiably true.</p>
+
+    <div class="done-grid">
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>A <strong>dsprrr module</strong> converts to a deputy tool with annotations, stable output, and recoverable errors</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>A <strong>deputy tool bundle</strong> is usable inside a dsprrr react module, with permission caveats documented</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>A <strong>full deputy agent</strong> wraps as a dsprrr module, is evaluated on datasets, and clones per row</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>A <strong>dsprrr signature</strong> converts to a deputy structured-output format for all common types</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><strong>Tests</strong> cover all four directions, permission behavior, agent cloning, and metadata capture</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><strong>Five vignettes</strong> demonstrate all prioritized workflows (deputy-tools, dsprrr-integration, agent-evaluation, signature-output-format, research-analyst)</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><strong>No circular dependencies:</strong> dsprrr does not import deputy; deputy Suggests dsprrr only</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><strong>deputy permissions</strong> are preserved exactly when wrapping agents; not active outside deputy runtime</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><strong>stop_reason</strong> distinguishes quality failures from policy failures in agent evaluation metadata</div>
+      </div>
+
+      <div class="done-item">
+        <div class="done-check">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>The <strong>flagship research analyst vignette</strong> demonstrates the integrated lifecycle end-to-end</div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-left">
+      <span class="ver">v0.2 draft</span> · April 2026 · internal proposal
+    </div>
+    <div class="footer-tags">
+      <span class="footer-tag">dsprrr</span>
+      <span class="footer-tag">deputy</span>
+      <span class="footer-tag">ellmer</span>
+      <span class="footer-tag">R</span>
+    </div>
+  </footer>
+
+  <script>
+    hljs.highlightAll();
+
+    // Tab switching
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.tab;
+
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+
+        btn.classList.add('active');
+        document.getElementById(target).classList.add('active');
+      });
+    });
+
+    // Subtle scroll-based nav shrink
+    const nav = document.querySelector('nav');
+    window.addEventListener('scroll', () => {
+      nav.style.height = window.scrollY > 60 ? '44px' : '52px';
+    }, { passive: true });
+  </script>
+</body>
+</html>
