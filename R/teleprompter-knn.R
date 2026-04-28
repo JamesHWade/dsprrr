@@ -241,7 +241,20 @@ cosine_similarity <- function(x, y) {
 #' Find k nearest neighbors by cosine similarity
 #' @noRd
 find_knn <- function(query_embedding, train_embeddings, k) {
+  find_knn_with_scores(query_embedding, train_embeddings, k)$indices
+}
+
+#' Find k nearest neighbors and expose cosine similarity scores
+#' @noRd
+find_knn_with_scores <- function(query_embedding, train_embeddings, k) {
   similarities <- cosine_similarity(query_embedding, train_embeddings)
   # Get indices of top k similarities (highest first)
-  order(similarities, decreasing = TRUE)[seq_len(min(k, length(similarities)))]
+  indices <- order(similarities, decreasing = TRUE)[
+    seq_len(min(k, length(similarities)))
+  ]
+
+  list(
+    indices = indices,
+    scores = similarities[indices]
+  )
 }

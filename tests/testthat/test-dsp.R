@@ -83,6 +83,17 @@ test_that("dsp.Chat validates inputs against signature", {
   )
 })
 
+test_that("dsp.Chat preserves dotted signature input names", {
+  mock_chat <- structure(
+    list(chat_structured = function(...) list(answer = "x")),
+    class = "Chat"
+  )
+
+  expect_no_error(
+    dsp(mock_chat, ".context -> answer", .context = "test")
+  )
+})
+
 test_that("dsp.Chat warns about extra inputs", {
   mock_chat <- structure(
     list(chat_structured = function(...) list(answer = "x")),
@@ -91,7 +102,32 @@ test_that("dsp.Chat warns about extra inputs", {
 
   expect_warning(
     dsp(mock_chat, "question -> answer", question = "test", extra = "ignored"),
-    "unknown input"
+    "Extra input not declared"
+  )
+})
+
+test_that("dsp.Chat warns about signature input type mismatches", {
+  mock_chat <- structure(
+    list(chat_structured = function(...) list(answer = "x")),
+    class = "Chat"
+  )
+
+  sig <- signature(
+    inputs = list(input_number("score")),
+    output_type = ellmer::type_object(answer = ellmer::type_string())
+  )
+
+  old <- options(dsprrr.warn_on_type_mismatch = TRUE)
+  on.exit(options(old))
+
+  expect_warning(
+    dsp(mock_chat, sig, score = "high"),
+    "Type mismatch"
+  )
+
+  options(dsprrr.warn_on_type_mismatch = FALSE)
+  expect_no_warning(
+    dsp(mock_chat, sig, score = "high")
   )
 })
 

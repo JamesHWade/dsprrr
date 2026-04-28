@@ -307,63 +307,14 @@ store_last_trace <- function(trace) {
 
 # Internal: Validate inputs against signature
 validate_dsp_inputs <- function(sig, inputs) {
-  if (length(sig@inputs) == 0) {
-    return(invisible(NULL))
-  }
-
-  required_names <- vapply(sig@inputs, function(x) x$name, character(1))
-  provided_names <- names(inputs)
-
-  # Check for missing required inputs
-  missing <- setdiff(required_names, provided_names)
-  if (length(missing) > 0) {
-    # Build error message with suggestions
-    error_parts <- c("Missing required inputs")
-
-    for (field in missing) {
-      error_parts <- c(error_parts, "x" = "Missing: {.field {field}}")
-
-      # Check if there's a close match in provided names
-      if (length(provided_names) > 0) {
-        suggestion <- find_closest_match(field, provided_names)
-        if (!is.null(suggestion)) {
-          error_parts <- c(
-            error_parts,
-            " " = "  Did you mean: {.field {suggestion}}?"
-          )
-        }
-      }
-    }
-
-    error_parts <- c(
-      error_parts,
-      "i" = "Signature requires: {.field {required_names}}"
-    )
-
-    cli::cli_abort(error_parts)
-  }
-
-  # Warn about extra inputs with suggestions
-  extra <- setdiff(provided_names, required_names)
-  if (length(extra) > 0) {
-    for (field in extra) {
-      suggestion <- find_closest_match(field, required_names)
-      if (!is.null(suggestion)) {
-        cli::cli_warn(c(
-          "Unknown input: {.field {field}}",
-          "i" = "Did you mean: {.field {suggestion}}?",
-          "i" = "Available fields: {.field {required_names}}"
-        ))
-      } else {
-        cli::cli_warn(c(
-          "Ignoring unknown input: {.field {field}}",
-          "i" = "Available fields: {.field {required_names}}"
-        ))
-      }
-    }
-  }
-
-  invisible(NULL)
+  validate_signature_inputs(
+    sig,
+    inputs,
+    missing = "error",
+    extra = "warn",
+    type = "warn",
+    context = "inputs"
+  )
 }
 
 # Internal: Build prompt from signature and inputs

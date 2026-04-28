@@ -4,6 +4,31 @@ test_that("run generic exists and works with modules", {
   expect_true("run" %in% ls("package:dsprrr"))
 })
 
+test_that("run.PredictModule warns about input type mismatches", {
+  sig <- signature(
+    inputs = list(input_integer("count")),
+    output_type = ellmer::type_object(answer = ellmer::type_string())
+  )
+  mod <- module(sig, type = "predict")
+  mock_chat <- structure(
+    list(
+      chat_structured = function(...) list(answer = "ok"),
+      get_model = function() "mock-model",
+      get_turns = function() list(),
+      last_turn = function(role = NULL) NULL
+    ),
+    class = "Chat"
+  )
+
+  old <- options(dsprrr.warn_on_type_mismatch = TRUE)
+  on.exit(options(old))
+
+  expect_warning(
+    run(mod, count = "many", .llm = mock_chat, .cache = FALSE),
+    "Type mismatch"
+  )
+})
+
 test_that("run validates required inputs", {
   sig <- Signature(
     inputs = list(
@@ -29,6 +54,30 @@ test_that("run validates required inputs", {
     run(pred, text = "Hello", .llm = mock_llm),
     "Missing required inputs: language"
   )
+})
+
+test_that("run and Module$run preserve dotted signature input names", {
+  DottedModule <- R6::R6Class(
+    "DottedModule",
+    inherit = dsprrr:::Module,
+    public = list(
+      initialize = function() {
+        super$initialize(signature(".context -> answer"))
+      },
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        tibble::tibble(
+          output = list(batch$.context),
+          chat = list(NULL),
+          metadata = list(list())
+        )
+      }
+    )
+  )
+
+  mod <- DottedModule$new()
+
+  expect_equal(run(mod, .context = "from-run"), "from-run")
+  expect_equal(mod$run(.context = "from-module-run"), "from-module-run")
 })
 
 test_that("build_prompt creates proper prompt", {

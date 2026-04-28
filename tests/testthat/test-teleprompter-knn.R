@@ -175,6 +175,8 @@ test_that("KNNFewShot selects demos dynamically at runtime", {
   selection1 <- compiled$last_selection()
   expect_equal(selection1$n_demos, 2)
   expect_length(selection1$indices, 2)
+  expect_length(selection1$scores, 2)
+  expect_true(all(is.finite(selection1$scores)))
 
   # Run with a geography question - should get different demos
   result2 <- compiled$forward(
@@ -185,11 +187,13 @@ test_that("KNNFewShot selects demos dynamically at runtime", {
   selection2 <- compiled$last_selection()
   expect_equal(selection2$n_demos, 2)
   expect_length(selection2$indices, 2)
+  expect_length(selection2$scores, 2)
 
   # Verify selections may differ (depending on embedding similarity)
   # At minimum, verify the structure is correct
   expect_s3_class(result1, "tbl_df")
   expect_s3_class(result2, "tbl_df")
+  expect_equal(length(result1$metadata[[1]]$knn_scores), 2)
 })
 
 test_that("KNNFewShot works with batch inputs", {

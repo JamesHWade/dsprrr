@@ -109,6 +109,180 @@ suggest_match <- function(input, valid_options, max_distance = 3L) {
   }
 }
 
+#' Validate call inputs against a signature
+#' @noRd
+validate_signature_inputs <- function(
+  sig,
+  inputs,
+  missing = c("error", "warn", "ignore"),
+  extra = c("warn", "ignore"),
+  type = c("warn", "ignore"),
+  context = "inputs"
+) {
+  missing <- match.arg(missing)
+  extra <- match.arg(extra)
+  type <- match.arg(type)
+
+  if (length(sig@inputs) == 0) {
+    return(invisible(NULL))
+  }
+
+  required_names <- vapply(sig@inputs, function(x) x$name, character(1))
+  provided_names <- names(inputs) %||% character()
+
+  missing_names <- setdiff(required_names, provided_names)
+  if (length(missing_names) > 0 && missing != "ignore") {
+    message <- build_missing_input_message(
+      missing_names = missing_names,
+      provided_names = provided_names,
+      required_names = required_names,
+      context = context
+    )
+
+    if (missing == "error") {
+      cli::cli_abort(message)
+    } else {
+      cli::cli_warn(message, class = "dsprrr_missing_input_warning")
+    }
+  }
+
+  extra_names <- setdiff(provided_names, required_names)
+  if (length(extra_names) > 0 && extra == "warn") {
+    for (field in extra_names) {
+      suggestion <- find_closest_match(field, required_names)
+      if (!is.null(suggestion)) {
+        cli::cli_warn(
+          c(
+            "Unknown input: {.field {field}}",
+            "i" = "Did you mean: {.field {suggestion}}?",
+            "i" = "Available fields: {.field {required_names}}"
+          ),
+          class = "dsprrr_extra_input_warning"
+        )
+      } else {
+        cli::cli_warn(
+          c(
+            "Extra input not declared in the signature: {.field {field}}",
+            "i" = "The field remains available to custom templates but is not declared in the signature.",
+            "i" = "Signature fields: {.field {required_names}}"
+          ),
+          class = "dsprrr_extra_input_warning"
+        )
+      }
+    }
+  }
+
+  if (
+    type == "warn" && isTRUE(getOption("dsprrr.warn_on_type_mismatch", TRUE))
+  ) {
+    warn_signature_type_mismatches(sig, inputs)
+  }
+
+  invisible(NULL)
+}
+
+#' Build a missing-input message with suggestions
+#' @noRd
+build_missing_input_message <- function(
+  missing_names,
+  provided_names,
+  required_names,
+  context = "inputs"
+) {
+  msg <- c("Missing required {context}: {.field {missing_names}}")
+
+  for (missing in missing_names) {
+    suggestion <- suggest_match(missing, provided_names)
+    if (!is.null(suggestion)) {
+      msg <- c(msg, "i" = suggestion)
+    }
+  }
+
+  c(
+    msg,
+    "i" = "Signature expects: {.field {required_names}}",
+    if (length(provided_names) > 0) {
+      c("i" = "You provided: {.field {provided_names}}")
+    }
+  )
+}
+
+#' Warn when provided values do not match declared input types
+#' @noRd
+warn_signature_type_mismatches <- function(sig, inputs) {
+  for (input_spec in sig@inputs) {
+    name <- input_spec$name
+    if (!name %in% names(inputs)) {
+      next
+    }
+
+    value <- inputs[[name]]
+    expected_type <- input_spec$type
+
+    if (
+      !isTRUE(input_spec$.type_explicit) ||
+        is.null(value) ||
+        is_content_input(value)
+    ) {
+      next
+    }
+
+    if (!input_value_matches_type(value, expected_type)) {
+      expected <- format_ellmer_type(expected_type, verbose = TRUE)
+      actual <- paste(class(value), collapse = "/")
+      cli::cli_warn(
+        c(
+          "Type mismatch for input {.field {name}}",
+          "i" = "Expected {.val {expected}} from the signature, got {.cls {actual}}.",
+          "i" = "Disable with {.code options(dsprrr.warn_on_type_mismatch = FALSE)}."
+        ),
+        class = "dsprrr_type_mismatch_warning"
+      )
+    }
+  }
+
+  invisible(NULL)
+}
+
+#' Check whether an R value is compatible with an ellmer type
+#' @noRd
+input_value_matches_type <- function(value, expected_type) {
+  if (
+    is.null(expected_type) || inherits(expected_type, "ellmer::TypeJsonSchema")
+  ) {
+    return(TRUE)
+  }
+
+  if (inherits(expected_type, "ellmer::TypeBasic")) {
+    type_name <- expected_type@type
+    return(switch(
+      type_name,
+      "string" = is.character(value),
+      "number" = is.numeric(value),
+      "integer" = is.integer(value) ||
+        (is.numeric(value) && all(is.na(value) | value == floor(value))),
+      "boolean" = is.logical(value),
+      TRUE
+    ))
+  }
+
+  if (inherits(expected_type, "ellmer::TypeEnum")) {
+    return(
+      is.character(value) && all(is.na(value) | value %in% expected_type@values)
+    )
+  }
+
+  if (inherits(expected_type, "ellmer::TypeArray")) {
+    return(is.atomic(value) || is.list(value))
+  }
+
+  if (inherits(expected_type, "ellmer::TypeObject")) {
+    return(is.list(value) || is.data.frame(value) || is.environment(value))
+  }
+
+  TRUE
+}
+
 #' Check if a model is a reasoning model
 #'
 #' Reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series) use different

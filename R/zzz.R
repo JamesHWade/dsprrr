@@ -51,6 +51,15 @@
     compile_bootstrap_rs(teleprompter, program, trainset, ...)
   }
 
+  S7::method(compile, list(BetterTogether, S7::class_any)) <- function(
+    teleprompter,
+    program,
+    trainset,
+    ...
+  ) {
+    compile_better_together(teleprompter, program, trainset, ...)
+  }
+
   S7::method(compile, list(KNNFewShot, S7::class_any)) <- function(
     teleprompter,
     program,

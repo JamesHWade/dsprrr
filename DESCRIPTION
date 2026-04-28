@@ -109,6 +109,7 @@ Collate:
     'signature-transforms.R'
     'signature.R'
     'teleprompter.R'
+    'teleprompter-better-together.R'
     'teleprompter-bootstrap.R'
     'teleprompter-bootstrap-rs.R'
     'teleprompter-copro.R'

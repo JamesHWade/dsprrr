@@ -79,10 +79,13 @@ run.Module <- function(
   .llm = NULL,
   .verbose = FALSE,
   .parallel = FALSE,
+  .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
   .show_prompt = FALSE
 ) {
+  .parallel_method <- match.arg(.parallel_method)
+
   # Show prompt preview if requested
   if (.show_prompt) {
     show_prompt_preview(module)
@@ -140,34 +143,14 @@ run.PredictModule <- function(
   .return_format <- match.arg(.return_format, c("simple", "structured"))
 
   # Validate inputs against signature
-  sig_inputs <- module$signature@inputs
-  if (length(sig_inputs) > 0) {
-    required_names <- vapply(sig_inputs, function(x) x$name, character(1))
-    missing_inputs <- setdiff(required_names, names(inputs))
-
-    if (length(missing_inputs) > 0) {
-      provided <- names(inputs)
-
-      # Build error message with "Did you mean?" suggestions
-      msg <- c("Missing required inputs: {.field {missing_inputs}}")
-
-      # Check for typos in provided names
-      for (missing in missing_inputs) {
-        suggestion <- suggest_match(missing, provided)
-        if (!is.null(suggestion)) {
-          msg <- c(msg, "i" = suggestion)
-        }
-      }
-
-      msg <- c(
-        msg,
-        "i" = "Signature expects: {.field {required_names}}",
-        if (length(provided) > 0) c("i" = "You provided: {.field {provided}}")
-      )
-
-      cli::cli_abort(msg)
-    }
-  }
+  validate_signature_inputs(
+    module$signature,
+    inputs,
+    missing = "error",
+    extra = "warn",
+    type = "warn",
+    context = "inputs"
+  )
 
   # Check if this is batch processing
   input_lengths <- lengths(inputs)
