@@ -81,6 +81,65 @@ test_that("as_ellmer_tool function can be invoked with mock LLM", {
   expect_equal(result$sentiment, "positive")
 })
 
+test_that("as_ellmer_tool passes annotations through to ellmer", {
+  skip_if_not_installed("ellmer")
+
+  mod <- module(
+    signature("text -> sentiment"),
+    type = "predict"
+  )
+
+  tool <- as_ellmer_tool(
+    mod,
+    name = "annotated_sentiment",
+    annotations = ellmer::tool_annotations(
+      read_only_hint = TRUE,
+      destructive_hint = FALSE
+    )
+  )
+
+  expect_true(tool@annotations$read_only_hint)
+  expect_false(tool@annotations$destructive_hint)
+})
+
+test_that("as_ellmer_tool supports output serialization modes", {
+  skip_if_not_installed("ellmer")
+
+  mod <- module_fn(
+    "text -> sentiment, confidence: number",
+    function(text, ...) {
+      list(sentiment = "positive", confidence = 0.9)
+    }
+  )
+
+  json_tool <- as_ellmer_tool(mod, name = "json_sentiment", output = "json")
+  expect_equal(
+    json_tool(text = "good"),
+    "{\"sentiment\":\"positive\",\"confidence\":0.9}"
+  )
+
+  text_mod <- module_fn(
+    "text -> answer",
+    function(text, ...) list(answer = paste("Answer:", text))
+  )
+  text_tool <- as_ellmer_tool(text_mod, name = "text_answer", output = "text")
+  expect_equal(text_tool(text = "ok"), "Answer: ok")
+})
+
+test_that("as_ellmer_tool copy = 'deep' avoids mutating source traces", {
+  skip_if_not_installed("ellmer")
+
+  mod <- module_fn("text -> answer", function(text, ...) list(answer = text))
+
+  deep_tool <- as_ellmer_tool(mod, name = "deep_tool", copy = "deep")
+  deep_tool(text = "one")
+  expect_length(mod$state$traces, 0)
+
+  shared_tool <- as_ellmer_tool(mod, name = "shared_tool", copy = "none")
+  shared_tool(text = "two")
+  expect_length(mod$state$traces, 1)
+})
+
 test_that("as_ellmer_tool preserves structured argument schemas", {
   skip_if_not_installed("ellmer")
 
@@ -187,6 +246,36 @@ test_that("register_dsprrr_tool registers tool with chat", {
   expect_equal(registered_tools[[1]]@name, "sentiment_tool")
 })
 
+test_that("register_dsprrr_tool forwards ellmer tool options", {
+  skip_if_not_installed("ellmer")
+
+  registered_tools <- list()
+  mock_chat <- structure(
+    list(
+      register_tool = function(tool) {
+        registered_tools <<- c(registered_tools, list(tool))
+      }
+    ),
+    class = "Chat"
+  )
+
+  mod <- module_fn("text -> answer", function(text, ...) list(answer = text))
+
+  register_dsprrr_tool(
+    mock_chat,
+    mod,
+    name = "answer_tool",
+    annotations = ellmer::tool_annotations(read_only_hint = TRUE),
+    output = "json",
+    copy = "deep"
+  )
+
+  expect_length(registered_tools, 1)
+  expect_true(registered_tools[[1]]@annotations$read_only_hint)
+  expect_equal(registered_tools[[1]](text = "hello"), "{\"answer\":\"hello\"}")
+  expect_length(mod$state$traces, 0)
+})
+
 test_that("as_ellmer_tool function environment has access to run", {
   skip_if_not_installed("ellmer")
 
@@ -232,6 +321,18 @@ test_that("as_ellmer_tool handles errors from module", {
     .llm = mock_llm
   )
 
-  # Errors should propagate (not be silently caught)
-  expect_error(tool(text = "test"), "API error")
+  # Default behavior returns a structured, recoverable tool observation.
+  result <- tool(text = "test")
+  expect_true(result$error)
+  expect_match(result$message, "API error")
+  expect_equal(result$tool, "test_sentiment")
+
+  abort_tool <- as_ellmer_tool(
+    mod,
+    name = "test_sentiment",
+    description = "Analyze sentiment",
+    .llm = mock_llm,
+    error = "abort"
+  )
+  expect_error(abort_tool(text = "test"), "API error")
 })
