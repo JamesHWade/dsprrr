@@ -14,34 +14,78 @@ dsp("question -> answer", question = "What is the capital of France?")
 #> "Paris"
 ```
 
-## The building blocks
+## Compose programs with reusable primitives
 
-Every dsprrr program is built from the same three composable pieces—the triad at the heart of DSPy. Learn these and the rest of the package falls into place.
+Every dsprrr program is built from the same three pieces. Learn these and the rest of the package falls into place.
 
-<div class="row row-cols-1 row-cols-md-3 g-4 my-4">
-<div class="col">
-<div class="card h-100 border-start border-primary border-4">
-<div class="card-body">
-<h5 class="card-title">1. Signatures</h5>
-<p class="card-text">Declare a task's inputs and outputs—<code>"question -> answer"</code>—and let dsprrr build the prompt. No string wrangling.</p>
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="col-md-5">
+
+### Signatures
+
+**Declare your task.** Define typed inputs and outputs instead of wrestling with prompt strings. Portable, maintainable, and easy to iterate on.
+
+[Learn about signatures &rarr;](articles/concepts-signatures-modules.html)
+
+</div>
+<div class="col-md-7">
+
+```r
+# Route a support ticket
+sig <- signature(
+  "ticket -> urgency: enum('low', 'high'), team: string"
+)
+```
+
 </div>
 </div>
+
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="col-md-5">
+
+### Modules
+
+**Same interface, different strategy.** Modules control how a signature executes—reason step by step, use tools, or run ensembles—without rewriting the task.
+
+[Explore modules &rarr;](articles/advanced-modules.html)
+
 </div>
-<div class="col">
-<div class="card h-100 border-start border-primary border-4">
-<div class="card-body">
-<h5 class="card-title">2. Modules</h5>
-<p class="card-text">Wrap a signature in a strategy—<code>predict</code>, <code>chain_of_thought</code>, <code>react</code>, and more—then chain modules into pipelines with <code>%&gt;&gt;%</code>.</p>
+<div class="col-md-7">
+
+```r
+# Direct completion
+classify <- module(sig, type = "predict")
+
+# Add step-by-step reasoning
+classify <- module(sig, type = "chain_of_thought")
+
+# Add tools and a reasoning loop
+classify <- module(sig, type = "react", tools = list(search))
+```
+
 </div>
 </div>
+
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="col-md-5">
+
+### Optimizers
+
+**Compile your program against a metric.** Give dsprrr examples and a scoring function; it tunes prompts and demos automatically until quality converges.
+
+[Try optimizers &rarr;](articles/compilation-optimization.html)
+
 </div>
-<div class="col">
-<div class="card h-100 border-start border-primary border-4">
-<div class="card-body">
-<h5 class="card-title">3. Optimizers</h5>
-<p class="card-text">Improve modules from data and a metric—few-shot demos, instruction search, Bayesian optimization—instead of hand-tuning prompts.</p>
-</div>
-</div>
+<div class="col-md-7">
+
+```r
+tp <- GEPA(metric = metric_exact_match())
+optimized <- compile(tp, mod, trainset)
+
+# Before: 0.41   After: 0.63
+pin_module_config(optimized, "rag-v2")
+```
+
 </div>
 </div>
 

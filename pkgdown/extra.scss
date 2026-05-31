@@ -52,6 +52,24 @@
   }
 }
 
+// Core primitives section (Signatures / Modules / Optimizers)
+.primitive-row {
+  padding: 1rem 0;
+  border-top: 1px solid var(--bs-border-color);
+
+  h3 {
+    color: var(--bs-primary);
+    font-weight: 600;
+    margin-top: 0;
+  }
+
+  // Keep the descriptive column and its code block vertically centered
+  // together, with comfortable spacing on wider screens.
+  pre {
+    margin-bottom: 0;
+  }
+}
+
 // Section separators
 hr {
   border: none;
