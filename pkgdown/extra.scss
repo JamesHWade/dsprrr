@@ -117,8 +117,9 @@ hr {
   margin: 3rem 0;
 }
 
-// Result callouts in tabs
-.tab-pane p strong:first-child {
+// Result callouts in the "Automatic Optimization" tabs ("**Result**: ...").
+// Scoped to that section so a bold lead-in elsewhere isn't recolored.
+#optimizeTabsContent .tab-pane p strong:first-child {
   color: var(--bs-success);
 }
 

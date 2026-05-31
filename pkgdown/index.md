@@ -226,10 +226,11 @@ result <- run(
   message = "I'm Sarah (sarah@acme.co). Meet Thursday?",
   .llm = chat_openai()
 )
-get_output(result)
-#> $name   "Sarah"
-#> $email  "sarah@acme.co"
-#> $intent "meeting"
+
+# In simple mode (the default), run() returns the parsed output directly
+result$name    #> "Sarah"
+result$email   #> "sarah@acme.co"
+result$intent  #> "meeting"
 ```
 
 [Extract structured data &rarr;](articles/tutorial-structured-outputs.html)
