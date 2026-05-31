@@ -53,14 +53,23 @@ sig <- signature(
 <div class="col-md-7">
 
 ```r
+sig <- signature(
+  "ticket -> urgency: enum('low', 'high'), team: string"
+)
+
 # Direct completion
 classify <- module(sig, type = "predict")
 
 # Add step-by-step reasoning
 classify <- module(sig, type = "chain_of_thought")
 
-# Add tools and a reasoning loop
-classify <- module(sig, type = "react", tools = list(search))
+# Add a tool-use loop
+lookup_tool <- ellmer::tool(
+  function(query) paste("Found:", query),
+  description = "Look up support policy details",
+  arguments = list(query = ellmer::type_string())
+)
+classify <- module(sig, type = "react", tools = list(lookup_tool))
 ```
 
 </div>
@@ -79,11 +88,18 @@ classify <- module(sig, type = "react", tools = list(search))
 <div class="col-md-7">
 
 ```r
-tp <- GEPA(metric = metric_exact_match())
-optimized <- compile(tp, mod, trainset)
+route_sig <- signature("ticket -> urgency: enum('low', 'high')")
+router <- module(route_sig, type = "predict")
+trainset <- dsp_trainset(
+  ticket  = c("Package lost", "Need a receipt"),
+  urgency = c("high", "low")
+)
 
-# Before: 0.41   After: 0.63
-pin_module_config(board, "rag-v2", optimized)
+tp <- GEPA(metric = metric_exact_match(field = "urgency"))
+optimized <- compile(tp, router, trainset)
+
+board <- pins::board_temp()
+pin_module_config(board, "ticket-router-v2", optimized)
 ```
 
 </div>
@@ -224,6 +240,13 @@ get_output(result)
 Define tools as functions and hand them to a ReAct module.
 
 ```r
+kb_search <- function(query) {
+  paste(
+    "Evaluators compare module outputs with labeled examples.",
+    "Optimizers use those scores to select better prompts and demos."
+  )
+}
+
 search <- ellmer::tool(
   function(query) kb_search(query),
   description = "Search a knowledge base",
@@ -233,11 +256,13 @@ search <- ellmer::tool(
 agent <- signature("question -> answer") |>
   module(type = "react", tools = list(search))
 
-run(agent, question = "What were R's biggest releases this year?",
-    .llm = chat_openai())
-#> # thought: I should search the knowledge base.
-#> # action: search("R releases 2026") -> ...
-#> Prediction(answer = "R 4.6 added ...")
+answer <- run(
+  agent,
+  question = "How do dsprrr optimizers improve a module?",
+  .llm = chat_openai()
+)
+answer$answer
+#> "They score outputs against examples, then keep better prompts and demos."
 ```
 
 [Build a tool-using agent &rarr;](articles/advanced-modules.html)
@@ -248,8 +273,8 @@ run(agent, question = "What were R's biggest releases this year?",
 Compose modules into a pipeline with `%>>%`—outputs flow to inputs.
 
 ```r
-# Pull claims, then verify each against the source
-find <- signature("article -> claims: array(string)") |>
+# Pull a claim, then verify it against the source
+find <- signature("article -> claim: string, source: string") |>
   module(type = "chain_of_thought")
 
 verify <- signature("claim, source -> verdict") |>
@@ -257,8 +282,10 @@ verify <- signature("claim, source -> verdict") |>
 
 factcheck <- find %>>% verify
 
-run(factcheck, article = news_article, .llm = chat_openai())
-#> verdict: "supported"
+news_article <- "Acme reported that revenue grew 12% in Q4."
+verdict <- run(factcheck, article = news_article, .llm = chat_openai())
+verdict$verdict
+#> "supported"
 ```
 
 [Chain modules into pipelines &rarr;](articles/chaining-modules.html)
@@ -269,16 +296,18 @@ run(factcheck, article = news_article, .llm = chat_openai())
 Name an image input in the signature and pass an ellmer content object.
 
 ```r
-analyze <- signature("chart, question -> answer") |>
+analyze <- signature("image, question -> answer") |>
   module(type = "predict")
 
 run(
   analyze,
-  chart    = ellmer::ContentImageRemote("quarterly_revenue.png"),
-  question = "Describe the trend and key data points.",
+  image    = ellmer::ContentImageRemote(
+    "https://www.r-project.org/logo/Rlogo.png"
+  ),
+  question = "What logo is shown?",
   .llm     = chat_openai()
 )
-#> "Steady growth, a Q3 dip, then a strong Q4 recovery."
+#> "The image shows the R project logo."
 ```
 
 [Work with multimodal inputs &rarr;](articles/advanced-ellmer.html)
@@ -289,16 +318,24 @@ run(
 Optimizers improve a program against a metric—no prompt rewriting.
 
 ```r
+extract <- signature(
+  "message -> intent: enum('meeting', 'intro')"
+) |>
+  module(type = "predict")
+
 trainset <- dsp_trainset(
   message = c("I'm Sarah (sarah@acme.co). Meet Thursday?",
               "Hi, this is Dev—just saying hello!"),
   intent  = c("meeting", "intro")
 )
 
-optimized <- compile(GEPA(metric = metric_exact_match()), extract, trainset)
-#> Baseline   62%  (zero-shot)
-#> Optimized  89%  (GEPA compile)
+optimized <- compile(
+  GEPA(metric = metric_exact_match(field = "intent")),
+  extract,
+  trainset
+)
 
+board <- pins::board_temp()
 pin_module_config(board, "extract-v2", optimized)
 ```
 
