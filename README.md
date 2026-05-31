@@ -290,8 +290,8 @@ Documentation](https://jameshwade.github.io/dsprrr/reference/index.html)
 
 ## Status
 
-Experimental. The API may change. See [PLAN.md](PLAN.md) for the
-roadmap.
+Experimental. The API may change. See the [open
+issues](https://github.com/JamesHWade/dsprrr/issues) for the roadmap.
 
 ## Acknowledgments
 
