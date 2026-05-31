@@ -171,92 +171,138 @@ dsp("question -> answer", question = "What is 2+2?")
   </div>
 </div>
 
-## Building Modules
+## Define a task. Grow it into a system.
 
-Modules are reusable LLM components with typed inputs and outputs.
+Start with a single signature and grow it into a multi-step program—the
+same building blocks scale from a one-line extractor to a full pipeline.
 
 <ul class="nav nav-tabs" id="moduleTabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="classify-tab" data-bs-toggle="tab" data-bs-target="#classify" type="button" role="tab">Classification</button>
+    <button class="nav-link active" id="extract-tab" data-bs-toggle="tab" data-bs-target="#extract" type="button" role="tab">Extract</button>
   </li>
   <li class="nav-item" role="presentation">
-    <button class="nav-link" id="qa-tab" data-bs-toggle="tab" data-bs-target="#qa" type="button" role="tab">Q&A</button>
+    <button class="nav-link" id="agent-tab" data-bs-toggle="tab" data-bs-target="#agent" type="button" role="tab">Agent</button>
   </li>
   <li class="nav-item" role="presentation">
-    <button class="nav-link" id="extract-tab" data-bs-toggle="tab" data-bs-target="#extract" type="button" role="tab">Extraction</button>
+    <button class="nav-link" id="pipeline-tab" data-bs-toggle="tab" data-bs-target="#pipeline" type="button" role="tab">Pipeline</button>
   </li>
   <li class="nav-item" role="presentation">
-    <button class="nav-link" id="agent-tab" data-bs-toggle="tab" data-bs-target="#agent" type="button" role="tab">Agents</button>
+    <button class="nav-link" id="multimodal-tab" data-bs-toggle="tab" data-bs-target="#multimodal" type="button" role="tab">Multimodal</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="optimize-tab" data-bs-toggle="tab" data-bs-target="#optimize" type="button" role="tab">Optimize</button>
   </li>
 </ul>
-<div class="tab-content" id="moduleTabsContent">
-  <div class="tab-pane fade show active" id="classify" role="tabpanel">
+<div class="tab-content example-gallery" id="moduleTabsContent">
+  <div class="tab-pane fade show active" id="extract" role="tabpanel">
+
+Signatures define a task and enforce typed outputs.
 
 ```r
-# Sentiment classification with constrained output
-classifier <- signature(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+# Extract several typed fields in one call
+extract <- signature(
+  "message -> name: string, email: string,
+   intent: enum('meeting', 'intro', 'follow-up')"
 ) |> module(type = "predict")
 
-classifier$predict(text = "I love this product!")
-#> "positive"
-
-# Batch processing
-classifier$predict(text = c("Great!", "Terrible!", "It's okay"))
-#> c("positive", "negative", "neutral")
-```
-
-  </div>
-  <div class="tab-pane fade" id="qa" role="tabpanel">
-
-```r
-# Context-aware QA
-qa <- signature("context, question -> answer") |>
-  module(type = "predict")
-
-qa$predict(
-  context = "R was created by Ross Ihaka and Robert Gentleman in 1993.",
-  question = "Who created R?"
+result <- run(
+  extract,
+  message = "I'm Sarah (sarah@acme.co). Meet Thursday?",
+  .llm = chat_openai()
 )
-#> "Ross Ihaka and Robert Gentleman"
+get_output(result)
+#> $name   "Sarah"
+#> $email  "sarah@acme.co"
+#> $intent "meeting"
 ```
 
-  </div>
-  <div class="tab-pane fade" id="extract" role="tabpanel">
-
-```r
-# Structured output with multiple fields
-extractor <- signature(
-  "text -> title: string, entities: array(string), sentiment: enum('pos', 'neg', 'neu')"
-) |> module(type = "predict")
-
-extractor$predict(text = "Apple announced the iPhone 16 today. Investors are excited.")
-#> $title
-#> "Apple iPhone 16 Announcement"
-#> $entities
-#> c("Apple", "iPhone 16")
-#> $sentiment
-#> "pos"
-```
+[Extract structured data &rarr;](articles/tutorial-structured-outputs.html)
 
   </div>
   <div class="tab-pane fade" id="agent" role="tabpanel">
 
-```r
-# ReAct agent with tool use
-library(ellmer)
+Define tools as functions and hand them to a ReAct module.
 
-search_tool <- tool(
-  function(query) wikipedia_search(query),
-  "Search Wikipedia for information"
+```r
+search <- ellmer::tool(
+  function(query) kb_search(query),
+  description = "Search a knowledge base",
+  arguments = list(query = ellmer::type_string())
 )
 
 agent <- signature("question -> answer") |>
-  module(type = "react", tools = list(search_tool))
+  module(type = "react", tools = list(search))
 
-agent$predict(question = "What is the population of Tokyo?")
-#> "Tokyo has a population of approximately 14 million people."
+run(agent, question = "What were R's biggest releases this year?",
+    .llm = chat_openai())
+#> # thought: I should search the knowledge base.
+#> # action: search("R releases 2026") -> ...
+#> Prediction(answer = "R 4.6 added ...")
 ```
+
+[Build a tool-using agent &rarr;](articles/advanced-modules.html)
+
+  </div>
+  <div class="tab-pane fade" id="pipeline" role="tabpanel">
+
+Compose modules into a pipeline with `%>>%`—outputs flow to inputs.
+
+```r
+# Pull claims, then verify each against the source
+find <- signature("article -> claims: array(string)") |>
+  module(type = "chain_of_thought")
+
+verify <- signature("claim, source -> verdict") |>
+  module(type = "chain_of_thought")
+
+factcheck <- find %>>% verify
+
+run(factcheck, article = news_article, .llm = chat_openai())
+#> verdict: "supported"
+```
+
+[Chain modules into pipelines &rarr;](articles/chaining-modules.html)
+
+  </div>
+  <div class="tab-pane fade" id="multimodal" role="tabpanel">
+
+Name an image input in the signature and pass an ellmer content object.
+
+```r
+analyze <- signature("chart, question -> answer") |>
+  module(type = "predict")
+
+run(
+  analyze,
+  chart    = ellmer::ContentImageRemote("quarterly_revenue.png"),
+  question = "Describe the trend and key data points.",
+  .llm     = chat_openai()
+)
+#> "Steady growth, a Q3 dip, then a strong Q4 recovery."
+```
+
+[Work with multimodal inputs &rarr;](articles/advanced-ellmer.html)
+
+  </div>
+  <div class="tab-pane fade" id="optimize" role="tabpanel">
+
+Optimizers improve a program against a metric—no prompt rewriting.
+
+```r
+trainset <- dsp_trainset(
+  message = c("I'm Sarah (sarah@acme.co). Meet Thursday?",
+              "Hi, this is Dev—just saying hello!"),
+  intent  = c("meeting", "intro")
+)
+
+optimized <- compile(GEPA(metric = metric_exact_match()), extract, trainset)
+#> Baseline   62%  (zero-shot)
+#> Optimized  89%  (GEPA compile)
+
+pin_module_config(board, "extract-v2", optimized)
+```
+
+[Optimize with your data &rarr;](articles/compilation-optimization.html)
 
   </div>
 </div>
