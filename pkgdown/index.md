@@ -83,7 +83,7 @@ tp <- GEPA(metric = metric_exact_match())
 optimized <- compile(tp, mod, trainset)
 
 # Before: 0.41   After: 0.63
-pin_module_config(optimized, "rag-v2")
+pin_module_config(board, "rag-v2", optimized)
 ```
 
 </div>
