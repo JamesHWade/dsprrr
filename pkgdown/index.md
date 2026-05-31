@@ -14,6 +14,37 @@ dsp("question -> answer", question = "What is the capital of France?")
 #> "Paris"
 ```
 
+## The building blocks
+
+Every dsprrr program is built from the same three composable pieces—the triad at the heart of DSPy. Learn these and the rest of the package falls into place.
+
+<div class="row row-cols-1 row-cols-md-3 g-4 my-4">
+<div class="col">
+<div class="card h-100 border-start border-primary border-4">
+<div class="card-body">
+<h5 class="card-title">1. Signatures</h5>
+<p class="card-text">Declare a task's inputs and outputs—<code>"question -> answer"</code>—and let dsprrr build the prompt. No string wrangling.</p>
+</div>
+</div>
+</div>
+<div class="col">
+<div class="card h-100 border-start border-primary border-4">
+<div class="card-body">
+<h5 class="card-title">2. Modules</h5>
+<p class="card-text">Wrap a signature in a strategy—<code>predict</code>, <code>chain_of_thought</code>, <code>react</code>, and more—then chain modules into pipelines with <code>%&gt;&gt;%</code>.</p>
+</div>
+</div>
+</div>
+<div class="col">
+<div class="card h-100 border-start border-primary border-4">
+<div class="card-body">
+<h5 class="card-title">3. Optimizers</h5>
+<p class="card-text">Improve modules from data and a metric—few-shot demos, instruction search, Bayesian optimization—instead of hand-tuning prompts.</p>
+</div>
+</div>
+</div>
+</div>
+
 ## Getting Started: Configure Your LLM
 
 <ul class="nav nav-tabs" id="providerTabs" role="tablist">
