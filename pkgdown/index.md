@@ -14,6 +14,97 @@ dsp("question -> answer", question = "What is the capital of France?")
 #> "Paris"
 ```
 
+## Compose programs with reusable primitives
+
+Every dsprrr program is built from the same three pieces. Learn these and the rest of the package falls into place.
+
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="col-md-5">
+
+### Signatures
+
+**Declare your task.** Define typed inputs and outputs instead of wrestling with prompt strings. Portable, maintainable, and easy to iterate on.
+
+[Learn about signatures &rarr;](articles/concepts-signatures-modules.html)
+
+</div>
+<div class="col-md-7">
+
+```r
+# Route a support ticket
+sig <- signature(
+  "ticket -> urgency: enum('low', 'high'), team: string"
+)
+```
+
+</div>
+</div>
+
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="col-md-5">
+
+### Modules
+
+**Same interface, different strategy.** Modules control how a signature executes—reason step by step, use tools, or run ensembles—without rewriting the task.
+
+[Explore modules &rarr;](articles/advanced-modules.html)
+
+</div>
+<div class="col-md-7">
+
+```r
+sig <- signature(
+  "ticket -> urgency: enum('low', 'high'), team: string"
+)
+
+# Direct completion
+classify <- module(sig, type = "predict")
+
+# Add step-by-step reasoning
+classify <- module(sig, type = "chain_of_thought")
+
+# Add a tool-use loop
+lookup_tool <- ellmer::tool(
+  function(query) paste("Found:", query),
+  description = "Look up support policy details",
+  arguments = list(query = ellmer::type_string())
+)
+classify <- module(sig, type = "react", tools = list(lookup_tool))
+```
+
+</div>
+</div>
+
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="col-md-5">
+
+### Optimizers
+
+**Compile your program against a metric.** Give dsprrr examples and a scoring function; it tunes prompts and demos automatically until quality converges.
+
+[Try optimizers &rarr;](articles/compilation-optimization.html)
+
+</div>
+<div class="col-md-7">
+
+```r
+route_sig <- signature("ticket -> urgency: enum('low', 'high')")
+router <- module(route_sig, type = "predict")
+trainset <- dsp_trainset(
+  ticket  = c("Package lost", "Need a receipt"),
+  urgency = c("high", "low")
+)
+
+tp <- GEPA(metric = metric_exact_match(field = "urgency"))
+optimized <- compile(tp, router, trainset)
+
+board <- pins::board_temp()
+pin_module_config(board, "ticket-router-v2", optimized)
+```
+
+</div>
+</div>
+
 ## Getting Started: Configure Your LLM
 
 <ul class="nav nav-tabs" id="providerTabs" role="tablist">
@@ -96,92 +187,160 @@ dsp("question -> answer", question = "What is 2+2?")
   </div>
 </div>
 
-## Building Modules
+## Define a task. Grow it into a system.
 
-Modules are reusable LLM components with typed inputs and outputs.
+Start with a single signature and grow it into a multi-step program—the
+same building blocks scale from a one-line extractor to a full pipeline.
 
 <ul class="nav nav-tabs" id="moduleTabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="classify-tab" data-bs-toggle="tab" data-bs-target="#classify" type="button" role="tab">Classification</button>
+    <button class="nav-link active" id="extract-tab" data-bs-toggle="tab" data-bs-target="#extract" type="button" role="tab">Extract</button>
   </li>
   <li class="nav-item" role="presentation">
-    <button class="nav-link" id="qa-tab" data-bs-toggle="tab" data-bs-target="#qa" type="button" role="tab">Q&A</button>
+    <button class="nav-link" id="agent-tab" data-bs-toggle="tab" data-bs-target="#agent" type="button" role="tab">Agent</button>
   </li>
   <li class="nav-item" role="presentation">
-    <button class="nav-link" id="extract-tab" data-bs-toggle="tab" data-bs-target="#extract" type="button" role="tab">Extraction</button>
+    <button class="nav-link" id="pipeline-tab" data-bs-toggle="tab" data-bs-target="#pipeline" type="button" role="tab">Pipeline</button>
   </li>
   <li class="nav-item" role="presentation">
-    <button class="nav-link" id="agent-tab" data-bs-toggle="tab" data-bs-target="#agent" type="button" role="tab">Agents</button>
+    <button class="nav-link" id="multimodal-tab" data-bs-toggle="tab" data-bs-target="#multimodal" type="button" role="tab">Multimodal</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="optimize-tab" data-bs-toggle="tab" data-bs-target="#optimize" type="button" role="tab">Optimize</button>
   </li>
 </ul>
-<div class="tab-content" id="moduleTabsContent">
-  <div class="tab-pane fade show active" id="classify" role="tabpanel">
+<div class="tab-content example-gallery" id="moduleTabsContent">
+  <div class="tab-pane fade show active" id="extract" role="tabpanel">
+
+Signatures define a task and enforce typed outputs.
 
 ```r
-# Sentiment classification with constrained output
-classifier <- signature(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+# Extract several typed fields in one call
+extract <- signature(
+  "message -> name: string, email: string,
+   intent: enum('meeting', 'intro', 'follow-up')"
 ) |> module(type = "predict")
 
-classifier$predict(text = "I love this product!")
-#> "positive"
-
-# Batch processing
-classifier$predict(text = c("Great!", "Terrible!", "It's okay"))
-#> c("positive", "negative", "neutral")
-```
-
-  </div>
-  <div class="tab-pane fade" id="qa" role="tabpanel">
-
-```r
-# Context-aware QA
-qa <- signature("context, question -> answer") |>
-  module(type = "predict")
-
-qa$predict(
-  context = "R was created by Ross Ihaka and Robert Gentleman in 1993.",
-  question = "Who created R?"
+result <- run(
+  extract,
+  message = "I'm Sarah (sarah@acme.co). Meet Thursday?",
+  .llm = chat_openai()
 )
-#> "Ross Ihaka and Robert Gentleman"
+
+# In simple mode (the default), run() returns the parsed output directly
+result$name    #> "Sarah"
+result$email   #> "sarah@acme.co"
+result$intent  #> "meeting"
 ```
 
-  </div>
-  <div class="tab-pane fade" id="extract" role="tabpanel">
-
-```r
-# Structured output with multiple fields
-extractor <- signature(
-  "text -> title: string, entities: array(string), sentiment: enum('pos', 'neg', 'neu')"
-) |> module(type = "predict")
-
-extractor$predict(text = "Apple announced the iPhone 16 today. Investors are excited.")
-#> $title
-#> "Apple iPhone 16 Announcement"
-#> $entities
-#> c("Apple", "iPhone 16")
-#> $sentiment
-#> "pos"
-```
+[Extract structured data &rarr;](articles/tutorial-structured-outputs.html)
 
   </div>
   <div class="tab-pane fade" id="agent" role="tabpanel">
 
-```r
-# ReAct agent with tool use
-library(ellmer)
+Define tools as functions and hand them to a ReAct module.
 
-search_tool <- tool(
-  function(query) wikipedia_search(query),
-  "Search Wikipedia for information"
+```r
+kb_search <- function(query) {
+  paste(
+    "Evaluators compare module outputs with labeled examples.",
+    "Optimizers use those scores to select better prompts and demos."
+  )
+}
+
+search <- ellmer::tool(
+  function(query) kb_search(query),
+  description = "Search a knowledge base",
+  arguments = list(query = ellmer::type_string())
 )
 
 agent <- signature("question -> answer") |>
-  module(type = "react", tools = list(search_tool))
+  module(type = "react", tools = list(search))
 
-agent$predict(question = "What is the population of Tokyo?")
-#> "Tokyo has a population of approximately 14 million people."
+answer <- run(
+  agent,
+  question = "How do dsprrr optimizers improve a module?",
+  .llm = chat_openai()
+)
+answer$answer
+#> "They score outputs against examples, then keep better prompts and demos."
 ```
+
+[Build a tool-using agent &rarr;](articles/advanced-modules.html)
+
+  </div>
+  <div class="tab-pane fade" id="pipeline" role="tabpanel">
+
+Compose modules into a pipeline with `%>>%`—outputs flow to inputs.
+
+```r
+# Pull a claim, then verify it against the source
+find <- signature("article -> claim: string, source: string") |>
+  module(type = "chain_of_thought")
+
+verify <- signature("claim, source -> verdict") |>
+  module(type = "chain_of_thought")
+
+factcheck <- find %>>% verify
+
+news_article <- "Acme reported that revenue grew 12% in Q4."
+verdict <- run(factcheck, article = news_article, .llm = chat_openai())
+verdict$verdict
+#> "supported"
+```
+
+[Chain modules into pipelines &rarr;](articles/chaining-modules.html)
+
+  </div>
+  <div class="tab-pane fade" id="multimodal" role="tabpanel">
+
+Name an image input in the signature and pass an ellmer content object.
+
+```r
+analyze <- signature("image, question -> answer") |>
+  module(type = "predict")
+
+run(
+  analyze,
+  image    = ellmer::ContentImageRemote(
+    "https://www.r-project.org/logo/Rlogo.png"
+  ),
+  question = "What logo is shown?",
+  .llm     = chat_openai()
+)
+#> "The image shows the R project logo."
+```
+
+[Work with multimodal inputs &rarr;](articles/advanced-ellmer.html)
+
+  </div>
+  <div class="tab-pane fade" id="optimize" role="tabpanel">
+
+Optimizers improve a program against a metric—no prompt rewriting.
+
+```r
+extract <- signature(
+  "message -> intent: enum('meeting', 'intro')"
+) |>
+  module(type = "predict")
+
+trainset <- dsp_trainset(
+  message = c("I'm Sarah (sarah@acme.co). Meet Thursday?",
+              "Hi, this is Dev—just saying hello!"),
+  intent  = c("meeting", "intro")
+)
+
+optimized <- compile(
+  GEPA(metric = metric_exact_match(field = "intent")),
+  extract,
+  trainset
+)
+
+board <- pins::board_temp()
+pin_module_config(board, "extract-v2", optimized)
+```
+
+[Optimize with your data &rarr;](articles/compilation-optimization.html)
 
   </div>
 </div>

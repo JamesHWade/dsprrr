@@ -52,6 +52,64 @@
   }
 }
 
+// Core primitives section (Signatures / Modules / Optimizers)
+.primitive-row {
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--bs-border-color);
+
+  h3 {
+    color: var(--bs-primary);
+    font-weight: 600;
+    margin-top: 0;
+  }
+
+  // The bold lead-in on each primitive ("Declare your task.") echoes
+  // DSPy's primitive taglines.
+  p > strong:first-child {
+    display: block;
+    font-size: 1.05rem;
+    color: var(--bs-emphasis-color);
+    margin-bottom: 0.25rem;
+  }
+
+  // Keep the descriptive column and its code block vertically centered
+  // together, with comfortable spacing on wider screens.
+  pre {
+    margin-bottom: 0;
+  }
+}
+
+// "Learn more ->" inline links under primitives and gallery tabs
+.primitive-row a[href$="html"],
+.example-gallery a[href$="html"] {
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Example gallery (Extract / Agent / Pipeline / Multimodal / Optimize)
+.example-gallery {
+  > .tab-pane {
+    // Steady height so switching tabs doesn't jump the page.
+    min-height: 22rem;
+  }
+
+  // The one-line caption above each example.
+  > .tab-pane > p:first-child {
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .example-gallery > .tab-pane {
+    min-height: 0;
+  }
+}
+
 // Section separators
 hr {
   border: none;
@@ -59,8 +117,9 @@ hr {
   margin: 3rem 0;
 }
 
-// Result callouts in tabs
-.tab-pane p strong:first-child {
+// Result callouts in the "Automatic Optimization" tabs ("**Result**: ...").
+// Scoped to that section so a bold lead-in elsewhere isn't recolored.
+#optimizeTabsContent .tab-pane p strong:first-child {
   color: var(--bs-success);
 }
 
