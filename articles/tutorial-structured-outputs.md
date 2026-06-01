@@ -22,6 +22,7 @@ and emails.
 - `OPENAI_API_KEY` set in your environment
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 library(tibble)
@@ -35,6 +36,7 @@ So far you’ve seen single outputs like `-> answer` or `-> sentiment`.
 Add more outputs with commas:
 
 ``` r
+
 sig <- signature("text -> sentiment, confidence: number")
 
 extractor <- module(sig, type = "predict")
@@ -47,6 +49,7 @@ You get back both `sentiment` and `confidence` in a structured result.
 Try another:
 
 ``` r
+
 run(extractor, text = "It was okay, nothing special.", .llm = chat)
 ```
 
@@ -57,6 +60,7 @@ Notice the confidence is lower for ambiguous text.
 Add types to each output field:
 
 ``` r
+
 sig <- signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral'), stars: int, summary: string"
 )
@@ -79,6 +83,7 @@ You get sentiment, a star rating, *and* a summary—all typed correctly.
 For nested or complex data, use ellmer’s type system directly:
 
 ``` r
+
 sig <- signature(
   inputs = list(
     input("article", description = "News article to analyze")
@@ -97,6 +102,7 @@ article_analyzer <- module(sig, type = "predict")
 Test it with a news snippet:
 
 ``` r
+
 article <- "
 Scientists at MIT announced a breakthrough in solar panel efficiency today.
 The new panels can convert 47% of sunlight to electricity, nearly double
@@ -114,6 +120,7 @@ Extract lists of items with
 [`type_array()`](https://ellmer.tidyverse.org/reference/type_boolean.html):
 
 ``` r
+
 sig <- signature(
   inputs = list(
     input("text", description = "Text to extract entities from")
@@ -132,6 +139,7 @@ entity_extractor <- module(sig, type = "predict")
 Test with a news article:
 
 ``` r
+
 news <- "
 Apple CEO Tim Cook met with President Biden at the White House yesterday
 to discuss manufacturing jobs. Cook announced that Apple will invest
@@ -147,6 +155,7 @@ result
 Access the arrays directly:
 
 ``` r
+
 result$people
 result$organizations
 ```
@@ -158,6 +167,7 @@ For hierarchical data, nest
 calls:
 
 ``` r
+
 sig <- signature(
   inputs = list(
     input("email", description = "Email message to parse")
@@ -181,6 +191,7 @@ email_parser <- module(sig, type = "predict")
 Test with an email:
 
 ``` r
+
 email <- "
 From: Sarah Johnson <sarah.johnson@techcorp.com>
 Subject: Q4 Budget Review - Action Required
@@ -205,6 +216,7 @@ result
 Access nested fields:
 
 ``` r
+
 result$sender$name
 result$action_items
 result$priority
@@ -215,6 +227,7 @@ result$priority
 Let’s combine what you’ve learned into a practical system:
 
 ``` r
+
 sig <- signature(
   inputs = list(
     input("email", description = "Email to triage")
@@ -240,6 +253,7 @@ triage <- module(sig, type = "predict")
 Process a batch of emails:
 
 ``` r
+
 emails <- tibble(
   id = 1:3,
   email = c(
@@ -258,6 +272,7 @@ results
 Some fields might not always be present. Make them nullable:
 
 ``` r
+
 sig <- signature(
   inputs = list(
     input("text", description = "Text that may mention a date")

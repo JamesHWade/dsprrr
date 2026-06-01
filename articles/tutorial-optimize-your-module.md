@@ -22,6 +22,7 @@ through grid search.
 - `OPENAI_API_KEY` set in your environment
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 library(tibble)
@@ -34,6 +35,7 @@ chat <- chat_openai(model = "gpt-5-mini")
 Let’s build a sentiment analyzer and optimize it:
 
 ``` r
+
 sig <- signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral')",
   instructions = "Classify the sentiment of this product review."
@@ -45,6 +47,7 @@ classifier <- module(sig, type = "predict")
 Create training and test data:
 
 ``` r
+
 # Training data for optimization
 trainset <- dsp_trainset(
   review = c(
@@ -85,6 +88,7 @@ Temperature controls randomness. Lower = more deterministic, higher =
 more creative. Let’s find the best value:
 
 ``` r
+
 classifier$optimize_grid(
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
@@ -100,6 +104,7 @@ classifier$optimize_grid(
 See what happened:
 
 ``` r
+
 # All trials
 module_trials(classifier)
 ```
@@ -107,6 +112,7 @@ module_trials(classifier)
 Get the summary:
 
 ``` r
+
 # Metrics summary
 module_metrics(classifier)
 ```
@@ -114,6 +120,7 @@ module_metrics(classifier)
 Check the best configuration:
 
 ``` r
+
 # Best score achieved
 classifier$state$best_score
 
@@ -127,6 +134,7 @@ After optimization, the module automatically uses the best
 configuration:
 
 ``` r
+
 # This uses the best temperature found
 run(classifier, review = "This product changed my life!", .llm = chat)
 ```
@@ -136,6 +144,7 @@ run(classifier, review = "This product changed my life!", .llm = chat)
 Instructions matter a lot. Let’s test different phrasings:
 
 ``` r
+
 # Reset to try different parameters
 classifier2 <- module(sig, type = "predict")
 
@@ -163,6 +172,7 @@ The `instructions_suffix` is appended to your base instructions.
 Search over multiple parameters at once:
 
 ``` r
+
 classifier3 <- module(sig, type = "predict")
 
 classifier3$optimize_grid(
@@ -186,6 +196,7 @@ total configurations.
 For more control, use `GridSearchTeleprompter` with explicit variants:
 
 ``` r
+
 variants <- tibble(
   id = c("concise", "analytical", "empathetic"),
   instructions_suffix = c(
@@ -216,6 +227,7 @@ This combines instruction optimization with few-shot example selection.
 Always test on data the optimizer never saw:
 
 ``` r
+
 # Evaluate the optimized module on test data
 test_results <- evaluate(
   optimized,
@@ -230,6 +242,7 @@ test_results
 Compare to baseline:
 
 ``` r
+
 baseline <- module(sig, type = "predict")
 
 baseline_results <- evaluate(
@@ -248,6 +261,7 @@ cat("Optimized test accuracy:", scales::percent(test_results$mean_score), "\n")
 Not all tasks use exact match. dsprrr provides several metrics:
 
 ``` r
+
 # For text generation - token overlap
 metric_f1()
 
@@ -269,6 +283,7 @@ metric_threshold(metric_f1(), threshold = 0.8)
 Optimization uses LLM calls. Track the cost:
 
 ``` r
+
 # After optimization
 classifier$trace_summary()
 
@@ -308,12 +323,12 @@ Key principles:
 
 ## When to Use Each Approach
 
-| Approach                                                                            | Best For                           |
-|-------------------------------------------------------------------------------------|------------------------------------|
-| [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) | Quick parameter sweeps             |
-| `LabeledFewShot`                                                                    | Adding examples from data          |
-| `GridSearchTeleprompter`                                                            | Instruction + example optimization |
-| Manual tuning                                                                       | Initial exploration                |
+| Approach | Best For |
+|----|----|
+| [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) | Quick parameter sweeps |
+| `LabeledFewShot` | Adding examples from data |
+| `GridSearchTeleprompter` | Instruction + example optimization |
+| Manual tuning | Initial exploration |
 
 ## Next Steps
 

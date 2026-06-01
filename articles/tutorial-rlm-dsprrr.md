@@ -43,6 +43,7 @@ setting the `primary` color in `bs_theme()` changes the navbar in
 with this example:
 
 ``` r
+
 # This changes the navbar color:
 page_navbar(theme = bs_theme(preset = "flatly", primary = "#95a5a6"))
 
@@ -64,6 +65,7 @@ beyond what fits in a single prompt.
 ## Step 1: Setup and Load the Codebases
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 ```
@@ -71,6 +73,7 @@ library(ellmer)
 Create an `RCodeRunner` for executing the code the RLM generates:
 
 ``` r
+
 runner <- r_code_runner(timeout = 30)
 ```
 
@@ -83,6 +86,7 @@ is what the function returns, not how it works.
 Definition of `read_package_source()`
 
 ``` r
+
 read_package_source <- function(repo, ref = "main", subdirs = c("R", "inst")) {
   dir <- tempfile()
   status <- system2(
@@ -126,6 +130,7 @@ read_package_source <- function(repo, ref = "main", subdirs = c("R", "inst")) {
 ```
 
 ``` r
+
 bslib_source <- read_package_source("rstudio/bslib")
 shiny_source <- read_package_source("rstudio/shiny")
 brandyml_source <- read_package_source(
@@ -138,6 +143,7 @@ These three strings sit in programmatic space; none enter the context
 window until the model requests a specific slice:
 
 ``` r
+
 format_size <- function(source, label) {
   n_files <- length(gregexpr("--- FILE:", source)[[1]])
   cli::cli_li("{.strong {label}}: {format(nchar(source), big.mark = ',')} characters ({n_files} files)")
@@ -158,6 +164,7 @@ Before reaching for an RLM, a competent developer would grep for the
 relevant functions and feed the results to a model. Let’s try that:
 
 ``` r
+
 # Extract the context a developer would actually assemble:
 # definitions and nearby code for both page functions, plus Sass variable usage
 relevant_lines <- function(source, patterns, context_chars = 3000) {
@@ -229,6 +236,7 @@ and the rest of the optimization framework.
 ## Step 3: Set Up the RLM
 
 ``` r
+
 investigator <- rlm_module(
   signature(
     "bslib_source, shiny_source, brandyml_source, question -> analysis",
@@ -247,14 +255,14 @@ investigator <- rlm_module(
 The module takes three context variables (one per package) plus a
 question. Inside the REPL, these mechanisms are available:
 
-| Mechanism                            | Purpose                                                                                                                                  |
-|--------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
-| `.context$<var>`                     | Access a context variable (e.g., `.context$bslib_source`)                                                                                |
-| `peek(var, start, end)`              | View a slice of a variable; dispatches on type (character positions for strings, element indices for vectors). Default: first 1000 chars |
-| `search(var, pattern)`               | Perl-compatible regex search; returns all matching substrings                                                                            |
-| `llm_query(query, context_slice)`    | Delegate a sub-question to a secondary model (requires `sub_lm`)                                                                         |
-| `llm_query_batched(queries, slices)` | Batch multiple sub-questions in parallel (requires `sub_lm`)                                                                             |
-| `SUBMIT(...)`                        | Return the final answer and terminate the REPL loop; validates against signature output fields                                           |
+| Mechanism | Purpose |
+|----|----|
+| `.context$<var>` | Access a context variable (e.g., `.context$bslib_source`) |
+| `peek(var, start, end)` | View a slice of a variable; dispatches on type (character positions for strings, element indices for vectors). Default: first 1000 chars |
+| `search(var, pattern)` | Perl-compatible regex search; returns all matching substrings |
+| `llm_query(query, context_slice)` | Delegate a sub-question to a secondary model (requires `sub_lm`) |
+| `llm_query_batched(queries, slices)` | Batch multiple sub-questions in parallel (requires `sub_lm`) |
+| `SUBMIT(...)` | Return the final answer and terminate the REPL loop; validates against signature output fields |
 
 The model writes R code using these mechanisms. Each iteration, the code
 executes and the output feeds back as context for the next step.
@@ -262,6 +270,7 @@ executes and the output feeds back as context for the next step.
 ## Step 4: Run the Investigation
 
 ``` r
+
 result <- run(
   investigator,
   bslib_source = bslib_source,
@@ -290,6 +299,7 @@ The RLM runs a loop: generate code, execute it, observe results, repeat.
 It does not read everything at once:
 
 ``` r
+
 history <- investigator$get_repl_history()
 latest <- history[[length(history)]]
 
@@ -382,6 +392,7 @@ help interpreting complex SCSS mixins or Bootstrap conventions from raw
 character slices. A secondary model handles these focused sub-questions:
 
 ``` r
+
 deep_investigator <- rlm_module(
   signature(
     "bslib_source, shiny_source, brandyml_source, question -> analysis, fix_proposal",
@@ -421,6 +432,7 @@ With `sub_lm` set, the root model can delegate interpretive tasks to a
 secondary model. For example, when it encounters a complex SCSS mixin:
 
 ``` r
+
 llm_query(
   "In Bootstrap 5 Sass, what is the difference between $navbar-bg and
    $navbar-light-bg? When would each be used?",
@@ -439,6 +451,7 @@ queries, since the sub-questions are narrow and well-scoped.
 RLMs trade latency for accuracy:
 
 ``` r
+
 history <- deep_investigator$get_repl_history()
 latest <- history[[length(history)]]
 
@@ -471,13 +484,13 @@ repeatable exploration patterns.
 We ran the bslib investigation four times with `gpt-5-mini`. The code
 varied across runs, but the exploration structure converged:
 
-| Phase                  | Run 1                                    | Run 2                               | Run 3                      | Run 4                              |
-|------------------------|------------------------------------------|-------------------------------------|----------------------------|------------------------------------|
-| 1\. Orient             | `search("page_navbar")`                  | `search("page_navbar")`             | `peek(bslib, 1, 5000)`     | `search("page_sidebar")`           |
-| 2\. Locate definitions | `gregexpr("page_navbar")` + `peek`       | `search("page_sidebar")` + `peek`   | `search("page_navbar\\b")` | `gregexpr("page_navbar")` + `peek` |
-| 3\. Find Sass chain    | `search("\\$navbar-bg")`                 | `search("navbar-bg")`               | `search("\\$primary")`     | `search("\\$navbar-bg")`           |
-| 4\. Cross-reference    | `search(shiny, "navbar")`                | `search(shiny, "navbarPage")`       | `search(shiny, "navbar")`  | `search(brandyml, "primary")`      |
-| 5\. Identify gap       | Compare page_navbar vs page_sidebar SCSS | Compare \$navbar-bg vs sidebar vars | Compare preset mappings    | Compare \$navbar-bg chain          |
+| Phase | Run 1 | Run 2 | Run 3 | Run 4 |
+|----|----|----|----|----|
+| 1\. Orient | `search("page_navbar")` | `search("page_navbar")` | `peek(bslib, 1, 5000)` | `search("page_sidebar")` |
+| 2\. Locate definitions | `gregexpr("page_navbar")` + `peek` | `search("page_sidebar")` + `peek` | `search("page_navbar\\b")` | `gregexpr("page_navbar")` + `peek` |
+| 3\. Find Sass chain | `search("\\$navbar-bg")` | `search("navbar-bg")` | `search("\\$primary")` | `search("\\$navbar-bg")` |
+| 4\. Cross-reference | `search(shiny, "navbar")` | `search(shiny, "navbarPage")` | `search(shiny, "navbar")` | `search(brandyml, "primary")` |
+| 5\. Identify gap | Compare page_navbar vs page_sidebar SCSS | Compare \$navbar-bg vs sidebar vars | Compare preset mappings | Compare \$navbar-bg chain |
 
 All four runs searched for `page_navbar` and `$navbar-bg` within the
 first four iterations. All four cross-referenced at least one other
@@ -524,6 +537,7 @@ in bslib that require the same kind of cross-package tracing. For
 example:
 
 ``` r
+
 # Investigate another theming issue with the same data
 run(
   investigator,
@@ -541,6 +555,7 @@ run(
 Or load your own package source:
 
 ``` r
+
 my_source <- read_package_source("your-org/your-package")
 
 explorer <- rlm_module(

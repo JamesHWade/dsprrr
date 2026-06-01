@@ -1,6 +1,7 @@
 # Advanced Reasoning Modules
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 ```
@@ -40,6 +41,7 @@ The simplest way to use CoT is with
 [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md):
 
 ``` r
+
 # Create a CoT module
 math_solver <- chain_of_thought("problem -> solution")
 
@@ -69,6 +71,7 @@ uses
 to transform the signature. You can use this directly for more control:
 
 ``` r
+
 # Start with a regular signature
 sig <- signature("question -> answer: string")
 
@@ -91,6 +94,7 @@ has_reasoning(sig)
 You can customize the reasoning prompt:
 
 ``` r
+
 # Default: "Let's think step by step in order to"
 math_cot <- with_reasoning(
   "equation -> result",
@@ -109,6 +113,7 @@ code_cot <- with_reasoning(
 For A/B testing CoT vs non-CoT performance:
 
 ``` r
+
 cot_sig <- with_reasoning("question -> answer")
 plain_sig <- without_reasoning(cot_sig)
 
@@ -132,6 +137,7 @@ threshold is met
 ### Basic Usage
 
 ``` r
+
 # Create a QA module
 qa <- module(signature("question -> answer"))
 
@@ -152,6 +158,7 @@ The power of BestOfN comes from custom reward functions that score
 outputs:
 
 ``` r
+
 # Reward function signature: function(prediction, inputs) -> [0, 1]
 
 # Example: Prefer single-word answers
@@ -183,6 +190,7 @@ Convert existing metrics to reward functions with
 [`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md):
 
 ``` r
+
 # When you have expected values in your inputs
 wrapper <- best_of_n(
   qa,
@@ -207,6 +215,7 @@ result <- run(
 After running, you can examine all attempts:
 
 ``` r
+
 # Get attempts from last run
 attempts <- wrapper$get_attempts()
 attempts
@@ -227,6 +236,7 @@ BestOfN tracks useful metadata. Use `.return_format = "structured"` to
 access it:
 
 ``` r
+
 # Use structured format to access metadata
 result <- run(wrapper, question = "Test", .llm = llm, .return_format = "structured")
 
@@ -257,6 +267,7 @@ the model to correct specific issues.
 ### Basic Usage
 
 ``` r
+
 # Create module that accepts feedback
 qa <- module(signature("question, feedback -> answer"))
 
@@ -290,6 +301,7 @@ The score from the reward function -
 output (formatted as string) - Any input field names from your signature
 
 ``` r
+
 # Reference input fields
 template <- "For the question '{question}', your answer '{prediction}' scored {score}. Try again."
 
@@ -306,6 +318,7 @@ By default, feedback is injected as a field called `feedback`. You can
 customize this:
 
 ``` r
+
 refined <- refine(
   module(signature("question, hint -> answer")),
   N = 3,
@@ -319,6 +332,7 @@ refined <- refine(
 Track the feedback generated across iterations:
 
 ``` r
+
 result <- run(refined, question = "Test", .llm = llm)
 
 # Get feedback from last run
@@ -348,6 +362,7 @@ no single “right” approach.
 ### Basic Usage
 
 ``` r
+
 # Create MCC module
 mcc <- multi_chain_comparison(
   "question -> answer",
@@ -373,6 +388,7 @@ MCC is also available via the
 factory:
 
 ``` r
+
 mcc <- module(
   signature("context, question -> answer"),
   type = "multichain",
@@ -387,6 +403,7 @@ By default, MCC uses ChainOfThought for the inner module. You can
 provide your own:
 
 ``` r
+
 # Use a custom CoT module
 cot <- chain_of_thought(
   "question -> answer",
@@ -405,6 +422,7 @@ mcc <- multi_chain_comparison(
 Customize how attempts are compared:
 
 ``` r
+
 mcc <- multi_chain_comparison(
   "question -> answer",
   M = 3,
@@ -422,6 +440,7 @@ mcc <- multi_chain_comparison(
 View the individual reasoning chains:
 
 ``` r
+
 result <- run(mcc, question = "Complex question...", .llm = llm)
 
 # Get all chain results
@@ -461,6 +480,7 @@ repair - Extracting the final answer from the execution result
 Code execution requires explicit opt-in via a runner:
 
 ``` r
+
 # Create a runner - this enables code execution
 runner <- r_code_runner(
   timeout = 30,                    # Max execution time
@@ -475,6 +495,7 @@ sandboxing (containers, AppArmor).
 ### Basic Usage
 
 ``` r
+
 # Create a ProgramOfThought module
 pot <- program_of_thought("question -> answer", runner = runner)
 
@@ -496,6 +517,7 @@ If the generated code fails, ProgramOfThought automatically feeds the
 error back to the LLM for repair:
 
 ``` r
+
 pot <- program_of_thought(
   "question -> answer",
   runner = runner,
@@ -511,6 +533,7 @@ result <- run(pot, question = "Calculate factorial of 10", .llm = llm)
 Track the code generation and execution process:
 
 ``` r
+
 # After running, inspect execution history
 executions <- pot$get_executions()
 executions[[1]]$iterations  # List of code attempts
@@ -522,6 +545,7 @@ executions[[1]]$success     # Whether it succeeded
 Pass data to your code via the `.context` list:
 
 ``` r
+
 pot <- program_of_thought("data, question -> answer", runner = runner)
 
 result <- run(
@@ -550,6 +574,7 @@ CodeAct provides all of these in a single module.
 ### Basic Usage
 
 ``` r
+
 # Create tools
 search_tool <- ellmer::tool(
   function(query) search_api(query),
@@ -580,6 +605,7 @@ CodeAct automatically includes an `execute_r_code` tool that the LLM can
 call:
 
 ``` r
+
 agent <- code_act("question -> answer", runner = runner)
 
 # The LLM sees this tool:
@@ -590,6 +616,7 @@ agent <- code_act("question -> answer", runner = runner)
 ### Controlling Iterations
 
 ``` r
+
 agent <- code_act(
   "question -> answer",
   runner = runner,
@@ -602,6 +629,7 @@ agent <- code_act(
 Track the agent’s decision-making process:
 
 ``` r
+
 result <- run(agent, question = "Complex question...", .llm = llm)
 
 # Get the trajectory
@@ -613,6 +641,7 @@ trajectories[[1]]$trajectory    # List of steps taken
 ### Combining with Custom Tools
 
 ``` r
+
 # Create multiple tools
 weather_tool <- ellmer::tool(
   function(city) get_weather(city),
@@ -639,6 +668,7 @@ agent <- code_act(
 These modules can be composed for sophisticated pipelines:
 
 ``` r
+
 # ChainOfThought inside BestOfN
 cot <- chain_of_thought("math_problem -> solution")
 reliable_cot <- best_of_n(cot, N = 3, reward_fn = math_checker)
@@ -657,6 +687,7 @@ refined_cot <- refine(cot_with_feedback, N = 3, reward_fn = quality_score)
 All advanced modules integrate with dsprrr’s optimization:
 
 ``` r
+
 # Grid search over wrapper parameters
 wrapper <- best_of_n(qa, N = 3)
 wrapper$optimize_grid(
@@ -689,6 +720,7 @@ Advanced modules use more tokens than simple prediction:
 All modules track costs in metadata:
 
 ``` r
+
 result <- run(mcc, question = "Test", .llm = llm)
 result$.metadata[[1]]$total_cost
 result$.metadata[[1]]$total_tokens
@@ -697,25 +729,25 @@ result$.metadata[[1]]$n_llm_calls
 
 ### When to Use Each
 
-| Module         | Best For                                    | Trade-off                     |
-|----------------|---------------------------------------------|-------------------------------|
-| ChainOfThought | Complex reasoning, math, logic              | Slight cost increase          |
-| BestOfN        | High-variance tasks, critical outputs       | N× cost (with early stopping) |
-| Refine         | Tasks with clear failure modes              | N× cost + feedback gen        |
-| MCC            | Complex analysis, multiple valid approaches | (M+1)× cost                   |
+| Module | Best For | Trade-off |
+|----|----|----|
+| ChainOfThought | Complex reasoning, math, logic | Slight cost increase |
+| BestOfN | High-variance tasks, critical outputs | N× cost (with early stopping) |
+| Refine | Tasks with clear failure modes | N× cost + feedback gen |
+| MCC | Complex analysis, multiple valid approaches | (M+1)× cost |
 
 ## Summary
 
 dsprrr’s advanced modules bring battle-tested patterns from DSPy to R:
 
-| Module                                                                                                | Best For                                    | Trade-off                     |
-|-------------------------------------------------------------------------------------------------------|---------------------------------------------|-------------------------------|
-| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)             | Complex reasoning, math, logic              | Slight cost increase          |
-| [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md)                           | High-variance tasks, critical outputs       | N× cost (with early stopping) |
-| [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md)                                 | Tasks with clear failure modes              | N× cost + feedback gen        |
-| [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) | Complex analysis, multiple valid approaches | (M+1)× cost                   |
-| [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)         | Exact computation, data analysis            | Code execution overhead       |
-| [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)                             | Tasks needing both tools AND computation    | Agent loop overhead           |
+| Module | Best For | Trade-off |
+|----|----|----|
+| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Complex reasoning, math, logic | Slight cost increase |
+| [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | High-variance tasks, critical outputs | N× cost (with early stopping) |
+| [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | Tasks with clear failure modes | N× cost + feedback gen |
+| [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) | Complex analysis, multiple valid approaches | (M+1)× cost |
+| [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | Exact computation, data analysis | Code execution overhead |
+| [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | Tasks needing both tools AND computation | Agent loop overhead |
 
 **Getting started:** - Start with **ChainOfThought** for complex
 reasoning tasks - Add **BestOfN** when you need reliability - Use

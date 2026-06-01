@@ -42,6 +42,7 @@ output support - **tidyverse conventions** for data manipulation
 ### Package Development
 
 ``` r
+
 devtools::load_all()           # Load package for development
 devtools::test()               # Run all tests
 testthat::test_file("tests/testthat/test-<name>.R")  # Run specific test
@@ -53,6 +54,7 @@ devtools::install()            # Install package locally
 ### Building README and Vignettes
 
 ``` r
+
 devtools::build_readme()       # Rebuild README.md from README.Rmd
 # For vignettes, use build_rmd() - DO NOT use devtools::build_vignettes()
 pkgdown::build_site()          # Build pkgdown site
@@ -176,6 +178,7 @@ gh pr create --title "Title" --body "Description"
 After PR is merged, clean up with:
 
 ``` r
+
 usethis::pr_finish()
 ```
 
@@ -214,6 +217,7 @@ specifications - `output_type`: ellmer type object (e.g.,
 `type_string()`, `type_enum()`) - `instructions`: System prompt text
 
 ``` r
+
 # String notation (DSPy-style)
 sig <- signature("question -> answer: string")
 sig <- signature("context, question -> answer", instructions = "Be concise")
@@ -236,6 +240,7 @@ Run grid search over parameter configurations - `is_compiled()`: Check
 if module has been optimized
 
 ``` r
+
 mod <- module(sig, type = "predict")
 result <- run(mod, question = "What is 2+2?", .llm = llm)
 ```
@@ -247,13 +252,13 @@ optimization
 
 ### Core Generics
 
-| Function                                  | Purpose                          |
-|-------------------------------------------|----------------------------------|
-| `run(module, ...)`                        | Execute module with named inputs |
-| `run_dataset(module, dataset, ...)`       | Batch execute on data frame      |
-| `evaluate(module, dataset, metric)`       | Compute metrics on dataset       |
-| `optimize_grid(module, devset, metric)`   | Grid search optimization         |
-| `compile(teleprompter, module, trainset)` | Teleprompter-based optimization  |
+| Function | Purpose |
+|----|----|
+| `run(module, ...)` | Execute module with named inputs |
+| `run_dataset(module, dataset, ...)` | Batch execute on data frame |
+| `evaluate(module, dataset, metric)` | Compute metrics on dataset |
+| `optimize_grid(module, devset, metric)` | Grid search optimization |
+| `compile(teleprompter, module, trainset)` | Teleprompter-based optimization |
 
 ### Teleprompters (S7)
 
@@ -262,6 +267,7 @@ examples from training set as demonstrations - `GridSearchTeleprompter`:
 Search over instruction/template variants
 
 ``` r
+
 tp <- LabeledFewShot(k = 4L, metric = metric_exact_match())
 compiled <- compile(tp, mod, trainset)
 ```
@@ -278,6 +284,7 @@ metrics
 ### Creating and Running Modules
 
 ``` r
+
 # 1. Define signature
 sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
@@ -295,6 +302,7 @@ results <- run(mod, text = c("Great!", "Terrible!"), .llm = llm)
 ### Optimization Workflow
 
 ``` r
+
 # Grid search with custom parameters
 mod$optimize_grid(
   devset = train_data,
@@ -311,6 +319,7 @@ module_metrics(mod)
 ### Evaluation
 
 ``` r
+
 eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
 # Returns: mean_score, scores, predictions, metadata, n_evaluated, n_errors
 ```
@@ -326,6 +335,7 @@ eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
 ### Key Test Conventions
 
 ``` r
+
 # Mock LLM for deterministic testing
 mock_llm <- list(
   chat_structured = function(prompt, type, ...) {
@@ -361,6 +371,7 @@ Rscript inst/scripts/record-cassettes.R
 Or interactively:
 
 ``` r
+
 source("inst/scripts/record-cassettes.R")
 main()  # Run recording
 ```
@@ -372,6 +383,7 @@ structure) - When cassettes become stale (API response format changes)
 **VCR in tests:**
 
 ``` r
+
 test_that("integration test with cassette", {
   skip_if_not_installed("vcr")
   cassette_file <- testthat::test_path("_vcr", "my-test.yml")
@@ -408,6 +420,7 @@ need different responses
 **Option 1: Per-test basis** (recommended):
 
 ``` r
+
 test_that("epochs get fresh responses", {
   # ... test setup ...
 
@@ -425,6 +438,7 @@ test_that("epochs get fresh responses", {
 **Option 2: Use `local_reset_cache()` helper**:
 
 ``` r
+
 test_that("stateful mock LLM", {
   local_reset_cache()  # Clear cache at start of test
   configure_cache(enable = FALSE)  # Disable for this test
@@ -449,6 +463,7 @@ stateful mocks.
 **Example of problematic test without cache handling**:
 
 ``` r
+
 # BAD: Will fail if cache has entries from previous run
 test_that("mock returns different values", {
   call_count <- 0
@@ -706,6 +721,7 @@ git branch -d feature/<short-description>
 Or use:
 
 ``` r
+
 usethis::pr_finish()
 ```
 

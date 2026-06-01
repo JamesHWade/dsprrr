@@ -7,6 +7,7 @@ This guide helps you diagnose and fix common issues when using dsprrr.
 When something goes wrong, start here:
 
 ``` r
+
 library(dsprrr)
 
 # 1. Check your configuration
@@ -38,6 +39,7 @@ inspect_history(n = 5)
 1.  **Set an API key** (recommended):
 
 ``` r
+
 # In your .Renviron file (run usethis::edit_r_environ())
 OPENAI_API_KEY=sk-your-key-here
 
@@ -48,12 +50,14 @@ Sys.setenv(OPENAI_API_KEY = "sk-your-key-here")
 2.  **Configure explicitly:**
 
 ``` r
+
 dsp_configure(provider = "openai", model = "gpt-4o-mini")
 ```
 
 3.  **Pass a Chat object directly:**
 
 ``` r
+
 chat <- ellmer::chat_openai()
 chat |> dsp("question -> answer", question = "What is 2+2?")
 ```
@@ -68,6 +72,7 @@ chat |> dsp("question -> answer", question = "What is 2+2?")
 **Solution:** Use a supported provider name:
 
 ``` r
+
 dsp_configure(provider = "openai")    # OpenAI
 dsp_configure(provider = "anthropic") # Anthropic Claude
 dsp_configure(provider = "google")    # Google Gemini
@@ -85,6 +90,7 @@ expecting one.
 **Solution:**
 
 ``` r
+
 # Wrong - passing a string
 mod <- module(sig, type = "predict", chat = "openai")
 
@@ -107,6 +113,7 @@ mod <- module(sig, type = "predict", chat = chat)
 **Solution:** Provide a valid signature string:
 
 ``` r
+
 # Wrong
 sig <- signature("")
 
@@ -127,6 +134,7 @@ from outputs.
 **Solution:**
 
 ``` r
+
 # Wrong - no arrow
 sig <- signature("question answer")
 
@@ -147,6 +155,7 @@ sig <- signature("question -> answer")
 **Solution:**
 
 ``` r
+
 # Wrong arrows
 signature("text => sentiment")   # JavaScript-style
 signature("text --> sentiment")  # Double dash
@@ -167,6 +176,7 @@ signature("text -> sentiment")
 arrows:
 
 ``` r
+
 # Wrong
 signature("question -> reasoning -> answer")
 
@@ -191,6 +201,7 @@ signature("question -> reasoning, answer")
 **Solution:**
 
 ``` r
+
 sig <- signature("context, question -> answer")
 
 # Wrong - missing 'context'
@@ -213,6 +224,7 @@ dsp(sig, context = "R is a programming language.", question = "What is R?")
 **Solution:** Fix the typo:
 
 ``` r
+
 # Wrong - typo
 dsp("question -> answer", qeustion = "What is 2+2?")
 
@@ -232,6 +244,7 @@ dsp("question -> answer", question = "What is 2+2?")
 **Solution:** Either remove the extra input or add it to your signature:
 
 ``` r
+
 # This warns because 'context' isn't in the signature
 dsp("question -> answer", question = "Hi", context = "extra")
 
@@ -261,6 +274,7 @@ dsp("context, question -> answer", context = "extra", question = "Hi")
 1.  **Wait and retry:**
 
 ``` r
+
 Sys.sleep(5)
 result <- dsp("question -> answer", question = "Try again")
 ```
@@ -268,12 +282,14 @@ result <- dsp("question -> answer", question = "Try again")
 2.  **Use a different model:**
 
 ``` r
+
 dsp_configure(provider = "openai", model = "gpt-3.5-turbo")
 ```
 
 3.  **For batch processing, add delays:**
 
 ``` r
+
 results <- list()
 for (i in seq_len(nrow(data))) {
   results[[i]] <- dsp("text -> result", text = data$text[i])
@@ -296,6 +312,7 @@ for (i in seq_len(nrow(data))) {
 1.  **Verify your API key is set:**
 
 ``` r
+
 dsprrr_sitrep()
 
 # Check the raw value (careful - don't share this!)
@@ -305,6 +322,7 @@ Sys.getenv("OPENAI_API_KEY")
 2.  **Re-set your API key:**
 
 ``` r
+
 Sys.setenv(OPENAI_API_KEY = "sk-your-actual-key")
 dsp_configure()  # Re-initialize
 ```
@@ -312,6 +330,7 @@ dsp_configure()  # Re-initialize
 3.  **Check for invisible characters** (copy-paste issues):
 
 ``` r
+
 # Sometimes copy-pasting adds hidden characters
 key <- "sk-your-key"
 nchar(key)  # Should match expected length
@@ -332,6 +351,7 @@ charToRaw(key)  # Check for unexpected bytes
 1.  **Simplify your prompt:**
 
 ``` r
+
 # Instead of a huge context, summarize first
 summary <- dsp("text -> brief_summary: string[100]", text = long_text)
 answer <- dsp("context, question -> answer", context = summary, question = q)
@@ -340,6 +360,7 @@ answer <- dsp("context, question -> answer", context = summary, question = q)
 2.  **Use a faster model:**
 
 ``` r
+
 dsp_configure(provider = "openai", model = "gpt-4o-mini")  # Faster than gpt-4o
 ```
 
@@ -357,6 +378,7 @@ dsp_configure(provider = "openai", model = "gpt-4o-mini")  # Faster than gpt-4o
 1.  **Truncate your input:**
 
 ``` r
+
 max_chars <- 10000
 truncated_context <- substr(long_context, 1, max_chars)
 ```
@@ -364,6 +386,7 @@ truncated_context <- substr(long_context, 1, max_chars)
 2.  **Use a model with larger context:**
 
 ``` r
+
 # GPT-4o supports 128k tokens
 dsp_configure(provider = "openai", model = "gpt-4o")
 
@@ -374,6 +397,7 @@ dsp_configure(provider = "anthropic", model = "claude-3-5-sonnet-latest")
 3.  **Chunk and summarize:**
 
 ``` r
+
 # Process in chunks
 chunks <- split_text(long_doc, chunk_size = 5000)
 summaries <- lapply(chunks, function(chunk) {
@@ -399,12 +423,14 @@ final <- dsp("summaries -> combined", summaries = paste(summaries, collapse = "\
 1.  **Inspect what happened:**
 
 ``` r
+
 get_last_prompt()  # See the prompt and response
 ```
 
 2.  **Simplify your output type:**
 
 ``` r
+
 # Complex nested types can confuse some models
 # Instead of:
 sig <- signature("text -> data: dict[string, list[dict[string, int]]]")
@@ -416,6 +442,7 @@ sig <- signature("text -> items: list[string]")
 3.  **Use a more capable model:**
 
 ``` r
+
 # GPT-4o is better at structured output than GPT-3.5
 dsp_configure(provider = "openai", model = "gpt-4o")
 ```
@@ -423,6 +450,7 @@ dsp_configure(provider = "openai", model = "gpt-4o")
 4.  **Add explicit instructions:**
 
 ``` r
+
 sig <- signature(
  "text -> result",
   instructions = "Return only valid JSON. No explanations or markdown."
@@ -454,6 +482,7 @@ filters. Consider the context and framing of your request.
 **Solution:**
 
 ``` r
+
 # Wrong - passing a string directly to module()
 mod <- module("question -> answer", type = "predict")
 
@@ -475,6 +504,7 @@ mod <- as_module("question -> answer")
 **Solution:** Use a supported module type:
 
 ``` r
+
 mod <- module(sig, type = "predict")  # Standard text generation
 mod <- module(sig, type = "react")    # Tool-calling agent
 ```
@@ -488,6 +518,7 @@ mod <- module(sig, type = "react")    # Tool-calling agent
 **Solution:** Ensure your development set has data:
 
 ``` r
+
 # Check your data
 nrow(devset)
 
@@ -508,6 +539,7 @@ if (nrow(devset) == 0) {
 **Solution:**
 
 ``` r
+
 # Option 1: Pass .llm explicitly
 result <- run(mod, question = "Hi", .llm = chat_openai())
 
@@ -528,6 +560,7 @@ When you encounter an issue, follow this systematic approach:
 ### Step 1: Check Configuration
 
 ``` r
+
 dsprrr_sitrep()
 ```
 
@@ -537,6 +570,7 @@ model are active - API key status
 ### Step 2: Inspect the Last Call
 
 ``` r
+
 # See the full prompt that was sent
 get_last_prompt()
 
@@ -550,6 +584,7 @@ trace$model       # Which model was used
 ### Step 3: View History
 
 ``` r
+
 # See recent prompts and responses
 inspect_history(n = 5)
 
@@ -560,6 +595,7 @@ inspect_history(n = 3, include_prompts = TRUE)
 ### Step 4: Test Incrementally
 
 ``` r
+
 # 1. Test the signature parses correctly
 sig <- signature("question -> answer")
 sig  # Should print without error
@@ -580,6 +616,7 @@ result <- run(mod, question = your_complex_question, .llm = chat_openai())
 If something complex isn’t working:
 
 ``` r
+
 # Start with the simplest possible signature
 dsp("q -> a", q = "test")
 
@@ -592,6 +629,7 @@ dsp("context, question -> answer", context = "ctx", question = "test")
 ### Step 6: Check for Known Issues
 
 ``` r
+
 # Ensure ellmer is up to date
 packageVersion("ellmer")
 
@@ -611,6 +649,7 @@ If you’re still stuck:
 1.  **Check the documentation:**
 
 ``` r
+
 ?dsp
 ?signature
 vignette("getting-started", package = "dsprrr")
@@ -620,6 +659,7 @@ vignette("cheatsheet", package = "dsprrr")
 2.  **Gather diagnostic info:**
 
 ``` r
+
 sessionInfo()
 dsprrr_sitrep()
 ```

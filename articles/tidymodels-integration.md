@@ -1,6 +1,7 @@
 # tidymodels Integration
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 # library(parsnip)
@@ -24,6 +25,7 @@ models. This enables:
 dsprrr registers an `llm_predict` model type with parsnip:
 
 ``` r
+
 # Create an LLM prediction model specification
 llm_spec <- llm_predict(
   mode = "classification",
@@ -39,6 +41,7 @@ print(llm_spec)
 Use standard parsnip fitting:
 
 ``` r
+
 # Training data (for classification, y determines output levels)
 train_data <- tibble::tibble(
   text = c(
@@ -57,6 +60,7 @@ llm_fit <- llm_spec |>
 ## Making Predictions
 
 ``` r
+
 # New data
 new_data <- tibble::tibble(
   text = c("Amazing quality!", "Worst purchase ever")
@@ -72,6 +76,7 @@ predictions
 dsprrr provides dials-compatible parameter functions:
 
 ``` r
+
 # Temperature parameter
 temperature()
 temperature(range = c(0.1, 0.9))
@@ -87,6 +92,7 @@ reasoning_effort()
 ### Tuning with tune
 
 ``` r
+
 # Create a tunable specification
 llm_spec_tune <- llm_predict(
   mode = "classification",
@@ -116,6 +122,7 @@ llm_spec_tune <- llm_predict(
 Combine LLM predictions with preprocessing:
 
 ``` r
+
 # library(workflows)
 # library(recipes)
 
@@ -137,6 +144,7 @@ While tidymodels integration is powerful, dsprrr also provides its own
 optimization:
 
 ``` r
+
 # Create module directly
 mod <- module(
   signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
@@ -155,6 +163,7 @@ params_reasoning
 ### Grid Search with dsprrr
 
 ``` r
+
 train_data <- tibble::tibble(
   text = c("Great!", "Terrible!", "Okay"),
   target = c("positive", "negative", "neutral")
@@ -196,6 +205,7 @@ tuning - Teleprompter-based optimization - Reasoning model support
 Register custom engines for specific providers:
 
 ``` r
+
 # dsprrr auto-registers on package load
 # But you can manually register:
 register_dsprrr_engine()
@@ -209,6 +219,7 @@ register_dsprrr_engine()
 dsprrr also integrates with vitals for LLM evaluation:
 
 ``` r
+
 # library(vitals)
 
 # Convert module to vitals solver

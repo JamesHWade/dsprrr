@@ -11,17 +11,17 @@ For basic optimization concepts, see
 
 ## Quick Reference: Choosing an Optimizer
 
-| If you want…                          | Use this optimizer                 | Complexity |
-|---------------------------------------|------------------------------------|------------|
-| Add labeled examples as demos         | `LabeledFewShot`                   | Low        |
-| Bootstrap demos from LLM outputs      | `BootstrapFewShot`                 | Medium     |
-| Bootstrap + search multiple configs   | `BootstrapFewShotWithRandomSearch` | Medium     |
-| Dynamic per-query demo selection      | `KNNFewShot`                       | Medium     |
-| Optimize instructions (not demos)     | `COPRO`                            | Medium     |
-| Joint instruction + demo optimization | `MIPROv2`                          | High       |
-| Focus on hard examples                | `SIMBA`                            | Medium     |
-| Multi-objective optimization          | `GEPA`                             | High       |
-| Combine multiple strategies           | `Ensemble`                         | Low        |
+| If you want… | Use this optimizer | Complexity |
+|----|----|----|
+| Add labeled examples as demos | `LabeledFewShot` | Low |
+| Bootstrap demos from LLM outputs | `BootstrapFewShot` | Medium |
+| Bootstrap + search multiple configs | `BootstrapFewShotWithRandomSearch` | Medium |
+| Dynamic per-query demo selection | `KNNFewShot` | Medium |
+| Optimize instructions (not demos) | `COPRO` | Medium |
+| Joint instruction + demo optimization | `MIPROv2` | High |
+| Focus on hard examples | `SIMBA` | Medium |
+| Multi-objective optimization | `GEPA` | High |
+| Combine multiple strategies | `Ensemble` | Low |
 
 ### Decision Tree
 
@@ -44,12 +44,12 @@ flowchart TB
 
 ## Dataset Sizing Guidance
 
-| Dataset Size     | Recommended Optimizers                        | Notes                       |
-|------------------|-----------------------------------------------|-----------------------------|
-| 10-30 examples   | `LabeledFewShot`                              | Minimal optimization        |
-| 30-100 examples  | `BootstrapFewShot`, `COPRO`                   | Good starting point         |
-| 100-300 examples | `BootstrapFewShotWithRandomSearch`, `MIPROv2` | Meaningful search           |
-| 300+ examples    | All optimizers                                | Full optimization potential |
+| Dataset Size | Recommended Optimizers | Notes |
+|----|----|----|
+| 10-30 examples | `LabeledFewShot` | Minimal optimization |
+| 30-100 examples | `BootstrapFewShot`, `COPRO` | Good starting point |
+| 100-300 examples | `BootstrapFewShotWithRandomSearch`, `MIPROv2` | Meaningful search |
+| 300+ examples | All optimizers | Full optimization potential |
 
 **Key principles:**
 
@@ -61,6 +61,7 @@ flowchart TB
   ones
 
 ``` r
+
 library(dsprrr)
 
 # Split your dataset properly
@@ -86,6 +87,7 @@ valset <- splits$val
 ## Setup
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 
@@ -126,6 +128,7 @@ keeping successful outputs as demos.
 format.
 
 ``` r
+
 tp <- BootstrapFewShot(
   metric = metric_exact_match(field = "answer"),
   max_bootstrapped_demos = 4L,
@@ -160,6 +163,7 @@ multiple candidate programs and selects the best.
 find the optimal configuration.
 
 ``` r
+
 tp <- BootstrapFewShotWithRandomSearch(
   metric = metric_exact_match(field = "answer"),
   max_bootstrapped_demos = 4L,
@@ -188,6 +192,7 @@ candidates <- compiled$config$optimizer$candidate_programs
 strategies:
 
 ``` r
+
 # Compile with different strategies and ensemble them
 mod1 <- compile(BootstrapFewShotWithRandomSearch(), qa_module, trainset, valset = valset, .llm = llm)
 mod2 <- compile(COPRO(), qa_module, trainset, valset = valset, .llm = llm)
@@ -210,6 +215,7 @@ query. Uses embeddings to find the most relevant examples.
 query.
 
 ``` r
+
 tp <- KNNFewShot(
   k = 3L,
   vectorizer = function(texts) {
@@ -242,6 +248,7 @@ instruction variants to find the best wording.
 than more demos.
 
 ``` r
+
 # Optionally use a different model for instruction generation
 prompt_llm <- chat_openai(model = "gpt-4o")
 
@@ -289,6 +296,7 @@ instructions and demonstrations using Bayesian optimization.
 compute budget.
 
 ``` r
+
 tp <- MIPROv2(
   metric = metric_exact_match(field = "answer"),
   auto = "medium",           # Preset: "light", "medium", or "heavy"
@@ -316,6 +324,7 @@ print(compiled$demos)
 **Presets:**
 
 ``` r
+
 # Light preset (faster, less thorough)
 tp_light <- MIPROv2(
   metric = metric_exact_match(),
@@ -337,6 +346,7 @@ Focuses optimization on hard examples that the model struggles with.
 cases.
 
 ``` r
+
 tp <- SIMBA(
   metric = metric_exact_match(field = "answer"),
   bsize = 32L,            # Mini-batch size for evaluation
@@ -375,6 +385,7 @@ objectives).
 against token usage or latency.
 
 ``` r
+
 # Single-objective GEPA
 tp <- GEPA(
   metric = metric_exact_match(field = "answer"),
@@ -422,6 +433,7 @@ strategies.
 strategies.
 
 ``` r
+
 # First, compile modules with different strategies
 mod_bootstrap <- compile(BootstrapFewShot(), qa_module, trainset, .llm = llm)
 mod_copro <- compile(COPRO(), qa_module, trainset, valset = valset, .llm = llm)
@@ -447,6 +459,7 @@ result <- run(ens, question = "What is photosynthesis?", .llm = llm)
 ### Reduce Functions
 
 ``` r
+
 # Majority voting (default)
 reduce_majority()
 
@@ -465,6 +478,7 @@ reduce_best_by_metric(
 ### Ensemble via Teleprompter
 
 ``` r
+
 # Ensemble teleprompter wraps existing compiled modules
 tp <- Ensemble(
   reduce_fn = reduce_weighted_vote(),
@@ -481,6 +495,7 @@ All optimizers support logging for debugging and reproducibility.
 ### Trial Logging
 
 ``` r
+
 # Enable logging to a directory
 tp <- BootstrapFewShotWithRandomSearch(
   metric = metric_exact_match(),
@@ -499,6 +514,7 @@ compiled <- compile(tp, qa_module, trainset, .llm = llm)
 ### Analyzing Trials
 
 ``` r
+
 # Read trial logs
 trials <- read_trials_jsonl("optimization_logs/experiment_001/trials.jsonl")
 
@@ -516,6 +532,7 @@ ggplot(trials, aes(x = trial_id, y = score)) +
 ### Accessing Optimizer State
 
 ``` r
+
 # After compilation, access optimizer metadata
 compiled$config$optimizer$name
 compiled$config$optimizer$params
@@ -537,6 +554,7 @@ compiled$config$optimizer$pareto_frontier
 All optimizers support deterministic seeds:
 
 ``` r
+
 # Set seed for reproducibility
 tp <- BootstrapFewShot(
   metric = metric_exact_match(),
@@ -556,6 +574,7 @@ identical(compiled1$demos, compiled2$demos)  # TRUE
 Optimizers gracefully handle LLM errors:
 
 ``` r
+
 tp <- BootstrapFewShot(
   metric = metric_exact_match(),
   max_errors = 10L  # Allow up to 10 errors before failing
@@ -573,6 +592,7 @@ compiled$config$optimizer$n_errors
 ### 1. Start Simple, Then Advance
 
 ``` r
+
 # Step 1: Try LabeledFewShot first
 simple <- compile(LabeledFewShot(k = 3L), qa_module, trainset, .llm = llm)
 simple_score <- evaluate(simple, valset, metric_exact_match(), .llm = llm)$mean_score
@@ -613,6 +633,7 @@ print(paste("Best score:", best_score))
 ### 2. Use Parallel Evaluation
 
 ``` r
+
 # BootstrapFewShotWithRandomSearch supports parallel evaluation
 tp <- BootstrapFewShotWithRandomSearch(
   num_candidate_programs = 16L,
@@ -623,6 +644,7 @@ tp <- BootstrapFewShotWithRandomSearch(
 ### 3. Cache Embeddings for KNNFewShot
 
 ``` r
+
 # Enable embedding caching in KNNFewShot
 tp <- KNNFewShot(
   k = 3L,
@@ -648,6 +670,7 @@ tp <- KNNFewShot(k = 3L, vectorizer = cached_embed)
 ### 4. Monitor Costs
 
 ``` r
+
 # Track costs during optimization
 session_cost()  # Total cost so far
 
@@ -657,17 +680,17 @@ session_cost()  # Total cost so far
 
 ## Summary
 
-| Optimizer                          | Optimizes            | Data Needs   | Compute Cost |
-|------------------------------------|----------------------|--------------|--------------|
-| `LabeledFewShot`                   | Demos                | Low (10+)    | Very Low     |
-| `BootstrapFewShot`                 | Demos                | Medium (30+) | Low          |
-| `BootstrapFewShotWithRandomSearch` | Demos + Config       | Medium (50+) | Medium       |
-| `KNNFewShot`                       | Dynamic Demos        | Medium (50+) | Low          |
-| `COPRO`                            | Instructions         | Medium (30+) | Medium       |
-| `MIPROv2`                          | Instructions + Demos | High (100+)  | High         |
-| `SIMBA`                            | Hard Example Demos   | Medium (50+) | Medium       |
-| `GEPA`                             | Multi-objective      | High (100+)  | High         |
-| `Ensemble`                         | Combines modules     | N/A          | Varies       |
+| Optimizer | Optimizes | Data Needs | Compute Cost |
+|----|----|----|----|
+| `LabeledFewShot` | Demos | Low (10+) | Very Low |
+| `BootstrapFewShot` | Demos | Medium (30+) | Low |
+| `BootstrapFewShotWithRandomSearch` | Demos + Config | Medium (50+) | Medium |
+| `KNNFewShot` | Dynamic Demos | Medium (50+) | Low |
+| `COPRO` | Instructions | Medium (30+) | Medium |
+| `MIPROv2` | Instructions + Demos | High (100+) | High |
+| `SIMBA` | Hard Example Demos | Medium (50+) | Medium |
+| `GEPA` | Multi-objective | High (100+) | High |
+| `Ensemble` | Combines modules | N/A | Varies |
 
 ## Further Reading
 

@@ -18,6 +18,7 @@ just raw text.
 - Install the packages:
 
 ``` r
+
 install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
 pak::pak("tidyverse/ellmer")
@@ -26,6 +27,7 @@ pak::pak("tidyverse/ellmer")
 ## Step 1: Load the Packages
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 ```
@@ -38,6 +40,7 @@ correctly.
 Connect to OpenAI:
 
 ``` r
+
 chat <- chat_openai()
 ```
 
@@ -49,6 +52,7 @@ Let’s ask a simple question using
 [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md):
 
 ``` r
+
 chat |> dsp("question -> answer", question = "What is the capital of France?")
 ```
 
@@ -64,6 +68,7 @@ You should see `"Paris"` returned. Let’s break down what happened:
 The same signature works for any question:
 
 ``` r
+
 chat |> dsp("question -> answer", question = "What is 7 * 8?")
 
 chat |> dsp("question -> answer", question = "Who wrote Romeo and Juliet?")
@@ -79,6 +84,7 @@ specific choice?
 ### Getting a Number
 
 ``` r
+
 chat |> dsp(
   "math_problem -> result: number",
   math_problem = "What is 15% of 200?"
@@ -91,6 +97,7 @@ a string.
 ### Getting a Choice (Enum)
 
 ``` r
+
 chat |> dsp(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   text = "I absolutely loved this movie!"
@@ -101,6 +108,7 @@ The LLM must pick from exactly those three options. Try changing the
 text to see different results:
 
 ``` r
+
 chat |> dsp(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   text = "This was a complete waste of time."
@@ -115,6 +123,7 @@ chat |> dsp(
 ### Getting True/False
 
 ``` r
+
 chat |> dsp(
   "statement -> is_true: bool",
   statement = "The Earth orbits the Sun."
@@ -131,6 +140,7 @@ chat |> dsp(
 Signatures can have multiple inputs. Separate them with commas:
 
 ``` r
+
 chat |> dsp(
   "context, question -> answer",
   context = "R was created in 1993 by Ross Ihaka and Robert Gentleman at the University of Auckland.",
@@ -141,6 +151,7 @@ chat |> dsp(
 Now the LLM uses your context to answer the question:
 
 ``` r
+
 chat |> dsp(
   "context, question -> answer",
   context = "The bakery opens at 7am and closes at 6pm. They sell croissants for $3 each.",
@@ -153,6 +164,7 @@ chat |> dsp(
 You can guide the LLM’s behavior with instructions:
 
 ``` r
+
 chat |> dsp(
   signature("question -> answer", instructions = "Answer in exactly one word."),
   question = "What color is the sky on a clear day?"

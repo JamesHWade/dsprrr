@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Inter-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Inter-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -127,7 +127,7 @@
                         <h4 data-toc-skip class="author">James H.
 Wade</h4>
             
-            <h4 data-toc-skip class="date">2026-04-28</h4>
+            <h4 data-toc-skip class="date">2026-06-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/articles/how-rlm-works.Rmd" class="external-link"><code>vignettes/articles/how-rlm-works.Rmd</code></a></small>
       <div class="d-none name"><code>how-rlm-works.Rmd</code></div>
@@ -145,9 +145,9 @@ the fundamental problem.</p>
 go wrong. The MIT researchers who introduced Recursive Language Models
 call this <em>context rot</em>, the empirical observation that output
 quality deteriorates as prompts grow, even when the relevant information
-is technically within the window <span class="citation">(see Zhang,
-Kraska, and Khattab 2025)</span>. The model misses what it needs with
-increasing frequency as input length grows.</p>
+is technically within the window <span class="citation">(see Zhang et
+al. 2025)</span>. The model misses what it needs with increasing
+frequency as input length grows.</p>
 <p>And there is no adaptive retrieval. The model cannot decide to
 re-read section 14 after discovering something relevant in section 42.
 It processes the entire input in one pass and produces output from
@@ -181,13 +181,12 @@ doesn’t, and revisits sections as its picture of the data develops.</p>
 <code>question</code>), holds context variables (e.g.,
 <code>document</code>) outside the prompt, and exposes
 <code>llm_query()</code> so the model can delegate sub-questions to a
-secondary model from generated code. In the paper’s notation <span class="citation">(Zhang, Kraska, and Khattab 2025)</span>, these
-correspond to a query
+secondary model from generated code. In the paper’s notation <span class="citation">(Zhang et al. 2025)</span>, these correspond to a query
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>,
 context
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>,
 and a recursive tool call
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mtext mathvariant="normal">RLM</mtext><mi>M</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mover><mi>q</mi><mo accent="true">̂</mo></mover><mo>,</mo><mover><mi>C</mi><mo accent="true">̂</mo></mover><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\text{RLM}_M(\hat{q}, \hat{C})</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mtext mathvariant="normal">RLM</mtext><mi>M</mi></msub><mo stretchy="false" form="prefix">(</mo><mover><mi>q</mi><mo accent="true">̂</mo></mover><mo>,</mo><mover><mi>C</mi><mo accent="true">̂</mo></mover><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\text{RLM}_M(\hat{q}, \hat{C})</annotation></semantics></math>
 that spawns an isolated sub-instance with a new query and a transformed
 slice of the context.</p>
 </div>
@@ -195,7 +194,7 @@ slice of the context.</p>
 <h2 id="origin-and-ecosystem">Origin and Ecosystem<a class="anchor" aria-label="anchor" href="#origin-and-ecosystem"></a>
 </h2>
 <p>RLMs were introduced by Alex Zhang, Tim Kraska, and Omar Khattab at
-MIT <span class="citation">(Zhang, Kraska, and Khattab 2025)</span>. On
+MIT <span class="citation">(Zhang et al. 2025)</span>. On
 BrowseComp-Plus (a benchmark with 6–11 million token inputs), standard
 models scored 0% while an RLM powered by GPT-5 achieved 91.33%. That
 comparison is less “RLM beats prompting” than “RLM makes previously
@@ -687,10 +686,10 @@ under 15 iterations.</p>
 <div class="section level2 unnumbered">
 <h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
-<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0">
+<div id="refs" class="references csl-bib-body hanging-indent">
 <div id="ref-zhang2025rlm" class="csl-entry">
-Zhang, Alex L., Tim Kraska, and Omar Khattab. 2025. <span>“Recursive
-Language Models.”</span> <a href="https://arxiv.org/abs/2512.24601" class="external-link">https://arxiv.org/abs/2512.24601</a>.
+Zhang, Alex L., Tim Kraska, and Omar Khattab. 2025. <em>Recursive
+Language Models</em>. <a href="https://arxiv.org/abs/2512.24601" class="external-link">https://arxiv.org/abs/2512.24601</a>.
 </div>
 </div>
 </div>

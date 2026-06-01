@@ -21,6 +21,7 @@ deployment
 - `OPENAI_API_KEY` set in your environment
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 library(pins)
@@ -34,6 +35,7 @@ chat <- chat_openai()
 Let’s start with a trained classifier:
 
 ``` r
+
 sig <- signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral')",
   instructions = "Classify the sentiment of this product review."
@@ -69,6 +71,7 @@ The `pins` package provides persistent storage. Save your module
 configuration:
 
 ``` r
+
 # Create a local board (folder on disk)
 board <- board_folder(tempdir())
 
@@ -84,6 +87,7 @@ instructions—is now saved.
 See what’s stored:
 
 ``` r
+
 board |> pin_list()
 
 # Get metadata
@@ -95,6 +99,7 @@ board |> pin_meta("sentiment-classifier")
 Imagine you restart R or deploy to a different machine:
 
 ``` r
+
 # Later, in a new session...
 config <- pins::pin_read(board, "sentiment-classifier")
 restored <- restore_module_config(config)
@@ -110,6 +115,7 @@ The restored module has all the optimization work preserved.
 Pins automatically version your saves:
 
 ``` r
+
 # Make some changes
 improved <- compile_module(
   program = restored,
@@ -129,6 +135,7 @@ board |> pin_versions("sentiment-classifier")
 If a new version performs worse:
 
 ``` r
+
 # Get specific version
 versions <- board |> pin_versions("sentiment-classifier")
 
@@ -144,6 +151,7 @@ if (nrow(versions) > 1) {
 Track what your module does in production:
 
 ``` r
+
 # Run some predictions
 run(classifier, review = "Great product!", .llm = chat)
 run(classifier, review = "Not worth the money.", .llm = chat)
@@ -158,6 +166,7 @@ pin_trace(board, "sentiment-traces", classifier)
 Load and examine traces:
 
 ``` r
+
 # Export as tibble
 traces <- export_traces(classifier, format = "tibble")
 traces
@@ -176,6 +185,7 @@ Use
 to check everything is ready:
 
 ``` r
+
 # Check module is properly configured
 validation <- validate_workflow(
   module = classifier,
@@ -193,6 +203,7 @@ defined - Board is accessible (if provided)
 Here’s a complete production workflow:
 
 ``` r
+
 # === DEVELOPMENT ===
 # 1. Build and optimize
 dev_module <- module(sig, type = "predict")
@@ -232,6 +243,7 @@ pin_trace(prod_board, "sentiment-traces", prod_module)
 Pins supports multiple backends:
 
 ``` r
+
 # Local folder
 board_folder("path/to/folder")
 
@@ -255,6 +267,7 @@ Choose based on your deployment environment.
 Set up regular checks:
 
 ``` r
+
 # Daily: Check trace summary
 module$trace_summary()
 

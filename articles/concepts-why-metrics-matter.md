@@ -40,6 +40,7 @@ morning.
 A metric converts subjective judgment into objective measurement:
 
 ``` r
+
 # Without metrics: "This looks right"
 result <- run(mod, text = "I love this product!")
 # result: "positive"  # Is this correct? Probably?
@@ -66,6 +67,7 @@ For classification and extraction tasks where the answer must be exactly
 right:
 
 ``` r
+
 metric <- metric_exact_match()
 metric("positive", "positive")  # TRUE
 metric("Positive", "positive")  # FALSE (case sensitive by default)
@@ -87,6 +89,7 @@ metric(
 For tasks where the answer should include specific content:
 
 ``` r
+
 metric <- metric_contains()
 metric("The capital of France is Paris.", "Paris")  # TRUE
 metric("The capital of France is Paris.", "London")  # FALSE
@@ -97,6 +100,7 @@ metric("The capital of France is Paris.", "London")  # FALSE
 For text generation where partial overlap matters:
 
 ``` r
+
 metric <- metric_f1()
 metric("the quick brown fox", "the fast brown fox")  # 0.75
 # Tokens: {the, quick, brown, fox} vs {the, fast, brown, fox}
@@ -109,6 +113,7 @@ metric("the quick brown fox", "the fast brown fox")  # 0.75
 For domain-specific evaluation:
 
 ``` r
+
 # Check if output is valid JSON
 metric_valid_json <- function(prediction, expected) {
   tryCatch({
@@ -132,6 +137,7 @@ dsprrr’s
 function runs your module on a dataset and computes metrics:
 
 ``` r
+
 # Prepare labeled data
 test_data <- tibble::tibble(
   text = c("Great product!", "Terrible service", "It's okay"),
@@ -168,6 +174,7 @@ With metrics in place, development becomes systematic:
 Before writing any prompt, create your evaluation dataset:
 
 ``` r
+
 # Collect or create labeled examples
 eval_data <- tibble::tibble(
   question = c(
@@ -187,6 +194,7 @@ answer? What edge cases matter?
 Run evaluation with your initial prompt:
 
 ``` r
+
 baseline <- evaluate(mod_v1, eval_data, metric_exact_match())
 baseline$mean_score  # 0.65
 ```
@@ -198,6 +206,7 @@ Now you have a number to beat.
 Every change gets measured:
 
 ``` r
+
 # Try different instructions
 mod_v2 <- module(
   signature("question -> answer", instructions = "Be concise."),
@@ -222,6 +231,7 @@ No guessing. No “it feels better”. Just numbers.
 Let the computer search for you:
 
 ``` r
+
 mod$optimize_grid(
   devset = train_data,
   metric = metric_exact_match(),
@@ -241,20 +251,21 @@ Optimization only works because metrics provide objective feedback.
 
 Different tasks need different metrics:
 
-| Task               | Recommended Metric                                                                            | Why                          |
-|--------------------|-----------------------------------------------------------------------------------------------|------------------------------|
-| Classification     | [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md) | Answer must be exactly right |
-| Extraction         | `metric_exact_match(field = "...")`                                                           | Extract specific field       |
-| Generation         | [`metric_f1()`](https://jameshwade.github.io/dsprrr/reference/metric_f1.md)                   | Partial credit for overlap   |
-| Yes/No questions   | `metric_exact_match(ignore_case = TRUE)`                                                      | “Yes” = “yes”                |
-| Contains keyword   | [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md)       | Answer includes key info     |
-| Complex evaluation | Custom function                                                                               | Domain-specific logic        |
+| Task | Recommended Metric | Why |
+|----|----|----|
+| Classification | [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md) | Answer must be exactly right |
+| Extraction | `metric_exact_match(field = "...")` | Extract specific field |
+| Generation | [`metric_f1()`](https://jameshwade.github.io/dsprrr/reference/metric_f1.md) | Partial credit for overlap |
+| Yes/No questions | `metric_exact_match(ignore_case = TRUE)` | “Yes” = “yes” |
+| Contains keyword | [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md) | Answer includes key info |
+| Complex evaluation | Custom function | Domain-specific logic |
 
 ### When Exact Match is Too Strict
 
 Sometimes equivalent answers look different:
 
 ``` r
+
 # These are all correct, but exact match fails
 metric_exact_match()("4", "four")           # FALSE
 metric_exact_match()("Paris", "paris")      # FALSE
@@ -270,6 +281,7 @@ Use F1 for partial credit
 F1 gives partial credit for word overlap, but sometimes that’s wrong:
 
 ``` r
+
 metric_f1()("The answer is yes", "The answer is no")  # 0.75
 # High score despite opposite meaning!
 ```
@@ -283,6 +295,7 @@ on key fields - Semantic similarity metrics - Model-graded evaluation
 Proper evaluation requires data discipline:
 
 ``` r
+
 # Split your data
 set.seed(42)
 n <- nrow(all_data)
@@ -317,6 +330,7 @@ overfit, not how well you’ll generalize.
 ### Testing on Training Data
 
 ``` r
+
 # WRONG: Evaluate on the same data used for optimization
 mod$optimize_grid(data, metric)
 evaluate(mod, data, metric)  # Overfit score!
@@ -329,6 +343,7 @@ evaluate(mod, testset, metric)  # Honest score
 ### Metric Doesn’t Match Task
 
 ``` r
+
 # Task: Generate creative stories
 # WRONG: Exact match (too strict)
 evaluate(mod, data, metric_exact_match())
@@ -340,6 +355,7 @@ evaluate(mod, data, metric_story_quality)
 ### Too Few Examples
 
 ``` r
+
 # WRONG: 5 examples gives noisy estimates
 test_tiny <- data[1:5, ]
 evaluate(mod, test_tiny, metric)  # Could be 0.8 or 0.2 by chance

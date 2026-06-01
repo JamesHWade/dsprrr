@@ -21,6 +21,7 @@ when building LLM applications.
 A Signature is an S7 class with three properties:
 
 ``` r
+
 Signature <- S7::new_class(
   "Signature",
   properties = list(
@@ -37,6 +38,7 @@ S7 provides **validated, immutable** objects. Once you create a
 signature, it doesn’t change:
 
 ``` r
+
 sig <- signature("question -> answer")
 
 # This would error - S7 objects are immutable
@@ -53,6 +55,7 @@ evaluation results.
 Consider what happens during optimization:
 
 ``` r
+
 mod$optimize_grid(
   devset = train_data,
   metric = metric_exact_match(),
@@ -73,6 +76,7 @@ you can reason about state because state doesn’t silently change.
 Signatures use ellmer’s type system for outputs:
 
 ``` r
+
 # Simple string output
 signature("text -> summary: string")
 
@@ -103,6 +107,7 @@ specification, not free-form text you have to parse.
 The string parser provides a concise syntax:
 
 ``` r
+
 # These are equivalent
 signature("context, question -> answer: string")
 
@@ -129,6 +134,7 @@ need: - Input descriptions - Complex output types - Custom validators
 Modules are R6 classes that wrap signatures with execution logic:
 
 ``` r
+
 Module <- R6::R6Class(
   "Module",
   public = list(
@@ -157,6 +163,7 @@ place. This is essential for:
 With S3/S4/S7, you’d need to return modified copies from every function:
 
 ``` r
+
 # Without reference semantics (hypothetical)
 result <- run(mod, question = "What is 2+2?", .llm = llm)
 mod <- result$updated_module  # Have to remember to capture this!
@@ -165,6 +172,7 @@ mod <- result$updated_module  # Have to remember to capture this!
 With R6, the module updates itself:
 
 ``` r
+
 # With reference semantics (actual API)
 result <- run(mod, question = "What is 2+2?", .llm = llm)
 # mod is already updated with new traces
@@ -175,6 +183,7 @@ result <- run(mod, question = "What is 2+2?", .llm = llm)
 A module **references** a signature but doesn’t own it:
 
 ``` r
+
 sig <- signature("question -> answer")
 mod1 <- module(sig, type = "predict")
 mod2 <- module(sig, type = "predict")
@@ -191,6 +200,7 @@ You can have multiple modules with the same signature but different
 configurations:
 
 ``` r
+
 sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 # Same interface, different implementations
@@ -206,6 +216,7 @@ careful_classifier$config$temperature <- 0.7
 Modules maintain rich state:
 
 ``` r
+
 mod$state <- list(
   traces = list(),           # Execution history
   cache = list(),            # Optional result caching
@@ -224,6 +235,7 @@ send? - Monitoring: How much are LLM calls costing? - Analysis: Which
 inputs cause failures?
 
 ``` r
+
 # After running the module
 mod$get_traces()
 #> # A tibble: 10 x 8
@@ -235,6 +247,7 @@ mod$get_traces()
 teleprompter optimization:
 
 ``` r
+
 mod$is_compiled()
 #> [1] FALSE
 
@@ -249,6 +262,7 @@ mod$is_compiled()
 Every module implements `forward()`:
 
 ``` r
+
 forward = function(batch, .llm = NULL, trace = TRUE, ...) {
   # 1. Build prompt from inputs and configuration
   prompt <- private$build_prompt(batch)
@@ -281,6 +295,7 @@ eventually calls `forward()`.
 dsprrr provides specialized module types via the `type` parameter:
 
 ``` r
+
 module(sig, type = "predict")      # Basic text generation
 module(sig, type = "react")        # ReAct-style agents with tools
 module(sig, type = "best_of_n")    # Ensemble with reward function
@@ -296,6 +311,7 @@ The workhorse for most tasks. Generates a prompt from a template, calls
 the LLM, returns structured output.
 
 ``` r
+
 PredictModule <- R6::R6Class(
   "PredictModule",
   inherit = Module,
@@ -317,6 +333,7 @@ PredictModule <- R6::R6Class(
 Some modules wrap other modules to add capabilities:
 
 ``` r
+
 # BestOfN: Run base module N times, pick best via reward function
 best_mod <- BestOfNModule$new(
   base_module = mod,
@@ -338,6 +355,7 @@ Wrappers compose because they maintain the same interface: input →
 output. You can wrap a wrapper:
 
 ``` r
+
 # BestOfN over Refine: 3 parallel refinement chains, pick best
 robust_mod <- BestOfNModule$new(
   base_module = RefineModule$new(base_module = simple_mod),
@@ -351,6 +369,7 @@ Modules need independent copies for optimization. The `copy()` method
 handles this:
 
 ``` r
+
 original <- module(sig, type = "predict")
 original$config$temperature <- 0.5
 original$state$traces <- list(trace1, trace2)
@@ -412,6 +431,7 @@ Use the same module when:
 To create a custom module type:
 
 ``` r
+
 MyModule <- R6::R6Class(
   "MyModule",
   inherit = Module,
@@ -447,6 +467,7 @@ When you call
 [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md):
 
 ``` r
+
 mod$optimize_grid(
   devset = train_data,
   metric = metric_exact_match(),

@@ -1,6 +1,7 @@
 # Working with Reasoning Models
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 ```
@@ -34,6 +35,7 @@ dsprrr automatically detects reasoning models using
 [`is_reasoning_model()`](https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.md):
 
 ``` r
+
 # Traditional models
 is_reasoning_model("gpt-4o")
 is_reasoning_model("claude-sonnet-4-20250514")
@@ -52,6 +54,7 @@ is_reasoning_model("gpt-5-mini")
 When you use a reasoning model, dsprrr automatically adjusts parameters:
 
 ``` r
+
 # Configure to use a reasoning model
 chat <- chat_openai(model = "o4-mini")
 
@@ -67,6 +70,7 @@ result <- chat |> dsp(
 Control how much “thinking” the model does with `reasoning_effort`:
 
 ``` r
+
 # Create a module with reasoning effort configuration
 mod <- module(
   signature("question -> answer"),
@@ -90,6 +94,7 @@ function automatically adjusts available parameters based on the model
 type:
 
 ``` r
+
 sig <- signature("text -> analysis")
 mod <- module(sig, type = "predict")
 
@@ -111,6 +116,7 @@ When optimizing modules that use reasoning models, dsprrr automatically:
 3.  Uses appropriate defaults
 
 ``` r
+
 # Grid search will use reasoning_effort instead of temperature
 optimize_grid(
   mod,
@@ -140,6 +146,7 @@ Reasoning models are significantly more expensive than traditional
 models:
 
 ``` r
+
 # Track costs with session_cost()
 session_cost()
 
@@ -159,6 +166,7 @@ mod <- module(
 Reasoning models may take longer to respond due to internal thinking:
 
 ``` r
+
 # Increase timeout for complex reasoning tasks
 options(ellmer_timeout = 120)  # 2 minutes
 
@@ -171,6 +179,7 @@ promise <- run_async(mod, question = complex_problem)
 dsprrr provides sensible defaults for different providers:
 
 ``` r
+
 # OpenAI defaults
 provider_defaults("openai")
 

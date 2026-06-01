@@ -44,6 +44,7 @@ structure as the project grows.
 - Save/load game functionality
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 library(cli)
@@ -56,6 +57,7 @@ For most R projects, plain lists and functions are all you need.
 ### Game State as Lists
 
 ``` r
+
 # Player is just a list
 create_player <- function(name) {
   list(
@@ -97,6 +99,7 @@ create_game <- function(player) {
 ### Helper Functions
 
 ``` r
+
 # Modify player state
 add_item <- function(player, item) {
   player$inventory <- c(player$inventory, item)
@@ -161,6 +164,7 @@ enum—constraining outputs to specific values makes downstream logic
 predictable.
 
 ``` r
+
 scene_sig <- signature(
   inputs = list(
     input("location", "Current location name"),
@@ -187,6 +191,7 @@ might offer better prices. The structured output ensures we can
 programmatically handle items changing hands.
 
 ``` r
+
 dialogue_sig <- signature(
   inputs = list(
     input("npc_name", "NPC name"),
@@ -211,6 +216,7 @@ output (`damage_taken`, `item_gained`, `experience`) lets us update game
 state automatically.
 
 ``` r
+
 action_sig <- signature(
   inputs = list(
     input("action", "What player attempts"),
@@ -238,6 +244,7 @@ thinking before giving the final answer. This improves output quality,
 especially for complex decisions like whether an action should succeed.
 
 ``` r
+
 create_modules <- function(llm) {
   list(
     scene = module(scene_sig, type = "chain_of_thought"),
@@ -256,6 +263,7 @@ for the AI, `detect_skill` maps player intent to game mechanics, and the
 `generate_*`/`resolve_*` functions orchestrate LLM calls.
 
 ``` r
+
 player_summary <- function(player) {
   sprintf(
     "Level %d %s | HP:%d | STR:%d INT:%d CHA:%d STL:%d | Items: %s",
@@ -325,6 +333,7 @@ resolve_action <- function(game, action, modules) {
 ### Save/Load
 
 ``` r
+
 save_game <- function(game, filename = "savegame.json") {
   jsonlite::write_json(game, filename, auto_unbox = TRUE, pretty = TRUE)
   cli_alert_success("Saved to {.file {filename}}")
@@ -345,6 +354,7 @@ load_game <- function(filename = "savegame.json") {
 ### Minimal Game Loop
 
 ``` r
+
 play_game <- function(llm = chat_openai()) {
   modules <- create_modules(llm)
 
@@ -401,12 +411,14 @@ As projects grow, plain lists show their limits:
 S7 solves these while staying functional:
 
 ``` r
+
 library(S7)
 ```
 
 ### S7 Classes for Game State
 
 ``` r
+
 Player <- new_class("Player",
   properties = list(
     name = class_character,
@@ -461,6 +473,7 @@ Now you get:
 Instead of plain functions, use generics for extensibility:
 
 ``` r
+
 add_item <- new_generic("add_item", "player")
 method(add_item, Player) <- function(player, item) {
   player@inventory <- c(player@inventory, item)
@@ -534,6 +547,7 @@ method(has_flag, GameContext) <- function(context, flag) {
 ### Print Methods
 
 ``` r
+
 method(print, Player) <- function(x, ...) {
   cli_h3("{x@name}")
   cli_text("Level {x@level} | HP: {x@health}/100 | XP: {x@experience}")
@@ -560,6 +574,7 @@ method(print, GameState) <- function(x, ...) {
 With more structure, we can add richer AI interactions:
 
 ``` r
+
 scene_sig <- signature(
   inputs = list(
     input("location", "Current location name"),
@@ -628,6 +643,7 @@ improve odds. Create interesting failures. Useful items help."
 ### Full Game Functions
 
 ``` r
+
 player_summary <- function(player) {
   sprintf(
     "Level %d %s | HP:%d | STR:%d INT:%d CHA:%d STL:%d | Items: %s",
@@ -676,6 +692,7 @@ npc_role <- function(npc_name) {
 ### Scene and Dialogue Handling
 
 ``` r
+
 generate_scene <- function(game, modules) {
   run(
     modules$scene,
@@ -756,6 +773,7 @@ handle_dialogue <- function(game, npc, action, modules) {
 ### Action Resolution
 
 ``` r
+
 resolve_action <- function(game, action, modules) {
   skill <- detect_skill(action)
 
@@ -810,6 +828,7 @@ resolve_action <- function(game, action, modules) {
 ### Save/Load with S7
 
 ``` r
+
 save_game <- function(game, filename = "savegame.json") {
   save_data <- list(
     player = list(
@@ -866,6 +885,7 @@ load_game <- function(filename = "savegame.json") {
 ### Character Creation
 
 ``` r
+
 create_character <- function() {
   cli_h1("{.emph MYSTIC REALM ADVENTURE}")
   cli_h2("Character Creation")
@@ -900,6 +920,7 @@ create_character <- function() {
 ### Full Game Loop
 
 ``` r
+
 play_game <- function(llm = chat_openai()) {
   modules <- create_modules(llm)
   game <- create_character()

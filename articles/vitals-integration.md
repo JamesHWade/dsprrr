@@ -1,6 +1,7 @@
 # Integration with vitals
 
 ``` r
+
 library(dsprrr)
 library(vitals)
 library(ellmer)
@@ -30,6 +31,7 @@ Thanks to the batch processing support and structured returns, dsprrr
 modules can now work directly with vitals:
 
 ``` r
+
 # Create a dsprrr module (using 'input' to match vitals conventions)
 sentiment_module <- signature(
   "input -> sentiment: enum('positive', 'negative', 'neutral')"
@@ -57,6 +59,7 @@ The new
 method makes it even easier to process tibbles:
 
 ``` r
+
 # Process a dataset directly
 dataset <- tibble(
   text = c("Great product!", "Waste of money", "It's okay"),
@@ -82,6 +85,7 @@ print(results)
 Convert vitals scorers to dsprrr metrics for use in optimization:
 
 ``` r
+
 # Create a metric from vitals scorer
 # (vitals provides model-graded scorers returning "C"/"I" style outputs)
 
@@ -102,6 +106,7 @@ teleprompter <- GridSearchTeleprompter(
 Here’s an end-to-end example showing the full integration:
 
 ``` r
+
 # 1. Design with dsprrr
 qa_module <- signature(
   inputs = list(
@@ -168,6 +173,7 @@ eval_task$eval()
 The new `as_function()` feature makes modules even more natural to use:
 
 ``` r
+
 # Convert module to function
 classify <- as_function(sentiment_module, .llm = chat_openai())
 
@@ -189,6 +195,7 @@ The new batch processing features provide significant performance
 benefits:
 
 ``` r
+
 # Process 100 items in parallel (new feature!)
 large_dataset <- tibble(
   text = sample_texts[1:100]

@@ -26,6 +26,7 @@ LLM performance depends on several factors that can be tuned:
 The system prompt or task description:
 
 ``` r
+
 # Original
 sig <- signature(
  "text -> sentiment",
@@ -53,6 +54,7 @@ wording depends on the model, the task, and the data distribution.
 Examples shown to the model before the actual input:
 
 ``` r
+
 # No demos
 mod$demos <- list()
 
@@ -74,6 +76,7 @@ patterns
 Model generation parameters:
 
 ``` r
+
 mod$config$temperature <- 0      # Deterministic
 mod$config$temperature <- 0.7    # Some randomness
 mod$config$temperature <- 1.0    # More creative
@@ -87,6 +90,7 @@ temperature helps with generation tasks where diversity matters.
 How inputs are formatted and combined:
 
 ``` r
+
 # Template 1: Simple
 mod$template <- "{input}"
 
@@ -124,6 +128,7 @@ teleprompter implements a different search strategy.
 Just add k examples from your training set as demonstrations:
 
 ``` r
+
 tp <- LabeledFewShot(k = 4L)
 compiled <- compile(tp, mod, trainset)
 ```
@@ -145,6 +150,7 @@ parameters - May pick suboptimal examples
 Uses the model to generate demonstrations, keeping only successful ones:
 
 ``` r
+
 tp <- BootstrapFewShot(
  metric = metric_exact_match(),
  max_bootstrapped_demos = 4L,
@@ -174,6 +180,7 @@ format
 Tests every combination of instruction and template variants:
 
 ``` r
+
 variants <- tibble::tibble(
  id = c("concise", "detailed", "structured"),
  instructions = c(
@@ -207,6 +214,7 @@ combinations not in grid
 Combines demo bootstrapping with parameter search:
 
 ``` r
+
 tp <- BootstrapFewShotWithRandomSearch(
  metric = metric_exact_match(),
  num_candidate_programs = 8L,
@@ -231,6 +239,7 @@ more trials
 Uses semantic similarity to select diverse, representative demos:
 
 ``` r
+
 tp <- SIMBA(
  metric = metric_exact_match(),
  max_demos = 4L,
@@ -258,6 +267,7 @@ vary significantly - When you want coverage over the input space
 Selects demos based on similarity to each test input:
 
 ``` r
+
 tp <- KNNFewShot(
  metric = metric_exact_match(),
  k = 3L,
@@ -285,6 +295,7 @@ inference
 Generates and refines instructions using the LLM itself:
 
 ``` r
+
 tp <- COPRO(
  metric = metric_exact_match(),
  breadth = 5L,
@@ -313,6 +324,7 @@ automatically-generated instructions
 Jointly optimizes instructions and demonstrations:
 
 ``` r
+
 tp <- MIPROv2(
  metric = metric_exact_match(),
  num_candidates = 10L,
@@ -330,6 +342,7 @@ budget for state-of-the-art results.
 Evolves prompts through mutation and crossover:
 
 ``` r
+
 tp <- GEPA(
  metric = metric_exact_match(),
  population_size = 20L,
@@ -362,6 +375,7 @@ flowchart TB
 All optimizers share a common evaluation pattern:
 
 ``` r
+
 # Pseudocode for optimizer loop
 for (candidate in candidates) {
  # 1. Create candidate module
@@ -427,6 +441,7 @@ Split your data:
   optimization)
 
 ``` r
+
 # Good practice
 set.seed(42)
 n <- nrow(data)
@@ -450,6 +465,7 @@ evaluate(compiled, testset, metric)
 Use seeds for reproducible optimization:
 
 ``` r
+
 tp <- BootstrapFewShot(
  metric = metric_exact_match(),
  seed = 42L

@@ -47,6 +47,7 @@ First, create a pins board. You can use local storage, cloud providers
 (S3, Azure, GCS), or Posit Connect:
 
 ``` r
+
 library(pins)
 
 # Local board for development
@@ -62,6 +63,7 @@ board <- board_folder("pins", versioned = TRUE)
 After optimizing a module, save its configuration:
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 
@@ -93,6 +95,7 @@ The pinned configuration includes:
 In a new session or different project, restore the module:
 
 ``` r
+
 # Read the pinned configuration
 config <- pin_read(board, "sentiment-classifier-v1")
 
@@ -108,6 +111,7 @@ result <- run(mod, text = "Great product!", .llm = llm)
 Pins automatically versions your configurations:
 
 ``` r
+
 # List versions
 pin_versions(board, "sentiment-classifier-v1")
 
@@ -130,6 +134,7 @@ usage, prompts, and outputs. Pinning traces enables:
 After running predictions, save the traces:
 
 ``` r
+
 # Run some predictions
 results <- run(mod, text = test_texts, .llm = llm, .progress = TRUE)
 
@@ -149,6 +154,7 @@ pin_trace(
 Load pinned traces for analysis:
 
 ``` r
+
 library(dplyr)
 library(ggplot2)
 
@@ -180,6 +186,7 @@ Evaluation results from
 or vitals Tasks can be pinned for tracking model performance over time:
 
 ``` r
+
 # Run evaluation
 eval_result <- evaluate(
   mod,
@@ -203,6 +210,7 @@ pin_vitals_log(
 Compare evaluations across time:
 
 ``` r
+
 # Load multiple evaluation results
 eval_jan <- pin_read(board, "sentiment-eval-2024-01")
 eval_feb <- pin_read(board, "sentiment-eval-2024-02")
@@ -229,6 +237,7 @@ framework for:
 dsprrr provides a ready-to-use targets template:
 
 ``` r
+
 # Copy the template to your project
 use_dsprrr_template("targets")
 
@@ -240,6 +249,7 @@ use_dsprrr_template("targets")
 The template includes these stages:
 
 ``` r
+
 # 1. Data Preparation
 tar_target(train_data, load_training_data())
 tar_target(test_data, load_test_data())
@@ -273,6 +283,7 @@ tar_target(pinned_config, {
 Execute your pipeline with targets:
 
 ``` r
+
 library(targets)
 
 # Run the full pipeline
@@ -290,6 +301,7 @@ eval_results <- tar_read(evaluation_results)
 targets caches results and only reruns what’s changed:
 
 ``` r
+
 # Modify only the test data
 # targets will skip optimization and only rerun evaluation
 
@@ -303,6 +315,7 @@ Quarto documents provide rich, reproducible reports. dsprrr’s template
 generates professional experiment reports:
 
 ``` r
+
 # Copy the Quarto template
 use_dsprrr_template("quarto")
 
@@ -333,6 +346,7 @@ params:
 Render your report:
 
 ``` r
+
 # From R
 quarto::quarto_render("report.qmd")
 
@@ -345,6 +359,7 @@ quarto::quarto_render("report.qmd")
 Add report rendering to your targets pipeline:
 
 ``` r
+
 tar_quarto(
   report,
   path = "report.qmd",
@@ -357,6 +372,7 @@ tar_quarto(
 Before running expensive LLM operations, validate your workflow:
 
 ``` r
+
 # Check that everything is configured correctly
 validate_workflow(
   module = mod,
@@ -384,6 +400,7 @@ This catches common issues:
 Here’s a complete example bringing everything together:
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 library(pins)
@@ -440,6 +457,7 @@ quarto::quarto_render("report.qmd")
 Always use versioned pins boards:
 
 ``` r
+
 board <- board_folder("pins", versioned = TRUE)
 ```
 
@@ -450,6 +468,7 @@ This enables rollback and audit trails.
 Add descriptions to your pins:
 
 ``` r
+
 pin_module_config(
   board, "classifier-v1", mod,
   description = "Trained on Q1 2024 data, optimized for precision"
@@ -461,6 +480,7 @@ pin_module_config(
 Use different boards for different environments:
 
 ``` r
+
 dev_board <- board_folder("pins-dev")
 prod_board <- board_s3("prod-bucket/dsprrr-pins")
 ```
@@ -470,6 +490,7 @@ prod_board <- board_s3("prod-bucket/dsprrr-pins")
 Always validate workflows, especially in production:
 
 ``` r
+
 validation <- validate_workflow(mod, dataset, board)
 if (!validation$valid) {
   stop("Workflow validation failed")
@@ -481,6 +502,7 @@ if (!validation$valid) {
 Monitor token usage and costs via traces:
 
 ``` r
+
 traces <- pin_read(board, "latest-traces")
 total_cost <- sum(traces$traces$cost, na.rm = TRUE)
 cli::cli_alert_info("Total API cost: ${total_cost}")
@@ -513,14 +535,14 @@ for details on:
 
 dsprrr’s orchestration features enable production-ready LLM workflows:
 
-| Feature                                                                                     | Purpose                      | Package |
-|---------------------------------------------------------------------------------------------|------------------------------|---------|
-| [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md) | Save/share optimized modules | pins    |
-| [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md)                 | Persist execution traces     | pins    |
-| [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md)       | Store evaluation results     | pins    |
-| `use_dsprrr_template("targets")`                                                            | Pipeline orchestration       | targets |
-| `use_dsprrr_template("quarto")`                                                             | Experiment reporting         | Quarto  |
-| [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md) | Pre-flight checks            | dsprrr  |
+| Feature | Purpose | Package |
+|----|----|----|
+| [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md) | Save/share optimized modules | pins |
+| [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md) | Persist execution traces | pins |
+| [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md) | Store evaluation results | pins |
+| `use_dsprrr_template("targets")` | Pipeline orchestration | targets |
+| `use_dsprrr_template("quarto")` | Experiment reporting | Quarto |
+| [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md) | Pre-flight checks | dsprrr |
 
 These tools integrate dsprrr into the broader R ecosystem, making it
 easy to build reliable, reproducible, and collaborative LLM

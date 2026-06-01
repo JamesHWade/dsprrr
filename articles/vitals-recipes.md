@@ -5,6 +5,7 @@ with vitals evaluation. Each recipe is self-contained and demonstrates a
 specific pattern.
 
 ``` r
+
 library(dsprrr)
 library(vitals)
 library(ellmer)
@@ -16,6 +17,7 @@ library(tibble)
 The fastest way to evaluate a dsprrr module with vitals:
 
 ``` r
+
 # 1. Create a simple module
 classifier <- signature("input -> label: enum('positive', 'negative')") |>
   module()
@@ -56,6 +58,7 @@ A common pattern: optimize on training data, evaluate on held-out test
 data.
 
 ``` r
+
 # Full dataset with ground truth
 qa_data <- tibble(
   question = c(
@@ -118,6 +121,7 @@ Vitals provides several scorers for different use cases:
 Best for factual questions with precise answers:
 
 ``` r
+
 factual <- signature("question -> answer") |> module()
 
 task <- as_vitals_task(
@@ -141,6 +145,7 @@ task$get_samples()
 Best for open-ended questions where multiple phrasings are correct:
 
 ``` r
+
 explainer <- signature("topic -> explanation") |>
   module(type = "chain_of_thought")
 
@@ -168,6 +173,7 @@ task$get_samples()
 Best for checking if specific text appears anywhere in output:
 
 ``` r
+
 coder <- signature("task -> code") |> module()
 
 task <- as_vitals_task(
@@ -194,6 +200,7 @@ task$get_samples()
 After running evaluation, dig into the results:
 
 ``` r
+
 # Run an evaluation
 sentiment <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')"
@@ -251,6 +258,7 @@ cat("Overall accuracy:", scales::percent(accuracy), "\n")
 Test different module configurations side-by-side:
 
 ``` r
+
 # Same signature, different approaches
 sig <- signature("question -> answer")
 
@@ -299,6 +307,7 @@ cat("CoT accuracy:", scales::percent(results$cot), "\n")
 Run multiple evaluation passes for more reliable metrics:
 
 ``` r
+
 classifier <- signature(
   "text -> category: enum('tech', 'sports', 'politics')"
 ) |>
@@ -345,6 +354,7 @@ cat("Overall accuracy:", scales::percent(mean(scores$score == "C")), "\n")
 For complex evaluation logic, build a custom pipeline:
 
 ``` r
+
 # Custom evaluation function
 evaluate_module <- function(module, dataset, llm, scorer = detect_match()) {
   # Run predictions

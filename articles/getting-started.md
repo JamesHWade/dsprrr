@@ -8,6 +8,7 @@ strings to be tweaked by hand. You declare what you want with
 find the best prompts automatically.
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 
@@ -90,6 +91,7 @@ Check the how-to guides:
 Here’s dsprrr in action—from simple call to optimized module:
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 
@@ -124,6 +126,7 @@ Before you begin:
 2.  **Install the packages**:
 
 ``` r
+
 # install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
 ```
@@ -131,6 +134,7 @@ pak::pak("JamesHWade/dsprrr")
 3.  **Set your API key**:
 
 ``` r
+
 # In your .Renviron file
 OPENAI_API_KEY=sk-your-key-here
 ```

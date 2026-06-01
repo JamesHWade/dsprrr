@@ -50,6 +50,7 @@ A multi-stage analysis pipeline that:
 5.  Produces formatted `llms.txt`
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 library(cli)
@@ -62,6 +63,7 @@ For a quick script or personal use, plain lists work fine.
 ### Gather Package Info
 
 ``` r
+
 gather_package_info <- function(pkg_path = ".") {
   # Read DESCRIPTION
   desc_path <- file.path(pkg_path, "DESCRIPTION")
@@ -139,6 +141,7 @@ to define structured outputs. The LLM returns JSON matching this schema,
 which we can then pass reliably to the next stage:
 
 ``` r
+
 # Stage 1: Analyze purpose
 analyze_purpose_sig <- signature(
   inputs = list(
@@ -236,6 +239,7 @@ accuracy for complex analysis tasks. The final `llmstxt` stage just
 needs to synthesize; no reasoning required.
 
 ``` r
+
 create_modules <- function(llm) {
   list(
     purpose = module(analyze_purpose_sig, type = "chain_of_thought"),
@@ -254,6 +258,7 @@ This is where the structured signatures pay off—we can confidently pass
 `purpose$key_concepts` to the examples stage because we know its shape.
 
 ``` r
+
 analyze_package <- function(pkg_path = ".", llm = chat_openai()) {
   cli_h1("Analyzing package")
 
@@ -330,6 +335,7 @@ analyze_package <- function(pkg_path = ".", llm = chat_openai()) {
 ### Use It
 
 ``` r
+
 # Find package root (works from vignettes/ or project root)
 pkg_root <- if (file.exists("DESCRIPTION")) "." else ".."
 
@@ -359,12 +365,14 @@ S7 gives you typed containers that catch these problems at construction
 time:
 
 ``` r
+
 library(S7)
 ```
 
 ### S7 Classes for Results
 
 ``` r
+
 # Package metadata
 PackageInfo <- new_class("PackageInfo",
   properties = list(
@@ -430,6 +438,7 @@ Now you get:
 ### Print Methods
 
 ``` r
+
 method(print, PackageInfo) <- function(x, ...) {
   cli_h3("Package: {x@name}")
   cli_text("{x@title}")
@@ -449,6 +458,7 @@ method(print, AnalysisResult) <- function(x, ...) {
 ### Updated Gather Function
 
 ``` r
+
 gather_package_info <- function(pkg_path = ".") {
   desc_path <- file.path(pkg_path, "DESCRIPTION")
   if (!file.exists(desc_path)) {
@@ -513,6 +523,7 @@ the simple approach: if the LLM returns incomplete data (missing
 immediately with a clear error. No silent `NULL` propagation:
 
 ``` r
+
 analyze_purpose <- function(pkg_info, modules) {
   cli_alert_info("Analyzing purpose and concepts...")
 
@@ -597,6 +608,7 @@ generate_llmstxt <- function(pkg_info, purpose, structure, examples, modules) {
 ### Main Function
 
 ``` r
+
 analyze_package <- function(pkg_path = ".", llm = chat_openai()) {
   cli_h1("Analyzing package")
 
@@ -633,6 +645,7 @@ complexity while preserving access to the full `AnalysisResult` for
 users who need it:
 
 ``` r
+
 generate_llmstxt_file <- function(pkg_path = ".", output = NULL, llm = chat_openai()) {
   result <- analyze_package(pkg_path, llm)
 
@@ -653,6 +666,7 @@ preview_llmstxt <- function(pkg_path = ".", llm = chat_openai()) {
 ### Running It
 
 ``` r
+
 # Find package root (works from vignettes/ or project root)
 pkg_root <- if (file.exists("DESCRIPTION")) "." else ".."
 
@@ -702,6 +716,7 @@ run(mod, question = "What is R?", .llm = chat_openai())
 ## Common Workflow
 
 ``` r
+
 sig <- signature("context, question -> answer",
                  instructions = "Answer based only on context.")
 mod <- module(sig, type = "predict")
@@ -764,13 +779,13 @@ variants in separate files. Optimization in teleprompter.R.
 The staged pipeline pattern adapts to many documentation and analysis
 tasks:
 
-| Application          | Gather Stage              | Analysis Stages                           | Output Stage                |
-|----------------------|---------------------------|-------------------------------------------|-----------------------------|
-| **API docs**         | Parse OpenAPI spec        | Analyze endpoints, group by resource      | Generate markdown reference |
-| **Changelogs**       | Parse git commits, issues | Categorize changes, identify breaking     | Generate release notes      |
-| **Code review**      | Diff files, parse AST     | Check style, find bugs, assess complexity | Generate review comments    |
-| **Test generation**  | Parse function signatures | Identify edge cases, dependencies         | Generate test cases         |
-| **Migration guides** | Diff API versions         | Identify breaking changes, patterns       | Generate upgrade steps      |
+| Application | Gather Stage | Analysis Stages | Output Stage |
+|----|----|----|----|
+| **API docs** | Parse OpenAPI spec | Analyze endpoints, group by resource | Generate markdown reference |
+| **Changelogs** | Parse git commits, issues | Categorize changes, identify breaking | Generate release notes |
+| **Code review** | Diff files, parse AST | Check style, find bugs, assess complexity | Generate review comments |
+| **Test generation** | Parse function signatures | Identify edge cases, dependencies | Generate test cases |
+| **Migration guides** | Diff API versions | Identify breaking changes, patterns | Generate upgrade steps |
 
 The key is the same: define clear signatures for each stage, use
 structured outputs to pass data between stages, and let S7 classes

@@ -20,6 +20,7 @@ just like any other module.
 Start with small modules that do one thing well:
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 
@@ -38,6 +39,7 @@ mod_format <- signature("answer -> response") |>
 When field names align, outputs connect automatically:
 
 ``` r
+
 qa_pipeline <- mod_extract %>>% mod_answer %>>% mod_format
 
 llm <- chat_openai()
@@ -55,6 +57,7 @@ If a downstream module expects a different input name, map fields
 explicitly:
 
 ``` r
+
 mod_retrieve <- signature("query -> documents") |>
   module(type = "predict", template = "Retrieve docs for: {query}")
 
@@ -74,6 +77,7 @@ Use
 to add constants that don't come from upstream outputs:
 
 ``` r
+
 mod_answer <- signature("facts, question, tone -> answer") |>
   module(type = "predict")
 
@@ -87,6 +91,7 @@ qa_pipeline <- mod_extract %>>%
 Keep only specific fields from a structured output:
 
 ``` r
+
 mod_reason <- signature("question -> answer, reasoning") |>
   module(type = "chain_of_thought")
 
@@ -103,6 +108,7 @@ For more control (or when you prefer not to use `%>>%`), build a
 pipeline explicitly:
 
 ``` r
+
 explicit_pipeline <- pipeline(
   mod_retrieve,
   step(mod_summarize, map = c(documents = "context")),
@@ -119,6 +125,7 @@ Pipelines work with data frames the same way as single modules.
 adds a `result` column to your input data:
 
 ``` r
+
 library(tibble)
 
 questions <- tibble(

@@ -53,6 +53,7 @@ hand-tuned features to learned representations.
 A signature declares *what* you want, not *how* to ask for it:
 
 ``` r
+
 # This is a contract: given a question, return an answer
 signature("question -> answer")
 
@@ -77,6 +78,7 @@ same.
 A module wraps a signature with executable logic:
 
 ``` r
+
 mod <- module(signature("text -> sentiment"), type = "predict")
 ```
 
@@ -104,6 +106,7 @@ Here’s the radical part: instead of hand-tuning prompts, you define a
 metric and let the optimizer search:
 
 ``` r
+
 mod$optimize_grid(
   devset = training_data,
   metric = metric_exact_match(),
@@ -160,6 +163,7 @@ Compare with metrics
 The tidyverse integration makes this natural:
 
 ``` r
+
 # This feels like R
 trainset |>
   run_dataset(classifier) |>

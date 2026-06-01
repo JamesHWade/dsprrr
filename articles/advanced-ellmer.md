@@ -1,6 +1,7 @@
 # Advanced ellmer Integration
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 ```
@@ -20,6 +21,7 @@ dsprrr supports two parallel processing methods for batch operations:
 The default parallel method uses mirai for multi-process parallelism:
 
 ``` r
+
 mod <- module(signature("text -> sentiment"), type = "predict")
 
 # Process multiple items in parallel using mirai
@@ -37,6 +39,7 @@ For more efficient parallelism, use ellmer’s native
 [`parallel_chat_structured()`](https://ellmer.tidyverse.org/reference/parallel_chat.html):
 
 ``` r
+
 results <- run(
   mod,
   text = c("I love this!", "This is terrible", "It's okay"),
@@ -55,6 +58,7 @@ dsprrr modules can be converted to ellmer tools for use in agentic
 workflows:
 
 ``` r
+
 # Create a sentiment analysis module
 sentiment_mod <- module(
   signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
@@ -83,6 +87,7 @@ For convenience, use
 to create and register in one step:
 
 ``` r
+
 chat <- chat_openai()
 
 # Create module
@@ -104,6 +109,7 @@ ellmer provides robust token and cost tracking. dsprrr integrates with
 this via accessor functions:
 
 ``` r
+
 # After running some predictions
 result <- dsp("question -> answer", question = "What is 2+2?")
 
@@ -118,6 +124,7 @@ session_cost()
 ### Token Usage from Batch Results
 
 ``` r
+
 # Run batch predictions
 mod <- module(signature("q -> a"), type = "predict")
 results <- run(mod, q = c("Hello", "World"), .return_format = "batch")
@@ -132,6 +139,7 @@ get_tokens(results)  # Total tokens for batch
 ### Using Chat Objects Across Multiple Calls
 
 ``` r
+
 # Create a Chat and reuse it
 chat <- chat_openai()
 
@@ -147,6 +155,7 @@ result2 <- chat |> dsp("q -> a", q = "What about Python?")
 ### Default Chat Management
 
 ``` r
+
 # Set a default Chat for all dsp() calls
 set_default_chat(chat_openai(model = "gpt-4o"))
 
@@ -165,6 +174,7 @@ clear_default_chat()
 dsprrr inherits ellmer’s multimodal capabilities:
 
 ``` r
+
 mod <- module(
   signature("image, question -> answer"),
   type = "predict"
@@ -183,6 +193,7 @@ result <- run(
 For long-form generation, use streaming:
 
 ``` r
+
 mod <- module(
   signature("topic -> essay"),
   type = "predict"
@@ -205,6 +216,7 @@ stream_async(mod, topic = "The future of AI") %...>%
 ellmer handles retries automatically. Configure via options:
 
 ``` r
+
 # Set max retries (default is 3)
 options(ellmer_max_tries = 5)
 

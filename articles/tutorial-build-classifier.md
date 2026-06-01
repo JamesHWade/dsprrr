@@ -24,6 +24,7 @@ Remembers its configuration - Can be saved and reused
 - `OPENAI_API_KEY` set in your environment
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 ```
@@ -33,6 +34,7 @@ library(ellmer)
 In Tutorial 1, you classified sentiment like this:
 
 ``` r
+
 chat <- chat_openai()
 chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Great!")
 chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Awful")
@@ -49,6 +51,7 @@ The
 function wraps a signature into a reusable object:
 
 ``` r
+
 chat <- chat_openai()
 
 classifier <- chat |>
@@ -64,12 +67,14 @@ Now `classifier` is an object you can use repeatedly.
 Use the `$predict()` method to classify:
 
 ``` r
+
 classifier$predict(text = "I absolutely loved this movie!")
 ```
 
 Try a few more:
 
 ``` r
+
 classifier$predict(text = "This was a complete waste of time.")
 
 classifier$predict(text = "It was okay, I guess.")
@@ -83,6 +88,7 @@ Here’s where modules shine. Process multiple texts at once by passing a
 vector:
 
 ``` r
+
 reviews <- c(
   "Best purchase I've ever made!",
   "Broke after one day. Total garbage.",
@@ -106,6 +112,7 @@ is convenient, but sometimes you need more control. The
 approach gives you that:
 
 ``` r
+
 # Define the signature separately
 sig <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
@@ -118,6 +125,7 @@ sig
 Now create a module from the signature:
 
 ``` r
+
 classifier2 <- module(sig, type = "predict")
 
 classifier2
@@ -130,6 +138,7 @@ With the full control approach, use
 execute:
 
 ``` r
+
 run(classifier2, text = "This is fantastic!", .llm = chat)
 ```
 
@@ -139,6 +148,7 @@ flexibility—you can use different LLMs for different calls.
 Batch processing works the same way:
 
 ``` r
+
 run(
   classifier2,
   text = c("Love it!", "Hate it!", "It's fine"),
@@ -152,6 +162,7 @@ Real data often comes in data frames. Use
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md):
 
 ``` r
+
 library(tibble)
 
 reviews_df <- tibble(
@@ -175,6 +186,7 @@ The results include your original columns plus the classification.
 Make your inputs more informative with descriptions:
 
 ``` r
+
 sig <- signature(
   inputs = list(
     input("review_text", description = "Customer review to classify")
@@ -199,6 +211,7 @@ Descriptions help the LLM understand what it’s working with.
 Modules track their calls. See what happened:
 
 ``` r
+
 classifier2$trace_summary()
 ```
 
@@ -221,10 +234,10 @@ In this tutorial, you:
 
 ## When to Use Each Approach
 
-| Approach                                                                                                                                            | Best For                                |
-|-----------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------|
-| [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md)                                                                                     | Quick one-off calls, exploration        |
-| [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)                                                                         | Simple reusable modules, prototyping    |
+| Approach | Best For |
+|----|----|
+| [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) | Quick one-off calls, exploration |
+| [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md) | Simple reusable modules, prototyping |
 | [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md) + [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) | Production code, optimization workflows |
 
 ## The Module Advantage

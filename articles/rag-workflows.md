@@ -1,6 +1,7 @@
 # RAG Workflows with ragnar
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 # library(ragnar)  # Install from: pak::pak("tidyverse/ragnar")
@@ -27,6 +28,7 @@ dsprrr’s `RAGModule` handles steps 2 and 3 automatically.
 ### With a ragnar Store
 
 ``` r
+
 # First, create a ragnar store with your documents
 # library(ragnar)
 #
@@ -58,6 +60,7 @@ dsprrr’s `RAGModule` handles steps 2 and 3 automatically.
 For custom retrieval logic, provide a retriever function:
 
 ``` r
+
 # Custom retriever function
 my_retriever <- function(query, k = 5) {
   # Your custom retrieval logic here
@@ -83,6 +86,7 @@ mod <- rag_module(
 Control how retrieved context appears in prompts:
 
 ``` r
+
 mod <- rag_module(
   signature = "question, context -> answer",
   store = store,
@@ -93,6 +97,7 @@ mod <- rag_module(
 ### Adjusting Retrieval
 
 ``` r
+
 # Retrieve more documents for complex questions
 mod_detailed <- rag_module(
   signature = "question, relevant_context -> detailed_answer",
@@ -113,6 +118,7 @@ mod_focused <- rag_module(
 For agentic workflows, create search tools that can be called by LLMs:
 
 ``` r
+
 # Create a search tool from a ragnar store
 # search_tool <- ragnar_tool(
 #   store = store,
@@ -137,6 +143,7 @@ For agentic workflows, create search tools that can be called by LLMs:
 For quick setup, create a tool directly from documents:
 
 ``` r
+
 docs <- c(
   "The capital of France is Paris.",
   "The capital of Germany is Berlin.",
@@ -157,6 +164,7 @@ docs <- c(
 ### Document Preparation
 
 ``` r
+
 # Good: Chunk documents appropriately
 chunks <- c(
   "Chapter 1, Section 1: Introduction to R...",
@@ -178,6 +186,7 @@ chunks <- c(
 ### Query Optimization
 
 ``` r
+
 # The query field should match typical question patterns
 # Good signature - clear query field
 mod <- rag_module(
@@ -192,6 +201,7 @@ mod <- rag_module(
 ### Handling No Results
 
 ``` r
+
 # RAGModule handles empty results gracefully
 # When no documents are retrieved, context is:
 # "No relevant context found."
@@ -211,6 +221,7 @@ mod <- rag_module(
 RAG modules include retrieval information in traces:
 
 ``` r
+
 # Run a query
 # result <- run(mod, question = "What is R?")
 
@@ -225,6 +236,7 @@ RAG modules include retrieval information in traces:
 RAG modules support optimization like any other module:
 
 ``` r
+
 # Optimize retrieval parameters
 train_data <- tibble::tibble(
   question = c("What is R?", "What is Python?"),

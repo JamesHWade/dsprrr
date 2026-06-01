@@ -10,9 +10,8 @@ As context grows, performance degrades: details get lost and answers go
 wrong. The MIT researchers who introduced Recursive Language Models call
 this *context rot*, the empirical observation that output quality
 deteriorates as prompts grow, even when the relevant information is
-technically within the window (see Zhang, Kraska, and Khattab 2025). The
-model misses what it needs with increasing frequency as input length
-grows.
+technically within the window (see Zhang et al. 2025). The model misses
+what it needs with increasing frequency as input length grows.
 
 And there is no adaptive retrieval. The model cannot decide to re-read
 section 14 after discovering something relevant in section 42. It
@@ -28,6 +27,7 @@ and let the model write code to explore it.
 A traditional call looks like this:
 
 ``` r
+
 llm$chat(paste("Summarize this document:", huge_document))
 ```
 
@@ -40,6 +40,7 @@ subprocess, and the printed output feeds back into the next iteration. A
 typical exploration might look like this:
 
 ``` r
+
 # The model generates and executes code like this:
 intro <- peek(.context$document, 1, 2000)
 findings <- search(.context$document, "\\b(conclusion|finding|result)\\b")
@@ -54,24 +55,22 @@ revisits sections as its picture of the data develops.
 In dsprrr’s API, the module receives input arguments (e.g., `question`),
 holds context variables (e.g., `document`) outside the prompt, and
 exposes `llm_query()` so the model can delegate sub-questions to a
-secondary model from generated code. In the paper’s notation (Zhang,
-Kraska, and Khattab 2025), these correspond to a query $q$, context $C$,
-and a recursive tool call
-$\text{RLM}_{M}\left( \widehat{q},\widehat{C} \right)$ that spawns an
+secondary model from generated code. In the paper’s notation (Zhang et
+al. 2025), these correspond to a query $`q`$, context $`C`$, and a
+recursive tool call $`\text{RLM}_M(\hat{q}, \hat{C})`$ that spawns an
 isolated sub-instance with a new query and a transformed slice of the
 context.
 
 ## Origin and Ecosystem
 
 RLMs were introduced by Alex Zhang, Tim Kraska, and Omar Khattab at MIT
-(Zhang, Kraska, and Khattab 2025). On BrowseComp-Plus (a benchmark with
-6–11 million token inputs), standard models scored 0% while an RLM
-powered by GPT-5 achieved 91.33%. That comparison is less “RLM beats
-prompting” than “RLM makes previously intractable tasks tractable”;
-inputs that large exceed every current model’s context window. The
-fairer apples-to-apples result is that their post-trained RLM-Qwen3-8B
-outperformed the base Qwen3-8B by 28.3% on average across long-context
-tasks.
+(Zhang et al. 2025). On BrowseComp-Plus (a benchmark with 6–11 million
+token inputs), standard models scored 0% while an RLM powered by GPT-5
+achieved 91.33%. That comparison is less “RLM beats prompting” than “RLM
+makes previously intractable tasks tractable”; inputs that large exceed
+every current model’s context window. The fairer apples-to-apples result
+is that their post-trained RLM-Qwen3-8B outperformed the base Qwen3-8B
+by 28.3% on average across long-context tasks.
 
 The idea has since spread quickly. DSPy integrated RLMs as a first-class
 module ([`dspy.RLM`](https://dspy.ai/api/modules/RLM/)) in version
@@ -105,6 +104,7 @@ Creating an RLM module requires two things: a signature declaring inputs
 and outputs, and a code runner for subprocess isolation:
 
 ``` r
+
 library(dsprrr)
 
 runner <- r_code_runner(timeout = 30)
@@ -119,6 +119,7 @@ For tasks that benefit from recursive sub-queries, you can wire up a
 secondary model:
 
 ``` r
+
 rlm <- rlm_module(
   signature = "document, question -> answer",
   runner = runner,
@@ -139,6 +140,7 @@ internal `forward()` method. This is where the REPL loop lives. A
 up to `max_iterations` times (default 20):
 
 ``` r
+
 # From R/module-rlm.R (error handling, sub-query interception, and
 # fallback extraction omitted -- see those sections below)
 for (iter in seq_len(self$max_iterations)) {
@@ -179,6 +181,7 @@ Each iteration produces a structured response with two fields:
 support:
 
 ``` r
+
 # From R/module-rlm.R -- structured code generation
 output_type <- ellmer::type_object(
   reasoning = ellmer::type_string("Your thought process for this step"),
@@ -202,6 +205,7 @@ the input type: for a character vector, `start` and `end` are element
 indices; for a single string, they are character positions:
 
 ``` r
+
 # From R/rlm-tools.R
 peek <- function(var, start = 1L, end = 1000L) {
   if (!is.character(var)) {
@@ -218,6 +222,7 @@ peek <- function(var, start = 1L, end = 1000L) {
 and returns all matches:
 
 ``` r
+
 # From R/rlm-tools.R
 search <- function(var, pattern, ignore_case = FALSE) {
   if (!is.character(var)) {
@@ -240,6 +245,7 @@ supporting both positional (`SUBMIT("my answer")`) and named
 (`SUBMIT(answer = "my answer")`) arguments:
 
 ``` r
+
 # From R/rlm-tools.R -- simplified; see source for full validation logic
 SUBMIT <- function(...) {
   args <- list(...)
@@ -278,6 +284,7 @@ All model-generated code runs in an isolated R subprocess via
 `RCodeRunner` class in `R/r-code-runner.R` handles this:
 
 ``` r
+
 # From R/r-code-runner.R -- subprocess execution (simplified)
 exec_result <- callr::r(
   func = private$execution_wrapper,
@@ -310,6 +317,7 @@ code. The function does not execute the sub-call inside the subprocess,
 which would be a security problem. Instead, it returns a marker object:
 
 ``` r
+
 # From R/rlm-tools.R -- returns a marker, not a result
 llm_query <- function(query, context_slice = NULL) {
   structure(
@@ -352,6 +360,7 @@ Every RLM execution records its full REPL history: reasoning, code,
 output, success or failure, and timing for each iteration:
 
 ``` r
+
 history <- rlm$get_repl_history()
 last_run <- history[[length(history)]]
 
@@ -368,15 +377,15 @@ recovered.
 
 The table below summarizes the key implementations:
 
-|                       | dsprrr                     | DSPy                    | Official `rlm`           | Google ADK        |
-|-----------------------|----------------------------|-------------------------|--------------------------|-------------------|
-| **Language**          | R                          | Python                  | Python                   | Python            |
-| **REPL**              | R via callr                | Python via Pyodide/WASM | Python (isolated or not) | Python via ADK    |
-| **Sandbox**           | Subprocess (callr)         | Deno/WASM               | Configurable             | ADK orchestration |
-| **Structured output** | ellmer types               | DSPy signatures         | Freeform                 | ADK tools         |
-| **Recursive calls**   | `llm_query()`              | Built-in                | Built-in                 | Child agents      |
-| **Optimization**      | Teleprompters, grid search | DSPy optimizers         | Manual                   | Manual            |
-| **Batched sub-calls** | `llm_query_batched()`      | –                       | –                        | –                 |
+|  | dsprrr | DSPy | Official `rlm` | Google ADK |
+|----|----|----|----|----|
+| **Language** | R | Python | Python | Python |
+| **REPL** | R via callr | Python via Pyodide/WASM | Python (isolated or not) | Python via ADK |
+| **Sandbox** | Subprocess (callr) | Deno/WASM | Configurable | ADK orchestration |
+| **Structured output** | ellmer types | DSPy signatures | Freeform | ADK tools |
+| **Recursive calls** | `llm_query()` | Built-in | Built-in | Child agents |
+| **Optimization** | Teleprompters, grid search | DSPy optimizers | Manual | Manual |
+| **Batched sub-calls** | `llm_query_batched()` | – | – | – |
 
 The “batched sub-calls” row refers specifically to issuing multiple
 recursive sub-queries from a single REPL iteration and running them
@@ -397,12 +406,12 @@ The hard part of any task here is either *finding* the right context or
 the context is already short and well-scoped, simpler approaches are
 faster and cheaper.
 
-| Approach                                                                                  | Best for                                  | Latency | Context limit  |
-|-------------------------------------------------------------------------------------------|-------------------------------------------|---------|----------------|
-| `PredictModule`                                                                           | Short, self-contained tasks               | Low     | Context window |
-| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Complex reasoning, known context          | Medium  | Context window |
-| [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md)             | Lookup in large corpora                   | Medium  | Chunk size     |
-| [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)             | Exploration of large, interconnected data | High    | Unlimited\*    |
+| Approach | Best for | Latency | Context limit |
+|----|----|----|----|
+| `PredictModule` | Short, self-contained tasks | Low | Context window |
+| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Complex reasoning, known context | Medium | Context window |
+| [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md) | Lookup in large corpora | Medium | Chunk size |
+| [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) | Exploration of large, interconnected data | High | Unlimited\* |
 
 \*Bounded by `max_iterations` and `max_llm_calls`, not by context window
 size.
@@ -493,5 +502,5 @@ million characters of source, explored in under 15 iterations.
 
 ## References
 
-Zhang, Alex L., Tim Kraska, and Omar Khattab. 2025. “Recursive Language
-Models.” <https://arxiv.org/abs/2512.24601>.
+Zhang, Alex L., Tim Kraska, and Omar Khattab. 2025. *Recursive Language
+Models*. <https://arxiv.org/abs/2512.24601>.

@@ -23,6 +23,7 @@ improvement.
 - `OPENAI_API_KEY` set in your environment
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 library(tibble)
@@ -35,6 +36,7 @@ chat <- chat_openai(model = "gpt-5-mini")
 Let’s build a customer support ticket classifier:
 
 ``` r
+
 sig <- signature(
  "ticket -> category: enum('billing', 'technical', 'shipping', 'general')",
   instructions = "Classify the customer support ticket."
@@ -46,6 +48,7 @@ classifier <- module(sig, type = "predict")
 Test it:
 
 ``` r
+
 run(classifier, ticket = "My package hasn't arrived yet", .llm = chat)
 
 run(classifier, ticket = "I was charged twice for my order", .llm = chat)
@@ -61,6 +64,7 @@ First, let’s create labeled examples using
 [`dsp_trainset()`](https://jameshwade.github.io/dsprrr/reference/dsp_trainset.md):
 
 ``` r
+
 trainset <- dsp_trainset(
   ticket = c(
     "I was charged twice for the same item",
@@ -101,6 +105,7 @@ matched with expected output columns.
 Before improving, let’s measure current performance:
 
 ``` r
+
 baseline_results <- run_dataset(classifier, trainset, .llm = chat)
 baseline_results
 ```
@@ -108,6 +113,7 @@ baseline_results
 Calculate accuracy:
 
 ``` r
+
 correct <- sum(baseline_results$category == trainset$category)
 total <- nrow(trainset)
 baseline_accuracy <- correct / total
@@ -122,6 +128,7 @@ The simplest way to improve: show the LLM examples. Add them via the
 `demos` parameter:
 
 ``` r
+
 classifier_with_demos <- module(
   sig,
   type = "predict",
@@ -148,6 +155,7 @@ expected outputs).
 Test the improved classifier:
 
 ``` r
+
 run(classifier_with_demos, ticket = "I need a receipt for my purchase", .llm = chat)
 
 run(classifier_with_demos, ticket = "The button doesn't respond when clicked", .llm = chat)
@@ -158,6 +166,7 @@ run(classifier_with_demos, ticket = "The button doesn't respond when clicked", .
 Run on the same test set:
 
 ``` r
+
 improved_results <- run_dataset(classifier_with_demos, trainset, .llm = chat)
 
 correct_improved <- sum(improved_results$category == trainset$category)
@@ -174,6 +183,7 @@ Manually picking demos is tedious. The `LabeledFewShot` teleprompter
 automatically selects good examples from your training data:
 
 ``` r
+
 # Create a teleprompter that selects 3 examples
 teleprompter <- LabeledFewShot(k = 3L)
 
@@ -196,6 +206,7 @@ demonstrations.
 See which examples the teleprompter chose:
 
 ``` r
+
 # The compiled module now has demos
 compiled$config$demos
 ```
@@ -205,6 +216,7 @@ compiled$config$demos
 Let’s see how each version performs:
 
 ``` r
+
 # Run all three on the test set
 results_baseline <- run_dataset(classifier, trainset, .llm = chat)
 results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
@@ -230,6 +242,7 @@ dsprrr provides metrics for common evaluation tasks. Use
 for classification:
 
 ``` r
+
 metric <- metric_exact_match(field = "category")
 
 # Evaluate the compiled module
@@ -249,6 +262,7 @@ predicted
 More examples aren’t always better. Let’s compare:
 
 ``` r
+
 results <- list()
 
 for (k in c(1L, 2L, 3L, 4L, 5L)) {

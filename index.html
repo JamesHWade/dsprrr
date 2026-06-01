@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="favicon.ico">
 <link rel="manifest" href="site.webmanifest">
 <script src="lightswitch.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/Inter-0.4.10/font.css" rel="stylesheet">
+<link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/Inter-0.4.10/font.css" rel="stylesheet">
 <link href="deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -137,6 +137,77 @@
 <span><span class="co">#&gt; "Paris"</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="compose-programs-with-reusable-primitives">Compose programs with reusable primitives<a class="anchor" aria-label="anchor" href="#compose-programs-with-reusable-primitives"></a>
+</h2>
+<p>Every dsprrr program is built from the same three pieces. Learn these and the rest of the package falls into place.</p>
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="section level3 col-md-5">
+<h3 id="signatures">Signatures<a class="anchor" aria-label="anchor" href="#signatures"></a>
+</h3>
+<p><strong>Declare your task.</strong> Define typed inputs and outputs instead of wrestling with prompt strings. Portable, maintainable, and easy to iterate on.</p>
+<p><a href="articles/concepts-signatures-modules.html">Learn about signatures →</a></p>
+</div>
+<div class="col-md-7">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Route a support ticket</span></span>
+<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"ticket -&gt; urgency: enum('low', 'high'), team: string"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="section level3 col-md-5">
+<h3 id="modules">Modules<a class="anchor" aria-label="anchor" href="#modules"></a>
+</h3>
+<p><strong>Same interface, different strategy.</strong> Modules control how a signature executes—reason step by step, use tools, or run ensembles—without rewriting the task.</p>
+<p><a href="articles/advanced-modules.html">Explore modules →</a></p>
+</div>
+<div class="col-md-7">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"ticket -&gt; urgency: enum('low', 'high'), team: string"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Direct completion</span></span>
+<span><span class="va">classify</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Add step-by-step reasoning</span></span>
+<span><span class="va">classify</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Add a tool-use loop</span></span>
+<span><span class="va">lookup_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Found:"</span>, <span class="va">query</span><span class="op">)</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Look up support policy details"</span>,</span>
+<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">classify</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"react"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">lookup_tool</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="row align-items-center g-4 my-4 primitive-row">
+<div class="section level3 col-md-5">
+<h3 id="optimizers">Optimizers<a class="anchor" aria-label="anchor" href="#optimizers"></a>
+</h3>
+<p><strong>Compile your program against a metric.</strong> Give dsprrr examples and a scoring function; it tunes prompts and demos automatically until quality converges.</p>
+<p><a href="articles/compilation-optimization.html">Try optimizers →</a></p>
+</div>
+<div class="col-md-7">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">route_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"ticket -&gt; urgency: enum('low', 'high')"</span><span class="op">)</span></span>
+<span><span class="va">router</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">route_sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span>  ticket  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Package lost"</span>, <span class="st">"Need a receipt"</span><span class="op">)</span>,</span>
+<span>  urgency <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"high"</span>, <span class="st">"low"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"urgency"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">router</span>, <span class="va">trainset</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_temp</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"ticket-router-v2"</span>, <span class="va">optimized</span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+</div>
+<div class="section level2">
 <h2 id="getting-started-configure-your-llm">Getting Started: Configure Your LLM<a class="anchor" aria-label="anchor" href="#getting-started-configure-your-llm"></a>
 </h2>
 <ul class="nav nav-tabs" id="providerTabs" role="tablist">
@@ -168,7 +239,7 @@ Auto-detect
 </ul>
 <div id="providerTabsContent" class="tab-content">
 <div id="openai" class="tab-pane fade show active" role="tabpanel">
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
@@ -177,7 +248,7 @@ Auto-detect
 <span><span class="co">#&gt; "4"</span></span></code></pre></div>
 </div>
 <div id="anthropic" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
@@ -186,7 +257,7 @@ Auto-detect
 <span><span class="co">#&gt; "4"</span></span></code></pre></div>
 </div>
 <div id="gemini" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
@@ -195,7 +266,7 @@ Auto-detect
 <span><span class="co">#&gt; "4"</span></span></code></pre></div>
 </div>
 <div id="ollama" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
@@ -204,7 +275,7 @@ Auto-detect
 <span><span class="co">#&gt; "4"</span></span></code></pre></div>
 </div>
 <div id="auto" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># dsprrr auto-detects from environment variables</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
@@ -215,88 +286,144 @@ Auto-detect
 </div>
 </div>
 <div class="section level2">
-<h2 id="building-modules">Building Modules<a class="anchor" aria-label="anchor" href="#building-modules"></a>
+<h2 id="define-a-task-grow-it-into-a-system">Define a task. Grow it into a system.<a class="anchor" aria-label="anchor" href="#define-a-task-grow-it-into-a-system"></a>
 </h2>
-<p>Modules are reusable LLM components with typed inputs and outputs.</p>
+<p>Start with a single signature and grow it into a multi-step program—the same building blocks scale from a one-line extractor to a full pipeline.</p>
 <ul class="nav nav-tabs" id="moduleTabs" role="tablist">
 <li class="nav-item" role="presentation">
-<button class="nav-link active" id="classify-tab" data-bs-toggle="tab" data-bs-target="#classify" type="button" role="tab">
-Classification
-</button>
-</li>
-<li class="nav-item" role="presentation">
-<button class="nav-link" id="qa-tab" data-bs-toggle="tab" data-bs-target="#qa" type="button" role="tab">
-Q&amp;A
-</button>
-</li>
-<li class="nav-item" role="presentation">
-<button class="nav-link" id="extract-tab" data-bs-toggle="tab" data-bs-target="#extract" type="button" role="tab">
-Extraction
+<button class="nav-link active" id="extract-tab" data-bs-toggle="tab" data-bs-target="#extract" type="button" role="tab">
+Extract
 </button>
 </li>
 <li class="nav-item" role="presentation">
 <button class="nav-link" id="agent-tab" data-bs-toggle="tab" data-bs-target="#agent" type="button" role="tab">
-Agents
+Agent
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="pipeline-tab" data-bs-toggle="tab" data-bs-target="#pipeline" type="button" role="tab">
+Pipeline
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="multimodal-tab" data-bs-toggle="tab" data-bs-target="#multimodal" type="button" role="tab">
+Multimodal
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="optimize-tab" data-bs-toggle="tab" data-bs-target="#optimize" type="button" role="tab">
+Optimize
 </button>
 </li>
 </ul>
-<div id="moduleTabsContent" class="tab-content">
-<div id="classify" class="tab-pane fade show active" role="tabpanel">
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Sentiment classification with constrained output</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span></span>
+<div id="moduleTabsContent" class="tab-content example-gallery">
+<div id="extract" class="tab-pane fade show active" role="tabpanel">
+<p>Signatures define a task and enforce typed outputs.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Extract several typed fields in one call</span></span>
+<span><span class="va">extract</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"message -&gt; name: string, email: string,</span></span>
+<span><span class="st">   intent: enum('meeting', 'intro', 'follow-up')"</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"I love this product!"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; "positive"</span></span>
-<span></span>
-<span><span class="co"># Batch processing</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great!"</span>, <span class="st">"Terrible!"</span>, <span class="st">"It's okay"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; c("positive", "negative", "neutral")</span></span></code></pre></div>
-</div>
-<div id="qa" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Context-aware QA</span></span>
-<span><span class="va">qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">qa</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span></span>
-<span>  context <span class="op">=</span> <span class="st">"R was created by Ross Ihaka and Robert Gentleman in 1993."</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"Who created R?"</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">extract</span>,</span>
+<span>  message <span class="op">=</span> <span class="st">"I'm Sarah (sarah@acme.co). Meet Thursday?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; "Ross Ihaka and Robert Gentleman"</span></span></code></pre></div>
-</div>
-<div id="extract" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Structured output with multiple fields</span></span>
-<span><span class="va">extractor</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  <span class="st">"text -&gt; title: string, entities: array(string), sentiment: enum('pos', 'neg', 'neu')"</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">extractor</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Apple announced the iPhone 16 today. Investors are excited."</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $title</span></span>
-<span><span class="co">#&gt; "Apple iPhone 16 Announcement"</span></span>
-<span><span class="co">#&gt; $entities</span></span>
-<span><span class="co">#&gt; c("Apple", "iPhone 16")</span></span>
-<span><span class="co">#&gt; $sentiment</span></span>
-<span><span class="co">#&gt; "pos"</span></span></code></pre></div>
+<span><span class="co"># In simple mode (the default), run() returns the parsed output directly</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">name</span>    <span class="co">#&gt; "Sarah"</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">email</span>   <span class="co">#&gt; "sarah@acme.co"</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">intent</span>  <span class="co">#&gt; "meeting"</span></span></code></pre></div>
+<p><a href="articles/tutorial-structured-outputs.html">Extract structured data →</a></p>
 </div>
 <div id="agent" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># ReAct agent with tool use</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
+<p>Define tools as functions and hand them to a ReAct module.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">kb_search</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Evaluators compare module outputs with labeled examples."</span>,</span>
+<span>    <span class="st">"Optimizers use those scores to select better prompts and demos."</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">search_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
-<span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu">wikipedia_search</span><span class="op">(</span><span class="va">query</span><span class="op">)</span>,</span>
-<span>  <span class="st">"Search Wikipedia for information"</span></span>
+<span><span class="va">search</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu">kb_search</span><span class="op">(</span><span class="va">query</span><span class="op">)</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Search a knowledge base"</span>,</span>
+<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"react"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search_tool</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"react"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">agent</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>question <span class="op">=</span> <span class="st">"What is the population of Tokyo?"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; "Tokyo has a population of approximately 14 million people."</span></span></code></pre></div>
+<span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">agent</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"How do dsprrr optimizers improve a module?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">answer</span><span class="op">$</span><span class="va">answer</span></span>
+<span><span class="co">#&gt; "They score outputs against examples, then keep better prompts and demos."</span></span></code></pre></div>
+<p><a href="articles/advanced-modules.html">Build a tool-using agent →</a></p>
+</div>
+<div id="pipeline" class="tab-pane fade" role="tabpanel">
+<p>Compose modules into a pipeline with <code>%&gt;&gt;%</code>—outputs flow to inputs.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Pull a claim, then verify it against the source</span></span>
+<span><span class="va">find</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"article -&gt; claim: string, source: string"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">verify</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"claim, source -&gt; verdict"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">factcheck</span> <span class="op">&lt;-</span> <span class="va">find</span> <span class="op"><a href="reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span> <span class="va">verify</span></span>
+<span></span>
+<span><span class="va">news_article</span> <span class="op">&lt;-</span> <span class="st">"Acme reported that revenue grew 12% in Q4."</span></span>
+<span><span class="va">verdict</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span><span class="va">factcheck</span>, article <span class="op">=</span> <span class="va">news_article</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">verdict</span><span class="op">$</span><span class="va">verdict</span></span>
+<span><span class="co">#&gt; "supported"</span></span></code></pre></div>
+<p><a href="articles/chaining-modules.html">Chain modules into pipelines →</a></p>
+</div>
+<div id="multimodal" class="tab-pane fade" role="tabpanel">
+<p>Name an image input in the signature and pass an ellmer content object.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">analyze</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"image, question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">analyze</span>,</span>
+<span>  image    <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/Content.html" class="external-link">ContentImageRemote</a></span><span class="op">(</span></span>
+<span>    <span class="st">"https://www.r-project.org/logo/Rlogo.png"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What logo is shown?"</span>,</span>
+<span>  .llm     <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; "The image shows the R project logo."</span></span></code></pre></div>
+<p><a href="articles/advanced-ellmer.html">Work with multimodal inputs →</a></p>
+</div>
+<div id="optimize" class="tab-pane fade" role="tabpanel">
+<p>Optimizers improve a program against a metric—no prompt rewriting.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">extract</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"message -&gt; intent: enum('meeting', 'intro')"</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span>  message <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I'm Sarah (sarah@acme.co). Meet Thursday?"</span>,</span>
+<span>              <span class="st">"Hi, this is Dev—just saying hello!"</span><span class="op">)</span>,</span>
+<span>  intent  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"meeting"</span>, <span class="st">"intro"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"intent"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="va">extract</span>,</span>
+<span>  <span class="va">trainset</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_temp</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"extract-v2"</span>, <span class="va">optimized</span><span class="op">)</span></span></code></pre></div>
+<p><a href="articles/compilation-optimization.html">Optimize with your data →</a></p>
 </div>
 </div>
 </div>
@@ -323,7 +450,7 @@ Evaluation
 </ul>
 <div id="optimizeTabsContent" class="tab-content">
 <div id="fewshot" class="tab-pane fade show active" role="tabpanel">
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Add examples automatically</span></span>
 <span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great product!"</span>, <span class="st">"Awful experience"</span>, <span class="st">"It works"</span><span class="op">)</span>,</span>
@@ -342,7 +469,7 @@ Evaluation
 <p><strong>Result</strong>: Few-shot examples improve accuracy on edge cases.</p>
 </div>
 <div id="grid" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Search over configurations</span></span>
 <span><span class="va">classifier</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
 <span>  devset <span class="op">=</span> <span class="va">validation_data</span>,</span>
@@ -364,7 +491,7 @@ Evaluation
 <p><strong>Result</strong>: Find the best configuration for your task.</p>
 </div>
 <div id="eval" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Rigorous evaluation with metrics</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">classifier</span>,</span>
@@ -495,20 +622,20 @@ Persistence with pins, orchestration with targets, deployment with vetiver.
 <col width="50%">
 <col width="50%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>Package</th>
 <th>Purpose</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></td>
 <td>Chat with LLMs from R</td>
 </tr>
-<tr class="even">
+<tr>
 <td><a href="https://vitals.tidyverse.org" class="external-link">vitals</a></td>
 <td>LLM evaluation framework</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><a href="https://posit-dev.github.io/shinychat/" class="external-link">shinychat</a></td>
 <td>Chat UIs for Shiny</td>
 </tr>

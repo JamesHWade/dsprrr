@@ -17,6 +17,7 @@ This vignette covers:
 ## Setup
 
 ``` r
+
 library(dsprrr)
 library(ellmer)
 
@@ -34,6 +35,7 @@ either as a simple named list or via tidymodels `dials` parameters) and
 records the results in `module$state$trials`.
 
 ``` r
+
 sig_quick <- signature("review -> sentiment: string",
   instructions = "Respond with the sentiment label only."
 )
@@ -88,6 +90,7 @@ set from the module. This is useful for further tuning or for generating
 additional grid configurations:
 
 ``` r
+
 library(dials)
 
 # After optimization, extract discovered parameters
@@ -109,6 +112,7 @@ parameter defaults
 You can filter which parameters are included:
 
 ``` r
+
 # Only include specific parameters
 param_set <- module_parameters(
   sentiment_module,
@@ -127,6 +131,7 @@ param_set <- module_parameters(
 Get a tidy summary of all optimization trials:
 
 ``` r
+
 summary <- module_trials(sentiment_module)
 
 # Returns a tibble with:
@@ -152,6 +157,7 @@ For more detailed per-trial analysis, including integration with
 yardstick metrics:
 
 ``` r
+
 # Basic summary without yardstick
 metrics <- module_metrics(sentiment_module)
 
@@ -183,6 +189,7 @@ yardstick_metrics$yardstick[[1]]  # Metrics for trial 1
 Here’s a comprehensive example showing how these helpers work together:
 
 ``` r
+
 library(dials)
 library(yardstick)
 library(ggplot2)
@@ -249,6 +256,7 @@ you to create custom ones.
 The simplest metric checks if outputs match exactly:
 
 ``` r
+
 # Basic exact match
 metric <- metric_exact_match()
 
@@ -273,6 +281,7 @@ metric_field(
 For text generation tasks, F1 score measures token overlap:
 
 ``` r
+
 # Token-based F1 score
 metric_f1_basic <- metric_f1()
 
@@ -296,6 +305,7 @@ score <- metric_f1_field(
 Check if output contains specific patterns:
 
 ``` r
+
 # Check for substring
 metric_has_positive <- metric_contains("positive", ignore_case = TRUE)
 metric_has_positive("The result is POSITIVE", NULL) # TRUE
@@ -319,6 +329,7 @@ metric_field_contains(
 Create your own evaluation logic:
 
 ``` r
+
 # Simple boolean metric
 length_check <- metric_custom(
   function(pred, exp) {
@@ -355,6 +366,7 @@ score <- similarity_metric("Hello World", "hello world")
 Convert numeric metrics to boolean pass/fail:
 
 ``` r
+
 # F1 score must be at least 0.8 to pass
 f1_threshold <- metric_threshold(
   metric_f1(),
@@ -374,6 +386,7 @@ passes <- f1_threshold(
 Evaluate multiple fields simultaneously:
 
 ``` r
+
 # Check if all specified fields match
 metric_all <- metric_field_match(
   c("sentiment", "confidence"),
@@ -402,6 +415,7 @@ The simplest optimization strategy adds labeled examples from your
 training data as demonstrations:
 
 ``` r
+
 # Create a sentiment classifier
 classifier <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')"
@@ -452,6 +466,7 @@ This teleprompter tests multiple instruction or template variants to
 find the best performing one:
 
 ``` r
+
 # Create base QA module
 qa_module <- signature("context, question -> answer") |>
   module(type = "predict")
@@ -525,6 +540,7 @@ The
 function is the main interface for optimizing your programs:
 
 ``` r
+
 # Step 1: Create your base module
 email_classifier <- signature(
   inputs = list(
@@ -620,6 +636,7 @@ Once you’ve optimized your module, systematically evaluate its
 performance:
 
 ``` r
+
 # Prepare test dataset (separate from training)
 test_emails <- dsp_trainset(
   email = c(
@@ -683,6 +700,7 @@ print(full_results$mean_score) # Lower, as all fields must match
 Let’s build and optimize a complete document analysis system:
 
 ``` r
+
 # 1. Define the task with structured output
 doc_analyzer <- signature(
   inputs = list(
@@ -859,6 +877,7 @@ print(analysis$recommendation) # Likely "review"
 Don’t optimize on your entire training set—use cross-validation:
 
 ``` r
+
 # Split data for proper evaluation
 split_data <- function(data, train_pct = 0.7) {
   n <- nrow(data)
@@ -903,6 +922,7 @@ print(paste("Validation score:", val_results$mean_score))
 Optimize in stages for complex tasks:
 
 ``` r
+
 # Stage 1: Optimize for accuracy
 stage1_module <- compile_module(
   program = doc_analyzer,
@@ -937,6 +957,7 @@ stage2_module <- compile_module(
 Combine multiple optimized modules:
 
 ``` r
+
 # Create multiple optimized versions
 modules <- list()
 
@@ -996,6 +1017,7 @@ While dsprrr currently provides `LabeledFewShot` and
 `GridSearchTeleprompter`, you can extend the system:
 
 ``` r
+
 # Example: A teleprompter that selects diverse examples
 DiverseFewShot <- S7::new_class(
   "DiverseFewShot",
@@ -1015,6 +1037,7 @@ DiverseFewShot <- S7::new_class(
 ### Understanding Compilation Results
 
 ``` r
+
 # Inspect what the compiler did
 optimized <- compile_module(
   program = classifier,
@@ -1042,6 +1065,7 @@ if (optimized$config$teleprompter == "GridSearchTeleprompter") {
 ### Module State Management
 
 ``` r
+
 # Create fresh copy without compilation
 fresh_module <- reset_copy(optimized)
 is_compiled(fresh_module) # FALSE
@@ -1060,6 +1084,7 @@ is.null(optimized$config$custom) # TRUE
 ### Common Issues and Solutions
 
 ``` r
+
 # Issue 1: Metric returns unexpected values
 # Solution: Test your metric separately
 test_metric <- metric_exact_match(field = "category")
@@ -1089,6 +1114,7 @@ length(unique(trainset$text)) # All unique examples?
 ### 1. Choose the Right Metric
 
 ``` r
+
 # For classification: exact match
 classification_metric <- metric_exact_match(field = "label")
 
@@ -1107,6 +1133,7 @@ composite <- function(pred, exp) {
 ### 2. Optimize Training Data
 
 ``` r
+
 # Ensure diversity in training examples
 check_diversity <- function(trainset, field) {
   values <- trainset[[field]]
@@ -1148,6 +1175,7 @@ balance_trainset <- function(data, label_col, max_per_class = NULL) {
 ### 3. Efficient Grid Search
 
 ``` r
+
 # Start with coarse grid, then refine
 # Phase 1: Test major variants
 coarse_variants <- data.frame(

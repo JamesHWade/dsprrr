@@ -15,7 +15,7 @@ to automatically create this structure from a flat dataset.
 The solver uses ellmer's parallel processing for efficiency. For
 structured outputs, mock Chat objects are created for vitals logging
 compatibility (following the same pattern as vitals'
-`generate_structured()`).
+[`generate_structured()`](https://vitals.tidyverse.org/reference/generate_structured.html)).
 
 ## Usage
 
