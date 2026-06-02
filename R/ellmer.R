@@ -21,17 +21,23 @@ copy_ellmer_type <- function(type) {
 #'   [ellmer::tool()]. This lets downstream runtimes reason about properties
 #'   such as read-only or destructive behavior without dsprrr depending on them.
 #' @param output Tool result serialization mode:
-#'   - `"auto"` returns the native module result.
-#'   - `"json"` returns stable compact JSON.
+#'   - `"auto"` returns the native module result with fields ordered to match
+#'     the signature.
+#'   - `"json"` returns compact JSON with signature-ordered top-level fields.
 #'   - `"text"` returns the primary output field as text when possible, or JSON
 #'     text otherwise.
-#'   - `"raw"` returns the native module result unchanged.
+#'   - `"raw"` returns the native module result unchanged, without field
+#'     reordering.
 #' @param copy Whether tool calls should use the supplied module directly
 #'   (`"none"`) or a fresh deep copy (`"deep"`).
 #' @param error Tool error handling:
-#'   - `"reject"` returns a structured recoverable error observation.
-#'   - `"abort"` propagates the original error.
-#'   - `"return"` returns a structured error object.
+#'   - `"reject"` (default) returns a structured recoverable error observation
+#'     suitable for surfacing back to an LLM. The condition class is preserved
+#'     in `$type`.
+#'   - `"abort"` propagates the original error to the caller.
+#'   - `"return"` signals the error as a classed `dsprrr_tool_error` condition
+#'     carrying the structured observation in `$payload`. Callers can install
+#'     a `withCallingHandlers()` to inspect the failure without aborting.
 #'
 #' @return A `ToolDef` object from ellmer, suitable for use with
 #'   `ellmer::Chat$register_tool()`.
@@ -118,7 +124,11 @@ as_ellmer_tool <- function(
     input_desc <- input_spec$description %||% paste("The", input_name, "value")
     ellmer_type <- copy_ellmer_type(input_spec$type)
 
-    if (is.null(ellmer_type@description) && !is.null(input_desc)) {
+    if (
+      !inherits(ellmer_type, "ellmer::TypeIgnore") &&
+        length(ellmer_type@description) == 0 &&
+        !is.null(input_desc)
+    ) {
       ellmer_type@description <- input_desc
     }
 
@@ -203,32 +213,64 @@ invoke_ellmer_tool_module <- function(
     module
   }
 
-  tryCatch(
-    {
-      result <- do.call(
-        run,
-        c(
-          list(working_module),
-          inputs,
-          list(.llm = .llm, .return_format = "simple")
-        )
+  result <- tryCatch(
+    do.call(
+      run,
+      c(
+        list(working_module),
+        inputs,
+        list(.llm = .llm, .return_format = "simple")
       )
-      format_ellmer_tool_output(result, working_module$signature@output_type, output)
-    },
-    error = function(err) {
-      if (error == "abort") {
-        stop(err)
-      }
-
-      structure_ellmer_tool_error(err, tool_name)
-    }
+    ),
+    error = function(err) handle_ellmer_tool_error(err, tool_name, error)
   )
+
+  if (inherits(result, "dsprrr_tool_observation")) {
+    return(result)
+  }
+
+  format_ellmer_tool_output(
+    result,
+    working_module$signature@output_type,
+    output
+  )
+}
+
+#' Apply the tool error mode to a captured run() error
+#' @noRd
+handle_ellmer_tool_error <- function(err, tool_name, mode) {
+  if (mode == "abort") {
+    stop(err)
+  }
+
+  observation <- structure_ellmer_tool_error(err, tool_name)
+  cli::cli_warn(
+    c(
+      "Tool {.field {tool_name}} failed: {conditionMessage(err)}",
+      "i" = "Returning structured error observation ({.code error = \"{mode}\"})"
+    ),
+    class = "dsprrr_tool_error_warning",
+    .frequency = "always"
+  )
+
+  if (mode == "return") {
+    rlang::abort(
+      conditionMessage(err),
+      class = c("dsprrr_tool_error", class(err)),
+      payload = observation,
+      parent = err
+    )
+  }
+
+  observation
 }
 
 #' Convert a module result to the requested ellmer tool output shape
 #' @noRd
 format_ellmer_tool_output <- function(result, output_type, output) {
-  result <- order_tool_result_fields(result, output_type)
+  if (output != "raw") {
+    result <- order_tool_result_fields(result, output_type)
+  }
 
   switch(
     output,
@@ -300,11 +342,14 @@ primary_output_field <- function(output_type) {
 #' Structured recoverable tool error
 #' @noRd
 structure_ellmer_tool_error <- function(err, tool_name) {
-  list(
-    error = TRUE,
-    type = class(err)[[1]],
-    message = conditionMessage(err),
-    tool = tool_name
+  structure(
+    list(
+      error = TRUE,
+      type = class(err)[[1]],
+      message = conditionMessage(err),
+      tool = tool_name
+    ),
+    class = c("dsprrr_tool_observation", "list")
   )
 }
 
@@ -362,8 +407,6 @@ register_dsprrr_tool <- function(
   output <- match.arg(output)
   copy <- match.arg(copy)
   error <- match.arg(error)
-
-  # Create the ellmer ToolDef from the module
 
   tool_def <- as_ellmer_tool(
     module,

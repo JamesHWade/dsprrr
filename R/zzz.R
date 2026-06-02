@@ -135,16 +135,33 @@
     compile_default(teleprompter, program, trainset, ...)
   }
 
-  # Register parsnip engine if parsnip is available
+  # Register parsnip engine if parsnip is available. Wrap in tryCatch so a
+  # parsnip API change cannot block the package from loading -- dsprrr modules
+  # are usable without parsnip integration.
   if (rlang::is_installed("parsnip")) {
     setHook(
       packageEvent("parsnip", "onLoad"),
-      function(...) register_dsprrr_engine()
+      function(...) try_register_dsprrr_engine()
     )
     if ("parsnip" %in% loadedNamespaces()) {
-      register_dsprrr_engine()
+      try_register_dsprrr_engine()
     }
   }
 
   invisible()
+}
+
+#' Register the parsnip engine, downgrading failures to a startup message
+#' @noRd
+try_register_dsprrr_engine <- function() {
+  tryCatch(
+    register_dsprrr_engine(),
+    error = function(e) {
+      packageStartupMessage(
+        "dsprrr: parsnip engine registration failed: ",
+        conditionMessage(e),
+        "\n  dsprrr will load without parsnip integration."
+      )
+    }
+  )
 }

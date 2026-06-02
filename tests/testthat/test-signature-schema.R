@@ -39,3 +39,41 @@ test_that("signature_to_json_schema converts scalar output types", {
 
   expect_equal(schema$type, "boolean")
 })
+
+test_that("signature_to_json_schema includes description on schema fragments", {
+  sig <- Signature(
+    inputs = list(input("text")),
+    output_type = ellmer::type_string(description = "A short answer")
+  )
+
+  schema <- signature_to_json_schema(sig)
+
+  expect_equal(schema$description, "A short answer")
+})
+
+test_that("signature_to_json_schema omits TypeIgnore properties", {
+  sig <- Signature(
+    inputs = list(input("text")),
+    output_type = ellmer::type_object(
+      visible = ellmer::type_string(),
+      hidden = ellmer::type_ignore()
+    )
+  )
+
+  schema <- signature_to_json_schema(sig)
+
+  expect_named(schema$properties, "visible")
+  expect_equal(schema$required, "visible")
+})
+
+test_that("signature_to_json_schema aborts on unknown ellmer types", {
+  fake_type <- structure(
+    list(),
+    class = c("ellmer::TypeUnknown", "ellmer::Type")
+  )
+
+  expect_error(
+    dsprrr:::ellmer_type_to_json_schema(fake_type),
+    "Unsupported ellmer type"
+  )
+})

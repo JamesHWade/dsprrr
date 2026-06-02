@@ -73,7 +73,7 @@ test_that("module_fn validates basic output types", {
   )
 })
 
-test_that("module_fn objects do not support optimization yet", {
+test_that("module_fn objects do not support optimization", {
   mod <- module_fn("text -> answer", function(text) list(answer = text))
 
   expect_error(
@@ -84,4 +84,76 @@ test_that("module_fn objects do not support optimization yet", {
     ),
     "do not support optimization"
   )
+})
+
+test_that("module_fn validates its arguments", {
+  expect_error(
+    module_fn(123, function(text) list(answer = text)),
+    "must be a Signature"
+  )
+  expect_error(
+    module_fn("text -> answer", "not a function"),
+    "must be a function"
+  )
+  expect_error(
+    module_fn(
+      "text -> answer",
+      function(text) list(answer = text),
+      config = "bad"
+    ),
+    "must be a list"
+  )
+})
+
+test_that("FnModule$forward rejects multi-row data frames", {
+  mod <- module_fn("text -> answer", function(text) list(answer = text))
+
+  expect_error(
+    mod$forward(data.frame(text = c("a", "b"))),
+    "single row"
+  )
+})
+
+test_that("module_fn validates scalar return for multi-field signature", {
+  mod <- module_fn(
+    "text -> answer, confidence: number",
+    function(text) "just a string"
+  )
+
+  expect_error(
+    run(mod, text = "hi"),
+    "scalar for a multi-field signature"
+  )
+})
+
+test_that("module_fn validates .metadata is a list", {
+  mod <- module_fn(
+    "text -> answer",
+    function(text) list(answer = text, .metadata = "not a list")
+  )
+
+  expect_error(
+    run(mod, text = "hi"),
+    "must be a list when supplied"
+  )
+})
+
+test_that("module_fn validates enum, array, and object output types", {
+  enum_mod <- module_fn(
+    "text -> label: enum('yes', 'no')",
+    function(text) list(label = "maybe")
+  )
+  expect_error(run(enum_mod, text = "hi"), "outside the enum")
+
+  array_mod <- module_fn(
+    "text -> tags: array(string)",
+    function(text) list(tags = list(1L, 2L))
+  )
+  expect_error(run(array_mod, text = "hi"), "wrong type")
+
+  object_mod <- module_fn(
+    "text -> answer",
+    function(text) list(answer = list(complex = "structure"))
+  )
+  expect_error(run(object_mod, text = "hi"), "wrong type")
 })

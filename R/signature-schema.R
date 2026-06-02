@@ -30,6 +30,10 @@ signature_to_json_schema <- function(signature) {
 #' Convert an ellmer type object to JSON Schema
 #' @noRd
 ellmer_type_to_json_schema <- function(type) {
+  if (inherits(type, "ellmer::TypeIgnore")) {
+    return(NULL)
+  }
+
   schema <- if (inherits(type, "ellmer::TypeBasic")) {
     list(type = type@type)
   } else if (inherits(type, "ellmer::TypeEnum")) {
@@ -41,8 +45,15 @@ ellmer_type_to_json_schema <- function(type) {
     )
   } else if (inherits(type, "ellmer::TypeObject")) {
     properties <- lapply(type@properties, ellmer_type_to_json_schema)
+    properties <- properties[!vapply(properties, is.null, logical(1))]
     required <- names(type@properties)[
-      vapply(type@properties, function(prop) isTRUE(prop@required), logical(1))
+      vapply(
+        type@properties,
+        function(prop) {
+          isTRUE(prop@required) && !inherits(prop, "ellmer::TypeIgnore")
+        },
+        logical(1)
+      )
     ]
     list(
       type = "object",
@@ -51,22 +62,21 @@ ellmer_type_to_json_schema <- function(type) {
       additionalProperties = isTRUE(type@additional_properties)
     )
   } else {
-    cli::cli_warn(c(
+    cli::cli_abort(c(
       "Unsupported ellmer type in signature schema conversion",
-      "i" = "Falling back to {.code {\"type\": \"string\"}} for {.cls {class(type)[1]}}"
+      "x" = "Cannot convert {.cls {class(type)[1]}} to JSON Schema",
+      "i" = "Supported types: TypeBasic, TypeEnum, TypeArray, TypeObject, TypeIgnore"
     ))
-    list(type = "string")
   }
 
-  schema <- add_ellmer_schema_description(schema, type)
-  schema
+  add_ellmer_schema_description(schema, type)
 }
 
 #' Add an ellmer description slot to a JSON schema fragment
 #' @noRd
 add_ellmer_schema_description <- function(schema, type) {
-  description <- tryCatch(type@description, error = function(e) NULL)
-  if (!is.null(description) && nzchar(description)) {
+  description <- type@description
+  if (length(description) > 0 && nzchar(description)) {
     schema$description <- description
   }
   schema

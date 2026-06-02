@@ -12,7 +12,8 @@ module_fn(signature, forward, chat = NULL, name = NULL, config = list())
 \item{forward}{Function called with named signature inputs. If the function
 accepts \code{.llm} or \code{...}, the active chat object is passed as \code{.llm}.
 Return a named list matching the signature output fields, or a scalar when
-the signature has exactly one output field.}
+the signature has exactly one output field. \code{forward} is invoked once per
+row; use \code{\link[=run_dataset]{run_dataset()}} or \code{\link[=evaluate]{evaluate()}} to process multi-row datasets.}
 
 \item{chat}{Optional ellmer Chat object stored on the module.}
 

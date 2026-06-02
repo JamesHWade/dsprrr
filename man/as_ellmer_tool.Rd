@@ -32,11 +32,13 @@ such as read-only or destructive behavior without dsprrr depending on them.}
 
 \item{output}{Tool result serialization mode:
 \itemize{
-\item \code{"auto"} returns the native module result.
-\item \code{"json"} returns stable compact JSON.
+\item \code{"auto"} returns the native module result with fields ordered to match
+the signature.
+\item \code{"json"} returns compact JSON with signature-ordered top-level fields.
 \item \code{"text"} returns the primary output field as text when possible, or JSON
 text otherwise.
-\item \code{"raw"} returns the native module result unchanged.
+\item \code{"raw"} returns the native module result unchanged, without field
+reordering.
 }}
 
 \item{copy}{Whether tool calls should use the supplied module directly
@@ -44,9 +46,13 @@ text otherwise.
 
 \item{error}{Tool error handling:
 \itemize{
-\item \code{"reject"} returns a structured recoverable error observation.
-\item \code{"abort"} propagates the original error.
-\item \code{"return"} returns a structured error object.
+\item \code{"reject"} (default) returns a structured recoverable error observation
+suitable for surfacing back to an LLM. The condition class is preserved
+in \verb{$type}.
+\item \code{"abort"} propagates the original error to the caller.
+\item \code{"return"} signals the error as a classed \code{dsprrr_tool_error} condition
+carrying the structured observation in \verb{$payload}. Callers can install
+a \code{withCallingHandlers()} to inspect the failure without aborting.
 }}
 }
 \value{

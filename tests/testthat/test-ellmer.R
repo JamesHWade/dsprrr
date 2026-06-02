@@ -126,8 +126,55 @@ test_that("as_ellmer_tool supports output serialization modes", {
   expect_equal(text_tool(text = "ok"), "Answer: ok")
 })
 
+test_that("format_ellmer_tool_output reorders fields for 'auto', preserves them for 'raw'", {
+  skip_if_not_installed("ellmer")
+
+  out_type <- ellmer::type_object(
+    first = ellmer::type_string(),
+    second = ellmer::type_string()
+  )
+  unordered <- list(second = "B", first = "A")
+
+  auto_result <- dsprrr:::format_ellmer_tool_output(unordered, out_type, "auto")
+  raw_result <- dsprrr:::format_ellmer_tool_output(unordered, out_type, "raw")
+
+  expect_equal(names(auto_result), c("first", "second"))
+  expect_equal(names(raw_result), c("second", "first"))
+})
+
+test_that("as_ellmer_tool output = 'text' falls back to JSON for multi-field results", {
+  skip_if_not_installed("ellmer")
+
+  mod <- module_fn(
+    "text -> a, b",
+    function(text, ...) list(a = "x", b = "y")
+  )
+  tool <- as_ellmer_tool(mod, name = "multi_text", output = "text")
+  expect_equal(tool(text = "ok"), "{\"a\":\"x\",\"b\":\"y\"}")
+})
+
+test_that("as_ellmer_tool rejects non-Module input", {
+  skip_if_not_installed("ellmer")
+
+  expect_error(
+    as_ellmer_tool(list()),
+    "must be a DSPrrr Module"
+  )
+})
+
+test_that("register_dsprrr_tool rejects non-Chat input", {
+  skip_if_not_installed("ellmer")
+
+  mod <- module(signature("text -> answer"), type = "predict")
+  expect_error(
+    register_dsprrr_tool(list(), mod),
+    "must be an ellmer Chat"
+  )
+})
+
 test_that("as_ellmer_tool copy = 'deep' avoids mutating source traces", {
   skip_if_not_installed("ellmer")
+  local_reset_cache()
 
   mod <- module_fn("text -> answer", function(text, ...) list(answer = text))
 
@@ -248,6 +295,7 @@ test_that("register_dsprrr_tool registers tool with chat", {
 
 test_that("register_dsprrr_tool forwards ellmer tool options", {
   skip_if_not_installed("ellmer")
+  local_reset_cache()
 
   registered_tools <- list()
   mock_chat <- structure(
@@ -321,9 +369,13 @@ test_that("as_ellmer_tool handles errors from module", {
     .llm = mock_llm
   )
 
-  # Default behavior returns a structured, recoverable tool observation.
-  result <- tool(text = "test")
+  # Default behavior emits a warning and returns a structured observation.
+  expect_warning(
+    result <- tool(text = "test"),
+    class = "dsprrr_tool_error_warning"
+  )
   expect_true(result$error)
+  expect_s3_class(result, "dsprrr_tool_observation")
   expect_match(result$message, "API error")
   expect_equal(result$tool, "test_sentiment")
 
@@ -335,4 +387,35 @@ test_that("as_ellmer_tool handles errors from module", {
     error = "abort"
   )
   expect_error(abort_tool(text = "test"), "API error")
+})
+
+test_that("as_ellmer_tool error = 'return' signals a classed condition", {
+  skip_if_not_installed("ellmer")
+
+  mock_llm <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        stop("API error")
+      }
+    ),
+    class = "Chat"
+  )
+
+  mod <- module(signature("text -> sentiment"), type = "predict")
+  tool <- as_ellmer_tool(
+    mod,
+    name = "return_tool",
+    .llm = mock_llm,
+    error = "return"
+  )
+
+  err <- tryCatch(
+    suppressWarnings(tool(text = "test")),
+    dsprrr_tool_error = function(e) e
+  )
+
+  expect_s3_class(err, "dsprrr_tool_error")
+  expect_s3_class(err$payload, "dsprrr_tool_observation")
+  expect_equal(err$payload$tool, "return_tool")
+  expect_match(conditionMessage(err), "API error")
 })

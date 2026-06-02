@@ -9,7 +9,8 @@
 #' @param forward Function called with named signature inputs. If the function
 #'   accepts `.llm` or `...`, the active chat object is passed as `.llm`.
 #'   Return a named list matching the signature output fields, or a scalar when
-#'   the signature has exactly one output field.
+#'   the signature has exactly one output field. `forward` is invoked once per
+#'   row; use [run_dataset()] or [evaluate()] to process multi-row datasets.
 #' @param chat Optional ellmer Chat object stored on the module.
 #' @param name Optional module name stored in `config$name`.
 #' @param config Optional configuration metadata.
@@ -42,7 +43,7 @@ module_fn <- function(
     cli::cli_abort("{.arg forward} must be a function")
   }
 
-  if (!is.null(config) && !is.list(config)) {
+  if (!is.list(config)) {
     cli::cli_abort("{.arg config} must be a list")
   }
 
@@ -51,7 +52,7 @@ module_fn <- function(
     forward_fn = forward,
     chat = chat,
     name = name,
-    config = config %||% list()
+    config = config
   )
 }
 
@@ -79,6 +80,13 @@ FnModule <- R6::R6Class(
     },
     forward = function(batch, .llm = NULL, trace = TRUE, ...) {
       inputs <- if (is.data.frame(batch)) {
+        if (nrow(batch) != 1L) {
+          cli::cli_abort(c(
+            "{.cls FnModule}'s {.fn forward} expects a single row of inputs",
+            "x" = "Got {.val {nrow(batch)}} rows",
+            "i" = "Use {.fn run_dataset} or {.fn evaluate} to process multi-row data"
+          ))
+        }
         as.list(batch[1, , drop = FALSE])
       } else {
         batch
@@ -93,9 +101,14 @@ FnModule <- R6::R6Class(
         context = "inputs"
       )
 
-      llm <- .llm %||% self$chat
+      llm <- resolve_module_llm(self, .llm = .llm, create = FALSE)
       start_time <- Sys.time()
-      raw_result <- call_fn_module_forward(private$.forward_fn, inputs, llm, ...)
+      raw_result <- call_fn_module_forward(
+        private$.forward_fn,
+        inputs,
+        llm,
+        ...
+      )
       end_time <- Sys.time()
 
       normalized <- normalize_fn_module_output(raw_result, self$signature)
@@ -104,7 +117,8 @@ FnModule <- R6::R6Class(
       metadata$timestamp <- end_time
       metadata$latency_ms <- as.numeric(
         difftime(end_time, start_time, units = "secs")
-      ) * 1000
+      ) *
+        1000
 
       if (trace) {
         trace_entry <- list(
@@ -120,7 +134,7 @@ FnModule <- R6::R6Class(
             total_tokens = NA_integer_
           ),
           cost = NA_real_,
-          model = tryCatch(llm$get_model(), error = function(e) NA_character_)
+          model = fn_module_model_name(llm)
         )
         self$state$traces <- append(self$state$traces, list(trace_entry))
       }
@@ -133,6 +147,25 @@ FnModule <- R6::R6Class(
     }
   )
 )
+
+#' Extract the model name from a Chat-like object for trace recording
+#' @noRd
+fn_module_model_name <- function(llm) {
+  if (is.null(llm) || !inherits(llm, "Chat")) {
+    return(NA_character_)
+  }
+  tryCatch(
+    llm$get_model() %||% NA_character_,
+    error = function(e) {
+      cli::cli_warn(
+        "Could not retrieve model name from Chat: {conditionMessage(e)}",
+        .frequency = "once",
+        .frequency_id = "fn_module_get_model_failure"
+      )
+      NA_character_
+    }
+  )
+}
 
 #' Call a function-backed module's user function
 #' @noRd
@@ -203,7 +236,11 @@ normalize_fn_module_output <- function(result, signature) {
   result <- result[output_names]
   properties <- output_type@properties
   for (field in output_names) {
-    validate_ellmer_output_value(result[[field]], properties[[field]], field = field)
+    validate_ellmer_output_value(
+      result[[field]],
+      properties[[field]],
+      field = field
+    )
   }
 
   list(output = result, metadata = metadata)
@@ -234,7 +271,7 @@ validate_ellmer_output_value <- function(value, type, field) {
       ))
     }
   } else if (inherits(type, "ellmer::TypeEnum")) {
-    if (!is.character(value) || any(!value %in% type@values)) {
+    if (!is.character(value) || !all(value %in% type@values)) {
       cli::cli_abort(c(
         "Callable module result has a value outside the enum",
         "x" = "{.field {field}} must be one of {.val {type@values}}"
@@ -247,7 +284,12 @@ validate_ellmer_output_value <- function(value, type, field) {
         "x" = "{.field {field}} must be an array or list"
       ))
     }
-    invisible(lapply(value, validate_ellmer_output_value, type = type@items, field = field))
+    invisible(lapply(
+      value,
+      validate_ellmer_output_value,
+      type = type@items,
+      field = field
+    ))
   } else if (inherits(type, "ellmer::TypeObject")) {
     if (!is.list(value)) {
       cli::cli_abort(c(
@@ -265,7 +307,7 @@ validate_ellmer_output_value <- function(value, type, field) {
 abort_if_fn_module <- function(program) {
   if (inherits(program, "FnModule")) {
     cli::cli_abort(c(
-      "Callable modules created with {.fn module_fn} do not support optimization yet",
+      "Callable modules created with {.fn module_fn} do not support optimization",
       "i" = "Use {.fn run} or {.fn evaluate} with this module, or wrap an optimizable dsprrr module instead."
     ))
   }
