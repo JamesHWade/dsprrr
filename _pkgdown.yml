@@ -162,6 +162,7 @@ reference:
     - Signature
     - input
     - starts_with("input_")
+    - signature_to_json_schema
     - dsp_trainset
 
   - title: Signature Transforms
@@ -182,6 +183,7 @@ reference:
     - predict.Module
     - dsp
     - as_module
+    - module_fn
     - get_last_trace
 
   - title: Pipelines

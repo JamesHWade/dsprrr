@@ -17,6 +17,27 @@ copy_ellmer_type <- function(type) {
 #'   instructions or a generated description.
 #' @param .llm Optional ellmer Chat object for the module to use when called.
 #'   If not provided, the module's stored chat or default chat is used.
+#' @param annotations Optional ellmer tool annotations list, passed through to
+#'   [ellmer::tool()]. This lets downstream runtimes reason about properties
+#'   such as read-only or destructive behavior without dsprrr depending on them.
+#' @param output Tool result serialization mode:
+#'   - `"auto"` returns the native module result with fields ordered to match
+#'     the signature.
+#'   - `"json"` returns compact JSON with signature-ordered top-level fields.
+#'   - `"text"` returns the primary output field as text when possible, or JSON
+#'     text otherwise.
+#'   - `"raw"` returns the native module result unchanged, without field
+#'     reordering.
+#' @param copy Whether tool calls should use the supplied module directly
+#'   (`"none"`) or a fresh deep copy (`"deep"`).
+#' @param error Tool error handling:
+#'   - `"reject"` (default) returns a structured recoverable error observation
+#'     suitable for surfacing back to an LLM. The condition class is preserved
+#'     in `$type`.
+#'   - `"abort"` propagates the original error to the caller.
+#'   - `"return"` signals the error as a classed `dsprrr_tool_error` condition
+#'     carrying the structured observation in `$payload`. Callers can install
+#'     a `withCallingHandlers()` to inspect the failure without aborting.
 #'
 #' @return A `ToolDef` object from ellmer, suitable for use with
 #'   `ellmer::Chat$register_tool()`.
@@ -44,8 +65,16 @@ as_ellmer_tool <- function(
   module,
   name = NULL,
   description = NULL,
-  .llm = NULL
+  .llm = NULL,
+  annotations = list(),
+  output = c("auto", "json", "text", "raw"),
+  copy = c("none", "deep"),
+  error = c("reject", "abort", "return")
 ) {
+  output <- match.arg(output)
+  copy <- match.arg(copy)
+  error <- match.arg(error)
+
   if (!inherits(module, "Module")) {
     cli::cli_abort(c(
       "{.arg module} must be a DSPrrr Module object",
@@ -95,7 +124,11 @@ as_ellmer_tool <- function(
     input_desc <- input_spec$description %||% paste("The", input_name, "value")
     ellmer_type <- copy_ellmer_type(input_spec$type)
 
-    if (is.null(ellmer_type@description) && !is.null(input_desc)) {
+    if (
+      !inherits(ellmer_type, "ellmer::TypeIgnore") &&
+        length(ellmer_type@description) == 0 &&
+        !is.null(input_desc)
+    ) {
       ellmer_type@description <- input_desc
     }
 
@@ -105,6 +138,10 @@ as_ellmer_tool <- function(
   # Capture module and llm in closure
   captured_module <- module
   captured_llm <- .llm
+  captured_name <- name
+  captured_output <- output
+  captured_copy <- copy
+  captured_error <- error
 
   # Create a function with named parameters matching the signature inputs
   # ellmer::tool() requires argument names to match function formals
@@ -122,20 +159,23 @@ as_ellmer_tool <- function(
 
   # Build function body using bquote to inject the captured variables
   tool_body <- bquote({
-    # Collect all arguments passed to this function
-    inputs <- as.list(match.call())[-1]
+    call <- match.call()
+    provided_names <- names(as.list(call)[-1])
+    inputs <- if (length(provided_names) > 0) {
+      mget(provided_names, envir = environment(), inherits = FALSE)
+    } else {
+      list()
+    }
 
-    # Run the module - let errors propagate so the LLM can handle them
-    result <- do.call(
-      run,
-      c(
-        list(.(captured_module)),
-        inputs,
-        list(.llm = .(captured_llm), .return_format = "simple")
-      )
+    invoke_ellmer_tool_module(
+      module = .(captured_module),
+      inputs = inputs,
+      .llm = .(captured_llm),
+      tool_name = .(captured_name),
+      output = .(captured_output),
+      copy = .(captured_copy),
+      error = .(captured_error)
     )
-
-    result
   })
 
   # Create the function with proper signature
@@ -151,7 +191,165 @@ as_ellmer_tool <- function(
     tool_fn,
     name = name,
     description = description,
-    arguments = arg_specs
+    arguments = arg_specs,
+    annotations = annotations
+  )
+}
+
+#' Invoke a module-backed ellmer tool
+#' @noRd
+invoke_ellmer_tool_module <- function(
+  module,
+  inputs,
+  .llm,
+  tool_name,
+  output,
+  copy,
+  error
+) {
+  working_module <- if (copy == "deep") {
+    module$copy(deep = TRUE)
+  } else {
+    module
+  }
+
+  result <- tryCatch(
+    do.call(
+      run,
+      c(
+        list(working_module),
+        inputs,
+        list(.llm = .llm, .return_format = "simple")
+      )
+    ),
+    error = function(err) handle_ellmer_tool_error(err, tool_name, error)
+  )
+
+  if (inherits(result, "dsprrr_tool_observation")) {
+    return(result)
+  }
+
+  format_ellmer_tool_output(
+    result,
+    working_module$signature@output_type,
+    output
+  )
+}
+
+#' Apply the tool error mode to a captured run() error
+#' @noRd
+handle_ellmer_tool_error <- function(err, tool_name, mode) {
+  if (mode == "abort") {
+    stop(err)
+  }
+
+  observation <- structure_ellmer_tool_error(err, tool_name)
+  cli::cli_warn(
+    c(
+      "Tool {.field {tool_name}} failed: {conditionMessage(err)}",
+      "i" = "Returning structured error observation ({.code error = \"{mode}\"})"
+    ),
+    class = "dsprrr_tool_error_warning",
+    .frequency = "always"
+  )
+
+  if (mode == "return") {
+    rlang::abort(
+      conditionMessage(err),
+      class = c("dsprrr_tool_error", class(err)),
+      payload = observation,
+      parent = err
+    )
+  }
+
+  observation
+}
+
+#' Convert a module result to the requested ellmer tool output shape
+#' @noRd
+format_ellmer_tool_output <- function(result, output_type, output) {
+  if (output != "raw") {
+    result <- order_tool_result_fields(result, output_type)
+  }
+
+  switch(
+    output,
+    raw = result,
+    auto = result,
+    json = as.character(jsonlite::toJSON(
+      result,
+      auto_unbox = TRUE,
+      null = "null",
+      dataframe = "rows",
+      POSIXt = "ISO8601"
+    )),
+    text = tool_result_text(result, output_type)
+  )
+}
+
+#' Order named tool result fields according to the signature output type
+#' @noRd
+order_tool_result_fields <- function(result, output_type) {
+  output_names <- output_field_names(output_type)
+  if (
+    length(output_names) == 0 ||
+      !is.list(result) ||
+      is.null(names(result))
+  ) {
+    return(result)
+  }
+
+  known <- intersect(output_names, names(result))
+  extra <- setdiff(names(result), output_names)
+  result[c(known, extra)]
+}
+
+#' Render a tool result as text
+#' @noRd
+tool_result_text <- function(result, output_type) {
+  primary <- primary_output_field(output_type)
+  if (!is.null(primary) && is.list(result) && primary %in% names(result)) {
+    value <- result[[primary]]
+    if (is.atomic(value) && length(value) == 1) {
+      return(as.character(value))
+    }
+  }
+
+  if (is.atomic(result) && length(result) == 1) {
+    return(as.character(result))
+  }
+
+  as.character(jsonlite::toJSON(
+    result,
+    auto_unbox = TRUE,
+    null = "null",
+    dataframe = "rows",
+    POSIXt = "ISO8601"
+  ))
+}
+
+#' Return the clear primary output field for a type, if any
+#' @noRd
+primary_output_field <- function(output_type) {
+  output_names <- output_field_names(output_type)
+  if (length(output_names) == 1) {
+    output_names[[1]]
+  } else {
+    NULL
+  }
+}
+
+#' Structured recoverable tool error
+#' @noRd
+structure_ellmer_tool_error <- function(err, tool_name) {
+  structure(
+    list(
+      error = TRUE,
+      type = class(err)[[1]],
+      message = conditionMessage(err),
+      tool = tool_name
+    ),
+    class = c("dsprrr_tool_observation", "list")
   )
 }
 
@@ -167,6 +365,12 @@ as_ellmer_tool <- function(
 #' @param description Optional tool description.
 #' @param .llm Optional ellmer Chat object for the module to use when called.
 #'   If not provided, the module's stored chat or default chat is used.
+#' @param annotations Optional ellmer tool annotations list, passed through to
+#'   [ellmer::tool()].
+#' @param output Tool result serialization mode. See [as_ellmer_tool()].
+#' @param copy Whether tool calls should use the supplied module directly or a
+#'   fresh deep copy. See [as_ellmer_tool()].
+#' @param error Tool error handling mode. See [as_ellmer_tool()].
 #'
 #' @return The Chat object (invisibly), with the tool registered.
 #'
@@ -187,7 +391,11 @@ register_dsprrr_tool <- function(
   module,
   name = NULL,
   description = NULL,
-  .llm = NULL
+  .llm = NULL,
+  annotations = list(),
+  output = c("auto", "json", "text", "raw"),
+  copy = c("none", "deep"),
+  error = c("reject", "abort", "return")
 ) {
   if (!inherits(chat, "Chat")) {
     cli::cli_abort(c(
@@ -196,13 +404,19 @@ register_dsprrr_tool <- function(
     ))
   }
 
-  # Create the ellmer ToolDef from the module
+  output <- match.arg(output)
+  copy <- match.arg(copy)
+  error <- match.arg(error)
 
   tool_def <- as_ellmer_tool(
     module,
     name = name,
     description = description,
-    .llm = .llm
+    .llm = .llm,
+    annotations = annotations,
+    output = output,
+    copy = copy,
+    error = error
   )
 
   # Register the ToolDef with the Chat

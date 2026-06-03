@@ -9,7 +9,11 @@ register_dsprrr_tool(
   module,
   name = NULL,
   description = NULL,
-  .llm = NULL
+  .llm = NULL,
+  annotations = list(),
+  output = c("auto", "json", "text", "raw"),
+  copy = c("none", "deep"),
+  error = c("reject", "abort", "return")
 )
 }
 \arguments{
@@ -23,6 +27,16 @@ register_dsprrr_tool(
 
 \item{.llm}{Optional ellmer Chat object for the module to use when called.
 If not provided, the module's stored chat or default chat is used.}
+
+\item{annotations}{Optional ellmer tool annotations list, passed through to
+\code{\link[ellmer:tool]{ellmer::tool()}}.}
+
+\item{output}{Tool result serialization mode. See \code{\link[=as_ellmer_tool]{as_ellmer_tool()}}.}
+
+\item{copy}{Whether tool calls should use the supplied module directly or a
+fresh deep copy. See \code{\link[=as_ellmer_tool]{as_ellmer_tool()}}.}
+
+\item{error}{Tool error handling mode. See \code{\link[=as_ellmer_tool]{as_ellmer_tool()}}.}
 }
 \value{
 The Chat object (invisibly), with the tool registered.

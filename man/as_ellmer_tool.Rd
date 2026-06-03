@@ -4,7 +4,16 @@
 \alias{as_ellmer_tool}
 \title{Convert a DSPrrr Module to an ellmer Tool}
 \usage{
-as_ellmer_tool(module, name = NULL, description = NULL, .llm = NULL)
+as_ellmer_tool(
+  module,
+  name = NULL,
+  description = NULL,
+  .llm = NULL,
+  annotations = list(),
+  output = c("auto", "json", "text", "raw"),
+  copy = c("none", "deep"),
+  error = c("reject", "abort", "return")
+)
 }
 \arguments{
 \item{module}{A DSPrrr module (created with \code{\link[=module]{module()}}).}
@@ -16,6 +25,35 @@ instructions or a generated description.}
 
 \item{.llm}{Optional ellmer Chat object for the module to use when called.
 If not provided, the module's stored chat or default chat is used.}
+
+\item{annotations}{Optional ellmer tool annotations list, passed through to
+\code{\link[ellmer:tool]{ellmer::tool()}}. This lets downstream runtimes reason about properties
+such as read-only or destructive behavior without dsprrr depending on them.}
+
+\item{output}{Tool result serialization mode:
+\itemize{
+\item \code{"auto"} returns the native module result with fields ordered to match
+the signature.
+\item \code{"json"} returns compact JSON with signature-ordered top-level fields.
+\item \code{"text"} returns the primary output field as text when possible, or JSON
+text otherwise.
+\item \code{"raw"} returns the native module result unchanged, without field
+reordering.
+}}
+
+\item{copy}{Whether tool calls should use the supplied module directly
+(\code{"none"}) or a fresh deep copy (\code{"deep"}).}
+
+\item{error}{Tool error handling:
+\itemize{
+\item \code{"reject"} (default) returns a structured recoverable error observation
+suitable for surfacing back to an LLM. The condition class is preserved
+in \verb{$type}.
+\item \code{"abort"} propagates the original error to the caller.
+\item \code{"return"} signals the error as a classed \code{dsprrr_tool_error} condition
+carrying the structured observation in \verb{$payload}. Callers can install
+a \code{withCallingHandlers()} to inspect the failure without aborting.
+}}
 }
 \value{
 A \code{ToolDef} object from ellmer, suitable for use with
