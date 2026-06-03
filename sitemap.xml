@@ -146,6 +146,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-wrapper.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_demos_as_tibble.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/module_fn.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_metrics.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_parameters.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_trials.html</loc></url>
@@ -207,6 +208,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/set_default_chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/signature-transforms.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/signature.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/signature_to_json_schema.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/split_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/step.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/stream_async.html</loc></url>

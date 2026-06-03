@@ -98,7 +98,11 @@ it with a Chat object in one step.</p>
 <span>  <span class="va">module</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  description <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  .llm <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  annotations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"json"</span>, <span class="st">"text"</span>, <span class="st">"raw"</span><span class="op">)</span>,</span>
+<span>  copy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"deep"</span><span class="op">)</span>,</span>
+<span>  error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reject"</span>, <span class="st">"abort"</span>, <span class="st">"return"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -125,6 +129,24 @@ it with a Chat object in one step.</p>
 <dt id="arg--llm">.llm<a class="anchor" aria-label="anchor" href="#arg--llm"></a></dt>
 <dd><p>Optional ellmer Chat object for the module to use when called.
 If not provided, the module's stored chat or default chat is used.</p></dd>
+
+
+<dt id="arg-annotations">annotations<a class="anchor" aria-label="anchor" href="#arg-annotations"></a></dt>
+<dd><p>Optional ellmer tool annotations list, passed through to
+<code><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">ellmer::tool()</a></code>.</p></dd>
+
+
+<dt id="arg-output">output<a class="anchor" aria-label="anchor" href="#arg-output"></a></dt>
+<dd><p>Tool result serialization mode. See <code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>.</p></dd>
+
+
+<dt id="arg-copy">copy<a class="anchor" aria-label="anchor" href="#arg-copy"></a></dt>
+<dd><p>Whether tool calls should use the supplied module directly or a
+fresh deep copy. See <code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>.</p></dd>
+
+
+<dt id="arg-error">error<a class="anchor" aria-label="anchor" href="#arg-error"></a></dt>
+<dd><p>Tool error handling mode. See <code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

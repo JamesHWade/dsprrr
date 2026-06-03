@@ -17,6 +17,8 @@ Declare typed schemas for LLM operations
   [`input_array()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
   [`input_object()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
   : Create typed input helpers for common cases
+- [`signature_to_json_schema()`](https://jameshwade.github.io/dsprrr/reference/signature_to_json_schema.md)
+  : Convert a Signature to JSON Schema
 - [`dsp_trainset()`](https://jameshwade.github.io/dsprrr/reference/dsp_trainset.md)
   : Create Training Data for DSPrrr
 
@@ -52,6 +54,8 @@ Create, run, and inspect LLM modules
   Declarative Structured Prediction
 - [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)
   : Create a Module from a Chat
+- [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+  : Callable Module
 - [`get_last_trace()`](https://jameshwade.github.io/dsprrr/reference/get_last_trace.md)
   : Get the Last DSP Trace
 

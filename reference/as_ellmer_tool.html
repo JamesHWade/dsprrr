@@ -96,7 +96,16 @@ the LLM can call dsprrr modules as part of its reasoning.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">as_ellmer_tool</span><span class="op">(</span><span class="va">module</span>, name <span class="op">=</span> <span class="cn">NULL</span>, description <span class="op">=</span> <span class="cn">NULL</span>, .llm <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">as_ellmer_tool</span><span class="op">(</span></span>
+<span>  <span class="va">module</span>,</span>
+<span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  description <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  annotations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"json"</span>, <span class="st">"text"</span>, <span class="st">"raw"</span><span class="op">)</span>,</span>
+<span>  copy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"deep"</span><span class="op">)</span>,</span>
+<span>  error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reject"</span>, <span class="st">"abort"</span>, <span class="st">"return"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -119,6 +128,39 @@ instructions or a generated description.</p></dd>
 <dt id="arg--llm">.llm<a class="anchor" aria-label="anchor" href="#arg--llm"></a></dt>
 <dd><p>Optional ellmer Chat object for the module to use when called.
 If not provided, the module's stored chat or default chat is used.</p></dd>
+
+
+<dt id="arg-annotations">annotations<a class="anchor" aria-label="anchor" href="#arg-annotations"></a></dt>
+<dd><p>Optional ellmer tool annotations list, passed through to
+<code><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">ellmer::tool()</a></code>. This lets downstream runtimes reason about properties
+such as read-only or destructive behavior without dsprrr depending on them.</p></dd>
+
+
+<dt id="arg-output">output<a class="anchor" aria-label="anchor" href="#arg-output"></a></dt>
+<dd><p>Tool result serialization mode:</p><ul><li><p><code>"auto"</code> returns the native module result with fields ordered to match
+the signature.</p></li>
+<li><p><code>"json"</code> returns compact JSON with signature-ordered top-level fields.</p></li>
+<li><p><code>"text"</code> returns the primary output field as text when possible, or JSON
+text otherwise.</p></li>
+<li><p><code>"raw"</code> returns the native module result unchanged, without field
+reordering.</p></li>
+</ul></dd>
+
+
+<dt id="arg-copy">copy<a class="anchor" aria-label="anchor" href="#arg-copy"></a></dt>
+<dd><p>Whether tool calls should use the supplied module directly
+(<code>"none"</code>) or a fresh deep copy (<code>"deep"</code>).</p></dd>
+
+
+<dt id="arg-error">error<a class="anchor" aria-label="anchor" href="#arg-error"></a></dt>
+<dd><p>Tool error handling:</p><ul><li><p><code>"reject"</code> (default) returns a structured recoverable error observation
+suitable for surfacing back to an LLM. The condition class is preserved
+in <code>$type</code>.</p></li>
+<li><p><code>"abort"</code> propagates the original error to the caller.</p></li>
+<li><p><code>"return"</code> signals the error as a classed <code>dsprrr_tool_error</code> condition
+carrying the structured observation in <code>$payload</code>. Callers can install
+a <code><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers()</a></code> to inspect the failure without aborting.</p></li>
+</ul></dd>
 
 </dl></div>
     <div class="section level2">
