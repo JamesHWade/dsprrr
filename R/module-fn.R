@@ -215,7 +215,14 @@ normalize_fn_module_output <- function(result, signature) {
     }
   }
 
-  missing <- setdiff(output_names, names(result))
+  properties <- output_type@properties
+  required_names <- output_names[vapply(
+    output_names,
+    function(field) isTRUE(properties[[field]]@required),
+    logical(1)
+  )]
+
+  missing <- setdiff(required_names, names(result))
   if (length(missing) > 0) {
     cli::cli_abort(c(
       "Callable module result is missing required output fields",
@@ -233,9 +240,11 @@ normalize_fn_module_output <- function(result, signature) {
     ))
   }
 
-  result <- result[output_names]
-  properties <- output_type@properties
-  for (field in output_names) {
+  # Preserve signature order, keeping only the fields the function returned.
+  # Optional fields may legitimately be absent.
+  present_names <- intersect(output_names, names(result))
+  result <- result[present_names]
+  for (field in present_names) {
     validate_ellmer_output_value(
       result[[field]],
       properties[[field]],

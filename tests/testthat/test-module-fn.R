@@ -157,3 +157,31 @@ test_that("module_fn validates enum, array, and object output types", {
   )
   expect_error(run(object_mod, text = "hi"), "wrong type")
 })
+
+test_that("module_fn allows optional output fields to be omitted", {
+  sig <- Signature(
+    inputs = list(input("text")),
+    output_type = ellmer::type_object(
+      answer = ellmer::type_string(),
+      rationale = ellmer::type_string(required = FALSE)
+    )
+  )
+
+  # Omitting the optional field is allowed.
+  mod <- module_fn(sig, function(text) list(answer = "hi"))
+  result <- run(mod, text = "anything")
+  expect_equal(result$answer, "hi")
+  expect_false("rationale" %in% names(result))
+
+  # Supplying the optional field still validates and preserves it.
+  mod2 <- module_fn(
+    sig,
+    function(text) list(answer = "hi", rationale = "because")
+  )
+  result2 <- run(mod2, text = "anything")
+  expect_equal(result2$rationale, "because")
+
+  # A missing *required* field still aborts.
+  mod3 <- module_fn(sig, function(text) list(rationale = "only optional"))
+  expect_error(run(mod3, text = "anything"), "missing required output fields")
+})
