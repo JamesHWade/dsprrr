@@ -199,6 +199,50 @@ search. Expect qualitatively similar behavior, not identical results.</p>
 
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A small GEPA run: 6 candidates evolved over 2 generations</span></span></span>
+<span class="r-in"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu">GEPA</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  metric <span class="op">=</span> <span class="fu"><a href="metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  population_size <span class="op">=</span> <span class="fl">6L</span>,</span></span>
+<span class="r-in"><span>  generations <span class="op">=</span> <span class="fl">2L</span>,</span></span>
+<span class="r-in"><span>  seed <span class="op">=</span> <span class="fl">42</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="co"># Feedback-aware metrics give the reflection step concrete guidance.</span></span></span>
+<span class="r-in"><span><span class="co"># During evaluation the metric receives the full expected row, so</span></span></span>
+<span class="r-in"><span><span class="co"># extract the target field explicitly:</span></span></span>
+<span class="r-in"><span><span class="va">feedback_metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="metric_with_feedback.html">metric_with_feedback</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">)</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>score <span class="op">=</span> <span class="fl">1</span>, feedback <span class="op">=</span> <span class="st">"Correct."</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>        score <span class="op">=</span> <span class="fl">0</span>,</span></span>
+<span class="r-in"><span>        feedback <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>          <span class="st">"Expected '"</span>,</span></span>
+<span class="r-in"><span>          <span class="va">expected</span><span class="op">$</span><span class="va">answer</span>,</span></span>
+<span class="r-in"><span>          <span class="st">"' but got '"</span>,</span></span>
+<span class="r-in"><span>          <span class="va">prediction</span>,</span></span>
+<span class="r-in"><span>          <span class="st">"'."</span></span></span>
+<span class="r-in"><span>        <span class="op">)</span></span></span>
+<span class="r-in"><span>      <span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">}</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span>,</span></span>
+<span class="r-in"><span>  field <span class="op">=</span> <span class="st">"answer"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu">GEPA</span><span class="op">(</span>metric <span class="op">=</span> <span class="va">feedback_metric</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="module.html">module</a></span><span class="op">(</span><span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"What is 2 + 2?"</span>, <span class="st">"What is the capital of France?"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"4"</span>, <span class="st">"Paris"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">qa</span>, <span class="va">trainset</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

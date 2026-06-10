@@ -38,3 +38,27 @@ template variants to find the best performing configuration.
 - verbose:
 
   Whether to print progress messages. Default is TRUE.
+
+## Examples
+
+``` r
+# Search over two instruction variants
+variants <- data.frame(
+  id = c("terse", "detailed"),
+  instructions = c("Be concise.", "Explain your reasoning step by step.")
+)
+tp <- GridSearchTeleprompter(
+  variants = variants,
+  metric = metric_exact_match(field = "sentiment")
+)
+
+if (FALSE) { # \dontrun{
+# Compile picks the variant that scores best on the training set
+classifier <- module(signature("text -> sentiment"), type = "predict")
+trainset <- dsp_trainset(
+  text = c("I love it!", "Terrible experience"),
+  sentiment = c("positive", "negative")
+)
+optimized <- compile(tp, classifier, trainset)
+} # }
+```

@@ -153,6 +153,32 @@ times to quantify variation.</p></li>
 </ul></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="module.html">module</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="st">"predict"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu"><a href="dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love it!"</span>, <span class="st">"Awful."</span>, <span class="st">"It's fine."</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">evaluate</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">classifier</span>,</span></span>
+<span class="r-in"><span>  data <span class="op">=</span> <span class="va">testset</span>,</span></span>
+<span class="r-in"><span>  metric <span class="op">=</span> <span class="fu"><a href="metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">result</span><span class="op">$</span><span class="va">mean_score</span> <span class="co"># accuracy across the test set</span></span></span>
+<span class="r-in"><span><span class="va">result</span><span class="op">$</span><span class="va">scores</span> <span class="co"># per-example scores</span></span></span>
+<span class="r-in"><span><span class="va">result</span><span class="op">$</span><span class="va">n_errors</span> <span class="co"># examples where the metric failed</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

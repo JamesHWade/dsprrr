@@ -99,3 +99,30 @@ When `.return_format = "simple"`:
 - [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md),
   [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md)
   for built-in metrics
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+classifier <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
+  type = "predict"
+)
+
+testset <- dsp_trainset(
+  text = c("I love it!", "Awful.", "It's fine."),
+  sentiment = c("positive", "negative", "neutral")
+)
+
+result <- evaluate(
+  classifier,
+  data = testset,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = ellmer::chat_openai()
+)
+
+result$mean_score # accuracy across the test set
+result$scores # per-example scores
+result$n_errors # examples where the metric failed
+} # }
+```

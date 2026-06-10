@@ -278,8 +278,8 @@ instructions—is now saved.</p>
 </h2>
 <p>Load and examine traces:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Export as tibble</span></span>
-<span><span class="va">traces</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">classifier</span>, format <span class="op">=</span> <span class="st">"tibble"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Export as a tibble</span></span>
+<span><span class="va">traces</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
 <span><span class="va">traces</span></span>
 <span></span>
 <span><span class="co"># Summary statistics</span></span>
@@ -312,7 +312,7 @@ defined - Board is accessible (if provided)</p>
 <span><span class="co"># 1. Build and optimize</span></span>
 <span><span class="va">dev_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span><span class="va">dev_module</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
-<span>  devset <span class="op">=</span> <span class="va">trainset</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
@@ -324,7 +324,11 @@ defined - Board is accessible (if provided)</p>
 <span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 3. Evaluate on test data</span></span>
+<span><span class="co"># 3. Evaluate on held-out test data (same columns as the trainset)</span></span>
+<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Exceeded expectations!"</span>, <span class="st">"Broke after a week."</span>, <span class="st">"It's fine."</span><span class="op">)</span>,</span>
+<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">optimized</span>, <span class="va">testset</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 4. Save if good enough</span></span>
@@ -333,9 +337,11 @@ defined - Board is accessible (if provided)</p>
 <span></span>
 <span><span class="co"># === PRODUCTION ===</span></span>
 <span><span class="co"># 1. Load the saved configuration</span></span>
-<span><span class="va">prod_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">prod_board</span>, <span class="st">"sentiment-v1"</span><span class="op">)</span></span>
+<span><span class="va">config</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">prod_board</span>, <span class="st">"sentiment-v1"</span><span class="op">)</span></span>
+<span><span class="va">prod_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">config</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 2. Use it</span></span>
+<span><span class="va">customer_review</span> <span class="op">&lt;-</span> <span class="st">"Arrived quickly and works perfectly."</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">prod_module</span>, review <span class="op">=</span> <span class="va">customer_review</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 3. Periodically save traces for monitoring</span></span>
@@ -367,11 +373,15 @@ defined - Board is accessible (if provided)</p>
 </h2>
 <p>Set up regular checks:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Daily: Check trace summary</span></span>
-<span><span class="va">module</span><span class="op">$</span><span class="fu">trace_summary</span><span class="op">(</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Daily: Check trace summary (tokens, cost, errors)</span></span>
+<span><span class="va">prod_module</span><span class="op">$</span><span class="fu">trace_summary</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Weekly: Evaluate on held-out samples</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">module</span>, <span class="va">weekly_sample</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># Weekly: Evaluate on a fresh sample of labeled production data</span></span>
+<span><span class="va">weekly_sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Saved me hours!"</span>, <span class="st">"Refund please."</span>, <span class="st">"Average at best."</span><span class="op">)</span>,</span>
+<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">prod_module</span>, <span class="va">weekly_sample</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Monthly: Compare to baseline</span></span>
 <span><span class="co"># If accuracy drops, investigate or retrain</span></span></code></pre></div>

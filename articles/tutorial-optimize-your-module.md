@@ -8,6 +8,11 @@ the best combination?
 
 The answer: **let dsprrr search for you**.
 
+We return to a sentiment classifier—this time for product reviews—so you
+can see how much headroom parameter tuning adds on top of few-shot
+demos. This is also the module you’ll take to production in [Tutorial
+6](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md).
+
 **Time**: 30-35 minutes
 
 ## What You’ll Build

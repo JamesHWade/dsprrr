@@ -7,7 +7,11 @@ them more accurate? The answer: **show the LLM examples of correct
 behavior**.
 
 This technique—called few-shot learning—is one of the most powerful ways
-to improve LLM performance.
+to improve LLM performance. Our running example here is support ticket
+triage: a classification task ambiguous enough that a handful of labeled
+examples makes a measurable difference. The same recipe—baseline,
+examples, re-measure—works for the sentiment classifier from Tutorial 2
+and the extractors from Tutorial 3.
 
 **Time**: 25-30 minutes
 

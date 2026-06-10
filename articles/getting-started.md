@@ -123,6 +123,10 @@ optimized <- compile_module(
 
 Before you begin:
 
+1.  **Get an API key** from an LLM provider supported by
+    [ellmer](https://ellmer.tidyverse.org/)—OpenAI and Anthropic are the
+    most common choices. The tutorials use OpenAI.
+
 2.  **Install the packages**:
 
 ``` r
@@ -138,6 +142,27 @@ pak::pak("JamesHWade/dsprrr")
 # In your .Renviron file
 OPENAI_API_KEY=sk-your-key-here
 ```
+
+4.  **Verify your setup**:
+
+``` r
+
+library(dsprrr)
+dsprrr_sitrep()
+#> ── Packages ──
+#> ✔ ellmer 0.4.0 (OK)
+#> ✔ dsprrr 0.1.0
+#>
+#> ── Default Chat ──
+#> ✔ OpenAI (gpt-4o-mini)
+#>   Source: Auto-detected from OPENAI_API_KEY
+```
+
+[`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)
+reports which API keys are visible, which chat provider dsprrr will use
+by default, and whether your installed packages are compatible. If
+something looks wrong, see
+[Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md).
 
 ## Learning Path
 

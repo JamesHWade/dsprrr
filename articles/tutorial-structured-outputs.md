@@ -7,6 +7,10 @@ tasks need multiple fields: names *and* dates, sentiment *and*
 confidence, entities *and* relationships.
 
 In this tutorial, you’ll extract complex, structured data from text.
+We’re switching the running example from sentiment labels to news
+articles and emails because extraction is where multi-field outputs
+shine—but the workflow you learned in Tutorial 2 (signature → module →
+run) stays exactly the same. Only the output type grows richer.
 
 **Time**: 25-30 minutes
 

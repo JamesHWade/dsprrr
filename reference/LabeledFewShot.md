@@ -44,3 +44,22 @@ LabeledFewShot(
 - seed:
 
   Random seed for reproducibility. Default is 123.
+
+## Examples
+
+``` r
+# A teleprompter that adds 2 labeled training examples as demonstrations
+tp <- LabeledFewShot(k = 2L, seed = 42L)
+tp@k
+#> [1] 2
+
+if (FALSE) { # \dontrun{
+# Compile a module with few-shot demos drawn from the training set
+classifier <- module(signature("text -> sentiment"), type = "predict")
+trainset <- dsp_trainset(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+optimized <- compile(tp, classifier, trainset)
+} # }
+```

@@ -256,9 +256,11 @@ Production</a></strong> — pins, targets, and Quarto</li>
 <h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
 </h2>
 <p>Before you begin:</p>
-<ol start="2" style="list-style-type: decimal">
-<li>
-<strong>Install the packages</strong>:</li>
+<ol style="list-style-type: decimal">
+<li><p><strong>Get an API key</strong> from an LLM provider supported by
+<a href="https://ellmer.tidyverse.org/" class="external-link">ellmer</a>—OpenAI and Anthropic
+are the most common choices. The tutorials use OpenAI.</p></li>
+<li><p><strong>Install the packages</strong>:</p></li>
 </ol>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
@@ -270,6 +272,23 @@ Production</a></strong> — pins, targets, and Quarto</li>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># In your .Renviron file</span></span>
 <span><span class="va">OPENAI_API_KEY</span><span class="op">=</span><span class="va">sk</span><span class="op">-</span><span class="va">your</span><span class="op">-</span><span class="va">key</span><span class="op">-</span><span class="va">here</span></span></code></pre></div>
+<ol start="4" style="list-style-type: decimal">
+<li>
+<strong>Verify your setup</strong>:</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/dsprrr_sitrep.html">dsprrr_sitrep</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ── Packages ──</span></span>
+<span><span class="co">#&gt; ✔ ellmer 0.4.0 (OK)</span></span>
+<span><span class="co">#&gt; ✔ dsprrr 0.1.0</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; ── Default Chat ──</span></span>
+<span><span class="co">#&gt; ✔ OpenAI (gpt-4o-mini)</span></span>
+<span><span class="co">#&gt;   Source: Auto-detected from OPENAI_API_KEY</span></span></code></pre></div>
+<p><code><a href="../reference/dsprrr_sitrep.html">dsprrr_sitrep()</a></code> reports which API keys are visible,
+which chat provider dsprrr will use by default, and whether your
+installed packages are compatible. If something looks wrong, see <a href="troubleshooting.html">Troubleshooting</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="learning-path">Learning Path<a class="anchor" aria-label="anchor" href="#learning-path"></a>

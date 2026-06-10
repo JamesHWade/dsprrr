@@ -167,8 +167,8 @@ Load and examine traces:
 
 ``` r
 
-# Export as tibble
-traces <- export_traces(classifier, format = "tibble")
+# Export as a tibble
+traces <- export_traces(classifier)
 traces
 
 # Summary statistics
@@ -208,7 +208,7 @@ Here’s a complete production workflow:
 # 1. Build and optimize
 dev_module <- module(sig, type = "predict")
 dev_module$optimize_grid(
-  devset = trainset,
+  data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(temperature = c(0, 0.3, 0.7))
 )
@@ -220,7 +220,11 @@ optimized <- compile_module(
   trainset = trainset
 )
 
-# 3. Evaluate on test data
+# 3. Evaluate on held-out test data (same columns as the trainset)
+testset <- dsp_trainset(
+  review = c("Exceeded expectations!", "Broke after a week.", "It's fine."),
+  sentiment = c("positive", "negative", "neutral")
+)
 evaluate(optimized, testset, metric = metric_exact_match(field = "sentiment"))
 
 # 4. Save if good enough
@@ -229,9 +233,11 @@ pin_module_config(prod_board, "sentiment-v1", optimized)
 
 # === PRODUCTION ===
 # 1. Load the saved configuration
-prod_module <- restore_module_config(prod_board, "sentiment-v1")
+config <- pins::pin_read(prod_board, "sentiment-v1")
+prod_module <- restore_module_config(config)
 
 # 2. Use it
+customer_review <- "Arrived quickly and works perfectly."
 result <- run(prod_module, review = customer_review, .llm = chat_openai())
 
 # 3. Periodically save traces for monitoring
@@ -268,11 +274,15 @@ Set up regular checks:
 
 ``` r
 
-# Daily: Check trace summary
-module$trace_summary()
+# Daily: Check trace summary (tokens, cost, errors)
+prod_module$trace_summary()
 
-# Weekly: Evaluate on held-out samples
-evaluate(module, weekly_sample, metric = metric_exact_match())
+# Weekly: Evaluate on a fresh sample of labeled production data
+weekly_sample <- dsp_trainset(
+  review = c("Saved me hours!", "Refund please.", "Average at best."),
+  sentiment = c("positive", "negative", "neutral")
+)
+evaluate(prod_module, weekly_sample, metric = metric_exact_match(field = "sentiment"))
 
 # Monthly: Compare to baseline
 # If accuracy drops, investigate or retrain
