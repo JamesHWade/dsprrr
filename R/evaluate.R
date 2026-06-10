@@ -30,6 +30,9 @@
 #'   - `n_evaluated`: number of successful evaluations.
 #'   - `n_errors`: number of metric failures.
 #'   - `errors`: character vector with error messages, when any.
+#'   - `feedbacks`: per-example textual feedback when the metric returns
+#'     `list(score = , feedback = )` (see [metric_with_feedback()]);
+#'     `NA` otherwise.
 #'   - `data`: input data augmented with prediction metadata.
 #'
 #'   When `epochs > 1`, additional fields are included:
@@ -164,6 +167,7 @@ evaluate.Module <- function(
 
     scores <- numeric(nrow(evaluated))
     errors <- character(nrow(evaluated))
+    feedbacks <- rep(NA_character_, nrow(evaluated))
 
     for (i in seq_len(nrow(evaluated))) {
       expected_row <- data[i, , drop = FALSE]
@@ -171,17 +175,11 @@ evaluate.Module <- function(
 
       scores[i] <- tryCatch(
         {
-          score <- metric(prediction, expected_row)
-          if (is.logical(score)) {
-            as.numeric(score)
-          } else if (is.numeric(score)) {
-            score
-          } else {
-            cli::cli_abort(c(
-              "Metric must return logical or numeric values",
-              "i" = "Got {.cls {class(score)[1]}}"
-            ))
-          }
+          normalized <- normalize_metric_result(
+            metric(prediction, expected_row)
+          )
+          feedbacks[i] <- normalized$feedback
+          normalized$score
         },
         error = function(e) {
           errors[i] <<- e$message
@@ -211,6 +209,7 @@ evaluate.Module <- function(
       predictions = predictions,
       metadata = metadata,
       errors = errors,
+      feedbacks = feedbacks,
       evaluated = evaluated
     )
   }
@@ -223,6 +222,7 @@ evaluate.Module <- function(
     predictions <- epoch_results[[1]]$predictions
     metadata <- epoch_results[[1]]$metadata
     errors <- epoch_results[[1]]$errors
+    feedbacks <- epoch_results[[1]]$feedbacks
     evaluated <- epoch_results[[1]]$evaluated
   } else {
     # Extract scores from all epochs (computed once, reused later)
@@ -275,9 +275,10 @@ evaluate.Module <- function(
     }
     errors <- all_errors
 
-    # Use last epoch's predictions and metadata for the result
+    # Use last epoch's predictions, metadata, and feedback for the result
     predictions <- epoch_results[[epochs]]$predictions
     metadata <- epoch_results[[epochs]]$metadata
+    feedbacks <- epoch_results[[epochs]]$feedbacks
     evaluated <- epoch_results[[epochs]]$evaluated
   }
 
@@ -292,7 +293,8 @@ evaluate.Module <- function(
     predictions = predictions,
     n_evaluated = n_evaluated,
     n_errors = n_errors,
-    errors = errors[errors != ""]
+    errors = errors[errors != ""],
+    feedbacks = feedbacks
   )
 
   # Add epoch-specific statistics when epochs > 1

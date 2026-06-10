@@ -354,6 +354,115 @@ get_metric_field <- function(metric) {
   attr(metric, "field")
 }
 
+#' Create a Metric with Textual Feedback
+#'
+#' @description
+#' Wraps a metric function so it can return both a numeric score and
+#' textual feedback explaining the score. Feedback-aware optimizers such
+#' as [GEPA] use this feedback to guide their reflection step, mirroring
+#' DSPy's GEPA feedback-metric protocol.
+#'
+#' The wrapped function must return either:
+#' - a single numeric (or logical) score, or
+#' - a list with elements `score` (numeric or logical) and optionally
+#'   `feedback` (a single character string).
+#'
+#' Feedback metrics work everywhere ordinary metrics do: [evaluate()] and
+#' optimizers simply use the `score` element. Optimizers that understand
+#' feedback additionally collect the `feedback` strings.
+#'
+#' @param fn A function with signature `function(prediction, expected)`
+#'   returning a score or a `list(score = , feedback = )`.
+#' @param field Optional name of the column in training data containing the
+#'   expected output (stored as the metric's `field` attribute, like other
+#'   built-in metrics).
+#'
+#' @return A metric function classed as `dsprrr_feedback_metric`.
+#' @export
+#' @examples
+#' metric <- metric_with_feedback(
+#'   function(prediction, expected) {
+#'     if (identical(prediction, expected)) {
+#'       list(score = 1, feedback = "Correct.")
+#'     } else {
+#'       list(
+#'         score = 0,
+#'         feedback = paste0("Expected '", expected, "' but got '", prediction, "'.")
+#'       )
+#'     }
+#'   },
+#'   field = "answer"
+#' )
+#' metric("4", "4")
+#' metric("5", "4")
+metric_with_feedback <- function(fn, field = NULL) {
+  if (!is.function(fn)) {
+    cli::cli_abort("{.arg fn} must be a function")
+  }
+  if (!is.null(field) && (!is.character(field) || length(field) != 1)) {
+    cli::cli_abort("{.arg field} must be a single character string or NULL")
+  }
+
+  metric <- function(prediction, expected) {
+    fn(prediction, expected)
+  }
+  attr(metric, "field") <- field
+  class(metric) <- c("dsprrr_feedback_metric", class(metric))
+  metric
+}
+
+#' Check whether a metric is feedback-aware
+#' @noRd
+is_feedback_metric <- function(metric) {
+  inherits(metric, "dsprrr_feedback_metric")
+}
+
+#' Normalize a raw metric return value to score + feedback
+#'
+#' Accepts numeric, logical, or `list(score = , feedback = )` returns and
+#' produces a consistent `list(score = <numeric>, feedback = <character>)`.
+#' Feedback is `NA_character_` when not supplied.
+#'
+#' @noRd
+normalize_metric_result <- function(raw) {
+  if (is.list(raw)) {
+    if (!"score" %in% names(raw)) {
+      cli::cli_abort(c(
+        "Metric returned a list without a {.field score} element",
+        "i" = "Feedback metrics must return {.code list(score = , feedback = )}"
+      ))
+    }
+    score <- raw$score
+    feedback <- raw$feedback %||% NA_character_
+  } else {
+    score <- raw
+    feedback <- NA_character_
+  }
+
+  if (is.logical(score)) {
+    score <- as.numeric(score)
+  }
+  if (!is.numeric(score) || length(score) != 1) {
+    cli::cli_abort(c(
+      "Metric must return a single logical or numeric score",
+      "i" = "Got {.cls {class(score)[1]}} of length {length(score)}"
+    ))
+  }
+
+  if (!is.na(feedback[1])) {
+    if (!is.character(feedback) || length(feedback) != 1) {
+      cli::cli_abort(c(
+        "Metric feedback must be a single character string",
+        "i" = "Got {.cls {class(feedback)[1]}} of length {length(feedback)}"
+      ))
+    }
+  } else {
+    feedback <- NA_character_
+  }
+
+  list(score = score, feedback = feedback)
+}
+
 #' Create a Threshold Metric
 #'
 #' @description

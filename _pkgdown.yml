@@ -77,6 +77,8 @@ navbar:
       menu:
         - text: "The DSPy Philosophy"
           href: articles/concepts-dspy-philosophy.html
+        - text: "dsprrr vs. DSPy"
+          href: articles/dspy-comparison.html
         - text: "Signatures & Modules"
           href: articles/concepts-signatures-modules.html
         - text: "How Optimization Works"
@@ -137,6 +139,7 @@ articles:
     desc: Understand the philosophy, design, and theory behind dsprrr
     contents:
     - concepts-dspy-philosophy
+    - dspy-comparison
     - concepts-signatures-modules
     - concepts-optimization-theory
     - concepts-why-metrics-matter
@@ -335,6 +338,8 @@ reference:
     - async
     - run_async
     - stream_async
+    - run_stream
+    - stream_listener
 
   - title: Debugging & Traces
     desc: Inspect prompts, execution history, and traces

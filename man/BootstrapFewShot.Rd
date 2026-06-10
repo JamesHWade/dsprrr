@@ -54,6 +54,20 @@ The optimizer:
 \item Optionally runs multiple rounds, updating the teacher with new demos
 }
 }
+\details{
+\subsection{Joint pipeline compilation}{
+
+When \code{program} is a pipeline (built with \code{\link[=pipeline]{pipeline()}} or \code{\link{\%>>\%}}),
+BootstrapFewShot compiles the whole program jointly, like DSPy: the
+teacher pipeline runs end-to-end on each training example, the \emph{final}
+output is scored with the metric, and when a run passes the threshold
+every step's \code{(inputs, output)} pair from that trace is harvested as a
+demonstration for the corresponding step module. Intermediate steps
+therefore receive demos even though the training set only labels the
+final output. Labeled demos (\code{max_labeled_demos}) are applied to the
+final step only, and only when its input fields exist in the trainset.
+}
+}
 \examples{
 \dontrun{
 # Create a BootstrapFewShot teleprompter

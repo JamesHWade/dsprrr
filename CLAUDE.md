@@ -451,43 +451,52 @@ test_that("mock returns different values", {
 
 ## Implementation Status
 
-### Completed (Milestones A-D)
+### Completed
 
-**Module Types (11):**
+**Module Types (14):**
 - PredictModule, ReactModule, ProgramOfThoughtModule, CodeActModule
-- RAGModule, MultiChainComparisonModule, EnsembleModule
-- BestOfNModule, RefineModule, KNNFewShotModule
+- RAGModule, RLMModule, MultiChainComparisonModule, EnsembleModule
+- BestOfNModule, RefineModule, KNNFewShotModule, FnModule, AssertModule
+- PipelineModule (composition via `pipeline()` and `%>>%`)
 - ChainOfThought via signature transforms (`with_reasoning()`, `chain_of_thought()`)
 
-**Teleprompters (10):**
+**Teleprompters (11):**
 - LabeledFewShot, BootstrapFewShot, BootstrapFewShotWithRandomSearch
-- MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, Ensemble, GridSearch
+- MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, Ensemble, GridSearch, BetterTogether
+- BootstrapFewShot compiles pipelines **jointly**: per-step demos are
+  harvested from passing end-to-end traces (DSPy-style whole-program compilation)
+- GEPA supports feedback metrics via `metric_with_feedback()`: metrics may
+  return `list(score = , feedback = )` and the feedback drives reflection
+- Fidelity notes: SIMBA and GEPA are intentionally simplified vs. their
+  papers (documented in roxygen and `vignettes/dspy-comparison.Rmd`)
 
 **Infrastructure:**
 - R6 Module base class with `forward()`, `optimize_grid()`, `reset()`, trace methods
 - S7 Signature with DSPy-style string parsing
 - ellmer integration via `chat_structured()`
+- Two-tier caching (memory + disk): `configure_cache()`, `clear_cache()`, `cache_stats()`
+- LM configuration: `dsp_configure()`, `with_lm()`, `local_lm()`
 - Async support: `run_async()`, `stream_async()` with promises
+- Streaming listeners: `run_stream()` + `stream_listener()` (per-field
+  callbacks, pipeline status events)
 - vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)
 - Optimizer infrastructure: `OptimizerControl`, `EvalResult`, `CostSummary`, `Trial`, `TrialLog`
 - Module persistence: `pin_module_config()`, `restore_module_config()`
-- ragnar integration for RAG
+- ragnar integration for RAG; tidymodels integration via parsnip/dials
 
-### Planned (Milestones E-H)
-
-**E - Caching & LM Configuration (dsprrr-mqo, dsprrr-1y9):**
-- Multi-tier caching (memory → disk → provider)
-- `configure_dsprrr()` / `with_lm()` for global LM config
+### Planned
 
 **F - Ecosystem Integration:**
 - shinychat integration, MLflow observability
 
 **G - DSPy 3.0+ Parity (dsprrr-9df, dsprrr-7r4, dsprrr-a3z, dsprrr-deh):**
-- TypedPredictor equivalent, PEP 604 union types
+- Native reasoning-trace capture (analogous to `dspy.Reasoning`)
 - `tune_bayes()` integration, ParallelModule, Embedder abstraction
+- Joint multi-step support for instruction optimizers (MIPROv2/GEPA
+  per-component selection); demo bootstrapping is already joint
 
 **H - Production Efficiency (dsprrr-1u0):**
-- BootstrapFinetune (model distillation)
+- BootstrapFinetune (model distillation), RL-based optimizers
 
 ## Coding Conventions
 
@@ -520,9 +529,9 @@ Suggested:
 
 ## Known Issues
 
-- Some test files have `-improved` suffix that should be renamed
-- Minor test failures related to deepcopy state preservation
 - For internal S7 classes with complex default values, use `@noRd` instead of `@keywords internal` to avoid R CMD check codoc mismatch warnings
+- Instruction-level optimizers (MIPROv2, GEPA, COPRO) operate on single
+  modules; only BootstrapFewShot compiles pipelines jointly
 
 ## Issue Tracking with Beads
 

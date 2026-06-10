@@ -670,7 +670,7 @@ identify_failed_examples <- function(
 
     score <- tryCatch(
       {
-        metric(pred, row)
+        normalize_metric_result(metric(pred, row))$score
       },
       error = function(e) {
         NA_real_

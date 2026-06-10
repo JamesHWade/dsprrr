@@ -39,6 +39,9 @@ A list with elements. When \code{.return_format = "structured"} (default):
 \item \code{n_evaluated}: number of successful evaluations.
 \item \code{n_errors}: number of metric failures.
 \item \code{errors}: character vector with error messages, when any.
+\item \code{feedbacks}: per-example textual feedback when the metric returns
+\code{list(score = , feedback = )} (see \code{\link[=metric_with_feedback]{metric_with_feedback()}});
+\code{NA} otherwise.
 \item \code{data}: input data augmented with prediction metadata.
 }
 
