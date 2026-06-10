@@ -34,3 +34,18 @@ A simple teleprompter that adds labeled examples from the training set
 as demonstrations to the module. This is the simplest form of few-shot
 learning.
 }
+\examples{
+# A teleprompter that adds 2 labeled training examples as demonstrations
+tp <- LabeledFewShot(k = 2L, seed = 42L)
+tp@k
+
+\dontrun{
+# Compile a module with few-shot demos drawn from the training set
+classifier <- module(signature("text -> sentiment"), type = "predict")
+trainset <- dsp_trainset(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+optimized <- compile(tp, classifier, trainset)
+}
+}

@@ -13,6 +13,17 @@
 #' @param ... Additional arguments including trainset (training data)
 #'
 #' @return An optimized module
+#' @seealso [compile_module()] for the pipe-friendly wrapper with
+#'   validation and friendlier argument order
+#' @examples
+#' \dontrun{
+#' classifier <- module(signature("text -> sentiment"), type = "predict")
+#' trainset <- dsp_trainset(
+#'   text = c("I love it!", "Terrible experience"),
+#'   sentiment = c("positive", "negative")
+#' )
+#' optimized <- compile(LabeledFewShot(k = 2L), classifier, trainset)
+#' }
 #' @export
 compile <- S7::new_generic("compile", c("teleprompter", "program"))
 
