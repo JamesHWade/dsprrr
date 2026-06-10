@@ -65,9 +65,11 @@ make_qa_pipeline <- function() {
 }
 
 qa_metric <- function() {
+  # Field-aware metrics receive the full trainset row as `expected`
   metric <- function(prediction, expected) {
     pred <- if (is.list(prediction)) prediction$answer else prediction
-    as.numeric(identical(as.character(pred), as.character(expected)))
+    exp <- if (is.list(expected)) expected$answer else expected
+    as.numeric(identical(as.character(pred), as.character(exp)))
   }
   attr(metric, "field") <- "answer"
   metric
@@ -194,6 +196,44 @@ test_that("joint pipeline compilation skips labeled demos when fields absent", {
   expect_equal(compiled$steps[[2]]@module$demos[[1]]$source, "bootstrapped")
 })
 
+test_that("joint pipeline compilation works with built-in field-aware metrics", {
+  p <- make_qa_pipeline()
+  trainset <- qa_trainset()
+
+  tp <- BootstrapFewShot(
+    metric = metric_exact_match(field = "answer"),
+    max_labeled_demos = 0L,
+    max_bootstrapped_demos = 2L,
+    seed = 42L
+  )
+
+  compiled <- compile(tp, p, trainset)
+
+  expect_length(compiled$steps[[1]]@module$demos, 2)
+  expect_length(compiled$steps[[2]]@module$demos, 2)
+  expect_equal(compiled$steps[[1]]@module$demos[[1]]$source, "bootstrapped")
+})
+
+test_that("joint pipeline compilation does not accumulate teacher traces", {
+  p <- make_qa_pipeline()
+  trainset <- qa_trainset()
+
+  tp <- BootstrapFewShot(
+    metric = qa_metric(),
+    max_labeled_demos = 0L,
+    max_bootstrapped_demos = 4L,
+    seed = 42L
+  )
+
+  compiled <- compile(tp, p, trainset)
+
+  expect_equal(compiled$config$optimizer$total_attempts, 4L)
+  # Traces are cleared after each bootstrap attempt, so neither the original
+  # pipeline nor the compiled student retains them
+  expect_length(p$state$traces, 0)
+  expect_length(compiled$state$traces, 0)
+})
+
 test_that("joint pipeline compilation works with feedback metrics", {
   p <- make_qa_pipeline()
   trainset <- qa_trainset()
@@ -201,7 +241,8 @@ test_that("joint pipeline compilation works with feedback metrics", {
   metric <- metric_with_feedback(
     function(prediction, expected) {
       pred <- if (is.list(prediction)) prediction$answer else prediction
-      ok <- identical(as.character(pred), as.character(expected))
+      exp <- if (is.list(expected)) expected$answer else expected
+      ok <- identical(as.character(pred), as.character(exp))
       list(
         score = as.numeric(ok),
         feedback = if (ok) "Correct." else "Wrong."

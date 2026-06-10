@@ -370,11 +370,18 @@ stream_module_step <- function(
       text
     }
   } else {
-    result <- module$forward(inputs, .llm = .llm, trace = FALSE)
+    # Streaming bypasses the response cache even on the fallback path
+    result <- module$forward(
+      inputs,
+      .llm = .llm,
+      trace = FALSE,
+      .cache = FALSE
+    )
     output <- result$output[[1]]
 
     # Fire matching listeners once with the completed field values
     if (length(listeners) > 0) {
+      completed_fields <- character(0)
       for (l in listeners) {
         value <- if (is.list(output) && l$field %in% names(output)) {
           output[[l$field]]
@@ -385,15 +392,19 @@ stream_module_step <- function(
         }
         if (!is.null(value)) {
           l$callback(paste(as.character(value), collapse = ""))
-          emit_stream_status(
-            on_status,
-            type = "field_complete",
-            step = step,
-            n_steps = n_steps,
-            module = module_class,
-            field = l$field
-          )
+          completed_fields <- union(completed_fields, l$field)
         }
+      }
+      # One field_complete event per field, regardless of listener count
+      for (field in completed_fields) {
+        emit_stream_status(
+          on_status,
+          type = "field_complete",
+          step = step,
+          n_steps = n_steps,
+          module = module_class,
+          field = field
+        )
       }
     }
   }

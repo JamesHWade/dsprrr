@@ -433,10 +433,10 @@ normalize_metric_result <- function(raw) {
       ))
     }
     score <- raw$score
-    feedback <- raw$feedback %||% NA_character_
+    feedback <- raw$feedback
   } else {
     score <- raw
-    feedback <- NA_character_
+    feedback <- NULL
   }
 
   if (is.logical(score)) {
@@ -449,15 +449,13 @@ normalize_metric_result <- function(raw) {
     ))
   }
 
-  if (!is.na(feedback[1])) {
-    if (!is.character(feedback) || length(feedback) != 1) {
-      cli::cli_abort(c(
-        "Metric feedback must be a single character string",
-        "i" = "Got {.cls {class(feedback)[1]}} of length {length(feedback)}"
-      ))
-    }
-  } else {
+  if (is.null(feedback) || (length(feedback) == 1 && is.na(feedback))) {
     feedback <- NA_character_
+  } else if (!is.character(feedback) || length(feedback) != 1) {
+    cli::cli_abort(c(
+      "Metric feedback must be a single character string",
+      "i" = "Got {.cls {class(feedback)[1]}} of length {length(feedback)}"
+    ))
   }
 
   list(score = score, feedback = feedback)

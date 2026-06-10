@@ -3,7 +3,10 @@
 test_that("stream_listener validates inputs", {
   expect_error(stream_listener(1, function(x) x), "single non-empty string")
   expect_error(stream_listener("", function(x) x), "single non-empty string")
-  expect_error(stream_listener("answer", "not a function"), "must be a function")
+  expect_error(
+    stream_listener("answer", "not a function"),
+    "must be a function"
+  )
 
   listener <- stream_listener("answer", function(chunk) chunk)
   expect_s3_class(listener, "dsprrr_stream_listener")
@@ -138,6 +141,74 @@ test_that("run_stream falls back to one-shot events for structured output", {
 
   types <- vapply(events, function(ev) ev$type, character(1))
   expect_equal(types, c("step_start", "field_complete", "step_end"))
+})
+
+test_that("field_complete fires once per field with multiple listeners", {
+  local_reset_cache()
+
+  mock_llm <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        list(answer = "42", confidence = "high")
+      }
+    ),
+    class = "Chat"
+  )
+
+  sig <- signature("question -> answer, confidence")
+  mod <- module(sig, type = "predict")
+
+  first <- character()
+  second <- character()
+  events <- list()
+
+  run_stream(
+    mod,
+    question = "What is the answer?",
+    .llm = mock_llm,
+    listeners = list(
+      stream_listener("answer", function(chunk) {
+        first <<- c(first, chunk)
+      }),
+      stream_listener("answer", function(chunk) {
+        second <<- c(second, chunk)
+      })
+    ),
+    on_status = function(ev) {
+      events[[length(events) + 1]] <<- ev
+    }
+  )
+
+  # Both listeners fired, but only one field_complete event was emitted
+  expect_equal(first, "42")
+  expect_equal(second, "42")
+  types <- vapply(events, function(ev) ev$type, character(1))
+  expect_equal(sum(types == "field_complete"), 1)
+})
+
+test_that("run_stream fallback execution bypasses the response cache", {
+  local_reset_cache()
+
+  calls <- 0
+  mock_llm <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        calls <<- calls + 1
+        list(answer = as.character(calls), confidence = "high")
+      }
+    ),
+    class = "Chat"
+  )
+
+  sig <- signature("question -> answer, confidence")
+  mod <- module(sig, type = "predict")
+
+  r1 <- run_stream(mod, question = "same question", .llm = mock_llm)
+  r2 <- run_stream(mod, question = "same question", .llm = mock_llm)
+
+  # Each streaming call hits the provider; nothing is served from cache
+  expect_equal(r1$answer, "1")
+  expect_equal(r2$answer, "2")
 })
 
 test_that("run_stream works across pipeline steps with status events", {

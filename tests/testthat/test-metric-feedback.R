@@ -53,6 +53,15 @@ test_that("normalize_metric_result handles all return shapes", {
 
   # Invalid feedback type errors
   expect_error(norm(list(score = 1, feedback = c("a", "b"))), "feedback")
+  expect_error(norm(list(score = 1, feedback = character(0))), "feedback")
+  expect_error(norm(list(score = 1, feedback = c(NA, "b"))), "feedback")
+  expect_error(norm(list(score = 1, feedback = 42)), "feedback")
+
+  # Scalar NA feedback is treated as absent
+  expect_equal(
+    norm(list(score = 1, feedback = NA)),
+    list(score = 1, feedback = NA_character_)
+  )
 })
 
 test_that("evaluate collects feedback from feedback metrics", {

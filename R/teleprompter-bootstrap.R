@@ -498,7 +498,8 @@ compile_bootstrap_pipeline <- function(
     character(1)
   )
 
-  output_col <- get_metric_field(teleprompter@metric) %||%
+  metric_field <- get_metric_field(teleprompter@metric)
+  output_col <- metric_field %||%
     find_output_column(trainset, pipeline_inputs)
 
   if (is.null(output_col)) {
@@ -620,7 +621,11 @@ compile_bootstrap_pipeline <- function(
         }
       }
 
-      expected <- if (!is.null(output_col) && output_col %in% names(row)) {
+      # Field-aware metrics extract their field from `expected` themselves
+      # (as in evaluate()), so they receive the full row, not the bare value
+      expected <- if (!is.null(metric_field) && metric_field %in% names(row)) {
+        row
+      } else if (!is.null(output_col) && output_col %in% names(row)) {
         row[[output_col]]
       } else {
         NULL
@@ -645,6 +650,11 @@ compile_bootstrap_pipeline <- function(
       if (is.null(result)) {
         next
       }
+
+      # Each forward(trace = TRUE) appends a trace; keep only the one for
+      # this attempt so memory does not grow with the number of attempts
+      trace_entry <- teacher$state$traces[[length(teacher$state$traces)]]
+      teacher$state$traces <- list()
 
       final_output <- result$output[[1]]
 
@@ -676,8 +686,6 @@ compile_bootstrap_pipeline <- function(
       }
 
       if (passes_threshold) {
-        trace_entry <- teacher$state$traces[[length(teacher$state$traces)]]
-
         for (i in demo_steps) {
           key <- as.character(i)
           if (
