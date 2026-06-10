@@ -84,6 +84,342 @@ stream_async <- function(module, ..., .llm = NULL) {
   llm$stream_async(request$payload)
 }
 
+#' Create a Stream Listener for a Module Output Field
+#'
+#' @description
+#' Creates a listener that receives streamed content for a specific output
+#' field during [run_stream()]. This mirrors DSPy's `StreamListener`:
+#' attach a callback to the field you care about (e.g., `"answer"`) and it
+#' fires as content for that field is produced — token by token when the
+#' field can be token-streamed, or once with the complete value otherwise.
+#'
+#' @details
+#' Token-level streaming is available when a module's output is a single
+#' string field. In that case dsprrr streams the response as plain text and
+#' treats the accumulated text as the field's value. Modules with multiple
+#' or non-string output fields run normally and fire each matching listener
+#' once with the completed value (chunked streaming of structured output is
+#' not supported by the underlying structured-output API).
+#'
+#' @param field Name of the output field to listen to (a single string).
+#' @param callback A function called with each chunk of text (a single
+#'   string). For non-streamable fields, called once with the full value.
+#'
+#' @return A `dsprrr_stream_listener` object for use with [run_stream()].
+#' @export
+#' @examples
+#' \dontrun{
+#' listener <- stream_listener("answer", function(chunk) cat(chunk))
+#' run_stream(mod, question = "Tell me a story", listeners = list(listener))
+#' }
+stream_listener <- function(field, callback) {
+  if (!is.character(field) || length(field) != 1 || !nzchar(field)) {
+    cli::cli_abort("{.arg field} must be a single non-empty string")
+  }
+  if (!is.function(callback)) {
+    cli::cli_abort("{.arg callback} must be a function")
+  }
+
+  structure(
+    list(field = field, callback = callback),
+    class = "dsprrr_stream_listener"
+  )
+}
+
+#' Run a Module with Streaming Listeners and Status Events
+#'
+#' @description
+#' Executes a module (or pipeline) while streaming output to per-field
+#' listeners and emitting status events. This is dsprrr's analogue of
+#' DSPy's `streamify()`: use it to surface intermediate progress and
+#' incremental output in Shiny apps or console tools.
+#'
+#' For pipelines, a status event is emitted as each step starts and ends,
+#' and listeners fire for matching fields at any step — not just the final
+#' one.
+#'
+#' @details
+#' ## Streaming behavior
+#'
+#' - Modules whose output is a single string field are token-streamed:
+#'   matching listeners receive text chunks as they arrive, and the
+#'   accumulated text becomes the field's value. Token streaming uses the
+#'   provider's text mode and requires the `coro` package.
+#' - Modules with multiple or non-string output fields run normally;
+#'   matching listeners fire once with the completed value.
+#' - Streaming execution does not record traces and bypasses the response
+#'   cache.
+#'
+#' ## Status events
+#'
+#' When `on_status` is provided, it is called with a list describing each
+#' event:
+#' - `type`: one of `"step_start"`, `"field_start"`, `"field_end"`,
+#'   `"field_complete"`, `"step_end"`
+#' - `step`, `n_steps`: position within the pipeline (both `1` for a
+#'   single module)
+#' - `module`: class name of the executing module
+#' - `field`: the output field name (field events only)
+#'
+#' @param module A dsprrr Module or pipeline.
+#' @param ... Named inputs matching the module's signature.
+#' @param .llm Optional ellmer Chat object.
+#' @param listeners A [stream_listener()] or list of them.
+#' @param on_status Optional function called with status event lists.
+#'
+#' @return The final output (named list for structured outputs, character
+#'   for plain string outputs), invisibly.
+#' @export
+#' @examples
+#' \dontrun{
+#' sig <- signature("question -> answer")
+#' mod <- module(sig, type = "predict")
+#'
+#' run_stream(
+#'   mod,
+#'   question = "Tell me a story",
+#'   .llm = ellmer::chat_openai(),
+#'   listeners = stream_listener("answer", function(chunk) cat(chunk)),
+#'   on_status = function(ev) message("[", ev$type, "] step ", ev$step)
+#' )
+#' }
+run_stream <- function(
+  module,
+  ...,
+  .llm = NULL,
+  listeners = list(),
+  on_status = NULL
+) {
+  if (!inherits(module, "Module")) {
+    cli::cli_abort("{.arg module} must be a dsprrr Module object")
+  }
+
+  listeners <- normalize_stream_listeners(listeners)
+
+  if (!is.null(on_status) && !is.function(on_status)) {
+    cli::cli_abort("{.arg on_status} must be a function or NULL")
+  }
+
+  inputs <- list(...)
+
+  if (inherits(module, "PipelineModule")) {
+    result <- module$forward_stream(
+      inputs,
+      .llm = .llm,
+      listeners = listeners,
+      on_status = on_status
+    )
+  } else {
+    result <- stream_module_step(
+      module,
+      inputs,
+      .llm = .llm,
+      listeners = listeners,
+      on_status = on_status,
+      step = 1L,
+      n_steps = 1L
+    )
+  }
+
+  invisible(result)
+}
+
+#' Normalize the listeners argument to a list of stream listeners
+#' @noRd
+normalize_stream_listeners <- function(listeners) {
+  if (inherits(listeners, "dsprrr_stream_listener")) {
+    listeners <- list(listeners)
+  }
+  if (!is.list(listeners)) {
+    cli::cli_abort(
+      "{.arg listeners} must be a {.fn stream_listener} or a list of them"
+    )
+  }
+  for (l in listeners) {
+    if (!inherits(l, "dsprrr_stream_listener")) {
+      cli::cli_abort(c(
+        "All listeners must be created with {.fn stream_listener}",
+        "x" = "Got {.cls {class(l)[1]}}"
+      ))
+    }
+  }
+  listeners
+}
+
+#' Identify the streamable output field of a signature, if any
+#'
+#' Token streaming is only possible when the output is a single string
+#' field: either a bare string type or an object type with exactly one
+#' string property.
+#'
+#' @return A list with `field` (name) and `wrap` (whether the output should
+#'   be wrapped in a named list), or NULL when not token-streamable.
+#' @noRd
+streamable_output_field <- function(output_type) {
+  if (
+    inherits(output_type, "ellmer::TypeBasic") &&
+      identical(output_type@type, "string")
+  ) {
+    return(list(field = "output", wrap = FALSE))
+  }
+
+  if (inherits(output_type, "ellmer::TypeObject")) {
+    props <- output_type@properties
+    if (length(props) == 1) {
+      prop <- props[[1]]
+      if (
+        inherits(prop, "ellmer::TypeBasic") && identical(prop@type, "string")
+      ) {
+        return(list(field = names(props)[1], wrap = TRUE))
+      }
+    }
+  }
+
+  NULL
+}
+
+#' Emit a status event if a handler is registered
+#' @noRd
+emit_stream_status <- function(on_status, ...) {
+  if (!is.null(on_status)) {
+    on_status(list(...))
+  }
+  invisible(NULL)
+}
+
+#' Execute one module while streaming to listeners
+#'
+#' Shared by run_stream() (single modules) and PipelineModule$forward_stream()
+#' (each step). Token-streams single-string-field outputs when a listener
+#' matches; otherwise falls back to a normal forward pass and fires matching
+#' listeners once with the completed value.
+#'
+#' @return The module's output value (named list or plain value).
+#' @noRd
+stream_module_step <- function(
+  module,
+  inputs,
+  .llm = NULL,
+  listeners = list(),
+  on_status = NULL,
+  step = 1L,
+  n_steps = 1L
+) {
+  module_class <- class(module)[1]
+  emit_stream_status(
+    on_status,
+    type = "step_start",
+    step = step,
+    n_steps = n_steps,
+    module = module_class
+  )
+
+  streamable <- streamable_output_field(module$signature@output_type)
+  matching <- if (!is.null(streamable)) {
+    Filter(function(l) identical(l$field, streamable$field), listeners)
+  } else {
+    list()
+  }
+
+  can_stream <- length(matching) > 0 &&
+    is.function(module$stream) &&
+    rlang::is_installed("coro")
+
+  if (length(matching) > 0 && !can_stream && !rlang::is_installed("coro")) {
+    cli::cli_warn(c(
+      "Token streaming requires the {.pkg coro} package",
+      "i" = "Falling back to non-streaming execution",
+      "i" = "Install with {.code install.packages('coro')}"
+    ))
+  }
+
+  if (can_stream) {
+    field <- streamable$field
+    emit_stream_status(
+      on_status,
+      type = "field_start",
+      step = step,
+      n_steps = n_steps,
+      module = module_class,
+      field = field
+    )
+
+    chunk_callback <- function(chunk) {
+      for (l in matching) {
+        l$callback(chunk)
+      }
+    }
+
+    text <- do.call(
+      module$stream,
+      c(inputs, list(.llm = .llm, callback = chunk_callback))
+    )
+
+    emit_stream_status(
+      on_status,
+      type = "field_end",
+      step = step,
+      n_steps = n_steps,
+      module = module_class,
+      field = field
+    )
+
+    output <- if (streamable$wrap) {
+      stats::setNames(list(text), field)
+    } else {
+      text
+    }
+  } else {
+    # Streaming bypasses the response cache even on the fallback path
+    result <- module$forward(
+      inputs,
+      .llm = .llm,
+      trace = FALSE,
+      .cache = FALSE
+    )
+    output <- result$output[[1]]
+
+    # Fire matching listeners once with the completed field values
+    if (length(listeners) > 0) {
+      completed_fields <- character(0)
+      for (l in listeners) {
+        value <- if (is.list(output) && l$field %in% names(output)) {
+          output[[l$field]]
+        } else if (!is.list(output) && identical(l$field, "output")) {
+          output
+        } else {
+          NULL
+        }
+        if (!is.null(value)) {
+          l$callback(paste(as.character(value), collapse = ""))
+          completed_fields <- union(completed_fields, l$field)
+        }
+      }
+      # One field_complete event per field, regardless of listener count
+      for (field in completed_fields) {
+        emit_stream_status(
+          on_status,
+          type = "field_complete",
+          step = step,
+          n_steps = n_steps,
+          module = module_class,
+          field = field
+        )
+      }
+    }
+  }
+
+  emit_stream_status(
+    on_status,
+    type = "step_end",
+    step = step,
+    n_steps = n_steps,
+    module = module_class
+  )
+
+  output
+}
+
 #' Build a simple prompt from inputs
 #'
 #' @description

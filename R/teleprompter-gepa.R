@@ -10,6 +10,28 @@
 #' Genetic/evolutionary prompt optimizer that evolves instruction variants
 #' using reflection on failed examples.
 #'
+#' @details
+#' ## Feedback metrics
+#'
+#' GEPA works best with feedback-aware metrics created via
+#' [metric_with_feedback()]. When the metric returns
+#' `list(score = , feedback = )`, the textual feedback for failed examples
+#' is included in the reflection prompt, giving the reflection LLM concrete
+#' guidance on *why* an output was wrong — the key mechanism in the GEPA
+#' paper ("GEPA: Reflective Prompt Evolution Can Outperform RL",
+#' Agrawal et al., 2025). Plain numeric metrics still work; reflection then
+#' sees only inputs, expected, and predicted values.
+#'
+#' ## Differences from DSPy's GEPA
+#'
+#' This is an adapted ("GEPA-lite") implementation. It shares the core
+#' ideas — reflective mutation of instructions guided by failures and
+#' feedback, plus Pareto-frontier selection over multiple metrics — but
+#' uses a fixed population/generations evolutionary loop rather than
+#' DSPy's budget-driven candidate search, and does not yet support
+#' per-component selection in multi-step programs or inference-time
+#' search. Expect qualitatively similar behavior, not identical results.
+#'
 #' @param metrics Named list of metric functions for evaluation.
 #' @param metric A single metric function (fallback when `metrics` is NULL).
 #' @param metric_threshold Minimum score for an example to be considered successful.
@@ -388,6 +410,8 @@ gepa_failed_examples <- function(
   output_col <- find_output_column(dataset, input_names)
 
   scores <- eval_result@examples$score
+  feedbacks <- eval_result@examples$feedback %||%
+    rep(NA_character_, length(scores))
   failed_idx <- which(is.na(scores) | scores < threshold)
 
   if (length(failed_idx) == 0) {
@@ -407,7 +431,8 @@ gepa_failed_examples <- function(
     list(
       inputs = inputs,
       expected = expected,
-      predicted = eval_result@examples$predicted[[i]] %||% NA
+      predicted = eval_result@examples$predicted[[i]] %||% NA,
+      feedback = feedbacks[[i]] %||% NA_character_
     )
   })
 }
@@ -586,7 +611,7 @@ gepa_format_failures <- function(failed_examples) {
         sep = ": ",
         collapse = ", "
       )
-      paste0(
+      line <- paste0(
         "Inputs: ",
         input_text,
         " | Expected: ",
@@ -594,6 +619,11 @@ gepa_format_failures <- function(failed_examples) {
         " | Predicted: ",
         as.character(ex$predicted)
       )
+      feedback <- ex$feedback %||% NA_character_
+      if (length(feedback) == 1 && !is.na(feedback) && nzchar(feedback)) {
+        line <- paste0(line, " | Feedback: ", feedback)
+      }
+      line
     },
     character(1)
   )

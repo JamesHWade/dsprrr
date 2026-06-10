@@ -135,6 +135,7 @@ PipelineModule <- R6::R6Class(
       all_metadata <- list()
       all_chats <- list()
       step_outputs <- list()
+      step_inputs <- list()
 
       # Execute each step in sequence
       for (i in seq_along(self$steps)) {
@@ -148,6 +149,7 @@ PipelineModule <- R6::R6Class(
 
         # Merge with static inputs (static inputs override mapped ones)
         merged_inputs <- modifyList(mapped_inputs, step@static_inputs)
+        step_inputs[[i]] <- merged_inputs
 
         # Validate inputs against module signature
         required_inputs <- vapply(
@@ -251,6 +253,7 @@ PipelineModule <- R6::R6Class(
           timestamp = end_time,
           inputs = batch,
           output = current_data,
+          step_inputs = step_inputs,
           step_outputs = step_outputs,
           step_metadata = all_metadata,
           aggregated = aggregated_metadata
@@ -269,6 +272,86 @@ PipelineModule <- R6::R6Class(
         chat = list(last_chat),
         metadata = list(aggregated_metadata)
       )
+    },
+
+    #' @description
+    #' Execute the pipeline with streaming listeners and status events.
+    #' Used by [run_stream()]; see that function for semantics. Streaming
+    #' execution does not record traces.
+    #' @param batch Named list or data frame of inputs
+    #' @param .llm Optional ellmer chat object
+    #' @param listeners List of [stream_listener()] objects
+    #' @param on_status Optional function called with status event lists
+    #' @return The final output (named list or plain value)
+    forward_stream = function(
+      batch,
+      .llm = NULL,
+      listeners = list(),
+      on_status = NULL
+    ) {
+      if (is.data.frame(batch)) {
+        current_data <- as.list(batch[1, , drop = FALSE])
+      } else {
+        current_data <- batch
+      }
+
+      n_steps <- length(self$steps)
+
+      for (i in seq_along(self$steps)) {
+        step <- self$steps[[i]]
+
+        mapped_inputs <- private$apply_input_mapping(
+          current_data,
+          step@input_map
+        )
+        merged_inputs <- modifyList(mapped_inputs, step@static_inputs)
+
+        required_inputs <- vapply(
+          step@module$signature@inputs,
+          function(x) x$name,
+          character(1)
+        )
+        missing <- setdiff(required_inputs, names(merged_inputs))
+        if (length(missing) > 0) {
+          cli::cli_abort(c(
+            "Missing inputs for pipeline step {i}",
+            "x" = "Required: {.field {missing}}",
+            "i" = "Available: {.field {names(merged_inputs)}}"
+          ))
+        }
+
+        output <- stream_module_step(
+          step@module,
+          merged_inputs,
+          .llm = .llm,
+          listeners = listeners,
+          on_status = on_status,
+          step = i,
+          n_steps = n_steps
+        )
+
+        if (is.null(output)) {
+          cli::cli_abort(c(
+            "Pipeline step {i} returned NULL output",
+            "x" = "Module {.cls {class(step@module)[1]}} did not produce output"
+          ))
+        }
+
+        if (is.list(output) && !is.data.frame(output)) {
+          current_data <- output
+          if (length(step@output_select) > 0) {
+            current_data <- current_data[intersect(
+              names(current_data),
+              step@output_select
+            )]
+          }
+        } else {
+          output_name <- private$get_output_name(step@module$signature)
+          current_data <- stats::setNames(list(output), output_name)
+        }
+      }
+
+      current_data
     },
 
     #' @description
@@ -338,6 +421,36 @@ PipelineModule <- R6::R6Class(
       }
 
       invisible(self)
+    },
+
+    #' @description
+    #' Create a deep copy of the pipeline with independent step modules
+    #' @return New PipelineModule with copied steps, config, and state
+    deepcopy = function() {
+      new_steps <- lapply(self$steps, function(step) {
+        mod <- step@module
+        new_mod <- if (is.function(mod$deepcopy)) {
+          mod$deepcopy()
+        } else if (is.function(mod$reset_copy)) {
+          mod$reset_copy()
+        } else {
+          mod$copy(deep = TRUE)
+        }
+        PipelineStep(
+          module = new_mod,
+          input_map = step@input_map,
+          output_select = step@output_select,
+          static_inputs = step@static_inputs
+        )
+      })
+
+      new_pipeline <- PipelineModule$new(
+        steps = new_steps,
+        config = lapply(self$config, function(x) x),
+        chat = self$chat
+      )
+      new_pipeline$state <- lapply(self$state, function(x) x)
+      new_pipeline
     },
 
     #' @description

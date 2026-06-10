@@ -51,3 +51,27 @@ GEPA(
 Genetic/evolutionary prompt optimizer that evolves instruction variants
 using reflection on failed examples.
 }
+\details{
+\subsection{Feedback metrics}{
+
+GEPA works best with feedback-aware metrics created via
+\code{\link[=metric_with_feedback]{metric_with_feedback()}}. When the metric returns
+\code{list(score = , feedback = )}, the textual feedback for failed examples
+is included in the reflection prompt, giving the reflection LLM concrete
+guidance on \emph{why} an output was wrong — the key mechanism in the GEPA
+paper ("GEPA: Reflective Prompt Evolution Can Outperform RL",
+Agrawal et al., 2025). Plain numeric metrics still work; reflection then
+sees only inputs, expected, and predicted values.
+}
+
+\subsection{Differences from DSPy's GEPA}{
+
+This is an adapted ("GEPA-lite") implementation. It shares the core
+ideas — reflective mutation of instructions guided by failures and
+feedback, plus Pareto-frontier selection over multiple metrics — but
+uses a fixed population/generations evolutionary loop rather than
+DSPy's budget-driven candidate search, and does not yet support
+per-component selection in multi-step programs or inference-time
+search. Expect qualitatively similar behavior, not identical results.
+}
+}

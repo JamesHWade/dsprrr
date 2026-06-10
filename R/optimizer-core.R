@@ -192,7 +192,9 @@ EvalResult <- S7::new_class(
 #' @param ... Additional arguments passed to [evaluate()].
 #'
 #' @return An EvalResult object containing:
-#'   - `examples`: tibble with per-example row_id, score, error, predicted, and input columns (prefixed with input_*)
+#'   - `examples`: tibble with per-example row_id, score, error, predicted,
+#'     feedback (textual feedback from feedback-aware metrics, see
+#'     [metric_with_feedback()]), and input columns (prefixed with input_*)
 #'   - `mean_score`: mean score across successful evaluations
 #'   - `std_error`: standard error of per-example scores (SD / sqrt(n))
 #'   - `n_evaluated`: number of successful evaluations
@@ -339,7 +341,12 @@ eval_program <- function(
     } else {
       rep(NA_character_, n)
     },
-    predicted = eval_result$predictions
+    predicted = eval_result$predictions,
+    feedback = if (length(eval_result$feedbacks %||% character(0)) == n) {
+      eval_result$feedbacks
+    } else {
+      rep(NA_character_, n)
+    }
   )
 
   # Add input columns from dataset

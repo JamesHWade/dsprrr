@@ -20,6 +20,19 @@
 #' 4. Selects top-scoring predictions as bootstrapped demonstrations
 #' 5. Optionally runs multiple rounds, updating the teacher with new demos
 #'
+#' @details
+#' ## Joint pipeline compilation
+#'
+#' When `program` is a pipeline (built with [pipeline()] or [`%>>%`]),
+#' BootstrapFewShot compiles the whole program jointly, like DSPy: the
+#' teacher pipeline runs end-to-end on each training example, the *final*
+#' output is scored with the metric, and when a run passes the threshold
+#' every step's `(inputs, output)` pair from that trace is harvested as a
+#' demonstration for the corresponding step module. Intermediate steps
+#' therefore receive demos even though the training set only labels the
+#' final output. Labeled demos (`max_labeled_demos`) are applied to the
+#' final step only, and only when its input fields exist in the trainset.
+#'
 #' @param metric A metric function for evaluating predictions (required).
 #' @param metric_threshold Minimum score for a demo to be accepted.
 #'   If NULL, accepts any successful prediction. Default is NULL.
@@ -142,6 +155,19 @@ compile_bootstrap <- function(
 
   if (is.null(teleprompter@metric)) {
     cli::cli_abort("BootstrapFewShot requires a metric function")
+  }
+
+  # Pipelines are compiled jointly: the whole program runs end-to-end and
+  # every step harvests demos from traces that pass the metric
+  if (inherits(program, "PipelineModule")) {
+    return(compile_bootstrap_pipeline(
+      teleprompter,
+      program,
+      trainset,
+      valset = valset,
+      .llm = .llm,
+      ...
+    ))
   }
 
   # Apply default teacher settings if not provided
@@ -300,10 +326,10 @@ compile_bootstrap <- function(
         next
       }
 
-      # Evaluate with metric
+      # Evaluate with metric (feedback metrics return list(score, feedback))
       score <- tryCatch(
         {
-          teleprompter@metric(result, expected)
+          normalize_metric_result(teleprompter@metric(result, expected))$score
         },
         error = function(e) {
           cli::cli_warn(
@@ -418,6 +444,351 @@ compile_bootstrap <- function(
         EvalResult(
           n_evaluated = as.integer(length(bootstrapped_demos)),
           n_errors = as.integer(error_count)
+        )
+      )
+    }
+
+    trial_log$add_trial(trial)
+  }
+
+  student
+}
+
+#' Joint compile method for BootstrapFewShot on pipelines
+#'
+#' Implements DSPy-style whole-program compilation: the teacher pipeline is
+#' executed end-to-end on each training example, the final output is scored
+#' with the metric, and when a run passes the threshold every step's
+#' (inputs, output) pair from that trace becomes a candidate demonstration
+#' for the corresponding step module.
+#'
+#' @noRd
+compile_bootstrap_pipeline <- function(
+  teleprompter,
+  program,
+  trainset,
+  valset = NULL,
+  .llm = NULL,
+  ...
+) {
+  control <- optimizer_control(
+    seed = teleprompter@seed,
+    max_errors = teleprompter@max_errors,
+    log_dir = teleprompter@log_dir
+  )
+
+  trial_log <- if (!is.null(teleprompter@log_dir)) {
+    TrialLog$new(
+      optimizer_name = "BootstrapFewShot",
+      log_dir = teleprompter@log_dir
+    )
+  } else {
+    NULL
+  }
+
+  trainset <- sample_dataset(trainset, n = NULL, seed = teleprompter@seed)
+
+  # Independent copies: teacher generates traces, student receives demos
+  teacher <- program$deepcopy()
+  student <- program$deepcopy()
+
+  pipeline_inputs <- vapply(
+    program$signature@inputs,
+    function(x) x$name,
+    character(1)
+  )
+
+  metric_field <- get_metric_field(teleprompter@metric)
+  output_col <- metric_field %||%
+    find_output_column(trainset, pipeline_inputs)
+
+  if (is.null(output_col)) {
+    cli::cli_warn(
+      c(
+        "No output column found in trainset",
+        "i" = "Expected one of: 'output', 'label', 'answer', 'response', 'result', 'y'",
+        "i" = "Or any column not in inputs: {.val {pipeline_inputs}}",
+        "!" = "Metric will receive NULL as expected value for all examples"
+      ),
+      class = "dsprrr_missing_output_column"
+    )
+  }
+
+  # Steps whose modules can hold demonstrations (e.g., PredictModule)
+  n_steps <- length(program$steps)
+  demo_steps <- which(vapply(
+    program$steps,
+    function(step) "demos" %in% names(step@module),
+    logical(1)
+  ))
+
+  if (length(demo_steps) == 0) {
+    cli::cli_warn(c(
+      "No pipeline step supports demonstrations",
+      "i" = "BootstrapFewShot requires at least one step module with a {.field demos} field",
+      "!" = "Returning unmodified program"
+    ))
+    return(program)
+  }
+
+  # Phase 1: labeled demos for the final step only — its inputs/output are
+  # the only ones the trainset can label directly. Intermediate steps get
+  # demos exclusively from bootstrapped traces.
+  labeled_demos <- stats::setNames(
+    rep(list(list()), n_steps),
+    as.character(seq_len(n_steps))
+  )
+  final_step <- n_steps
+  n_labeled <- 0L
+
+  if (teleprompter@max_labeled_demos > 0 && final_step %in% demo_steps) {
+    final_module <- program$steps[[final_step]]@module
+    final_inputs <- vapply(
+      final_module$signature@inputs,
+      function(x) x$name,
+      character(1)
+    )
+
+    if (all(final_inputs %in% names(trainset))) {
+      n_labeled <- min(teleprompter@max_labeled_demos, nrow(trainset))
+      labeled_data <- trainset[seq_len(n_labeled), , drop = FALSE]
+      demos <- format_trainset_as_demos(
+        labeled_data,
+        final_module$signature,
+        output_col = output_col
+      )
+      for (i in seq_along(demos)) {
+        demos[[i]]$source <- "labeled"
+        demos[[i]]$score <- NA_real_
+        demos[[i]]$round <- 0L
+      }
+      labeled_demos[[as.character(final_step)]] <- demos
+    }
+  }
+
+  # Examples not consumed as labeled demos are bootstrap candidates
+  bootstrap_indices <- if (n_labeled < nrow(trainset)) {
+    seq(n_labeled + 1, nrow(trainset))
+  } else {
+    integer(0)
+  }
+
+  # Phase 2: bootstrap demos for every demo-capable step from passing traces
+  step_demos <- stats::setNames(
+    rep(list(list()), n_steps),
+    as.character(seq_len(n_steps))
+  )
+  error_count <- 0L
+  total_attempts <- 0L
+
+  all_steps_full <- function() {
+    all(vapply(
+      demo_steps,
+      function(i) {
+        length(step_demos[[as.character(i)]]) >=
+          teleprompter@max_bootstrapped_demos
+      },
+      logical(1)
+    ))
+  }
+
+  for (round in seq_len(teleprompter@max_rounds)) {
+    if (length(bootstrap_indices) == 0 || all_steps_full()) {
+      break
+    }
+
+    # Give the teacher the demos collected so far for this round
+    for (i in demo_steps) {
+      key <- as.character(i)
+      teacher_module <- teacher$steps[[i]]@module
+      teacher_module$demos <- c(labeled_demos[[key]], step_demos[[key]])
+    }
+
+    for (idx in bootstrap_indices) {
+      budget_check <- check_budget(total_attempts, error_count, control)
+      if (budget_check$should_stop) {
+        cli::cli_warn(budget_check$reason)
+        break
+      }
+
+      row <- trainset[idx, , drop = FALSE]
+      total_attempts <- total_attempts + 1L
+
+      example_inputs <- list()
+      for (name in pipeline_inputs) {
+        if (name %in% names(row)) {
+          example_inputs[[name]] <- row[[name]]
+        }
+      }
+
+      # Field-aware metrics extract their field from `expected` themselves
+      # (as in evaluate()), so they receive the full row, not the bare value
+      expected <- if (!is.null(metric_field) && metric_field %in% names(row)) {
+        row
+      } else if (!is.null(output_col) && output_col %in% names(row)) {
+        row[[output_col]]
+      } else {
+        NULL
+      }
+
+      result <- tryCatch(
+        teacher$forward(example_inputs, .llm = .llm, trace = TRUE),
+        error = function(e) {
+          error_count <<- error_count + 1L
+          cli::cli_warn(
+            c(
+              "Bootstrap attempt failed",
+              "x" = conditionMessage(e),
+              "i" = "Error count: {error_count}/{control@max_errors}"
+            ),
+            class = "dsprrr_bootstrap_warning"
+          )
+          NULL
+        }
+      )
+
+      if (is.null(result)) {
+        next
+      }
+
+      # Each forward(trace = TRUE) appends a trace; keep only the one for
+      # this attempt so memory does not grow with the number of attempts
+      trace_entry <- teacher$state$traces[[length(teacher$state$traces)]]
+      teacher$state$traces <- list()
+
+      final_output <- result$output[[1]]
+
+      score <- tryCatch(
+        normalize_metric_result(
+          teleprompter@metric(final_output, expected)
+        )$score,
+        error = function(e) {
+          cli::cli_warn(
+            c(
+              "Metric evaluation failed for example {idx}",
+              "x" = conditionMessage(e),
+              "i" = "This example will be skipped for bootstrapping"
+            ),
+            class = "dsprrr_metric_warning"
+          )
+          NA_real_
+        }
+      )
+
+      passes_threshold <- if (!is.na(score)) {
+        if (!is.null(teleprompter@metric_threshold)) {
+          score >= teleprompter@metric_threshold
+        } else {
+          score > 0
+        }
+      } else {
+        FALSE
+      }
+
+      if (passes_threshold) {
+        for (i in demo_steps) {
+          key <- as.character(i)
+          if (
+            length(step_demos[[key]]) >= teleprompter@max_bootstrapped_demos
+          ) {
+            next
+          }
+          step_in <- trace_entry$step_inputs[[i]]
+          step_out <- trace_entry$step_outputs[[i]]
+          if (is.null(step_in) || is.null(step_out)) {
+            next
+          }
+          demo <- list(
+            inputs = step_in,
+            output = step_out,
+            source = "bootstrapped",
+            score = score,
+            round = round
+          )
+          step_demos[[key]] <- append(step_demos[[key]], list(demo))
+        }
+      }
+
+      if (all_steps_full()) {
+        break
+      }
+    }
+
+    if (all_steps_full()) {
+      break
+    }
+  }
+
+  # Phase 3: assign top-scoring demos to the student's step modules
+  n_bootstrapped_total <- 0L
+  for (i in demo_steps) {
+    key <- as.character(i)
+    demos_i <- step_demos[[key]]
+
+    if (length(demos_i) > teleprompter@max_bootstrapped_demos) {
+      scores <- vapply(demos_i, function(d) d$score %||% 0, numeric(1))
+      top_idx <- order(scores, decreasing = TRUE)[
+        seq_len(teleprompter@max_bootstrapped_demos)
+      ]
+      demos_i <- demos_i[top_idx]
+    }
+
+    n_bootstrapped_total <- n_bootstrapped_total + length(demos_i)
+    student_module <- student$steps[[i]]@module
+    student_module$demos <- c(labeled_demos[[key]], demos_i)
+  }
+
+  student$state$compiled <- TRUE
+  student$config$compiled <- TRUE
+  student$config$teleprompter <- "BootstrapFewShot"
+  student$config$optimizer <- list(
+    joint_pipeline = TRUE,
+    n_steps = n_steps,
+    demo_steps = demo_steps,
+    n_labeled_demos = length(labeled_demos[[as.character(final_step)]]),
+    n_bootstrapped_demos = n_bootstrapped_total,
+    demos_per_step = stats::setNames(
+      lapply(demo_steps, function(i) {
+        length(student$steps[[i]]@module$demos)
+      }),
+      as.character(demo_steps)
+    ),
+    total_attempts = total_attempts,
+    error_count = error_count,
+    max_rounds = teleprompter@max_rounds
+  )
+
+  if (!is.null(trial_log)) {
+    trial <- create_trial(
+      optimizer_name = "BootstrapFewShot",
+      params = list(
+        joint_pipeline = TRUE,
+        max_bootstrapped_demos = teleprompter@max_bootstrapped_demos,
+        max_labeled_demos = teleprompter@max_labeled_demos,
+        max_rounds = teleprompter@max_rounds,
+        metric_threshold = teleprompter@metric_threshold
+      )
+    )
+
+    if (!is.null(valset)) {
+      eval_result <- eval_program(
+        student,
+        valset,
+        teleprompter@metric,
+        .llm = .llm,
+        control = control
+      )
+      trial <- complete_trial(
+        trial,
+        eval_result,
+        compiled_artifact_ref = student
+      )
+    } else {
+      trial <- complete_trial(
+        trial,
+        EvalResult(
+          n_evaluated = n_bootstrapped_total,
+          n_errors = error_count
         )
       )
     }

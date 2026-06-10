@@ -33,7 +33,9 @@ significance. Defaults to 1L. When > 1, computes std and confidence intervals.}
 \value{
 An EvalResult object containing:
 \itemize{
-\item \code{examples}: tibble with per-example row_id, score, error, predicted, and input columns (prefixed with input_*)
+\item \code{examples}: tibble with per-example row_id, score, error, predicted,
+feedback (textual feedback from feedback-aware metrics, see
+\code{\link[=metric_with_feedback]{metric_with_feedback()}}), and input columns (prefixed with input_*)
 \item \code{mean_score}: mean score across successful evaluations
 \item \code{std_error}: standard error of per-example scores (SD / sqrt(n))
 \item \code{n_evaluated}: number of successful evaluations
