@@ -85,15 +85,23 @@ tp <- GEPA(
 )
 
 \dontrun{
-# Feedback-aware metrics give the reflection step concrete guidance
+# Feedback-aware metrics give the reflection step concrete guidance.
+# During evaluation the metric receives the full expected row, so
+# extract the target field explicitly:
 feedback_metric <- metric_with_feedback(
   function(prediction, expected) {
-    if (identical(as.character(prediction), as.character(expected))) {
+    if (identical(as.character(prediction), expected$answer)) {
       list(score = 1, feedback = "Correct.")
     } else {
       list(
         score = 0,
-        feedback = paste0("Expected '", expected, "' but got '", prediction, "'.")
+        feedback = paste0(
+          "Expected '",
+          expected$answer,
+          "' but got '",
+          prediction,
+          "'."
+        )
       )
     }
   },
