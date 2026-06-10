@@ -68,6 +68,7 @@ Optionally runs multiple rounds, updating the teacher with new demos
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
@@ -175,6 +176,25 @@ the training set. Default is 16.</p></dd>
 <dd><p>Directory for trial logging. Default is NULL.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+
+<div class="section">
+<h3 id="joint-pipeline-compilation">Joint pipeline compilation<a class="anchor" aria-label="anchor" href="#joint-pipeline-compilation"></a></h3>
+
+
+<p>When <code>program</code> is a pipeline (built with <code><a href="pipeline.html">pipeline()</a></code> or <code>%&gt;&gt;%</code>),
+BootstrapFewShot compiles the whole program jointly, like DSPy: the
+teacher pipeline runs end-to-end on each training example, the <em>final</em>
+output is scored with the metric, and when a run passes the threshold
+every step's <code>(inputs, output)</code> pair from that trace is harvested as a
+demonstration for the corresponding step module. Intermediate steps
+therefore receive demos even though the training set only labels the
+final output. Labeled demos (<code>max_labeled_demos</code>) are applied to the
+final step only, and only when its input fields exist in the trainset.</p>
+</div>
+
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

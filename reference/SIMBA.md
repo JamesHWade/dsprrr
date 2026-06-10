@@ -82,6 +82,16 @@ SIMBA(
 
   Directory for trial logging. Default is NULL.
 
+## Details
+
+### Differences from DSPy's SIMBA
+
+This is an adapted implementation: it mines hard (high-variability)
+examples and asks an LLM to generate improvement rules, but it does not
+reproduce every detail of DSPy's stochastic introspective mini-batch
+ascent (e.g., trajectory-level introspection across candidate programs).
+Expect qualitatively similar behavior, not identical results.
+
 ## Examples
 
 ``` r

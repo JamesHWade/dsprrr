@@ -54,6 +54,9 @@ Understand the philosophy, design, and theory behind dsprrr
 - [The DSPy Philosophy: Programs, Not
   Prompts](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.md):
 
+- [dsprrr vs. DSPy: Feature
+  Comparison](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.md):
+
 - [Understanding Signatures and
   Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md):
 

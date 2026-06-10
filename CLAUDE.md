@@ -502,48 +502,70 @@ test_that("mock returns different values", {
 
 ## Implementation Status
 
-### Completed (Milestones A-D)
+### Completed
 
-**Module Types (11):** - PredictModule, ReactModule,
-ProgramOfThoughtModule, CodeActModule - RAGModule,
+**Module Types (14):** - PredictModule, ReactModule,
+ProgramOfThoughtModule, CodeActModule - RAGModule, RLMModule,
 MultiChainComparisonModule, EnsembleModule - BestOfNModule,
-RefineModule, KNNFewShotModule - ChainOfThought via signature transforms
+RefineModule, KNNFewShotModule, FnModule, AssertModule - PipelineModule
+(composition via
+[`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
+and `%>>%`) - ChainOfThought via signature transforms
 ([`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
 [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md))
 
-**Teleprompters (10):** - LabeledFewShot, BootstrapFewShot,
+**Teleprompters (11):** - LabeledFewShot, BootstrapFewShot,
 BootstrapFewShotWithRandomSearch - MIPROv2, SIMBA, GEPA, COPRO,
-KNNFewShot, Ensemble, GridSearch
+KNNFewShot, Ensemble, GridSearch, BetterTogether - BootstrapFewShot
+compiles pipelines **jointly**: per-step demos are harvested from
+passing end-to-end traces (DSPy-style whole-program compilation) - GEPA
+supports feedback metrics via
+[`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md):
+metrics may return `list(score = , feedback = )` and the feedback drives
+reflection - Fidelity notes: SIMBA and GEPA are intentionally simplified
+vs. their papers (documented in roxygen and
+`vignettes/dspy-comparison.Rmd`)
 
 **Infrastructure:** - R6 Module base class with `forward()`,
 [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
 `reset()`, trace methods - S7 Signature with DSPy-style string parsing -
-ellmer integration via `chat_structured()` - Async support:
+ellmer integration via `chat_structured()` - Two-tier caching (memory +
+disk):
+[`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md),
+[`clear_cache()`](https://jameshwade.github.io/dsprrr/reference/clear_cache.md),
+[`cache_stats()`](https://jameshwade.github.io/dsprrr/reference/cache_stats.md) -
+LM configuration:
+[`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md),
+[`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md),
+[`local_lm()`](https://jameshwade.github.io/dsprrr/reference/local_lm.md) -
+Async support:
 [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
 [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
-with promises - vitals bridges (`as_vitals_solver`,
-`as_dsprrr_metric`) - Optimizer infrastructure: `OptimizerControl`,
-`EvalResult`, `CostSummary`, `Trial`, `TrialLog` - Module persistence:
+with promises - Streaming listeners:
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md) +
+[`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
+(per-field callbacks, pipeline status events) - vitals bridges
+(`as_vitals_solver`, `as_dsprrr_metric`) - Optimizer infrastructure:
+`OptimizerControl`, `EvalResult`, `CostSummary`, `Trial`, `TrialLog` -
+Module persistence:
 [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),
 [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md) -
-ragnar integration for RAG
+ragnar integration for RAG; tidymodels integration via parsnip/dials
 
-### Planned (Milestones E-H)
-
-**E - Caching & LM Configuration (dsprrr-mqo, dsprrr-1y9):** -
-Multi-tier caching (memory → disk → provider) - `configure_dsprrr()` /
-[`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)
-for global LM config
+### Planned
 
 **F - Ecosystem Integration:** - shinychat integration, MLflow
 observability
 
 **G - DSPy 3.0+ Parity (dsprrr-9df, dsprrr-7r4, dsprrr-a3z,
-dsprrr-deh):** - TypedPredictor equivalent, PEP 604 union types -
-`tune_bayes()` integration, ParallelModule, Embedder abstraction
+dsprrr-deh):** - Native reasoning-trace capture (analogous to
+`dspy.Reasoning`) - `tune_bayes()` integration, ParallelModule, Embedder
+abstraction - Joint multi-step support for instruction optimizers
+(MIPROv2/GEPA per-component selection); demo bootstrapping is already
+joint
 
 **H - Production Efficiency (dsprrr-1u0):** - BootstrapFinetune (model
-distillation)
+distillation), RL-based optimizers
 
 ## Coding Conventions
 
@@ -585,11 +607,11 @@ Suggested: - `dials`, `knitr`, `rmarkdown`, `testthat`, `vcr`, `vitals`
 
 ## Known Issues
 
-- Some test files have `-improved` suffix that should be renamed
-- Minor test failures related to deepcopy state preservation
 - For internal S7 classes with complex default values, use `@noRd`
   instead of `@keywords internal` to avoid R CMD check codoc mismatch
   warnings
+- Instruction-level optimizers (MIPROv2, GEPA, COPRO) operate on single
+  modules; only BootstrapFewShot compiles pipelines jointly
 
 ## Issue Tracking with Beads
 

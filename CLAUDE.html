@@ -48,6 +48,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
+    <li><a class="dropdown-item" href="articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
     <li><a class="dropdown-item" href="articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><a class="dropdown-item" href="articles/concepts-optimization-theory.html">How Optimization Works</a></li>
     <li><a class="dropdown-item" href="articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
@@ -434,17 +435,16 @@
 <div class="section level2">
 <h2 id="implementation-status">Implementation Status<a class="anchor" aria-label="anchor" href="#implementation-status"></a></h2>
 <div class="section level3">
-<h3 id="completed-milestones-a-d">Completed (Milestones A-D)<a class="anchor" aria-label="anchor" href="#completed-milestones-a-d"></a></h3>
-<p><strong>Module Types (11):</strong> - PredictModule, ReactModule, ProgramOfThoughtModule, CodeActModule - RAGModule, MultiChainComparisonModule, EnsembleModule - BestOfNModule, RefineModule, KNNFewShotModule - ChainOfThought via signature transforms (<code><a href="reference/with_reasoning.html">with_reasoning()</a></code>, <code><a href="reference/chain_of_thought.html">chain_of_thought()</a></code>)</p>
-<p><strong>Teleprompters (10):</strong> - LabeledFewShot, BootstrapFewShot, BootstrapFewShotWithRandomSearch - MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, Ensemble, GridSearch</p>
-<p><strong>Infrastructure:</strong> - R6 Module base class with <code>forward()</code>, <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>, <code>reset()</code>, trace methods - S7 Signature with DSPy-style string parsing - ellmer integration via <code>chat_structured()</code> - Async support: <code><a href="reference/run_async.html">run_async()</a></code>, <code><a href="reference/stream_async.html">stream_async()</a></code> with promises - vitals bridges (<code>as_vitals_solver</code>, <code>as_dsprrr_metric</code>) - Optimizer infrastructure: <code>OptimizerControl</code>, <code>EvalResult</code>, <code>CostSummary</code>, <code>Trial</code>, <code>TrialLog</code> - Module persistence: <code><a href="reference/pin_module_config.html">pin_module_config()</a></code>, <code><a href="reference/restore_module_config.html">restore_module_config()</a></code> - ragnar integration for RAG</p>
+<h3 id="completed">Completed<a class="anchor" aria-label="anchor" href="#completed"></a></h3>
+<p><strong>Module Types (14):</strong> - PredictModule, ReactModule, ProgramOfThoughtModule, CodeActModule - RAGModule, RLMModule, MultiChainComparisonModule, EnsembleModule - BestOfNModule, RefineModule, KNNFewShotModule, FnModule, AssertModule - PipelineModule (composition via <code><a href="reference/pipeline.html">pipeline()</a></code> and <code>%&gt;&gt;%</code>) - ChainOfThought via signature transforms (<code><a href="reference/with_reasoning.html">with_reasoning()</a></code>, <code><a href="reference/chain_of_thought.html">chain_of_thought()</a></code>)</p>
+<p><strong>Teleprompters (11):</strong> - LabeledFewShot, BootstrapFewShot, BootstrapFewShotWithRandomSearch - MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, Ensemble, GridSearch, BetterTogether - BootstrapFewShot compiles pipelines <strong>jointly</strong>: per-step demos are harvested from passing end-to-end traces (DSPy-style whole-program compilation) - GEPA supports feedback metrics via <code><a href="reference/metric_with_feedback.html">metric_with_feedback()</a></code>: metrics may return <code>list(score = , feedback = )</code> and the feedback drives reflection - Fidelity notes: SIMBA and GEPA are intentionally simplified vs. their papers (documented in roxygen and <code>vignettes/dspy-comparison.Rmd</code>)</p>
+<p><strong>Infrastructure:</strong> - R6 Module base class with <code>forward()</code>, <code><a href="reference/optimize_grid.html">optimize_grid()</a></code>, <code>reset()</code>, trace methods - S7 Signature with DSPy-style string parsing - ellmer integration via <code>chat_structured()</code> - Two-tier caching (memory + disk): <code><a href="reference/configure_cache.html">configure_cache()</a></code>, <code><a href="reference/clear_cache.html">clear_cache()</a></code>, <code><a href="reference/cache_stats.html">cache_stats()</a></code> - LM configuration: <code><a href="reference/dsp_configure.html">dsp_configure()</a></code>, <code><a href="reference/with_lm.html">with_lm()</a></code>, <code><a href="reference/local_lm.html">local_lm()</a></code> - Async support: <code><a href="reference/run_async.html">run_async()</a></code>, <code><a href="reference/stream_async.html">stream_async()</a></code> with promises - Streaming listeners: <code><a href="reference/run_stream.html">run_stream()</a></code> + <code><a href="reference/stream_listener.html">stream_listener()</a></code> (per-field callbacks, pipeline status events) - vitals bridges (<code>as_vitals_solver</code>, <code>as_dsprrr_metric</code>) - Optimizer infrastructure: <code>OptimizerControl</code>, <code>EvalResult</code>, <code>CostSummary</code>, <code>Trial</code>, <code>TrialLog</code> - Module persistence: <code><a href="reference/pin_module_config.html">pin_module_config()</a></code>, <code><a href="reference/restore_module_config.html">restore_module_config()</a></code> - ragnar integration for RAG; tidymodels integration via parsnip/dials</p>
 </div>
 <div class="section level3">
-<h3 id="planned-milestones-e-h">Planned (Milestones E-H)<a class="anchor" aria-label="anchor" href="#planned-milestones-e-h"></a></h3>
-<p><strong>E - Caching &amp; LM Configuration (dsprrr-mqo, dsprrr-1y9):</strong> - Multi-tier caching (memory → disk → provider) - <code>configure_dsprrr()</code> / <code><a href="reference/with_lm.html">with_lm()</a></code> for global LM config</p>
+<h3 id="planned">Planned<a class="anchor" aria-label="anchor" href="#planned"></a></h3>
 <p><strong>F - Ecosystem Integration:</strong> - shinychat integration, MLflow observability</p>
-<p><strong>G - DSPy 3.0+ Parity (dsprrr-9df, dsprrr-7r4, dsprrr-a3z, dsprrr-deh):</strong> - TypedPredictor equivalent, PEP 604 union types - <code>tune_bayes()</code> integration, ParallelModule, Embedder abstraction</p>
-<p><strong>H - Production Efficiency (dsprrr-1u0):</strong> - BootstrapFinetune (model distillation)</p>
+<p><strong>G - DSPy 3.0+ Parity (dsprrr-9df, dsprrr-7r4, dsprrr-a3z, dsprrr-deh):</strong> - Native reasoning-trace capture (analogous to <code>dspy.Reasoning</code>) - <code>tune_bayes()</code> integration, ParallelModule, Embedder abstraction - Joint multi-step support for instruction optimizers (MIPROv2/GEPA per-component selection); demo bootstrapping is already joint</p>
+<p><strong>H - Production Efficiency (dsprrr-1u0):</strong> - BootstrapFinetune (model distillation), RL-based optimizers</p>
 </div>
 </div>
 <div class="section level2">
@@ -482,9 +482,8 @@
 </div>
 <div class="section level2">
 <h2 id="known-issues">Known Issues<a class="anchor" aria-label="anchor" href="#known-issues"></a></h2>
-<ul><li>Some test files have <code>-improved</code> suffix that should be renamed</li>
-<li>Minor test failures related to deepcopy state preservation</li>
-<li>For internal S7 classes with complex default values, use <code>@noRd</code> instead of <code>@keywords internal</code> to avoid R CMD check codoc mismatch warnings</li>
+<ul><li>For internal S7 classes with complex default values, use <code>@noRd</code> instead of <code>@keywords internal</code> to avoid R CMD check codoc mismatch warnings</li>
+<li>Instruction-level optimizers (MIPROv2, GEPA, COPRO) operate on single modules; only BootstrapFewShot compiles pipelines jointly</li>
 </ul></div>
 <div class="section level2">
 <h2 id="issue-tracking-with-beads">Issue Tracking with Beads<a class="anchor" aria-label="anchor" href="#issue-tracking-with-beads"></a></h2>

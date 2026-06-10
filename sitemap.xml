@@ -16,6 +16,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/dspy-comparison.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/getting-started.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/index.html</loc></url>
@@ -137,6 +138,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_f1.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_field_match.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_threshold.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-codeact.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-ensemble.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-multichain.html</loc></url>
@@ -202,6 +204,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_async.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_demo.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/run_stream.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/sample_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/select_outputs.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/session_cost.html</loc></url>
@@ -212,6 +215,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/split_dataset.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/step.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/stream_async.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/stream_listener.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/summarize_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/summarize_traces_df.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/teleprompter-ensemble.html</loc></url>

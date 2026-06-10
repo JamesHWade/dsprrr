@@ -68,6 +68,7 @@ Multi-epoch evaluation for statistical significance (when epochs &amp;gt; 1)
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
@@ -163,7 +164,9 @@ significance. Defaults to 1L. When &gt; 1, computes std and confidence intervals
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An EvalResult object containing:</p><ul><li><p><code>examples</code>: tibble with per-example row_id, score, error, predicted, and input columns (prefixed with input_*)</p></li>
+    <p>An EvalResult object containing:</p><ul><li><p><code>examples</code>: tibble with per-example row_id, score, error, predicted,
+feedback (textual feedback from feedback-aware metrics, see
+<code><a href="metric_with_feedback.html">metric_with_feedback()</a></code>), and input columns (prefixed with input_*)</p></li>
 <li><p><code>mean_score</code>: mean score across successful evaluations</p></li>
 <li><p><code>std_error</code>: standard error of per-example scores (SD / sqrt(n))</p></li>
 <li><p><code>n_evaluated</code>: number of successful evaluations</p></li>

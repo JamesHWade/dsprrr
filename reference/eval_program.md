@@ -68,6 +68,8 @@ eval_program(
 An EvalResult object containing:
 
 - `examples`: tibble with per-example row_id, score, error, predicted,
+  feedback (textual feedback from feedback-aware metrics, see
+  [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md)),
   and input columns (prefixed with input\_\*)
 
 - `mean_score`: mean score across successful evaluations

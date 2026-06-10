@@ -185,6 +185,8 @@ Score module outputs and measure performance
   : Create a Field Equality Metric
 - [`metric_threshold()`](https://jameshwade.github.io/dsprrr/reference/metric_threshold.md)
   : Create a Threshold Metric
+- [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md)
+  : Create a Metric with Textual Feedback
 - [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
   [`metric_model_graded_fact()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
   [`metric_detect_match()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
@@ -333,6 +335,10 @@ Non-blocking execution and streaming responses
   : Run a module asynchronously
 - [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
   : Stream module output asynchronously
+- [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
+  : Run a Module with Streaming Listeners and Status Events
+- [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
+  : Create a Stream Listener for a Module Output Field
 
 ## Debugging & Traces
 

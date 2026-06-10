@@ -52,6 +52,7 @@ together with the predictions and metadata required for downstream analysis."><m
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
@@ -132,6 +133,9 @@ times to quantify variation.</p></li>
 <li><p><code>n_evaluated</code>: number of successful evaluations.</p></li>
 <li><p><code>n_errors</code>: number of metric failures.</p></li>
 <li><p><code>errors</code>: character vector with error messages, when any.</p></li>
+<li><p><code>feedbacks</code>: per-example textual feedback when the metric returns
+<code>list(score = , feedback = )</code> (see <code><a href="metric_with_feedback.html">metric_with_feedback()</a></code>);
+<code>NA</code> otherwise.</p></li>
 <li><p><code>data</code>: input data augmented with prediction metadata.</p></li>
 </ul><p>When <code>epochs &gt; 1</code>, additional fields are included:</p><ul><li><p><code>epoch_scores</code>: list of numeric vectors, one per epoch</p></li>
 <li><p><code>score_std</code>: standard deviation of mean scores across epochs</p></li>

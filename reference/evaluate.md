@@ -64,6 +64,11 @@ A list with elements. When `.return_format = "structured"` (default):
 
 - `errors`: character vector with error messages, when any.
 
+- `feedbacks`: per-example textual feedback when the metric returns
+  `list(score = , feedback = )` (see
+  [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md));
+  `NA` otherwise.
+
 - `data`: input data augmented with prediction metadata.
 
 When `epochs > 1`, additional fields are included:

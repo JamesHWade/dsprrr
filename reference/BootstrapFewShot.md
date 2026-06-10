@@ -74,6 +74,22 @@ BootstrapFewShot(
 
   Directory for trial logging. Default is NULL.
 
+## Details
+
+### Joint pipeline compilation
+
+When `program` is a pipeline (built with
+[`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
+or `%>>%`), BootstrapFewShot compiles the whole program jointly, like
+DSPy: the teacher pipeline runs end-to-end on each training example, the
+*final* output is scored with the metric, and when a run passes the
+threshold every step's `(inputs, output)` pair from that trace is
+harvested as a demonstration for the corresponding step module.
+Intermediate steps therefore receive demos even though the training set
+only labels the final output. Labeled demos (`max_labeled_demos`) are
+applied to the final step only, and only when its input fields exist in
+the trainset.
+
 ## Examples
 
 ``` r

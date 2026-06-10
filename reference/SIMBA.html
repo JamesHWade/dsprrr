@@ -74,6 +74,7 @@ Evaluates improvement and keeps changes if better
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
     <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
@@ -186,6 +187,21 @@ variability. Default is 6.</p></dd>
 <dd><p>Directory for trial logging. Default is NULL.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+
+<div class="section">
+<h3 id="differences-from-dspy-s-simba">Differences from DSPy's SIMBA<a class="anchor" aria-label="anchor" href="#differences-from-dspy-s-simba"></a></h3>
+
+
+<p>This is an adapted implementation: it mines hard (high-variability)
+examples and asks an LLM to generate improvement rules, but it does not
+reproduce every detail of DSPy's stochastic introspective mini-batch
+ascent (e.g., trajectory-level introspection across candidate programs).
+Expect qualitatively similar behavior, not identical results.</p>
+</div>
+
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
