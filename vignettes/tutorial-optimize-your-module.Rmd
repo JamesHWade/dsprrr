@@ -40,6 +40,8 @@ In [Tutorial 4](tutorial-improve-with-demos.html), you improved your module with
 
 The answer: **let dsprrr search for you**.
 
+We return to a sentiment classifier—this time for product reviews—so you can see how much headroom parameter tuning adds on top of few-shot demos. This is also the module you'll take to production in [Tutorial 6](tutorial-deploy-to-production.html).
+
 **Time**: 30-35 minutes
 
 ## What You'll Build

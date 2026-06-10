@@ -80,6 +80,20 @@ compile_default <- function(teleprompter, program, trainset, ...) {
 #' @param sample Whether to randomly sample examples. Default is TRUE.
 #' @param seed Random seed for reproducibility. Default is 123.
 #'
+#' @examples
+#' # A teleprompter that adds 2 labeled training examples as demonstrations
+#' tp <- LabeledFewShot(k = 2L, seed = 42L)
+#' tp@k
+#'
+#' \dontrun{
+#' # Compile a module with few-shot demos drawn from the training set
+#' classifier <- module(signature("text -> sentiment"), type = "predict")
+#' trainset <- dsp_trainset(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#' optimized <- compile(tp, classifier, trainset)
+#' }
 #' @export
 LabeledFewShot <- S7::new_class(
   "LabeledFewShot",
@@ -192,6 +206,26 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #'   grid search. Default is 50.
 #' @param verbose Whether to print progress messages. Default is TRUE.
 #'
+#' @examples
+#' # Search over two instruction variants
+#' variants <- data.frame(
+#'   id = c("terse", "detailed"),
+#'   instructions = c("Be concise.", "Explain your reasoning step by step.")
+#' )
+#' tp <- GridSearchTeleprompter(
+#'   variants = variants,
+#'   metric = metric_exact_match(field = "sentiment")
+#' )
+#'
+#' \dontrun{
+#' # Compile picks the variant that scores best on the training set
+#' classifier <- module(signature("text -> sentiment"), type = "predict")
+#' trainset <- dsp_trainset(
+#'   text = c("I love it!", "Terrible experience"),
+#'   sentiment = c("positive", "negative")
+#' )
+#' optimized <- compile(tp, classifier, trainset)
+#' }
 #' @usage NULL
 #' @export
 GridSearchTeleprompter <- S7::new_class(

@@ -46,6 +46,47 @@
 #' @param verbose Whether to print progress messages.
 #' @param track_stats Whether to record generation statistics.
 #'
+#' @examples
+#' # A small GEPA run: 6 candidates evolved over 2 generations
+#' tp <- GEPA(
+#'   metric = metric_exact_match(field = "answer"),
+#'   population_size = 6L,
+#'   generations = 2L,
+#'   seed = 42
+#' )
+#'
+#' \dontrun{
+#' # Feedback-aware metrics give the reflection step concrete guidance.
+#' # During evaluation the metric receives the full expected row, so
+#' # extract the target field explicitly:
+#' feedback_metric <- metric_with_feedback(
+#'   function(prediction, expected) {
+#'     if (identical(as.character(prediction), expected$answer)) {
+#'       list(score = 1, feedback = "Correct.")
+#'     } else {
+#'       list(
+#'         score = 0,
+#'         feedback = paste0(
+#'           "Expected '",
+#'           expected$answer,
+#'           "' but got '",
+#'           prediction,
+#'           "'."
+#'         )
+#'       )
+#'     }
+#'   },
+#'   field = "answer"
+#' )
+#' tp <- GEPA(metric = feedback_metric, seed = 42)
+#'
+#' qa <- module(signature("question -> answer"), type = "predict")
+#' trainset <- dsp_trainset(
+#'   question = c("What is 2 + 2?", "What is the capital of France?"),
+#'   answer = c("4", "Paris")
+#' )
+#' optimized <- compile(tp, qa, trainset)
+#' }
 #' @export
 GEPA <- S7::new_class(
   "GEPA",

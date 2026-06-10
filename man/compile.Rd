@@ -24,3 +24,17 @@ This file defines the compile generic and its methods for optimizing
 DSPrrr modules using teleprompters.
 Compile Generic
 }
+\examples{
+\dontrun{
+classifier <- module(signature("text -> sentiment"), type = "predict")
+trainset <- dsp_trainset(
+  text = c("I love it!", "Terrible experience"),
+  sentiment = c("positive", "negative")
+)
+optimized <- compile(LabeledFewShot(k = 2L), classifier, trainset)
+}
+}
+\seealso{
+\code{\link[=compile_module]{compile_module()}} for the pipe-friendly wrapper with
+validation and friendlier argument order
+}

@@ -49,6 +49,29 @@
 #' * [run_dataset()] for batch execution without metrics
 #' * [optimize_grid()] for parameter optimization
 #' * [metric_exact_match()], [metric_contains()] for built-in metrics
+#' @examples
+#' \dontrun{
+#' classifier <- module(
+#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
+#'   type = "predict"
+#' )
+#'
+#' testset <- dsp_trainset(
+#'   text = c("I love it!", "Awful.", "It's fine."),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#'
+#' result <- evaluate(
+#'   classifier,
+#'   data = testset,
+#'   metric = metric_exact_match(field = "sentiment"),
+#'   .llm = ellmer::chat_openai()
+#' )
+#'
+#' result$mean_score # accuracy across the test set
+#' result$scores # per-example scores
+#' result$n_errors # examples where the metric failed
+#' }
 #' @export
 evaluate <- function(module, ...) {
   UseMethod("evaluate")
