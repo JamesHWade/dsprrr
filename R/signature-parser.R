@@ -393,6 +393,10 @@ parse_type_string <- function(type_str, field_name = NULL) {
   # Handle common type patterns
   type_str <- trimws(type_str)
 
+  # Catch unknown / misspelled simple types early with a helpful error,
+  # rather than silently falling through to the type_string() default below.
+  validate_type_string(type_str)
+
   # Handle Optional types
   if (grepl("^Optional\\[", type_str)) {
     inner_type_str <- sub("^Optional\\[(.*)\\]$", "\\1", type_str)
@@ -718,8 +722,15 @@ validate_type_string <- function(type_str, context = "output") {
 
   if (!is_known && !grepl("\\[|\\(", type_str)) {
     # Unknown simple type
+    suggestion <- find_closest_match(
+      type_str,
+      c(known_types, known_constructors)
+    )
     cli::cli_abort(c(
       "Unknown type: {.val {type_str}}",
+      if (!is.null(suggestion)) {
+        c("i" = "Did you mean {.code {suggestion}}?")
+      },
       "i" = "Available simple types: {.code string}, {.code number}, {.code integer}, {.code boolean}",
       "i" = "Available complex types: {.code enum('a', 'b')}, {.code array(string)}, {.code object}"
     ))

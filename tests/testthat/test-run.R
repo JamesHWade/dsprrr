@@ -1065,3 +1065,37 @@ test_that("mock_batch_chat handles character response directly", {
 
   expect_true(inherits(result, "Chat"))
 })
+
+test_that("print.dsprrr_batch_result counts failed items (dsprrr-8l0)", {
+  # Regression: the error predicate read item$error / inherits(item$output,
+  # "error"), but create_error_result() stores the message in metadata$error
+  # with output = NA, so n_errors was always 0 and failures printed as success.
+  result <- structure(
+    list(
+      list(output = "ok", chat = NULL, metadata = list()),
+      list(
+        output = NA,
+        chat = NULL,
+        metadata = list(error = "intentional failure", batch_index = 2L)
+      )
+    ),
+    class = c("dsprrr_batch_result", "list")
+  )
+
+  out <- cli::cli_fmt(print(result))
+  expect_true(any(grepl("Errors", out)))
+  expect_true(any(grepl("1 of 2", out)))
+  expect_false(any(grepl("All items completed successfully", out)))
+})
+
+test_that("print.dsprrr_batch_result reports success when there are no errors", {
+  result <- structure(
+    list(
+      list(output = "a", chat = NULL, metadata = list()),
+      list(output = "b", chat = NULL, metadata = list())
+    ),
+    class = c("dsprrr_batch_result", "list")
+  )
+  out <- cli::cli_fmt(print(result))
+  expect_true(any(grepl("All items completed successfully", out)))
+})

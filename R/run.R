@@ -72,6 +72,27 @@ run <- function(module, ...) {
   UseMethod("run")
 }
 
+#' Validate the `.cache` argument
+#'
+#' Shared by [run()] methods so every module type rejects malformed `.cache`
+#' values the same way.
+#' @noRd
+validate_cache_arg <- function(.cache) {
+  if (!is.null(.cache)) {
+    if (!is.logical(.cache) || length(.cache) != 1 || is.na(.cache)) {
+      cache_value <- .cache
+      cli::cli_abort(c(
+        "{.arg .cache} must be {.code TRUE}, {.code FALSE}, or {.code NULL}",
+        "x" = "You provided: {.cls {class(cache_value)}} with value {.val {cache_value}}",
+        "i" = "{.code TRUE} attempts to use cache (if available)",
+        "i" = "{.code FALSE} bypasses cache for this call",
+        "i" = "{.code NULL} uses global cache configuration (default)"
+      ))
+    }
+  }
+  invisible(.cache)
+}
+
 #' @export
 run.Module <- function(
   module,
@@ -82,9 +103,11 @@ run.Module <- function(
   .parallel_method = c("ellmer", "mirai"),
   .progress = TRUE,
   .return_format = "simple",
-  .show_prompt = FALSE
+  .show_prompt = FALSE,
+  .cache = NULL
 ) {
   .parallel_method <- match.arg(.parallel_method)
+  validate_cache_arg(.cache)
 
   # Show prompt preview if requested
   if (.show_prompt) {
@@ -98,7 +121,8 @@ run.Module <- function(
     .verbose = .verbose,
     .parallel = .parallel,
     .progress = .progress,
-    .return_format = .return_format
+    .return_format = .return_format,
+    .cache = .cache
   )
 }
 
@@ -118,18 +142,7 @@ run.PredictModule <- function(
   .parallel_method <- match.arg(.parallel_method)
 
   # Validate .cache parameter
-  if (!is.null(.cache)) {
-    if (!is.logical(.cache) || length(.cache) != 1 || is.na(.cache)) {
-      cache_value <- .cache
-      cli::cli_abort(c(
-        "{.arg .cache} must be {.code TRUE}, {.code FALSE}, or {.code NULL}",
-        "x" = "You provided: {.cls {class(cache_value)}} with value {.val {cache_value}}",
-        "i" = "{.code TRUE} attempts to use cache (if available)",
-        "i" = "{.code FALSE} bypasses cache for this call",
-        "i" = "{.code NULL} uses global cache configuration (default)"
-      ))
-    }
-  }
+  validate_cache_arg(.cache)
 
   # Show prompt preview if requested
   if (.show_prompt) {
@@ -1499,7 +1512,11 @@ print.dsprrr_batch_result <- function(x, ...) {
   n_errors <- sum(vapply(
     x,
     function(item) {
-      isTRUE(item$error) || inherits(item$output, "error")
+      # Errors from create_error_result() are stored in metadata$error with
+      # output = NA; also tolerate other shapes defensively.
+      !is.null(item$metadata$error) ||
+        isTRUE(item$error) ||
+        inherits(item$output, "error")
     },
     logical(1)
   ))

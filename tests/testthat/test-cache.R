@@ -1123,3 +1123,17 @@ test_that("dsprrr_sitrep shows disabled cache", {
 
   expect_false(result$cache_enabled)
 })
+
+test_that(".cache is accepted and validated for non-Predict modules (dsprrr-jup)", {
+  # Regression: only run.PredictModule declared .cache; for every other module
+  # type and pipelines it fell into ... -> treated as an unknown signature input
+  # (spurious warning) and dropped.
+  mod <- module_fn("text -> answer", function(text) paste("Echo:", text))
+
+  expect_no_warning(res <- run(mod, text = "hi", .cache = FALSE))
+  expect_equal(res$answer, "Echo: hi")
+
+  # Invalid .cache values are rejected the same way as for PredictModule.
+  expect_error(run(mod, text = "hi", .cache = "yes"), "must be")
+  expect_error(run(mod, text = "hi", .cache = NA), "must be")
+})

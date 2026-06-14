@@ -83,7 +83,8 @@ Module <- R6::R6Class(
       .verbose = FALSE,
       .parallel = FALSE,
       .progress = TRUE,
-      .return_format = "simple"
+      .return_format = "simple",
+      .cache = NULL
     ) {
       inputs <- list(...)
 
@@ -131,7 +132,12 @@ Module <- R6::R6Class(
         results <- vector("list", max_length)
         for (i in seq_len(max_length)) {
           input_set <- lapply(inputs, `[[`, i)
-          result <- self$forward(input_set, .llm = .llm, trace = TRUE)
+          result <- self$forward(
+            input_set,
+            .llm = .llm,
+            trace = TRUE,
+            .cache = .cache
+          )
 
           if (.return_format == "simple") {
             results[[i]] <- result$output[[1]]
@@ -148,7 +154,7 @@ Module <- R6::R6Class(
       }
 
       # Single input processing
-      result <- self$forward(inputs, .llm = .llm, trace = TRUE)
+      result <- self$forward(inputs, .llm = .llm, trace = TRUE, .cache = .cache)
 
       if (.return_format == "simple") {
         return(result$output[[1]])

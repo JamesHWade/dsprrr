@@ -12,6 +12,16 @@ NULL
 
 # ── Cache Configuration ──────────────────────────────────────────────────────
 
+#' Default on-disk cache directory
+#'
+#' Honors the `DSPRRR_CACHE_PATH` environment variable so the test suite (and
+#' users with read-only working directories) can redirect the disk cache
+#' without writing into the current working directory.
+#' @noRd
+default_disk_cache_path <- function() {
+  Sys.getenv("DSPRRR_CACHE_PATH", unset = ".dsprrr_cache")
+}
+
 #' Configure dsprrr Cache
 #'
 #' @description
@@ -69,7 +79,7 @@ configure_cache <- function(
   enable = TRUE,
   enable_memory = TRUE,
   enable_disk = TRUE,
-  disk_path = ".dsprrr_cache",
+  disk_path = default_disk_cache_path(),
   memory_max_entries = 1000L,
   disk_max_size = 500 * 1024^2,
   disk_max_age = Inf
@@ -245,7 +255,7 @@ get_cache_config <- function() {
       enable = !env_disabled,
       enable_memory = TRUE,
       enable_disk = TRUE,
-      disk_path = ".dsprrr_cache",
+      disk_path = default_disk_cache_path(),
       memory_max_entries = 1000L,
       disk_max_size = 500 * 1024^2,
       disk_max_age = Inf

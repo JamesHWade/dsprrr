@@ -248,3 +248,22 @@ test_that("module_metric_summary handles modules without trials", {
   metrics <- module_metrics(mod)
   expect_equal(nrow(metrics), 0)
 })
+
+test_that("module_trials() warns and returns an inspectable summary when all trials fail (dsprrr-hew)", {
+  # Regression: which.max() on all-NA scores returns integer(0), so indexing
+  # threw "attempt to select less than one element" instead of a clear message.
+  mod <- module(signature("question -> answer"), type = "predict")
+  mod$state$trials <- tibble::tibble(
+    trial_id = 1:3,
+    score = NA_real_,
+    parameters = list(list(a = 1), list(a = 2), list(a = 3))
+  )
+
+  expect_warning(
+    summary <- module_trials(mod),
+    "trial.*failed"
+  )
+  expect_equal(summary$n_trials, 3L)
+  expect_true(is.na(summary$best_score))
+  expect_true(is.na(summary$best_trial))
+})
