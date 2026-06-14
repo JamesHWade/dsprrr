@@ -159,6 +159,15 @@ restore_module_config <- function(config, signature = NULL) {
 }
 
 serialize_module_config_v2 <- function(module) {
+  if (inherits(module, "PipelineModule")) {
+    cli::cli_abort(c(
+      "Pipeline persistence is not yet supported",
+      "x" = "{.fn pin_module_config} cannot serialise a {.cls PipelineModule}",
+      "i" = "Persisting it here would silently drop every step and its demos",
+      "i" = "Pin each step module individually, or rebuild the pipeline from source"
+    ))
+  }
+
   kind <- module_kind(module)
   supported <- c("predict", "react", "chain_of_thought", "multichain")
   if (!kind %in% supported) {

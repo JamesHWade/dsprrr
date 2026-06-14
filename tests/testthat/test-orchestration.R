@@ -465,3 +465,20 @@ test_that("module config round-trips correctly", {
   expect_true(restored$is_compiled())
   expect_equal(restored$state$best_score, 0.92)
 })
+
+test_that("pin_module_config refuses to silently destroy pipelines (dsprrr-07u)", {
+  skip_if_not_installed("pins")
+
+  m1 <- module(signature("question -> thought"), type = "predict")
+  m2 <- module(signature("thought -> answer"), type = "predict")
+  pipe <- pipeline(m1, m2)
+  board <- pins::board_temp()
+
+  # Regression: module_kind() collapsed unknown classes to "predict", so a
+  # pipeline pinned without error and restored as a single empty PredictModule,
+  # silently losing every step and its bootstrapped demos.
+  expect_error(
+    pin_module_config(board, "pipe", pipe),
+    "[Pp]ipeline"
+  )
+})
