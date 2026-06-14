@@ -420,3 +420,39 @@ test_that("dsprrr_evaluation print method handles errors", {
   output <- capture.output(print(results), type = "message")
   expect_true(any(grepl("Errors", output, fixed = TRUE)))
 })
+
+test_that("evaluate() counts failed rows as 0 in mean_score (dsprrr-tn1)", {
+  # Regression: mean_score used na.rm = TRUE, so failed rows vanished from the
+  # number that drives optimizer selection. A failing row must count as 0 so a
+  # config that errors on hard examples cannot outrank a robust one.
+  sig <- Signature(
+    inputs = list(input(name = "text", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Classify"
+  )
+  mod <- module(signature = sig, type = "predict")
+
+  dataset <- data.frame(
+    text = c("a", "b"),
+    expected = c("a", "b")
+  )
+
+  # Scores row 1 as 1, errors on row 2 (-> NA -> counted as 0).
+  half_failing_metric <- function(pred, row) {
+    if (identical(row$text, "b")) {
+      stop("intentional failure")
+    }
+    1
+  }
+
+  results <- evaluate(
+    mod,
+    dataset,
+    metric = half_failing_metric,
+    .llm = mock_llm,
+    .progress = FALSE
+  )
+
+  expect_equal(results$n_errors, 1)
+  expect_equal(results$mean_score, 0.5) # (1 + 0) / 2, not 1.0
+})
