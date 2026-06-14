@@ -151,10 +151,17 @@ AssertModule <- R6::R6Class(
           )
         }
 
-        # Run the wrapped module
+        # Run the wrapped module. rollout_id partitions the cache per attempt so
+        # retries are not served identical cached responses.
         result <- tryCatch(
           {
-            self$module$forward(current_batch, .llm = .llm, trace = FALSE, ...)
+            self$module$forward(
+              current_batch,
+              .llm = .llm,
+              trace = FALSE,
+              rollout_id = i,
+              ...
+            )
           },
           error = function(e) {
             cli::cli_warn(c(

@@ -603,3 +603,52 @@ test_that("RefineModule print works", {
   expect_invisible(print(wrapper))
   expect_s3_class(wrapper, "RefineModule")
 })
+
+test_that("BestOfN passes a distinct rollout_id to each attempt (dsprrr-pcd)", {
+  seen <- integer(0)
+  mock <- create_mock_module()
+  mock$forward <- function(
+    batch,
+    .llm = NULL,
+    trace = TRUE,
+    rollout_id = NULL,
+    ...
+  ) {
+    seen <<- c(seen, rollout_id %||% NA_integer_)
+    tibble::tibble(
+      output = list(list(answer = "a")),
+      chat = list(NULL),
+      metadata = list(list(total_tokens = 1, cost = 0, model = "mock"))
+    )
+  }
+
+  # threshold above any reward so all N attempts run
+  wrapper <- best_of_n(mock, N = 3, threshold = 99)
+  wrapper$forward(list(question = "q"))
+
+  expect_equal(seen, c(1L, 2L, 3L))
+})
+
+test_that("Refine passes a distinct rollout_id to each attempt (dsprrr-pcd)", {
+  seen <- integer(0)
+  mock <- create_mock_module()
+  mock$forward <- function(
+    batch,
+    .llm = NULL,
+    trace = TRUE,
+    rollout_id = NULL,
+    ...
+  ) {
+    seen <<- c(seen, rollout_id %||% NA_integer_)
+    tibble::tibble(
+      output = list(list(answer = "a")),
+      chat = list(NULL),
+      metadata = list(list(total_tokens = 1, cost = 0, model = "mock"))
+    )
+  }
+
+  wrapper <- refine(mock, N = 3, threshold = 99)
+  wrapper$forward(list(question = "q"))
+
+  expect_equal(seen, c(1L, 2L, 3L))
+})

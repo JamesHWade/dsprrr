@@ -124,10 +124,18 @@ BestOfNModule <- R6::R6Class(
       total_cost <- 0
 
       for (i in seq_len(self$N)) {
-        # Run the wrapped module
+        # Run the wrapped module. rollout_id partitions the cache per attempt so
+        # attempts 2..N are not served identical cached responses (which would
+        # make BestOfN explore nothing when caching is enabled).
         result <- tryCatch(
           {
-            self$module$forward(batch, .llm = .llm, trace = FALSE, ...)
+            self$module$forward(
+              batch,
+              .llm = .llm,
+              trace = FALSE,
+              rollout_id = i,
+              ...
+            )
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1
@@ -643,10 +651,18 @@ RefineModule <- R6::R6Class(
           )
         }
 
-        # Run the wrapped module
+        # Run the wrapped module. rollout_id partitions the cache per attempt so
+        # retries are not served identical cached responses even before feedback
+        # changes the prompt.
         result <- tryCatch(
           {
-            self$module$forward(current_batch, .llm = .llm, trace = FALSE, ...)
+            self$module$forward(
+              current_batch,
+              .llm = .llm,
+              trace = FALSE,
+              rollout_id = i,
+              ...
+            )
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1

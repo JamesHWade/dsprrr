@@ -54,7 +54,14 @@ PredictModule <- R6::R6Class(
     #'   if caching globally disabled). If FALSE, bypasses cache for this call.
     #' @param ... Additional arguments
     #' @return Tibble with result, .chat, .metadata columns
-    forward = function(batch, .llm = NULL, trace = TRUE, .cache = NULL, ...) {
+    forward = function(
+      batch,
+      .llm = NULL,
+      trace = TRUE,
+      .cache = NULL,
+      rollout_id = NULL,
+      ...
+    ) {
       # Handle both list and data frame inputs
       if (is.data.frame(batch)) {
         inputs <- as.list(batch[1, , drop = FALSE])
@@ -80,7 +87,8 @@ PredictModule <- R6::R6Class(
             llm = llm,
             request = request,
             output_type = self$signature@output_type,
-            .cache = .cache
+            .cache = .cache,
+            rollout_id = rollout_id
           )
         },
         error = function(e) {
@@ -447,13 +455,15 @@ PredictModule <- R6::R6Class(
       llm,
       request,
       output_type,
-      .cache = NULL
+      .cache = NULL,
+      rollout_id = NULL
     ) {
       call_llm_request(
         llm = llm,
         request = request,
         output_type = output_type,
-        .cache = .cache
+        .cache = .cache,
+        rollout_id = rollout_id
       )
     }
   ),
