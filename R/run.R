@@ -292,7 +292,11 @@ module_kind <- function(module) {
       "ReactModule" = "react",
       "MultiChainComparisonModule" = "multichain",
       "PredictModule" = "predict",
-      "predict"
+      # Fall back to the actual class name rather than silently claiming
+      # "predict" -- otherwise unsupported module types (pipelines, ensembles,
+      # RAG, ...) pass the persistence allow-list and serialize as a bare
+      # PredictModule, losing all of their structure.
+      class(module)[1]
     )
 }
 

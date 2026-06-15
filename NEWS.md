@@ -39,6 +39,10 @@ First development changelog. dsprrr is experimental; the API may change.
   `refine(best_of_n(mod))`) compose their ids cleanly instead of crashing with
   a duplicate-argument error (#dsprrr-pcd, #dsprrr-wx6).
 
+* `pin_module_config()` now errors clearly for pipelines and other unsupported
+  module types instead of silently serialising them as an empty `PredictModule`
+  and dropping every step on restore (#dsprrr-07u).
+
 ## Internal
 
 * Tests now isolate the on-disk cache to a temporary directory, so running
