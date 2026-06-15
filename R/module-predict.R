@@ -52,6 +52,9 @@ PredictModule <- R6::R6Class(
     #' @param .cache Logical or NULL. Per-call cache control. If NULL (default),
     #'   uses global cache configuration. If TRUE, attempts to use cache (no effect
     #'   if caching globally disabled). If FALSE, bypasses cache for this call.
+    #' @param rollout_id Optional value for cache partitioning. When set, the
+    #'   structured-output cache key includes it, so retries/attempts (e.g. from
+    #'   BestOfN, Refine, Assert) get distinct keys and explore fresh responses.
     #' @param ... Additional arguments
     #' @return Tibble with result, .chat, .metadata columns
     forward = function(

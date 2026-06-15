@@ -26,7 +26,11 @@ withr::defer(
   {
     dsprrr::clear_cache()
     unlink(dsprrr_test_cache_dir, recursive = TRUE)
-    dsprrr::configure_cache()
+    # Restore the production default explicitly. teardown defers run LIFO, so
+    # DSPRRR_CACHE_PATH set by local_envvar() above is still in scope here; a
+    # bare configure_cache() would otherwise re-read it and point disk_path at
+    # the just-unlinked test dir.
+    dsprrr::configure_cache(disk_path = ".dsprrr_cache")
   },
   envir = testthat::teardown_env()
 )

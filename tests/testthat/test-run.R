@@ -1082,6 +1082,9 @@ test_that("print.dsprrr_batch_result counts failed items (dsprrr-8l0)", {
     class = c("dsprrr_batch_result", "list")
   )
 
+  # print.dsprrr_batch_result emits only via cli, so cli::cli_fmt() captures it
+  # reliably. Do NOT switch to capture.output(type = "message"): cli writes to
+  # stdout, so that pattern silently captures nothing.
   out <- cli::cli_fmt(print(result))
   expect_true(any(grepl("Errors", out)))
   expect_true(any(grepl("1 of 2", out)))
