@@ -356,3 +356,29 @@ test_that("find_closest_match works correctly", {
   # No close match
   expect_null(dsprrr:::find_closest_match("zzzzz", candidates))
 })
+
+test_that("unknown / misspelled types raise an error instead of silently becoming strings (dsprrr-47p)", {
+  # Regression: validate_type_string() existed but was never called, so typo'd
+  # types silently fell through to the type_string() default.
+  expect_error(parse_signature("question -> answer: interger"), "Unknown type")
+  expect_error(
+    parse_signature("question -> answer: frobnicate"),
+    "Unknown type"
+  )
+  expect_error(parse_signature("question -> answer: numbr"), "Unknown type")
+
+  # The error suggests the closest valid type.
+  expect_error(parse_signature("q -> a: integ"), "Did you mean")
+})
+
+test_that("valid types still parse after type validation is wired in", {
+  expect_no_error(parse_signature("q -> a: string"))
+  expect_no_error(parse_signature("q -> a: integer"))
+  expect_no_error(parse_signature("q -> a: number"))
+  expect_no_error(parse_signature("q -> a: boolean"))
+  expect_no_error(parse_signature("q -> a: enum('x', 'y')"))
+  expect_no_error(parse_signature("q -> a: array(string)"))
+  # Python-style aliases remain valid.
+  expect_no_error(parse_signature("q -> a: str"))
+  expect_no_error(parse_signature("q -> a: int"))
+})

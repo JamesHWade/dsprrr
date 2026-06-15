@@ -8,7 +8,7 @@ configure_cache(
   enable = TRUE,
   enable_memory = TRUE,
   enable_disk = TRUE,
-  disk_path = ".dsprrr_cache",
+  disk_path = default_disk_cache_path(),
   memory_max_entries = 1000L,
   disk_max_size = 500 * 1024^2,
   disk_max_age = Inf

@@ -458,6 +458,22 @@ module_trials <- function(
   }
 
   scores <- trials$score
+  if (all(is.na(scores))) {
+    cli::cli_warn(c(
+      "All {nrow(trials)} optimization trial{?s} failed (no valid scores).",
+      "i" = "Check that the LLM is reachable and the metric returns numeric scores.",
+      "i" = "Inspect the {.field trials} list-column for per-trial details."
+    ))
+    return(tibble::tibble(
+      n_trials = nrow(trials),
+      best_trial = NA_integer_,
+      best_score = NA_real_,
+      mean_score = NA_real_,
+      std_error = NA_real_,
+      best_params = list(NULL),
+      trials = list(trials)
+    ))
+  }
   best_idx <- if (objective == "maximize") {
     which.max(scores)
   } else {
