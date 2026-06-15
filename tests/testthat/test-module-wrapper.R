@@ -603,3 +603,118 @@ test_that("RefineModule print works", {
   expect_invisible(print(wrapper))
   expect_s3_class(wrapper, "RefineModule")
 })
+
+test_that("BestOfN passes a distinct rollout_id to each attempt (dsprrr-pcd)", {
+  seen <- integer(0)
+  mock <- create_mock_module()
+  mock$forward <- function(
+    batch,
+    .llm = NULL,
+    trace = TRUE,
+    rollout_id = NULL,
+    ...
+  ) {
+    seen <<- c(seen, rollout_id %||% NA_integer_)
+    tibble::tibble(
+      output = list(list(answer = "a")),
+      chat = list(NULL),
+      metadata = list(list(total_tokens = 1, cost = 0, model = "mock"))
+    )
+  }
+
+  # threshold above any reward so all N attempts run
+  wrapper <- best_of_n(mock, N = 3, threshold = 99)
+  wrapper$forward(list(question = "q"))
+
+  # compose_rollout_id() returns character ids so they nest cleanly
+  expect_equal(seen, c("1", "2", "3"))
+})
+
+test_that("Refine passes a distinct rollout_id to each attempt (dsprrr-pcd)", {
+  seen <- integer(0)
+  mock <- create_mock_module()
+  mock$forward <- function(
+    batch,
+    .llm = NULL,
+    trace = TRUE,
+    rollout_id = NULL,
+    ...
+  ) {
+    seen <<- c(seen, rollout_id %||% NA_integer_)
+    tibble::tibble(
+      output = list(list(answer = "a")),
+      chat = list(NULL),
+      metadata = list(list(total_tokens = 1, cost = 0, model = "mock"))
+    )
+  }
+
+  wrapper <- refine(mock, N = 3, threshold = 99)
+  wrapper$forward(list(question = "q"))
+
+  expect_equal(seen, c("1", "2", "3"))
+})
+
+# Regression tests for dsprrr-wx6: nested wrappers used to crash because each
+# wrapper passed rollout_id = i explicitly while also spreading ..., so the
+# inner forward() received rollout_id twice.
+
+# Innermost mock that records every rollout_id it is handed.
+mock_recording_rollouts <- function(seen_env) {
+  mock <- create_mock_module()
+  mock$forward <- function(
+    batch,
+    .llm = NULL,
+    trace = TRUE,
+    rollout_id = NULL,
+    ...
+  ) {
+    seen_env$ids <- c(seen_env$ids, rollout_id %||% NA_character_)
+    tibble::tibble(
+      output = list(list(answer = "a")),
+      chat = list(NULL),
+      metadata = list(list(total_tokens = 1, cost = 0, model = "mock"))
+    )
+  }
+  mock
+}
+
+test_that("refine(best_of_n(mod)) nests without a duplicate-argument crash (dsprrr-wx6)", {
+  seen <- new.env()
+  seen$ids <- character(0)
+  nested <- refine(
+    best_of_n(mock_recording_rollouts(seen), N = 2, threshold = 99),
+    N = 2,
+    threshold = 99
+  )
+
+  expect_no_error(nested$forward(list(question = "q")))
+  # 2 outer x 2 inner attempts, each id unique and hierarchical
+  expect_equal(sort(seen$ids), c("1.1", "1.2", "2.1", "2.2"))
+})
+
+test_that("best_of_n(refine(mod)) nests without a crash (dsprrr-wx6)", {
+  seen <- new.env()
+  seen$ids <- character(0)
+  nested <- best_of_n(
+    refine(mock_recording_rollouts(seen), N = 2, threshold = 99),
+    N = 2,
+    threshold = 99
+  )
+
+  expect_no_error(nested$forward(list(question = "q")))
+  expect_equal(sort(seen$ids), c("1.1", "1.2", "2.1", "2.2"))
+})
+
+test_that("with_assertions(best_of_n(mod)) nests without a crash (dsprrr-wx6)", {
+  seen <- new.env()
+  seen$ids <- character(0)
+  nested <- with_assertions(
+    best_of_n(mock_recording_rollouts(seen), N = 2, threshold = 99),
+    assertions = list(assert_output(~TRUE, "always passes")),
+    max_retries = 1L
+  )
+
+  expect_no_error(nested$forward(list(question = "q")))
+  # assertion passes on the first outer attempt; inner best_of_n runs twice
+  expect_equal(sort(seen$ids), c("1.1", "1.2"))
+})

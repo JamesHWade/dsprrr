@@ -100,9 +100,17 @@ BestOfNModule <- R6::R6Class(
     #' @param batch Named list or data frame of inputs
     #' @param .llm Optional ellmer chat object
     #' @param trace Logical whether to record trace information
+    #' @param rollout_id Optional id inherited from an enclosing wrapper. Taken
+    #'   as a formal (not via `...`) so nested wrappers don't pass it twice.
     #' @param ... Additional arguments passed to wrapped module
     #' @return Tibble with output, chat, metadata columns
-    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+    forward = function(
+      batch,
+      .llm = NULL,
+      trace = TRUE,
+      rollout_id = NULL,
+      ...
+    ) {
       # Handle both list and data frame inputs
       if (is.data.frame(batch)) {
         inputs <- as.list(batch[1, , drop = FALSE])
@@ -124,10 +132,19 @@ BestOfNModule <- R6::R6Class(
       total_cost <- 0
 
       for (i in seq_len(self$N)) {
-        # Run the wrapped module
+        # Run the wrapped module. rollout_id partitions the cache per attempt so
+        # attempts 2..N are not served identical cached responses (which would
+        # make BestOfN explore nothing when caching is enabled). compose_*
+        # folds in any inherited id so nesting stays unique and consistent.
         result <- tryCatch(
           {
-            self$module$forward(batch, .llm = .llm, trace = FALSE, ...)
+            self$module$forward(
+              batch,
+              .llm = .llm,
+              trace = FALSE,
+              rollout_id = compose_rollout_id(rollout_id, i),
+              ...
+            )
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1
@@ -608,9 +625,17 @@ RefineModule <- R6::R6Class(
     #' @param batch Named list or data frame of inputs
     #' @param .llm Optional ellmer chat object
     #' @param trace Logical whether to record trace information
+    #' @param rollout_id Optional id inherited from an enclosing wrapper. Taken
+    #'   as a formal (not via `...`) so nested wrappers don't pass it twice.
     #' @param ... Additional arguments passed to wrapped module
     #' @return Tibble with output, chat, metadata columns
-    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+    forward = function(
+      batch,
+      .llm = NULL,
+      trace = TRUE,
+      rollout_id = NULL,
+      ...
+    ) {
       # Handle both list and data frame inputs
       if (is.data.frame(batch)) {
         inputs <- as.list(batch[1, , drop = FALSE])
@@ -643,10 +668,18 @@ RefineModule <- R6::R6Class(
           )
         }
 
-        # Run the wrapped module
+        # Run the wrapped module. rollout_id partitions the cache per attempt so
+        # retries are not served identical cached responses even before feedback
+        # changes the prompt. compose_* folds in any inherited id for nesting.
         result <- tryCatch(
           {
-            self$module$forward(current_batch, .llm = .llm, trace = FALSE, ...)
+            self$module$forward(
+              current_batch,
+              .llm = .llm,
+              trace = FALSE,
+              rollout_id = compose_rollout_id(rollout_id, i),
+              ...
+            )
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1

@@ -24,6 +24,21 @@ First development changelog. dsprrr is experimental; the API may change.
   (e.g. `RAGModule`, `ReActModule`, `RLMModule`) accept `.cache` but do not yet
   route their own calls through the cache (#dsprrr-aa2).
 
+* `BootstrapFewShot` now harvests demonstrations when the metric targets a
+  specific output field (e.g. `metric_exact_match(field = "answer")`).
+  Previously the single-module path passed a bare value to the metric, which
+  errored internally and silently bootstrapped zero demos (#dsprrr-s3b).
+
+* Evaluation now treats a failed prediction as a score of 0 rather than
+  dropping it from the mean, so optimizers no longer prefer configurations
+  that fail on most of the data (#dsprrr-tn1).
+
+* `BestOfN`, `Refine`, and `Assert` now thread a per-attempt `rollout_id` into
+  the cache key, so retries make distinct attempts instead of replaying one
+  cached response when caching is enabled. Nested wrappers (e.g.
+  `refine(best_of_n(mod))`) compose their ids cleanly instead of crashing with
+  a duplicate-argument error (#dsprrr-pcd, #dsprrr-wx6).
+
 ## Internal
 
 * Tests now isolate the on-disk cache to a temporary directory, so running

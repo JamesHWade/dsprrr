@@ -213,7 +213,8 @@ compile_bootstrap <- function(
 
   # Determine output column name
   # First try to get field from metric, then fall back to auto-detection
-  output_col <- get_metric_field(teleprompter@metric) %||%
+  metric_field <- get_metric_field(teleprompter@metric)
+  output_col <- metric_field %||%
     find_output_column(trainset, input_names)
 
   if (is.null(output_col)) {
@@ -290,8 +291,13 @@ compile_bootstrap <- function(
         }
       }
 
-      # Get expected output
-      expected <- if (!is.null(output_col) && output_col %in% names(row)) {
+      # Get expected output. Field-aware metrics extract their field from
+      # `expected` themselves (as in evaluate()), so they must receive the full
+      # row, not the bare cell value -- otherwise extract_field() errors, the
+      # metric is scored NA, and no demos are ever harvested.
+      expected <- if (!is.null(metric_field) && metric_field %in% names(row)) {
+        row
+      } else if (!is.null(output_col) && output_col %in% names(row)) {
         row[[output_col]]
       } else {
         NULL

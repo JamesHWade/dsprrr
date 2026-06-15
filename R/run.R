@@ -474,7 +474,13 @@ build_module_request <- function(module, inputs) {
 
 #' Execute a structured ellmer call from a prepared request
 #' @noRd
-call_llm_request <- function(llm, request, output_type, .cache = NULL) {
+call_llm_request <- function(
+  llm,
+  request,
+  output_type,
+  .cache = NULL,
+  rollout_id = NULL
+) {
   if (isTRUE(request$is_multimodal)) {
     llm$chat_structured(
       request$payload,
@@ -486,6 +492,7 @@ call_llm_request <- function(llm, request, output_type, .cache = NULL) {
       llm = llm,
       prompt = request$full_prompt,
       output_type = output_type,
+      rollout_id = rollout_id,
       .cache = .cache
     )
   }

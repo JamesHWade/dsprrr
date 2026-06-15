@@ -305,7 +305,15 @@ evaluate.Module <- function(
     evaluated <- epoch_results[[epochs]]$evaluated
   }
 
-  mean_score <- mean(scores, na.rm = TRUE)
+  # Failed rows (score NA) count as 0 in the headline mean, matching DSPy.
+  # Optimizers select on `mean_score`; dropping failures with na.rm would let a
+  # config that errors on the hard examples outrank a robust one. The raw
+  # `scores` vector keeps NA for diagnostics, and `n_errors` reports failures.
+  mean_score <- if (length(scores) == 0) {
+    NA_real_
+  } else {
+    mean(ifelse(is.na(scores), 0, scores))
+  }
   n_evaluated <- sum(!is.na(scores))
   n_errors <- sum(is.na(scores))
 

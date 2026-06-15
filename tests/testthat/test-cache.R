@@ -1137,3 +1137,35 @@ test_that(".cache is accepted and validated for non-Predict modules (dsprrr-jup)
   expect_error(run(mod, text = "hi", .cache = "yes"), "must be")
   expect_error(run(mod, text = "hi", .cache = NA), "must be")
 })
+
+test_that("rollout_id threads from forward() into the cache key (dsprrr-pcd)", {
+  # Regression: rollout_id was implemented in the cache layer but no caller
+  # passed it, so BestOfN/Refine retries with caching enabled were served
+  # identical cached responses (effective N = 1).
+  local_reset_cache()
+  configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
+
+  call_count <- 0
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, type, ...) {
+      call_count <<- call_count + 1
+      list(answer = paste0("resp-", call_count))
+    }),
+    class = "Chat"
+  )
+  sig <- Signature(
+    inputs = list(input(name = "q", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = ""
+  )
+  mod <- module(signature = sig, type = "predict", template = "{q}")
+
+  # Same prompt, different rollout_id -> both miss the cache -> 2 real calls.
+  mod$forward(list(q = "x"), .llm = mock_llm, rollout_id = 1)
+  mod$forward(list(q = "x"), .llm = mock_llm, rollout_id = 2)
+  expect_equal(call_count, 2)
+
+  # Repeating a rollout_id hits the cache -> no new call.
+  mod$forward(list(q = "x"), .llm = mock_llm, rollout_id = 1)
+  expect_equal(call_count, 2)
+})

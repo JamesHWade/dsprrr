@@ -1,3 +1,19 @@
+#' Compose a per-attempt cache-partition id that nests cleanly
+#'
+#' Retrying wrappers (BestOfN, Refine, Assert) tag each attempt with a
+#' `rollout_id` so retries get distinct cache keys. When wrappers are nested
+#' (e.g. `refine(best_of_n(mod))`) the outer wrapper passes its own id down;
+#' combining it with the inner attempt index keeps every (outer, inner) pair
+#' unique while consuming the inherited id (so it is not matched twice).
+#'
+#' @param rollout_id Inherited id from an enclosing wrapper, or NULL.
+#' @param i Integer attempt index for this wrapper.
+#' @return A character id, e.g. `"2"` at the top level or `"2.1"` when nested.
+#' @noRd
+compose_rollout_id <- function(rollout_id, i) {
+  if (is.null(rollout_id)) as.character(i) else paste0(rollout_id, ".", i)
+}
+
 #' Check if object inherits from ellmer type
 #'
 #' @noRd

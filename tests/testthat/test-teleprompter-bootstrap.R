@@ -446,3 +446,40 @@ test_that("compile_module works with BootstrapFewShot", {
   expect_true(result$is_compiled())
   expect_equal(result$config$teleprompter, "BootstrapFewShot")
 })
+
+test_that("BootstrapFewShot harvests demos with field-aware metrics (dsprrr-s3b)", {
+  # Regression: the single-module path passed the bare cell value as `expected`,
+  # so a field-aware metric (the documented default) errored inside
+  # extract_field(), was scored NA, and bootstrapped ZERO demos. The metric must
+  # receive the full row, mirroring the pipeline path and evaluate().
+  local_reset_cache()
+
+  sig <- Signature(
+    inputs = list(input(name = "question", class = S7::class_character)),
+    output_type = ellmer::type_string(),
+    instructions = "Answer the question"
+  )
+  mod <- module(signature = sig, type = "predict", template = "{question}")
+
+  # Mock LLM always returns the correct structured answer so every row passes.
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, type, ...) list(answer = "yes")),
+    class = "Chat"
+  )
+
+  trainset <- data.frame(
+    question = c("q1", "q2", "q3"),
+    answer = c("yes", "yes", "yes")
+  )
+
+  tp <- BootstrapFewShot(
+    metric = metric_exact_match(field = "answer"),
+    max_labeled_demos = 0L,
+    max_bootstrapped_demos = 2L,
+    seed = 42L
+  )
+
+  result <- compile(tp, mod, trainset, .llm = mock_llm)
+
+  expect_gt(result$config$optimizer$n_bootstrapped_demos, 0)
+})
