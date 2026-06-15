@@ -47,6 +47,11 @@ First development changelog. dsprrr is experimental; the API may change.
   cleanly instead of crashing with a duplicate-argument error
   (#dsprrr-pcd, \#dsprrr-wx6).
 
+- [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
+  now errors clearly for pipelines and other unsupported module types
+  instead of silently serialising them as an empty `PredictModule` and
+  dropping every step on restore (#dsprrr-07u).
+
 ### Internal
 
 - Tests now isolate the on-disk cache to a temporary directory, so

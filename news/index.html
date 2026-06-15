@@ -96,6 +96,7 @@
 <li><p><code>BootstrapFewShot</code> now harvests demonstrations when the metric targets a specific output field (e.g. <code>metric_exact_match(field = "answer")</code>). Previously the single-module path passed a bare value to the metric, which errored internally and silently bootstrapped zero demos (#dsprrr-s3b).</p></li>
 <li><p>Evaluation now treats a failed prediction as a score of 0 rather than dropping it from the mean, so optimizers no longer prefer configurations that fail on most of the data (#dsprrr-tn1).</p></li>
 <li><p><code>BestOfN</code>, <code>Refine</code>, and <code>Assert</code> now thread a per-attempt <code>rollout_id</code> into the cache key, so retries make distinct attempts instead of replaying one cached response when caching is enabled. Nested wrappers (e.g. <code>refine(best_of_n(mod))</code>) compose their ids cleanly instead of crashing with a duplicate-argument error (#dsprrr-pcd, #dsprrr-wx6).</p></li>
+<li><p><code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> now errors clearly for pipelines and other unsupported module types instead of silently serialising them as an empty <code>PredictModule</code> and dropping every step on restore (#dsprrr-07u).</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="internal-development-version">Internal<a class="anchor" aria-label="anchor" href="#internal-development-version"></a></h3>
