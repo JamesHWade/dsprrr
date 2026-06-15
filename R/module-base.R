@@ -86,6 +86,11 @@ Module <- R6::R6Class(
       .return_format = "simple",
       .cache = NULL
     ) {
+      # Validate .cache here too: callers can reach $run() directly (not only
+      # via the run() generic, which validates separately), so a malformed
+      # value must fail loudly instead of being silently forwarded.
+      validate_cache_arg(.cache)
+
       inputs <- list(...)
 
       # Validate inputs against signature

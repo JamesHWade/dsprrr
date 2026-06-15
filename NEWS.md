@@ -4,11 +4,6 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Bug fixes
 
-* `BootstrapFewShot` now harvests demonstrations when the metric targets a
-  specific output field (e.g. `metric_exact_match(field = "answer")`).
-  Previously the single-module path passed a bare value to the metric, which
-  errored internally and silently bootstrapped zero demos (#dsprrr-s3b).
-
 * Failed items in a batch are now counted and reported. Previously
   `print()` on a batch result always said "All items completed successfully"
   because it looked for the error in the wrong place (#dsprrr-8l0).
@@ -21,13 +16,13 @@ First development changelog. dsprrr is experimental; the API may change.
   example, when the API is unreachable) instead of a cryptic
   "attempt to select less than one element" (#dsprrr-hew).
 
-* `.cache` is now honored by all module types and pipelines, not only
-  `PredictModule`. Previously it was silently dropped (with a spurious
-  "unknown input" warning) for every other module (#dsprrr-jup).
-
-* Evaluation now treats a failed prediction as a score of 0 rather than
-  dropping it from the mean, so optimizers no longer prefer configurations
-  that fail on most of the data (#dsprrr-tn1).
+* `.cache` is now a validated, first-class argument to `run()` and `forward()`
+  for every module type, instead of triggering a spurious "unknown input"
+  warning and being dropped for non-`PredictModule` modules (#dsprrr-jup).
+  `PredictModule` (and the wrapper/few-shot modules that delegate to it) honor
+  it for the structured-output cache; modules that drive the LLM directly
+  (e.g. `RAGModule`, `ReActModule`, `RLMModule`) accept `.cache` but do not yet
+  route their own calls through the cache (#dsprrr-aa2).
 
 ## Internal
 

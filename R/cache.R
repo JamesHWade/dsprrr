@@ -19,7 +19,10 @@ NULL
 #' without writing into the current working directory.
 #' @noRd
 default_disk_cache_path <- function() {
-  Sys.getenv("DSPRRR_CACHE_PATH", unset = ".dsprrr_cache")
+  # Treat an empty-string env var the same as unset, so DSPRRR_CACHE_PATH=""
+  # does not resolve the cache to "" (which would write into the working dir).
+  path <- Sys.getenv("DSPRRR_CACHE_PATH", unset = "")
+  if (nzchar(path)) path else ".dsprrr_cache"
 }
 
 #' Configure dsprrr Cache
