@@ -669,12 +669,10 @@ test_that("reduce_best_by_metric warns for individual failures then errors when 
 
   # Should warn for each scoring failure, then error when all scores are NA
 
-  expect_error(
-    expect_warning(
-      reducer(outputs),
-      "Metric scoring failed"
-    ),
-    "All metric scores are NA"
+  expect_error_with_warnings(
+    reducer(outputs),
+    warning_regexp = "Metric scoring failed",
+    error_regexp = "All metric scores are NA"
   )
 })
 

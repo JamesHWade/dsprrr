@@ -224,7 +224,7 @@ get_cost.dsprrr_batch_result <- function(x, ...) {
   if (n_missing > 0) {
     cli::cli_warn(c(
       "Cost data missing for {n_missing} of {length(costs)} items",
-      "i" = "Total cost may be underreported"
+      "i" = "Total cost is unknown; missing prices are not treated as free"
     ))
   }
 
@@ -234,7 +234,7 @@ get_cost.dsprrr_batch_result <- function(x, ...) {
         index = seq_along(costs),
         cost = costs
       ),
-      total = sum(costs, na.rm = TRUE),
+      total = sum_cost_values(costs),
       n_missing = n_missing
     ),
     class = "dsprrr_cost_summary"
@@ -268,8 +268,14 @@ get_cost.dsprrr_evaluation <- function(x, ...) {
   if (n_missing > 0) {
     cli::cli_warn(c(
       "Cost data missing for {n_missing} of {length(costs)} items",
-      "i" = "Total cost may be underreported"
+      "i" = "Total cost is unknown; missing prices are not treated as free"
     ))
+  }
+
+  total <- if (!is.null(x$total_cost) && length(x$total_cost) == 1L) {
+    as.numeric(x$total_cost)
+  } else {
+    sum_cost_values(costs)
   }
 
   structure(
@@ -278,7 +284,7 @@ get_cost.dsprrr_evaluation <- function(x, ...) {
         index = seq_along(costs),
         cost = costs
       ),
-      total = sum(costs, na.rm = TRUE),
+      total = total,
       n_missing = n_missing
     ),
     class = "dsprrr_cost_summary"

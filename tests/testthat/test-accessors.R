@@ -225,6 +225,23 @@ test_that("get_cost handles empty dsprrr_evaluation", {
   expect_equal(result$n_missing, 0L)
 })
 
+test_that("get_cost uses evaluation-wide cost across epochs", {
+  eval_result <- structure(
+    list(
+      total_cost = 0.06,
+      metadata = list(
+        list(cost = 0.01),
+        list(cost = 0.02)
+      )
+    ),
+    class = "dsprrr_evaluation"
+  )
+
+  result <- get_cost(eval_result)
+  expect_equal(result$total, 0.06)
+  expect_equal(result$costs$cost, c(0.01, 0.02))
+})
+
 test_that("get_cost warns when costs are missing", {
   batch <- structure(
     list(
@@ -239,7 +256,7 @@ test_that("get_cost warns when costs are missing", {
     "Cost data missing for 1 of 2 items"
   )
   expect_equal(result$n_missing, 1)
-  expect_equal(result$total, 0.001)
+  expect_true(is.na(result$total))
 })
 
 test_that("print.dsprrr_cost_summary works", {

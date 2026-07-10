@@ -4,7 +4,12 @@
 local_clean_scoped_lm <- function(.env = parent.frame()) {
   # Access the package environment
   pkg_env <- asNamespace("dsprrr")$.dsprrr_env
-  withr::defer(pkg_env$scoped_lm <- NULL, envir = .env)
+  withr::defer(
+    {
+      pkg_env$scoped_lm <- NULL
+    },
+    envir = .env
+  )
   pkg_env$scoped_lm <- NULL
 }
 

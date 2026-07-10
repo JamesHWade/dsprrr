@@ -247,7 +247,10 @@ test_that("BestOfN handles module errors gracefully", {
   }
 
   wrapper <- best_of_n(mock, N = 5, fail_count = 5)
-  result <- wrapper$forward(list(question = "test"))
+  result <- expect_test_warnings(
+    wrapper$forward(list(question = "test")),
+    "failed in BestOfN"
+  )
 
   # Should succeed after 2 failures
   expect_equal(result$output[[1]]$answer, "success")
@@ -261,9 +264,10 @@ test_that("BestOfN fails after too many consecutive errors", {
 
   wrapper <- best_of_n(mock, N = 3, fail_count = 2)
 
-  expect_error(
+  expect_error_with_warnings(
     wrapper$forward(list(question = "test")),
-    "Too many consecutive failures"
+    warning_regexp = "failed in BestOfN",
+    error_regexp = "Too many consecutive failures"
   )
 })
 
@@ -379,8 +383,8 @@ test_that("BestOfN handles reward_fn errors gracefully", {
   wrapper <- best_of_n(mock, N = 2, reward_fn = error_reward)
 
   # Should warn about reward function failure but still return result
-  expect_warning(
-    result <- wrapper$forward(list(question = "test")),
+  result <- expect_test_warnings(
+    wrapper$forward(list(question = "test")),
     "Reward function failed"
   )
 

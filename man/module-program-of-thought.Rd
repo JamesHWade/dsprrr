@@ -4,7 +4,8 @@
 \alias{module-program-of-thought}
 \title{Program of Thought Module}
 \description{
-A module that generates R code to solve problems, executes it safely,
+A module that generates R code to solve problems, executes it through an
+explicitly configured runner,
 and uses the execution results to produce answers. This is particularly
 effective for tasks requiring exact computation (arithmetic, statistics,
 data manipulation) where LLMs alone are unreliable.
@@ -13,15 +14,16 @@ data manipulation) where LLMs alone are unreliable.
 The execution flow is:
 \enumerate{
 \item LLM generates R code based on the inputs
-\item Code is executed in an isolated subprocess via RCodeRunner
+\item Code is executed by the configured code runner
 \item If execution fails, the error is fed back to the LLM for repair
 \item Steps 2-3 repeat until success or max_iters is reached
 \item Final answer is extracted from the execution result
 }
 
 Security: Code execution requires explicit opt-in via a runner parameter.
-The runner provides subprocess isolation but is NOT a security sandbox.
-For untrusted inputs, use OS-level sandboxing (containers, AppArmor).
+The built-in runner uses a separate process but is NOT a security sandbox.
+Inspect \code{runner$policy()} before execution. For untrusted inputs, provide a
+runner backed by OS-level sandboxing (such as a container or AppArmor).
 }
 \examples{
 \dontrun{

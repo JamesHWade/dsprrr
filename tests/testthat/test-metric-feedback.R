@@ -250,5 +250,5 @@ test_that("gepa_format_failures omits feedback when absent", {
 
   formatted <- dsprrr:::gepa_format_failures(failed)
   expect_match(formatted, "Expected: A")
-  expect_false(grepl("Feedback:", formatted))
+  expect_false(grepl("Feedback:", formatted, fixed = TRUE))
 })

@@ -10,6 +10,71 @@ test_that("r_code_runner creates RCodeRunner object", {
   expect_equal(runner$max_output_chars, 100000L)
 })
 
+test_that("RCodeRunner exposes its trust boundary", {
+  skip_if_not_installed("callr")
+
+  policy <- r_code_runner()$policy()
+
+  expect_identical(policy$backend, "callr")
+  expect_identical(policy$trust, "trusted-input-only")
+  expect_false(policy$sandboxed)
+  expect_true(policy$process_isolation)
+  expect_identical(policy$filesystem_access, "host-user")
+  expect_identical(policy$network_access, "host-user")
+  expect_identical(policy$pattern_scan, "defense-in-depth")
+})
+
+test_that("code runner protocol supports external sandbox backends", {
+  runner <- list(
+    execute = function(code, context = list()) {
+      list(success = TRUE, result = code, context = context)
+    },
+    policy = function() {
+      list(
+        backend = "test-container",
+        trust = "untrusted-input",
+        sandboxed = TRUE
+      )
+    }
+  )
+
+  expect_invisible(dsprrr:::validate_code_runner(runner))
+  expect_s3_class(
+    program_of_thought("question -> answer", runner = runner),
+    "ProgramOfThoughtModule"
+  )
+  expect_s3_class(
+    code_act("question -> answer", runner = runner),
+    "CodeActModule"
+  )
+  expect_s3_class(
+    rlm_module("question -> answer", runner = runner),
+    "RLMModule"
+  )
+})
+
+test_that("code runner protocol validates policy metadata", {
+  incomplete <- list(
+    execute = function(code, context = list()) NULL,
+    policy = function() list(backend = "custom")
+  )
+  invalid <- list(
+    execute = function(code, context = list()) NULL,
+    policy = function() {
+      list(backend = "custom", trust = "trusted", sandboxed = "no")
+    }
+  )
+
+  expect_error(
+    dsprrr:::validate_code_runner(incomplete),
+    "Missing required fields"
+  )
+  expect_error(
+    dsprrr:::validate_code_runner(invalid),
+    "returned invalid metadata"
+  )
+})
+
 test_that("RCodeRunner executes simple R code", {
   skip_if_not_installed("callr")
 

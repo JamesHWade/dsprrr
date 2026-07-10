@@ -289,6 +289,7 @@ Module <- R6::R6Class(
       scores <- rep(NA_real_, n_candidates)
       n_evaluated <- integer(n_candidates)
       n_errors <- integer(n_candidates)
+      total_costs <- rep(NA_real_, n_candidates)
       parameters_col <- vector("list", n_candidates)
       evaluations <- vector("list", n_candidates)
       timestamps <- rep(
@@ -327,6 +328,7 @@ Module <- R6::R6Class(
         scores[i] <- eval_result$mean_score
         n_evaluated[i] <- eval_result$n_evaluated
         n_errors[i] <- eval_result$n_errors
+        total_costs[i] <- eval_result$total_cost %||% NA_real_
         timestamps[i] <- Sys.time()
 
         if (!is.na(scores[i])) {
@@ -365,6 +367,7 @@ Module <- R6::R6Class(
         score = scores,
         n_evaluated = n_evaluated,
         n_errors = n_errors,
+        total_cost = total_costs,
         evaluation = evaluations,
         timestamp = timestamps
       )
@@ -556,10 +559,7 @@ Module <- R6::R6Class(
           vapply(traces, trace_latency_ms, numeric(1)),
           na.rm = TRUE
         ),
-        total_cost = sum(
-          vapply(traces, trace_cost, numeric(1)),
-          na.rm = TRUE
-        )
+        total_cost = sum_cost_values(vapply(traces, trace_cost, numeric(1)))
       )
     },
 

@@ -56,13 +56,16 @@ test_that("evaluate() runs multiple epochs when epochs > 1", {
     identical(prediction, expected_row$answer)
   }
 
-  result <- evaluate(
-    mod,
-    data = dataset,
-    metric = metric,
-    .llm = mock_llm,
-    .progress = FALSE,
-    epochs = 3L
+  result <- expect_test_warnings(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = metric,
+      .llm = mock_llm,
+      .progress = FALSE,
+      epochs = 3L
+    ),
+    "Confidence intervals"
   )
 
   expect_s3_class(result, "dsprrr_evaluation")
@@ -103,13 +106,16 @@ test_that("evaluate() computes correct statistics across epochs", {
     identical(prediction, expected_row$answer)
   }
 
-  result <- evaluate(
-    mod,
-    data = dataset,
-    metric = metric,
-    .llm = mock_llm,
-    .progress = FALSE,
-    epochs = 3L
+  result <- expect_test_warnings(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = metric,
+      .llm = mock_llm,
+      .progress = FALSE,
+      epochs = 3L
+    ),
+    "Confidence intervals"
   )
 
   # All epochs should have score of 1.0 for this example
@@ -235,14 +241,17 @@ test_that("epoch results are aggregated correctly", {
     identical(prediction, expected_row$answer)
   }
 
-  result <- evaluate(
-    mod,
-    data = dataset,
-    metric = metric,
-    .llm = mock_llm,
-    .progress = FALSE,
-    epochs = 3L,
-    .cache = FALSE # Disable cache so each epoch gets fresh responses
+  result <- expect_test_warnings(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = metric,
+      .llm = mock_llm,
+      .progress = FALSE,
+      epochs = 3L,
+      .cache = FALSE # Disable cache so each epoch gets fresh responses
+    ),
+    "Confidence intervals"
   )
 
   # Check that we have 3 epochs
@@ -304,13 +313,16 @@ test_that("evaluate() handles empty dataset with epochs > 1", {
     identical(prediction, expected_row$answer)
   }
 
-  result <- evaluate(
-    mod,
-    data = empty_data,
-    metric = metric,
-    .llm = mock_llm,
-    .progress = FALSE,
-    epochs = 3L
+  result <- expect_test_warnings(
+    evaluate(
+      mod,
+      data = empty_data,
+      metric = metric,
+      .llm = mock_llm,
+      .progress = FALSE,
+      epochs = 3L
+    ),
+    "Empty data provided"
   )
 
   # Should still return valid list structure
@@ -354,7 +366,7 @@ test_that("evaluate() reports epoch in error messages", {
   expect_equal(result$n_errors, 1L)
 })
 
-test_that("epochs parameter coerces non-integer with warning", {
+test_that("epochs parameter coerces non-integer", {
   sig <- signature("question -> answer")
   mod <- module(sig, type = "predict")
   mock_llm <- list(chat_structured = function(...) "4")
@@ -372,12 +384,12 @@ test_that("epochs parameter coerces non-integer with warning", {
     metric = metric,
     .llm = mock_llm,
     .progress = FALSE,
-    epochs = 3.7
+    epochs = 5.7
   )
 
-  # Should have run 3 epochs (not 3.7)
+  # Should have run 5 epochs (not 5.7)
   expect_s3_class(result, "dsprrr_evaluation")
-  expect_equal(length(result$epoch_scores), 3)
+  expect_equal(length(result$epoch_scores), 5)
 })
 
 test_that("eval_program() validates epochs parameter", {
@@ -467,6 +479,6 @@ test_that("evaluate() counts intermittent metric failures correctly", {
 
   # Errors should contain information from both epochs
   expect_true(length(result$errors) > 0)
-  expect_true(any(grepl("Epoch 1", result$errors)))
-  expect_true(any(grepl("Epoch 2", result$errors)))
+  expect_true(any(grepl("Epoch 1", result$errors, fixed = TRUE)))
+  expect_true(any(grepl("Epoch 2", result$errors, fixed = TRUE)))
 })

@@ -15,8 +15,9 @@
 #' 3. Agent produces final structured answer
 #'
 #' Security: Code execution requires explicit opt-in via a runner parameter.
-#' The runner provides subprocess isolation but is NOT a security sandbox.
-#' For untrusted inputs, use OS-level sandboxing.
+#' The built-in runner uses a separate process but is NOT a security sandbox.
+#' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
+#' runner backed by OS-level sandboxing.
 #'
 #' @examples
 #' \dontrun{
@@ -54,7 +55,7 @@ NULL
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
 #' @param tools List of ellmer ToolDef objects for the agent to use
-#' @param runner An RCodeRunner object for code execution. Required.
+#' @param runner A code runner implementing `execute()` and `policy()`. Required.
 #' @param max_iterations Maximum tool/code iterations before forcing answer
 #'   (default 10)
 #' @param ... Additional arguments passed to the module
@@ -88,13 +89,7 @@ code_act <- function(
     ))
   }
 
-  if (!inherits(runner, "RCodeRunner")) {
-    cli::cli_abort(c(
-      "runner must be an RCodeRunner object",
-      "x" = "You provided: {.cls {class(runner)[1]}}",
-      "i" = "Create one with: {.code r_code_runner()}"
-    ))
-  }
+  validate_code_runner(runner)
 
   # Parse signature if string
   if (is.character(signature)) {
@@ -133,7 +128,7 @@ CodeActModule <- R6::R6Class(
     #' @field tools List of ellmer tools
     tools = NULL,
 
-    #' @field runner RCodeRunner for code execution
+    #' @field runner Code runner for code execution
     runner = NULL,
 
     #' @field max_iterations Maximum iterations
@@ -144,7 +139,7 @@ CodeActModule <- R6::R6Class(
     #'
     #' @param signature Signature object
     #' @param tools List of ellmer tools
-    #' @param runner RCodeRunner for code execution
+    #' @param runner Code runner for code execution
     #' @param max_iterations Maximum iterations
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object

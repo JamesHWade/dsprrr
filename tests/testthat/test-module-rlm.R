@@ -63,7 +63,7 @@ test_that("rlm_module requires runner", {
 test_that("rlm_module validates runner type", {
   expect_error(
     rlm_module("question -> answer", runner = "not a runner"),
-    "runner must be an RCodeRunner"
+    "runner must implement the dsprrr code-runner protocol"
   )
 })
 
@@ -594,9 +594,12 @@ test_that("RLMModule respects max_iterations", {
     list(reasoning = "Step 3", code = "z <- 3") # Won't be reached
   ))
 
-  result <- rlm$forward(
-    list(question = "test"),
-    .llm = mock_llm
+  result <- expect_test_warnings(
+    rlm$forward(
+      list(question = "test"),
+      .llm = mock_llm
+    ),
+    "reached max_iterations"
   )
 
   # Should use fallback after max_iterations
@@ -619,9 +622,12 @@ test_that("RLMModule uses fallback when no SUBMIT", {
     list(reasoning = "Just computing", code = "1 + 1")
   ))
 
-  result <- rlm$forward(
-    list(question = "test"),
-    .llm = mock_llm
+  result <- expect_test_warnings(
+    rlm$forward(
+      list(question = "test"),
+      .llm = mock_llm
+    ),
+    "reached max_iterations"
   )
 
   # Should have used fallback extraction
@@ -649,9 +655,12 @@ test_that("RLMModule normalizes structured fallback to signature fields and type
     )
   )
 
-  result <- rlm$forward(
-    list(question = "Classify this"),
-    .llm = mock_llm
+  result <- expect_test_warnings(
+    rlm$forward(
+      list(question = "Classify this"),
+      .llm = mock_llm
+    ),
+    "reached max_iterations"
   )
 
   expect_equal(result$output[[1]]$score, 0.75)
@@ -866,9 +875,9 @@ test_that("RLMModule handles various context types", {
     .llm = mock_llm
   )
 
-  expect_true(grepl("text: 11", result$output[[1]]$answer))
-  expect_true(grepl("numbers: 5", result$output[[1]]$answer))
-  expect_true(grepl("df rows: 3", result$output[[1]]$answer))
+  expect_true(grepl("text: 11", result$output[[1]]$answer, fixed = TRUE))
+  expect_true(grepl("numbers: 5", result$output[[1]]$answer, fixed = TRUE))
+  expect_true(grepl("df rows: 3", result$output[[1]]$answer, fixed = TRUE))
 })
 
 # ============================================================================
@@ -894,7 +903,7 @@ test_that("create_rlm_prelude includes SUBMIT function", {
     custom_tools = list()
   )
 
-  expect_true(grepl("SUBMIT <- function", prelude))
+  expect_true(grepl("SUBMIT <- function", prelude, fixed = TRUE))
 })
 
 test_that("create_rlm_prelude includes peek function", {
@@ -904,7 +913,7 @@ test_that("create_rlm_prelude includes peek function", {
     custom_tools = list()
   )
 
-  expect_true(grepl("peek <- function", prelude))
+  expect_true(grepl("peek <- function", prelude, fixed = TRUE))
 })
 
 test_that("create_rlm_prelude includes search function", {
@@ -914,7 +923,7 @@ test_that("create_rlm_prelude includes search function", {
     custom_tools = list()
   )
 
-  expect_true(grepl("search <- function", prelude))
+  expect_true(grepl("search <- function", prelude, fixed = TRUE))
 })
 
 test_that("create_rlm_prelude includes rlm_query when sub_lm enabled", {
@@ -931,10 +940,14 @@ test_that("create_rlm_prelude includes rlm_query when sub_lm enabled", {
   )
 
   # With sub_lm: should have working rlm_query
-  expect_true(grepl("rlm_query_request", prelude_with))
+  expect_true(grepl("rlm_query_request", prelude_with, fixed = TRUE))
 
   # Without sub_lm: should have disabled rlm_query
-  expect_true(grepl("Recursive LLM queries are disabled", prelude_without))
+  expect_true(grepl(
+    "Recursive LLM queries are disabled",
+    prelude_without,
+    fixed = TRUE
+  ))
 })
 
 test_that("create_rlm_prelude includes custom tools", {
@@ -949,8 +962,8 @@ test_that("create_rlm_prelude includes custom tools", {
     custom_tools = custom_tools
   )
 
-  expect_true(grepl("my_tool <-", prelude))
-  expect_true(grepl("another_tool <-", prelude))
+  expect_true(grepl("my_tool <-", prelude, fixed = TRUE))
+  expect_true(grepl("another_tool <-", prelude, fixed = TRUE))
 })
 
 test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
@@ -980,7 +993,7 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
     context = list()
   )
   expect_false(bad$success)
-  expect_true(grepl("missing outputs", bad$error))
+  expect_true(grepl("missing outputs", bad$error, fixed = TRUE))
 })
 
 test_that("strip_rlm_code_fences removes markdown fences", {
@@ -1206,7 +1219,7 @@ test_that("rlm_query_batch validates queries is character", {
   )
 
   expect_false(result$success)
-  expect_true(grepl("character vector", result$error))
+  expect_true(grepl("character vector", result$error, fixed = TRUE))
 })
 
 test_that("rlm_query_batch validates slices length", {
@@ -1226,7 +1239,7 @@ test_that("rlm_query_batch validates slices length", {
   )
 
   expect_false(result$success)
-  expect_true(grepl("same length", result$error))
+  expect_true(grepl("same length", result$error, fixed = TRUE))
 })
 
 test_that("process_rlm_query_batch uses bounded parallelism and preserves order", {

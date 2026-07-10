@@ -190,7 +190,7 @@ test_that("SIMBA compile applies rules and demos when improved", {
         chat_structured = function(prompt, type, ...) {
           call_count <<- call_count + 1L
           # Check if SIMBA_RULE has been applied by looking at the prompt
-          if (grepl("SIMBA_RULE", prompt)) {
+          if (grepl("SIMBA_RULE", prompt, fixed = TRUE)) {
             # After rule is applied, return correct answers
             if (grepl("2\\+2", prompt)) {
               return("4")
@@ -249,7 +249,7 @@ test_that("SIMBA compile applies rules and demos when improved", {
 
   expect_true(result$config$compiled)
   expect_equal(result$config$teleprompter, "SIMBA")
-  expect_true(grepl("SIMBA_RULE", result$signature@instructions))
+  expect_true(grepl("SIMBA_RULE", result$signature@instructions, fixed = TRUE))
   expect_true(length(result$demos) > 0)
   expect_true("SIMBA_RULE" %in% result$config$optimizer$rules)
 })

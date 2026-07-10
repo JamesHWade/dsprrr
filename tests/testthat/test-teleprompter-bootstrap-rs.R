@@ -220,7 +220,8 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
 
   # Metric that returns 1.0 for "correct"
   exact_metric <- function(pred, row) {
-    as.numeric(pred == row$answer)
+    expected <- if (is.data.frame(row)) row$answer else row
+    as.numeric(pred == expected)
   }
 
   tp <- BootstrapFewShotWithRandomSearch(
@@ -404,7 +405,10 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
   })
 
   tp <- BootstrapFewShotWithRandomSearch(
-    metric = function(pred, row) as.numeric(pred == row$y),
+    metric = function(pred, row) {
+      expected <- if (is.data.frame(row)) row$y else row
+      as.numeric(pred == expected)
+    },
     num_candidate_programs = 3L,
     max_labeled_demos = 1L,
     max_bootstrapped_demos = 1L
@@ -449,7 +453,9 @@ test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
 
   # Should error when all candidates fail
   expect_error(
-    compile(tp, mod, trainset, valset = valset, .llm = failing_llm),
+    suppressWarnings(
+      compile(tp, mod, trainset, valset = valset, .llm = failing_llm)
+    ),
     "All .* candidate programs failed"
   )
 })

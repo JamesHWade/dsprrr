@@ -65,7 +65,7 @@ BetterTogether <- S7::new_class(
         if (length(value) == 0) {
           return(NULL)
         }
-        if (is.null(names(value)) || any(!nzchar(names(value)))) {
+        if (is.null(names(value)) || !all(nzchar(names(value)))) {
           return("optimizers must be named")
         }
         if (anyDuplicated(names(value))) {
@@ -144,7 +144,7 @@ BetterTogether <- S7::new_class(
   ) {
     dots <- list(...)
     if (length(dots) > 0) {
-      if (is.null(names(dots)) || any(!nzchar(names(dots)))) {
+      if (is.null(names(dots)) || !all(nzchar(names(dots)))) {
         cli::cli_abort(
           "Optimizer arguments in {.arg ...} must be named strategy keys"
         )
@@ -220,7 +220,7 @@ compile_better_together <- function(
   if (length(optimizer_compile_args) > 0) {
     if (
       is.null(names(optimizer_compile_args)) ||
-        any(!nzchar(names(optimizer_compile_args)))
+        !all(nzchar(names(optimizer_compile_args)))
     ) {
       cli::cli_abort("{.arg optimizer_compile_args} must be named")
     }

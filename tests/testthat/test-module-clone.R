@@ -12,7 +12,10 @@ test_that("copy() creates independent module", {
   )
 
   mod1 <- module(sig, type = "predict", chat = mock_chat)
-  mod2 <- mod1$copy()
+  expect_warning(
+    mod2 <- mod1$copy(),
+    "Could not clone Chat"
+  )
 
   # Should be different objects
   expect_false(identical(mod1, mod2))

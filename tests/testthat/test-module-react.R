@@ -142,6 +142,10 @@ test_that("ReactModule max_iterations is configurable", {
   mod <- module(sig, type = "react", max_iterations = 20L)
 
   expect_equal(mod$max_iterations, 20L)
+  expect_error(
+    module(sig, type = "react", max_iterations = 0L),
+    "positive integer"
+  )
 })
 
 test_that("ReactModule forward tracks tool calls from ellmer turns", {
@@ -215,7 +219,60 @@ test_that("ReactModule forward tracks tool calls from ellmer turns", {
   expect_equal(metadata$tool_calls[[1]]$arguments$query, "alpha")
   expect_equal(metadata$tool_calls[[2]]$arguments$value, "beta")
   expect_equal(metadata$tools_used, c("lookup", "summarize"))
+  expect_true(all(vapply(
+    metadata$history,
+    inherits,
+    logical(1),
+    "ellmer::Turn"
+  )))
+  expect_identical(metadata$finalization, "structured-followup")
+  expect_true(is.na(metadata$cost))
   expect_equal(mod$state$traces[[1]]$iterations, 2L)
+})
+
+test_that("ReactModule enforces max_iterations before finalization", {
+  turns <- list()
+  mock_llm <- structure(
+    list(
+      register_tool = function(tool) invisible(NULL),
+      get_turns = function(...) turns,
+      chat = function(prompt, echo = "none", ...) {
+        turns <<- c(
+          turns,
+          list(
+            ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentToolRequest(
+                id = "call_1",
+                name = "first",
+                arguments = list()
+              ))
+            ),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentToolRequest(
+                id = "call_2",
+                name = "second",
+                arguments = list()
+              ))
+            )
+          )
+        )
+        invisible(NULL)
+      },
+      chat_structured = function(...) stop("finalization should not run")
+    ),
+    class = "Chat"
+  )
+
+  mod <- module(
+    signature("question -> answer"),
+    type = "react",
+    max_iterations = 1L
+  )
+  expect_error(
+    mod$forward(list(question = "test"), .llm = mock_llm),
+    class = "dsprrr_react_iteration_limit"
+  )
 })
 
 test_that("ReactModule print includes tool info", {

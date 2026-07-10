@@ -1,7 +1,8 @@
 #' Program of Thought Module
 #'
 #' @description
-#' A module that generates R code to solve problems, executes it safely,
+#' A module that generates R code to solve problems, executes it through an
+#' explicitly configured runner,
 #' and uses the execution results to produce answers. This is particularly
 #' effective for tasks requiring exact computation (arithmetic, statistics,
 #' data manipulation) where LLMs alone are unreliable.
@@ -9,14 +10,15 @@
 #' @details
 #' The execution flow is:
 #' 1. LLM generates R code based on the inputs
-#' 2. Code is executed in an isolated subprocess via RCodeRunner
+#' 2. Code is executed by the configured code runner
 #' 3. If execution fails, the error is fed back to the LLM for repair
 #' 4. Steps 2-3 repeat until success or max_iters is reached
 #' 5. Final answer is extracted from the execution result
 #'
 #' Security: Code execution requires explicit opt-in via a runner parameter.
-#' The runner provides subprocess isolation but is NOT a security sandbox.
-#' For untrusted inputs, use OS-level sandboxing (containers, AppArmor).
+#' The built-in runner uses a separate process but is NOT a security sandbox.
+#' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
+#' runner backed by OS-level sandboxing (such as a container or AppArmor).
 #'
 #' @examples
 #' \dontrun{
@@ -44,7 +46,7 @@ NULL
 #' executes R code to solve problems.
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
-#' @param runner An RCodeRunner object for code execution. Required.
+#' @param runner A code runner implementing `execute()` and `policy()`. Required.
 #' @param max_iters Maximum code generation/repair iterations (default 3)
 #' @param extract_answer Logical. If TRUE (default), use LLM to extract final
 #'   answer from execution result. If FALSE, return execution result directly.
@@ -76,13 +78,7 @@ program_of_thought <- function(
     ))
   }
 
-  if (!inherits(runner, "RCodeRunner")) {
-    cli::cli_abort(c(
-      "runner must be an RCodeRunner object",
-      "x" = "You provided: {.cls {class(runner)[1]}}",
-      "i" = "Create one with: {.code r_code_runner()}"
-    ))
-  }
+  validate_code_runner(runner)
 
   # Parse signature if string
   if (is.character(signature)) {
@@ -118,7 +114,7 @@ ProgramOfThoughtModule <- R6::R6Class(
   "ProgramOfThoughtModule",
   inherit = Module,
   public = list(
-    #' @field runner RCodeRunner for code execution
+    #' @field runner Code runner for code execution
     runner = NULL,
 
     #' @field max_iters Maximum iterations for code repair
@@ -131,7 +127,7 @@ ProgramOfThoughtModule <- R6::R6Class(
     #' Initialize a ProgramOfThoughtModule
     #'
     #' @param signature Signature object defining inputs/outputs
-    #' @param runner RCodeRunner for code execution
+    #' @param runner Code runner for code execution
     #' @param max_iters Maximum code repair iterations
     #' @param extract_answer Whether to extract answer via LLM
     #' @param config Optional configuration list

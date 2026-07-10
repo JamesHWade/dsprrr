@@ -499,7 +499,7 @@ test_that("update_cost_summary handles NA in total_cost", {
   updated <- update_cost_summary(summary, cost_with_na)
 
   expect_equal(updated@total_tokens, 150L)
-  expect_equal(updated@total_cost, 0) # NA treated as 0
+  expect_true(is.na(updated@total_cost)) # Unknown is not treated as free
   expect_equal(updated@n_calls, 1L)
 })
 
@@ -516,9 +516,9 @@ test_that("update_cost_summary handles NULL values in cost list", {
 
   updated <- update_cost_summary(summary, cost_with_nulls)
 
-  # Should preserve existing values, add 0 from NULL
+  # Token counters remain additive, but a missing price makes cost unknown.
   expect_equal(updated@total_tokens, 100L)
-  expect_equal(updated@total_cost, 0.01)
+  expect_true(is.na(updated@total_cost))
   expect_equal(updated@n_calls, 1L)
 })
 

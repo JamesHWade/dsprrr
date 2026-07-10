@@ -4,6 +4,9 @@
 ^README\.Rmd$
 ^cran-comments\.md$
 ^\.github$
+^\.git$
+^\.roborev\.toml$
+^\.dsprrr_cache$
 ^codecov\.yml$
 ^[.]?air[.]toml$
 ^\.vscode$
@@ -25,6 +28,7 @@
 ^gh-issue.*\.md$
 ^PHASE2_ISSUE\.md$
 ^vignettes/_vcr/\.gitkeep$
+^vignettes/.*_cache$
 ^tests/testthat/\.dsprrr_cache$
 ^inst/shiny-demo/srcts$
 ^inst/shiny-demo/node_modules$
@@ -33,4 +37,5 @@
 ^inst/shiny-demo/tsconfig\.json$
 ^inst/shiny-demo/build\.ts$
 ^inst/shiny-demo/components\.json$
+^inst/shiny-demo/r/\.posit$
 ^vignettes/articles$

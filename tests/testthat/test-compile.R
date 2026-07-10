@@ -88,7 +88,9 @@ test_that("compile_module works with different teleprompters", {
   )
   tp_grid <- GridSearchTeleprompter(
     variants = variants,
-    metric = metric_exact_match(field = "answer"),
+    metric = function(prediction, expected) {
+      identical(prediction, expected$answer)
+    },
     k = 1L,
     verbose = FALSE
   )
@@ -172,7 +174,9 @@ test_that("evaluate_dsp evaluates modules", {
     expected = c("greeting", "noun")
   )
 
-  metric <- metric_exact_match(field = "result")
+  metric <- function(prediction, expected) {
+    identical(prediction, expected$expected)
+  }
 
   # Mock evaluation (actual would need LLM)
   results <- evaluate_dsp(
@@ -243,7 +247,9 @@ test_that("compile workflow with validation set", {
 
   tp <- GridSearchTeleprompter(
     variants = variants,
-    metric = metric_exact_match(field = "sentiment"),
+    metric = function(prediction, expected) {
+      identical(prediction, expected$sentiment)
+    },
     eval_sample_size = 2L,
     verbose = FALSE
   )
@@ -367,7 +373,9 @@ test_that("evaluate returns dsprrr_evaluation class", {
     expected = c("greeting", "noun")
   )
 
-  metric <- metric_exact_match(field = "result")
+  metric <- function(prediction, expected) {
+    identical(prediction, expected$expected)
+  }
 
   results <- evaluate(
     mod,
@@ -405,12 +413,15 @@ test_that("dsprrr_evaluation print method handles errors", {
   # Metric that always fails
   bad_metric <- function(pred, row) stop("intentional failure")
 
-  results <- evaluate(
-    mod,
-    dataset,
-    metric = bad_metric,
-    .llm = mock_llm,
-    .progress = FALSE
+  results <- expect_test_warnings(
+    evaluate(
+      mod,
+      dataset,
+      metric = bad_metric,
+      .llm = mock_llm,
+      .progress = FALSE
+    ),
+    "Metric evaluation failed"
   )
 
   expect_s3_class(results, "dsprrr_evaluation")
@@ -445,14 +456,61 @@ test_that("evaluate() counts failed rows as 0 in mean_score (dsprrr-tn1)", {
     1
   }
 
-  results <- evaluate(
-    mod,
-    dataset,
-    metric = half_failing_metric,
-    .llm = mock_llm,
-    .progress = FALSE
+  results <- expect_test_warnings(
+    evaluate(
+      mod,
+      dataset,
+      metric = half_failing_metric,
+      .llm = mock_llm,
+      .progress = FALSE
+    ),
+    "Metric evaluation failed"
   )
 
   expect_equal(results$n_errors, 1)
   expect_equal(results$mean_score, 0.5) # (1 + 0) / 2, not 1.0
+})
+
+test_that("evaluate preserves run failures instead of replacing them with metric errors", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, ...) {
+      if (grepl("fail", prompt, fixed = TRUE)) {
+        stop("primary provider failure")
+      }
+      "ok"
+    }),
+    class = "Chat"
+  )
+  metric_calls <- 0L
+  metric <- function(prediction, expected) {
+    metric_calls <<- metric_calls + 1L
+    if (anyNA(prediction)) {
+      stop("secondary metric failure")
+    }
+    1
+  }
+
+  expect_warning(
+    result <- evaluate(
+      mod,
+      data.frame(text = c("works", "fail")),
+      metric = metric,
+      .llm = mock_llm,
+      .progress = FALSE
+    ),
+    "Failed to process item 2"
+  )
+
+  expect_identical(metric_calls, 1L)
+  expect_equal(result$n_errors, 1L)
+  expect_equal(result$n_run_errors, 1L)
+  expect_equal(result$n_metric_errors, 0L)
+  expect_match(result$run_errors, "primary provider failure")
+  expect_false(any(grepl(
+    "secondary metric failure",
+    result$errors,
+    fixed = TRUE
+  )))
+  expect_match(result$data$.error[[2]], "primary provider failure")
 })

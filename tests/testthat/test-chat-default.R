@@ -473,3 +473,9 @@ test_that("session_cost print method works", {
   expect_true(any(grepl("LLM calls", output, fixed = TRUE)))
   expect_true(any(grepl("Tokens", output, fixed = TRUE)))
 })
+
+test_that("ellmer compatibility matches DESCRIPTION", {
+  expect_identical(dsprrr:::check_ellmer_version("0.4.0"), FALSE)
+  expect_identical(dsprrr:::check_ellmer_version("0.4.1"), TRUE)
+  expect_identical(dsprrr:::check_ellmer_version("1.0.0"), TRUE)
+})

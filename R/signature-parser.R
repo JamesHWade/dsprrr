@@ -431,9 +431,10 @@ parse_type_string <- function(type_str, field_name = NULL) {
     types <- split_respecting_nesting(inner_str, ",")
 
     if (length(types) == 2) {
-      # For dict types, we'll use type_object with additional_properties
-      # This is a simplification - ideally we'd have a specific dict type
-      return(ellmer::type_object(.additional_properties = TRUE))
+      # Construct TypeObject directly because ellmer 0.5.0 deprecated the
+      # `.additional_properties` factory argument while retaining the typed
+      # representation. This remains compatible with the 0.4.1 minimum.
+      return(ellmer::TypeObject(additional_properties = TRUE))
     }
     # Fallback to generic object
     return(ellmer::type_object())

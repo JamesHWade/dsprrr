@@ -42,7 +42,10 @@ parallelism (more efficient, single process).
 \item{.return_format}{Character either "simple" or "structured"}
 }
 \value{
-A tibble with the input columns plus a result column containing outputs
+A tibble with the input columns plus a \code{result} list-column. With
+\code{.return_format = "structured"}, the tibble also contains \code{.error},
+\code{.metadata}, and \code{.chat}; \code{.error} is \code{NA} for successful rows and contains
+the LLM execution error message for failed rows.
 }
 \description{
 Execute a module on a data frame/tibble with optimized batch processing.

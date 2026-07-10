@@ -20,16 +20,16 @@ ReactModule <- R6::R6Class(
     #' @field tools List of ToolDef objects for the module
     tools = NULL,
 
-    #' @field max_iterations Maximum expected number of ReAct tool iterations
+    #' @field max_iterations Maximum number of ReAct tool iterations
     max_iterations = 10L,
 
     #' @description
     #' Initialize a new ReactModule
     #' @param signature S7 Signature object
     #' @param tools List of ellmer ToolDef objects
-    #' @param max_iterations Maximum expected tool-call iterations before
-    #'   warning. ellmer executes the tool loop internally, so this is checked
-    #'   after the chat call completes.
+    #' @param max_iterations Maximum tool-call iterations. dsprrr installs an
+    #'   ellmer tool-request guard when callbacks are available and validates the
+    #'   native turn history before finalization.
     #' @param template Optional glue template string
     #' @param demos Optional list of demonstrations
     #' @param config Optional configuration list
@@ -62,8 +62,17 @@ ReactModule <- R6::R6Class(
         }
       }
 
+      max_iterations <- as.integer(max_iterations)
+      if (
+        length(max_iterations) != 1L ||
+          is.na(max_iterations) ||
+          max_iterations < 1L
+      ) {
+        cli::cli_abort("max_iterations must be a positive integer")
+      }
+
       self$tools <- tools
-      self$max_iterations <- as.integer(max_iterations)
+      self$max_iterations <- max_iterations
     },
 
     #' @description
@@ -156,6 +165,40 @@ ReactModule <- R6::R6Class(
         )
       }
 
+      count_tool_iterations <- function(turns) {
+        sum(vapply(
+          turns,
+          function(turn) {
+            inherits(turn, "ellmer::AssistantTurn") &&
+              any(vapply(
+                turn@contents,
+                inherits,
+                logical(1),
+                "ellmer::ContentToolRequest"
+              ))
+          },
+          logical(1)
+        ))
+      }
+
+      # ellmer's callback fires before executing a tool. The returned remover
+      # keeps this per-run guard from leaking into subsequent conversations.
+      if (is.function(llm$on_tool_request)) {
+        remove_iteration_guard <- llm$on_tool_request(function(request) {
+          iteration_count <- count_tool_iterations(get_turns_safe(llm))
+          if (iteration_count > self$max_iterations) {
+            cli::cli_abort(
+              "ReAct exceeded max_iterations ({self$max_iterations})",
+              class = "dsprrr_react_iteration_limit"
+            )
+          }
+          invisible(NULL)
+        })
+        if (is.function(remove_iteration_guard)) {
+          on.exit(remove_iteration_guard(), add = TRUE)
+        }
+      }
+
       n_turns_before <- length(get_turns_safe(llm))
 
       tryCatch(
@@ -163,6 +206,9 @@ ReactModule <- R6::R6Class(
           llm$chat(prompt, echo = "none")
         },
         error = function(e) {
+          if (inherits(e, "dsprrr_react_iteration_limit")) {
+            stop(e)
+          }
           cli::cli_abort(
             "LLM call failed in ReAct loop: {e$message}",
             parent = e
@@ -215,10 +261,14 @@ ReactModule <- R6::R6Class(
       }
 
       if (iterations > self$max_iterations) {
-        cli::cli_warn(c(
-          "Tool-calling loop ran {iterations} iterations (max: {self$max_iterations})",
-          "i" = "Increase max_iterations if more reasoning steps are needed"
-        ))
+        cli::cli_abort(
+          c(
+            "ReAct exceeded max_iterations ({self$max_iterations})",
+            "x" = "The model produced {iterations} tool-call iterations.",
+            "i" = "Increase max_iterations if more reasoning steps are needed."
+          ),
+          class = "dsprrr_react_iteration_limit"
+        )
       }
 
       # Get final structured output
@@ -271,7 +321,7 @@ ReactModule <- R6::R6Class(
       total_input <- 0
       total_output <- 0
       total_cached <- 0
-      total_cost <- 0
+      turn_costs <- numeric()
       total_duration <- 0
 
       for (turn in all_turns) {
@@ -280,7 +330,7 @@ ReactModule <- R6::R6Class(
           total_output <- total_output + (turn@tokens[2] %||% 0)
           total_cached <- total_cached + (turn@tokens[3] %||% 0)
         }
-        total_cost <- total_cost + (turn@cost %||% 0)
+        turn_costs <- c(turn_costs, turn@cost %||% NA_real_)
         total_duration <- total_duration + (turn@duration %||% 0)
       }
 
@@ -289,9 +339,10 @@ ReactModule <- R6::R6Class(
         total_input <- total_input + (final_turn@tokens[1] %||% 0)
         total_output <- total_output + (final_turn@tokens[2] %||% 0)
         total_cached <- total_cached + (final_turn@tokens[3] %||% 0)
-        total_cost <- total_cost + (final_turn@cost %||% 0)
+        turn_costs <- c(turn_costs, final_turn@cost %||% NA_real_)
         total_duration <- total_duration + (final_turn@duration %||% 0)
       }
+      total_cost <- sum_cost_values(turn_costs)
 
       model <- tryCatch(llm$get_model(), error = function(e) NA_character_)
 
@@ -310,6 +361,8 @@ ReactModule <- R6::R6Class(
         latency_ms = latency_ms,
         iterations = iterations,
         tool_calls = tool_calls,
+        history = turns,
+        finalization = "structured-followup",
         tools_used = unique(vapply(
           tool_calls,
           function(x) x$tool_name,

@@ -256,10 +256,16 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
     as.numeric(prediction == expected_row$target)
   }
 
-  mock_llm <- structure(
-    list(chat_structured = function(...) "unused"),
-    class = "MockChat"
-  )
+  mock_llm <- local({
+    self <- structure(
+      list(
+        chat_structured = function(...) "unused",
+        clone = function(...) self
+      ),
+      class = "MockChat"
+    )
+    self
+  })
 
   # Run optimization with temperature grid
   optimize_grid(
@@ -357,8 +363,8 @@ test_that("module_parameter_set works with finetune grid functions", {
   random_grid <- dials::grid_random(param_set, size = 10)
   expect_equal(nrow(random_grid), 10)
 
-  # Verify grid_latin_hypercube works (used by tune_race_anova)
-  lhs_grid <- dials::grid_latin_hypercube(param_set, size = 5)
+  # Verify space-filling grids work (used by tune_race_anova)
+  lhs_grid <- dials::grid_space_filling(param_set, size = 5)
   expect_equal(nrow(lhs_grid), 5)
   expect_true(all(c("temperature", "top_p") %in% names(lhs_grid)))
 })

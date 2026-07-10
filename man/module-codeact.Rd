@@ -19,8 +19,9 @@ allows the agent to write and run R code. The execution flow is:
 }
 
 Security: Code execution requires explicit opt-in via a runner parameter.
-The runner provides subprocess isolation but is NOT a security sandbox.
-For untrusted inputs, use OS-level sandboxing.
+The built-in runner uses a separate process but is NOT a security sandbox.
+Inspect \code{runner$policy()} before execution. For untrusted inputs, provide a
+runner backed by OS-level sandboxing.
 }
 \examples{
 \dontrun{

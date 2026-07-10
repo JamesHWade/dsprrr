@@ -502,6 +502,51 @@ call_llm_request <- function(
   }
 }
 
+#' Extract usage metadata from the latest assistant turn
+#'
+#' @param chat An ellmer Chat or compatible object
+#' @return Named list of token and cost fields; unknown values remain `NA`
+#' @noRd
+chat_usage_metadata <- function(chat) {
+  assistant_turn <- tryCatch(
+    {
+      if (is.function(chat$last_turn)) {
+        chat$last_turn(role = "assistant")
+      } else {
+        NULL
+      }
+    },
+    error = function(e) NULL
+  )
+  if (is.null(assistant_turn)) {
+    return(list(
+      input_tokens = NA_integer_,
+      output_tokens = NA_integer_,
+      cached_input_tokens = NA_integer_,
+      total_tokens = NA_integer_,
+      cost = NA_real_
+    ))
+  }
+
+  tokens <- tryCatch(assistant_turn@tokens, error = function(e) NULL)
+  input_tokens <- as.integer(tokens[1] %||% NA_integer_)
+  output_tokens <- as.integer(tokens[2] %||% NA_integer_)
+  cached_input_tokens <- as.integer(tokens[3] %||% NA_integer_)
+  total_tokens <- if (anyNA(c(input_tokens, output_tokens))) {
+    NA_integer_
+  } else {
+    input_tokens + output_tokens
+  }
+
+  list(
+    input_tokens = input_tokens,
+    output_tokens = output_tokens,
+    cached_input_tokens = cached_input_tokens,
+    total_tokens = total_tokens,
+    cost = tryCatch(assistant_turn@cost, error = function(e) NA_real_)
+  )
+}
+
 #' Process a single batch item
 #'
 #' Core processing logic shared by both parallel and sequential execution.
@@ -548,17 +593,21 @@ process_batch_item <- function(
     extract_simple_output(response, module$signature@output_type)
   } else {
     instructions <- request$instructions
+    usage <- chat_usage_metadata(llm)
 
     list(
       output = response,
       chat = mock_batch_chat(request$payload, response, llm),
-      metadata = list(
-        latency_ms = latency_ms,
-        prompt_length = nchar(prompt),
-        prompt = prompt,
-        instructions = instructions,
-        timestamp = end_time,
-        batch_index = index
+      metadata = c(
+        list(
+          latency_ms = latency_ms,
+          prompt_length = nchar(prompt),
+          prompt = prompt,
+          instructions = instructions,
+          timestamp = end_time,
+          batch_index = index
+        ),
+        usage
       )
     )
   }
@@ -655,6 +704,12 @@ create_error_result <- function(
   llm,
   .return_format
 ) {
+  error_message <- if (inherits(error, "condition")) {
+    conditionMessage(error)
+  } else {
+    error$message %||% as.character(error)
+  }
+
   if (.return_format == "simple") {
     structure(
       NA,
@@ -662,7 +717,7 @@ create_error_result <- function(
         "Failed to process item ",
         index,
         ": ",
-        error$message
+        error_message
       )
     )
   } else {
@@ -670,7 +725,9 @@ create_error_result <- function(
       output = NA,
       chat = llm,
       metadata = list(
-        error = error$message,
+        error = error_message,
+        error_class = class(error)[1] %||% NA_character_,
+        error_stage = "llm",
         batch_index = index,
         instructions = instructions,
         prompt = prompt
@@ -885,7 +942,10 @@ run_batch_ellmer_parallel <- function(
       ellmer::parallel_chat_structured(
         chat = chat,
         prompts = prompts,
-        type = module$signature@output_type
+        type = module$signature@output_type,
+        include_tokens = TRUE,
+        include_cost = TRUE,
+        on_error = "continue"
       )
     },
     error = function(e) {
@@ -919,6 +979,9 @@ run_batch_ellmer_parallel <- function(
 
   # Normalize responses to list-of-lists format
   # parallel_chat_structured returns a tibble where each row is a response
+  response_errors <- vector("list", n)
+  response_usage <- replicate(n, list(), simplify = FALSE)
+
   if (is.data.frame(responses)) {
     if (nrow(responses) != n) {
       cli::cli_abort(c(
@@ -926,6 +989,29 @@ run_batch_ellmer_parallel <- function(
         "x" = "Expected {n} responses, got {nrow(responses)}",
         "i" = "Some requests may have failed silently"
       ))
+    }
+    if (".error" %in% names(responses)) {
+      response_errors <- responses$.error
+      responses$.error <- NULL
+    }
+    usage_fields <- intersect(
+      c("input_tokens", "output_tokens", "cached_input_tokens", "cost"),
+      names(responses)
+    )
+    if (length(usage_fields) > 0) {
+      response_usage <- lapply(seq_len(n), function(i) {
+        usage <- as.list(responses[i, usage_fields, drop = FALSE])
+        usage$total_tokens <- if (
+          all(c("input_tokens", "output_tokens") %in% names(usage)) &&
+            !anyNA(c(usage$input_tokens, usage$output_tokens))
+        ) {
+          as.integer(usage$input_tokens + usage$output_tokens)
+        } else {
+          NA_integer_
+        }
+        usage
+      })
+      responses[usage_fields] <- NULL
     }
     responses_list <- lapply(
       seq_len(nrow(responses)),
@@ -939,6 +1025,9 @@ run_batch_ellmer_parallel <- function(
         "i" = "Some requests may have failed silently"
       ))
     }
+    response_errors <- lapply(responses, function(response) {
+      if (inherits(response, "error")) response else NULL
+    })
     responses_list <- responses
   } else {
     cli::cli_abort(c(
@@ -950,9 +1039,23 @@ run_batch_ellmer_parallel <- function(
 
   # Format results
   if (.return_format == "simple") {
-    results <- purrr::map(responses_list, function(response) {
-      extract_simple_output(response, module$signature@output_type)
-    })
+    results <- purrr::map2(
+      responses_list,
+      seq_along(responses_list),
+      function(response, i) {
+        if (!is.null(response_errors[[i]])) {
+          return(create_error_result(
+            error = response_errors[[i]],
+            index = i,
+            prompt = requests[[i]]$prompt,
+            instructions = requests[[i]]$instructions,
+            llm = NULL,
+            .return_format = "simple"
+          ))
+        }
+        extract_simple_output(response, module$signature@output_type)
+      }
+    )
   } else {
     # Create mock chats for each request with recorded prompt/response
     # This follows the same pattern as vitals::generate_structured()
@@ -960,17 +1063,30 @@ run_batch_ellmer_parallel <- function(
       responses_list,
       seq_along(responses_list),
       function(response, i) {
+        if (!is.null(response_errors[[i]])) {
+          return(create_error_result(
+            error = response_errors[[i]],
+            index = i,
+            prompt = requests[[i]]$prompt,
+            instructions = requests[[i]]$instructions,
+            llm = NULL,
+            .return_format = "structured"
+          ))
+        }
         list(
           output = response,
           chat = mock_batch_chat(prompts[[i]], response, chat),
-          metadata = list(
-            latency_ms = total_latency / n,
-            prompt_length = nchar(requests[[i]]$prompt),
-            prompt = requests[[i]]$prompt,
-            instructions = requests[[i]]$instructions,
-            timestamp = end_time,
-            batch_index = i,
-            parallel_method = "ellmer"
+          metadata = c(
+            list(
+              latency_ms = total_latency / n,
+              prompt_length = nchar(requests[[i]]$prompt),
+              prompt = requests[[i]]$prompt,
+              instructions = requests[[i]]$instructions,
+              timestamp = end_time,
+              batch_index = i,
+              parallel_method = "ellmer"
+            ),
+            response_usage[[i]]
           )
         )
       }
@@ -1341,7 +1457,10 @@ call_llm <- function(
 #' @param data A tibble or data frame with columns matching the module's inputs.
 #' @param ... Additional arguments passed to [run()].
 #'
-#' @return A tibble with the input columns plus a result column containing outputs
+#' @return A tibble with the input columns plus a `result` list-column. With
+#'   `.return_format = "structured"`, the tibble also contains `.error`,
+#'   `.metadata`, and `.chat`; `.error` is `NA` for successful rows and contains
+#'   the LLM execution error message for failed rows.
 #' @export
 #' @examples
 #' \dontrun{
@@ -1464,6 +1583,11 @@ run_dataset.Module <- function(
   } else {
     # For structured format, extract outputs and add metadata columns
     data$result <- lapply(results, `[[`, "output")
+    data$.error <- vapply(
+      results,
+      function(result) result$metadata$error %||% NA_character_,
+      character(1)
+    )
     data$.metadata <- lapply(results, `[[`, "metadata")
     data$.chat <- lapply(results, `[[`, "chat")
   }

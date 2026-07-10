@@ -431,6 +431,91 @@ test_that("batch processing handles errors gracefully", {
   expect_equal(results[[3]], "success")
 })
 
+test_that("structured datasets expose row-level LLM errors", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, ...) {
+      if (grepl("explode", prompt, fixed = TRUE)) {
+        stop("provider exploded")
+      }
+      "ok"
+    }),
+    class = "Chat"
+  )
+
+  expect_warning(
+    result <- run_dataset(
+      mod,
+      data.frame(text = c("works", "explode")),
+      .llm = mock_llm,
+      .progress = FALSE,
+      .return_format = "structured"
+    ),
+    "Failed to process item 2"
+  )
+
+  expect_named(result, c("text", "result", ".error", ".metadata", ".chat"))
+  expect_true(is.na(result$.error[[1]]))
+  expect_match(result$.error[[2]], "provider exploded")
+  expect_true(is.na(result$result[[2]]))
+  expect_identical(result$.metadata[[2]]$error_stage, "llm")
+})
+
+test_that("ellmer parallel preserves successes around a failed request", {
+  observed_on_error <- NULL
+  observed_usage_flags <- NULL
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(
+      chat,
+      prompts,
+      type,
+      include_tokens,
+      include_cost,
+      on_error,
+      ...
+    ) {
+      observed_on_error <<- on_error
+      observed_usage_flags <<- c(include_tokens, include_cost)
+      tibble::tibble(
+        answer = c("first", NA_character_, "third"),
+        input_tokens = c(10L, 0L, 30L),
+        output_tokens = c(2L, 0L, 4L),
+        cached_input_tokens = c(1L, 0L, 3L),
+        cost = c(0.01, 0, 0.03),
+        .error = list(NULL, simpleError("parallel provider failure"), NULL)
+      )
+    },
+    .package = "ellmer"
+  )
+
+  mod <- module(signature("text -> answer"), type = "predict")
+  mock_llm <- structure(list(), class = "Chat")
+  result <- dsprrr:::run_batch_ellmer_parallel(
+    module = mod,
+    input_sets = list(
+      list(text = "a"),
+      list(text = "b"),
+      list(text = "c")
+    ),
+    n = 3,
+    .llm = mock_llm,
+    .verbose = FALSE,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_identical(observed_on_error, "continue")
+  expect_true(all(observed_usage_flags))
+  expect_equal(result[[1]]$output$answer, "first")
+  expect_equal(result[[3]]$output$answer, "third")
+  expect_equal(result[[1]]$metadata$total_tokens, 12L)
+  expect_equal(result[[1]]$metadata$cost, 0.01)
+  expect_false("cost" %in% names(result[[1]]$output))
+  expect_true(is.na(result[[2]]$output))
+  expect_match(result[[2]]$metadata$error, "parallel provider failure")
+  expect_identical(result[[2]]$metadata$error_stage, "llm")
+})
+
 test_that("run warns when mirai parallel execution with custom llm", {
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
@@ -501,7 +586,9 @@ test_that("run does NOT warn about mirai when ellmer parallel with custom llm", 
 
   # The key assertion: no "mirai parallel execution requires" warning
   mirai_warnings <- Filter(
-    function(w) grepl("mirai parallel execution", conditionMessage(w)),
+    function(w) {
+      grepl("mirai parallel execution", conditionMessage(w), fixed = TRUE)
+    },
     conditions
   )
   expect_length(mirai_warnings, 0)
@@ -580,6 +667,13 @@ test_that("process_batch_item returns correct format for structured mode", {
   mock_llm <- structure(
     list(
       chat_structured = function(prompt, ...) "response",
+      last_turn = function(role = "assistant") {
+        ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText("response")),
+          tokens = c(10L, 2L, 1L),
+          cost = 0.001
+        )
+      },
       clone = function(...) mock_llm,
       set_turns = function(turns) invisible(NULL),
       get_turns = function(...) list()
@@ -604,6 +698,8 @@ test_that("process_batch_item returns correct format for structured mode", {
   expect_equal(result$metadata$batch_index, 5)
   expect_true("latency_ms" %in% names(result$metadata))
   expect_true("prompt" %in% names(result$metadata))
+  expect_equal(result$metadata$total_tokens, 12L)
+  expect_equal(result$metadata$cost, 0.001)
 })
 
 test_that("extract_simple_output extracts single-field objects", {
@@ -891,6 +987,13 @@ test_that("get_total_cost returns 0 for module with no traces", {
   expect_equal(mod$get_total_cost(), 0)
 })
 
+test_that("get_total_cost preserves unknown trace cost", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  mod$state$traces <- list(list(cost = NA_real_))
+
+  expect_true(is.na(mod$get_total_cost()))
+})
+
 test_that("get_cost_summary returns empty tibble for module with no traces", {
   sig <- Signature(
     inputs = list(input(name = "q", class = S7::class_character)),
@@ -1018,7 +1121,9 @@ test_that("mock_batch_chat handles structured response (JSON serializes)", {
       clone = function(...) {
         cloned <- structure(
           list(
-            set_turns = function(turns) turns_stored <<- turns,
+            set_turns = function(turns) {
+              turns_stored <<- turns
+            },
             get_turns = function(...) turns_stored
           ),
           class = "Chat"
@@ -1046,7 +1151,9 @@ test_that("mock_batch_chat handles character response directly", {
       clone = function(...) {
         cloned <- structure(
           list(
-            set_turns = function(turns) turns_stored <<- turns,
+            set_turns = function(turns) {
+              turns_stored <<- turns
+            },
             get_turns = function(...) turns_stored
           ),
           class = "Chat"
@@ -1086,9 +1193,13 @@ test_that("print.dsprrr_batch_result counts failed items (dsprrr-8l0)", {
   # reliably. Do NOT switch to capture.output(type = "message"): cli writes to
   # stdout, so that pattern silently captures nothing.
   out <- cli::cli_fmt(print(result))
-  expect_true(any(grepl("Errors", out)))
-  expect_true(any(grepl("1 of 2", out)))
-  expect_false(any(grepl("All items completed successfully", out)))
+  expect_true(any(grepl("Errors", out, fixed = TRUE)))
+  expect_true(any(grepl("1 of 2", out, fixed = TRUE)))
+  expect_false(any(grepl(
+    "All items completed successfully",
+    out,
+    fixed = TRUE
+  )))
 })
 
 test_that("print.dsprrr_batch_result reports success when there are no errors", {
@@ -1100,5 +1211,5 @@ test_that("print.dsprrr_batch_result reports success when there are no errors", 
     class = c("dsprrr_batch_result", "list")
   )
   out <- cli::cli_fmt(print(result))
-  expect_true(any(grepl("All items completed successfully", out)))
+  expect_true(any(grepl("All items completed successfully", out, fixed = TRUE)))
 })
