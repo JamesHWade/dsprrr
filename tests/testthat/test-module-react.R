@@ -275,6 +275,76 @@ test_that("ReactModule enforces max_iterations before finalization", {
   )
 })
 
+test_that("ReactModule iteration guard ignores tool turns from prior runs", {
+  turns <- list(
+    ellmer::AssistantTurn(
+      contents = list(ellmer::ContentToolRequest(
+        id = "old_call",
+        name = "old_tool",
+        arguments = list()
+      ))
+    )
+  )
+  iteration_guard <- NULL
+
+  last_turn <- function(role = c("assistant", "user"), ...) {
+    role <- match.arg(role)
+    matching <- Filter(function(turn) identical(turn@role, role), turns)
+    matching[[length(matching)]]
+  }
+
+  mock_llm <- structure(
+    list(
+      register_tool = function(tool) invisible(NULL),
+      get_turns = function(...) turns,
+      last_turn = last_turn,
+      on_tool_request = function(callback) {
+        iteration_guard <<- callback
+        function() iteration_guard <<- NULL
+      },
+      chat = function(prompt, echo = "none", ...) {
+        turns <<- c(
+          turns,
+          list(
+            ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentToolRequest(
+                id = "new_call",
+                name = "new_tool",
+                arguments = list()
+              ))
+            )
+          )
+        )
+        iteration_guard(list(id = "new_call"))
+        invisible(NULL)
+      },
+      chat_structured = function(prompt, type, echo = "none", ...) {
+        turns <<- c(
+          turns,
+          list(ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+          ))
+        )
+        list(answer = "done")
+      },
+      get_model = function() "mock-model"
+    ),
+    class = "Chat"
+  )
+
+  mod <- module(
+    signature("question -> answer"),
+    type = "react",
+    max_iterations = 1L
+  )
+  result <- mod$forward(list(question = "test"), .llm = mock_llm)
+
+  expect_equal(result$metadata[[1]]$iterations, 1L)
+  expect_identical(result$metadata[[1]]$tool_calls[[1]]$tool_id, "new_call")
+  expect_null(iteration_guard)
+})
+
 test_that("ReactModule print includes tool info", {
   skip_if_not_installed("ellmer")
 

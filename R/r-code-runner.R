@@ -354,12 +354,13 @@ RCodeRunner <- R6::R6Class(
     #' @description
     #' Print method for RCodeRunner
     print = function() {
+      trust <- self$policy()$trust
       cli::cli_h3("RCodeRunner")
       cli::cli_bullets(c(
         "*" = "Timeout: {.val {self$timeout}} seconds",
         "*" = "Max output: {.val {self$max_output_chars}} chars",
         "*" = "Allowed packages: {.val {self$allowed_packages}}",
-        "!" = "Trust: {.val trusted-input-only}; not sandboxed"
+        "!" = "Trust: {.val {trust}}; not sandboxed"
       ))
       invisible(self)
     }

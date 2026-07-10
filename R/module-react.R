@@ -185,7 +185,13 @@ ReactModule <- R6::R6Class(
       # keeps this per-run guard from leaking into subsequent conversations.
       if (is.function(llm$on_tool_request)) {
         remove_iteration_guard <- llm$on_tool_request(function(request) {
-          iteration_count <- count_tool_iterations(get_turns_safe(llm))
+          current_turns <- get_turns_safe(llm)
+          current_run_turns <- if (length(current_turns) > start_turn_count) {
+            current_turns[seq.int(start_turn_count + 1L, length(current_turns))]
+          } else {
+            list()
+          }
+          iteration_count <- count_tool_iterations(current_run_turns)
           if (iteration_count > self$max_iterations) {
             cli::cli_abort(
               "ReAct exceeded max_iterations ({self$max_iterations})",

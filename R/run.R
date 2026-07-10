@@ -936,6 +936,11 @@ run_batch_ellmer_parallel <- function(
 
   start_time <- Sys.time()
 
+  output_fields <- output_field_names(module$signature@output_type)
+  token_fields <- c("input_tokens", "output_tokens", "cached_input_tokens")
+  include_tokens <- !any(token_fields %in% output_fields)
+  include_cost <- !"cost" %in% output_fields
+
   # Call ellmer's parallel_chat_structured
   responses <- tryCatch(
     {
@@ -943,8 +948,8 @@ run_batch_ellmer_parallel <- function(
         chat = chat,
         prompts = prompts,
         type = module$signature@output_type,
-        include_tokens = TRUE,
-        include_cost = TRUE,
+        include_tokens = include_tokens,
+        include_cost = include_cost,
         on_error = "continue"
       )
     },
@@ -994,10 +999,11 @@ run_batch_ellmer_parallel <- function(
       response_errors <- responses$.error
       responses$.error <- NULL
     }
-    usage_fields <- intersect(
-      c("input_tokens", "output_tokens", "cached_input_tokens", "cost"),
-      names(responses)
+    telemetry_fields <- c(
+      if (include_tokens) token_fields else character(),
+      if (include_cost) "cost" else character()
     )
+    usage_fields <- intersect(telemetry_fields, names(responses))
     if (length(usage_fields) > 0) {
       response_usage <- lapply(seq_len(n), function(i) {
         usage <- as.list(responses[i, usage_fields, drop = FALSE])

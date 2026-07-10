@@ -516,6 +516,53 @@ test_that("ellmer parallel preserves successes around a failed request", {
   expect_identical(result[[2]]$metadata$error_stage, "llm")
 })
 
+test_that("ellmer parallel preserves outputs named like telemetry", {
+  observed_usage_flags <- NULL
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(
+      chat,
+      prompts,
+      type,
+      include_tokens,
+      include_cost,
+      on_error,
+      ...
+    ) {
+      observed_usage_flags <<- c(
+        include_tokens = include_tokens,
+        include_cost = include_cost
+      )
+      tibble::tibble(
+        cost = c(1.25, 2.5),
+        input_tokens = c(7L, 8L),
+        .error = list(NULL, NULL)
+      )
+    },
+    .package = "ellmer"
+  )
+
+  mod <- module(
+    signature("text -> cost: number, input_tokens: integer"),
+    type = "predict"
+  )
+  result <- dsprrr:::run_batch_ellmer_parallel(
+    module = mod,
+    input_sets = list(list(text = "a"), list(text = "b")),
+    n = 2,
+    .llm = structure(list(), class = "Chat"),
+    .verbose = FALSE,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_false(observed_usage_flags[["include_tokens"]])
+  expect_false(observed_usage_flags[["include_cost"]])
+  expect_equal(result[[1]]$output$cost, 1.25)
+  expect_equal(result[[2]]$output$input_tokens, 8L)
+  expect_false("cost" %in% names(result[[1]]$metadata))
+  expect_false("input_tokens" %in% names(result[[1]]$metadata))
+})
+
 test_that("run warns when mirai parallel execution with custom llm", {
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),

@@ -380,8 +380,9 @@ test_that("RCodeRunner print method works", {
 
   runner <- r_code_runner(timeout = 5)
 
-  # Print method should return invisibly
-  expect_invisible(print(runner))
+  output <- capture.output(expect_invisible(print(runner)), type = "message")
+  expect_match(paste(output, collapse = "\n"), "trusted-input-only")
+  expect_match(paste(output, collapse = "\n"), "not sandboxed")
   expect_s3_class(runner, "RCodeRunner")
 })
 
