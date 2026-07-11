@@ -323,6 +323,115 @@ test_that("TrialLog summary works", {
   expect_equal(summary$best_score, 0.8)
 })
 
+test_that("TrialLog cost summaries distinguish unknown from zero", {
+  completed_trial <- function(id, cost) {
+    trial <- create_trial("TestOptimizer", trial_id = id)
+    complete_trial(
+      trial,
+      EvalResult(mean_score = 0.8, n_evaluated = 1L, total_cost = cost)
+    )
+  }
+
+  empty_log <- TrialLog$new("TestOptimizer")
+  expect_equal(empty_log$summary()$total_cost, 0)
+
+  unknown_log <- TrialLog$new("TestOptimizer")
+  unknown_log$add_trial(
+    completed_trial("unknown_1", NA_real_),
+    persist = FALSE
+  )
+  unknown_log$add_trial(
+    completed_trial("unknown_2", NA_real_),
+    persist = FALSE
+  )
+  expect_true(is.na(unknown_log$summary()$total_cost))
+  expect_equal(is.na(unknown_log$as_tibble()$total_cost), c(TRUE, TRUE))
+
+  zero_log <- TrialLog$new("TestOptimizer")
+  zero_log$add_trial(completed_trial("zero", 0), persist = FALSE)
+  expect_equal(zero_log$summary()$total_cost, 0)
+  expect_equal(zero_log$as_tibble()$total_cost, 0)
+
+  mixed_log <- TrialLog$new("TestOptimizer")
+  mixed_log$add_trial(completed_trial("known", 0.25), persist = FALSE)
+  mixed_log$add_trial(completed_trial("unknown", NA_real_), persist = FALSE)
+  expect_true(is.na(mixed_log$summary()$total_cost))
+  expect_equal(mixed_log$as_tibble()$total_cost, c(0.25, NA_real_))
+})
+
+test_that("TrialLog JSONL roundtrip preserves unknown and zero costs", {
+  completed_trial <- function(id, cost) {
+    trial <- create_trial("TestOptimizer", trial_id = id)
+    complete_trial(
+      trial,
+      EvalResult(mean_score = 0.8, n_evaluated = 1L, total_cost = cost)
+    )
+  }
+
+  path <- withr::local_tempfile(fileext = ".jsonl")
+  write_trials_jsonl(
+    list(
+      completed_trial("unknown", NA_real_),
+      completed_trial("zero", 0)
+    ),
+    path
+  )
+
+  trials <- read_trials_jsonl(path)
+  expect_true(is.na(trials[[1]]@cost_summary$total_cost))
+  expect_equal(trials[[2]]@cost_summary$total_cost, 0)
+
+  log <- TrialLog$new("TestOptimizer")
+  for (trial in trials) {
+    log$add_trial(trial, persist = FALSE)
+  }
+  expect_true(is.na(log$summary()$total_cost))
+})
+
+test_that("TrialLog print and README render cost state explicitly", {
+  completed_trial <- function(id, cost) {
+    trial <- create_trial("TestOptimizer", trial_id = id)
+    complete_trial(
+      trial,
+      EvalResult(mean_score = 0.8, n_evaluated = 1L, total_cost = cost)
+    )
+  }
+
+  unknown_dir <- withr::local_tempdir()
+  unknown_log <- TrialLog$new("TestOptimizer", log_dir = unknown_dir)
+  unknown_log$add_trial(completed_trial("unknown", NA_real_))
+
+  unknown_output <- paste(
+    capture.output(unknown_log$print(), type = "message"),
+    collapse = "\n"
+  )
+  expect_match(unknown_output, "Total Cost: Unknown", fixed = TRUE)
+  unknown_readme <- readLines(file.path(unknown_dir, "README.md"))
+  expect_identical(
+    grep("Total Cost", unknown_readme, value = TRUE),
+    "- Total Cost: Unknown"
+  )
+
+  loaded <- load_trial_log(unknown_dir)
+  expect_true(is.na(loaded$summary()$total_cost))
+  expect_true(is.na(loaded$as_tibble()$total_cost))
+
+  zero_dir <- withr::local_tempdir()
+  zero_log <- TrialLog$new("TestOptimizer", log_dir = zero_dir)
+  zero_log$add_trial(completed_trial("zero", 0))
+
+  zero_output <- paste(
+    capture.output(zero_log$print(), type = "message"),
+    collapse = "\n"
+  )
+  expect_match(zero_output, "Total Cost: $0.0000", fixed = TRUE)
+  zero_readme <- readLines(file.path(zero_dir, "README.md"))
+  expect_identical(
+    grep("Total Cost", zero_readme, value = TRUE),
+    "- Total Cost: $0.0000"
+  )
+})
+
 test_that("write_trials_jsonl and read_trials_jsonl roundtrip", {
   trials <- list(
     create_trial("Opt1", list(a = 1, b = "x")),

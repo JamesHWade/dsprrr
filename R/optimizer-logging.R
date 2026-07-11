@@ -6,6 +6,30 @@
 # - JSONL persistence
 # - Log directory management
 
+# Normalize persisted or in-memory trial costs to one scalar representation.
+# Historical JSONL files may contain an unknown numeric value as the string
+# "NA", while missing cost fields are also unknown.
+normalize_trial_cost <- function(cost) {
+  if (is.null(cost) || length(cost) != 1L) {
+    return(NA_real_)
+  }
+
+  cost <- suppressWarnings(as.numeric(cost))
+  if (length(cost) != 1L || is.na(cost)) {
+    return(NA_real_)
+  }
+
+  cost
+}
+
+format_trial_cost <- function(cost) {
+  if (length(cost) != 1L || is.na(cost)) {
+    return("Unknown")
+  }
+
+  sprintf("$%.4f", cost)
+}
+
 #' Trial Record
 #'
 #' @description
@@ -321,7 +345,7 @@ TrialLog <- R6::R6Class(
         ),
         total_cost = vapply(
           self$trials,
-          function(t) t@cost_summary$total_cost %||% NA_real_,
+          function(t) normalize_trial_cost(t@cost_summary$total_cost),
           numeric(1)
         ),
         latency_ms = vapply(
@@ -411,7 +435,7 @@ TrialLog <- R6::R6Class(
 
       costs <- vapply(
         completed,
-        function(t) t@cost_summary$total_cost %||% 0,
+        function(t) normalize_trial_cost(t@cost_summary$total_cost),
         numeric(1)
       )
 
@@ -430,7 +454,7 @@ TrialLog <- R6::R6Class(
         },
         mean_score = mean(scores, na.rm = TRUE),
         total_tokens = sum(tokens, na.rm = TRUE),
-        total_cost = sum(costs, na.rm = TRUE)
+        total_cost = sum_cost_values(costs)
       )
     },
 
@@ -532,11 +556,11 @@ TrialLog <- R6::R6Class(
       readme_path <- file.path(save_dir, "README.md")
       summary <- self$summary()
       readme_content <- sprintf(
-        "# Optimizer Log: %s\n\n- Trials: %d\n- Best Score: %.4f\n- Total Cost: $%.4f\n- Created: %s\n",
+        "# Optimizer Log: %s\n\n- Trials: %d\n- Best Score: %.4f\n- Total Cost: %s\n- Created: %s\n",
         self$optimizer_name,
         summary$n_trials,
         summary$best_score %||% NA,
-        summary$total_cost,
+        format_trial_cost(summary$total_cost),
         format(self$metadata$created_at, "%Y-%m-%d %H:%M:%S")
       )
       tryCatch(
@@ -574,10 +598,9 @@ TrialLog <- R6::R6Class(
         cli::cli_text("{.field Total Tokens}: {summary$total_tokens}")
       }
 
-      if (summary$total_cost > 0) {
-        cli::cli_text(
-          "{.field Total Cost}: ${format(summary$total_cost, digits = 4)}"
-        )
+      if (summary$n_completed > 0) {
+        cost_label <- format_trial_cost(summary$total_cost)
+        cli::cli_text("{.field Total Cost}: {cost_label}")
       }
 
       if (!is.null(self$log_dir)) {
@@ -702,12 +725,19 @@ read_trials_jsonl <- function(path) {
           NULL
         }
 
+        cost_summary <- as.list(data$cost_summary %||% list())
+        if ("total_cost" %in% names(cost_summary)) {
+          cost_summary$total_cost <- normalize_trial_cost(
+            cost_summary$total_cost
+          )
+        }
+
         Trial(
           trial_id = data$trial_id %||% "",
           optimizer_name = data$optimizer_name %||% "",
           params = as.list(data$params %||% list()),
           metric_summary = as.list(data$metric_summary %||% list()),
-          cost_summary = as.list(data$cost_summary %||% list()),
+          cost_summary = cost_summary,
           start_time = start_time,
           end_time = end_time,
           notes = data$notes %||% "",
