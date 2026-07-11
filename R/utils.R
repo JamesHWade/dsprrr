@@ -532,6 +532,19 @@ trace_cost <- function(trace) {
     tryCatch(trace$assistant_turn@cost, error = function(e) NA_real_)
 }
 
+#' Sum cost values without treating missing prices as free
+#' @noRd
+sum_cost_values <- function(costs) {
+  costs <- as.numeric(costs)
+  if (length(costs) == 0) {
+    return(0)
+  }
+  if (anyNA(costs)) {
+    return(NA_real_)
+  }
+  sum(costs)
+}
+
 #' Extract latency from a trace entry
 #' @noRd
 trace_latency_ms <- function(trace) {

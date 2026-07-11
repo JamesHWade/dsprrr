@@ -92,9 +92,12 @@ test_that("BetterTogether lets named arguments override optimizer list entries",
   expect_error(
     BetterTogether(
       metric = bt_metric,
-      optimizers = list(
-        p = BTMarkingTeleprompter(marker = "first"),
-        p = BTMarkingTeleprompter(marker = "second")
+      optimizers = stats::setNames(
+        list(
+          BTMarkingTeleprompter(marker = "first"),
+          BTMarkingTeleprompter(marker = "second")
+        ),
+        c("p", "p")
       )
     ),
     "must be unique"

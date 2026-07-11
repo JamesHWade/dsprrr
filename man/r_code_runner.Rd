@@ -29,7 +29,7 @@ Useful for setting options or loading common utilities.}
 An RCodeRunner R6 object
 }
 \description{
-Factory function to create an RCodeRunner instance for safe R code execution.
+Factory function to create a trusted-input-only RCodeRunner instance.
 }
 \examples{
 \dontrun{

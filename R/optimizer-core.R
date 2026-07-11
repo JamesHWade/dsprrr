@@ -614,9 +614,21 @@ update_cost_summary <- function(summary, module) {
     return(summary)
   }
 
-  # Helper to safely get numeric value, treating NULL and NA as 0
+  # Helper to safely get numeric counters, treating NULL and NA as 0
   safe_num <- function(x, default = 0) {
     if (is.null(x) || length(x) == 0 || is.na(x)) default else x
+  }
+
+  cost_value <- cost$total_cost
+  next_total_cost <- if (
+    is.null(cost_value) ||
+      length(cost_value) == 0 ||
+      is.na(cost_value) ||
+      is.na(summary@total_cost)
+  ) {
+    NA_real_
+  } else {
+    summary@total_cost + cost_value
   }
 
   CostSummary(
@@ -624,7 +636,7 @@ update_cost_summary <- function(summary, module) {
     tokens_out = summary@tokens_out + as.integer(safe_num(cost$tokens_out, 0L)),
     total_tokens = summary@total_tokens +
       as.integer(safe_num(cost$total_tokens, 0L)),
-    total_cost = summary@total_cost + safe_num(cost$total_cost, 0),
+    total_cost = next_total_cost,
     n_calls = summary@n_calls + 1L
   )
 }

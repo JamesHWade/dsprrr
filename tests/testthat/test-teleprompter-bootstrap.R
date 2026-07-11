@@ -296,8 +296,8 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
   )
 
   # Should complete despite some failures
-  expect_warning(
-    result <- compile(tp, mod, trainset, .llm = failing_llm),
+  result <- expect_test_warnings(
+    compile(tp, mod, trainset, .llm = failing_llm),
     "Bootstrap attempt failed"
   )
 

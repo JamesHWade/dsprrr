@@ -93,7 +93,10 @@ test_that("LabeledFewShot compile works", {
 
   # Empty trainset
   empty_trainset <- data.frame(text = character(), label = character())
-  optimized_empty <- compile(tp, mod, empty_trainset)
+  optimized_empty <- expect_warning(
+    compile(tp, mod, empty_trainset),
+    "Empty trainset provided"
+  )
   expect_length(optimized_empty$demos, 0)
 
   # No sampling
@@ -582,10 +585,13 @@ test_that("detect_output_source handles various trainset formats", {
 
   # Case 3: Field not found
   trainset3 <- data.frame(text = "a", other = "b")
-  result3 <- dsprrr:::detect_output_source(
-    trainset3,
-    "nonexistent",
-    input_names
+  result3 <- expect_test_warnings(
+    dsprrr:::detect_output_source(
+      trainset3,
+      "nonexistent",
+      input_names
+    ),
+    "Could not find output field"
   )
   expect_equal(result3$type, "not_found")
 
@@ -620,10 +626,13 @@ test_that("detect_output_source handles various trainset formats", {
     text = "a",
     output = list(list(classification = "pos")) # missing confidence
   )
-  result7 <- dsprrr:::detect_output_source(
-    trainset7,
-    c("classification", "confidence"),
-    input_names
+  result7 <- expect_test_warnings(
+    dsprrr:::detect_output_source(
+      trainset7,
+      c("classification", "confidence"),
+      input_names
+    ),
+    "Could not find all requested fields"
   )
   expect_equal(result7$type, "not_found")
 })

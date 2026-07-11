@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Generates R code that defines RLM tools in the execution environment.
-#' This code is run before user-generated code via RCodeRunner.
+#' This code is run before user-generated code by the configured code runner.
 #'
 #' @details
 #' The prelude defines these functions in the execution environment:

@@ -19,7 +19,7 @@ rlm_module(
 \arguments{
 \item{signature}{A Signature object or string notation defining inputs/outputs}
 
-\item{runner}{An RCodeRunner object for code execution. Required.}
+\item{runner}{A code runner implementing \code{execute()} and \code{policy()}. Required.}
 
 \item{max_iterations}{Maximum REPL iterations before fallback (default 20)}
 

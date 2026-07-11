@@ -48,8 +48,8 @@ If provided with \code{type = "predict"}, automatically upgrades to react.
 
 \item{temperature}{Temperature for multichain diversity (default: 0.7)}
 
-\item{runner}{RCodeRunner for program_of_thought modules. Required for
-code execution types. Create with \code{r_code_runner()}.}
+\item{runner}{Code runner implementing \code{execute()} and \code{policy()} for code
+execution types. Create the built-in backend with \code{r_code_runner()}.}
 
 \item{max_iters}{Maximum code repair iterations for program_of_thought
 (default: 3)}

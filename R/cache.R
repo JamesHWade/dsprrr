@@ -608,7 +608,7 @@ cached_chat_structured <- function(
     error = function(e) {
       # Only warn for real LLMs (not mock LLMs in tests)
       # Mock LLMs typically error with "attempt to apply non-function"
-      if (!grepl("attempt to apply non-function", e$message)) {
+      if (!grepl("attempt to apply non-function", e$message, fixed = TRUE)) {
         cli::cli_warn(c(
           "Could not extract model name from LLM for cache key",
           "i" = "Using 'unknown' as fallback - cache may be less effective",

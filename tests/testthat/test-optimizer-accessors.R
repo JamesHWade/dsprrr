@@ -262,7 +262,7 @@ test_that("export_module_code writes to file", {
 
   expect_true(file.exists(temp_file))
   content <- readLines(temp_file)
-  expect_true(any(grepl("module", content)))
+  expect_true(any(grepl("module", content, fixed = TRUE)))
 })
 
 
@@ -294,6 +294,15 @@ test_that("optimization_summary calculates improvement", {
 
   # First score was 0.6, best is 0.85
   expect_equal(summary$improvement, 0.25)
+})
+
+test_that("optimization_summary preserves known and unknown trial costs", {
+  mod <- create_test_module(compiled = TRUE)
+  mod$state$trials$total_cost <- c(0.01, 0.02, 0.03)
+  expect_equal(optimization_summary(mod)$total_cost, 0.06)
+
+  mod$state$trials$total_cost[[2]] <- NA_real_
+  expect_true(is.na(optimization_summary(mod)$total_cost))
 })
 
 test_that("optimization_summary print works", {

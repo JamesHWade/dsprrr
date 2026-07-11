@@ -255,7 +255,11 @@ test_that("AssertModule injects feedback on retry", {
   expect_true(length(mock_mod$captured_batches) >= 2)
   second_batch <- mock_mod$captured_batches[[2]]
   expect_true("assertion_feedback" %in% names(second_batch))
-  expect_true(grepl("Must be longer", second_batch$assertion_feedback))
+  expect_true(grepl(
+    "Must be longer",
+    second_batch$assertion_feedback,
+    fixed = TRUE
+  ))
 })
 
 # Test get_attempts method
@@ -388,7 +392,11 @@ test_that("AssertModule uses custom feedback template", {
 
   # Check that custom template was used
   second_batch <- mock_mod$captured_batches[[2]]
-  expect_true(grepl("CUSTOM FEEDBACK:", second_batch$assertion_feedback))
+  expect_true(grepl(
+    "CUSTOM FEEDBACK:",
+    second_batch$assertion_feedback,
+    fixed = TRUE
+  ))
 })
 
 # Test edge cases

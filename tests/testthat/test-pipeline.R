@@ -185,8 +185,8 @@ test_that("PipelineModule forward chains outputs to inputs", {
   expect_named(result, c("output", "chat", "metadata"))
 
   output <- result$output[[1]]
-  expect_true(grepl("Formatted:", output$formatted))
-  expect_true(grepl("Answer to", output$formatted))
+  expect_true(grepl("Formatted:", output$formatted, fixed = TRUE))
+  expect_true(grepl("Answer to", output$formatted, fixed = TRUE))
 })
 
 test_that("PipelineModule aggregates metadata", {
@@ -405,7 +405,7 @@ test_that("%>>% works with execution", {
 
   expect_s3_class(result, "tbl_df")
   output <- result$output[[1]]
-  expect_true(grepl("A: Q: hello", output$b))
+  expect_true(grepl("A: Q: hello", output$b, fixed = TRUE))
 })
 
 # ============================================================================

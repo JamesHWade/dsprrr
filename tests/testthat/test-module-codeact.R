@@ -43,7 +43,7 @@ test_that("code_act requires runner", {
 test_that("code_act validates runner type", {
   expect_error(
     code_act("question -> answer", runner = "not a runner"),
-    "runner must be an RCodeRunner"
+    "runner must implement the dsprrr code-runner protocol"
   )
 })
 

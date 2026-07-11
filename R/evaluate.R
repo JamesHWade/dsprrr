@@ -28,8 +28,11 @@
 #'   - `predictions`: list of model outputs.
 #'   - `metadata`: list of metadata captured from [run()].
 #'   - `n_evaluated`: number of successful evaluations.
-#'   - `n_errors`: number of metric failures.
-#'   - `errors`: character vector with error messages, when any.
+#'   - `n_errors`: number of rows with run or metric failures.
+#'   - `errors`: character vector with all error messages, when any.
+#'   - `n_run_errors`, `run_errors`: count and messages for module/LLM failures.
+#'   - `n_metric_errors`, `metric_errors`: count and messages for metric failures.
+#'   - `total_cost`: total evaluation cost, or `NA` when any call's cost is unknown.
 #'   - `feedbacks`: per-example textual feedback when the metric returns
 #'     `list(score = , feedback = )` (see [metric_with_feedback()]);
 #'     `NA` otherwise.
@@ -136,6 +139,11 @@ evaluate.Module <- function(
       n_evaluated = 0L,
       n_errors = 0L,
       errors = character(),
+      n_run_errors = 0L,
+      run_errors = character(),
+      n_metric_errors = 0L,
+      metric_errors = character(),
+      total_cost = 0,
       data = data
     ))
   }
@@ -189,12 +197,37 @@ evaluate.Module <- function(
     }
 
     scores <- numeric(nrow(evaluated))
-    errors <- character(nrow(evaluated))
+    run_errors <- vapply(
+      metadata,
+      function(item) {
+        error <- item$error %||% ""
+        if (length(error) == 0 || is.na(error[[1]])) {
+          ""
+        } else {
+          as.character(error[[1]])
+        }
+      },
+      character(1)
+    )
+    metric_errors <- character(nrow(evaluated))
+    errors <- run_errors
     feedbacks <- rep(NA_character_, nrow(evaluated))
+    total_cost <- sum_cost_values(vapply(
+      metadata,
+      function(item) item$cost %||% NA_real_,
+      numeric(1)
+    ))
 
     for (i in seq_len(nrow(evaluated))) {
       expected_row <- data[i, , drop = FALSE]
       prediction <- predictions[[i]]
+
+      # Preserve the primary module/provider failure. Calling the metric with an
+      # NA prediction would replace the useful run error with a secondary one.
+      if (nzchar(run_errors[i])) {
+        scores[i] <- NA_real_
+        next
+      }
 
       scores[i] <- tryCatch(
         {
@@ -205,6 +238,7 @@ evaluate.Module <- function(
           normalized$score
         },
         error = function(e) {
+          metric_errors[i] <<- e$message
           errors[i] <<- e$message
 
           # Include epoch context in error message
@@ -232,6 +266,9 @@ evaluate.Module <- function(
       predictions = predictions,
       metadata = metadata,
       errors = errors,
+      run_errors = run_errors,
+      metric_errors = metric_errors,
+      total_cost = total_cost,
       feedbacks = feedbacks,
       evaluated = evaluated
     )
@@ -245,6 +282,8 @@ evaluate.Module <- function(
     predictions <- epoch_results[[1]]$predictions
     metadata <- epoch_results[[1]]$metadata
     errors <- epoch_results[[1]]$errors
+    run_errors <- epoch_results[[1]]$run_errors
+    metric_errors <- epoch_results[[1]]$metric_errors
     feedbacks <- epoch_results[[1]]$feedbacks
     evaluated <- epoch_results[[1]]$evaluated
   } else {
@@ -252,7 +291,7 @@ evaluate.Module <- function(
     all_epoch_scores <- lapply(epoch_results, function(x) x$scores)
 
     # Validate all epochs have same length
-    epoch_lengths <- vapply(all_epoch_scores, length, integer(1))
+    epoch_lengths <- lengths(all_epoch_scores)
     if (length(unique(epoch_lengths)) > 1) {
       cli::cli_abort(c(
         "Epochs produced inconsistent result lengths",
@@ -269,7 +308,7 @@ evaluate.Module <- function(
       function(i) {
         epoch_scores_i <- vapply(all_epoch_scores, function(s) s[i], numeric(1))
         # If any epoch failed, mark this row as failed
-        if (any(is.na(epoch_scores_i))) {
+        if (anyNA(epoch_scores_i)) {
           NA_real_
         } else {
           mean(epoch_scores_i, na.rm = TRUE)
@@ -278,25 +317,30 @@ evaluate.Module <- function(
       numeric(1)
     )
 
-    # Aggregate errors across all epochs
-    # A row has an error if it failed in ANY epoch
-    all_errors <- character(nrow(data))
-    for (i in seq_len(nrow(data))) {
-      epoch_errors_i <- character(0)
-      for (epoch_idx in seq_along(epoch_results)) {
-        err <- epoch_results[[epoch_idx]]$errors[i]
-        if (!is.na(err) && err != "") {
-          epoch_errors_i <- c(
-            epoch_errors_i,
-            paste0("Epoch ", epoch_idx, ": ", err)
-          )
+    # Aggregate error channels across all epochs. A row has an error if it
+    # failed in any epoch, while preserving whether execution or scoring failed.
+    aggregate_epoch_errors <- function(field) {
+      all_errors <- character(nrow(data))
+      for (i in seq_len(nrow(data))) {
+        epoch_errors_i <- character(0)
+        for (epoch_idx in seq_along(epoch_results)) {
+          err <- epoch_results[[epoch_idx]][[field]][i]
+          if (!is.na(err) && err != "") {
+            epoch_errors_i <- c(
+              epoch_errors_i,
+              paste0("Epoch ", epoch_idx, ": ", err)
+            )
+          }
+        }
+        if (length(epoch_errors_i) > 0) {
+          all_errors[i] <- paste(epoch_errors_i, collapse = "; ")
         }
       }
-      if (length(epoch_errors_i) > 0) {
-        all_errors[i] <- paste(epoch_errors_i, collapse = "; ")
-      }
+      all_errors
     }
-    errors <- all_errors
+    errors <- aggregate_epoch_errors("errors")
+    run_errors <- aggregate_epoch_errors("run_errors")
+    metric_errors <- aggregate_epoch_errors("metric_errors")
 
     # Use last epoch's predictions, metadata, and feedback for the result
     predictions <- epoch_results[[epochs]]$predictions
@@ -304,6 +348,12 @@ evaluate.Module <- function(
     feedbacks <- epoch_results[[epochs]]$feedbacks
     evaluated <- epoch_results[[epochs]]$evaluated
   }
+
+  total_cost <- sum_cost_values(vapply(
+    epoch_results,
+    function(result) result$total_cost,
+    numeric(1)
+  ))
 
   # Failed rows (score NA) count as 0 in the headline mean, matching DSPy.
   # Optimizers select on `mean_score`; dropping failures with na.rm would let a
@@ -316,6 +366,8 @@ evaluate.Module <- function(
   }
   n_evaluated <- sum(!is.na(scores))
   n_errors <- sum(is.na(scores))
+  n_run_errors <- sum(nzchar(run_errors))
+  n_metric_errors <- sum(nzchar(metric_errors))
 
   # Build result based on return format
   result <- list(
@@ -325,6 +377,11 @@ evaluate.Module <- function(
     n_evaluated = n_evaluated,
     n_errors = n_errors,
     errors = errors[errors != ""],
+    n_run_errors = n_run_errors,
+    run_errors = run_errors[run_errors != ""],
+    n_metric_errors = n_metric_errors,
+    metric_errors = metric_errors[metric_errors != ""],
+    total_cost = total_cost,
     feedbacks = feedbacks
   )
 
@@ -429,7 +486,7 @@ print.dsprrr_evaluation <- function(x, ...) {
     if (!is.null(x$score_std)) {
       cli::cli_text("  SD: {round(x$score_std, 4)}")
     }
-    if (!is.null(x$ci_95) && !any(is.na(x$ci_95))) {
+    if (!is.null(x$ci_95) && !anyNA(x$ci_95)) {
       cli::cli_text(
         "  95% CI: [{round(x$ci_95[1], 4)}, {round(x$ci_95[2], 4)}]"
       )
@@ -444,6 +501,12 @@ print.dsprrr_evaluation <- function(x, ...) {
   cli::cli_text("{.field Evaluated}: {x$n_evaluated}")
   if (x$n_errors > 0) {
     cli::cli_alert_warning("{.field Errors}: {x$n_errors}")
+    if (!is.null(x$n_run_errors) && x$n_run_errors > 0) {
+      cli::cli_text("  Run: {x$n_run_errors}")
+    }
+    if (!is.null(x$n_metric_errors) && x$n_metric_errors > 0) {
+      cli::cli_text("  Metric: {x$n_metric_errors}")
+    }
   }
 
   if (length(x$scores) <= 10) {

@@ -266,7 +266,7 @@ test_that("run_discrete_bo respects error limit", {
 
   mock_control <- dsprrr:::optimizer_control(max_errors = 3L)
 
-  expect_error(
+  expect_error_with_warnings(
     dsprrr:::run_discrete_bo(
       candidates = candidates,
       eval_fn = failing_eval_fn,
@@ -275,7 +275,8 @@ test_that("run_discrete_bo respects error limit", {
       minibatch_size = 1,
       full_eval_every = 5
     ),
-    "Exceeded maximum errors"
+    warning_regexp = "Evaluation failed for trial",
+    error_regexp = "Exceeded maximum errors"
   )
 })
 
@@ -301,14 +302,17 @@ test_that("run_discrete_bo UCB explores untried candidates first", {
 
   mock_control <- dsprrr:::optimizer_control()
 
-  result <- dsprrr:::run_discrete_bo(
-    candidates = candidates,
-    eval_fn = tracking_eval_fn,
-    control = mock_control,
-    max_trials = 3,
-    minibatch_size = 1,
-    full_eval_every = 10,
-    seed = 123
+  result <- expect_test_warnings(
+    dsprrr:::run_discrete_bo(
+      candidates = candidates,
+      eval_fn = tracking_eval_fn,
+      control = mock_control,
+      max_trials = 3,
+      minibatch_size = 1,
+      full_eval_every = 10,
+      seed = 123
+    ),
+    "No candidate received full evaluation"
   )
 
   # First 3 trials should visit all candidates (exploration)

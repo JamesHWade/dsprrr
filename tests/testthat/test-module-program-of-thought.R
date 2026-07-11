@@ -40,7 +40,7 @@ test_that("program_of_thought requires runner", {
 test_that("program_of_thought validates runner type", {
   expect_error(
     program_of_thought("question -> answer", runner = "not a runner"),
-    "runner must be an RCodeRunner"
+    "runner must implement the dsprrr code-runner protocol"
   )
 })
 

@@ -1130,7 +1130,7 @@ test_that(".cache is accepted and validated for non-Predict modules (dsprrr-jup)
   # (spurious warning) and dropped.
   mod <- module_fn("text -> answer", function(text) paste("Echo:", text))
 
-  expect_no_warning(res <- run(mod, text = "hi", .cache = FALSE))
+  res <- expect_no_warning(run(mod, text = "hi", .cache = FALSE))
   expect_equal(res$answer, "Echo: hi")
 
   # Invalid .cache values are rejected the same way as for PredictModule.

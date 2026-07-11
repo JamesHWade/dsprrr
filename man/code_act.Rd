@@ -11,7 +11,7 @@ code_act(signature, tools = list(), runner, max_iterations = 10L, ...)
 
 \item{tools}{List of ellmer ToolDef objects for the agent to use}
 
-\item{runner}{An RCodeRunner object for code execution. Required.}
+\item{runner}{A code runner implementing \code{execute()} and \code{policy()}. Required.}
 
 \item{max_iterations}{Maximum tool/code iterations before forcing answer
 (default 10)}

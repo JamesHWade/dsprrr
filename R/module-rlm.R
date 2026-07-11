@@ -12,7 +12,7 @@
 #' The execution flow is:
 #' 1. Context is made available as variables in an R execution environment
 #' 2. LLM generates R code to explore and analyze the context
-#' 3. Code is executed in an isolated subprocess via RCodeRunner
+#' 3. Code is executed by the configured code runner
 #' 4. Results are fed back to the LLM for the next iteration
 #' 5. Process continues until SUBMIT() is called or max_iterations reached
 #' 6. If max_iterations reached without SUBMIT(), fallback extraction is used
@@ -25,8 +25,9 @@
 #' - `llm_query_batched(queries, slices)`: Batched recursive calls
 #'
 #' Security: Code execution requires explicit opt-in via a runner parameter.
-#' The runner provides subprocess isolation but is NOT a security sandbox.
-#' For untrusted inputs, use OS-level sandboxing (containers, AppArmor).
+#' The built-in runner uses a separate process but is NOT a security sandbox.
+#' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
+#' runner backed by OS-level sandboxing (such as a container or AppArmor).
 #'
 #' @examples
 #' \dontrun{
@@ -63,7 +64,7 @@ NULL
 #' explore large contexts through a REPL interface.
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
-#' @param runner An RCodeRunner object for code execution. Required.
+#' @param runner A code runner implementing `execute()` and `policy()`. Required.
 #' @param max_iterations Maximum REPL iterations before fallback (default 20)
 #' @param max_llm_calls Maximum recursive LLM calls allowed (default 50)
 #' @param max_output_chars Maximum characters per execution output (default 100000)
@@ -103,13 +104,7 @@ rlm_module <- function(
     ))
   }
 
-  if (!inherits(runner, "RCodeRunner")) {
-    cli::cli_abort(c(
-      "runner must be an RCodeRunner object",
-      "x" = "You provided: {.cls {class(runner)[1]}}",
-      "i" = "Create one with: {.code r_code_runner()}"
-    ))
-  }
+  validate_code_runner(runner)
 
   # Parse signature if string
   if (is.character(signature)) {
@@ -160,7 +155,7 @@ rlm_module <- function(
   if (length(tools) > 0) {
     # Names must be present and non-empty
     tool_names <- names(tools)
-    if (is.null(tool_names) || any(!nzchar(tool_names))) {
+    if (is.null(tool_names) || !all(nzchar(tool_names))) {
       cli::cli_abort(c(
         "tools must have non-empty names",
         "i" = "Example: {.code tools = list(my_tool = function(...) ...)}"
@@ -232,7 +227,7 @@ RLMModule <- R6::R6Class(
   "RLMModule",
   inherit = Module,
   public = list(
-    #' @field runner RCodeRunner for code execution
+    #' @field runner Code runner for code execution
     runner = NULL,
 
     #' @field max_iterations Maximum REPL iterations before fallback
@@ -257,7 +252,7 @@ RLMModule <- R6::R6Class(
     #' Initialize an RLMModule
     #'
     #' @param signature Signature object defining inputs/outputs
-    #' @param runner RCodeRunner for code execution
+    #' @param runner Code runner for code execution
     #' @param max_iterations Maximum REPL iterations
     #' @param max_llm_calls Maximum recursive LLM calls
     #' @param max_output_chars Maximum output size

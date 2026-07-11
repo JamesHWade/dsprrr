@@ -12,8 +12,9 @@ tool calls, and observations before producing a final structured answer.
 Create a ReAct module with \code{module(type = "react", tools = list(...))}.
 If you pass \code{tools} with \code{type = "predict"}, the module automatically
 upgrades to \code{react}. ellmer executes the tool-calling loop internally; dsprrr
-records the observed tool-call rounds and warns if they exceed
-\code{max_iterations}, then produces output based on the module signature.
+preserves its native turn history and tool-call IDs, enforces
+\code{max_iterations}, and then produces a structured output based on the module
+signature. Multiple tool calls in one assistant turn count as one iteration.
 }
 \examples{
 \dontrun{

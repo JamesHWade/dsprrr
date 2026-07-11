@@ -23,8 +23,8 @@
 #' @param max_iterations Maximum ReAct iterations (default: 10, only for react)
 #' @param M Number of reasoning chains for multichain (default: 3)
 #' @param temperature Temperature for multichain diversity (default: 0.7)
-#' @param runner RCodeRunner for program_of_thought modules. Required for
-#'   code execution types. Create with `r_code_runner()`.
+#' @param runner Code runner implementing `execute()` and `policy()` for code
+#'   execution types. Create the built-in backend with `r_code_runner()`.
 #' @param max_iters Maximum code repair iterations for program_of_thought
 #'   (default: 3)
 #' @param extract_answer Logical. For program_of_thought, whether to use LLM

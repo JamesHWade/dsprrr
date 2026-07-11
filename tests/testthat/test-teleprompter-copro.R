@@ -252,7 +252,7 @@ test_that("format_copro_failed_examples respects max_examples", {
   )
 
   expect_match(result, "Example 1")
-  expect_false(grepl("Example 2", result))
+  expect_false(grepl("Example 2", result, fixed = TRUE))
 })
 
 test_that("COPRO compile optimizes instructions", {
@@ -265,7 +265,7 @@ test_that("COPRO compile optimizes instructions", {
     chat_structured = function(prompt, type, ...) {
       call_count <<- call_count + 1L
       # Check if improved instruction is in the prompt
-      if (grepl("IMPROVED", prompt)) {
+      if (grepl("IMPROVED", prompt, fixed = TRUE)) {
         best_instruction_applied <<- TRUE
         return("4")
       }
@@ -323,7 +323,7 @@ test_that("COPRO tracks instruction history when track_stats is TRUE", {
       "4"
     },
     chat = function(prompt) {
-      paste("Instruction version", sample(1:100, 1))
+      paste("Instruction version", sample.int(100, 1))
     }
   )
 

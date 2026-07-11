@@ -995,8 +995,8 @@ check_ellmer_version <- function(version) {
     return(FALSE)
   }
 
-  # Minimum recommended ellmer version
-  min_version <- "0.1.0"
+  # Keep this aligned with the minimum declared in DESCRIPTION.
+  min_version <- "0.4.1"
 
   tryCatch(
     {

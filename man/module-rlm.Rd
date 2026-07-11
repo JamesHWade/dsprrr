@@ -16,7 +16,7 @@ The execution flow is:
 \enumerate{
 \item Context is made available as variables in an R execution environment
 \item LLM generates R code to explore and analyze the context
-\item Code is executed in an isolated subprocess via RCodeRunner
+\item Code is executed by the configured code runner
 \item Results are fed back to the LLM for the next iteration
 \item Process continues until SUBMIT() is called or max_iterations reached
 \item If max_iterations reached without SUBMIT(), fallback extraction is used
@@ -32,8 +32,9 @@ Available REPL tools:
 }
 
 Security: Code execution requires explicit opt-in via a runner parameter.
-The runner provides subprocess isolation but is NOT a security sandbox.
-For untrusted inputs, use OS-level sandboxing (containers, AppArmor).
+The built-in runner uses a separate process but is NOT a security sandbox.
+Inspect \code{runner$policy()} before execution. For untrusted inputs, provide a
+runner backed by OS-level sandboxing (such as a container or AppArmor).
 }
 \examples{
 \dontrun{

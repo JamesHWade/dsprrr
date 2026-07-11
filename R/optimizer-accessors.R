@@ -628,21 +628,22 @@ optimization_summary <- function(module) {
     NA_real_
   }
 
-  # Try to get total cost from evaluations
+  # Prefer the explicit per-trial cost column. Older trial logs may only carry
+  # cost inside their evaluation objects.
   total_cost <- tryCatch(
     {
-      costs <- vapply(
-        trials$evaluation,
-        function(e) {
-          if (is.list(e) && "total_cost" %in% names(e)) {
-            e$total_cost %||% 0
-          } else {
-            0
-          }
-        },
-        numeric(1)
-      )
-      sum(costs, na.rm = TRUE)
+      costs <- if ("total_cost" %in% names(trials)) {
+        trials$total_cost
+      } else {
+        vapply(
+          trials$evaluation,
+          function(e) {
+            if (is.list(e)) e$total_cost %||% NA_real_ else NA_real_
+          },
+          numeric(1)
+        )
+      }
+      sum_cost_values(costs)
     },
     error = function(e) NA_real_
   )
