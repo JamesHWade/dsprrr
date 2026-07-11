@@ -27,7 +27,8 @@ Conventions:
 - Never commit directly to main; feature branches + PRs only
 """
 
-# Create beads issues for failed reviews
+# Create Kata issues for failed reviews
 [[hooks]]
 event = "review.failed"
-type = "beads"
+type = "kata"
+project = "dsprrr"
