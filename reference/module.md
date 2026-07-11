@@ -78,8 +78,8 @@ module(
 
 - runner:
 
-  RCodeRunner for program_of_thought modules. Required for code
-  execution types. Create with
+  Code runner implementing `execute()` and `policy()` for code execution
+  types. Create the built-in backend with
   [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md).
 
 - max_iters:

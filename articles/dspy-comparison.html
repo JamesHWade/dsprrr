@@ -131,12 +131,23 @@
 <p>dsprrr is an R implementation of <a href="https://dspy.ai" class="external-link">DSPy</a>’s
 programming model, built on <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> and tidyverse
 conventions. If you know DSPy, this page tells you what carries over,
-what is different, and what is not (yet) available. It reflects DSPy 3.x
-as of mid-2026.</p>
+what is different, and what is not (yet) available.</p>
+<div class="section level2">
+<h2 id="version-baseline">Version baseline<a class="anchor" aria-label="anchor" href="#version-baseline"></a>
+</h2>
+<p>This comparison was checked against DSPy <strong>3.2.1</strong> (the
+latest stable release on 2026-07-09) and <strong>3.3.0b1</strong>
+(beta). The beta is especially useful as a design signal: it introduces
+<code>ReActV2</code>, a typed provider-neutral LM boundary, normalized
+LM error classes, and sanitized state serialization. Those beta APIs may
+still change, so dsprrr follows the durable contracts rather than
+copying unstable Python interfaces. See the <a href="https://github.com/stanfordnlp/dspy/releases" class="external-link">official DSPy
+releases</a>.</p>
 <p>dsprrr is not a line-by-line port. It follows DSPy’s concepts —
 signatures, modules, metrics, and optimizers (“teleprompters”) — while
 embracing R idioms: tibbles in and out, S7/R6 objects, and ellmer for
 all provider communication.</p>
+</div>
 <div class="section level2">
 <h2 id="modules">Modules<a class="anchor" aria-label="anchor" href="#modules"></a>
 </h2>
@@ -165,9 +176,13 @@ all provider communication.</p>
 <td>Implemented as signature transforms</td>
 </tr>
 <tr class="odd">
-<td><code>dspy.ReAct</code></td>
+<td>
+<code>dspy.ReAct</code> / experimental <code>ReActV2</code>
+</td>
 <td><code>module(sig, type = "react")</code></td>
-<td>Tool-calling agent loop via ellmer tools</td>
+<td>Native ellmer turn history, tool-call IDs, parallel calls per
+assistant turn, enforced iteration limit, then structured
+finalization</td>
 </tr>
 <tr class="even">
 <td><code>dspy.ProgramOfThought</code></td>
@@ -177,9 +192,9 @@ all provider communication.</p>
 <tr class="odd">
 <td><code>dspy.CodeAct</code></td>
 <td><code><a href="../reference/code_act.html">code_act()</a></code></td>
-<td>Hybrid tools + R code execution; requires an explicit, opt-in
-<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code>
-</td>
+<td>Hybrid tools + R code execution; the built-in runner is
+trusted-input-only, and sandboxed backends can implement the runner
+protocol</td>
 </tr>
 <tr class="even">
 <td><code>dspy.BestOfN</code></td>
@@ -416,16 +431,16 @@ inputs</td>
 </tr>
 <tr class="odd">
 <td><code>dspy.History</code></td>
-<td>Implicit via ellmer <code>Chat$get_turns()</code>; not a signature
-type</td>
+<td>Native ellmer turns preserved in ReAct metadata and traces; not a
+signature type</td>
 </tr>
 <tr class="even">
 <td>
-<code>dspy.Tool</code>, <code>dspy.ToolCalls</code>
+<code>dspy.Tool</code>, <code>dspy.ToolCalls</code>,
+<code>ToolCallResults</code>
 </td>
-<td>ellmer <code>ToolDef</code> via <code><a href="../reference/as_ellmer_tool.html">as_ellmer_tool()</a></code> /
-<code><a href="../reference/register_dsprrr_tool.html">register_dsprrr_tool()</a></code>
-</td>
+<td>ellmer <code>ToolDef</code>, <code>ContentToolRequest</code>, and
+<code>ContentToolResult</code>; IDs remain attached to native turns</td>
 </tr>
 <tr class="odd">
 <td>
@@ -470,8 +485,11 @@ operate on single modules).</p>
 <tr class="odd">
 <td>LM client</td>
 <td>
-<code>dspy.LM</code> (LiteLLM; decoupling in 3.2+)</td>
-<td>ellmer <code>Chat</code> (100+ providers via ellmer)</td>
+<code>dspy.LM</code>; experimental typed
+<code>LMRequest -&gt; LMResponse</code> boundary in 3.3</td>
+<td>ellmer <code>Chat</code>; <code>build_module_request()</code>
+normalizes prompt/content input, but a complete package-wide invocation
+record is still planned</td>
 </tr>
 <tr class="even">
 <td>Configuration</td>
@@ -523,17 +541,19 @@ parallelism</td>
 <tr class="even">
 <td>Saving programs</td>
 <td>
-<code>save</code>/<code>load</code>, whole-program
-serialization</td>
+<code>save</code>/<code>load</code>; sanitized LM state and explicit
+unsafe-class opt-in in 3.3 beta</td>
 <td>
 <code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> /
-<code><a href="../reference/restore_module_config.html">restore_module_config()</a></code> (pins-based)</td>
+<code><a href="../reference/restore_module_config.html">restore_module_config()</a></code> (pins-based); safe versioned
+nested-program state is planned</td>
 </tr>
 <tr class="odd">
 <td>Observability</td>
 <td>MLflow autolog, OpenTelemetry callbacks</td>
 <td>Traces tibble, <code><a href="../reference/inspect_history.html">inspect_history()</a></code>,
-<code><a href="../reference/export_traces.html">export_traces()</a></code>; MLflow integration planned</td>
+<code><a href="../reference/export_traces.html">export_traces()</a></code>; package-level OpenTelemetry spans are
+planned on top of ellmer</td>
 </tr>
 <tr class="even">
 <td>Adapters (Chat/JSON/XML/TwoStep/BAML)</td>
@@ -578,11 +598,24 @@ sweeps.</li>
 <div class="section level2">
 <h2 id="known-gaps-roadmap">Known gaps (roadmap)<a class="anchor" aria-label="anchor" href="#known-gaps-roadmap"></a>
 </h2>
-<p>In rough priority order:</p>
+<p>In rough priority order, based on the stable DSPy 3.2 runtime and the
+3.3 beta direction:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Weight optimization</strong>: <code>BootstrapFinetune</code>
-/ RL-based optimizers.</li>
+<strong>Versioned, safe whole-program state</strong>: nested
+pipelines without secrets, with explicit opt-in before restoring trusted
+custom code or classes.</li>
+<li>
+<strong>One provider-neutral invocation/result contract</strong>
+carrying native turns, usage, cost, cache state, timing, and normalized
+errors across every module.</li>
+<li>
+<strong>Package-level OpenTelemetry spans</strong> for module,
+optimizer, evaluation, cache, and tool activity, composed with ellmer’s
+provider telemetry.</li>
+<li>
+<strong>MCP tools through ellmer’s tool abstraction</strong>,
+without a second transport or competing tool schema.</li>
 <li>
 <strong>Native reasoning-trace capture</strong> as a typed output
 (analogous to <code>dspy.Reasoning</code>).</li>
@@ -595,7 +628,9 @@ bootstrapping is already joint.</li>
 structured-output support (analogous to
 <code>TwoStepAdapter</code>).</li>
 <li>
-<strong>MLflow / OpenTelemetry observability</strong>.</li>
+<strong>Weight and RL optimization</strong>, after provider-neutral
+training data, reproducibility, cost accounting, and artifact contracts
+are stable.</li>
 </ol>
 <p>If one of these blocks your use case, please <a href="https://github.com/JamesHWade/dsprrr/issues" class="external-link">open an
 issue</a>.</p>
@@ -611,7 +646,7 @@ issue</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

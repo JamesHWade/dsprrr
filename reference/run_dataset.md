@@ -68,7 +68,10 @@ run_dataset(
 
 ## Value
 
-A tibble with the input columns plus a result column containing outputs
+A tibble with the input columns plus a `result` list-column. With
+`.return_format = "structured"`, the tibble also contains `.error`,
+`.metadata`, and `.chat`; `.error` is `NA` for successful rows and
+contains the LLM execution error message for failed rows.
 
 ## Examples
 

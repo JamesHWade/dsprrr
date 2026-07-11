@@ -3,8 +3,18 @@
 dsprrr is an R implementation of [DSPy](https://dspy.ai)’s programming
 model, built on [ellmer](https://ellmer.tidyverse.org) and tidyverse
 conventions. If you know DSPy, this page tells you what carries over,
-what is different, and what is not (yet) available. It reflects DSPy 3.x
-as of mid-2026.
+what is different, and what is not (yet) available.
+
+## Version baseline
+
+This comparison was checked against DSPy **3.2.1** (the latest stable
+release on 2026-07-09) and **3.3.0b1** (beta). The beta is especially
+useful as a design signal: it introduces `ReActV2`, a typed
+provider-neutral LM boundary, normalized LM error classes, and sanitized
+state serialization. Those beta APIs may still change, so dsprrr follows
+the durable contracts rather than copying unstable Python interfaces.
+See the [official DSPy
+releases](https://github.com/stanfordnlp/dspy/releases).
 
 dsprrr is not a line-by-line port. It follows DSPy’s concepts —
 signatures, modules, metrics, and optimizers (“teleprompters”) — while
@@ -17,9 +27,9 @@ all provider communication.
 |----|----|----|
 | `dspy.Predict` | `module(sig, type = "predict")` | Core predictor |
 | `dspy.ChainOfThought` | [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md), [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md) | Implemented as signature transforms |
-| `dspy.ReAct` | `module(sig, type = "react")` | Tool-calling agent loop via ellmer tools |
+| `dspy.ReAct` / experimental `ReActV2` | `module(sig, type = "react")` | Native ellmer turn history, tool-call IDs, parallel calls per assistant turn, enforced iteration limit, then structured finalization |
 | `dspy.ProgramOfThought` | [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | Generates and executes **R** code (not Python) |
-| `dspy.CodeAct` | [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | Hybrid tools + R code execution; requires an explicit, opt-in [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md) |
+| `dspy.CodeAct` | [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | Hybrid tools + R code execution; the built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
 | `dspy.BestOfN` | [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | Reward-function-guided retries |
 | `dspy.Refine` | [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | Retries with LLM-generated feedback |
 | `dspy.MultiChainComparison` | [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) |  |
@@ -97,8 +107,8 @@ they did.
 | Class-based signatures with `InputField`/`OutputField` | `signature(inputs = list(input(...)), output_type = ...)` |
 | Pydantic-typed outputs | ellmer type objects ([`type_string()`](https://ellmer.tidyverse.org/reference/type_boolean.html), [`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html), [`type_object()`](https://ellmer.tidyverse.org/reference/type_boolean.html), [`type_array()`](https://ellmer.tidyverse.org/reference/type_boolean.html)) |
 | `dspy.Image`, `dspy.Audio`, `dspy.File` | ellmer `Content` objects (images, PDFs) passed as inputs |
-| `dspy.History` | Implicit via ellmer `Chat$get_turns()`; not a signature type |
-| `dspy.Tool`, `dspy.ToolCalls` | ellmer `ToolDef` via [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md) / [`register_dsprrr_tool()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_tool.md) |
+| `dspy.History` | Native ellmer turns preserved in ReAct metadata and traces; not a signature type |
+| `dspy.Tool`, `dspy.ToolCalls`, `ToolCallResults` | ellmer `ToolDef`, `ContentToolRequest`, and `ContentToolResult`; IDs remain attached to native turns |
 | `dspy.Reasoning` (native reasoning traces) | Not yet first-class; [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md) adds a prompted reasoning field |
 
 ## Programs and composition
@@ -123,15 +133,15 @@ optimizers operate on single modules).
 
 | Capability | DSPy | dsprrr |
 |----|----|----|
-| LM client | `dspy.LM` (LiteLLM; decoupling in 3.2+) | ellmer `Chat` (100+ providers via ellmer) |
+| LM client | `dspy.LM`; experimental typed `LMRequest -> LMResponse` boundary in 3.3 | ellmer `Chat`; `build_module_request()` normalizes prompt/content input, but a complete package-wide invocation record is still planned |
 | Configuration | `dspy.configure()` / `dspy.context()` | [`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md), [`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md), [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/local_lm.md) |
 | Caching | Two-tier memory + disk | Two-tier memory + disk ([`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md)) |
 | Async | `acall`/`aforward`, `asyncify` | [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md) with promises |
 | Streaming | `streamify()` + `StreamListener` | [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md) + [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md); token streaming for single string fields, status events per pipeline step |
 | Usage tracking | `track_usage` | [`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/get_tokens.md), [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/get_cost.md), [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md) |
 | Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.parallel = TRUE)` via mirai or ellmer’s native parallelism |
-| Saving programs | `save`/`load`, whole-program serialization | [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md) / [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md) (pins-based) |
-| Observability | MLflow autolog, OpenTelemetry callbacks | Traces tibble, [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md), [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md); MLflow integration planned |
+| Saving programs | `save`/`load`; sanitized LM state and explicit unsafe-class opt-in in 3.3 beta | [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md) / [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md) (pins-based); safe versioned nested-program state is planned |
+| Observability | MLflow autolog, OpenTelemetry callbacks | Traces tibble, [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md), [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md); package-level OpenTelemetry spans are planned on top of ellmer |
 | Adapters (Chat/JSON/XML/TwoStep/BAML) | Yes | No adapter layer; ellmer’s `chat_structured()` handles structured output |
 | Evaluation framework | `dspy.Evaluate` | [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md), [`eval_program()`](https://jameshwade.github.io/dsprrr/reference/eval_program.md), plus **vitals** integration |
 
@@ -155,17 +165,30 @@ optimizers operate on single modules).
 
 ## Known gaps (roadmap)
 
-In rough priority order:
+In rough priority order, based on the stable DSPy 3.2 runtime and the
+3.3 beta direction:
 
-1.  **Weight optimization**: `BootstrapFinetune` / RL-based optimizers.
-2.  **Native reasoning-trace capture** as a typed output (analogous to
+1.  **Versioned, safe whole-program state**: nested pipelines without
+    secrets, with explicit opt-in before restoring trusted custom code
+    or classes.
+2.  **One provider-neutral invocation/result contract** carrying native
+    turns, usage, cost, cache state, timing, and normalized errors
+    across every module.
+3.  **Package-level OpenTelemetry spans** for module, optimizer,
+    evaluation, cache, and tool activity, composed with ellmer’s
+    provider telemetry.
+4.  **MCP tools through ellmer’s tool abstraction**, without a second
+    transport or competing tool schema.
+5.  **Native reasoning-trace capture** as a typed output (analogous to
     `dspy.Reasoning`).
-3.  **Joint multi-step optimization for instruction optimizers**
+6.  **Joint multi-step optimization for instruction optimizers**
     (MIPROv2, GEPA per-component selection); demo bootstrapping is
     already joint.
-4.  **Adapter-style fallbacks** for models with weak structured-output
+7.  **Adapter-style fallbacks** for models with weak structured-output
     support (analogous to `TwoStepAdapter`).
-5.  **MLflow / OpenTelemetry observability**.
+8.  **Weight and RL optimization**, after provider-neutral training
+    data, reproducibility, cost accounting, and artifact contracts are
+    stable.
 
 If one of these blocks your use case, please [open an
 issue](https://github.com/JamesHWade/dsprrr/issues).

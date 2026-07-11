@@ -1,7 +1,6 @@
 # Create an R Code Runner
 
-Factory function to create an RCodeRunner instance for safe R code
-execution.
+Factory function to create a trusted-input-only RCodeRunner instance.
 
 ## Usage
 

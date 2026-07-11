@@ -1,7 +1,8 @@
 # RLM Tools - Prelude Generator
 
 Generates R code that defines RLM tools in the execution environment.
-This code is run before user-generated code via RCodeRunner.
+This code is run before user-generated code by the configured code
+runner.
 
 ## Details
 

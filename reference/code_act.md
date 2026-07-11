@@ -21,7 +21,7 @@ code_act(signature, tools = list(), runner, max_iterations = 10L, ...)
 
 - runner:
 
-  An RCodeRunner object for code execution. Required.
+  A code runner implementing `execute()` and `policy()`. Required.
 
 - max_iterations:
 

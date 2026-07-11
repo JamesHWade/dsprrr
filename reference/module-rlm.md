@@ -15,7 +15,7 @@ The execution flow is:
 
 2.  LLM generates R code to explore and analyze the context
 
-3.  Code is executed in an isolated subprocess via RCodeRunner
+3.  Code is executed by the configured code runner
 
 4.  Results are fed back to the LLM for the next iteration
 
@@ -39,9 +39,10 @@ Available REPL tools:
 - `llm_query_batched(queries, slices)`: Batched recursive calls
 
 Security: Code execution requires explicit opt-in via a runner
-parameter. The runner provides subprocess isolation but is NOT a
-security sandbox. For untrusted inputs, use OS-level sandboxing
-(containers, AppArmor).
+parameter. The built-in runner uses a separate process but is NOT a
+security sandbox. Inspect `runner$policy()` before execution. For
+untrusted inputs, provide a runner backed by OS-level sandboxing (such
+as a container or AppArmor).
 
 ## Examples
 

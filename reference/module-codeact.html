@@ -106,8 +106,9 @@ allows the agent to write and run R code. The execution flow is:</p><ol><li><p>A
 <li><p>Agent iteratively calls tools or executes code until it has enough info</p></li>
 <li><p>Agent produces final structured answer</p></li>
 </ol><p>Security: Code execution requires explicit opt-in via a runner parameter.
-The runner provides subprocess isolation but is NOT a security sandbox.
-For untrusted inputs, use OS-level sandboxing.</p>
+The built-in runner uses a separate process but is NOT a security sandbox.
+Inspect <code>runner$policy()</code> before execution. For untrusted inputs, provide a
+runner backed by OS-level sandboxing.</p>
     </div>
 
     <div class="section level2">
@@ -146,7 +147,7 @@ For untrusted inputs, use OS-level sandboxing.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

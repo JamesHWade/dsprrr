@@ -23,7 +23,7 @@ program_of_thought(
 
 - runner:
 
-  An RCodeRunner object for code execution. Required.
+  A code runner implementing `execute()` and `policy()`. Required.
 
 - max_iters:
 

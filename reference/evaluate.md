@@ -60,9 +60,18 @@ A list with elements. When `.return_format = "structured"` (default):
 
 - `n_evaluated`: number of successful evaluations.
 
-- `n_errors`: number of metric failures.
+- `n_errors`: number of rows with run or metric failures.
 
-- `errors`: character vector with error messages, when any.
+- `errors`: character vector with all error messages, when any.
+
+- `n_run_errors`, `run_errors`: count and messages for module/LLM
+  failures.
+
+- `n_metric_errors`, `metric_errors`: count and messages for metric
+  failures.
+
+- `total_cost`: total evaluation cost, or `NA` when any call's cost is
+  unknown.
 
 - `feedbacks`: per-example textual feedback when the metric returns
   `list(score = , feedback = )` (see

@@ -85,11 +85,15 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="dsprrr-development-version">dsprrr (development version)<a class="anchor" aria-label="anchor" href="#dsprrr-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.0.0.9000" id="dsprrr-0009000">dsprrr 0.0.0.9000<a class="anchor" aria-label="anchor" href="#dsprrr-0009000"></a></h2>
 <p>First development changelog. dsprrr is experimental; the API may change.</p>
 <div class="section level3">
-<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
-<ul><li><p>Failed items in a batch are now counted and reported. Previously <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> on a batch result always said “All items completed successfully” because it looked for the error in the wrong place (#dsprrr-8l0).</p></li>
+<h3 id="bug-fixes-0-0-0-9000">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-0-9000"></a></h3>
+<ul><li><p>Batch and evaluation failures now preserve the original LLM/provider error. Structured <code><a href="../reference/run_dataset.html">run_dataset()</a></code> results expose a row-level <code>.error</code> column, and <code><a href="../reference/evaluate.html">evaluate()</a></code> reports run failures separately from metric failures instead of passing failed predictions into the metric. Native ellmer parallel batches continue after individual request failures (#dsprrr-hqp, #dsprrr-lr7).</p></li>
+<li><p>Unknown provider costs remain <code>NA</code> through traces, evaluation, optimizer trials, and summaries instead of being reported as <code>$0</code>. <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> now records per-trial cost explicitly (#dsprrr-e3u).</p></li>
+<li><p><code>ReActModule</code> now enforces <code>max_iterations</code>, preserves native ellmer turn history and tool-call IDs, treats parallel calls in one assistant turn as one iteration, and records structured finalization metadata (#dsprrr-7nu).</p></li>
+<li><p>The built-in R code runner now advertises its real trust boundary: callr provides process isolation, not a security sandbox. Code-executing modules accept external container/OS sandbox backends through a documented <code>execute()</code> + <code>policy()</code> protocol (#dsprrr-ady).</p></li>
+<li><p>Failed items in a batch are now counted and reported. Previously <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> on a batch result always said “All items completed successfully” because it looked for the error in the wrong place (#dsprrr-8l0).</p></li>
 <li><p>Unknown or misspelled types in a signature string (e.g. <code>"q -&gt; a: interger"</code>) now raise an error suggesting the closest valid type, instead of silently becoming a string field (#dsprrr-47p).</p></li>
 <li><p><code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> now gives a clear error when every trial fails (for example, when the API is unreachable) instead of a cryptic “attempt to select less than one element” (#dsprrr-hew).</p></li>
 <li><p><code>.cache</code> is now a validated, first-class argument to <code><a href="../reference/run.html">run()</a></code> and <code>forward()</code> for every module type, instead of triggering a spurious “unknown input” warning and being dropped for non-<code>PredictModule</code> modules (#dsprrr-jup). <code>PredictModule</code> (and the wrapper/few-shot modules that delegate to it) honor it for the structured-output cache; modules that drive the LLM directly (e.g. <code>RAGModule</code>, <code>ReActModule</code>, <code>RLMModule</code>) accept <code>.cache</code> but do not yet route their own calls through the cache (#dsprrr-aa2).</p></li>
@@ -99,13 +103,19 @@
 <li><p><code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> now errors clearly for pipelines and other unsupported module types instead of silently serialising them as an empty <code>PredictModule</code> and dropping every step on restore (#dsprrr-07u).</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="internal-development-version">Internal<a class="anchor" aria-label="anchor" href="#internal-development-version"></a></h3>
+<h3 id="internal-0-0-0-9000">Internal<a class="anchor" aria-label="anchor" href="#internal-0-0-0-9000"></a></h3>
 <ul><li>Tests now isolate the on-disk cache to a temporary directory, so running the test suite no longer writes into the package source tree (#dsprrr-63v).</li>
 </ul></div>
 <div class="section level3">
-<h3 id="packaging-development-version">Packaging<a class="anchor" aria-label="anchor" href="#packaging-development-version"></a></h3>
-<ul><li><p>Lowered the minimum <code>ellmer</code> requirement to the released <code>&gt;= 0.4.1</code> and removed the <code>Remotes:</code> entry, so the package installs from CRAN-released dependencies (#dsprrr-w0e).</p></li>
+<h3 id="packaging-0-0-0-9000">Packaging<a class="anchor" aria-label="anchor" href="#packaging-0-0-0-9000"></a></h3>
+<ul><li><p>Source archives exclude local dsprrr/vignette caches, editor state, and review configuration. R &gt;= 4.1 is now explicit because generated examples use the native pipe (#dsprrr-wn9).</p></li>
+<li><p>Runtime ellmer compatibility checks now match <code>DESCRIPTION</code> (<code>&gt;= 0.4.1</code>). Dictionary signatures also avoid ellmer’s deprecated factory argument while remaining compatible with the released minimum.</p></li>
+<li><p>Lowered the minimum <code>ellmer</code> requirement to the released <code>&gt;= 0.4.1</code> and removed the <code>Remotes:</code> entry, so the package installs from CRAN-released dependencies (#dsprrr-w0e).</p></li>
 <li><p>Removed unused <code>Suggests</code>: <code>future</code> and <code>lifecycle</code>.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="quality-0-0-0-9000">Quality<a class="anchor" aria-label="anchor" href="#quality-0-0-0-9000"></a></h3>
+<ul><li>The full test suite is warning-free, expected warning/error sequences are asserted explicitly, and vitals/cache state is isolated in temporary directories. Static analysis (<code>jarl</code>) is clean, and R CMD check CI now covers R-devel and oldrel-1 in addition to release R on Linux, macOS, and Windows (#dsprrr-h8k).</li>
 </ul></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -117,7 +127,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

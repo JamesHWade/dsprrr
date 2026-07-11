@@ -131,8 +131,11 @@ times to quantify variation.</p></li>
 <li><p><code>predictions</code>: list of model outputs.</p></li>
 <li><p><code>metadata</code>: list of metadata captured from <code><a href="run.html">run()</a></code>.</p></li>
 <li><p><code>n_evaluated</code>: number of successful evaluations.</p></li>
-<li><p><code>n_errors</code>: number of metric failures.</p></li>
-<li><p><code>errors</code>: character vector with error messages, when any.</p></li>
+<li><p><code>n_errors</code>: number of rows with run or metric failures.</p></li>
+<li><p><code>errors</code>: character vector with all error messages, when any.</p></li>
+<li><p><code>n_run_errors</code>, <code>run_errors</code>: count and messages for module/LLM failures.</p></li>
+<li><p><code>n_metric_errors</code>, <code>metric_errors</code>: count and messages for metric failures.</p></li>
+<li><p><code>total_cost</code>: total evaluation cost, or <code>NA</code> when any call's cost is unknown.</p></li>
 <li><p><code>feedbacks</code>: per-example textual feedback when the metric returns
 <code>list(score = , feedback = )</code> (see <code><a href="metric_with_feedback.html">metric_with_feedback()</a></code>);
 <code>NA</code> otherwise.</p></li>
@@ -188,7 +191,7 @@ times to quantify variation.</p></li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

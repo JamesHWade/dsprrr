@@ -152,7 +152,10 @@ parallelism (more efficient, single process).
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A tibble with the input columns plus a result column containing outputs</p>
+    <p>A tibble with the input columns plus a <code>result</code> list-column. With
+<code>.return_format = "structured"</code>, the tibble also contains <code>.error</code>,
+<code>.metadata</code>, and <code>.chat</code>; <code>.error</code> is <code>NA</code> for successful rows and contains
+the LLM execution error message for failed rows.</p>
     </div>
 
     <div class="section level2">
@@ -179,7 +182,7 @@ parallelism (more efficient, single process).
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

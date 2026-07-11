@@ -101,8 +101,9 @@ tool calls, and observations before producing a final structured answer.</p>
     <p>Create a ReAct module with <code>module(type = "react", tools = list(...))</code>.
 If you pass <code>tools</code> with <code>type = "predict"</code>, the module automatically
 upgrades to <code>react</code>. ellmer executes the tool-calling loop internally; dsprrr
-records the observed tool-call rounds and warns if they exceed
-<code>max_iterations</code>, then produces output based on the module signature.</p>
+preserves its native turn history and tool-call IDs, enforces
+<code>max_iterations</code>, and then produces a structured output based on the module
+signature. Multiple tool calls in one assistant turn count as one iteration.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -150,7 +151,7 @@ records the observed tool-call rounds and warns if they exceed
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
