@@ -137,6 +137,139 @@ test_that("check_budget detects max_errors", {
   expect_match(result$reason, "max_errors")
 })
 
+test_that("check_budget lets a zero error budget attempt work", {
+  ctrl <- optimizer_control(max_errors = 0L)
+
+  expect_false(check_budget(0L, 0L, ctrl)$should_stop)
+  expect_true(check_budget(1L, 1L, ctrl)$should_stop)
+})
+
+test_that("optimizer budget resets only the consecutive error streak", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+
+  record_optimizer_outcome(budget, FALSE, "minibatch")
+  record_optimizer_outcome(budget, TRUE, "minibatch")
+  record_optimizer_outcome(budget, FALSE, "full")
+
+  summary <- optimizer_budget_summary(budget)
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 1L)
+  expect_false(summary$stopped)
+  expect_null(summary$stop_reason)
+})
+
+test_that("optimizer budget stops on the failure reaching the limit", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+
+  record_optimizer_outcome(budget, FALSE, "minibatch")
+  expect_false(optimizer_budget_stopped(budget))
+
+  record_optimizer_outcome(
+    budget,
+    FALSE,
+    "full",
+    condition = simpleError("provider failed")
+  )
+  reason <- optimizer_budget_summary(budget)$stop_reason
+
+  expect_true(optimizer_budget_stopped(budget))
+  expect_s3_class(reason, "dsprrr_optimizer_stop_reason")
+  expect_identical(reason$code, "max_errors")
+  expect_identical(reason$stage, "full")
+  expect_equal(reason$limit, 2L)
+  expect_equal(reason$observed, 2L)
+  expect_equal(reason$total_errors, 2L)
+  expect_equal(reason$attempts, 2L)
+  expect_identical(
+    reason$message,
+    "Reached max_errors limit (2 consecutive errors)"
+  )
+  expect_identical(reason$condition_class, "simpleError")
+
+  record_optimizer_outcome(budget, TRUE, "after_stop")
+  expect_identical(optimizer_budget_summary(budget)$stop_reason, reason)
+  expect_equal(optimizer_budget_summary(budget)$attempts, 2L)
+})
+
+test_that("zero max_errors stops on its first failure", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 0L))
+
+  expect_false(optimizer_budget_stopped(budget))
+  record_optimizer_outcome(budget, TRUE, "initial")
+  expect_false(optimizer_budget_stopped(budget))
+  record_optimizer_outcome(budget, FALSE, "evaluation")
+
+  reason <- optimizer_budget_summary(budget)$stop_reason
+  expect_true(optimizer_budget_stopped(budget))
+  expect_equal(reason$limit, 0L)
+  expect_equal(reason$observed, 1L)
+  expect_equal(reason$total_errors, 1L)
+  expect_equal(reason$attempts, 2L)
+})
+
+test_that("EvalResult outcomes preserve row order and reconcile errors", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  result <- EvalResult(
+    examples = data.frame(error = c(NA_character_, "row failed")),
+    n_evaluated = 1L,
+    n_errors = 2L
+  )
+
+  record_eval_result_outcomes(budget, result, "minibatch")
+  summary <- optimizer_budget_summary(budget)
+
+  expect_true(summary$stopped)
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 2L)
+  expect_identical(summary$stop_reason$stage, "minibatch")
+})
+
+test_that("fully successful EvalResult resets an existing streak", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  record_optimizer_outcome(budget, FALSE, "minibatch")
+  result <- EvalResult(
+    examples = data.frame(error = c(NA_character_, NA_character_)),
+    n_evaluated = 2L,
+    n_errors = 0L
+  )
+
+  record_eval_result_outcomes(budget, result, "full")
+  summary <- optimizer_budget_summary(budget)
+
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 2L)
+  expect_equal(summary$total_errors, 1L)
+  expect_equal(summary$consecutive_errors, 0L)
+  expect_false(summary$stopped)
+})
+
+test_that("EvalResult counts summary outcomes when row detail is absent", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  result <- EvalResult(
+    n_evaluated = 2L,
+    n_errors = 2L
+  )
+
+  record_eval_result_outcomes(budget, result, "full")
+  summary <- optimizer_budget_summary(budget)
+
+  expect_equal(summary$attempts, 4L)
+  expect_equal(summary$successes, 2L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 2L)
+  expect_true(summary$stopped)
+
+  empty_budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  record_eval_result_outcomes(empty_budget, EvalResult(), "full")
+  empty_summary <- optimizer_budget_summary(empty_budget)
+  expect_equal(empty_summary$attempts, 1L)
+  expect_equal(empty_summary$successes, 1L)
+})
+
 test_that("generate_trial_id creates unique IDs", {
   ids <- replicate(100, generate_trial_id())
   expect_equal(length(unique(ids)), 100)

@@ -2,6 +2,14 @@
 #
 # Provides lightweight discrete BO utilities for optimizers like MIPROv2.
 
+is_fatal_discrete_bo_error <- function(condition) {
+  classes <- class(condition)
+  message <- conditionMessage(condition)
+
+  any(grepl("config|invariant", classes, ignore.case = TRUE)) ||
+    grepl("\\b(configuration|invariant)\\b", message, ignore.case = TRUE)
+}
+
 #' Discrete BO over candidate configurations
 #' @noRd
 run_discrete_bo <- function(
@@ -49,7 +57,7 @@ run_discrete_bo <- function(
   })
 
   trial_history <- list()
-  error_count <- 0L
+  budget <- new_optimizer_budget(control)
   best_full <- list(score = -Inf, candidate = NULL)
   best_any <- list(score = -Inf, candidate = NULL)
 
@@ -108,21 +116,22 @@ run_discrete_bo <- function(
 
       candidate_idx <- select_candidate(stats, trial_idx)
       candidate <- candidates[[candidate_idx]]
+      budget_stage <- paste0("discrete_bo_", eval_type)
 
       eval_result <- tryCatch(
         {
           eval_fn(candidate, eval_type, trial_idx)
         },
         error = function(e) {
-          error_count <<- error_count + 1L
           msg <- conditionMessage(e)
 
           # Classify error type for better user feedback
-          is_auth_error <- grepl(
-            "auth|401|403|api.?key|invalid.?key|unauthorized",
-            msg,
-            ignore.case = TRUE
-          )
+          is_auth_error <- any(grepl("auth", class(e), ignore.case = TRUE)) ||
+            grepl(
+              "auth|401|403|api.?key|invalid.?key|unauthorized",
+              msg,
+              ignore.case = TRUE
+            )
           is_rate_limit <- grepl(
             "rate.?limit|429|quota|too.?many",
             msg,
@@ -138,7 +147,18 @@ run_discrete_bo <- function(
               ),
               class = "dsprrr_mipro_auth_error"
             )
-          } else if (is_rate_limit) {
+          } else if (is_fatal_discrete_bo_error(e)) {
+            stop(e)
+          }
+
+          record_optimizer_outcome(
+            budget,
+            success = FALSE,
+            stage = budget_stage,
+            condition = e
+          )
+
+          if (is_rate_limit) {
             cli::cli_warn(
               c(
                 "Rate limit hit for trial {trial_idx}",
@@ -152,7 +172,12 @@ run_discrete_bo <- function(
               c(
                 "Evaluation failed for trial {trial_idx}",
                 "x" = msg,
-                "i" = "Error count: {error_count}/{control@max_errors}"
+                "i" = paste0(
+                  "Consecutive errors: ",
+                  budget$consecutive_errors,
+                  "; max_errors: ",
+                  control@max_errors
+                )
               ),
               class = "dsprrr_mipro_eval_error"
             )
@@ -164,9 +189,10 @@ run_discrete_bo <- function(
       score <- NA_real_
       std_error <- NA_real_
       n_evaluated <- 0L
-      n_errors <- 0L
+      n_errors <- if (is.null(eval_result)) 1L else 0L
 
       if (!is.null(eval_result)) {
+        record_eval_result_outcomes(budget, eval_result, budget_stage)
         score <- eval_result@mean_score
         std_error <- eval_result@std_error
         n_evaluated <- eval_result@n_evaluated
@@ -230,14 +256,8 @@ run_discrete_bo <- function(
         instruction_id = candidate$instruction_id %||% NA_character_
       )
 
-      if (error_count > control@max_errors) {
-        cli::cli_abort(
-          c(
-            "Exceeded maximum errors during optimization",
-            "i" = "max_errors: {control@max_errors}"
-          ),
-          class = "dsprrr_mipro_error_limit"
-        )
+      if (optimizer_budget_stopped(budget)) {
+        break
       }
     }
   })
@@ -311,9 +331,14 @@ run_discrete_bo <- function(
     NULL
   }
 
+  budget_summary <- optimizer_budget_summary(budget)
+
   list(
     best_candidate = best_candidate,
     trial_history = trial_history_tbl,
-    candidate_stats = stats
+    candidate_stats = stats,
+    budget_summary = budget_summary,
+    stop_reason = budget_summary$stop_reason,
+    error_count = budget_summary$total_errors
   )
 }

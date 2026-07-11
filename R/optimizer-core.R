@@ -641,6 +641,250 @@ update_cost_summary <- function(summary, module) {
   )
 }
 
+# Create mutable state for a single optimizer error budget.
+new_optimizer_budget <- function(control = NULL) {
+  if (is.null(control)) {
+    control <- optimizer_control()
+  }
+
+  budget <- new.env(parent = emptyenv())
+  budget$max_errors <- as.integer(control@max_errors)
+  budget$attempts <- 0L
+  budget$successes <- 0L
+  budget$total_errors <- 0L
+  budget$consecutive_errors <- 0L
+  budget$stop_reason <- NULL
+  class(budget) <- c("dsprrr_optimizer_budget", "environment")
+  budget
+}
+
+new_optimizer_stop_reason <- function(budget, stage, condition = NULL) {
+  limit <- budget$max_errors
+  message <- if (limit == 0L) {
+    "Stopped after the first error because max_errors is 0"
+  } else {
+    sprintf(
+      "Reached max_errors limit (%d consecutive errors)",
+      limit
+    )
+  }
+
+  reason <- list(
+    code = "max_errors",
+    stage = as.character(stage)[1L],
+    limit = limit,
+    observed = budget$consecutive_errors,
+    total_errors = budget$total_errors,
+    attempts = budget$attempts,
+    message = message
+  )
+
+  if (inherits(condition, "condition")) {
+    reason$condition_class <- class(condition)[1L]
+  }
+
+  structure(
+    reason,
+    class = c("dsprrr_optimizer_stop_reason", "list")
+  )
+}
+
+# Record one ordered optimizer outcome and update the sticky stop reason.
+record_optimizer_outcome <- function(
+  budget,
+  success,
+  stage,
+  condition = NULL
+) {
+  if (!inherits(budget, "dsprrr_optimizer_budget")) {
+    cli::cli_abort(
+      "{.arg budget} must be an optimizer budget",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+
+  if (!is.logical(success) || length(success) != 1L || is.na(success)) {
+    cli::cli_abort(
+      "{.arg success} must be a single non-missing logical value",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+
+  if (
+    !is.character(stage) ||
+      length(stage) != 1L ||
+      is.na(stage) ||
+      !nzchar(stage)
+  ) {
+    cli::cli_abort(
+      "{.arg stage} must be a single non-empty string",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+
+  # Exhaustion is sticky. Optimizers must stop scheduling once it is reached,
+  # so later outcomes cannot rewrite the boundary or its accounting snapshot.
+  if (!is.null(budget$stop_reason)) {
+    return(invisible(budget))
+  }
+
+  budget$attempts <- budget$attempts + 1L
+
+  if (isTRUE(success)) {
+    budget$successes <- budget$successes + 1L
+    budget$consecutive_errors <- 0L
+    return(invisible(budget))
+  }
+
+  budget$total_errors <- budget$total_errors + 1L
+  budget$consecutive_errors <- budget$consecutive_errors + 1L
+
+  effective_limit <- max(1L, budget$max_errors)
+  if (budget$consecutive_errors >= effective_limit) {
+    budget$stop_reason <- new_optimizer_stop_reason(
+      budget,
+      stage = stage,
+      condition = condition
+    )
+  }
+
+  invisible(budget)
+}
+
+optimizer_error_present <- function(error) {
+  if (is.null(error) || length(error) == 0L) {
+    return(FALSE)
+  }
+
+  if (inherits(error, "condition")) {
+    return(TRUE)
+  }
+
+  if (length(error) == 1L && is.atomic(error) && is.na(error)) {
+    return(FALSE)
+  }
+
+  if (is.character(error)) {
+    return(any(nzchar(trimws(error[!is.na(error)]))))
+  }
+
+  TRUE
+}
+
+optimizer_error_condition <- function(error) {
+  if (inherits(error, "condition")) {
+    return(error)
+  }
+
+  simpleError(paste(as.character(error), collapse = ", "))
+}
+
+# Record the ordered row outcomes represented by an EvalResult.
+record_eval_result_outcomes <- function(budget, eval_result, stage) {
+  if (!inherits(eval_result, "dsprrr::EvalResult")) {
+    cli::cli_abort(
+      "{.arg eval_result} must be an EvalResult",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+
+  examples <- eval_result@examples
+  reported_successes <- as.integer(eval_result@n_evaluated)
+  if (length(reported_successes) != 1L || is.na(reported_successes)) {
+    reported_successes <- 0L
+  }
+  reported_successes <- max(0L, reported_successes)
+
+  reported_errors <- as.integer(eval_result@n_errors)
+  if (length(reported_errors) != 1L || is.na(reported_errors)) {
+    reported_errors <- 0L
+  }
+  reported_errors <- max(0L, reported_errors)
+
+  has_ordered_errors <- is.data.frame(examples) &&
+    nrow(examples) > 0L &&
+    "error" %in% names(examples)
+
+  if (has_ordered_errors) {
+    row_errors <- examples$error
+    error_flags <- vapply(row_errors, optimizer_error_present, logical(1))
+
+    observed_errors <- 0L
+    for (index in seq_along(error_flags)) {
+      is_error <- error_flags[[index]]
+      condition <- if (is_error) {
+        optimizer_error_condition(row_errors[[index]])
+      } else {
+        NULL
+      }
+      record_optimizer_outcome(
+        budget,
+        success = !is_error,
+        stage = stage,
+        condition = condition
+      )
+      observed_errors <- observed_errors + as.integer(is_error)
+
+      if (optimizer_budget_stopped(budget)) {
+        return(invisible(budget))
+      }
+    }
+
+    # EvalResult summaries can report failures omitted from the row detail.
+    # Preserve the known row order, then conservatively append the difference.
+    unreported_errors <- max(0L, reported_errors - observed_errors)
+    if (unreported_errors > 0L) {
+      for (index in seq_len(unreported_errors)) {
+        record_optimizer_outcome(budget, FALSE, stage)
+        if (optimizer_budget_stopped(budget)) {
+          break
+        }
+      }
+    }
+
+    return(invisible(budget))
+  }
+
+  if (reported_successes == 0L && reported_errors == 0L) {
+    record_optimizer_outcome(budget, TRUE, stage)
+    return(invisible(budget))
+  }
+
+  # Without row detail, the actual ordering is unknowable. Record successes
+  # first and group failures at the end so the reported failures form the
+  # conservative terminal streak.
+  if (reported_successes > 0L) {
+    for (index in seq_len(reported_successes)) {
+      record_optimizer_outcome(budget, TRUE, stage)
+    }
+  }
+
+  for (index in seq_len(reported_errors)) {
+    record_optimizer_outcome(budget, FALSE, stage)
+    if (optimizer_budget_stopped(budget)) {
+      break
+    }
+  }
+
+  invisible(budget)
+}
+
+optimizer_budget_stopped <- function(budget) {
+  !is.null(budget$stop_reason)
+}
+
+optimizer_budget_summary <- function(budget) {
+  list(
+    attempts = budget$attempts,
+    successes = budget$successes,
+    total_errors = budget$total_errors,
+    consecutive_errors = budget$consecutive_errors,
+    max_errors = budget$max_errors,
+    stopped = optimizer_budget_stopped(budget),
+    stop_reason = budget$stop_reason
+  )
+}
+
 #' Check Budget Stopping Condition
 #'
 #' @description
@@ -667,13 +911,25 @@ check_budget <- function(trial_count, error_count, control) {
   }
 
   # Check max errors
-  if (error_count >= control@max_errors) {
-    return(list(
-      should_stop = TRUE,
-      reason = sprintf(
+  reached_error_limit <- if (control@max_errors == 0L) {
+    error_count > 0L
+  } else {
+    error_count >= control@max_errors
+  }
+
+  if (reached_error_limit) {
+    reason <- if (control@max_errors == 0L) {
+      "Reached max_errors limit (first error with max_errors = 0)"
+    } else {
+      sprintf(
         "Reached max_errors limit (%d consecutive errors)",
         control@max_errors
       )
+    }
+
+    return(list(
+      should_stop = TRUE,
+      reason = reason
     ))
   }
 

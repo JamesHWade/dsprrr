@@ -98,6 +98,9 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
   expect_true(length(optimizer$instruction_candidates) > 0)
   expect_s3_class(optimizer$trial_history, "tbl_df")
   expect_true(any(optimizer$trial_history$eval_type == "full"))
+  expect_false(optimizer$budget_summary$stopped)
+  expect_null(optimizer$stop_reason)
+  expect_equal(optimizer$error_count, 0L)
 
   expect_true(file.exists(file.path(log_dir, "trials.jsonl")))
 })
@@ -266,7 +269,7 @@ test_that("run_discrete_bo respects error limit", {
 
   mock_control <- dsprrr:::optimizer_control(max_errors = 3L)
 
-  expect_error_with_warnings(
+  result <- expect_test_warnings(
     dsprrr:::run_discrete_bo(
       candidates = candidates,
       eval_fn = failing_eval_fn,
@@ -275,9 +278,177 @@ test_that("run_discrete_bo respects error limit", {
       minibatch_size = 1,
       full_eval_every = 5
     ),
-    warning_regexp = "Evaluation failed for trial",
-    error_regexp = "Exceeded maximum errors"
+    "Evaluation failed for trial"
   )
+
+  expect_null(result$best_candidate)
+  expect_equal(nrow(result$trial_history), 3L)
+  expect_equal(result$error_count, 3L)
+  expect_true(result$budget_summary$stopped)
+  expect_s3_class(result$stop_reason, "dsprrr_optimizer_stop_reason")
+  expect_identical(result$stop_reason$stage, "discrete_bo_minibatch")
+  expect_equal(result$stop_reason$observed, 3L)
+})
+
+test_that("run_discrete_bo keeps the best partial candidate at exhaustion", {
+  candidates <- list(list(id = "best"))
+  eval_fn <- function(candidate, eval_type, trial_idx) {
+    if (trial_idx > 1L) {
+      stop("later evaluation failed")
+    }
+
+    dsprrr:::EvalResult(
+      mean_score = 0.8,
+      n_evaluated = 1L,
+      n_errors = 0L
+    )
+  }
+
+  result <- expect_test_warnings(
+    dsprrr:::run_discrete_bo(
+      candidates = candidates,
+      eval_fn = eval_fn,
+      control = dsprrr:::optimizer_control(max_errors = 2L),
+      max_trials = 10L,
+      minibatch_size = 1L,
+      full_eval_every = 1L
+    ),
+    "Evaluation failed for trial"
+  )
+
+  expect_identical(result$best_candidate$id, "best")
+  expect_equal(nrow(result$trial_history), 3L)
+  expect_equal(result$error_count, 2L)
+  expect_equal(result$budget_summary$attempts, 3L)
+  expect_equal(result$budget_summary$successes, 1L)
+  expect_equal(result$stop_reason$observed, 2L)
+})
+
+test_that("run_discrete_bo counts ordered EvalResult row errors", {
+  candidates <- list(list(id = "partial"))
+  eval_fn <- function(candidate, eval_type, trial_idx) {
+    dsprrr:::EvalResult(
+      examples = data.frame(error = c("first", "second")),
+      mean_score = 0.6,
+      n_evaluated = 0L,
+      n_errors = 2L
+    )
+  }
+
+  result <- dsprrr:::run_discrete_bo(
+    candidates = candidates,
+    eval_fn = eval_fn,
+    control = dsprrr:::optimizer_control(max_errors = 2L),
+    max_trials = 10L,
+    minibatch_size = 1L,
+    full_eval_every = 1L
+  )
+
+  expect_identical(result$best_candidate$id, "partial")
+  expect_equal(nrow(result$trial_history), 1L)
+  expect_equal(result$error_count, 2L)
+  expect_true(result$budget_summary$stopped)
+  expect_identical(result$stop_reason$condition_class, "simpleError")
+})
+
+test_that("run_discrete_bo lets max_errors zero attempt once", {
+  calls <- 0L
+  result <- expect_test_warnings(
+    dsprrr:::run_discrete_bo(
+      candidates = list(list(id = "candidate")),
+      eval_fn = function(candidate, eval_type, trial_idx) {
+        calls <<- calls + 1L
+        stop("first failure")
+      },
+      control = dsprrr:::optimizer_control(max_errors = 0L),
+      max_trials = 10L,
+      minibatch_size = 1L,
+      full_eval_every = 10L
+    ),
+    "Evaluation failed for trial"
+  )
+
+  expect_equal(calls, 1L)
+  expect_equal(result$error_count, 1L)
+  expect_equal(result$stop_reason$limit, 0L)
+  expect_equal(result$stop_reason$observed, 1L)
+})
+
+test_that("run_discrete_bo keeps authentication and configuration fatal", {
+  run_failure <- function(eval_fn) {
+    dsprrr:::run_discrete_bo(
+      candidates = list(list(id = "candidate")),
+      eval_fn = eval_fn,
+      control = dsprrr:::optimizer_control(max_errors = 2L),
+      max_trials = 2L,
+      minibatch_size = 1L,
+      full_eval_every = 1L
+    )
+  }
+
+  expect_error(
+    run_failure(function(...) stop("Unauthorized API key")),
+    class = "dsprrr_mipro_auth_error"
+  )
+  expect_error(
+    run_failure(function(...) {
+      cli::cli_abort(
+        "Invalid optimizer configuration",
+        class = "dsprrr_test_config_error"
+      )
+    }),
+    class = "dsprrr_test_config_error"
+  )
+})
+
+test_that("MIPROv2 propagates a typed budget stop into metadata", {
+  budget <- dsprrr:::new_optimizer_budget(
+    dsprrr:::optimizer_control(max_errors = 1L)
+  )
+  dsprrr:::record_optimizer_outcome(
+    budget,
+    FALSE,
+    "discrete_bo_minibatch",
+    simpleError("evaluation failed")
+  )
+  budget_summary <- dsprrr:::optimizer_budget_summary(budget)
+
+  testthat::local_mocked_bindings(
+    generate_mipro_demo_candidates = function(...) {
+      list(list(id = "demo", demos = list(), params = list(id = "demo")))
+    },
+    generate_mipro_instruction_candidates = function(...) {
+      list(list(
+        id = "instruction",
+        instructions = "Use the input.",
+        params = list(id = "instruction")
+      ))
+    },
+    run_discrete_bo = function(candidates, ...) {
+      list(
+        best_candidate = candidates[[1L]],
+        trial_history = tibble::tibble(),
+        candidate_stats = list(),
+        budget_summary = budget_summary,
+        stop_reason = budget_summary$stop_reason,
+        error_count = budget_summary$total_errors
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  program <- module(signature("question -> answer"), type = "predict")
+  teleprompter <- MIPROv2(metric = function(...) 1)
+  compiled <- dsprrr:::compile_mipro(
+    teleprompter,
+    program,
+    data.frame(question = "test", answer = "test")
+  )
+
+  metadata <- compiled$config$optimizer
+  expect_identical(metadata$budget_summary, budget_summary)
+  expect_identical(metadata$stop_reason, budget_summary$stop_reason)
+  expect_equal(metadata$error_count, 1L)
 })
 
 test_that("run_discrete_bo UCB explores untried candidates first", {

@@ -309,7 +309,10 @@ compile_mipro <- function(
       function(x) x$params
     ),
     trial_history = bo_result$trial_history,
-    best_config = best_candidate$params
+    best_config = best_candidate$params,
+    budget_summary = bo_result$budget_summary,
+    stop_reason = bo_result$stop_reason,
+    error_count = bo_result$error_count
   )
 
   compiled
