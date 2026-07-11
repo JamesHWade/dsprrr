@@ -402,6 +402,142 @@ test_that("use_dsprrr_template creates targets template", {
   }
 })
 
+test_that("targets template parses and declares a valid graph", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
+
+  project_dir <- withr::local_tempdir()
+  script <- file.path(project_dir, "_targets.R")
+  use_dsprrr_template("targets", path = project_dir)
+
+  parsed <- parse(script)
+  expect_gt(length(parsed), 0L)
+
+  withr::local_package("targets")
+  withr::local_package("tarchetypes")
+  graph <- source(
+    script,
+    local = new.env(parent = globalenv())
+  )$value
+
+  expect_type(graph, "list")
+  expect_length(graph, 12L)
+
+  manifest <- targets::tar_manifest(
+    script = script,
+    fields = c("name", "format"),
+    callr_function = NULL
+  )
+  expect_setequal(
+    manifest$name,
+    c(
+      "train_data",
+      "test_data",
+      "module_definition",
+      "llm_client",
+      "optimized_module",
+      "evaluation_results",
+      "pins_board",
+      "pinned_config",
+      "pinned_traces",
+      "pinned_evaluation",
+      "summary_stats",
+      "summary_json"
+    )
+  )
+  expect_equal(
+    manifest$format[manifest$name == "summary_json"],
+    "file"
+  )
+})
+
+test_that("generated targets workflow runs its core graph end to end", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
+  skip_if_not_installed("jsonlite")
+
+  make_mock_chat <- function() {
+    structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          sentiment <- if (
+            grepl(
+              "terrible|not recommend|worst|waste|disappointing|not worth",
+              prompt,
+              ignore.case = TRUE
+            )
+          ) {
+            "negative"
+          } else if (
+            grepl(
+              "amazing|love|exceeded|great|highly recommend",
+              prompt,
+              ignore.case = TRUE
+            )
+          ) {
+            "positive"
+          } else {
+            "neutral"
+          }
+
+          list(sentiment = sentiment)
+        },
+        get_turns = function(...) list(),
+        set_turns = function(...) invisible(NULL),
+        last_turn = function(...) NULL,
+        get_model = function() "deterministic-test",
+        clone = function(deep = FALSE) make_mock_chat()
+      ),
+      class = "Chat"
+    )
+  }
+
+  project_dir <- withr::local_tempdir()
+  use_dsprrr_template("targets", path = project_dir)
+  withr::local_dir(project_dir)
+  withr::local_envvar(DSPRRR_CACHE_ENABLED = "false")
+  old_cache <- configure_cache(enable = FALSE)
+  withr::defer(do.call(configure_cache, old_cache))
+  withr::local_options(
+    dsprrr.targets.llm_factory = function(model) make_mock_chat()
+  )
+
+  targets::tar_make(
+    names = "summary_json",
+    callr_function = NULL,
+    reporter = "silent"
+  )
+
+  optimized <- targets::tar_read_raw("optimized_module")
+  evaluation <- targets::tar_read_raw("evaluation_results")
+  summary_path <- targets::tar_read_raw("summary_json")
+  metadata <- targets::tar_meta(
+    fields = c("name", "error")
+  )
+  completed <- metadata[
+    metadata$name %in%
+      c("optimized_module", "evaluation_results", "summary_json"),
+    ,
+    drop = FALSE
+  ]
+
+  expect_true(optimized$is_compiled())
+  expect_s3_class(evaluation, "dsprrr_evaluation")
+  expect_equal(evaluation$n_evaluated, 3L)
+  expect_equal(evaluation$n_errors, 0L)
+  expect_equal(evaluation$mean_score, 1)
+  expect_true(file.exists(summary_path))
+  expect_equal(
+    jsonlite::read_json(summary_path, simplifyVector = TRUE)$accuracy,
+    1
+  )
+  expect_setequal(
+    completed$name,
+    c("optimized_module", "evaluation_results", "summary_json")
+  )
+  expect_length(stats::na.omit(completed$error), 0L)
+})
+
 test_that("use_dsprrr_template respects overwrite argument", {
   skip_on_cran()
 
