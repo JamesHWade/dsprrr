@@ -23,11 +23,13 @@ First development changelog. dsprrr is experimental; the API may change.
   as scalar calls. Direct `PredictModule$run()` batches now use the isolated,
   observable scheduler; unsupported custom and specialized modules reject
   vectorized execution before work instead of silently sharing mutable state
-  or bypassing specialized logic. Native ellmer batches retain row failures for
-  non-object outputs through an internal typed wrapper, including valid
-  optional `NULL` values, and schemas whose optional nested presence is
-  ambiguous use isolated scalar rows instead of guessing between absent and
-  present-empty values (#dsprrr-bbdm).
+  or bypassing specialized logic. `Module$predict()` retains named output
+  records for compatibility even though simple `run()` batches simplify a
+  single-field row. Native ellmer batches retain row failures for non-object
+  outputs through an internal typed wrapper, including valid optional `NULL`
+  values, and schemas whose optional nested presence is ambiguous use isolated
+  scalar rows instead of guessing between absent and present-empty values
+  (#dsprrr-bbdm).
 
 * `concurrency_control()` now gives batch execution one enforceable contract
   for backend selection, exact in-flight limits, per-task and total timeouts,

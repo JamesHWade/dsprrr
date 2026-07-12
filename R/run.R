@@ -1721,7 +1721,8 @@ run_batch <- function(
   .progress,
   .return_format,
   .cache = NULL,
-  .concurrency
+  .concurrency,
+  .isolate_rows = TRUE
 ) {
   if (n == 0L) {
     return(empty_batch_result(.return_format))
@@ -1740,7 +1741,8 @@ run_batch <- function(
       .return_format,
       .progress,
       .cache,
-      .concurrency
+      .concurrency,
+      .isolate_rows
     )
   } else if (identical(.concurrency$effective_backend, "ellmer")) {
     # Use ellmer's parallel_chat_structured for native parallelism
@@ -1792,7 +1794,8 @@ run_batch_sequential <- function(
   .return_format,
   .progress,
   .cache = NULL,
-  .concurrency = NULL
+  .concurrency = NULL,
+  .isolate_rows = TRUE
 ) {
   if (is.null(.concurrency)) {
     .concurrency <- normalize_concurrency_runtime(
@@ -1800,7 +1803,11 @@ run_batch_sequential <- function(
     )
   }
   baseline_llm <- resolve_module_llm(module, .llm = .llm)
-  row_llms <- batch_chat_branches(baseline_llm, n)
+  row_llms <- if (isTRUE(.isolate_rows)) {
+    batch_chat_branches(baseline_llm, n)
+  } else {
+    rep(list(baseline_llm), n)
+  }
   results <- vector("list", n)
 
   # Create progress bar if requested

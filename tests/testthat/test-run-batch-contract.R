@@ -528,6 +528,38 @@ test_that("scalar output stays named while batch rows stay simplified", {
   expect_identical(scalar$answer, batch[[1]])
 })
 
+test_that("Module predict preserves named records without changing run batches", {
+  responses <- list(
+    ROW_ONE = list(sentiment = "first"),
+    ROW_TWO = list(sentiment = "second")
+  )
+  make_module <- function() {
+    module(signature("text -> sentiment"), type = "predict")
+  }
+
+  scalar <- make_module()$predict(
+    text = "ROW_ONE",
+    .llm = batch_shape_chat(responses)
+  )
+  predicted <- make_module()$predict(
+    text = names(responses),
+    .llm = batch_shape_chat(responses)
+  )
+  run_result <- run(
+    make_module(),
+    text = names(responses),
+    .llm = batch_shape_chat(responses),
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_identical(scalar, responses[[1L]])
+  expect_identical(predicted, unname(responses))
+  expect_identical(run_result, list("first", "second"))
+  expect_named(predicted[[1L]], "sentiment")
+  expect_type(run_result[[1L]], "character")
+})
+
 test_that("sequential failures still commit one ordered trace per row", {
   clear_prompt_history()
   mod <- module(signature("text -> answer"), type = "predict")

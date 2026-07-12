@@ -89,7 +89,8 @@ Module <- R6::R6Class(
       .concurrency_runtime = NULL,
       .progress = TRUE,
       .return_format = "simple",
-      .cache = NULL
+      .cache = NULL,
+      .predict_compat = FALSE
     ) {
       parallel_missing <- missing(.parallel)
       parallel_method_missing <- missing(.parallel_method)
@@ -119,6 +120,16 @@ Module <- R6::R6Class(
       # value must fail loudly instead of being silently forwarded.
       validate_cache_arg(.cache)
       .return_format <- match.arg(.return_format, c("simple", "structured"))
+      if (
+        !is.logical(.predict_compat) ||
+          length(.predict_compat) != 1L ||
+          is.na(.predict_compat)
+      ) {
+        cli::cli_abort(
+          "Internal predict compatibility mode is invalid",
+          class = "dsprrr_runtime_config_error"
+        )
+      }
 
       inputs <- list(...)
 
@@ -169,6 +180,21 @@ Module <- R6::R6Class(
             .llm = .llm,
             .chat = runtime_chat
           )
+        if (
+          isTRUE(.predict_compat) &&
+            !identical(runtime$effective_backend, "sequential")
+        ) {
+          cli::cli_abort(
+            c(
+              "Stateful predict batches require sequential execution",
+              "i" = "Use {.fn run} for isolated concurrent batch execution."
+            ),
+            class = c(
+              "dsprrr_predict_concurrency_unsupported",
+              "dsprrr_concurrency_unsupported_error"
+            )
+          )
+        }
       }
 
       if (identical(input_contract$kind, "empty")) {
@@ -193,7 +219,8 @@ Module <- R6::R6Class(
           .progress = .progress,
           .return_format = .return_format,
           .cache = .cache,
-          .concurrency = runtime
+          .concurrency = runtime,
+          .isolate_rows = !isTRUE(.predict_compat)
         ))
       }
 
@@ -222,9 +249,19 @@ Module <- R6::R6Class(
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object (uses stored chat if not provided)
-    #' @return The output value(s) from the module
+    #' @return The declared output record, or a list of output records for a
+    #'   batch. Single-field object outputs retain their field name.
     predict = function(..., .llm = NULL) {
-      self$run(..., .llm = .llm, .return_format = "simple")
+      result <- self$run(
+        ...,
+        .llm = .llm,
+        .return_format = "structured",
+        .predict_compat = TRUE
+      )
+      if (inherits(result, "dsprrr_batch_result")) {
+        return(lapply(result, `[[`, "output"))
+      }
+      result$output
     },
 
     #' @description
