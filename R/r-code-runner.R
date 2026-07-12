@@ -241,10 +241,14 @@ RCodeRunner <- R6::R6Class(
       on.exit(unlink(c(stdout_file, stderr_file)), add = TRUE)
 
       # Build the execution wrapper
+      # Source metadata is not needed in the child. Removing it keeps the
+      # serialized worker small and prevents coverage instrumentation from
+      # making each callr process load the parent package namespace.
+      worker <- utils::removeSource(private$execution_wrapper)
       exec_result <- tryCatch(
         {
           callr::r(
-            func = private$execution_wrapper,
+            func = worker,
             args = list(
               code = code,
               context = context,

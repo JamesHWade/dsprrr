@@ -67,7 +67,9 @@ First development changelog. dsprrr is experimental; the API may change.
 * The built-in R code runner now advertises its real trust boundary: callr
   provides process isolation, not a security sandbox. Code-executing modules
   accept external container/OS sandbox backends through a documented
-  `execute()` + `policy()` protocol (#dsprrr-ady).
+  `execute()` + `policy()` protocol. Subprocess workers shed parent-process
+  source metadata before transport, avoiding instrumented-namespace startup
+  costs without weakening execution checks (#dsprrr-ady).
 
 * Failed items in a batch are now counted and reported. Previously
   `print()` on a batch result always said "All items completed successfully"
