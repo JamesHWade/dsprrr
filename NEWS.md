@@ -42,11 +42,13 @@ First development changelog. dsprrr is experimental; the API may change.
 * Cached requests now use versioned, account-partitioned identities covering
   conversation state, provider settings, exact schemas, and multimodal content.
   Cache hits replay provider-recorded semantic turns, including ellmer's native
-  structured JSON content, without fabricated usage. Opaque/custom Chats and
+  structured JSON content, without fabricated usage. Assistant metadata adapts
+  to the installed ellmer contract, preserving finish reasons when available
+  while remaining cacheable with CRAN ellmer 0.4.1. Opaque/custom Chats and
   registered tools bypass caching. Sequential batch rows preserve isolated,
   completed Chat histories instead of sharing or replacing state. Persistent
-  cache envelopes can contain request content, outputs, and turn deltas and
-  must be treated as sensitive storage.
+  cache envelopes can contain request content, outputs, and turn deltas and must
+  be treated as sensitive storage.
 
 * Batch and evaluation failures now preserve the original LLM/provider error.
   Structured `run_dataset()` results expose a row-level `.error` column, and

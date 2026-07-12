@@ -1010,7 +1010,11 @@ cache_turn_fingerprint <- function(turn) {
 
   if (inherits(turn, "ellmer::AssistantTurn")) {
     result$json <- cache_config_fingerprint(turn@json, sort_named = FALSE)
-    result$finish_reason <- cache_opaque_value(turn@finish_reason)
+    if (S7::prop_exists(turn, "finish_reason")) {
+      result$finish_reason <- cache_opaque_value(
+        S7::prop(turn, "finish_reason")
+      )
+    }
   }
 
   result
@@ -2618,14 +2622,19 @@ cache_replay_content <- function(content) {
 cache_replay_turn <- function(turn) {
   contents <- lapply(turn@contents, cache_replay_content)
   if (inherits(turn, "ellmer::AssistantTurn")) {
-    return(ellmer::AssistantTurn(
+    arguments <- list(
       contents = contents,
       json = cache_replay_value(turn@json),
       tokens = c(NA_real_, NA_real_, NA_real_),
       cost = NA_real_,
-      duration = NA_real_,
-      finish_reason = cache_replay_value(turn@finish_reason)
-    ))
+      duration = NA_real_
+    )
+    if (S7::prop_exists(turn, "finish_reason")) {
+      arguments$finish_reason <- cache_replay_value(
+        S7::prop(turn, "finish_reason")
+      )
+    }
+    return(do.call(ellmer::AssistantTurn, arguments))
   }
   if (inherits(turn, "ellmer::SystemTurn")) {
     return(ellmer::SystemTurn(contents = contents))

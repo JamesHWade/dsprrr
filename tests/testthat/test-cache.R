@@ -803,7 +803,16 @@ test_that("real structured Chat branches replay ContentJson equivalently", {
     miss_assistant@contents[[1]]@parsed
   )
   expect_identical(hit_assistant@json, miss_assistant@json)
-  expect_identical(hit_assistant@finish_reason, miss_assistant@finish_reason)
+  expect_identical(
+    S7::prop_exists(hit_assistant, "finish_reason"),
+    S7::prop_exists(miss_assistant, "finish_reason")
+  )
+  if (S7::prop_exists(miss_assistant, "finish_reason")) {
+    expect_identical(
+      S7::prop(hit_assistant, "finish_reason"),
+      S7::prop(miss_assistant, "finish_reason")
+    )
+  }
   expect_true(all(is.na(hit_assistant@tokens)))
   expect_true(is.na(hit_assistant@cost))
   expect_true(is.na(hit_assistant@duration))
@@ -811,6 +820,49 @@ test_that("real structured Chat branches replay ContentJson equivalently", {
   dsprrr:::cached_chat_structured(second, "prompt", output_type)
   expect_equal(calls$n, 2L)
   expect_length(second$get_turns(), 4)
+})
+
+test_that("assistant turn caching follows the runtime metadata contract", {
+  supports_finish_reason <- S7::prop_exists(
+    ellmer::AssistantTurn(),
+    "finish_reason"
+  )
+  arguments <- list(
+    contents = list(ellmer::ContentText("answer")),
+    tokens = c(1, 2, 3),
+    cost = 4,
+    duration = 5
+  )
+  if (supports_finish_reason) {
+    arguments$finish_reason <- "stop"
+  }
+  turn <- do.call(ellmer::AssistantTurn, arguments)
+
+  fingerprint <- dsprrr:::cache_turn_fingerprint(turn)
+  replayed <- dsprrr:::cache_replay_turn(turn)
+
+  expect_identical(
+    "finish_reason" %in% names(fingerprint),
+    supports_finish_reason
+  )
+  expect_identical(
+    S7::prop_exists(replayed, "finish_reason"),
+    supports_finish_reason
+  )
+  if (supports_finish_reason) {
+    expect_identical(S7::prop(replayed, "finish_reason"), "stop")
+    different_arguments <- arguments
+    different_arguments$finish_reason <- "length"
+    expect_false(identical(
+      fingerprint,
+      dsprrr:::cache_turn_fingerprint(
+        do.call(ellmer::AssistantTurn, different_arguments)
+      )
+    ))
+  }
+  expect_true(all(is.na(replayed@tokens)))
+  expect_true(is.na(replayed@cost))
+  expect_true(is.na(replayed@duration))
 })
 
 test_that("ContentJson data and string forms fingerprint and replay exactly", {
