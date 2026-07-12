@@ -82,6 +82,10 @@ cache_test_key <- function(chat, payload, output_type, rollout_id = NULL) {
   )
 }
 
+cache_test_mode <- function(path) {
+  sprintf("%04o", dsprrr:::cache_path_mode(path))
+}
+
 test_that("configure_cache sets default values", {
   local_reset_cache()
 
@@ -91,7 +95,38 @@ test_that("configure_cache sets default values", {
   expect_true(config$enable)
   expect_true(config$enable_memory)
   expect_true(config$enable_disk)
+  expect_true(config$disk_private)
   expect_equal(config$memory_max_entries, 1000L)
+})
+
+test_that("default disk path is per-user and preserves its override", {
+  cache_root <- tempfile("dsprrr-user-cache-")
+  withr::local_envvar(c(
+    DSPRRR_CACHE_PATH = NA,
+    R_USER_CACHE_DIR = cache_root
+  ))
+
+  expect_identical(
+    dsprrr:::default_disk_cache_path(),
+    file.path(cache_root, "R", "dsprrr")
+  )
+
+  override <- tempfile("dsprrr-cache-override-")
+  withr::local_envvar(DSPRRR_CACHE_PATH = override)
+  expect_identical(dsprrr:::default_disk_cache_path(), override)
+
+  withr::local_envvar(DSPRRR_CACHE_PATH = "")
+  expect_identical(
+    dsprrr:::default_disk_cache_path(),
+    file.path(cache_root, "R", "dsprrr")
+  )
+})
+
+test_that("configure_cache validates its privacy mode", {
+  local_reset_cache()
+
+  expect_snapshot(error = TRUE, configure_cache(disk_private = NA))
+  expect_snapshot(error = TRUE, configure_cache(disk_private = "yes"))
 })
 
 test_that("configure_cache can disable caching", {
@@ -916,6 +951,735 @@ test_that("cached_chat_structured bypasses cache when disabled", {
 
 # Disk cache integration tests
 
+test_that("private disk caches preserve parents and use owner-only modes", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  parent <- tempfile("cache_private_parent_")
+  disk_path <- file.path(parent, "cache")
+  withr::defer(unlink(parent, recursive = TRUE))
+  dir.create(parent)
+  Sys.chmod(parent, mode = "0755", use_umask = FALSE)
+  original_umask <- Sys.umask()
+
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  cache <- dsprrr:::get_cache()
+  cache$set("secure_key", list(answer = "first"))
+  cache$set("secure_key", list(answer = "second"))
+
+  expect_identical(cache_test_mode(parent), "0755")
+  expect_identical(cache_test_mode(disk_path), "0700")
+  expect_identical(
+    cache_test_mode(file.path(disk_path, "secure_key.rds")),
+    "0600"
+  )
+  expect_identical(cache$get("secure_key")$answer, "second")
+  expect_length(list.files(disk_path, pattern = "-temp-"), 0L)
+  expect_identical(Sys.umask(), original_umask)
+  expect_identical(
+    asNamespace("dsprrr")$.dsprrr_env$cache_privacy_status,
+    "verified_posix_modes"
+  )
+  expect_match(
+    asNamespace("dsprrr")$.dsprrr_env$cache_privacy_reason,
+    "extended ACLs were not checked"
+  )
+})
+
+test_that("live private path replacement never returns or rewrites poison", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  root <- tempfile("cache_live_replacement_")
+  disk_path <- file.path(root, "cache")
+  displaced <- file.path(root, "audited-cache")
+  withr::defer(unlink(root, recursive = TRUE))
+  dir.create(root)
+
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  calls <- new.env(parent = emptyenv())
+  calls$n <- 0L
+  local_cache_openai_backend(
+    calls,
+    response = function(n) list(answer = paste0("provider-", n))
+  )
+  base <- cache_real_chat()
+  mod <- module(signature("text -> answer"), type = "predict")
+
+  first <- run(
+    mod,
+    text = "same",
+    .llm = base$clone(deep = TRUE),
+    .return_format = "structured"
+  )
+  expect_identical(first$output$answer, "provider-1")
+  response_file <- list.files(disk_path, full.names = TRUE)
+  expect_length(response_file, 1L)
+  poisoned <- readRDS(response_file)
+  poisoned$result$answer <- "POISONED"
+
+  # Force the next request through the retained disk handle while keeping
+  # memory enabled in configuration for post-degradation recovery.
+  clear_cache("memory")
+
+  expect_true(file.rename(disk_path, displaced))
+  dir.create(disk_path)
+  Sys.chmod(disk_path, mode = "0777", use_umask = FALSE)
+  poisoned_file <- file.path(disk_path, basename(response_file))
+  saveRDS(poisoned, poisoned_file)
+  Sys.chmod(poisoned_file, mode = "0666", use_umask = FALSE)
+
+  expect_warning(
+    second <- run(
+      mod,
+      text = "same",
+      .llm = base$clone(deep = TRUE),
+      .return_format = "structured"
+    ),
+    class = "dsprrr_cache_security_warning"
+  )
+  expect_identical(second$output$answer, "provider-2")
+  expect_identical(second$metadata$cache, "bypass")
+  expect_identical(calls$n, 2L)
+  expect_identical(readRDS(poisoned_file)$result$answer, "POISONED")
+
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  expect_true(pkg_env$cache_degraded)
+  expect_null(pkg_env$cache_disk)
+  expect_null(pkg_env$cache_disk_guard)
+  expect_identical(pkg_env$cache_privacy_status, "degraded")
+
+  third <- run(
+    mod,
+    text = "same",
+    .llm = base$clone(deep = TRUE),
+    .return_format = "structured"
+  )
+  fourth <- run(
+    mod,
+    text = "same",
+    .llm = base$clone(deep = TRUE),
+    .return_format = "structured"
+  )
+  expect_identical(third$output$answer, "provider-3")
+  expect_identical(third$metadata$cache, "miss")
+  expect_identical(fourth$output$answer, "provider-3")
+  expect_identical(fourth$metadata$cache, "hit")
+  expect_identical(calls$n, 3L)
+  expect_identical(readRDS(poisoned_file)$result$answer, "POISONED")
+})
+
+test_that("warn-as-error cannot strand an invalid global disk guard", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  root <- tempfile("cache_warn_error_cleanup_")
+  disk_path <- file.path(root, "cache")
+  displaced <- file.path(root, "audited-cache")
+  withr::defer(unlink(root, recursive = TRUE))
+  dir.create(root)
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  layered <- dsprrr:::get_cache()
+  layered$set("safe", list(answer = "safe"))
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  stale_disk <- pkg_env$cache_disk
+
+  clear_cache("memory")
+  expect_true(file.rename(disk_path, displaced))
+  dir.create(disk_path)
+  Sys.chmod(disk_path, mode = "0777", use_umask = FALSE)
+  poisoned_file <- file.path(disk_path, "safe.rds")
+  saveRDS(list(answer = "POISONED"), poisoned_file)
+  Sys.chmod(poisoned_file, mode = "0666", use_umask = FALSE)
+
+  withr::local_options(warn = 2)
+  error <- tryCatch(stale_disk$get("safe"), error = identity)
+  expect_s3_class(error, "error")
+  expect_match(conditionMessage(error), "Disk caching is unavailable")
+  expect_null(pkg_env$cache_disk_guard)
+  expect_null(pkg_env$cache_disk)
+  expect_true(pkg_env$cache_degraded)
+
+  expect_true(cachem::is.key_missing(stale_disk$get("safe")))
+  expect_identical(stale_disk$set("fresh", list(answer = "fresh")), FALSE)
+  expect_false(file.exists(file.path(disk_path, "fresh.rds")))
+  expect_identical(readRDS(poisoned_file)$answer, "POISONED")
+
+  memory <- dsprrr:::get_cache()
+  expect_s3_class(memory, "cache_mem")
+  memory$set("memory", list(answer = "usable"))
+  expect_identical(memory$get("memory")$answer, "usable")
+})
+
+test_that("private audits require verifiable effective ownership", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_owner_check_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  dir.create(disk_path)
+  Sys.chmod(disk_path, mode = "0700", use_umask = FALSE)
+  effective_owner <- dsprrr:::cache_effective_owner_id()
+  expect_false(is.na(effective_owner))
+  expect_identical(
+    dsprrr:::cache_path_owner_id(disk_path),
+    effective_owner
+  )
+
+  audit <- testthat::with_mocked_bindings(
+    dsprrr:::audit_private_cache_directory(disk_path),
+    cache_effective_owner_id = function() effective_owner + 1L,
+    .package = "dsprrr"
+  )
+  expect_false(audit$ok)
+  expect_match(audit$reason, "not owned by the effective user")
+
+  foreign <- file.path(disk_path, "foreign.rds")
+  saveRDS(list(answer = "foreign"), foreign)
+  Sys.chmod(foreign, mode = "0600", use_umask = FALSE)
+  entry_audit <- testthat::with_mocked_bindings(
+    dsprrr:::audit_private_cache_entries(disk_path),
+    cache_path_owner_id = function(path) {
+      if (identical(basename(path), "foreign.rds")) {
+        effective_owner + 1L
+      } else {
+        effective_owner
+      }
+    },
+    .package = "dsprrr"
+  )
+  expect_false(entry_audit$ok)
+  expect_match(entry_audit$reason, "files not owned by the effective user")
+})
+
+test_that("private writes verify 0600 staging before serialization", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_prewrite_mode_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  observations <- list()
+  testthat::local_mocked_bindings(
+    cache_save_rds = function(value, file) {
+      observations[[length(observations) + 1L]] <<- list(
+        mode = cache_test_mode(file),
+        owned = dsprrr:::cache_paths_owned_by_effective_user(file),
+        size = file.info(file)$size[[1]]
+      )
+      base::saveRDS(value, file)
+    },
+    .package = "dsprrr"
+  )
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  cache <- dsprrr:::get_cache()
+  cache$set("key", list(answer = "private"))
+
+  expect_gte(length(observations), 2L)
+  expect_true(all(vapply(
+    observations,
+    function(observation) identical(observation$mode, "0600"),
+    logical(1)
+  )))
+  expect_true(all(vapply(observations, `[[`, logical(1), "owned")))
+  expect_true(all(vapply(observations, `[[`, numeric(1), "size") == 0))
+})
+
+test_that("unsafe non-sticky parents fail and sticky parents remain usable", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  root <- tempfile("cache_parent_safety_")
+  withr::defer(unlink(root, recursive = TRUE))
+  dir.create(root)
+  Sys.chmod(root, mode = "0777", use_umask = FALSE)
+  unsafe <- dsprrr:::prepare_cache_directory(
+    file.path(root, "unsafe-cache"),
+    private = TRUE
+  )
+  expect_false(unsafe$ok)
+  expect_match(unsafe$reason, "non-sticky cache ancestor is writable")
+  expect_false(dir.exists(file.path(root, "unsafe-cache")))
+
+  Sys.chmod(root, mode = "1777", use_umask = FALSE)
+  safe <- dsprrr:::prepare_cache_directory(
+    file.path(root, "sticky-cache"),
+    private = TRUE
+  )
+  expect_true(safe$ok)
+  expect_identical(safe$trust$owner_id, dsprrr:::cache_effective_owner_id())
+})
+
+test_that("readable existing disk caches are repaired before reuse", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_repair_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  dir.create(disk_path)
+  legacy_file <- file.path(disk_path, "legacy.rds")
+  saveRDS(list(answer = "legacy"), legacy_file)
+  Sys.chmod(disk_path, mode = "0755", use_umask = FALSE)
+  Sys.chmod(legacy_file, mode = "0644", use_umask = FALSE)
+
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  expect_warning(
+    cache <- dsprrr:::get_cache(),
+    class = "dsprrr_cache_permissions_repaired"
+  )
+
+  expect_identical(cache_test_mode(disk_path), "0700")
+  expect_identical(cache_test_mode(legacy_file), "0600")
+  expect_identical(cache$get("legacy")$answer, "legacy")
+
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  expect_no_warning(dsprrr:::get_cache())
+})
+
+test_that("writable cache directories and files fail closed", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  root <- tempfile("cache_untrusted_")
+  withr::defer(unlink(root, recursive = TRUE))
+  dir.create(root)
+
+  writable_dir <- file.path(root, "writable-dir")
+  dir.create(writable_dir)
+  saveRDS(list(answer = "untrusted"), file.path(writable_dir, "key.rds"))
+  Sys.chmod(writable_dir, mode = "0777", use_umask = FALSE)
+
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = writable_dir
+  )
+  expect_warning(
+    cache <- dsprrr:::get_cache(),
+    class = "dsprrr_cache_security_warning"
+  )
+  expect_s3_class(cache, "cache_mem")
+  expect_null(asNamespace("dsprrr")$.dsprrr_env$cache_disk)
+  expect_match(
+    asNamespace("dsprrr")$.dsprrr_env$cache_degraded_reason,
+    "writable by another local account"
+  )
+
+  writable_file <- file.path(root, "writable-file")
+  dir.create(writable_file, mode = "0700")
+  response_file <- file.path(writable_file, "key.rds")
+  saveRDS(list(answer = "untrusted"), response_file)
+  Sys.chmod(writable_file, mode = "0700", use_umask = FALSE)
+  Sys.chmod(response_file, mode = "0666", use_umask = FALSE)
+
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = writable_file
+  )
+  warning_message <- NULL
+  cache <- withCallingHandlers(
+    dsprrr:::get_cache(),
+    dsprrr_cache_security_warning = function(cnd) {
+      warning_message <<- conditionMessage(cnd)
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_null(cache)
+  expect_null(asNamespace("dsprrr")$.dsprrr_env$cache_disk)
+  expect_match(warning_message, "No cache tier remains enabled")
+})
+
+test_that("owner-unreadable directories cannot hide writable RDS entries", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_owner_unreadable_")
+  withr::defer({
+    Sys.chmod(disk_path, mode = "0700", use_umask = FALSE)
+    unlink(disk_path, recursive = TRUE)
+  })
+  dir.create(disk_path)
+  evil <- file.path(disk_path, "evil.rds")
+  saveRDS(list(answer = "poisoned"), evil)
+  Sys.chmod(evil, mode = "0666", use_umask = FALSE)
+  Sys.chmod(disk_path, mode = "0300", use_umask = FALSE)
+
+  cachem_initialized <- FALSE
+  testthat::local_mocked_bindings(
+    cache_disk = function(...) {
+      cachem_initialized <<- TRUE
+      stop("unsafe cache reached cachem")
+    },
+    .package = "cachem"
+  )
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+
+  expect_warning(
+    cache <- dsprrr:::get_cache(),
+    class = "dsprrr_cache_security_warning"
+  )
+  expect_false(cachem_initialized)
+  expect_s3_class(cache, "cache_mem")
+  expect_null(asNamespace("dsprrr")$.dsprrr_env$cache_disk)
+  expect_true(cachem::is.key_missing(cache$get("evil")))
+  expect_identical(cache_test_mode(evil), "0666")
+})
+
+test_that("non-regular cache entries fail closed before cachem", {
+  skip_on_os("windows")
+  skip_if(Sys.which("mkfifo") == "", "mkfifo unavailable")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_fifo_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  dir.create(disk_path, mode = "0700")
+  fifo <- file.path(disk_path, "adversarial name.rds")
+  status <- system2(Sys.which("mkfifo"), shQuote(fifo))
+  skip_if(status != 0L, "could not create FIFO")
+  Sys.chmod(disk_path, mode = "0700", use_umask = FALSE)
+  Sys.chmod(fifo, mode = "0600", use_umask = FALSE)
+
+  cachem_initialized <- FALSE
+  testthat::local_mocked_bindings(
+    cache_disk = function(...) {
+      cachem_initialized <<- TRUE
+      stop("non-regular entry reached cachem")
+    },
+    .package = "cachem"
+  )
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+
+  warning_message <- NULL
+  cache <- withCallingHandlers(
+    dsprrr:::get_cache(),
+    dsprrr_cache_security_warning = function(cnd) {
+      warning_message <<- conditionMessage(cnd)
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_false(cachem_initialized)
+  expect_s3_class(cache, "cache_mem")
+  expect_match(warning_message, "non-regular filesystem entry")
+})
+
+test_that("symlinked cache directories and entries fail closed", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  root <- tempfile("cache_symlink_")
+  withr::defer(unlink(root, recursive = TRUE))
+  dir.create(root)
+
+  target_dir <- file.path(root, "target")
+  linked_dir <- file.path(root, "linked")
+  dir.create(target_dir, mode = "0700")
+  skip_if_not(file.symlink(target_dir, linked_dir), "symlinks unavailable")
+
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = linked_dir
+  )
+  expect_warning(
+    cache <- dsprrr:::get_cache(),
+    class = "dsprrr_cache_security_warning"
+  )
+  expect_s3_class(cache, "cache_mem")
+
+  entry_dir <- file.path(root, "entry")
+  entry_target <- file.path(root, "target.rds")
+  dir.create(entry_dir, mode = "0700")
+  saveRDS(list(answer = "untrusted"), entry_target)
+  Sys.chmod(entry_dir, mode = "0700", use_umask = FALSE)
+  Sys.chmod(entry_target, mode = "0600", use_umask = FALSE)
+  expect_true(file.symlink(entry_target, file.path(entry_dir, "key.rds")))
+
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = entry_dir
+  )
+  expect_warning(
+    cache <- dsprrr:::get_cache(),
+    class = "dsprrr_cache_security_warning"
+  )
+  expect_s3_class(cache, "cache_mem")
+})
+
+test_that("permission verification failures fall back to memory", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_chmod_failure_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  testthat::local_mocked_bindings(
+    cache_set_private_mode = function(...) FALSE,
+    .package = "dsprrr"
+  )
+
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  expect_warning(
+    cache <- dsprrr:::get_cache(),
+    class = "dsprrr_cache_security_warning"
+  )
+  expect_s3_class(cache, "cache_mem")
+  expect_identical(
+    asNamespace("dsprrr")$.dsprrr_env$cache_privacy_status,
+    "degraded"
+  )
+})
+
+test_that("non-Unix private caches rely on inherited ACLs", {
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_windows_acl_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  testthat::local_mocked_bindings(
+    cache_private_modes_supported = function() FALSE,
+    .package = "dsprrr"
+  )
+
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  cache <- expect_no_warning(dsprrr:::get_cache())
+  cache$set("key", list(answer = "inherited"))
+
+  expect_identical(cache$get("key")$answer, "inherited")
+  expect_identical(
+    asNamespace("dsprrr")$.dsprrr_env$cache_privacy_status,
+    "unverified_windows"
+  )
+})
+
+test_that("privacy enforcement can be disabled only explicitly", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_trusted_shared_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  dir.create(disk_path)
+  Sys.chmod(disk_path, mode = "0777", use_umask = FALSE)
+
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = disk_path,
+    disk_private = FALSE
+  )
+  cache <- expect_no_warning(dsprrr:::get_cache())
+  cache$set("key", list(answer = "trusted"))
+
+  expect_identical(cache$get("key")$answer, "trusted")
+  expect_identical(
+    asNamespace("dsprrr")$.dsprrr_env$cache_privacy_status,
+    "disabled"
+  )
+})
+
+test_that("clear all invalidates stale disk handles before degradation", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_stale_handle_")
+  withr::defer({
+    Sys.chmod(disk_path, mode = "0700", use_umask = FALSE)
+    unlink(disk_path, recursive = TRUE)
+  })
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  first <- dsprrr:::get_cache()
+  first$set("safe", list(answer = "safe"))
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  old_disk <- pkg_env$cache_disk
+  expect_s3_class(old_disk, "cache_disk")
+
+  clear_cache("all")
+  expect_null(pkg_env$cache)
+  expect_null(pkg_env$cache_memory)
+  expect_null(pkg_env$cache_disk)
+  expect_identical(pkg_env$cache_privacy_status, "not_checked")
+  old_read <- tryCatch(old_disk$get("safe"), error = identity)
+  expect_s3_class(old_read, "error")
+  expect_match(conditionMessage(old_read), "destroyed")
+
+  dir.create(disk_path)
+  saveRDS(list(answer = "poisoned"), file.path(disk_path, "evil.rds"))
+  Sys.chmod(disk_path, mode = "0777", use_umask = FALSE)
+  expect_warning(
+    second <- dsprrr:::get_cache(),
+    class = "dsprrr_cache_security_warning"
+  )
+
+  expect_s3_class(second, "cache_mem")
+  expect_null(pkg_env$cache_disk)
+  expect_true(cachem::is.key_missing(second$get("evil")))
+  expect_identical(pkg_env$cache_privacy_status, "degraded")
+})
+
+test_that("clear all detaches state and attempts every tier before errors", {
+  local_reset_cache()
+
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  calls <- new.env(parent = emptyenv())
+  calls$memory <- 0L
+  calls$disk <- 0L
+  memory <- list(reset = function() {
+    calls$memory <- calls$memory + 1L
+    stop("memory reset failed")
+  })
+  disk <- list(destroy = function() {
+    calls$disk <- calls$disk + 1L
+    stop("disk destroy failed")
+  })
+  stale <- list(name = "stale-layer")
+  pkg_env$cache <- stale
+  pkg_env$cache_memory <- memory
+  pkg_env$cache_disk <- disk
+  pkg_env$cache_disk_guard <- NULL
+  pkg_env$cache_degraded <- TRUE
+  pkg_env$cache_degraded_reason <- "old failure"
+  pkg_env$cache_privacy_status <- "degraded"
+  pkg_env$cache_privacy_reason <- "old failure"
+  pkg_env$cache_stats <- list(hits = 3L, misses = 4L)
+  pkg_env$cache_first_hit_shown <- TRUE
+
+  error <- rlang::catch_cnd(clear_cache("all"))
+  expect_s3_class(error, "dsprrr_cache_clear_error")
+  expect_identical(calls$memory, 1L)
+  expect_identical(calls$disk, 1L)
+  expect_null(pkg_env$cache)
+  expect_null(pkg_env$cache_memory)
+  expect_null(pkg_env$cache_disk)
+  expect_null(pkg_env$cache_disk_guard)
+  expect_false(pkg_env$cache_degraded)
+  expect_null(pkg_env$cache_degraded_reason)
+  expect_identical(pkg_env$cache_privacy_status, "not_checked")
+  expect_identical(pkg_env$cache_stats, list(hits = 0L, misses = 0L))
+  expect_false(pkg_env$cache_first_hit_shown)
+})
+
+test_that("targeted clears preserve the untouched safe tier", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_targeted_clear_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  cache <- dsprrr:::get_cache()
+  cache$set("key", list(answer = "both"))
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  disk <- pkg_env$cache_disk
+  guard <- pkg_env$cache_disk_guard
+
+  clear_cache("memory")
+  expect_identical(pkg_env$cache, disk)
+  expect_null(pkg_env$cache_memory)
+  expect_identical(pkg_env$cache_disk, disk)
+  expect_identical(pkg_env$cache_disk_guard, guard)
+  expect_identical(pkg_env$cache$get("key")$answer, "both")
+
+  configure_cache(
+    enable_memory = TRUE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  cache <- dsprrr:::get_cache()
+  cache$set("key", list(answer = "both-again"))
+  memory <- pkg_env$cache_memory
+  clear_cache("disk")
+  expect_identical(pkg_env$cache, memory)
+  expect_identical(pkg_env$cache_memory, memory)
+  expect_null(pkg_env$cache_disk)
+  expect_null(pkg_env$cache_disk_guard)
+  expect_identical(pkg_env$cache$get("key")$answer, "both-again")
+})
+
+test_that("failed targeted cleanup still leaves only the safe tier reachable", {
+  local_reset_cache()
+
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  remaining_disk <- list(name = "remaining-disk")
+  failing_memory <- list(reset = function() stop("memory failed"))
+  pkg_env$cache <- list(name = "stale-layer")
+  pkg_env$cache_memory <- failing_memory
+  pkg_env$cache_disk <- remaining_disk
+  pkg_env$cache_disk_guard <- NULL
+
+  error <- rlang::catch_cnd(clear_cache("memory"))
+  expect_s3_class(error, "dsprrr_cache_clear_error")
+  expect_identical(pkg_env$cache, remaining_disk)
+  expect_null(pkg_env$cache_memory)
+  expect_identical(pkg_env$cache_disk, remaining_disk)
+})
+
+test_that("cleanup FALSE is reported and detached guards stay detached", {
+  local_reset_cache()
+
+  pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  guard <- new.env(parent = emptyenv())
+  guard$invalid <- TRUE
+  guard$reason <- "detached failure"
+  guard$warning_emitted <- FALSE
+  guard$trust <- list(path = tempfile("detached-cache-"))
+  disk <- list(destroy = function() FALSE)
+  pkg_env$cache <- disk
+  pkg_env$cache_memory <- NULL
+  pkg_env$cache_disk <- disk
+  pkg_env$cache_disk_guard <- guard
+
+  error <- rlang::catch_cnd(clear_cache("all"))
+  expect_s3_class(error, "dsprrr_cache_clear_error")
+  expect_false(pkg_env$cache_degraded)
+  expect_identical(pkg_env$cache_privacy_status, "not_checked")
+  expect_false(guard$warning_emitted)
+})
+
 test_that("disk cache persists data across cache resets", {
   local_reset_cache()
 
@@ -1538,6 +2302,12 @@ test_that("dsprrr_sitrep shows cache configuration", {
   expect_type(result, "list")
   expect_true("cache_enabled" %in% names(result))
   expect_true(result$cache_enabled)
+  expect_identical(result$cache_disk_private, TRUE)
+  expect_identical(result$cache_privacy_status, "not_checked")
+  expect_identical(
+    result$cache_disk_path,
+    dsprrr:::get_cache_config()$disk_path
+  )
 
   # Should have cache_stats if there's cache activity
   if (!is.null(result$cache_stats)) {
@@ -1553,6 +2323,53 @@ test_that("dsprrr_sitrep shows disabled cache", {
   result <- expect_no_error(suppressMessages(dsprrr_sitrep()))
 
   expect_false(result$cache_enabled)
+})
+
+test_that("dsprrr_sitrep reports a degraded private disk cache", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_sitrep_degraded_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  dir.create(disk_path)
+  Sys.chmod(disk_path, mode = "0777", use_umask = FALSE)
+  configure_cache(disk_path = disk_path)
+  suppressWarnings(dsprrr:::get_cache())
+
+  result <- expect_no_error(suppressMessages(dsprrr_sitrep()))
+  expect_true(result$cache_degraded)
+  expect_identical(result$cache_privacy_status, "degraded")
+  expect_match(
+    result$cache_degraded_reason,
+    "writable by another local account"
+  )
+})
+
+test_that("dsprrr_sitrep does not claim memory fallback without memory", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  disk_path <- tempfile("cache_sitrep_no_memory_")
+  withr::defer(unlink(disk_path, recursive = TRUE))
+  dir.create(disk_path)
+  Sys.chmod(disk_path, mode = "0777", use_umask = FALSE)
+  configure_cache(
+    enable_memory = FALSE,
+    enable_disk = TRUE,
+    disk_path = disk_path
+  )
+  expect_warning(
+    dsprrr:::get_cache(),
+    class = "dsprrr_cache_security_warning"
+  )
+
+  output <- cli::cli_fmt(dsprrr_sitrep())
+  expect_true(any(grepl(
+    "no cache tier remains enabled",
+    output,
+    fixed = TRUE
+  )))
+  expect_false(any(grepl("using memory only", output, fixed = TRUE)))
 })
 
 test_that(".cache is accepted and validated for non-Predict modules (dsprrr-jup)", {

@@ -4,6 +4,15 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Bug fixes
 
+* `configure_cache()` now keeps persistent response envelopes in the
+  platform-specific per-user cache directory by default. Unix cache directories
+  and files are bound to their effective owner, canonical identity, and private
+  POSIX modes before every serialized read or write. Unsafe or unverifiable
+  caches fall back to memory when enabled, or leave no cache tier active;
+  extended ACL and Windows inherited-ACL boundaries are reported honestly.
+  Project-local and shared caches require an explicit path, and disabling
+  privacy enforcement requires `disk_private = FALSE` (#dsprrr-etge).
+
 * Cached requests now use versioned, account-partitioned identities covering
   conversation state, provider settings, exact schemas, and multimodal content.
   Cache hits replay provider-recorded semantic turns, including ellmer's native

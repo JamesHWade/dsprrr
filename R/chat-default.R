@@ -23,6 +23,9 @@ NULL
 .dsprrr_env$scoped_lm <- NULL
 .dsprrr_env$cache_degraded <- FALSE
 .dsprrr_env$cache_degraded_reason <- NULL
+.dsprrr_env$cache_privacy_status <- "not_checked"
+.dsprrr_env$cache_privacy_reason <- NULL
+.dsprrr_env$cache_disk_guard <- NULL
 
 #' Get the Default Chat
 #'
@@ -763,6 +766,13 @@ dsprrr_sitrep <- function() {
 
   cache_config <- get_cache_config()
   result$cache_enabled <- cache_config$enable
+  result$cache_disk_path <- cache_config$disk_path
+  result$cache_disk_private <- cache_config$disk_private
+  result$cache_degraded <- isTRUE(.dsprrr_env$cache_degraded)
+  result$cache_degraded_reason <- .dsprrr_env$cache_degraded_reason
+  result$cache_privacy_status <- .dsprrr_env$cache_privacy_status %||%
+    "not_checked"
+  result$cache_privacy_reason <- .dsprrr_env$cache_privacy_reason
 
   if (!cache_config$enable) {
     cli::cli_bullets(c("x" = "Caching disabled"))
@@ -783,6 +793,38 @@ dsprrr_sitrep <- function() {
     }
 
     cli::cli_bullets(c("v" = "Cache tiers: {paste(tiers, collapse = ', ')}"))
+
+    if (cache_config$enable_disk) {
+      cli::cli_bullets(c("*" = "Disk path: {.path {cache_config$disk_path}}"))
+      privacy_message <- switch(
+        result$cache_privacy_status,
+        "verified_posix_modes" = paste0(
+          "Effective owner and POSIX modes verified (extended ACLs not checked)"
+        ),
+        "unverified_windows" = "Disk privacy relies on unverified inherited ACLs",
+        "disabled" = "Owner-only disk enforcement disabled (trusted cache only)",
+        "degraded" = if (cache_config$enable_memory) {
+          "Disk cache unavailable; using memory only"
+        } else {
+          "Disk cache unavailable; no cache tier remains enabled"
+        },
+        "Private disk permissions will be checked on first use"
+      )
+      privacy_bullet <- if (
+        result$cache_privacy_status == "verified_posix_modes"
+      ) {
+        "v"
+      } else if (result$cache_privacy_status == "degraded") {
+        "x"
+      } else {
+        "i"
+      }
+      cli::cli_bullets(stats::setNames(privacy_message, privacy_bullet))
+    }
+
+    if (result$cache_degraded && !is.null(result$cache_degraded_reason)) {
+      cli::cli_bullets(c("!" = "Disk cache: {result$cache_degraded_reason}"))
+    }
 
     # Cache statistics
     stats <- cache_stats()

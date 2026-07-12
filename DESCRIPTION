@@ -30,6 +30,7 @@ Imports:
     codetools,
     digest,
     ellmer (>= 0.4.1),
+    fs,
     glue,
     jsonlite,
     methods,
