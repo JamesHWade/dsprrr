@@ -619,7 +619,11 @@ test_that("simple failures warn once and return no internal attributes", {
 
   expect_length(warnings, 1L)
   expect_match(warnings, "Failed to process item 2: provider row failed")
-  expect_false(grepl("Failed to process item 2: Failed", warnings))
+  expect_false(grepl(
+    "Failed to process item 2: Failed",
+    warnings,
+    fixed = TRUE
+  ))
   expect_true(is.na(result[[2]]))
   expect_null(attributes(result[[2]]))
   expect_null(attributes(result))
@@ -639,7 +643,10 @@ test_that("usage comes only from a verified current-call assistant delta", {
   opaque_success <- structure(
     list(
       get_turns = function(...) turns,
-      set_turns = function(value) turns <<- value,
+      set_turns = function(value) {
+        turns <<- value
+        invisible(NULL)
+      },
       last_turn = function(...) baseline[[2]],
       chat_structured = function(...) list(answer = "fresh")
     ),
@@ -1201,7 +1208,9 @@ test_that("ambiguous required-array presence uses isolated scalar rows", {
   )
   expect_true(all(vapply(
     result,
-    function(row) grepl("present-empty", row$metadata$fallback_reason),
+    function(row) {
+      grepl("present-empty", row$metadata$fallback_reason, fixed = TRUE)
+    },
     logical(1)
   )))
 })

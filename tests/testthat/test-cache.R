@@ -849,8 +849,8 @@ test_that("opaque Chats with unavailable state inspection never cache", {
     class = "Chat"
   )
 
-  expect_no_warning(
-    first <- dsprrr:::cached_chat_structured(
+  first <- expect_no_warning(
+    dsprrr:::cached_chat_structured(
       opaque,
       "prompt",
       output_type

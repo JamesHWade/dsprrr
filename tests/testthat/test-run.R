@@ -1027,9 +1027,15 @@ test_that("structured batches synthesize history when a Chat records no delta", 
     "NonRecordingChat",
     private = list(turns = NULL),
     public = list(
-      initialize = function(turns) private$turns <- turns,
+      initialize = function(turns) {
+        private$turns <- turns
+        invisible(self)
+      },
       get_turns = function(...) private$turns,
-      set_turns = function(turns) private$turns <- turns,
+      set_turns = function(turns) {
+        private$turns <- turns
+        invisible(self)
+      },
       chat_structured = function(...) list(answer = "ok")
     )
   )

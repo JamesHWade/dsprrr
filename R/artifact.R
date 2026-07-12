@@ -1305,8 +1305,9 @@ artifact_sanitize_atomic <- function(
 }
 
 artifact_is_supported_data_frame <- function(value) {
-  identical(class(value), "data.frame") ||
-    identical(class(value), c("tbl_df", "tbl", "data.frame"))
+  value_class <- class(value)
+  identical(value_class, "data.frame") ||
+    identical(value_class, c("tbl_df", "tbl", "data.frame"))
 }
 
 artifact_normalize_field_name <- function(name) {
@@ -1708,7 +1709,7 @@ artifact_validate_json_schema_value <- function(value) {
     !is.null(keys) &&
       (length(keys) != length(value) ||
         anyNA(keys) ||
-        any(!nzchar(keys)))
+        !all(nzchar(keys)))
   ) {
     cli::cli_abort(
       "JSON-schema lists must be either named objects or unnamed arrays",
@@ -2793,7 +2794,7 @@ artifact_validate_type_record <- function(type, malformed) {
         (length(type$properties) > 0L &&
           (is.null(property_names) ||
             anyNA(property_names) ||
-            any(!nzchar(property_names)) ||
+            !all(nzchar(property_names)) ||
             anyDuplicated(property_names))) ||
         !artifact_is_logical_scalar(type$additional_properties)
     ) {

@@ -3208,15 +3208,13 @@ validate_mirai_worker_record <- function(
       (is.null(usage_names) ||
         anyDuplicated(usage_names) > 0L ||
         length(setdiff(usage_names, known_usage)) > 0L ||
-        any(
-          !vapply(
-            record$usage,
-            function(value) {
-              is.numeric(value) && length(value) == 1L
-            },
-            logical(1)
-          )
-        ))
+        !all(vapply(
+          record$usage,
+          function(value) {
+            is.numeric(value) && length(value) == 1L
+          },
+          logical(1)
+        )))
   ) {
     return(invalid("mirai worker record has invalid usage fields"))
   }

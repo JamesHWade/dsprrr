@@ -222,7 +222,7 @@ OptimizerControl <- S7::new_class(
           length(value) > 0L &&
             (is.null(names(value)) ||
               anyNA(names(value)) ||
-              any(!nzchar(names(value))) ||
+              !all(nzchar(names(value))) ||
               anyDuplicated(names(value)))
         ) {
           return("checkpoint_registry must have unique, non-empty names")
@@ -2870,7 +2870,7 @@ optimizer_budget_requires_row_units <- function(budget) {
     "max_cost",
     "max_elapsed_seconds"
   )]
-  any(!vapply(limits, is.null, logical(1)))
+  !all(vapply(limits, is.null, logical(1)))
 }
 
 # Evaluate one candidate while preserving the legacy whole-evaluation path when

@@ -457,18 +457,24 @@ test_that("restored budget state requires exact canonical schemas", {
     state = boundary_partition
   )))
 
+  fractional_count <- state
+  fractional_count$attempts <- 0.5
+  numeric_count <- state
+  numeric_count$trials <- 0
+  malformed_overshoot <- state
+  malformed_overshoot$overshoots <- list(
+    list(resource = "trials", amount = 1)
+  )
+
   malformed <- list(
     extra_field = c(state, list(unexpected = 1L)),
-    fractional_count = within(state, attempts <- 0.5),
-    numeric_count = within(state, trials <- 0),
+    fractional_count = fractional_count,
+    numeric_count = numeric_count,
     missing_outcome = missing_outcome,
     overlapping_outcome = overlapping_outcome,
     overflowing_partition = overflowing_partition,
     impossible_streak = impossible_streak,
-    malformed_overshoot = within(
-      state,
-      overshoots <- list(list(resource = "trials", amount = 1))
-    )
+    malformed_overshoot = malformed_overshoot
   )
 
   stopped <- new_optimizer_budget(optimizer_control(max_trials = 1L))
@@ -795,6 +801,10 @@ test_that("row-sized optimizer evaluation resumes without repeating paid rows", 
   program <- module(signature("x -> y"), type = "predict")
   data <- data.frame(x = 1:5, y = 1:5)
   partial <- list()
+  save_partial <- function(records, ...) {
+    partial <<- records
+    invisible(NULL)
+  }
   first <- new_optimizer_budget(optimizer_control(max_metric_calls = 2L))
   first_result <- optimizer_eval_program(
     program,
@@ -803,7 +813,7 @@ test_that("row-sized optimizer evaluation resumes without repeating paid rows", 
     budget = first,
     stage = "search",
     unit_id = "trial:1",
-    on_progress = function(records, ...) partial <<- records
+    on_progress = save_partial
   )
 
   expect_identical(calls, 1:2)
@@ -825,7 +835,7 @@ test_that("row-sized optimizer evaluation resumes without repeating paid rows", 
     stage = "search",
     unit_id = "trial:1",
     partial_records = partial,
-    on_progress = function(records, ...) partial <<- records
+    on_progress = save_partial
   )
 
   expect_identical(calls, 1:5)

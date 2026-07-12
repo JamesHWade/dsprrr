@@ -570,7 +570,7 @@ test_that("TrialLog print and README render cost state explicitly", {
   expect_match(unknown_output, "Total Cost: Unknown", fixed = TRUE)
   unknown_readme <- readLines(file.path(unknown_dir, "README.md"))
   expect_identical(
-    grep("Total Cost", unknown_readme, value = TRUE),
+    grep("Total Cost", unknown_readme, value = TRUE, fixed = TRUE),
     "- Total Cost: Unknown"
   )
 
@@ -589,7 +589,7 @@ test_that("TrialLog print and README render cost state explicitly", {
   expect_match(zero_output, "Total Cost: $0.0000", fixed = TRUE)
   zero_readme <- readLines(file.path(zero_dir, "README.md"))
   expect_identical(
-    grep("Total Cost", zero_readme, value = TRUE),
+    grep("Total Cost", zero_readme, value = TRUE, fixed = TRUE),
     "- Total Cost: $0.0000"
   )
 })

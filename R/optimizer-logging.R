@@ -873,7 +873,7 @@ trial_log_validate_raw_journal <- function(path, guard) {
     guard,
     function(candidate) readLines(candidate, warn = FALSE)
   )
-  if (any(!nzchar(trimws(lines)))) {
+  if (!all(nzchar(trimws(lines)))) {
     trial_log_abort_corrupt(path, "The trial log contains an empty record")
   }
   if (length(lines) == 0L) {
