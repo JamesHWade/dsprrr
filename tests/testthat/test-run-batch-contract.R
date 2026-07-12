@@ -841,6 +841,61 @@ test_that("native ellmer rows reconstruct nested and array output types", {
   expect_s3_class(result[[1L]]$output$choices, "tbl_df")
 })
 
+test_that("native ellmer preserves optional nested-object presence", {
+  output_type <- ellmer::type_object(
+    label = ellmer::type_string(),
+    details = ellmer::type_object(
+      score = ellmer::type_number(),
+      .required = FALSE
+    ),
+    sparse = ellmer::type_object(
+      note = ellmer::type_string(required = FALSE),
+      .required = FALSE
+    )
+  )
+  raw_rows <- list(
+    list(
+      label = "present",
+      details = list(score = 0.8),
+      sparse = list()
+    ),
+    list(label = "absent", sparse = list())
+  )
+  convert_from_type <- get("convert_from_type", asNamespace("ellmer"))
+  scalar_rows <- lapply(raw_rows, convert_from_type, type = output_type)
+  parallel_rows <- convert_from_type(
+    raw_rows,
+    ellmer::type_array(output_type)
+  )
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) parallel_rows,
+    .package = "ellmer"
+  )
+  mod <- module(
+    signature(
+      inputs = list(input("text", ellmer::type_string())),
+      output_type = output_type
+    ),
+    type = "predict"
+  )
+
+  result <- run(
+    mod,
+    text = c("one", "two"),
+    .llm = batch_contract_chat(),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+  native_rows <- lapply(result, `[[`, "output")
+
+  expect_identical(native_rows, scalar_rows)
+  expect_null(native_rows[[2L]]$details)
+  expect_identical(native_rows[[2L]]$sparse, list(note = NULL))
+})
+
 test_that("native ellmer row chats preserve baseline while traces keep deltas", {
   baseline <- list(
     ellmer::UserTurn(contents = list(ellmer::ContentText("prior question"))),

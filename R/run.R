@@ -2426,10 +2426,94 @@ ellmer_parallel_scalar_value <- function(value, type) {
   value
 }
 
+#' Probe whether a required nested property carries evidence of presence
+#'
+#' Ellmer vectorizes nested objects into nested tibbles. When an optional
+#' object is absent, required scalar fields in that row become typed `NA`s.
+#' This helper returns `TRUE` for that missing sentinel, `FALSE` for evidence
+#' that the property is present, and `NA` when the converted representation is
+#' inherently ambiguous (for example, a required array may legitimately be
+#' empty).
+#' @noRd
+ellmer_parallel_required_property_missing <- function(column, index, type) {
+  if (inherits(type, c("ellmer::TypeBasic", "ellmer::TypeEnum"))) {
+    if (index > length(column)) {
+      return(NA)
+    }
+    value <- column[[index]]
+    return(
+      is.null(value) ||
+        (length(value) == 1L &&
+          is.atomic(value) &&
+          is.na(value))
+    )
+  }
+
+  if (inherits(type, "ellmer::TypeObject")) {
+    if (is.data.frame(column)) {
+      return(ellmer_parallel_object_row_missing(column, index, type))
+    }
+    if (index > length(column)) {
+      return(NA)
+    }
+    return(is.null(column[[index]]))
+  }
+
+  # Arrays and arbitrary JSON values do not have an unambiguous converted
+  # sentinel: an empty value can be a valid, present value.
+  NA
+}
+
+#' Detect an absent optional object in ellmer's nested-tibble representation
+#'
+#' Only required properties with an unambiguous missing sentinel participate.
+#' If an object has no such property, preserve it as present. This deliberately
+#' avoids collapsing a genuinely present object whose optional fields are all
+#' missing.
+#' @noRd
+ellmer_parallel_object_row_missing <- function(responses, index, type) {
+  if (index > nrow(responses)) {
+    return(NA)
+  }
+
+  properties <- type@properties
+  required <- names(properties)[vapply(
+    properties,
+    function(property) isTRUE(property@required),
+    logical(1)
+  )]
+  if (length(required) == 0L) {
+    return(FALSE)
+  }
+
+  probes <- vapply(
+    required,
+    function(name) {
+      if (!name %in% names(responses)) {
+        return(TRUE)
+      }
+      ellmer_parallel_required_property_missing(
+        responses[[name]],
+        index,
+        properties[[name]]
+      )
+    },
+    logical(1)
+  )
+  probes <- probes[!is.na(probes)]
+  length(probes) > 0L && all(probes)
+}
+
 #' Extract one row from a vectorized ellmer output column
 #' @noRd
 ellmer_parallel_column_value <- function(column, index, type) {
   if (inherits(type, "ellmer::TypeObject") && is.data.frame(column)) {
+    if (
+      !isTRUE(type@required) &&
+        isTRUE(ellmer_parallel_object_row_missing(column, index, type))
+    ) {
+      return(NULL)
+    }
     return(ellmer_parallel_response_row(column, index, type))
   }
   if (index > length(column)) {
