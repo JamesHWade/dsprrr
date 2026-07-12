@@ -4,6 +4,15 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Bug fixes
 
+* Cached requests now use versioned, account-partitioned identities covering
+  conversation state, provider settings, exact schemas, and multimodal content.
+  Cache hits replay provider-recorded semantic turns, including ellmer's native
+  structured JSON content, without fabricated usage. Opaque/custom Chats and
+  registered tools bypass caching. Sequential batch rows preserve isolated,
+  completed Chat histories instead of sharing or replacing state. Persistent
+  cache envelopes can contain request content, outputs, and turn deltas and
+  must be treated as sensitive storage.
+
 * Batch and evaluation failures now preserve the original LLM/provider error.
   Structured `run_dataset()` results expose a row-level `.error` column, and
   `evaluate()` reports run failures separately from metric failures instead of
@@ -34,6 +43,10 @@ First development changelog. dsprrr is experimental; the API may change.
 * `optimize_grid()` now gives a clear error when every trial fails (for
   example, when the API is unreachable) instead of a cryptic
   "attempt to select less than one element" (#dsprrr-hew).
+
+* `optimizer_control()` now applies `max_errors` as an exact consecutive-error
+  boundary while retaining total-error and completed-evaluation overshoot
+  metadata consistently across optimizers.
 
 * `.cache` is now a validated, first-class argument to `run()` and `forward()`
   for every module type, instead of triggering a spurious "unknown input"

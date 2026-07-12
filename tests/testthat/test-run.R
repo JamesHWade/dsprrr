@@ -886,8 +886,427 @@ test_that("run_batch_sequential processes all items", {
 
   expect_length(results, 3)
   expect_equal(results[[1]], "response_1")
-  expect_equal(results[[2]], "response_2")
-  expect_equal(results[[3]], "response_3")
+  expect_equal(results[[2]], "response_1")
+  expect_equal(results[[3]], "response_1")
+  expect_equal(call_count, 0L)
+})
+
+test_that("sequential batch rows branch from identical Chat state", {
+  StatefulBatchChat <- R6::R6Class(
+    "StatefulBatchChat",
+    private = list(
+      turns = NULL,
+      system_prompt = NULL,
+      tools = NULL,
+      provider_config = NULL
+    ),
+    public = list(
+      initialize = function(
+        turns = list(),
+        system_prompt = NULL,
+        tools = list(),
+        provider_config = list()
+      ) {
+        private$turns <- turns
+        private$system_prompt <- system_prompt
+        private$tools <- tools
+        private$provider_config <- provider_config
+      },
+      get_turns = function(...) private$turns,
+      get_system_prompt = function() private$system_prompt,
+      get_tools = function() private$tools,
+      set_turns = function(turns) {
+        private$turns <- turns
+        invisible(NULL)
+      },
+      chat_structured = function(prompt, type, echo = "none") {
+        initial_length <- length(private$turns)
+        private$turns <- c(
+          private$turns,
+          list(
+            ellmer::UserTurn(
+              contents = list(ellmer::ContentText(as.character(prompt)))
+            ),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentText("ok"))
+            )
+          )
+        )
+        list(
+          answer = paste0(
+            initial_length,
+            ":",
+            private$system_prompt,
+            ":",
+            length(private$tools),
+            ":",
+            private$provider_config$model,
+            ":",
+            prompt
+          )
+        )
+      }
+    )
+  )
+
+  initial_turns <- list(
+    ellmer::UserTurn(contents = list(ellmer::ContentText("prior"))),
+    ellmer::AssistantTurn(contents = list(ellmer::ContentText("context")))
+  )
+  caller_chat <- StatefulBatchChat$new(
+    turns = initial_turns,
+    system_prompt = "system",
+    tools = list("tool"),
+    provider_config = list(model = "model-a")
+  )
+  mod <- module(
+    signature("text -> answer"),
+    type = "predict",
+    template = "{text}"
+  )
+
+  results <- run(
+    mod,
+    text = c("a", "b"),
+    .llm = caller_chat,
+    .cache = FALSE,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  outputs <- vapply(
+    results,
+    function(result) result$output$answer,
+    character(1)
+  )
+  expect_true(all(vapply(
+    outputs,
+    startsWith,
+    logical(1),
+    prefix = "2:system:1:model-a:"
+  )))
+  expect_true(endsWith(outputs[[1]], "a"))
+  expect_true(endsWith(outputs[[2]], "b"))
+  expect_length(results[[1]]$chat$get_turns(), 4)
+  expect_length(results[[2]]$chat$get_turns(), 4)
+  expect_identical(results[[1]]$chat$get_turns()[1:2], initial_turns)
+  expect_identical(results[[2]]$chat$get_turns()[1:2], initial_turns)
+  expect_true(endsWith(
+    results[[1]]$chat$get_turns()[[3]]@contents[[1]]@text,
+    "a"
+  ))
+  expect_true(endsWith(
+    results[[2]]$chat$get_turns()[[3]]@contents[[1]]@text,
+    "b"
+  ))
+  expect_length(caller_chat$get_turns(), 2)
+  expect_identical(caller_chat$get_turns(), initial_turns)
+})
+
+test_that("structured batches synthesize history when a Chat records no delta", {
+  NonRecordingChat <- R6::R6Class(
+    "NonRecordingChat",
+    private = list(turns = NULL),
+    public = list(
+      initialize = function(turns) private$turns <- turns,
+      get_turns = function(...) private$turns,
+      set_turns = function(turns) private$turns <- turns,
+      chat_structured = function(...) list(answer = "ok")
+    )
+  )
+  baseline <- list(
+    ellmer::UserTurn(contents = list(ellmer::ContentText("prior"))),
+    ellmer::AssistantTurn(contents = list(ellmer::ContentText("context")))
+  )
+  chat <- NonRecordingChat$new(baseline)
+  mod <- module(
+    signature("text -> answer"),
+    type = "predict",
+    template = "{text}"
+  )
+
+  result <- dsprrr:::process_batch_item(
+    input_set = list(text = "new"),
+    module = mod,
+    llm = chat,
+    index = 1L,
+    .verbose = FALSE,
+    .return_format = "structured",
+    .cache = FALSE
+  )
+
+  expect_identical(chat$get_turns(), baseline)
+  expect_length(result$chat$get_turns(), 4)
+  expect_identical(result$chat$get_turns()[1:2], baseline)
+  expect_true(endsWith(
+    result$chat$get_turns()[[3]]@contents[[1]]@text,
+    "new"
+  ))
+})
+
+test_that("non-cloneable closure Chats are copied before batch execution", {
+  calls <- 0L
+  chat <- structure(
+    list(
+      get_turns = function(...) list(),
+      chat_structured = function(...) {
+        calls <<- calls + 1L
+        list(answer = "unexpected")
+      }
+    ),
+    class = "Chat"
+  )
+  mod <- module(signature("text -> answer"), type = "predict")
+
+  result <- run(
+    mod,
+    text = c("a", "b"),
+    .llm = chat,
+    .cache = FALSE,
+    .progress = FALSE
+  )
+  expect_identical(
+    unlist(result, use.names = FALSE),
+    c("unexpected", "unexpected")
+  )
+  expect_equal(calls, 0L)
+})
+
+test_that("batch Chat isolation handles zero, one, and many rows", {
+  EnvironmentStateChat <- R6::R6Class(
+    "EnvironmentStateChat",
+    private = list(state = NULL),
+    public = list(
+      initialize = function() {
+        private$state <- new.env(parent = emptyenv())
+        private$state$turns <- list()
+      },
+      get_turns = function(...) private$state$turns,
+      set_turns = function(turns) {
+        private$state$turns <- turns
+        invisible(NULL)
+      },
+      chat_structured = function(...) list(answer = "ok")
+    )
+  )
+  caller <- EnvironmentStateChat$new()
+
+  expect_identical(dsprrr:::batch_chat_branches(caller, 0L), list())
+
+  one <- dsprrr:::batch_chat_branches(caller, 1L)
+  expect_length(one, 1L)
+  one[[1]]$set_turns(list(ellmer::UserTurn("one")))
+  expect_identical(caller$get_turns(), list())
+
+  many <- dsprrr:::batch_chat_branches(caller, 3L)
+  many[[1]]$set_turns(list(ellmer::UserTurn("first")))
+  expect_identical(caller$get_turns(), list())
+  expect_length(many[[1]]$get_turns(), 1L)
+  expect_identical(many[[2]]$get_turns(), list())
+  expect_identical(many[[3]]$get_turns(), list())
+})
+
+test_that("opaque closure-backed histories are copied, never shared", {
+  turns <- list()
+  chat <- structure(
+    list(
+      get_turns = function(...) turns,
+      set_turns = function(value) {
+        turns <<- value
+        invisible(NULL)
+      },
+      chat_structured = function(...) list(answer = "ok")
+    ),
+    class = "Chat"
+  )
+
+  branches <- dsprrr:::batch_chat_branches(chat, 2L)
+  branches[[1]]$set_turns(list(ellmer::UserTurn("branch one")))
+
+  expect_identical(chat$get_turns(), list())
+  expect_length(branches[[1]]$get_turns(), 1L)
+  expect_identical(branches[[2]]$get_turns(), list())
+})
+
+test_that("batch isolation aborts before rows when shared state remains", {
+  binding <- ".dsprrr_opaque_batch_calls"
+  assign(binding, 0L, envir = globalenv())
+  withr::defer(rm(list = binding, envir = globalenv()))
+
+  get_turns <- function(...) list()
+  environment(get_turns) <- globalenv()
+  chat_structured <- function(...) {
+    .dsprrr_opaque_batch_calls <<- .dsprrr_opaque_batch_calls + 1L
+    list(answer = "unexpected")
+  }
+  environment(chat_structured) <- globalenv()
+  chat <- structure(
+    list(
+      get_turns = get_turns,
+      chat_structured = chat_structured
+    ),
+    class = "Chat"
+  )
+  mod <- module(signature("text -> answer"), type = "predict")
+
+  expect_error(
+    run(
+      mod,
+      text = c("a", "b"),
+      .llm = chat,
+      .cache = FALSE,
+      .progress = FALSE
+    ),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_equal(get(binding, envir = globalenv()), 0L)
+})
+
+test_that("batch isolation scans deeply nested state without truncation", {
+  calls <- new.env(parent = emptyenv())
+  calls$n <- 0L
+  hidden <- globalenv()
+  for (i in seq_len(12L)) {
+    hidden <- list(hidden)
+  }
+  chat <- structure(
+    list(
+      hidden = hidden,
+      chat_structured = function(...) {
+        calls$n <- calls$n + 1L
+        list(answer = "unexpected")
+      }
+    ),
+    class = "Chat"
+  )
+
+  expect_error(
+    dsprrr:::batch_chat_branches(chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_equal(calls$n, 0L)
+})
+
+test_that("batch isolation rejects opaque external state before rows", {
+  calls <- 0L
+  chat <- structure(
+    list(
+      hidden = methods::new("externalptr"),
+      chat_structured = function(...) {
+        calls <<- calls + 1L
+        list(answer = "unexpected")
+      }
+    ),
+    class = "Chat"
+  )
+
+  expect_error(
+    dsprrr:::batch_chat_branches(chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_equal(calls, 0L)
+})
+
+test_that("batch isolation rejects namespace-held opaque closure state", {
+  package_state <- asNamespace("dsprrr")$.dsprrr_env
+  binding <- ".batch_namespace_probe"
+  package_state[[binding]] <- 0L
+  withr::defer(rm(list = binding, envir = package_state))
+
+  closure_env <- new.env(parent = asNamespace("dsprrr"))
+  chat_structured <- function(...) {
+    .dsprrr_env$.batch_namespace_probe <-
+      .dsprrr_env$.batch_namespace_probe + 1L
+    list(answer = "unexpected")
+  }
+  environment(chat_structured) <- closure_env
+  chat <- structure(list(chat_structured = chat_structured), class = "Chat")
+
+  expect_error(
+    dsprrr:::batch_chat_branches(chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_equal(package_state[[binding]], 0L)
+})
+
+test_that("batch isolation rejects parent-resolved global closure state", {
+  binding <- ".dsprrr_parent_batch_state"
+  state <- new.env(parent = emptyenv())
+  state$calls <- 0L
+  assign(binding, state, envir = globalenv())
+  withr::defer(rm(list = binding, envir = globalenv()))
+
+  closure_env <- new.env(parent = globalenv())
+  chat_structured <- function(...) {
+    .dsprrr_parent_batch_state$calls <-
+      .dsprrr_parent_batch_state$calls + 1L
+    list(answer = "unexpected")
+  }
+  environment(chat_structured) <- closure_env
+  chat <- structure(list(chat_structured = chat_structured), class = "Chat")
+
+  expect_error(
+    dsprrr:::batch_chat_branches(chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_equal(state$calls, 0L)
+})
+
+test_that("batch isolation never forces delayed closure state", {
+  initializations <- new.env(parent = emptyenv())
+  initializations$n <- 0L
+  closure_env <- new.env(parent = baseenv())
+  closure_env$calls <- 0L
+  delayedAssign(
+    "state",
+    {
+      initializations$n <- initializations$n + 1L
+      new.env(parent = emptyenv())
+    },
+    eval.env = environment(),
+    assign.env = closure_env
+  )
+  chat_structured <- function(...) {
+    state
+    calls <<- calls + 1L
+    list(answer = "unexpected")
+  }
+  environment(chat_structured) <- closure_env
+  chat <- structure(list(chat_structured = chat_structured), class = "Chat")
+
+  expect_error(
+    dsprrr:::batch_chat_branches(chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_equal(initializations$n, 0L)
+  expect_equal(closure_env$calls, 0L)
+  expect_true(rlang::env_binding_are_lazy(closure_env, "state"))
+
+  self_initializations <- new.env(parent = emptyenv())
+  self_initializations$n <- 0L
+  self_env <- new.env(parent = baseenv())
+  delayedAssign(
+    "self",
+    {
+      self_initializations$n <- self_initializations$n + 1L
+      new.env(parent = emptyenv())
+    },
+    eval.env = environment(),
+    assign.env = self_env
+  )
+  self_chat_structured <- function(...) list(answer = "unexpected")
+  environment(self_chat_structured) <- self_env
+  self_chat <- structure(
+    list(chat_structured = self_chat_structured),
+    class = "Chat"
+  )
+
+  expect_error(
+    dsprrr:::batch_chat_branches(self_chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_equal(self_initializations$n, 0L)
+  expect_true(rlang::env_binding_are_lazy(self_env, "self"))
 })
 
 test_that("run_batch_sequential handles errors per item", {

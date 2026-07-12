@@ -444,7 +444,8 @@ apply_chat_params <- function(chat, params) {
 #' Determine if a value is an ellmer content object
 #' @noRd
 is_content_input <- function(x) {
-  inherits(x, "Content") || any(grepl("^Content", class(x)))
+  inherits(x, "ellmer::Content") ||
+    any(grepl("(^|::)Content", class(x)))
 }
 
 #' Build the canonical request payload for a module execution
@@ -485,21 +486,13 @@ call_llm_request <- function(
   .cache = NULL,
   rollout_id = NULL
 ) {
-  if (isTRUE(request$is_multimodal)) {
-    llm$chat_structured(
-      request$payload,
-      type = output_type,
-      echo = "none"
-    )
-  } else {
-    cached_chat_structured(
-      llm = llm,
-      prompt = request$full_prompt,
-      output_type = output_type,
-      rollout_id = rollout_id,
-      .cache = .cache
-    )
-  }
+  cached_chat_structured(
+    llm = llm,
+    prompt = request$payload,
+    output_type = output_type,
+    rollout_id = rollout_id,
+    .cache = .cache
+  )
 }
 
 #' Extract usage metadata from the latest assistant turn
@@ -577,6 +570,11 @@ process_batch_item <- function(
   }
 
   start_time <- Sys.time()
+  turns_before <- if (.return_format == "structured") {
+    batch_chat_turns(llm)
+  } else {
+    NULL
+  }
 
   response <- call_llm_request(
     llm = llm,
@@ -597,7 +595,12 @@ process_batch_item <- function(
 
     list(
       output = response,
-      chat = mock_batch_chat(request$payload, response, llm),
+      chat = completed_batch_chat(
+        request$payload,
+        response,
+        llm,
+        turns_before = turns_before
+      ),
       metadata = c(
         list(
           latency_ms = latency_ms,
@@ -613,6 +616,50 @@ process_batch_item <- function(
   }
 }
 
+#' Preserve a completed stateful batch branch
+#'
+#' Sequential rows already run on isolated Chat branches. When post-call history
+#' contains the original baseline plus a provider-recorded delta, return a deep
+#' clone of that completed branch. Chats that record no delta use a synthetic
+#' logging Chat instead.
+#' @noRd
+batch_chat_turns <- function(chat) {
+  get_turns <- tryCatch(chat$get_turns, error = function(e) NULL)
+  if (!is.function(get_turns)) {
+    return(NULL)
+  }
+  tryCatch(
+    {
+      turns <- get_turns()
+      if (is.list(turns)) turns else NULL
+    },
+    error = function(e) NULL
+  )
+}
+
+completed_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
+  turns_after <- batch_chat_turns(chat)
+  before_n <- length(turns_before)
+  recorded <- !is.null(turns_before) &&
+    !is.null(turns_after) &&
+    length(turns_after) > before_n &&
+    (before_n == 0 ||
+      identical(
+        turns_after[seq_len(before_n)],
+        turns_before
+      ))
+  if (!recorded) {
+    return(mock_batch_chat(
+      prompt,
+      response,
+      chat,
+      turns_before = turns_before
+    ))
+  }
+
+  batch_chat_copy(chat, "completed batch result")
+}
+
 #' Create a mock chat with recorded prompt/response for logging
 #'
 #' Creates a Chat object with synthetic turns representing the prompt and response.
@@ -622,15 +669,21 @@ process_batch_item <- function(
 #' @param prompt The prompt that was sent
 #' @param response The response received (will be JSON-serialized if not string)
 #' @param chat A Chat object to clone and populate with the mock turns
-#' @return A cloned Chat with UserTurn and AssistantTurn representing the exchange
+#' @param turns_before Exact Chat history from before the provider call
+#' @return A cloned Chat with the baseline plus synthetic UserTurn and
+#'   AssistantTurn representing the exchange
 #' @noRd
-mock_batch_chat <- function(prompt, response, chat) {
-  mock <- tryCatch(
-    {
-      if (is.function(chat$clone)) chat$clone() else chat
-    },
-    error = function(e) chat
-  )
+mock_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
+  provider <- if (cache_is_trusted_ellmer_chat(chat)) {
+    chat$get_provider()
+  } else {
+    ellmer::Provider(
+      name = "dsprrr",
+      model = "synthetic-batch-history",
+      base_url = ""
+    )
+  }
+  mock <- getFromNamespace("Chat", "ellmer")$new(provider = provider)
 
   prompt_contents <- if (
     is.list(prompt) &&
@@ -655,8 +708,31 @@ mock_batch_chat <- function(prompt, response, chat) {
     contents = list(ellmer::ContentText(response_text))
   )
 
-  if (is.function(mock$set_turns)) {
-    mock$set_turns(list(user_turn, assistant_turn))
+  baseline <- if (is.list(turns_before)) {
+    rlang::duplicate(turns_before, shallow = FALSE)
+  } else {
+    rlang::duplicate(
+      batch_chat_history(chat) %||% list(),
+      shallow = FALSE
+    )
+  }
+  updated <- c(baseline, list(user_turn, assistant_turn))
+  tryCatch(
+    mock$set_turns(updated),
+    error = function(e) {
+      cli::cli_abort(
+        "Cannot record synthetic batch history",
+        class = "dsprrr_chat_isolation_error",
+        parent = e
+      )
+    }
+  )
+  recorded <- batch_chat_history(mock)
+  if (is.null(recorded) || !identical(recorded, updated)) {
+    cli::cli_abort(
+      "Synthetic batch history could not be verified",
+      class = "dsprrr_chat_isolation_error"
+    )
   }
   mock
 }
@@ -809,7 +885,8 @@ run_batch_sequential <- function(
   .progress,
   .cache = NULL
 ) {
-  shared_llm <- resolve_module_llm(module, .llm = .llm)
+  baseline_llm <- resolve_module_llm(module, .llm = .llm)
+  row_llms <- batch_chat_branches(baseline_llm, n)
   results <- vector("list", n)
 
   # Create progress bar if requested
@@ -824,13 +901,14 @@ run_batch_sequential <- function(
 
   for (i in seq_len(n)) {
     prompt <- build_module_request(module, input_sets[[i]])$prompt
+    row_llm <- row_llms[[i]]
 
     results[[i]] <- tryCatch(
       {
         process_batch_item(
           input_set = input_sets[[i]],
           module = module,
-          llm = shared_llm,
+          llm = row_llm,
           index = i,
           .verbose = .verbose,
           .return_format = .return_format,
@@ -844,7 +922,7 @@ run_batch_sequential <- function(
           index = i,
           prompt = prompt,
           instructions = module$signature@instructions,
-          llm = shared_llm,
+          llm = row_llm,
           .return_format = .return_format
         )
       }
@@ -860,6 +938,506 @@ run_batch_sequential <- function(
   }
 
   results
+}
+
+#' Find mutable environments reachable from a Chat's state surface
+#' @noRd
+batch_chat_state_environments <- function(chat) {
+  found <- character()
+  seen <- new.env(hash = TRUE, parent = emptyenv())
+  expanded <- new.env(hash = TRUE, parent = emptyenv())
+  trusted_ellmer <- cache_is_trusted_ellmer_chat(chat)
+
+  immutable_environment <- function(env) {
+    identical(env, emptyenv()) ||
+      identical(env, baseenv()) ||
+      (trusted_ellmer && isNamespace(env))
+  }
+
+  shared_scope <- function(env) {
+    identical(env, baseenv()) ||
+      identical(env, globalenv()) ||
+      isNamespace(env) ||
+      startsWith(environmentName(env), "package:")
+  }
+
+  binding_is_lazy <- function(env, name) {
+    isTRUE(unname(rlang::env_binding_are_lazy(env, name))[[1]])
+  }
+
+  check_binding <- function(env, name) {
+    if (bindingIsActive(name, env)) {
+      cli::cli_abort(
+        c(
+          "Cannot prove opaque Chat isolation",
+          "x" = "State references active binding {.field {name}}."
+        ),
+        class = "dsprrr_chat_isolation_error"
+      )
+    }
+    if (binding_is_lazy(env, name)) {
+      cli::cli_abort(
+        c(
+          "Cannot prove opaque Chat isolation",
+          "x" = "State references delayed binding {.field {name}}."
+        ),
+        class = "dsprrr_chat_isolation_error"
+      )
+    }
+    invisible(NULL)
+  }
+
+  known_base_binding <- function(env, name) {
+    if (
+      !identical(env, baseenv()) &&
+        !identical(env, asNamespace("base"))
+    ) {
+      return(FALSE)
+    }
+    check_binding(env, name)
+    if (!bindingIsLocked(name, env)) {
+      return(FALSE)
+    }
+    value <- get(name, envir = env, inherits = FALSE)
+    is.function(value) || is.atomic(value) || is.null(value)
+  }
+
+  mark_seen <- function(value) {
+    address <- rlang::obj_address(value)
+    already_seen <- exists(address, envir = seen, inherits = FALSE)
+    if (!already_seen) {
+      assign(address, TRUE, envir = seen)
+    }
+    already_seen
+  }
+
+  record <- function(env) {
+    if (immutable_environment(env)) {
+      return(invisible(NULL))
+    }
+    address <- rlang::obj_address(env)
+    if (!mark_seen(env)) {
+      found <<- c(found, address)
+    }
+    invisible(NULL)
+  }
+
+  unsupported <- function(value) {
+    cli::cli_abort(
+      c(
+        "Cannot prove opaque Chat isolation",
+        "x" = "State contains unsupported {.code {typeof(value)}} data."
+      ),
+      class = "dsprrr_chat_isolation_error"
+    )
+  }
+
+  visit <- function(value) {
+    if (is.null(value)) {
+      return(invisible(NULL))
+    }
+    if (
+      trusted_ellmer &&
+        (inherits(value, "ellmer::Provider") ||
+          inherits(value, "ellmer::ToolDef"))
+    ) {
+      return(invisible(NULL))
+    }
+    if (is.function(value)) {
+      if (mark_seen(value)) {
+        return(invisible(NULL))
+      }
+      env <- environment(value)
+      if (!is.null(env)) {
+        if (
+          !trusted_ellmer &&
+            shared_scope(env) &&
+            !identical(env, baseenv()) &&
+            !identical(env, asNamespace("base"))
+        ) {
+          cli::cli_abort(
+            c(
+              "Cannot prove opaque Chat isolation",
+              "x" = "A Chat closure is bound directly to shared environment {.envvar {environmentName(env)}}."
+            ),
+            class = "dsprrr_chat_isolation_error"
+          )
+        }
+        if (!immutable_environment(env)) {
+          record(env)
+        }
+        self <- NULL
+        if (exists("self", envir = env, inherits = FALSE)) {
+          check_binding(env, "self")
+          self <- get("self", envir = env, inherits = FALSE)
+        }
+        r6_clone_method <- inherits(self, "R6") &&
+          identical(
+            value,
+            tryCatch(self$clone, error = function(e) NULL)
+          )
+        if (!trusted_ellmer && !r6_clone_method) {
+          calls <- all.names(body(value), functions = TRUE, unique = TRUE)
+          dynamic_state_calls <- c(
+            "as.environment",
+            "asNamespace",
+            "assign",
+            "baseenv",
+            "bquote",
+            "delayedAssign",
+            "do.call",
+            "dynGet",
+            "environment",
+            "environment<-",
+            "eval",
+            "eval.parent",
+            "exists",
+            "get",
+            "get0",
+            "getNamespace",
+            "globalenv",
+            "loadNamespace",
+            "mget",
+            "parse",
+            "parent.env",
+            "parent.env<-",
+            "parent.frame",
+            "pos.to.env",
+            "rm",
+            "substitute",
+            "sys.call",
+            "sys.calls",
+            "sys.frame",
+            "topenv"
+          )
+          if (any(calls %in% dynamic_state_calls)) {
+            cli::cli_abort(
+              c(
+                "Cannot prove opaque Chat isolation",
+                "x" = "A Chat closure uses dynamic environment access."
+              ),
+              class = "dsprrr_chat_isolation_error"
+            )
+          }
+          globals <- codetools::findGlobals(
+            value,
+            merge = FALSE
+          )
+          property_roots <- character()
+          find_property_roots <- function(expr) {
+            if (is.call(expr)) {
+              operator <- if (is.symbol(expr[[1]])) {
+                as.character(expr[[1]])
+              } else {
+                ""
+              }
+              if (operator %in% c("$", "$<-", "@", "@<-")) {
+                target <- expr[[2]]
+                while (
+                  is.call(target) &&
+                    is.symbol(target[[1]]) &&
+                    as.character(target[[1]]) %in% c("$", "@")
+                ) {
+                  target <- target[[2]]
+                }
+                if (is.symbol(target)) {
+                  property_roots <<- c(
+                    property_roots,
+                    as.character(target)
+                  )
+                }
+              }
+              lapply(as.list(expr)[-1], find_property_roots)
+            } else if (is.pairlist(expr) || is.expression(expr)) {
+              lapply(expr, find_property_roots)
+            }
+            invisible(NULL)
+          }
+          find_property_roots(body(value))
+          find_property_roots(formals(value))
+          referenced <- unique(c(
+            globals$variables,
+            globals$functions,
+            property_roots
+          ))
+          referenced <- setdiff(referenced, names(formals(value)))
+          for (name in referenced) {
+            current <- env
+            repeat {
+              if (identical(current, emptyenv())) {
+                break
+              }
+              if (exists(name, envir = current, inherits = FALSE)) {
+                check_binding(current, name)
+                if (shared_scope(current)) {
+                  if (!known_base_binding(current, name)) {
+                    cli::cli_abort(
+                      c(
+                        "Cannot prove opaque Chat isolation",
+                        "x" = "Closure state {.field {name}} resolves from shared environment {.envvar {environmentName(current)}}."
+                      ),
+                      class = "dsprrr_chat_isolation_error"
+                    )
+                  }
+                } else {
+                  record(current)
+                  visit(get(name, envir = current, inherits = FALSE))
+                }
+                break
+              }
+              current <- parent.env(current)
+            }
+          }
+        }
+      }
+      lapply(attributes(value), visit)
+      return(invisible(NULL))
+    }
+    if (is.environment(value)) {
+      if (immutable_environment(value)) {
+        return(invisible(NULL))
+      }
+      if (!trusted_ellmer && shared_scope(value)) {
+        cli::cli_abort(
+          c(
+            "Cannot prove opaque Chat isolation",
+            "x" = "State reaches shared environment {.envvar {environmentName(value)}}."
+          ),
+          class = "dsprrr_chat_isolation_error"
+        )
+      }
+      record(value)
+      address <- rlang::obj_address(value)
+      if (exists(address, envir = expanded, inherits = FALSE)) {
+        return(invisible(NULL))
+      }
+      assign(address, TRUE, envir = expanded)
+      members <- ls(value, all.names = TRUE)
+      for (name in members) {
+        check_binding(value, name)
+        member <- tryCatch(
+          get(name, envir = value, inherits = FALSE),
+          error = function(e) unsupported(value)
+        )
+        visit(member)
+      }
+      return(invisible(NULL))
+    }
+    if (inherits(value, "S7_object")) {
+      if (!any(startsWith(class(value), "ellmer::"))) {
+        unsupported(value)
+      }
+      if (mark_seen(value)) {
+        return(invisible(NULL))
+      }
+      properties <- tryCatch(
+        S7::props(value),
+        error = function(e) unsupported(value)
+      )
+      lapply(properties, visit)
+      return(invisible(NULL))
+    }
+    if (isS4(value)) {
+      if (mark_seen(value)) {
+        return(invisible(NULL))
+      }
+      lapply(methods::slotNames(value), function(name) {
+        visit(methods::slot(value, name))
+      })
+      lapply(attributes(value), visit)
+      return(invisible(NULL))
+    }
+    if (is.list(value) || is.pairlist(value) || is.expression(value)) {
+      if (mark_seen(value)) {
+        return(invisible(NULL))
+      }
+      lapply(value, visit)
+      lapply(attributes(value), visit)
+      return(invisible(NULL))
+    }
+    if (is.language(value)) {
+      visit(as.list(value))
+      lapply(attributes(value), visit)
+      return(invisible(NULL))
+    }
+    if (typeof(value) %in% c("externalptr", "weakref")) {
+      unsupported(value)
+    }
+    if (
+      is.atomic(value) ||
+        typeof(value) %in% c("symbol", "builtin", "special")
+    ) {
+      lapply(attributes(value), visit)
+      return(invisible(NULL))
+    }
+    unsupported(value)
+  }
+
+  visit(chat)
+  unique(found)
+}
+
+#' Read Chat turns when an inspection method is available
+#' @noRd
+batch_chat_history <- function(chat) {
+  getter <- tryCatch(chat$get_turns, error = function(e) NULL)
+  if (!is.function(getter)) {
+    return(NULL)
+  }
+  turns <- tryCatch(getter(), error = function(e) e)
+  if (inherits(turns, "condition") || !is.list(turns)) {
+    cli::cli_abort(
+      "Cannot inspect Chat history for batch isolation",
+      class = "dsprrr_chat_isolation_error",
+      parent = if (inherits(turns, "condition")) turns else NULL
+    )
+  }
+  turns
+}
+
+#' Create one isolated Chat without invoking opaque clone methods
+#' @noRd
+batch_chat_copy <- function(chat, stage, source_state = NULL) {
+  if (is.null(source_state)) {
+    source_state <- list(
+      environments = batch_chat_state_environments(chat),
+      history = batch_chat_history(chat)
+    )
+  }
+  branch <- if (cache_is_trusted_ellmer_chat(chat)) {
+    tryCatch(
+      chat$clone(deep = TRUE),
+      error = function(e) {
+        cli::cli_abort(
+          "Cannot deep-clone ellmer Chat for the {stage}",
+          class = "dsprrr_chat_isolation_error",
+          parent = e
+        )
+      }
+    )
+  } else {
+    tryCatch(
+      unserialize(serialize(chat, connection = NULL, version = 3)),
+      error = function(e) {
+        cli::cli_abort(
+          c(
+            "Cannot isolate the Chat for batch execution",
+            "x" = "The opaque Chat could not be copied for the {stage}."
+          ),
+          class = "dsprrr_chat_isolation_error",
+          parent = e
+        )
+      }
+    )
+  }
+
+  if (
+    is.null(branch) ||
+      identical(rlang::obj_address(branch), rlang::obj_address(chat))
+  ) {
+    cli::cli_abort(
+      c(
+        "Cannot isolate the Chat for batch execution",
+        "x" = "Copying returned the original mutable Chat for the {stage}."
+      ),
+      class = "dsprrr_chat_isolation_error"
+    )
+  }
+
+  branch_envs <- batch_chat_state_environments(branch)
+  if (length(intersect(source_state$environments, branch_envs)) > 0L) {
+    cli::cli_abort(
+      c(
+        "Cannot isolate the Chat for batch execution",
+        "x" = "The {stage} still shares mutable environment-backed state."
+      ),
+      class = "dsprrr_chat_isolation_error"
+    )
+  }
+
+  source_history <- source_state$history
+  branch_history <- batch_chat_history(branch)
+  if (
+    !is.null(source_history) &&
+      !identical(source_history, branch_history)
+  ) {
+    setter <- tryCatch(branch$set_turns, error = function(e) NULL)
+    if (is.function(setter)) {
+      tryCatch(
+        setter(rlang::duplicate(source_history, shallow = FALSE)),
+        error = function(e) NULL
+      )
+      branch_history <- batch_chat_history(branch)
+    }
+  }
+  if (
+    xor(is.null(source_history), is.null(branch_history)) ||
+      (!is.null(source_history) && !identical(source_history, branch_history))
+  ) {
+    cli::cli_abort(
+      c(
+        "Cannot isolate the Chat for batch execution",
+        "x" = "The {stage} did not preserve the exact starting history."
+      ),
+      class = "dsprrr_chat_isolation_error"
+    )
+  }
+
+  branch
+}
+
+#' Create independent Chat branches for sequential batch rows
+#'
+#' Every row receives an isolated copy of the caller's starting state. Canonical
+#' ellmer Chats use their deep-clone contract; opaque Chats are copied without
+#' calling custom clone methods and rejected if any mutable environments remain
+#' shared.
+#' @noRd
+batch_chat_branches <- function(chat, n) {
+  if (n == 0) {
+    return(list())
+  }
+
+  source_state <- list(
+    environments = batch_chat_state_environments(chat),
+    history = batch_chat_history(chat)
+  )
+  branches <- lapply(seq_len(n), function(i) {
+    batch_chat_copy(
+      chat,
+      paste0("branch for row ", i),
+      source_state = source_state
+    )
+  })
+
+  branch_ids <- vapply(branches, rlang::obj_address, character(1))
+  branch_envs <- lapply(branches, batch_chat_state_environments)
+  shared_branch_state <- anyDuplicated(branch_ids) > 0L ||
+    any(vapply(
+      seq_along(branches),
+      function(i) {
+        if (i == 1L) {
+          return(FALSE)
+        }
+        length(intersect(
+          branch_envs[[i]],
+          unique(unlist(branch_envs[seq_len(i - 1L)], use.names = FALSE))
+        )) >
+          0L
+      },
+      logical(1)
+    ))
+  if (shared_branch_state) {
+    cli::cli_abort(
+      c(
+        "Cannot isolate the Chat for batch execution",
+        "x" = "Multiple rows received shared mutable Chat state."
+      ),
+      class = "dsprrr_chat_isolation_error"
+    )
+  }
+
+  branches
 }
 
 #' Run batch processing using ellmer's parallel_chat_structured

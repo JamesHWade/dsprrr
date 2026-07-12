@@ -269,9 +269,9 @@ test_that("COPRO compile optimizes instructions", {
         best_instruction_applied <<- TRUE
         return("4")
       }
-      # Default behavior - sometimes wrong
+      # Deterministic baseline behavior; batch branches must not share RNG state.
       if (grepl("2\\+2", prompt)) {
-        return(if (runif(1) > 0.3) "4" else "wrong")
+        return("wrong")
       }
       "wrong"
     },

@@ -10,5 +10,9 @@ and reduce costs. The cache uses a two-tier architecture:
 \item \strong{Memory cache}: Fast in-session LRU cache
 \item \strong{Disk cache}: Persistent cache across R sessions
 }
+
+Versioned cache envelopes can contain raw request content, parsed model
+outputs, and semantic conversation-turn deltas. Persistent cache directories
+must therefore be treated as sensitive storage; see \code{\link[=configure_cache]{configure_cache()}}.
 }
 \keyword{internal}

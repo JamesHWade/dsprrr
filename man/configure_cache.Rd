@@ -42,9 +42,15 @@ Configure the caching behavior for LLM responses. By default, both memory
 and disk caching are enabled.
 }
 \details{
-The cache stores parsed LLM responses (lists, tibbles, vectors) keyed by
-a hash of the prompt, model, temperature, and output type. This avoids
-redundant API calls during development and optimization.
+The cache stores versioned envelopes containing parsed LLM responses and,
+when needed, semantic conversation-turn deltas used to restore an ellmer
+Chat after a cache hit. Although cache keys hash request identity, envelope
+values may contain raw request content and model outputs. Treat persistent
+cache files as sensitive data.
+
+\strong{Disk permissions}: Private-directory enforcement is tracked separately.
+Until it is available, choose a cache location with appropriately restricted
+permissions, or use \code{enable_disk = FALSE} for sensitive workloads.
 
 \strong{Environment variable}: Set \code{DSPRRR_CACHE_ENABLED=false} (or \code{0}, \code{no},
 \code{off}) to globally disable caching, useful for CI/testing environments.

@@ -27,6 +27,7 @@ Depends:
 Imports:
     cachem,
     cli,
+    codetools,
     digest,
     ellmer (>= 0.4.1),
     glue,
