@@ -230,16 +230,18 @@ test_that("export_module_code generates valid R code", {
   code <- export_module_code(mod, name = "test_mod")
 
   expect_type(code, "character")
-  expect_true(grepl("test_mod <- module", code, fixed = TRUE))
-  expect_true(grepl("temperature <- 0.5", code, fixed = TRUE))
-  expect_true(grepl("compiled <- TRUE", code, fixed = TRUE))
+  expect_true(grepl("test_mod <- local({", code, fixed = TRUE))
+  expect_true(grepl("dsprrr::restore_module_config", code, fixed = TRUE))
+  expect_true(grepl("temperature = 0.5", code, fixed = TRUE))
+  expect_true(grepl("compiled = TRUE", code, fixed = TRUE))
+  expect_no_error(parse(text = code))
 })
 
 test_that("export_module_code includes demos when requested", {
   mod <- create_test_module(compiled = TRUE, with_demos = TRUE)
   code <- export_module_code(mod, include_demos = TRUE)
 
-  expect_true(grepl("demos <- list", code, fixed = TRUE))
+  expect_true(grepl("demos = list", code, fixed = TRUE))
   expect_true(grepl("Great product!", code, fixed = TRUE))
 })
 

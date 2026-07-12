@@ -22,7 +22,7 @@ library(tarchetypes)
 
 # Set target options
 tar_option_set(
-  packages = c("dsprrr", "ellmer", "tibble", "dplyr"),
+  packages = c("dsprrr", "ellmer", "tibble"),
   format = "rds"
 )
 
@@ -34,8 +34,24 @@ tar_option_set(
 # ============================================================================
 
 # LLM provider configuration
-# Set these environment variables or modify directly
-LLM_MODEL <- Sys.getenv("DSPRRR_MODEL", "claude-sonnet-4-20250514")
+# Set this environment variable or customize dsprrr_targets_llm() below.
+LLM_MODEL <- Sys.getenv("DSPRRR_MODEL", "claude-sonnet-4-5-20250929")
+
+# Keep provider construction outside the graph so deployments and tests can
+# replace it without editing target definitions. A custom factory receives the
+# configured model name and must return an ellmer Chat object.
+dsprrr_targets_llm <- function() {
+  factory <- getOption("dsprrr.targets.llm_factory")
+
+  if (is.null(factory)) {
+    return(ellmer::chat_anthropic(model = LLM_MODEL))
+  }
+  if (!is.function(factory)) {
+    stop("Option 'dsprrr.targets.llm_factory' must be a function.")
+  }
+
+  factory(model = LLM_MODEL)
+}
 
 # Pins board for persisting results
 PINS_BOARD_PATH <- "pins"
@@ -116,11 +132,12 @@ list(
   tar_target(
     llm_client,
     {
-      # CUSTOMIZE: Choose your LLM provider
-      # Options: chat_claude(), chat_openai(), chat_ollama(), etc.
-      ellmer::chat_claude(model = LLM_MODEL)
+      # CUSTOMIZE: edit dsprrr_targets_llm() for chat_openai(),
+      # chat_ollama(), or another ellmer provider.
+      dsprrr_targets_llm()
     },
-    # Don't cache the LLM client across runs
+    # Recreate the stateful Chat for every pipeline run. targets still stores
+    # this value during the run so downstream targets share the same client.
     cue = tar_cue(mode = "always")
   ),
 
@@ -145,7 +162,7 @@ list(
       # Run optimization
       dsprrr::optimize_grid(
         mod,
-        devset = train_data,
+        data = train_data,
         metric = metric,
         parameters = list(
           temperature = c(0.0, 0.3, 0.7)
@@ -178,7 +195,7 @@ list(
 
       dsprrr::evaluate(
         optimized_module,
-        dataset = test_data,
+        data = test_data,
         metric = metric,
         .llm = llm_client,
         .progress = TRUE
@@ -304,13 +321,16 @@ list(
   tar_target(
     summary_json,
     {
+      path <- file.path("outputs", "summary.json")
+      dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
       jsonlite::write_json(
         summary_stats,
-        "outputs/summary.json",
+        path,
         auto_unbox = TRUE,
         pretty = TRUE
       )
-      "outputs/summary.json"
-    }
+      path
+    },
+    format = "file"
   )
 )

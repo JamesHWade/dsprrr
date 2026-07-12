@@ -160,6 +160,27 @@ BootstrapFewShotWithRandomSearch <- S7::new_class(
   )
 )
 
+new_optimizer_score_error <- function(candidate_name, score) {
+  score_label <- if (length(score) == 0L) {
+    "missing"
+  } else {
+    as.character(score[[1L]])
+  }
+
+  structure(
+    list(
+      message = paste0(
+        "Candidate ",
+        candidate_name,
+        " returned an unusable mean_score: ",
+        score_label
+      ),
+      call = NULL
+    ),
+    class = c("dsprrr_optimizer_score_error", "error", "condition")
+  )
+}
+
 #' Compile method for BootstrapFewShotWithRandomSearch
 #' @noRd
 compile_bootstrap_rs <- function(
@@ -168,6 +189,7 @@ compile_bootstrap_rs <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
+  control = NULL,
   ...
 ) {
   # Validate inputs
@@ -201,32 +223,36 @@ compile_bootstrap_rs <- function(
     )
   }
 
-  # Create control from teleprompter settings
-  control <- optimizer_control(
-    seed = teleprompter@seed,
-    max_errors = teleprompter@max_errors,
-    num_threads = teleprompter@num_threads,
-    log_dir = teleprompter@log_dir
+  control <- optimizer_control_for_teleprompter(
+    teleprompter,
+    control = control,
+    num_threads = teleprompter@num_threads
   )
+  optimizer_require_ledger_only_checkpoint(
+    control,
+    "BootstrapFewShotWithRandomSearch"
+  )
+  budget <- new_optimizer_budget(control)
+  effective_seed <- control@seed %||% teleprompter@seed
 
   # Initialize trial logging if log_dir specified
-  trial_log <- if (!is.null(teleprompter@log_dir)) {
+  trial_log <- if (!is.null(control@log_dir)) {
     TrialLog$new(
       optimizer_name = "BootstrapFewShotWithRandomSearch",
-      log_dir = teleprompter@log_dir
+      log_dir = control@log_dir
     )
   } else {
     NULL
   }
 
   # Set seed for reproducibility
-  if (!is.null(teleprompter@seed)) {
+  if (!is.null(effective_seed)) {
     old_seed <- if (exists(".Random.seed", envir = globalenv())) {
       get(".Random.seed", envir = globalenv())
     } else {
       NULL
     }
-    set.seed(teleprompter@seed)
+    set.seed(effective_seed)
     on.exit(
       {
         if (is.null(old_seed)) {
@@ -243,7 +269,7 @@ compile_bootstrap_rs <- function(
   candidates <- generate_candidate_configs(
     teleprompter,
     nrow(trainset),
-    teleprompter@seed
+    effective_seed
   )
 
   cli::cli_alert_info(
@@ -255,9 +281,16 @@ compile_bootstrap_rs <- function(
   best_score <- -Inf
   best_candidate <- NULL
   best_program <- NULL
+  partial_program <- copy_module(program)
 
   for (i in seq_along(candidates)) {
+    if (optimizer_budget_stopped(budget)) {
+      break
+    }
+
     config <- candidates[[i]]
+    candidate_prefix <- paste0("bootstrap_rs:candidate:", i)
+    validation_unit_id <- paste0(candidate_prefix, ":validation")
 
     cli::cli_progress_step(
       "Candidate {i}/{length(candidates)}: {config$name}",
@@ -273,7 +306,10 @@ compile_bootstrap_rs <- function(
           program = program,
           trainset = trainset,
           .llm = .llm,
-          teleprompter = teleprompter
+          teleprompter = teleprompter,
+          control = control,
+          budget = budget,
+          checkpoint_namespace = candidate_prefix
         )
       },
       error = function(e) {
@@ -290,6 +326,23 @@ compile_bootstrap_rs <- function(
     )
 
     if (is.null(compiled)) {
+      compile_unit_id <- paste0(candidate_prefix, ":compile")
+      optimizer_budget_count_trial(
+        budget,
+        "bootstrap_rs_compile",
+        compile_unit_id
+      )
+      record_optimizer_outcome(
+        budget,
+        success = FALSE,
+        stage = "bootstrap_rs_compile",
+        condition = if (!is.null(compile_error_msg)) {
+          simpleError(compile_error_msg)
+        } else {
+          NULL
+        }
+      )
+      optimizer_budget_complete_unit(budget, compile_unit_id)
       results[[i]] <- list(
         name = config$name,
         config = config,
@@ -298,19 +351,26 @@ compile_bootstrap_rs <- function(
         error = TRUE,
         error_message = compile_error_msg %||% "Unknown compilation error"
       )
+      if (optimizer_budget_stopped(budget)) {
+        break
+      }
       next
     }
 
     # Evaluate on validation set
     eval_error_msg <- NULL
+    errors_before_evaluation <- budget$total_errors
     eval_result <- tryCatch(
       {
-        eval_program(
+        optimizer_eval_candidate(
           compiled,
           valset,
           teleprompter@metric,
           .llm = .llm,
-          control = control
+          control = control,
+          budget = budget,
+          stage = "bootstrap_rs_validation",
+          unit_id = validation_unit_id
         )
       },
       error = function(e) {
@@ -326,8 +386,93 @@ compile_bootstrap_rs <- function(
       }
     )
 
-    score <- if (!is.null(eval_result)) eval_result@mean_score else NA_real_
-    has_error <- is.null(eval_result)
+    evaluation_started <- validation_unit_id %in% budget$trial_units
+    if (is.null(eval_result)) {
+      unknown_usage <- optimizer_unknown_provider_usage()
+      unknown_usage$metric_calls <- NA_integer_
+      record_optimizer_usage(
+        budget,
+        unknown_usage,
+        stage = "bootstrap_rs_evaluation",
+        unit_id = validation_unit_id,
+        work_unit = "candidate_validation",
+        max_started = 1L
+      )
+      optimizer_budget_count_trial(
+        budget,
+        "bootstrap_rs_evaluation",
+        validation_unit_id
+      )
+      optimizer_budget_complete_unit(budget, validation_unit_id)
+      evaluation_started <- TRUE
+    }
+
+    if (
+      identical(config$type, "baseline") ||
+        identical(partial_program$config$candidate_type, NULL)
+    ) {
+      partial_program <- compiled
+    }
+
+    raw_score <- if (!is.null(eval_result)) {
+      eval_result@mean_score
+    } else {
+      NA_real_
+    }
+    usable_score <- !is.null(eval_result) &&
+      length(raw_score) == 1L &&
+      !is.na(raw_score) &&
+      is.finite(raw_score)
+    score_condition <- NULL
+    budget_blocked <- !evaluation_started && optimizer_budget_stopped(budget)
+    if (!is.null(eval_result) && !usable_score && !budget_blocked) {
+      score_condition <- new_optimizer_score_error(config$name, raw_score)
+      eval_error_msg <- conditionMessage(score_condition)
+      cli::cli_warn(
+        c(
+          "Candidate {config$name} returned an unusable score",
+          "x" = eval_error_msg,
+          "i" = "The candidate will count as an evaluation failure"
+        ),
+        class = "dsprrr_optimizer_score_warning"
+      )
+    }
+
+    score <- if (usable_score) raw_score else NA_real_
+    has_error <- is.null(eval_result) || (!usable_score && !budget_blocked)
+    evaluation_complete <- optimizer_budget_unit_completed(
+      budget,
+      validation_unit_id
+    )
+
+    if (is.null(eval_result) && evaluation_started) {
+      record_optimizer_outcome(
+        budget,
+        success = FALSE,
+        stage = "bootstrap_rs_evaluation",
+        condition = if (!is.null(eval_error_msg)) {
+          simpleError(eval_error_msg)
+        } else {
+          NULL
+        }
+      )
+    } else if (
+      !is.null(score_condition) &&
+        budget$total_errors == errors_before_evaluation
+    ) {
+      # A structurally complete EvalResult can still carry an unusable
+      # aggregate score. Count that optimizer-level failure only when the row
+      # ledger did not already account an evaluation failure.
+      record_optimizer_outcome(
+        budget,
+        success = FALSE,
+        stage = "bootstrap_rs_evaluation",
+        condition = score_condition
+      )
+    } else if (budget_blocked) {
+      eval_error_msg <- budget$stop_reason$message %||%
+        "Candidate validation was blocked by the optimizer budget"
+    }
 
     results[[i]] <- list(
       name = config$name,
@@ -336,6 +481,7 @@ compile_bootstrap_rs <- function(
       score = score,
       eval_result = eval_result,
       error = has_error,
+      complete = evaluation_complete,
       error_message = if (has_error) {
         eval_error_msg %||% "Evaluation failed"
       } else {
@@ -344,7 +490,7 @@ compile_bootstrap_rs <- function(
     )
 
     # Track best
-    if (!is.na(score) && score > best_score) {
+    if (evaluation_complete && !is.na(score) && score > best_score) {
       best_score <- score
       best_candidate <- config
       best_program <- compiled
@@ -355,7 +501,7 @@ compile_bootstrap_rs <- function(
     }
 
     # Log trial
-    if (!is.null(trial_log) && !is.null(eval_result)) {
+    if (!is.null(trial_log) && !has_error && evaluation_complete) {
       trial <- create_trial(
         optimizer_name = "BootstrapFewShotWithRandomSearch",
         params = config
@@ -366,6 +512,10 @@ compile_bootstrap_rs <- function(
         compiled_artifact_ref = compiled
       )
       trial_log$add_trial(trial)
+    }
+
+    if (optimizer_budget_stopped(budget)) {
+      break
     }
 
     # Early stopping
@@ -386,44 +536,51 @@ compile_bootstrap_rs <- function(
   ranked_order <- order(scores, decreasing = TRUE, na.last = TRUE)
   ranked_results <- results[ranked_order]
 
-  # Use best program or abort if all candidates failed
+  # A normal resource stop returns the original/baseline program with partial
+  # metadata when no complete candidate exists. Only systemic failures that do
+  # not exhaust a configured budget retain the all-candidates-failed error.
   if (is.null(best_program)) {
-    # Collect error messages from failed candidates
-    error_msgs <- vapply(
-      results,
-      function(r) {
-        if (isTRUE(r$error)) {
-          r$error_message %||% "Unknown error"
-        } else {
-          NA_character_
-        }
-      },
-      character(1)
-    )
-    error_msgs <- error_msgs[!is.na(error_msgs)]
-
-    cli::cli_abort(
-      c(
-        "All {length(results)} candidate programs failed to compile or evaluate",
-        "i" = "This indicates a systemic issue with your configuration",
-        "x" = if (length(error_msgs) > 0) {
-          paste(
-            "Sample errors:",
-            paste(utils::head(error_msgs, 3), collapse = "; ")
-          )
-        } else {
-          "No specific error messages captured"
+    if (optimizer_budget_stopped(budget)) {
+      best_program <- partial_program
+    } else {
+      # Collect error messages from failed candidates
+      error_msgs <- vapply(
+        results,
+        function(r) {
+          if (isTRUE(r$error)) {
+            r$error_message %||% "Unknown error"
+          } else {
+            NA_character_
+          }
         },
-        "i" = "Check your LLM connection, metric function, and trainset format"
-      ),
-      class = "dsprrr_all_candidates_failed"
-    )
+        character(1)
+      )
+      error_msgs <- error_msgs[!is.na(error_msgs)]
+
+      cli::cli_abort(
+        c(
+          "All {length(results)} candidate programs failed to compile or evaluate",
+          "i" = "This indicates a systemic issue with your configuration",
+          "x" = if (length(error_msgs) > 0) {
+            paste(
+              "Sample errors:",
+              paste(utils::head(error_msgs, 3), collapse = "; ")
+            )
+          } else {
+            "No specific error messages captured"
+          },
+          "i" = "Check your LLM connection, metric function, and trainset format"
+        ),
+        class = "dsprrr_all_candidates_failed"
+      )
+    }
   }
 
   # Update program state
   best_program$state$compiled <- TRUE
   best_program$config$compiled <- TRUE
   best_program$config$teleprompter <- "BootstrapFewShotWithRandomSearch"
+  budget_summary <- optimizer_budget_summary(budget)
   best_program$config$optimizer <- list(
     num_candidates_evaluated = length(results),
     best_candidate = if (!is.null(best_candidate)) {
@@ -431,14 +588,20 @@ compile_bootstrap_rs <- function(
     } else {
       NA_character_
     },
-    best_score = best_score,
+    best_score = if (is.finite(best_score)) best_score else NA_real_,
+    best_complete = !is.null(best_candidate),
     candidate_programs = lapply(ranked_results, function(r) {
       list(
         name = r$name,
         score = r$score,
-        config = r$config
+        config = r$config,
+        complete = isTRUE(r$complete)
       )
-    })
+    }),
+    error_count = budget_summary$total_errors,
+    budget_summary = budget_summary,
+    stop_reason = budget_summary$stop_reason,
+    partial = optimizer_budget_stopped(budget)
   )
 
   best_program
@@ -505,7 +668,16 @@ generate_candidate_configs <- function(teleprompter, n_train, base_seed) {
 
 #' Compile a single candidate program
 #' @noRd
-compile_candidate <- function(config, program, trainset, .llm, teleprompter) {
+compile_candidate <- function(
+  config,
+  program,
+  trainset,
+  .llm,
+  teleprompter,
+  control = NULL,
+  budget = NULL,
+  checkpoint_namespace = "bootstrap_rs_candidate"
+) {
   if (config$type == "baseline") {
     # Return uncompiled copy
     compiled <- copy_module(program)
@@ -537,7 +709,18 @@ compile_candidate <- function(config, program, trainset, .llm, teleprompter) {
       teacher_settings = config$teacher_settings,
       seed = config$seed
     )
-    compiled <- compile(tp, program, trainset, .llm = .llm)
+    compiled <- compile(
+      tp,
+      program,
+      trainset,
+      .llm = .llm,
+      control = control,
+      .optimizer_budget = budget,
+      .checkpoint_namespace = paste0(
+        checkpoint_namespace,
+        ":bootstrap"
+      )
+    )
     compiled$config$candidate_type <- "bootstrap"
     return(compiled)
   }

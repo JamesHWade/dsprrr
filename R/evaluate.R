@@ -15,6 +15,8 @@
 #'   Additional arguments passed to [run_dataset()]:
 #'   - `.llm`: Optional ellmer chat object
 #'   - `.parallel`: Logical; whether to allow parallel execution
+#'   - `.concurrency`: A policy created by [concurrency_control()]. Do not also
+#'     pass `.parallel` when using an explicit policy.
 #'   - `.progress`: Logical; whether to display progress while evaluating
 #'   - `.return_format`: Character; `"simple"` returns just scores and predictions,
 #'     `"structured"` (default) includes full metadata and data
@@ -80,6 +82,73 @@ evaluate <- function(module, ...) {
   UseMethod("evaluate")
 }
 
+# Aggregate attempted scores without rewarding failures. Raw score vectors keep
+# NA for diagnostics, but every NA contributes zero to performance summaries.
+failure_adjusted_mean <- function(scores) {
+  if (length(scores) == 0) {
+    return(NA_real_)
+  }
+
+  adjusted_scores <- scores
+  adjusted_scores[is.na(adjusted_scores)] <- 0
+  result <- mean(adjusted_scores)
+
+  if (is.finite(result)) result else NA_real_
+}
+
+# Compute every multi-epoch performance statistic from the same estimand: each
+# attempted row-epoch is one observation and failures contribute zero. Epochs
+# are required to have equal lengths before this helper is called, so the mean
+# of epoch means is also the mean over all attempted row-epoch observations.
+summarize_epoch_scores <- function(epoch_scores) {
+  epoch_means <- vapply(
+    epoch_scores,
+    failure_adjusted_mean,
+    numeric(1)
+  )
+
+  mean_score <- if (length(epoch_means) == 0 || anyNA(epoch_means)) {
+    NA_real_
+  } else {
+    mean(epoch_means)
+  }
+
+  no_uncertainty <- list(
+    epoch_means = epoch_means,
+    mean_score = mean_score,
+    score_std = NA_real_,
+    ci_95 = c(lower = NA_real_, upper = NA_real_)
+  )
+
+  if (length(epoch_means) < 2 || is.na(mean_score)) {
+    return(no_uncertainty)
+  }
+
+  score_std <- stats::sd(epoch_means)
+  if (!is.finite(score_std)) {
+    return(no_uncertainty)
+  }
+
+  standard_error <- score_std / sqrt(length(epoch_means))
+  degrees_freedom <- length(epoch_means) - 1L
+  margin <- stats::qt(0.975, df = degrees_freedom) * standard_error
+  ci_95 <- c(
+    lower = mean_score - margin,
+    upper = mean_score + margin
+  )
+
+  if (!all(is.finite(ci_95))) {
+    ci_95[] <- NA_real_
+  }
+
+  list(
+    epoch_means = epoch_means,
+    mean_score = mean_score,
+    score_std = score_std,
+    ci_95 = ci_95
+  )
+}
+
 #' Evaluate an R6 Module
 #'
 #' @details
@@ -96,11 +165,27 @@ evaluate.Module <- function(
   metric,
   .llm = NULL,
   .parallel = FALSE,
+  .concurrency = NULL,
   .progress = TRUE,
   .return_format = c("structured", "simple"),
   epochs = 1L,
   ...
 ) {
+  parallel_missing <- missing(.parallel)
+  concurrency_missing <- missing(.concurrency)
+  explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
+  if (explicit_concurrency && !parallel_missing) {
+    cli::cli_abort(
+      c(
+        "{.arg .concurrency} cannot be combined with {.arg .parallel}",
+        "i" = "Configure workers and backend with {.fn concurrency_control} only."
+      ),
+      class = "dsprrr_concurrency_argument_conflict"
+    )
+  }
+  if (explicit_concurrency) {
+    .concurrency <- validate_concurrency_control(.concurrency)
+  }
   .return_format <- match.arg(.return_format)
 
   # Validate epochs
@@ -150,7 +235,7 @@ evaluate.Module <- function(
 
   # Safety: disallow parallel reuse of custom LLM clients
   parallel_allowed <- .parallel
-  if (.parallel && !is.null(.llm)) {
+  if (!explicit_concurrency && .parallel && !is.null(.llm)) {
     cli::cli_warn(
       "Parallel execution requires a NULL .llm so each worker can create its own client; falling back to sequential processing"
     )
@@ -167,16 +252,26 @@ evaluate.Module <- function(
     }
 
     # Execute module with error handling
+    execution_args <- if (explicit_concurrency) {
+      list(.concurrency = .concurrency)
+    } else {
+      list(.parallel = parallel_allowed)
+    }
     evaluated <- tryCatch(
       {
-        run_dataset(
-          module,
-          data,
-          .llm = .llm,
-          .parallel = parallel_allowed,
-          .progress = .progress && epochs == 1,
-          .return_format = "structured",
-          ...
+        do.call(
+          run_dataset,
+          c(
+            list(
+              module = module,
+              data = data,
+              .llm = .llm,
+              .progress = .progress && epochs == 1,
+              .return_format = "structured"
+            ),
+            execution_args,
+            list(...)
+          )
         )
       },
       error = function(e) {
@@ -311,7 +406,7 @@ evaluate.Module <- function(
         if (anyNA(epoch_scores_i)) {
           NA_real_
         } else {
-          mean(epoch_scores_i, na.rm = TRUE)
+          mean(epoch_scores_i)
         }
       },
       numeric(1)
@@ -355,14 +450,19 @@ evaluate.Module <- function(
     numeric(1)
   ))
 
-  # Failed rows (score NA) count as 0 in the headline mean, matching DSPy.
-  # Optimizers select on `mean_score`; dropping failures with na.rm would let a
-  # config that errors on the hard examples outrank a robust one. The raw
-  # `scores` vector keeps NA for diagnostics, and `n_errors` reports failures.
-  mean_score <- if (length(scores) == 0) {
-    NA_real_
+  epoch_summary <- if (epochs > 1) {
+    summarize_epoch_scores(all_epoch_scores)
   } else {
-    mean(ifelse(is.na(scores), 0, scores))
+    NULL
+  }
+
+  # Optimizers select on `mean_score`, so failures must contribute zero instead
+  # of disappearing. For multiple epochs, use the same row-epoch estimand as
+  # the uncertainty statistics rather than the diagnostic per-row `scores`.
+  mean_score <- if (epochs > 1) {
+    epoch_summary$mean_score
+  } else {
+    failure_adjusted_mean(scores)
   }
   n_evaluated <- sum(!is.na(scores))
   n_errors <- sum(is.na(scores))
@@ -389,75 +489,16 @@ evaluate.Module <- function(
   if (epochs > 1) {
     # Use all_epoch_scores already computed during aggregation
     result$epoch_scores <- all_epoch_scores
+    result$score_std <- epoch_summary$score_std
+    result$ci_95 <- epoch_summary$ci_95
 
-    # Compute mean score for each epoch
-    epoch_means <- vapply(
-      all_epoch_scores,
-      function(s) mean(s, na.rm = TRUE),
-      numeric(1)
-    )
-
-    # Standard deviation of epoch means with validation
-    score_std_raw <- stats::sd(epoch_means, na.rm = TRUE)
-
-    # Validate statistical results
-    if (is.nan(score_std_raw) || is.infinite(score_std_raw)) {
+    degrees_freedom <- epochs - 1L
+    if (degrees_freedom < 3L && !is.na(result$score_std)) {
       cli::cli_warn(c(
-        "Invalid standard deviation computed across epochs",
-        "x" = "Got {score_std_raw}",
-        "i" = "Epoch means: {paste(round(epoch_means, 4), collapse = ', ')}",
-        "i" = "This may indicate metric computation errors"
+        "Confidence intervals computed with only {epochs} epochs (df={degrees_freedom})",
+        "i" = "Consider using epochs >= 5 for reliable statistical inference",
+        "i" = "Current CI may be extremely wide and unreliable"
       ))
-      result$score_std <- NA_real_
-    } else {
-      result$score_std <- score_std_raw
-    }
-
-    # 95% confidence interval using t-distribution
-    # Appropriate for any sample size, especially small n
-    if (
-      length(epoch_means) > 1 &&
-        !all(is.na(epoch_means)) &&
-        !is.na(result$score_std)
-    ) {
-      se <- result$score_std / sqrt(length(epoch_means))
-
-      # Validate SE
-      if (is.nan(se) || is.infinite(se)) {
-        cli::cli_warn(c(
-          "Invalid standard error: {se}",
-          "i" = "Cannot compute valid confidence intervals"
-        ))
-        result$ci_95 <- c(lower = NA_real_, upper = NA_real_)
-      } else {
-        df <- length(epoch_means) - 1
-
-        # Warn about low degrees of freedom
-        if (df < 3) {
-          cli::cli_warn(c(
-            "Confidence intervals computed with only {epochs} epochs (df={df})",
-            "i" = "Consider using epochs >= 5 for reliable statistical inference",
-            "i" = "Current CI may be extremely wide and unreliable"
-          ))
-        }
-
-        t_crit <- stats::qt(0.975, df = df)
-        margin <- t_crit * se
-        result$ci_95 <- c(
-          lower = mean(epoch_means, na.rm = TRUE) - margin,
-          upper = mean(epoch_means, na.rm = TRUE) + margin
-        )
-
-        # Validate final CI
-        if (any(is.nan(result$ci_95)) || any(is.infinite(result$ci_95))) {
-          cli::cli_warn(
-            "Invalid confidence interval computed: [{result$ci_95[1]}, {result$ci_95[2]}]"
-          )
-          result$ci_95 <- c(lower = NA_real_, upper = NA_real_)
-        }
-      }
-    } else {
-      result$ci_95 <- c(lower = NA_real_, upper = NA_real_)
     }
   }
 

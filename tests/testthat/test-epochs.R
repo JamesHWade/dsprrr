@@ -33,6 +33,24 @@ test_that("evaluate() works with epochs = 1 (default behavior)", {
   expect_false("ci_95" %in% names(result))
 })
 
+test_that("epoch summaries omit uncertainty with fewer than two epochs", {
+  summary <- summarize_epoch_scores(list(c(1, NA_real_)))
+
+  expect_equal(summary$epoch_means, 0.5)
+  expect_equal(summary$mean_score, 0.5)
+  expect_true(is.na(summary$score_std))
+  expect_named(summary$ci_95, c("lower", "upper"))
+  expect_true(all(is.na(summary$ci_95)))
+  expect_false(any(is.nan(unlist(summary))))
+  expect_false(any(is.infinite(unlist(summary))))
+
+  failed_summary <- summarize_epoch_scores(list(c(NA_real_, NA_real_)))
+  expect_equal(failed_summary$epoch_means, 0)
+  expect_equal(failed_summary$mean_score, 0)
+  expect_true(is.na(failed_summary$score_std))
+  expect_true(all(is.na(failed_summary$ci_95)))
+})
+
 test_that("evaluate() runs multiple epochs when epochs > 1", {
   sig <- signature("question -> answer")
   mod <- module(sig, type = "predict")
@@ -133,25 +151,18 @@ test_that("evaluate() computes correct statistics across epochs", {
   expect_equal(result$score_std, 0)
 })
 
-test_that("eval_program() works with epochs parameter", {
-  sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
-
-  # Mock LLM
-  mock_llm <- list(
-    chat_structured = function(...) "4"
-  )
-
-  dataset <- tibble::tibble(
-    question = "What is 2+2?",
-    answer = "4"
-  )
-
-  # Simple metric that compares prediction to expected row$answer
+test_that("eval_program() preserves failure-adjusted epoch statistics", {
+  mod <- module(signature("question -> answer"), type = "predict")
+  mock_llm <- list(chat_structured = function(...) "4")
+  dataset <- tibble::tibble(question = "What is 2+2?", answer = "4")
+  metric_calls <- 0L
   metric <- function(prediction, expected_row) {
-    identical(prediction, expected_row$answer)
+    metric_calls <<- metric_calls + 1L
+    if (metric_calls == 1L) {
+      stop("First epoch fails")
+    }
+    1
   }
-  ctrl <- optimizer_control(progress = FALSE)
 
   result <- suppressWarnings(
     eval_program(
@@ -159,18 +170,32 @@ test_that("eval_program() works with epochs parameter", {
       dataset,
       metric = metric,
       .llm = mock_llm,
-      control = ctrl,
-      epochs = 3L
+      control = optimizer_control(progress = FALSE),
+      epochs = 3L,
+      .cache = FALSE
     )
   )
 
-  # Check S7 class using S7::class_of
+  expected_epoch_means <- c(0, 1, 1)
+  expected_sd <- stats::sd(expected_epoch_means)
+  expected_margin <- stats::qt(0.975, df = 2) * expected_sd / sqrt(3)
+
   expect_true(inherits(result, "S7_object"))
   expect_equal(result@epochs, 3L)
-  expect_equal(length(result@epoch_scores), 3)
-  expect_true(!is.na(result@score_std))
-  expect_true(!is.na(result@ci_lower))
-  expect_true(!is.na(result@ci_upper))
+  expect_equal(result@epoch_scores, list(NA_real_, 1, 1))
+  expect_equal(result@mean_score, mean(expected_epoch_means))
+  expect_equal(result@score_std, expected_sd)
+  expect_equal(
+    unname(result@ci_lower),
+    mean(expected_epoch_means) - expected_margin
+  )
+  expect_equal(
+    unname(result@ci_upper),
+    mean(expected_epoch_means) + expected_margin
+  )
+  expect_equal(result@n_errors, 1L)
+  expect_equal(result@n_evaluated, 0L)
+  expect_true(is.na(result@examples$score))
 })
 
 test_that("epochs parameter validates input", {
@@ -208,28 +233,29 @@ test_that("epochs parameter validates input", {
   )
 })
 
-test_that("epoch results are aggregated correctly", {
+test_that("epoch results use all no-failure observations consistently", {
   sig <- signature("question -> answer")
   mod <- module(sig, type = "predict")
 
   # Mock LLM with varying correctness
   # Epoch 1: score 0.5, Epoch 2: score 1.0, Epoch 3: score 0.0
   responses <- c("4", "wrong", "4", "4", "wrong", "wrong")
-  call_idx <- 0
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(...) {
-          call_idx <<- call_idx + 1
-          responses[call_idx]
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  # Model the provider as an external ordered response stream. Chat instances
+  # are intentionally isolated per row, so a counter captured inside the Chat
+  # would be copied from the same baseline for every row.
+  response_path <- withr::local_tempfile()
+  writeLines(responses, response_path)
+  mock_llm <- list(
+    chat_structured = function(...) {
+      remaining <- readLines(response_path)
+      if (length(remaining) == 0) {
+        stop("The deterministic provider response stream is exhausted")
+      }
+      response <- remaining[[1]]
+      writeLines(remaining[-1], response_path)
+      response
+    }
+  )
 
   dataset <- tibble::tibble(
     question = c("Q1", "Q2"),
@@ -254,23 +280,33 @@ test_that("epoch results are aggregated correctly", {
     "Confidence intervals"
   )
 
-  # Check that we have 3 epochs
   expect_equal(length(result$epoch_scores), 3)
 
-  # Compute expected epoch means: [0.5, 1.0, 0.0]
   epoch_means <- vapply(
     result$epoch_scores,
-    function(s) mean(s, na.rm = TRUE),
+    mean,
     numeric(1)
   )
   expect_equal(epoch_means, c(0.5, 1.0, 0.0))
 
-  # Mean across epochs should be (0.5 + 1.0 + 0.0) / 3 = 0.5
-  expect_equal(result$mean_score, 0.5)
-
-  # SD should be sd(c(0.5, 1.0, 0.0))
-  expected_sd <- sd(c(0.5, 1.0, 0.0))
+  expected_mean <- mean(epoch_means)
+  expected_sd <- stats::sd(epoch_means)
+  expected_margin <- stats::qt(0.975, df = 2) * expected_sd / sqrt(3)
+  expect_equal(result$mean_score, expected_mean)
   expect_equal(result$score_std, expected_sd)
+  expect_equal(
+    result$ci_95,
+    c(
+      lower = expected_mean - expected_margin,
+      upper = expected_mean + expected_margin
+    )
+  )
+  expect_equal(mean(result$ci_95), result$mean_score)
+  expect_equal(result$n_errors, 0L)
+  expect_equal(result$n_run_errors, 0L)
+  expect_equal(result$n_metric_errors, 0L)
+  expect_length(result$run_errors, 0L)
+  expect_length(result$metric_errors, 0L)
 })
 
 test_that("print methods show epoch information", {
@@ -429,11 +465,10 @@ test_that("eval_program() validates epochs parameter", {
   )
 })
 
-test_that("evaluate() counts intermittent metric failures correctly", {
+test_that("evaluate() counts intermittent metric failures as zero", {
   sig <- signature("question -> answer")
   mod <- module(sig, type = "predict")
 
-  # Mock LLM that returns consistent output
   mock_llm <- list(chat_structured = function(...) "4")
 
   dataset <- tibble::tibble(
@@ -441,17 +476,11 @@ test_that("evaluate() counts intermittent metric failures correctly", {
     answer = c("4", "4", "4")
   )
 
-  # Metric that fails intermittently for specific rows/epochs
-  # Row 1: fails in epoch 1 only
-  # Row 2: succeeds in all epochs
-  # Row 3: fails in epoch 2 only
-  call_count <- 0
+  metric_calls <- 0L
   intermittent_metric <- function(prediction, expected_row) {
-    call_count <<- call_count + 1
-    # Pattern: epoch 1 (calls 1-3), epoch 2 (calls 4-6), epoch 3 (calls 7-9)
-    # Fail on call 1 (row 1, epoch 1) and call 6 (row 3, epoch 2)
-    if (call_count %in% c(1, 6)) {
-      stop("Intermittent failure")
+    metric_calls <<- metric_calls + 1L
+    if (metric_calls %in% c(1, 6)) {
+      stop("Intermittent metric failure")
     }
     identical(prediction, expected_row$answer)
   }
@@ -463,22 +492,96 @@ test_that("evaluate() counts intermittent metric failures correctly", {
       metric = intermittent_metric,
       .llm = mock_llm,
       .progress = FALSE,
-      epochs = 3L
+      epochs = 3L,
+      .cache = FALSE
     )
   )
 
-  # Should mark rows 1 and 3 as errors (intermittent failures)
-  # Row 2 should succeed (no failures)
+  expected_epoch_scores <- list(
+    c(NA_real_, 1, 1),
+    c(1, 1, NA_real_),
+    c(1, 1, 1)
+  )
+  expected_epoch_means <- c(2 / 3, 2 / 3, 1)
+  expected_mean <- mean(expected_epoch_means)
+  expected_sd <- stats::sd(expected_epoch_means)
+  expected_margin <- stats::qt(0.975, df = 2) * expected_sd / sqrt(3)
+
+  expect_equal(result$epoch_scores, expected_epoch_scores)
+  expect_equal(result$mean_score, expected_mean)
+  expect_equal(result$score_std, expected_sd)
+  expect_equal(
+    result$ci_95,
+    c(
+      lower = expected_mean - expected_margin,
+      upper = expected_mean + expected_margin
+    )
+  )
+  expect_equal(mean(result$ci_95), result$mean_score)
   expect_equal(result$n_errors, 2L)
   expect_equal(result$n_evaluated, 1L)
-
-  # Scores should have NA for rows 1 and 3, valid for row 2
   expect_true(is.na(result$scores[1]))
-  expect_false(is.na(result$scores[2]))
+  expect_equal(result$scores[2], 1)
   expect_true(is.na(result$scores[3]))
+  expect_equal(result$n_run_errors, 0L)
+  expect_equal(result$n_metric_errors, 2L)
+  expect_length(result$run_errors, 0L)
+  expect_length(result$metric_errors, 2L)
+  expect_match(result$metric_errors[1], "Epoch 1: Intermittent metric failure")
+  expect_match(result$metric_errors[2], "Epoch 2: Intermittent metric failure")
+})
 
-  # Errors should contain information from both epochs
-  expect_true(length(result$errors) > 0)
-  expect_true(any(grepl("Epoch 1", result$errors, fixed = TRUE)))
-  expect_true(any(grepl("Epoch 2", result$errors, fixed = TRUE)))
+test_that("evaluate() includes a wholly failed epoch in uncertainty", {
+  mod <- module(signature("question -> answer"), type = "predict")
+  mock_llm <- list(chat_structured = function(...) "4")
+  dataset <- tibble::tibble(
+    question = c("Q1", "Q2"),
+    answer = c("4", "4")
+  )
+  metric_calls <- 0L
+  metric <- function(prediction, expected_row) {
+    metric_calls <<- metric_calls + 1L
+    if (metric_calls %in% 3:4) {
+      stop("Epoch unavailable")
+    }
+    1
+  }
+
+  result <- suppressWarnings(
+    evaluate(
+      mod,
+      data = dataset,
+      metric = metric,
+      .llm = mock_llm,
+      .progress = FALSE,
+      epochs = 3L,
+      .cache = FALSE
+    )
+  )
+
+  expected_epoch_means <- c(1, 0, 1)
+  expected_mean <- mean(expected_epoch_means)
+  expected_sd <- stats::sd(expected_epoch_means)
+  expected_margin <- stats::qt(0.975, df = 2) * expected_sd / sqrt(3)
+
+  expect_equal(
+    result$epoch_scores,
+    list(c(1, 1), c(NA_real_, NA_real_), c(1, 1))
+  )
+  expect_equal(result$mean_score, expected_mean)
+  expect_equal(result$score_std, expected_sd)
+  expect_equal(
+    result$ci_95,
+    c(
+      lower = expected_mean - expected_margin,
+      upper = expected_mean + expected_margin
+    )
+  )
+  expect_equal(mean(result$ci_95), result$mean_score)
+  expect_equal(result$n_errors, 2L)
+  expect_equal(result$n_evaluated, 0L)
+  expect_equal(result$n_run_errors, 0L)
+  expect_equal(result$n_metric_errors, 2L)
+  expect_length(result$run_errors, 0L)
+  expect_length(result$metric_errors, 2L)
 })

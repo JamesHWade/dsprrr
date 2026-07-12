@@ -34,7 +34,8 @@ Trial(
 
 \item{notes}{Optional character string with additional notes.}
 
-\item{compiled_artifact_ref}{Optional reference to compiled module (file path or object).}
+\item{compiled_artifact_ref}{Optional compiled module. The best module is
+persisted with \code{\link[=save_program]{save_program()}} rather than serialized as a live R object.}
 
 \item{status}{Trial status: "pending", "running", "completed", "failed".}
 }

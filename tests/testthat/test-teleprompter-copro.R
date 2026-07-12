@@ -269,9 +269,9 @@ test_that("COPRO compile optimizes instructions", {
         best_instruction_applied <<- TRUE
         return("4")
       }
-      # Default behavior - sometimes wrong
+      # Deterministic baseline behavior; batch branches must not share RNG state.
       if (grepl("2\\+2", prompt)) {
-        return(if (runif(1) > 0.3) "4" else "wrong")
+        return("wrong")
       }
       "wrong"
     },
@@ -484,4 +484,208 @@ test_that("generate_copro_candidates deduplicates results", {
   # Should have deduplicated to just 1 unique instruction
   expect_equal(length(candidates), 1)
   expect_equal(candidates[[1]], "Same instruction")
+})
+
+test_that("COPRO generation budget follows requested candidate order", {
+  calls <- 0L
+  prompt_model <- function(prompt) {
+    calls <<- calls + 1L
+    if (calls == 1L) {
+      return(NULL)
+    }
+    if (calls == 2L) {
+      return("usable instruction")
+    }
+    stop("generation failed")
+  }
+  budget <- dsprrr:::new_optimizer_budget(
+    dsprrr:::optimizer_control(max_errors = 2L)
+  )
+
+  candidates <- expect_test_warnings(
+    dsprrr:::generate_copro_candidates(
+      current_instructions = "Original",
+      failed_examples = list(),
+      input_names = "question",
+      output_col = "answer",
+      breadth = 3L,
+      prompt_model = prompt_model,
+      budget = budget
+    ),
+    "instruction generation function failed"
+  )
+  summary <- dsprrr:::optimizer_budget_summary(budget)
+
+  expect_equal(calls, 3L)
+  expect_identical(candidates, list("usable instruction"))
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 1L)
+  expect_false(summary$stopped)
+})
+
+test_that("COPRO generation max_errors zero stops after its first request", {
+  calls <- 0L
+  budget <- dsprrr:::new_optimizer_budget(
+    dsprrr:::optimizer_control(max_errors = 0L)
+  )
+
+  candidates <- dsprrr:::generate_copro_candidates(
+    current_instructions = "Original",
+    failed_examples = list(),
+    input_names = "question",
+    output_col = "answer",
+    breadth = 3L,
+    prompt_model = function(prompt) {
+      calls <<- calls + 1L
+      NULL
+    },
+    budget = budget
+  )
+  summary <- dsprrr:::optimizer_budget_summary(budget)
+
+  expect_equal(calls, 1L)
+  expect_length(candidates, 0L)
+  expect_equal(summary$attempts, 1L)
+  expect_equal(summary$total_errors, 1L)
+  expect_true(summary$stopped)
+  expect_equal(summary$stop_reason$limit, 0L)
+})
+
+test_that("COPRO preserves the best candidate when evaluation exhausts budget", {
+  eval_calls <- 0L
+  generation_calls <- 0L
+  eval_result <- function(mean_score, scores, errors) {
+    dsprrr:::EvalResult(
+      examples = data.frame(score = scores, error = errors),
+      mean_score = mean_score,
+      n_evaluated = as.integer(sum(!is.na(scores))),
+      n_errors = as.integer(sum(is.na(scores)))
+    )
+  }
+
+  testthat::local_mocked_bindings(
+    identify_failed_examples = function(...) list(),
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      if (eval_calls == 1L) {
+        return(eval_result(0.5, 0.5, NA_character_))
+      }
+      if (eval_calls == 2L) {
+        return(eval_result(0.7, 0.7, NA_character_))
+      }
+      eval_result(
+        0.9,
+        c(NA_real_, NA_real_),
+        c("first failure", "second failure")
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  prompt_model <- list(chat = function(prompt) {
+    generation_calls <<- generation_calls + 1L
+    paste("Instruction", generation_calls)
+  })
+  teleprompter <- COPRO(
+    metric = function(...) 1,
+    breadth = 2L,
+    depth = 1L,
+    max_errors = 2L,
+    prompt_model = prompt_model,
+    track_stats = TRUE
+  )
+  result <- dsprrr:::compile_copro(
+    teleprompter,
+    module(signature("question -> answer"), type = "predict"),
+    data.frame(question = "q", answer = "a")
+  )
+  optimizer <- result$config$optimizer
+
+  expect_equal(eval_calls, 3L)
+  expect_equal(generation_calls, 2L)
+  expect_equal(optimizer$budget_summary$attempts, 6L)
+  expect_equal(optimizer$budget_summary$successes, 4L)
+  expect_equal(optimizer$error_count, 2L)
+  expect_true(optimizer$budget_summary$stopped)
+  expect_equal(optimizer$stop_reason$attempts, 6L)
+  expect_identical(result$signature@instructions, "Instruction 2")
+})
+
+test_that("COPRO retains partial evidence without selecting or logging it", {
+  eval_calls <- 0L
+  log_dir <- withr::local_tempdir()
+
+  testthat::local_mocked_bindings(
+    identify_failed_examples = function(...) list(),
+    eval_program = function(program, dataset, ...) {
+      eval_calls <<- eval_calls + 1L
+      score <- if (
+        identical(
+          program$signature@instructions,
+          "Biased partial candidate"
+        )
+      ) {
+        1
+      } else {
+        0.5
+      }
+      dsprrr:::EvalResult(
+        examples = data.frame(
+          score = score,
+          error = NA_character_,
+          predicted = "answer",
+          feedback = NA_character_
+        ),
+        mean_score = score,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  result <- dsprrr:::compile_copro(
+    COPRO(
+      metric = function(...) 1,
+      prompt_model = function(...) "Biased partial candidate",
+      breadth = 1L,
+      depth = 1L,
+      track_stats = TRUE
+    ),
+    module(
+      signature("question -> answer", instructions = "Baseline"),
+      type = "predict"
+    ),
+    data.frame(
+      question = c("q1", "q2"),
+      answer = c("a1", "a2")
+    ),
+    control = dsprrr:::optimizer_control(
+      max_metric_calls = 3L,
+      log_dir = log_dir
+    )
+  )
+  optimizer <- result$config$optimizer
+
+  expect_equal(eval_calls, 3L)
+  expect_identical(result$signature@instructions, "Baseline")
+  expect_equal(optimizer$final_score, 0.5)
+  expect_true(optimizer$best_complete)
+  expect_true(optimizer$baseline_complete)
+  expect_true(optimizer$partial)
+  expect_identical(optimizer$stop_reason$code, "max_metric_calls")
+  expect_true("copro:baseline" %in% optimizer$budget_summary$completed_units)
+  expect_false(
+    "copro:iteration:1:candidate:1" %in%
+      optimizer$budget_summary$completed_units
+  )
+  expect_length(optimizer$history, 2L)
+  expect_equal(optimizer$history[[2]]$score, 1)
+  expect_false(optimizer$history[[2]]$complete)
+  expect_false(optimizer$history[[2]]$is_best)
+  trials_path <- file.path(log_dir, "trials.jsonl")
+  expect_length(dsprrr:::read_trials_jsonl(trials_path), 0L)
 })

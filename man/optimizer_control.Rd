@@ -8,9 +8,19 @@ optimizer_control(
   seed = NULL,
   max_trials = NULL,
   max_errors = 5L,
+  max_metric_calls = NULL,
+  max_provider_calls = NULL,
+  max_input_tokens = NULL,
+  max_output_tokens = NULL,
+  max_total_tokens = NULL,
+  max_cost = NULL,
+  max_elapsed_seconds = NULL,
   num_threads = 1L,
   progress = NA,
   log_dir = NULL,
+  checkpoint_path = NULL,
+  resume = FALSE,
+  checkpoint_registry = list(),
   verbose = FALSE
 )
 }
@@ -19,13 +29,44 @@ optimizer_control(
 
 \item{max_trials}{Maximum number of trials to run. Default is NULL (unlimited).}
 
-\item{max_errors}{Maximum consecutive errors before stopping. Default is 5.}
+\item{max_errors}{Non-negative integer error budget. Optimizers report total
+errors while stopping on a separate consecutive-error streak; each success
+resets only that streak. A positive value stops on the failure that reaches
+the limit. Zero permits work to begin but stops after the first failure.
+When a completed evaluation returns multiple outcomes, all are included in
+the final counters even if the stop boundary was crossed partway through;
+the first stop reason remains unchanged and prevents scheduling new work.}
+
+\item{max_metric_calls}{Maximum metric calls, or NULL for unlimited.}
+
+\item{max_provider_calls}{Maximum verified provider calls, or NULL for
+unlimited. Ambiguous provider usage stops a run that has this cap.}
+
+\item{max_input_tokens}{Maximum verified input tokens, or NULL for unlimited.}
+
+\item{max_output_tokens}{Maximum verified output tokens, or NULL for unlimited.}
+
+\item{max_total_tokens}{Maximum verified input plus output tokens, or NULL for
+unlimited.}
+
+\item{max_cost}{Maximum known provider cost in US dollars, or NULL for
+unlimited. Unknown cost stops a run that has this cap.}
+
+\item{max_elapsed_seconds}{Maximum active optimizer elapsed time in seconds,
+or NULL for unlimited. Checkpoint downtime is excluded.}
 
 \item{num_threads}{Number of threads for parallel evaluation. Default is 1.}
 
 \item{progress}{Whether to display progress. Default is TRUE in interactive sessions.}
 
 \item{log_dir}{Directory for trial logging. Default is NULL (no logging).}
+
+\item{checkpoint_path}{Optional optimizer checkpoint file.}
+
+\item{resume}{Whether to resume from \code{checkpoint_path}.}
+
+\item{checkpoint_registry}{Named runtime registry used by safe program
+artifacts stored in checkpoints.}
 
 \item{verbose}{Whether to print detailed output. Default is FALSE}
 }

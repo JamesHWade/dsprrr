@@ -30,6 +30,7 @@ test_that("clear_prompt_history clears history", {
   n_cleared <- clear_prompt_history()
   expect_equal(n_cleared, 1)
   expect_equal(length(.dsprrr_env$prompt_history), 0)
+  expect_identical(dsprrr:::prompt_history_generation(), 0)
 })
 
 test_that("add_to_global_history adds entries", {
@@ -45,8 +46,29 @@ test_that("add_to_global_history adds entries", {
   add_to_global_history(trace, source = "test")
 
   expect_equal(length(.dsprrr_env$prompt_history), 1)
+  expect_identical(dsprrr:::prompt_history_generation(), 1)
   expect_equal(.dsprrr_env$prompt_history[[1]]$source, "test")
   expect_equal(.dsprrr_env$prompt_history[[1]]$prompt, "Test prompt")
+})
+
+test_that("prompt history generation wraps without losing append counts", {
+  clear_prompt_history()
+  .dsprrr_env$prompt_history_generation <-
+    dsprrr:::prompt_history_generation_max
+  before <- dsprrr:::prompt_history_generation()
+
+  add_to_global_history(
+    list(prompt = "wrapped", output = "wrapped"),
+    source = "test"
+  )
+
+  after <- dsprrr:::prompt_history_generation()
+  expect_identical(after, 0)
+  expect_identical(
+    dsprrr:::prompt_history_generation_delta(before, after),
+    1
+  )
+  clear_prompt_history()
 })
 
 test_that("add_to_global_history respects max history limit", {

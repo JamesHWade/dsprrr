@@ -10,7 +10,9 @@ pin_module_config(
   module,
   description = NULL,
   versioned = TRUE,
-  ...
+  ...,
+  registry = list(),
+  trusted = FALSE
 )
 }
 \arguments{
@@ -25,13 +27,19 @@ pin_module_config(
 \item{versioned}{Logical; whether to version the pin (default TRUE)}
 
 \item{...}{Additional arguments passed to \code{pins::pin_write()}}
+
+\item{registry}{Named runtime registry; see \link{program-artifact}.}
+
+\item{trusted}{Whether trusted runtime values may be embedded. The default is
+\code{FALSE}.}
 }
 \value{
 The pin name (invisibly)
 }
 \description{
-Save a module's configuration and signature to a pins board for later retrieval.
-This enables sharing optimized modules across projects and team members.
+Save a complete module program artifact to a pins board for later retrieval.
+This uses the versioned manifest documented in \link{program-artifact}, including
+nested programs and shared module identity.
 }
 \details{
 The pinned configuration includes:
@@ -60,12 +68,12 @@ restored_mod <- restore_module_config(config)
 }
 }
 \seealso{
-Other orchestration: 
+Other orchestration:
 \code{\link{orchestration}},
-\code{\link{pin_trace}()},
-\code{\link{pin_vitals_log}()},
-\code{\link{restore_module_config}()},
-\code{\link{use_dsprrr_template}()},
-\code{\link{validate_workflow}()}
+\code{\link[=pin_trace]{pin_trace()}},
+\code{\link[=pin_vitals_log]{pin_vitals_log()}},
+\code{\link[=restore_module_config]{restore_module_config()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}}
 }
 \concept{orchestration}

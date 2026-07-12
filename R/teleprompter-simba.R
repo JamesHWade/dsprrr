@@ -153,6 +153,7 @@ compile_simba <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
+  control = NULL,
   ...
 ) {
   if (!inherits(program, "Module")) {
@@ -172,16 +173,17 @@ compile_simba <- function(
     cli::cli_abort("SIMBA requires a metric function")
   }
 
-  control <- optimizer_control(
-    seed = teleprompter@seed,
-    max_errors = teleprompter@max_errors,
-    log_dir = teleprompter@log_dir
+  control <- optimizer_control_for_teleprompter(
+    teleprompter,
+    control = control
   )
+  optimizer_require_ledger_only_checkpoint(control, "SIMBA")
+  budget <- new_optimizer_budget(control)
 
-  trial_log <- if (!is.null(teleprompter@log_dir)) {
+  trial_log <- if (!is.null(control@log_dir)) {
     TrialLog$new(
       optimizer_name = "SIMBA",
-      log_dir = teleprompter@log_dir
+      log_dir = control@log_dir
     )
   } else {
     NULL
@@ -227,20 +229,27 @@ compile_simba <- function(
 
   eval_dataset <- valset %||% trainset
   best_program <- copy_module(program)
-  best_eval <- eval_program(
+  best_eval <- optimizer_eval_candidate(
     best_program,
     eval_dataset,
     metric = teleprompter@metric,
     .llm = .llm,
     control = control,
+    budget = budget,
+    stage = "simba_baseline",
+    unit_id = "simba:baseline",
     ...
   )
   best_score <- best_eval@mean_score
+  best_complete <- optimizer_budget_unit_completed(budget, "simba:baseline")
 
   rules <- character()
   added_demos <- list()
 
   for (step in seq_len(teleprompter@max_steps)) {
+    if (optimizer_budget_stopped(budget)) {
+      break
+    }
     minibatch <- sample_dataset(
       trainset,
       n = min(teleprompter@bsize, nrow(trainset)),
@@ -257,7 +266,11 @@ compile_simba <- function(
       output_col = output_col,
       metric = teleprompter@metric,
       num_candidates = teleprompter@num_candidates,
-      .llm = .llm
+      .llm = .llm,
+      control = control,
+      budget = budget,
+      stage = paste0("simba_variability_", step),
+      unit_prefix = paste0("simba:step:", step, ":variability")
     )
 
     hard_examples <- select_simba_hard_examples(
@@ -275,7 +288,9 @@ compile_simba <- function(
       teleprompter@prompt_model,
       hard_examples,
       input_names = input_names,
-      output_col = output_col
+      output_col = output_col,
+      budget = budget,
+      unit_id = paste0("simba:step:", step, ":rule")
     )
 
     candidate <- copy_module(best_program)
@@ -315,22 +330,32 @@ compile_simba <- function(
       break
     }
 
-    eval_result <- eval_program(
+    candidate_unit_id <- paste0("simba:step:", step, ":candidate")
+    eval_result <- optimizer_eval_candidate(
       candidate,
       eval_dataset,
       metric = teleprompter@metric,
       .llm = .llm,
       control = control,
+      budget = budget,
+      stage = "simba_candidate",
+      unit_id = candidate_unit_id,
       ...
     )
     score <- eval_result@mean_score
+    candidate_complete <- optimizer_budget_unit_completed(
+      budget,
+      candidate_unit_id
+    )
 
-    improved <- !is.na(score) &&
-      (is.na(best_score) || score > best_score)
+    improved <- candidate_complete &&
+      !is.na(score) &&
+      (!best_complete || is.na(best_score) || score > best_score)
 
     if (improved) {
       best_program <- candidate
       best_score <- score
+      best_complete <- TRUE
       if (!is.null(rule_text) && nzchar(rule_text)) {
         rules <- c(rules, rule_text)
       }
@@ -342,7 +367,7 @@ compile_simba <- function(
       break
     }
 
-    if (!is.null(trial_log)) {
+    if (!is.null(trial_log) && candidate_complete) {
       trial <- create_trial(
         optimizer_name = "SIMBA",
         params = list(
@@ -362,11 +387,17 @@ compile_simba <- function(
   best_program$state$compiled <- TRUE
   best_program$config$compiled <- TRUE
   best_program$config$teleprompter <- "SIMBA"
+  budget_summary <- optimizer_budget_summary(budget)
   best_program$config$optimizer <- list(
     steps = teleprompter@max_steps,
     best_score = best_score,
+    best_complete = best_complete,
     rules = rules,
-    demos_added = added_demos
+    demos_added = added_demos,
+    error_count = budget_summary$total_errors,
+    budget_summary = budget_summary,
+    stop_reason = budget_summary$stop_reason,
+    partial = optimizer_budget_stopped(budget)
   )
 
   best_program
@@ -378,21 +409,31 @@ simba_variability <- function(
   output_col,
   metric,
   num_candidates,
-  .llm = NULL
+  .llm = NULL,
+  control = NULL,
+  budget = NULL,
+  stage = "simba_variability",
+  unit_prefix = "simba:variability"
 ) {
   outputs <- vector("list", num_candidates)
+  score_outputs <- vector("list", num_candidates)
   successful_runs <- 0L
 
   for (i in seq_len(num_candidates)) {
+    if (!is.null(budget) && optimizer_budget_stopped(budget)) {
+      break
+    }
     results <- tryCatch(
       {
-        run_dataset(
+        optimizer_eval_candidate(
           program,
           minibatch,
+          metric = metric,
           .llm = .llm,
-          .parallel = FALSE,
-          .progress = FALSE,
-          .return_format = "simple"
+          control = control,
+          budget = budget,
+          stage = stage,
+          unit_id = paste0(unit_prefix, ":", i)
         )
       },
       error = function(e) {
@@ -408,14 +449,28 @@ simba_variability <- function(
       }
     )
 
-    if (!is.null(results)) {
-      outputs[[i]] <- results$result
+    if (!is.null(results) && results@n_evaluated > 0L) {
+      predictions_i <- rep(list(NA), nrow(minibatch))
+      scores_i <- rep(NA_real_, nrow(minibatch))
+      row_ids <- results@examples$row_id
+      predictions_i[row_ids] <- results@examples$predicted
+      scores_i[row_ids] <- results@examples$score
+      outputs[[i]] <- predictions_i
+      score_outputs[[i]] <- scores_i
       successful_runs <- successful_runs + 1L
     }
   }
 
   # Check if we have enough successful candidates
   if (successful_runs == 0L) {
+    if (!is.null(budget) && optimizer_budget_stopped(budget)) {
+      return(tibble::tibble(
+        row_id = integer(),
+        variability = numeric(),
+        mean_score = numeric(),
+        difficulty = numeric()
+      ))
+    }
     cli::cli_abort(
       c(
         "All {num_candidates} SIMBA candidate runs failed",
@@ -427,6 +482,7 @@ simba_variability <- function(
 
   # Filter out NULL outputs from failed runs
   valid_outputs <- Filter(Negate(is.null), outputs)
+  valid_scores <- Filter(Negate(is.null), score_outputs)
 
   variability <- vector("list", nrow(minibatch))
   for (i in seq_len(nrow(minibatch))) {
@@ -442,12 +498,12 @@ simba_variability <- function(
     mean_score <- NA_real_
     if (!is.null(output_col)) {
       row <- minibatch[i, , drop = FALSE]
-      scores <- vapply(
-        predictions,
-        function(pred) simba_safe_metric(metric, pred, row),
-        numeric(1)
-      )
-      mean_score <- mean(scores, na.rm = TRUE)
+      scores <- vapply(valid_scores, function(x) x[[i]], numeric(1))
+      mean_score <- if (all(is.na(scores))) {
+        NA_real_
+      } else {
+        mean(scores, na.rm = TRUE)
+      }
     }
 
     difficulty <- if (is.na(mean_score)) {
@@ -481,7 +537,9 @@ generate_simba_rule <- function(
   prompt_model,
   hard_examples,
   input_names,
-  output_col
+  output_col,
+  budget = NULL,
+  unit_id = "simba:rule"
 ) {
   if (nrow(hard_examples) == 0) {
     return(NULL)
@@ -520,6 +578,28 @@ generate_simba_rule <- function(
 
   rule <- NULL
   used_fallback <- FALSE
+
+  if (!is.null(budget) && !is.null(prompt_model)) {
+    request <- optimizer_budgeted_provider_call(
+      budget = budget,
+      model = prompt_model,
+      stage = "simba_rule",
+      unit_id = unit_id,
+      call = function() {
+        generate_simba_rule(
+          prompt_model,
+          hard_examples,
+          input_names,
+          output_col,
+          budget = NULL
+        )
+      },
+      success = function(value, condition) {
+        is.null(condition) && is.character(value) && nzchar(value)
+      }
+    )
+    return(request$value)
+  }
 
   if (inherits(prompt_model, "Chat")) {
     # Handle ellmer Chat objects (e.g., from chat_openai())
