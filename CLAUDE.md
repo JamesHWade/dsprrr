@@ -628,13 +628,13 @@ When code is complete and ready for review:
 
 ```bash
 git add <specific-files>
-git commit -m "feat: description (kata#xxxx)"
+git commit -m "feat: description (dsprrr#<id>)"
 commit_sha="$(git rev-parse HEAD)"
 kata close <id> --done \
   --message "Implemented and verified the requested work." \
   --commit "$commit_sha"
 git push -u origin HEAD
-gh pr create --title "..." --body "Resolves kata#xxxx"
+gh pr create --title "..." --body "Resolves dsprrr#<id>"
 ```
 
 **Important**: Close the Kata issue when the work is complete and verified, not
@@ -686,7 +686,7 @@ kata unassign <unfinished-id> --agent
 
 # 5. Commit specific files, then close completed work with that evidence
 git add <specific-files>
-git commit -m "feat: description (kata#xxxx)"
+git commit -m "feat: description (dsprrr#<id>)"
 commit_sha="$(git rev-parse HEAD)"
 kata close <completed-id> --done \
   --message "Implemented and verified the completed work." \
@@ -694,7 +694,7 @@ kata close <completed-id> --done \
 git push -u origin HEAD
 
 # 6. Create PR (if not already created)
-gh pr create --title "..." --body "Resolves kata#xxxx"
+gh pr create --title "..." --body "Resolves dsprrr#<id>"
 
 # 7. Verify
 git status  # Should show "up to date with origin"
