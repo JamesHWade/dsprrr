@@ -1,0 +1,1120 @@
+batch_contract_chat <- function(fail_on = NULL, initial_turns = list()) {
+  force(fail_on)
+  force(initial_turns)
+  turns <- initial_turns
+  calls <- 0L
+
+  last_turn <- function(role = c("assistant", "user"), ...) {
+    role <- match.arg(role)
+    matching <- Filter(function(turn) identical(turn@role, role), turns)
+    if (length(matching) == 0L) {
+      stop("no matching turn")
+    }
+    matching[[length(matching)]]
+  }
+
+  structure(
+    list(
+      calls = function() calls,
+      get_turns = function(...) turns,
+      set_turns = function(value) {
+        turns <<- value
+        invisible(NULL)
+      },
+      last_turn = last_turn,
+      get_model = function() "batch-contract-model",
+      chat_structured = function(prompt, ...) {
+        calls <<- calls + 1L
+        prompt <- as.character(prompt)
+        if (!is.null(fail_on) && grepl(fail_on, prompt, fixed = TRUE)) {
+          error <- simpleError("provider row failed")
+          class(error) <- c("batch_contract_provider_error", class(error))
+          stop(error)
+        }
+        response <- list(answer = paste0("ok:", prompt))
+        turns <<- c(
+          turns,
+          list(
+            ellmer::UserTurn(
+              contents = list(ellmer::ContentText(prompt))
+            ),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentText("ok")),
+              tokens = c(4L, 2L, 0L),
+              cost = 0.001,
+              duration = 0.01
+            )
+          )
+        )
+        response
+      }
+    ),
+    class = "Chat"
+  )
+}
+
+batch_contract_metadata_names <- c(
+  "usage",
+  "error",
+  "error_class",
+  "error_stage",
+  "cache",
+  "backend",
+  "batch_index"
+)
+
+test_that("zero-length Predict inputs return without runtime side effects", {
+  local_reset_cache()
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+  clear_prompt_history()
+
+  mod <- module(signature("text -> answer"), type = "predict")
+  chat <- batch_contract_chat()
+  stats_before <- cache_stats()
+
+  simple <- run(mod, text = character(), .llm = chat, .cache = TRUE)
+  structured <- run(
+    mod,
+    text = character(),
+    .llm = chat,
+    .cache = TRUE,
+    .return_format = "structured"
+  )
+
+  expect_identical(simple, list())
+  expect_s3_class(structured, "dsprrr_batch_result")
+  expect_length(structured, 0L)
+  expect_equal(chat$calls(), 0L)
+  expect_length(mod$state$traces, 0L)
+  expect_length(dsprrr:::.dsprrr_env$prompt_history, 0L)
+  expect_identical(cache_stats()$hits, stats_before$hits)
+  expect_identical(cache_stats()$misses, stats_before$misses)
+})
+
+test_that("zero-row datasets preserve simple and structured shapes", {
+  clear_prompt_history()
+  mod <- module(signature("text -> answer"), type = "predict")
+  chat <- batch_contract_chat()
+  data <- data.frame(text = character(), group = integer())
+
+  simple <- run_dataset(mod, data, .llm = chat)
+  structured <- run_dataset(
+    mod,
+    data,
+    .llm = chat,
+    .return_format = "structured"
+  )
+
+  expect_named(simple, c("text", "group", "result"))
+  expect_named(
+    structured,
+    c("text", "group", "result", ".error", ".metadata", ".chat")
+  )
+  expect_equal(nrow(simple), 0L)
+  expect_equal(nrow(structured), 0L)
+  expect_type(simple$result, "list")
+  expect_type(structured$.metadata, "list")
+  expect_type(structured$.chat, "list")
+  expect_equal(chat$calls(), 0L)
+  expect_length(mod$state$traces, 0L)
+  expect_length(dsprrr:::.dsprrr_env$prompt_history, 0L)
+})
+
+test_that("one-row datasets keep a simple result list-column", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  result <- run_dataset(
+    mod,
+    data.frame(text = "one"),
+    .llm = batch_contract_chat(),
+    .cache = FALSE
+  )
+
+  expect_type(result$result, "list")
+  expect_length(result$result, 1L)
+  expect_type(result$result[[1]], "character")
+  expect_match(result$result[[1]], "one", fixed = TRUE)
+})
+
+test_that("no-input signatures preserve zero-row dataset shape", {
+  sig <- Signature(
+    inputs = list(),
+    output_type = ellmer::type_object(answer = ellmer::type_string()),
+    instructions = "Produce an answer without inputs"
+  )
+  mod <- module(sig, type = "predict")
+  chat <- batch_contract_chat()
+
+  result <- run_dataset(
+    mod,
+    data.frame(row.names = integer()),
+    .llm = chat,
+    .return_format = "structured"
+  )
+
+  expect_equal(nrow(result), 0L)
+  expect_named(result, c("result", ".error", ".metadata", ".chat"))
+  expect_equal(chat$calls(), 0L)
+  expect_length(mod$state$traces, 0L)
+})
+
+test_that("mixed zero and incompatible lengths fail before execution", {
+  sig <- signature("left, right -> answer")
+  mod <- module(sig, type = "predict")
+  chat <- batch_contract_chat()
+
+  expect_error(
+    run(mod, left = character(), right = "scalar", .llm = chat),
+    class = "dsprrr_batch_length_error"
+  )
+  expect_error(
+    run(mod, left = c("a", "b"), right = c("x", "y", "z"), .llm = chat),
+    class = "dsprrr_batch_length_error"
+  )
+  expect_equal(chat$calls(), 0L)
+  expect_length(mod$state$traces, 0L)
+})
+
+test_that("scalar and sequential batch traces share one metadata contract", {
+  clear_prompt_history()
+  scalar_mod <- module(signature("text -> answer"), type = "predict")
+  batch_mod <- module(signature("text -> answer"), type = "predict")
+
+  scalar <- run(
+    scalar_mod,
+    text = "one",
+    .llm = batch_contract_chat(),
+    .cache = FALSE,
+    .return_format = "structured"
+  )
+  batch <- run(
+    batch_mod,
+    text = c("one", "two"),
+    .llm = batch_contract_chat(),
+    .cache = FALSE,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_true(all(batch_contract_metadata_names %in% names(scalar$metadata)))
+  expect_true(all(vapply(
+    batch,
+    function(row) {
+      all(batch_contract_metadata_names %in% names(row$metadata))
+    },
+    logical(1)
+  )))
+  expect_length(scalar_mod$state$traces, 1L)
+  expect_length(batch_mod$state$traces, 2L)
+  expect_identical(scalar_mod$state$traces[[1]]$metadata$backend, "sequential")
+  expect_identical(scalar_mod$state$traces[[1]]$metadata$batch_index, 1L)
+  expect_identical(scalar_mod$state$traces[[1]]$metadata$cache, "bypass")
+  expect_identical(
+    vapply(
+      batch_mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:2
+  )
+  expect_true(all(vapply(
+    batch_mod$state$traces,
+    function(trace) identical(trace$metadata$backend, "sequential"),
+    logical(1)
+  )))
+  expect_equal(length(dsprrr:::.dsprrr_env$prompt_history), 3L)
+})
+
+test_that("scalar simple output extracts the declared field like batch output", {
+  scalar_mod <- module(signature("text -> answer"), type = "predict")
+  batch_mod <- module(signature("text -> answer"), type = "predict")
+
+  scalar <- run(
+    scalar_mod,
+    text = "one",
+    .llm = batch_contract_chat(),
+    .cache = FALSE
+  )
+  batch <- run(
+    batch_mod,
+    text = c("one", "two"),
+    .llm = batch_contract_chat(),
+    .cache = FALSE,
+    .progress = FALSE
+  )
+
+  expect_type(scalar, "character")
+  expect_length(scalar, 1L)
+  expect_identical(scalar, batch[[1]])
+})
+
+test_that("sequential failures still commit one ordered trace per row", {
+  clear_prompt_history()
+  mod <- module(signature("text -> answer"), type = "predict")
+
+  expect_warning(
+    result <- run(
+      mod,
+      text = c("first", "FAIL", "third"),
+      .llm = batch_contract_chat(fail_on = "FAIL"),
+      .cache = FALSE,
+      .return_format = "structured",
+      .progress = FALSE
+    ),
+    "Failed to process item 2"
+  )
+
+  expect_length(result, 3L)
+  expect_length(mod$state$traces, 3L)
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$inputs$text,
+      character(1)
+    ),
+    c("first", "FAIL", "third")
+  )
+  expect_true(is.na(mod$state$traces[[1]]$metadata$error))
+  expect_match(mod$state$traces[[2]]$metadata$error, "provider row failed")
+  expect_identical(
+    mod$state$traces[[2]]$metadata$error_class,
+    "batch_contract_provider_error"
+  )
+  expect_true(is.na(mod$state$traces[[3]]$metadata$error))
+  history <- dsprrr:::.dsprrr_env$prompt_history
+  expect_equal(length(history), 3L)
+  expect_true(grepl("first", history[[1]]$prompt, fixed = TRUE))
+  expect_true(grepl("FAIL", history[[2]]$prompt, fixed = TRUE))
+  expect_true(grepl("third", history[[3]]$prompt, fixed = TRUE))
+})
+
+test_that("simple failures warn once and return no internal attributes", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  warnings <- character()
+  result <- withCallingHandlers(
+    run(
+      mod,
+      text = c("first", "FAIL", "third"),
+      .llm = batch_contract_chat(fail_on = "FAIL"),
+      .cache = FALSE,
+      .progress = FALSE
+    ),
+    warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+
+  expect_length(warnings, 1L)
+  expect_match(warnings, "Failed to process item 2: provider row failed")
+  expect_false(grepl("Failed to process item 2: Failed", warnings))
+  expect_true(is.na(result[[2]]))
+  expect_null(attributes(result[[2]]))
+  expect_null(attributes(result))
+})
+
+test_that("usage comes only from a verified current-call assistant delta", {
+  baseline <- list(
+    ellmer::UserTurn(contents = list(ellmer::ContentText("old question"))),
+    ellmer::AssistantTurn(
+      contents = list(ellmer::ContentText("old answer")),
+      tokens = c(100L, 50L, 0L),
+      cost = 9.99,
+      duration = 8
+    )
+  )
+  turns <- baseline
+  opaque_success <- structure(
+    list(
+      get_turns = function(...) turns,
+      set_turns = function(value) turns <<- value,
+      last_turn = function(...) baseline[[2]],
+      chat_structured = function(...) list(answer = "fresh")
+    ),
+    class = "Chat"
+  )
+  mod <- module(signature("text -> answer"), type = "predict")
+  success <- dsprrr:::process_batch_item(
+    list(text = "new"),
+    mod,
+    opaque_success,
+    index = 1L,
+    .verbose = FALSE,
+    .return_format = "structured",
+    .cache = FALSE
+  )
+  expect_true(all(is.na(success$metadata$usage)))
+
+  seeded_failure <- batch_contract_chat(
+    fail_on = "FAIL",
+    initial_turns = baseline
+  )
+  failure <- dsprrr:::process_batch_item(
+    list(text = "FAIL"),
+    mod,
+    seeded_failure,
+    index = 1L,
+    .verbose = FALSE,
+    .return_format = "structured",
+    .cache = FALSE
+  )
+  expect_match(failure$metadata$error, "provider row failed")
+  expect_true(all(is.na(failure$metadata$usage)))
+})
+
+test_that("scalar provider errors are traced then re-signalled unchanged", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  error <- rlang::catch_cnd(run(
+    mod,
+    text = "FAIL",
+    .llm = batch_contract_chat(fail_on = "FAIL"),
+    .cache = FALSE
+  ))
+
+  expect_s3_class(error, "batch_contract_provider_error")
+  expect_match(conditionMessage(error), "provider row failed")
+  expect_length(mod$state$traces, 1L)
+  expect_match(mod$state$traces[[1]]$metadata$error, "provider row failed")
+})
+
+test_that("a genuine cache hit is recorded on the matching canonical trace", {
+  local_reset_cache()
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+  calls <- new.env(parent = emptyenv())
+  calls$n <- 0L
+  testthat::local_mocked_bindings(
+    req_perform = function(req) {
+      calls$n <- calls$n + 1L
+      body <- list(
+        id = paste0("response_", calls$n),
+        object = "response",
+        created_at = 1L,
+        status = "completed",
+        model = "batch-cache-model",
+        output = list(list(
+          id = paste0("message_", calls$n),
+          type = "message",
+          status = "completed",
+          role = "assistant",
+          content = list(list(
+            type = "output_text",
+            annotations = list(),
+            logprobs = list(),
+            text = "{\"answer\":\"cached answer\"}"
+          ))
+        )),
+        usage = list(
+          input_tokens = 4L,
+          input_tokens_details = list(cached_tokens = 0L),
+          output_tokens = 2L,
+          output_tokens_details = list(reasoning_tokens = 0L),
+          total_tokens = 6L
+        ),
+        service_tier = "default",
+        metadata = list()
+      )
+      getFromNamespace("response", "httr2")(
+        headers = list(`content-type` = "application/json"),
+        body = charToRaw(jsonlite::toJSON(
+          body,
+          auto_unbox = TRUE,
+          null = "null"
+        ))
+      )
+    },
+    .package = "ellmer"
+  )
+  base <- suppressWarnings(ellmer::chat_openai(
+    api_key = "dummy-key",
+    model = "batch-cache-model"
+  ))
+  first_chat <- base$clone(deep = TRUE)
+  second_chat <- base$clone(deep = TRUE)
+  mod <- module(signature("text -> answer"), type = "predict")
+
+  first <- run(
+    mod,
+    text = "same request",
+    .llm = first_chat,
+    .cache = TRUE,
+    .return_format = "structured"
+  )
+  second <- suppressMessages(run(
+    mod,
+    text = "same request",
+    .llm = second_chat,
+    .cache = TRUE,
+    .return_format = "structured"
+  ))
+
+  expect_equal(first$output$answer, "cached answer")
+  expect_equal(second$output$answer, "cached answer")
+  expect_equal(calls$n, 1L)
+  expect_length(mod$state$traces, 2L)
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$cache,
+      character(1)
+    ),
+    c("miss", "hit")
+  )
+  expect_true(all(is.na(second$metadata$usage[c(
+    "input_tokens",
+    "output_tokens",
+    "cost",
+    "duration_s"
+  )])))
+  miss_turns <- mod$state$traces[[1]]$turns
+  hit_turns <- mod$state$traces[[2]]$turns
+  expect_length(miss_turns, 2L)
+  expect_length(hit_turns, 2L)
+  expect_identical(
+    vapply(miss_turns, function(turn) turn@role, character(1)),
+    vapply(hit_turns, function(turn) turn@role, character(1))
+  )
+  expect_identical(miss_turns[[1]]@contents, hit_turns[[1]]@contents)
+  expect_identical(miss_turns[[2]]@contents, hit_turns[[2]]@contents)
+})
+
+test_that("native ellmer parallel traces successes and character errors", {
+  clear_prompt_history()
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      tibble::tibble(
+        answer = c("first", NA_character_, "third"),
+        input_tokens = c(3L, 0L, 5L),
+        output_tokens = c(1L, 0L, 2L),
+        cached_input_tokens = c(0L, 0L, 0L),
+        cost = c(0.01, 0, 0.02),
+        .error = c(NA_character_, "native row failed", NA_character_)
+      )
+    },
+    .package = "ellmer"
+  )
+  mod <- module(signature("text -> answer"), type = "predict")
+
+  result <- run(
+    mod,
+    text = c("a", "b", "c"),
+    .llm = batch_contract_chat(),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_equal(result[[1]]$output$answer, "first")
+  expect_match(result[[2]]$metadata$error, "native row failed")
+  expect_equal(result[[3]]$output$answer, "third")
+  expect_length(mod$state$traces, 3L)
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:3
+  )
+  expect_true(all(vapply(
+    mod$state$traces,
+    function(trace) identical(trace$metadata$backend, "ellmer"),
+    logical(1)
+  )))
+  history <- dsprrr:::.dsprrr_env$prompt_history
+  expect_equal(length(history), 3L)
+  expect_true(grepl("text: a", history[[1]]$prompt, fixed = TRUE))
+  expect_true(grepl("text: b", history[[2]]$prompt, fixed = TRUE))
+  expect_true(grepl("text: c", history[[3]]$prompt, fixed = TRUE))
+  expect_true(all(vapply(
+    mod$state$traces,
+    function(trace) identical(trace$metadata$cache, "bypass"),
+    logical(1)
+  )))
+})
+
+test_that("native ellmer row chats preserve baseline while traces keep deltas", {
+  baseline <- list(
+    ellmer::UserTurn(contents = list(ellmer::ContentText("prior question"))),
+    ellmer::AssistantTurn(contents = list(ellmer::ContentText("prior answer")))
+  )
+  caller <- batch_contract_chat(initial_turns = baseline)
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      tibble::tibble(
+        answer = c("first", "second"),
+        .error = list(NULL, NULL)
+      )
+    },
+    .package = "ellmer"
+  )
+  mod <- module(signature("text -> answer"), type = "predict")
+  result <- run(
+    mod,
+    text = c("a", "b"),
+    .llm = caller,
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_identical(caller$get_turns(), baseline)
+  expect_true(all(vapply(
+    result,
+    function(row) {
+      identical(row$chat$get_turns()[1:2], baseline)
+    },
+    logical(1)
+  )))
+  expect_true(all(vapply(
+    result,
+    function(row) {
+      length(row$chat$get_turns()) == 4L
+    },
+    logical(1)
+  )))
+  expect_identical(
+    vapply(mod$state$traces, function(trace) length(trace$turns), integer(1)),
+    c(2L, 2L)
+  )
+})
+
+test_that("mirai workers return records committed by the parent in row order", {
+  skip_if_not_installed("mirai")
+  current <- mirai::daemons(NULL)
+  if (is.null(current) || current == 0L) {
+    mirai::daemons(n = 1L)
+    withr::defer(mirai::daemons(0L))
+  }
+
+  mod <- module(signature("text -> answer"), type = "predict")
+  mod$chat <- structure(
+    list(chat_structured = function(prompt, ...) {
+      list(answer = paste0("worker:", as.character(prompt)))
+    }),
+    class = "Chat"
+  )
+  result <- run(
+    mod,
+    text = c("one", "two"),
+    .parallel = TRUE,
+    .parallel_method = "mirai",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_true(grepl("one", result[[1]]$output$answer, fixed = TRUE))
+  expect_true(grepl("two", result[[2]]$output$answer, fixed = TRUE))
+  expect_length(mod$state$traces, 2L)
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:2
+  )
+  expect_true(all(vapply(
+    mod$state$traces,
+    function(trace) identical(trace$metadata$backend, "mirai"),
+    logical(1)
+  )))
+})
+
+test_that("mirai row failures retain ordered parent traces and error metadata", {
+  clear_prompt_history()
+  skip_if_not_installed("mirai")
+  current <- mirai::daemons(NULL)
+  if (is.null(current) || current == 0L) {
+    mirai::daemons(n = 1L)
+    withr::defer(mirai::daemons(0L))
+  }
+
+  mod <- module(signature("text -> answer"), type = "predict")
+  mod$chat <- structure(
+    list(chat_structured = function(prompt, ...) {
+      if (grepl("FAIL", as.character(prompt), fixed = TRUE)) {
+        error <- simpleError("mirai provider row failed")
+        class(error) <- c("mirai_provider_error", class(error))
+        stop(error)
+      }
+      list(answer = paste0("worker:", as.character(prompt)))
+    }),
+    class = "Chat"
+  )
+  result <- run(
+    mod,
+    text = c("first", "FAIL", "third"),
+    .parallel = TRUE,
+    .parallel_method = "mirai",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_true(grepl("first", result[[1]]$output$answer, fixed = TRUE))
+  expect_true(is.na(result[[2]]$output))
+  expect_match(result[[2]]$metadata$error, "mirai provider row failed")
+  expect_identical(result[[2]]$metadata$error_class, "mirai_provider_error")
+  expect_true(grepl("third", result[[3]]$output$answer, fixed = TRUE))
+  expect_length(mod$state$traces, 3L)
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$inputs$text,
+      character(1)
+    ),
+    c("first", "FAIL", "third")
+  )
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:3
+  )
+  expect_match(
+    mod$state$traces[[2]]$metadata$error,
+    "mirai provider row failed"
+  )
+  history <- dsprrr:::.dsprrr_env$prompt_history
+  expect_equal(length(history), 3L)
+  expect_true(grepl("first", history[[1]]$prompt, fixed = TRUE))
+  expect_true(grepl("FAIL", history[[2]]$prompt, fixed = TRUE))
+  expect_true(grepl("third", history[[3]]$prompt, fixed = TRUE))
+})
+
+test_that("malformed mirai records become typed traced failure rows", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  request <- dsprrr:::build_module_request(mod, list(text = "row"))
+  chat <- batch_contract_chat()
+  started_at <- Sys.time() - 1
+  ended_at <- Sys.time()
+  incomplete_success <- list(
+    ok = TRUE,
+    started_at = started_at,
+    ended_at = ended_at,
+    usage = list(),
+    model = NA_character_,
+    turns_before = NULL
+  )
+  serialization_failure <- list(
+    ok = FALSE,
+    error_message = "cannot serialize Chat",
+    error_class = "simpleError",
+    error_kind = "serialization",
+    started_at = started_at,
+    ended_at = ended_at,
+    usage = list(),
+    model = NA_character_,
+    turns_before = NULL
+  )
+  vector_usage <- list(
+    ok = TRUE,
+    response = list(answer = "invalid"),
+    usage_verified = TRUE,
+    started_at = started_at,
+    ended_at = ended_at,
+    usage = list(input_tokens = 1:2),
+    model = NA_character_,
+    turns_before = NULL
+  )
+  unknown_field <- list(
+    ok = TRUE,
+    response = list(answer = "invalid"),
+    usage_verified = TRUE,
+    started_at = started_at,
+    ended_at = ended_at,
+    usage = list(),
+    model = NA_character_,
+    turns_before = NULL,
+    unexpected = "field"
+  )
+  records <- list(
+    "atomic",
+    list(),
+    incomplete_success,
+    vector_usage,
+    unknown_field,
+    structure(
+      "remote worker crashed",
+      class = "miraiError",
+      message = "remote worker crashed"
+    ),
+    serialization_failure
+  )
+  results <- lapply(records, function(record) {
+    dsprrr:::mirai_worker_result(
+      record = record,
+      module = mod,
+      input_set = list(text = "row"),
+      request = request,
+      chat = chat,
+      index = 1L,
+      .return_format = "structured",
+      fallback_started_at = started_at,
+      fallback_ended_at = ended_at
+    )
+  })
+
+  expect_true(all(vapply(
+    results,
+    function(result) {
+      is.na(result$output) &&
+        identical(result$metadata$backend, "mirai") &&
+        identical(result$metadata$cache, "bypass") &&
+        nzchar(result$metadata$error) &&
+        !is.null(attr(result, "dsprrr_trace", exact = TRUE))
+    },
+    logical(1)
+  )))
+  expect_true(all(vapply(
+    results[1:5],
+    function(result) {
+      inherits(
+        attr(result, "dsprrr_error_condition", exact = TRUE),
+        "dsprrr_mirai_record_error"
+      )
+    },
+    logical(1)
+  )))
+  expect_s3_class(
+    attr(results[[6]], "dsprrr_error_condition", exact = TRUE),
+    "dsprrr_mirai_worker_error"
+  )
+  expect_s3_class(
+    attr(results[[7]], "dsprrr_error_condition", exact = TRUE),
+    "dsprrr_mirai_serialization_error"
+  )
+})
+
+test_that("mirai timeouts stop tasks and commit typed elapsed failures", {
+  skip_if_not_installed("mirai")
+  current <- mirai::daemons(NULL)
+  if (is.null(current) || current == 0L) {
+    mirai::daemons(n = 1L)
+    withr::defer(mirai::daemons(0L))
+  }
+  withr::local_options(list(dsprrr.parallel_timeout = 0.03))
+  clear_prompt_history()
+
+  stops <- new.env(parent = emptyenv())
+  stops$n <- 0L
+  progress <- new.env(parent = emptyenv())
+  progress$done <- 0L
+  original_stop <- mirai::stop_mirai
+  testthat::local_mocked_bindings(
+    stop_mirai = function(x) {
+      stops$n <- stops$n + 1L
+      original_stop(x)
+    },
+    .package = "mirai"
+  )
+  testthat::local_mocked_bindings(
+    cli_progress_bar = function(...) "batch-contract-progress",
+    cli_progress_update = function(...) invisible(NULL),
+    cli_progress_done = function(...) {
+      progress$done <- progress$done + 1L
+      invisible(NULL)
+    },
+    .package = "cli"
+  )
+
+  mod <- module(signature("text -> answer"), type = "predict")
+  mod$chat <- structure(
+    list(chat_structured = function(...) {
+      Sys.sleep(0.25)
+      list(answer = "too late")
+    }),
+    class = "Chat"
+  )
+  expect_warning(
+    result <- run(
+      mod,
+      text = c("first", "second"),
+      .parallel = TRUE,
+      .parallel_method = "mirai",
+      .return_format = "structured",
+      .progress = TRUE,
+      .cache = FALSE
+    ),
+    "timed out"
+  )
+
+  expect_gte(stops$n, 1L)
+  expect_equal(progress$done, 1L)
+  expect_length(result, 2L)
+  expect_length(mod$state$traces, 2L)
+  expect_true(all(vapply(
+    result,
+    function(row) {
+      identical(row$metadata$error_class, "dsprrr_mirai_timeout_error") &&
+        identical(row$metadata$backend, "mirai") &&
+        identical(row$metadata$cache, "bypass") &&
+        row$metadata$latency_ms >= 20 &&
+        is.null(attr(row, "dsprrr_trace", exact = TRUE)) &&
+        is.null(attr(row, "dsprrr_error_condition", exact = TRUE))
+    },
+    logical(1)
+  )))
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:2
+  )
+  expect_equal(length(dsprrr:::.dsprrr_env$prompt_history), 2L)
+})
+
+test_that("ReAct scalar run preserves its specialized forward path", {
+  local_reset_cache()
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+  clear_prompt_history()
+  turns <- list()
+  chat_calls <- 0L
+  last_turn <- function(role = c("assistant", "user"), ...) {
+    role <- match.arg(role)
+    matching <- Filter(function(turn) identical(turn@role, role), turns)
+    matching[[length(matching)]]
+  }
+  chat <- structure(
+    list(
+      register_tool = function(tool) invisible(NULL),
+      get_turns = function(...) turns,
+      last_turn = last_turn,
+      chat = function(prompt, ...) {
+        chat_calls <<- chat_calls + 1L
+        turns <<- c(
+          turns,
+          list(
+            ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentText("reasoning"))
+            )
+          )
+        )
+        invisible(NULL)
+      },
+      chat_structured = function(...) {
+        turns <<- c(
+          turns,
+          list(ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+          ))
+        )
+        list(answer = "done")
+      },
+      get_model = function() "react-model"
+    ),
+    class = "Chat"
+  )
+  mod <- module(signature("question -> answer"), type = "react")
+
+  scalar <- run(
+    mod,
+    question = "solve",
+    .llm = chat,
+    .cache = FALSE,
+    .return_format = "structured"
+  )
+
+  expect_equal(chat_calls, 1L)
+  expect_identical(scalar$metadata$finalization, "structured-followup")
+  expect_length(mod$state$traces, 1L)
+  traces_before <- mod$state$traces
+  history_before <- dsprrr:::.dsprrr_env$prompt_history
+  cache_before <- cache_stats()[c("hits", "misses")]
+  turns_before <- chat$get_turns()
+  expect_error(
+    run(mod, question = c("a", "b"), .llm = chat, .cache = TRUE),
+    class = "dsprrr_batch_unsupported_module"
+  )
+  expect_equal(chat_calls, 1L)
+  expect_identical(mod$state$traces, traces_before)
+  expect_identical(dsprrr:::.dsprrr_env$prompt_history, history_before)
+  expect_identical(cache_stats()[c("hits", "misses")], cache_before)
+  expect_identical(chat$get_turns(), turns_before)
+})
+
+test_that("direct specialized Predict batches reject before forward work", {
+  SpecializedPredict <- R6::R6Class(
+    "BatchContractSpecializedPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      calls = 0L,
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        self$calls <- self$calls + 1L
+        tibble::tibble(
+          output = list("unexpected"),
+          chat = list(NULL),
+          metadata = list(list())
+        )
+      }
+    )
+  )
+  mod <- SpecializedPredict$new(signature("text -> answer"))
+
+  expect_error(
+    mod$run(text = c("a", "b"), .progress = FALSE),
+    class = "dsprrr_batch_unsupported_module"
+  )
+  expect_identical(mod$calls, 0L)
+  expect_length(mod$state$traces, 0L)
+})
+
+test_that("cache observer failures never change model results", {
+  calls <- 0L
+  chat <- structure(
+    list(chat_structured = function(...) {
+      calls <<- calls + 1L
+      list(answer = "ok")
+    }),
+    class = "Chat"
+  )
+
+  result <- dsprrr:::cached_chat_structured(
+    chat,
+    "prompt",
+    ellmer::type_object(answer = ellmer::type_string()),
+    .cache = FALSE,
+    .observer = function(...) stop("observer failure")
+  )
+
+  expect_equal(result$answer, "ok")
+  expect_equal(calls, 1L)
+})
+
+test_that("cache observer fires exactly once for every outcome", {
+  stored <- cachem::key_missing()
+  fake_cache <- list(
+    get = function(key) stored,
+    set = function(key, value) {
+      stored <<- value
+      invisible(NULL)
+    }
+  )
+  testthat::local_mocked_bindings(
+    get_cache = function() fake_cache,
+    cache_request_fingerprint = function(...) list(version = "test"),
+    cache_key = function(...) "observer-key",
+    cache_turn_snapshot = function(...) list(mode = "stateless"),
+    cache_turn_delta = function(...) list(mode = "stateless", turns = list()),
+    cache_replay_turn_delta = function(...) TRUE,
+    increment_cache_stats = function(...) invisible(NULL),
+    .package = "dsprrr"
+  )
+  package_state <- getFromNamespace(".dsprrr_env", "dsprrr")
+  old_first_hit <- package_state$cache_first_hit_shown
+  package_state$cache_first_hit_shown <- TRUE
+  withr::defer({
+    package_state$cache_first_hit_shown <- old_first_hit
+  })
+  provider_calls <- 0L
+  chat <- structure(
+    list(chat_structured = function(...) {
+      provider_calls <<- provider_calls + 1L
+      list(answer = "ok")
+    }),
+    class = "Chat"
+  )
+  output_type <- ellmer::type_object(answer = ellmer::type_string())
+  observe <- function() {
+    events <- character()
+    list(
+      callback = function(status, reason) {
+        events <<- c(events, paste(status, reason, sep = ":"))
+      },
+      events = function() events
+    )
+  }
+
+  miss <- observe()
+  dsprrr:::cached_chat_structured(
+    chat,
+    "prompt",
+    output_type,
+    .cache = TRUE,
+    .observer = miss$callback
+  )
+  expect_identical(miss$events(), "miss:cache_miss")
+
+  hit <- observe()
+  dsprrr:::cached_chat_structured(
+    chat,
+    "prompt",
+    output_type,
+    .cache = TRUE,
+    .observer = hit$callback
+  )
+  expect_identical(hit$events(), "hit:cache_hit")
+  expect_equal(provider_calls, 1L)
+
+  bypass <- observe()
+  dsprrr:::cached_chat_structured(
+    chat,
+    "bypass",
+    output_type,
+    .cache = FALSE,
+    .observer = bypass$callback
+  )
+  expect_identical(bypass$events(), "bypass:disabled")
+
+  stored <- cachem::key_missing()
+  failure <- observe()
+  failing_chat <- structure(
+    list(chat_structured = function(...) stop("provider failed")),
+    class = "Chat"
+  )
+  expect_error(
+    dsprrr:::cached_chat_structured(
+      failing_chat,
+      "failure",
+      output_type,
+      .cache = TRUE,
+      .observer = failure$callback
+    ),
+    "provider failed"
+  )
+  expect_identical(failure$events(), "miss:cache_miss")
+
+  observer_calls <- 0L
+  result <- dsprrr:::cached_chat_structured(
+    chat,
+    "observer failure",
+    output_type,
+    .cache = FALSE,
+    .observer = function(...) {
+      observer_calls <<- observer_calls + 1L
+      stop("observer failed")
+    }
+  )
+  expect_equal(result$answer, "ok")
+  expect_equal(observer_calls, 1L)
+})
+
+test_that("batch printing ignores missing and empty success errors", {
+  result <- structure(
+    list(
+      list(output = "a", chat = NULL, metadata = list(error = NA_character_)),
+      list(output = "b", chat = NULL, metadata = list(error = ""))
+    ),
+    class = c("dsprrr_batch_result", "list")
+  )
+  output <- cli::cli_fmt(print(result))
+
+  expect_true(any(grepl(
+    "All items completed successfully",
+    output,
+    fixed = TRUE
+  )))
+  expect_false(any(grepl("Errors", output, fixed = TRUE)))
+})

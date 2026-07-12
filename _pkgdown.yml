@@ -183,6 +183,7 @@ reference:
     - module
     - run
     - run_dataset
+    - concurrency_control
     - predict.Module
     - dsp
     - as_module

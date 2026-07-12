@@ -14,6 +14,7 @@ run_dataset(module, ...)
   .verbose = FALSE,
   .parallel = FALSE,
   .parallel_method = c("ellmer", "mirai"),
+  .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
   ...
@@ -37,6 +38,10 @@ run_dataset(module, ...)
 parallelism (more efficient, single process).
 "mirai" uses mirai for multi-process parallelism (requires \code{.llm = NULL}).}
 
+\item{.concurrency}{Optional batch policy created by
+\code{\link[=concurrency_control]{concurrency_control()}}. Do not combine it with \code{.parallel} or
+\code{.parallel_method}.}
+
 \item{.progress}{Logical whether to show progress bar}
 
 \item{.return_format}{Character either "simple" or "structured"}
@@ -49,6 +54,8 @@ the LLM execution error message for failed rows.
 }
 \description{
 Execute a module on a data frame/tibble with optimized batch processing.
+Zero-row data frames return a zero-row tibble with the same result columns
+as a non-empty call, without resolving a Chat or changing runtime state.
 }
 \examples{
 \dontrun{

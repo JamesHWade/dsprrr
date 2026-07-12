@@ -711,9 +711,25 @@ test_that("process_batch_item returns correct format for structured mode", {
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
+  turns <- list()
   mock_llm <- structure(
     list(
-      chat_structured = function(prompt, ...) "response",
+      chat_structured = function(prompt, ...) {
+        turns <<- c(
+          turns,
+          list(
+            ellmer::UserTurn(
+              contents = list(ellmer::ContentText(as.character(prompt)))
+            ),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentText("response")),
+              tokens = c(10L, 2L, 1L),
+              cost = 0.001
+            )
+          )
+        )
+        "response"
+      },
       last_turn = function(role = "assistant") {
         ellmer::AssistantTurn(
           contents = list(ellmer::ContentText("response")),
@@ -722,8 +738,11 @@ test_that("process_batch_item returns correct format for structured mode", {
         )
       },
       clone = function(...) mock_llm,
-      set_turns = function(turns) invisible(NULL),
-      get_turns = function(...) list()
+      set_turns = function(value) {
+        turns <<- value
+        invisible(NULL)
+      },
+      get_turns = function(...) turns
     ),
     class = "Chat"
   )
@@ -790,7 +809,7 @@ test_that("create_error_result formats simple errors correctly", {
   expect_true(is.na(result))
   expect_equal(
     attr(result, "error_message"),
-    "Failed to process item 3: test error"
+    "test error"
   )
 })
 
@@ -1128,6 +1147,24 @@ test_that("opaque closure-backed histories are copied, never shared", {
   expect_identical(branches[[2]]$get_turns(), list())
 })
 
+test_that("batch isolation allows ordinary locked package functions", {
+  chat <- local({
+    structure(
+      list(
+        helper = stats::median,
+        chat_structured = function(...) list(answer = "ok")
+      ),
+      class = "Chat"
+    )
+  })
+
+  branches <- dsprrr:::batch_chat_branches(chat, 2L)
+
+  expect_length(branches, 2L)
+  expect_identical(branches[[1]]$helper(1:3), 2L)
+  expect_identical(branches[[2]]$helper(2:4), 3L)
+})
+
 test_that("batch isolation aborts before rows when shared state remains", {
   binding <- ".dsprrr_opaque_batch_calls"
   assign(binding, 0L, envir = globalenv())
@@ -1227,6 +1264,48 @@ test_that("batch isolation rejects namespace-held opaque closure state", {
     class = "dsprrr_chat_isolation_error"
   )
   expect_equal(package_state[[binding]], 0L)
+})
+
+test_that("batch isolation rejects reflective namespace state access", {
+  package_state <- asNamespace("dsprrr")$.dsprrr_env
+  binding <- ".batch_reflective_namespace_probe"
+  package_state[[binding]] <- 0L
+  withr::defer(rm(list = binding, envir = package_state))
+
+  chat <- local({
+    structure(
+      list(chat_structured = function(...) {
+        state <- getFromNamespace(".dsprrr_env", "dsprrr")
+        state$.batch_reflective_namespace_probe <-
+          state$.batch_reflective_namespace_probe + 1L
+        list(answer = "unexpected")
+      }),
+      class = "Chat"
+    )
+  })
+
+  expect_error(
+    dsprrr:::batch_chat_branches(chat, 2L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_equal(package_state[[binding]], 0L)
+})
+
+test_that("batch isolation rejects triple-colon namespace access", {
+  chat <- local({
+    structure(
+      list(chat_structured = function(...) {
+        dsprrr:::.dsprrr_env
+        list(answer = "unexpected")
+      }),
+      class = "Chat"
+    )
+  })
+
+  expect_error(
+    dsprrr:::batch_chat_branches(chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
 })
 
 test_that("batch isolation rejects parent-resolved global closure state", {

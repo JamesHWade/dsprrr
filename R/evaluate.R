@@ -15,6 +15,8 @@
 #'   Additional arguments passed to [run_dataset()]:
 #'   - `.llm`: Optional ellmer chat object
 #'   - `.parallel`: Logical; whether to allow parallel execution
+#'   - `.concurrency`: A policy created by [concurrency_control()]. Do not also
+#'     pass `.parallel` when using an explicit policy.
 #'   - `.progress`: Logical; whether to display progress while evaluating
 #'   - `.return_format`: Character; `"simple"` returns just scores and predictions,
 #'     `"structured"` (default) includes full metadata and data
@@ -163,11 +165,27 @@ evaluate.Module <- function(
   metric,
   .llm = NULL,
   .parallel = FALSE,
+  .concurrency = NULL,
   .progress = TRUE,
   .return_format = c("structured", "simple"),
   epochs = 1L,
   ...
 ) {
+  parallel_missing <- missing(.parallel)
+  concurrency_missing <- missing(.concurrency)
+  explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
+  if (explicit_concurrency && !parallel_missing) {
+    cli::cli_abort(
+      c(
+        "{.arg .concurrency} cannot be combined with {.arg .parallel}",
+        "i" = "Configure workers and backend with {.fn concurrency_control} only."
+      ),
+      class = "dsprrr_concurrency_argument_conflict"
+    )
+  }
+  if (explicit_concurrency) {
+    .concurrency <- validate_concurrency_control(.concurrency)
+  }
   .return_format <- match.arg(.return_format)
 
   # Validate epochs
@@ -217,7 +235,7 @@ evaluate.Module <- function(
 
   # Safety: disallow parallel reuse of custom LLM clients
   parallel_allowed <- .parallel
-  if (.parallel && !is.null(.llm)) {
+  if (!explicit_concurrency && .parallel && !is.null(.llm)) {
     cli::cli_warn(
       "Parallel execution requires a NULL .llm so each worker can create its own client; falling back to sequential processing"
     )
@@ -234,16 +252,26 @@ evaluate.Module <- function(
     }
 
     # Execute module with error handling
+    execution_args <- if (explicit_concurrency) {
+      list(.concurrency = .concurrency)
+    } else {
+      list(.parallel = parallel_allowed)
+    }
     evaluated <- tryCatch(
       {
-        run_dataset(
-          module,
-          data,
-          .llm = .llm,
-          .parallel = parallel_allowed,
-          .progress = .progress && epochs == 1,
-          .return_format = "structured",
-          ...
+        do.call(
+          run_dataset,
+          c(
+            list(
+              module = module,
+              data = data,
+              .llm = .llm,
+              .progress = .progress && epochs == 1,
+              .return_format = "structured"
+            ),
+            execution_args,
+            list(...)
+          )
         )
       },
       error = function(e) {

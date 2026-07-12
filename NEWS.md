@@ -13,6 +13,22 @@ First development changelog. dsprrr is experimental; the API may change.
   Project-local and shared caches require an explicit path, and disabling
   privacy enforcement requires `disk_private = FALSE` (#dsprrr-etge).
 
+* Empty Predict batches and zero-row datasets now return correctly shaped
+  empty results without resolving a provider or changing cache, trace, or
+  history state. Batch rows record one canonical ordered trace across
+  sequential, native ellmer, mirai, cache-hit, and failure paths; mixed
+  zero/non-zero inputs fail during typed preflight. Specialized Predict
+  subclasses preserve scalar `forward()` behavior and reject unsupported
+  vectorized execution instead of silently bypassing it (#dsprrr-bbdm).
+
+* `concurrency_control()` now gives batch execution one enforceable contract
+  for backend selection, exact in-flight limits, per-task and total timeouts,
+  error budgets, and cancellation. Ellmer receives the requested `max_active`;
+  mirai runs in a verified dsprrr-owned pool without replacing user topology;
+  and every row reports requested and effective execution metadata. Explicit
+  backends fail before provider work when their contract cannot be honored
+  (#dsprrr-ywhf).
+
 * Cached requests now use versioned, account-partitioned identities covering
   conversation state, provider settings, exact schemas, and multimodal content.
   Cache hits replay provider-recorded semantic turns, including ellmer's native

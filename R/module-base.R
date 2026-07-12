@@ -73,6 +73,8 @@ Module <- R6::R6Class(
     #' @param .llm Optional ellmer chat object
     #' @param .verbose Logical for debug output (currently unused, for API consistency)
     #' @param .parallel Logical for parallel batch processing (requires using run() generic)
+    #' @param .parallel_method Legacy parallel backend passed through by [run()]
+    #' @param .concurrency Optional policy created by [concurrency_control()]
     #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
     #' @return Module outputs. For .return_format="simple", returns the output value directly.
@@ -82,10 +84,36 @@ Module <- R6::R6Class(
       .llm = NULL,
       .verbose = FALSE,
       .parallel = FALSE,
+      .parallel_method = c("ellmer", "mirai"),
+      .concurrency = NULL,
+      .concurrency_runtime = NULL,
       .progress = TRUE,
       .return_format = "simple",
       .cache = NULL
     ) {
+      parallel_missing <- missing(.parallel)
+      parallel_method_missing <- missing(.parallel_method)
+      concurrency_missing <- missing(.concurrency)
+      if (is.null(.concurrency_runtime)) {
+        concurrency <- resolve_concurrency_control(
+          .concurrency = .concurrency,
+          concurrency_missing = concurrency_missing,
+          .parallel = .parallel,
+          parallel_missing = parallel_missing,
+          .parallel_method = .parallel_method,
+          parallel_method_missing = parallel_method_missing
+        )
+      } else if (
+        !inherits(
+          .concurrency_runtime,
+          "dsprrr_concurrency_runtime"
+        )
+      ) {
+        cli::cli_abort(
+          "Internal concurrency runtime is invalid",
+          class = "dsprrr_concurrency_config_error"
+        )
+      }
       # Validate .cache here too: callers can reach $run() directly (not only
       # via the run() generic, which validates separately), so a malformed
       # value must fail loudly instead of being silently forwarded.
@@ -103,39 +131,62 @@ Module <- R6::R6Class(
         context = "inputs"
       )
 
-      # Check for batch inputs - warn if parallel requested but using $run()
-      input_lengths <- lengths(inputs)
-      is_batch <- any(input_lengths > 1)
+      input_contract <- batch_input_contract(inputs)
+      is_batch <- input_contract$kind %in% c("batch", "empty")
 
-      if (is_batch && .parallel) {
-        cli::cli_warn(c(
-          "Parallel batch processing requires using the {.fn run} generic function",
-          "i" = "Use {.code run(module, ...)} instead of {.code module$run(...)}"
-        ))
+      if (identical(input_contract$kind, "batch")) {
+        if (
+          inherits(self, "PredictModule") &&
+            !identical(class(self)[1], "PredictModule")
+        ) {
+          cli::cli_abort(
+            c(
+              "Batch execution is not yet supported for specialized Predict modules",
+              "x" = "{.cls {class(self)[1]}} overrides the row execution contract.",
+              "i" = "Run scalar inputs so the module's specialized {.fn forward} method is preserved."
+            ),
+            class = "dsprrr_batch_unsupported_module",
+            module_class = class(self)[1]
+          )
+        }
+        runtime_chat <- .llm %||% self$chat %||%
+          get_default_chat(create = FALSE)
+        runtime <- .concurrency_runtime %||%
+          normalize_concurrency_runtime(
+            concurrency,
+            .llm = .llm,
+            .chat = runtime_chat
+          )
+        if (!identical(runtime$effective_backend, "sequential")) {
+          cli::cli_abort(
+            c(
+              "Concurrent batch execution is not supported for this module",
+              "x" = "{.cls {class(self)[1]}} does not implement the isolated Predict row contract.",
+              "i" = "Use sequential execution or run scalar inputs."
+            ),
+            class = c(
+              "dsprrr_batch_unsupported_module",
+              "dsprrr_concurrency_unsupported_error"
+            ),
+            module_class = class(self)[1]
+          )
+        }
+      }
+
+      if (identical(input_contract$kind, "empty")) {
+        return(empty_batch_result(.return_format))
       }
 
       # Handle batch inputs by iterating over forward()
-      if (is_batch) {
-        max_length <- max(input_lengths)
-
-        # Validate all inputs have compatible lengths
-        invalid_lengths <- input_lengths[
-          input_lengths != 1 & input_lengths != max_length
-        ]
-        if (length(invalid_lengths) > 0) {
-          cli::cli_abort(
-            "All inputs must have the same length or length 1 for batch processing"
-          )
-        }
-
+      if (identical(input_contract$kind, "batch")) {
         # Expand scalar inputs
         inputs <- lapply(inputs, function(x) {
-          if (length(x) == 1) rep(x, max_length) else x
+          if (length(x) == 1L) rep(x, input_contract$size) else x
         })
 
         # Process each item
-        results <- vector("list", max_length)
-        for (i in seq_len(max_length)) {
+        results <- vector("list", input_contract$size)
+        for (i in seq_len(input_contract$size)) {
           input_set <- lapply(inputs, `[[`, i)
           result <- self$forward(
             input_set,

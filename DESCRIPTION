@@ -71,6 +71,7 @@ Collate:
     'cache.R'
     'chat-default.R'
     'compile.R'
+    'concurrency-control.R'
     'demo.R'
     'dsp.R'
     'dsprrr-package.R'
