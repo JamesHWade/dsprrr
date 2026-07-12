@@ -187,6 +187,7 @@ reference:
     - dsp
     - as_module
     - module_fn
+    - module-graph
     - get_last_trace
 
   - title: Pipelines

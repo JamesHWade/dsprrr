@@ -81,6 +81,7 @@ Collate:
     'module-codeact.R'
     'module-ensemble.R'
     'module-fn.R'
+    'module-graph.R'
     'module-knn.R'
     'module-multichain.R'
     'module-predict.R'
