@@ -762,9 +762,21 @@ trial_log_atomic_publish <- function(path, what, guard, writer, verifier) {
     trial_log_trust_abort(paste0(what, " target is a symbolic link"))
   }
   existing <- NULL
+  existing_hold <- NULL
+  on.exit(artifact_file_hold_release(existing_hold), add = TRUE)
   if (file.exists(path)) {
     trial_log_assert_private_file(path, what, guard)
     existing <- trial_log_file_identity(path, guard)$identity
+    existing_hold <- tryCatch(
+      artifact_file_hold(path),
+      error = function(e) e
+    )
+    if (inherits(existing_hold, "condition")) {
+      trial_log_trust_abort(
+        paste0(what, " target identity could not be held"),
+        parent = existing_hold
+      )
+    }
   }
 
   temporary <- artifact_private_stage(path)
@@ -772,6 +784,17 @@ trial_log_atomic_publish <- function(path, what, guard, writer, verifier) {
   staged_empty <- trial_log_file_identity(temporary, guard)
   if (!isTRUE(staged_empty$ok)) {
     trial_log_trust_abort(staged_empty$reason)
+  }
+  staging_hold <- tryCatch(
+    artifact_file_hold(temporary),
+    error = function(e) e
+  )
+  on.exit(artifact_file_hold_release(staging_hold), add = TRUE)
+  if (inherits(staging_hold, "condition")) {
+    trial_log_trust_abort(
+      paste0(what, " staging identity could not be held"),
+      parent = staging_hold
+    )
   }
   trial_log_publication_hook("stage_created", path, temporary, what)
   writer(temporary)
@@ -817,6 +840,10 @@ trial_log_atomic_publish <- function(path, what, guard, writer, verifier) {
     )
   }
 
+  artifact_file_hold_release(staging_hold)
+  staging_hold <- NULL
+  artifact_file_hold_release(existing_hold)
+  existing_hold <- NULL
   tryCatch(
     artifact_atomic_replace(temporary, path, what = what),
     error = function(e) {

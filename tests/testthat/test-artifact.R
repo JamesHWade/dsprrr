@@ -1575,6 +1575,60 @@ test_that("local files atomically replace and preserve the old target on failure
   }
 })
 
+test_that("atomic replacement is a guarded same-directory filesystem move", {
+  directory <- withr::local_tempdir()
+  destination <- file.path(directory, "published.txt")
+  source <- file.path(directory, "staged.txt")
+  writeLines("old", destination)
+  writeLines("new", source)
+
+  expect_identical(
+    dsprrr:::artifact_atomic_replace(source, destination, "test artifact"),
+    destination
+  )
+  expect_identical(readLines(destination), "new")
+  expect_identical(file.exists(source), FALSE)
+
+  writeLines("verified-old", destination)
+  writeLines("unpublished", source)
+  before <- readBin(destination, "raw", n = file.info(destination)$size)
+  testthat::local_mocked_bindings(
+    artifact_file_move = function(...) {
+      cli::cli_abort("injected filesystem move failure")
+    },
+    .package = "dsprrr"
+  )
+
+  condition <- rlang::catch_cnd(
+    dsprrr:::artifact_atomic_replace(source, destination, "test artifact")
+  )
+
+  expect_s3_class(condition, "dsprrr_artifact_io_error")
+  expect_identical(
+    readBin(destination, "raw", n = file.info(destination)$size),
+    before
+  )
+  expect_identical(readLines(source), "unpublished")
+})
+
+test_that("atomic replacement rejects cross-directory publication", {
+  source_dir <- withr::local_tempdir()
+  destination_dir <- withr::local_tempdir()
+  source <- file.path(source_dir, "staged.txt")
+  destination <- file.path(destination_dir, "published.txt")
+  writeLines("new", source)
+  writeLines("old", destination)
+
+  condition <- rlang::catch_cnd(
+    dsprrr:::artifact_atomic_replace(source, destination, "test artifact")
+  )
+
+  expect_s3_class(condition, "dsprrr_artifact_io_error")
+  expect_match(conditionMessage(condition), "canonical directory")
+  expect_identical(readLines(destination), "old")
+  expect_identical(readLines(source), "new")
+})
+
 test_that("artifact staging is private before any RDS content is written", {
   skip_if(.Platform$OS.type != "unix")
   writer <- dsprrr:::artifact_write_rds

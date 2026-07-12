@@ -1850,58 +1850,222 @@ artifact_write_lines <- function(lines, path) {
   invisible(path)
 }
 
-artifact_atomic_replace <- function(source, destination, what) {
-  destination_exists <- file.exists(destination)
-  replaced <- if (!destination_exists || .Platform$OS.type != "windows") {
-    file.rename(source, destination)
-  } else {
-    artifact_windows_atomic_replace(source, destination)
+artifact_atomic_identity <- function(path) {
+  if (
+    !file.exists(path) ||
+      cache_path_is_symlink(path) ||
+      !cache_path_is_regular(path)
+  ) {
+    return(NULL)
   }
+  info <- tryCatch(
+    suppressWarnings(fs::file_info(path, follow = FALSE, fail = FALSE)),
+    error = function(e) NULL
+  )
+  if (
+    is.null(info) ||
+      nrow(info) != 1L ||
+      !all(
+        c("device_id", "inode", "size", "modification_time") %in%
+          names(info)
+      )
+  ) {
+    return(NULL)
+  }
+  identity <- list(
+    device_id = suppressWarnings(as.numeric(info$device_id[[1L]])),
+    inode = suppressWarnings(as.numeric(info$inode[[1L]])),
+    size = suppressWarnings(as.numeric(info$size[[1L]])),
+    modification_time = suppressWarnings(
+      as.numeric(info$modification_time[[1L]])
+    )
+  )
+  if (
+    any(lengths(identity) != 1L) ||
+      !all(is.finite(unlist(identity, use.names = FALSE)))
+  ) {
+    return(NULL)
+  }
+  identity
+}
 
-  if (!isTRUE(replaced)) {
+artifact_file_hold <- function(path) {
+  if (.Platform$OS.type != "unix") {
+    return(NULL)
+  }
+  file(path, open = "rb")
+}
+
+artifact_file_hold_release <- function(connection) {
+  if (inherits(connection, "connection") && isOpen(connection)) {
+    close(connection)
+  }
+  invisible(NULL)
+}
+
+artifact_file_move <- function(source, destination) {
+  fs::file_move(source, destination)
+  invisible(destination)
+}
+
+artifact_atomic_replace <- function(source, destination, what) {
+  requested_destination <- destination
+  source <- artifact_validate_path(source)
+  destination <- artifact_validate_path(destination)
+  source_absolute <- tryCatch(
+    as.character(fs::path_abs(path.expand(source))),
+    error = function(e) NULL
+  )
+  destination_absolute <- tryCatch(
+    as.character(fs::path_abs(path.expand(destination))),
+    error = function(e) NULL
+  )
+  source_parent <- tryCatch(
+    as.character(fs::path_real(dirname(source_absolute))),
+    error = function(e) NULL
+  )
+  destination_parent <- tryCatch(
+    as.character(fs::path_real(dirname(destination_absolute))),
+    error = function(e) NULL
+  )
+  if (
+    is.null(source_absolute) ||
+      is.null(destination_absolute) ||
+      is.null(source_parent) ||
+      is.null(destination_parent) ||
+      !identical(source_parent, destination_parent)
+  ) {
     cli::cli_abort(
       c(
         "Could not atomically publish {what} at {.path {destination}}",
-        "i" = "An existing destination was left unchanged."
+        "x" = "The staging file and destination are not in one canonical directory."
       ),
       class = "dsprrr_artifact_io_error"
     )
   }
-  invisible(destination)
-}
-
-artifact_windows_atomic_replace <- function(source, destination) {
-  powershell <- Sys.which(c("pwsh", "powershell"))
-  powershell <- unname(powershell[nzchar(powershell)][1])
-  if (length(powershell) == 0L || is.na(powershell)) {
-    return(FALSE)
+  source <- file.path(source_parent, basename(source_absolute))
+  destination <- file.path(destination_parent, basename(destination_absolute))
+  if (identical(source, destination)) {
+    cli::cli_abort(
+      "Could not atomically publish {what}: staging and destination paths are identical",
+      class = "dsprrr_artifact_io_error"
+    )
   }
 
-  quote_path <- function(path) {
-    path <- normalizePath(path, winslash = "\\", mustWork = TRUE)
-    paste0("'", gsub("'", "''", path, fixed = TRUE), "'")
+  source_identity <- artifact_atomic_identity(source)
+  if (is.null(source_identity)) {
+    cli::cli_abort(
+      "Could not verify the {what} staging file at {.path {source}}",
+      class = "dsprrr_artifact_io_error"
+    )
   }
-  command <- sprintf(
-    "[System.IO.File]::Replace(%s, %s, $null, $true)",
-    quote_path(source),
-    quote_path(destination)
+  source_hold <- tryCatch(
+    artifact_file_hold(source),
+    error = function(e) e
   )
-  status <- tryCatch(
-    suppressWarnings(system2(
-      powershell,
+  on.exit(artifact_file_hold_release(source_hold), add = TRUE)
+  if (inherits(source_hold, "condition")) {
+    cli::cli_abort(
+      "Could not hold the {what} staging identity",
+      parent = source_hold,
+      class = "dsprrr_artifact_io_error"
+    )
+  }
+
+  destination_exists <- file.exists(destination)
+  destination_identity <- NULL
+  destination_hold <- NULL
+  on.exit(artifact_file_hold_release(destination_hold), add = TRUE)
+  if (destination_exists || cache_path_is_symlink(destination)) {
+    destination_identity <- artifact_atomic_identity(destination)
+    if (is.null(destination_identity)) {
+      cli::cli_abort(
+        "Could not verify the existing {what} destination at {.path {destination}}",
+        class = "dsprrr_artifact_io_error"
+      )
+    }
+    destination_hold <- tryCatch(
+      artifact_file_hold(destination),
+      error = function(e) e
+    )
+    if (inherits(destination_hold, "condition")) {
+      cli::cli_abort(
+        "Could not hold the existing {what} destination identity",
+        parent = destination_hold,
+        class = "dsprrr_artifact_io_error"
+      )
+    }
+  }
+
+  source_current <- artifact_atomic_identity(source)
+  destination_current <- if (destination_exists) {
+    artifact_atomic_identity(destination)
+  } else {
+    NULL
+  }
+  if (!identical(source_current, source_identity)) {
+    cli::cli_abort(
+      "Could not atomically publish {what}: the staging file identity changed",
+      class = "dsprrr_artifact_io_error"
+    )
+  }
+  if (
+    destination_exists &&
+      !identical(destination_current, destination_identity)
+  ) {
+    cli::cli_abort(
+      "Could not atomically publish {what}: the destination identity changed",
+      class = "dsprrr_artifact_io_error"
+    )
+  }
+  if (
+    !destination_exists &&
+      (file.exists(destination) || cache_path_is_symlink(destination))
+  ) {
+    cli::cli_abort(
+      "Could not atomically publish {what}: the destination appeared",
+      class = "dsprrr_artifact_io_error"
+    )
+  }
+
+  artifact_file_hold_release(source_hold)
+  source_hold <- NULL
+  artifact_file_hold_release(destination_hold)
+  destination_hold <- NULL
+  failure <- tryCatch(
+    {
+      artifact_file_move(source, destination)
+      NULL
+    },
+    error = function(e) e
+  )
+  if (!is.null(failure)) {
+    cli::cli_abort(
       c(
-        "-NoLogo",
-        "-NoProfile",
-        "-NonInteractive",
-        "-Command",
-        shQuote(command)
+        "Could not atomically publish {what} at {.path {destination}}",
+        "i" = if (destination_exists) {
+          "The existing destination was left unchanged."
+        } else {
+          "No destination was published."
+        }
       ),
-      stdout = FALSE,
-      stderr = FALSE
-    )),
-    error = function(e) 1L
-  )
-  identical(status, 0L)
+      parent = failure,
+      class = "dsprrr_artifact_io_error"
+    )
+  }
+
+  installed_identity <- artifact_atomic_identity(destination)
+  if (
+    file.exists(source) ||
+      cache_path_is_symlink(source) ||
+      !identical(installed_identity, source_identity)
+  ) {
+    cli::cli_abort(
+      "Could not verify the atomically published {what} at {.path {destination}}",
+      class = "dsprrr_artifact_io_error"
+    )
+  }
+  invisible(requested_destination)
 }
 
 artifact_validate_path <- function(path) {

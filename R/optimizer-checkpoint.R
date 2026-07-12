@@ -1142,6 +1142,17 @@ optimizer_checkpoint_atomic_save_locked <- function(
   if (!isTRUE(staging_before$ok)) {
     optimizer_checkpoint_trust_abort(staging_before$reason)
   }
+  staging_hold <- tryCatch(
+    artifact_file_hold(temporary),
+    error = function(e) e
+  )
+  on.exit(artifact_file_hold_release(staging_hold), add = TRUE)
+  if (inherits(staging_hold, "condition")) {
+    optimizer_checkpoint_trust_abort(
+      "the checkpoint staging identity could not be held",
+      parent = staging_hold
+    )
+  }
   tryCatch(
     artifact_write_rds(checkpoint, temporary),
     error = function(e) {
@@ -1183,6 +1194,8 @@ optimizer_checkpoint_atomic_save_locked <- function(
     include_content = TRUE
   )
   optimizer_checkpoint_validate_manifest(staged)
+  artifact_file_hold_release(staging_hold)
+  staging_hold <- NULL
   optimizer_checkpoint_assert_parent(guard)
   if (is.null(current_predecessor)) {
     if (file.exists(path)) {
