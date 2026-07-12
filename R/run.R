@@ -3427,6 +3427,11 @@ run_batch_parallel <- function(
   baseline_turns <- batch_chat_turns(llm_template)
   batch_started_at <- Sys.time()
   batch_started_elapsed <- concurrency_elapsed()
+  deadline <- if (is.finite(.concurrency$total_timeout)) {
+    batch_started_elapsed + .concurrency$total_timeout
+  } else {
+    Inf
+  }
   compute_profile <- new_dsprrr_mirai_profile()
   profile_owned <- FALSE
   tasks <- vector("list", n)
@@ -3467,7 +3472,8 @@ run_batch_parallel <- function(
     stopped <- shutdown_dsprrr_mirai_profile(
       profile = compute_profile,
       tasks = tasks,
-      strict = strict
+      strict = strict,
+      deadline = if (is.finite(deadline)) deadline else NULL
     )
     if (isTRUE(stopped)) {
       profile_owned <<- FALSE
@@ -3658,12 +3664,6 @@ run_batch_parallel <- function(
   } else {
     NULL
   }
-  deadline <- if (is.finite(.concurrency$total_timeout)) {
-    batch_started_elapsed + .concurrency$total_timeout
-  } else {
-    Inf
-  }
-
   launch_one <- function(index) {
     task_started_at[[index]] <<- Sys.time()
     task_started_elapsed[[index]] <<- concurrency_elapsed()
@@ -3687,6 +3687,7 @@ run_batch_parallel <- function(
   launch_available <- function() {
     while (
       !stop_scheduling &&
+        concurrency_elapsed() < deadline &&
         next_index <= n &&
         length(active) < .concurrency$effective_workers
     ) {

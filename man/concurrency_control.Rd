@@ -27,8 +27,10 @@ dsprrr-owned mirai pool.}
 \item{task_timeout}{Per-task timeout in seconds, or \code{Inf} for no timeout.
 Finite task timeouts currently require the mirai backend.}
 
-\item{total_timeout}{Total batch timeout in seconds, or \code{Inf} for no timeout.
-Finite total timeouts currently require the mirai backend.}
+\item{total_timeout}{Total batch execution timeout in seconds, or \code{Inf} for
+no timeout. Finite total timeouts currently require the mirai backend.
+Shutdown is initiated at the deadline and verification is bounded; the
+native backend reset can add brief cleanup latency before \code{\link[=run]{run()}} returns.}
 
 \item{max_errors}{Non-negative integer error budget, or \code{Inf}. Zero permits
 work to begin and stops new work after the first failure. With ellmer, an

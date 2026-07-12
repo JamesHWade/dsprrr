@@ -19,8 +19,10 @@
 #'   dsprrr-owned mirai pool.
 #' @param task_timeout Per-task timeout in seconds, or `Inf` for no timeout.
 #'   Finite task timeouts currently require the mirai backend.
-#' @param total_timeout Total batch timeout in seconds, or `Inf` for no timeout.
-#'   Finite total timeouts currently require the mirai backend.
+#' @param total_timeout Total batch execution timeout in seconds, or `Inf` for
+#'   no timeout. Finite total timeouts currently require the mirai backend.
+#'   Shutdown is initiated at the deadline and verification is bounded; the
+#'   native backend reset can add brief cleanup latency before [run()] returns.
 #' @param max_errors Non-negative integer error budget, or `Inf`. Zero permits
 #'   work to begin and stops new work after the first failure. With ellmer, an
 #'   already-started wave of at most `max_active` rows completes before the
@@ -519,27 +521,81 @@ mirai_profile_is_drained <- function(profile) {
 shutdown_dsprrr_mirai_profile <- function(
   profile,
   tasks = list(),
-  strict = TRUE
+  strict = TRUE,
+  deadline = NULL,
+  timeout = getOption("dsprrr.mirai_teardown_timeout", 5)
 ) {
+  if (is.null(deadline)) {
+    timeout <- tryCatch(
+      suppressWarnings(as.numeric(timeout)),
+      error = function(error) NA_real_
+    )
+    if (
+      length(timeout) != 1L ||
+        is.na(timeout) ||
+        !is.finite(timeout) ||
+        timeout <= 0
+    ) {
+      timeout <- 5
+    }
+    deadline <- concurrency_elapsed() + timeout
+  } else {
+    deadline <- tryCatch(
+      suppressWarnings(as.numeric(deadline)),
+      error = function(error) NA_real_
+    )
+    if (length(deadline) != 1L || is.na(deadline) || !is.finite(deadline)) {
+      deadline <- concurrency_elapsed() + 5
+    }
+  }
+
   for (task in Filter(Negate(is.null), tasks)) {
     if (isTRUE(tryCatch(mirai::unresolved(task), error = function(e) FALSE))) {
       try(mirai::stop_mirai(task), silent = TRUE)
     }
   }
 
-  last_error <- NULL
-  for (attempt in seq_len(2L)) {
-    last_error <- tryCatch(
-      {
-        mirai::daemons(0L, sync = TRUE, .compute = profile)
-        NULL
-      },
-      error = function(error) error
-    )
+  # The native reset call itself cannot be safely pre-empted from R. Request a
+  # non-synchronous reset, then bound every retry and verification after it
+  # returns by the caller's absolute monotonic deadline.
+  last_error <- tryCatch(
+    {
+      mirai::daemons(0L, sync = FALSE, .compute = profile)
+      NULL
+    },
+    error = function(error) error
+  )
+  attempts <- 1L
+  timed_out <- FALSE
+
+  repeat {
     if (is.null(last_error) && mirai_profile_is_drained(profile)) {
       return(TRUE)
     }
-    Sys.sleep(0.02)
+
+    remaining <- deadline - concurrency_elapsed()
+    if (remaining <= 0) {
+      timed_out <- TRUE
+      break
+    }
+
+    if (!is.null(last_error) && attempts < 2L) {
+      Sys.sleep(min(0.02, remaining))
+      attempts <- attempts + 1L
+      last_error <- tryCatch(
+        {
+          mirai::daemons(0L, sync = FALSE, .compute = profile)
+          NULL
+        },
+        error = function(error) error
+      )
+      next
+    }
+
+    if (!is.null(last_error)) {
+      break
+    }
+    Sys.sleep(min(0.02, remaining))
   }
 
   if (strict) {
@@ -553,7 +609,16 @@ shutdown_dsprrr_mirai_profile <- function(
         "Could not fully stop the dsprrr-owned mirai worker pool",
         "x" = detail
       ),
-      class = "dsprrr_mirai_teardown_error"
+      class = if (timed_out) {
+        c(
+          "dsprrr_mirai_teardown_timeout",
+          "dsprrr_mirai_teardown_error"
+        )
+      } else {
+        "dsprrr_mirai_teardown_error"
+      },
+      profile = profile,
+      deadline = deadline
     )
   }
   FALSE

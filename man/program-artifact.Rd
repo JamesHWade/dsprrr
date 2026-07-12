@@ -53,10 +53,11 @@ retrievers, stores, and code runners.
 
 Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 through a closed codec. Remote content URLs must be stable HTTPS URLs without
-user information, query strings, or fragments. Thinking, tool-call,
-uploaded, and other runtime content still requires a registry or trusted
-embedding. The payload digest detects changes but is not an authenticity or
-trust signal.
+user information, query strings, fragments, or recognizable signed-path
+credentials. Demo fields with credential-like names are rejected instead of
+being silently removed from the program. Thinking, tool-call, uploaded, and
+other runtime content still requires a registry or trusted embedding. The
+payload digest detects changes but is not an authenticity or trust signal.
 
 Artifacts currently reject cyclic module graphs with a typed error. Shared
 acyclic nodes are represented once and reconstructed with identical R6

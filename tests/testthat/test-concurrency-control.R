@@ -550,6 +550,108 @@ test_that("mirai preserves the user-owned default topology", {
   expect_identical(probe[["data"]], 42L)
 })
 
+test_that("mirai teardown reuses an expired absolute deadline", {
+  daemons_calls <- list()
+  testthat::local_mocked_bindings(
+    daemons = function(n, sync, .compute) {
+      daemons_calls <<- append(
+        daemons_calls,
+        list(list(n = n, sync = sync, profile = .compute))
+      )
+      invisible(FALSE)
+    },
+    status = function(.compute) {
+      list(
+        connections = 1L,
+        mirai = c(awaiting = 0L, executing = 1L)
+      )
+    },
+    .package = "mirai"
+  )
+  testthat::local_mocked_bindings(
+    concurrency_elapsed = function() 10,
+    .package = "dsprrr"
+  )
+
+  error <- tryCatch(
+    dsprrr:::shutdown_dsprrr_mirai_profile(
+      profile = "dsprrr-expired-deadline",
+      deadline = 9
+    ),
+    error = identity
+  )
+  expect_s3_class(error, "dsprrr_mirai_teardown_timeout")
+  expect_identical(error$profile, "dsprrr-expired-deadline")
+  expect_identical(error$deadline, 9)
+  expect_identical(
+    daemons_calls,
+    list(list(
+      n = 0L,
+      sync = FALSE,
+      profile = "dsprrr-expired-deadline"
+    ))
+  )
+})
+
+test_that("expired mirai batch deadlines launch no worker tasks", {
+  launches <- 0L
+  ticks <- c(0, 1)
+  tick <- 0L
+  testthat::local_mocked_bindings(
+    new_dsprrr_mirai_profile = function() "dsprrr-expired-before-launch",
+    mirai_profile_is_unoccupied = function(...) TRUE,
+    shutdown_dsprrr_mirai_profile = function(...) TRUE,
+    concurrency_elapsed = function() {
+      tick <<- tick + 1L
+      ticks[[min(tick, length(ticks))]]
+    },
+    .package = "dsprrr"
+  )
+  testthat::local_mocked_bindings(
+    daemons = function(...) invisible(TRUE),
+    mirai = function(...) {
+      launches <<- launches + 1L
+      stop("worker launched after its batch deadline")
+    },
+    .package = "mirai"
+  )
+
+  mod <- module(signature("text -> answer"), type = "predict")
+  mod$chat <- concurrency_test_chat()
+  expect_warning(
+    result <- run(
+      mod,
+      text = c("a", "b"),
+      .concurrency = concurrency_control(
+        backend = "mirai",
+        max_active = 1L,
+        total_timeout = 1e-9
+      ),
+      .return_format = "structured",
+      .progress = FALSE,
+      .cache = FALSE
+    ),
+    "timed out"
+  )
+
+  expect_identical(launches, 0L)
+  expect_length(result, 2L)
+  expect_true(all(vapply(
+    result,
+    function(row) {
+      identical(
+        row$metadata$cancellation_reason,
+        "total_timeout"
+      ) &&
+        identical(
+          row$metadata$error_class,
+          "dsprrr_mirai_timeout_error"
+        )
+    },
+    logical(1)
+  )))
+})
+
 test_that("mirai refuses to claim an occupied named profile", {
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")

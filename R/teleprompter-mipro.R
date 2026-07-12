@@ -228,7 +228,8 @@ compile_mipro <- function(
   evalset <- valset %||% trainset
   control <- optimizer_control_for_teleprompter(
     teleprompter,
-    control = control
+    control = control,
+    num_threads = teleprompter@num_threads
   )
   settings <- resolve_mipro_settings(
     auto = teleprompter@auto,

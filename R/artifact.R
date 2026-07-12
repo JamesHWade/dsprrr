@@ -15,10 +15,11 @@
 #'
 #' Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 #' through a closed codec. Remote content URLs must be stable HTTPS URLs without
-#' user information, query strings, or fragments. Thinking, tool-call,
-#' uploaded, and other runtime content still requires a registry or trusted
-#' embedding. The payload digest detects changes but is not an authenticity or
-#' trust signal.
+#' user information, query strings, fragments, or recognizable signed-path
+#' credentials. Demo fields with credential-like names are rejected instead of
+#' being silently removed from the program. Thinking, tool-call, uploaded, and
+#' other runtime content still requires a registry or trusted embedding. The
+#' payload digest detects changes but is not an authenticity or trust signal.
 #'
 #' Artifacts currently reject cyclic module graphs with a typed error. Shared
 #' acyclic nodes are represented once and reconstructed with identical R6
@@ -599,14 +600,28 @@ artifact_serialize_fields <- function(
   trusted,
   exclusions
 ) {
-  clean <- function(value, name, drop_runtime_names = FALSE) {
+  # Legacy v2 manifests already promised credential redaction inside demos.
+  # Preserve that migration-only behavior, while new artifacts fail instead of
+  # silently changing semantic demo fields.
+  reject_demo_secret_names <- !isTRUE(attr(
+    module,
+    "dsprrr_legacy_demo_redaction",
+    exact = TRUE
+  ))
+  clean <- function(
+    value,
+    name,
+    drop_runtime_names = FALSE,
+    reject_secret_names = FALSE
+  ) {
     artifact_sanitize_value(
       value,
       paste0(node_path, ".fields.", name),
       registry,
       trusted,
       exclusions,
-      drop_runtime_names = drop_runtime_names
+      drop_runtime_names = drop_runtime_names,
+      reject_secret_names = reject_secret_names
     )
   }
   runtime <- function(value, name) {
@@ -639,13 +654,21 @@ artifact_serialize_fields <- function(
     class,
     ReactModule = list(
       template = module$template,
-      demos = clean(module$demos, "demos"),
+      demos = clean(
+        module$demos,
+        "demos",
+        reject_secret_names = reject_demo_secret_names
+      ),
       max_iterations = module$max_iterations,
       tools = runtime_list(module$tools, "tools")
     ),
     PredictModule = list(
       template = module$template,
-      demos = clean(module$demos, "demos")
+      demos = clean(
+        module$demos,
+        "demos",
+        reject_secret_names = reject_demo_secret_names
+      )
     ),
     PipelineModule = list(
       steps = lapply(seq_along(module$steps), function(i) {
@@ -714,9 +737,17 @@ artifact_serialize_fields <- function(
       vectorizer = runtime(module$vectorizer, "vectorizer"),
       input_text = runtime(module$input_text, "input_text"),
       train_embeddings = clean(module$train_embeddings, "train_embeddings"),
-      trainset_demos = clean(module$trainset_demos, "trainset_demos"),
+      trainset_demos = clean(
+        module$trainset_demos,
+        "trainset_demos",
+        reject_secret_names = reject_demo_secret_names
+      ),
       merge_demos = module$merge_demos,
-      original_demos = clean(module$original_demos, "original_demos")
+      original_demos = clean(
+        module$original_demos,
+        "original_demos",
+        reject_secret_names = reject_demo_secret_names
+      )
     ),
     FnModule = list(
       forward_fn = runtime(
@@ -875,10 +906,14 @@ artifact_sanitize_value <- function(
   registry,
   trusted,
   exclusions,
-  drop_runtime_names
+  drop_runtime_names,
+  reject_secret_names = FALSE
 ) {
   if (is.null(value)) {
     return(NULL)
+  }
+  if (reject_secret_names) {
+    artifact_reject_secret_named_fields(value, path)
   }
   if (inherits(value, "Module")) {
     artifact_record_exclusion(exclusions, path, "module-reference")
@@ -1014,7 +1049,8 @@ artifact_sanitize_value <- function(
       registry,
       trusted,
       exclusions,
-      drop_runtime_names
+      drop_runtime_names,
+      reject_secret_names
     )
     if (!artifact_is_omit(item)) {
       # Single-bracket assignment preserves declarative NULL values. Using
@@ -1035,6 +1071,28 @@ artifact_sanitize_value <- function(
     return(artifact_envelope("plain", result))
   }
   result
+}
+
+artifact_reject_secret_named_fields <- function(value, path) {
+  value_names <- names(value)
+  if (is.null(value_names)) {
+    return(invisible(NULL))
+  }
+  secret <- !is.na(value_names) &
+    nzchar(value_names) &
+    vapply(value_names, artifact_is_secret_name, logical(1))
+  if (!any(secret)) {
+    return(invisible(NULL))
+  }
+  field_path <- paste0(path, ".", value_names[[which(secret)[[1L]]]])
+  cli::cli_abort(
+    c(
+      "Semantic program data cannot be persisted safely",
+      "x" = "{.field {field_path}} has a credential-like field name and cannot be silently removed.",
+      "i" = "Rename the semantic field or keep this program outside the safe artifact format."
+    ),
+    class = "dsprrr_artifact_unsafe_value"
+  )
 }
 
 artifact_encode_content <- function(value, path) {
@@ -1094,11 +1152,34 @@ artifact_is_safe_remote_url <- function(url) {
   authority <- sub("[/#?].*$", "", without_scheme)
   if (
     !nzchar(authority) ||
-      grepl("@", utils::URLdecode(authority), fixed = TRUE)
+      grepl("@", utils::URLdecode(authority), fixed = TRUE) ||
+      artifact_remote_url_has_signed_path(url)
   ) {
     return(FALSE)
   }
   TRUE
+}
+
+artifact_remote_url_has_signed_path <- function(url) {
+  without_scheme <- sub("^[^:]+://", "", url)
+  path <- sub("^[^/]*", "", without_scheme)
+  decoded <- tryCatch(utils::URLdecode(path), error = function(e) path)
+  patterns <- c(
+    "(^|/)s--[^/]+--(/|$)",
+    paste0(
+      "(^|/)(x-amz-)?(signed|signature|sig|token|auth|key)",
+      "[=:_-][^/]+(/|$)"
+    ),
+    "(^|/)(signed|signature|token|auth|key)/[^/]+(/|$)"
+  )
+  any(vapply(
+    patterns,
+    grepl,
+    logical(1),
+    x = decoded,
+    ignore.case = TRUE,
+    perl = TRUE
+  ))
 }
 
 artifact_validate_content_ref <- function(record, path) {
@@ -4462,6 +4543,14 @@ migrate_program_artifact_v2 <- function(
         source$signature <- serialize_signature_v2(signature)
       }
       module <- restore_module_from_v2(source)
+      legacy_graph <- module_graph(
+        module,
+        boundaries = "cross",
+        cycles = "record"
+      )
+      for (legacy_module in legacy_graph$module) {
+        attr(legacy_module, "dsprrr_legacy_demo_redaction") <- TRUE
+      }
       if (legacy_n_trials > 0L) {
         optimizer <- module$config$optimizer %||% list()
         optimizer$n_trials <- legacy_n_trials

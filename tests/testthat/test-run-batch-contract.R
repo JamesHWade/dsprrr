@@ -1732,7 +1732,6 @@ test_that("mirai timeouts stop tasks and commit typed elapsed failures", {
     mirai::daemons(n = 1L)
     withr::defer(mirai::daemons(0L))
   }
-  withr::local_options(list(dsprrr.parallel_timeout = 0.03))
   clear_prompt_history()
 
   stops <- new.env(parent = emptyenv())
@@ -1769,8 +1768,12 @@ test_that("mirai timeouts stop tasks and commit typed elapsed failures", {
     result <- run(
       mod,
       text = c("first", "second"),
-      .parallel = TRUE,
-      .parallel_method = "mirai",
+      .concurrency = concurrency_control(
+        backend = "mirai",
+        max_active = 1L,
+        task_timeout = 0.05,
+        total_timeout = 5
+      ),
       .return_format = "structured",
       .progress = TRUE,
       .cache = FALSE

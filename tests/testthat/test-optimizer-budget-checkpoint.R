@@ -329,6 +329,68 @@ test_that("raising a resource cap clears only its resumable stop", {
   expect_true(optimizer_budget_stopped(unchanged))
 })
 
+test_that("restored max-error stops survive later started outcomes", {
+  clock <- function() 0
+  control <- optimizer_control(max_errors = 2L)
+  budget <- new_optimizer_budget(control, clock = clock)
+
+  for (success in c(FALSE, FALSE, TRUE)) {
+    record_optimizer_outcome(budget, success, "completed_batch")
+  }
+
+  state <- optimizer_budget_state(budget)
+  expect_identical(state$consecutive_errors, 0L)
+  expect_identical(state$stop_reason$observed, 2L)
+  expect_identical(state$stop_reason$attempts, 2L)
+
+  resumed <- new_optimizer_budget(control, state = state, clock = clock)
+  expect_identical(optimizer_budget_state(resumed), state)
+  expect_identical(optimizer_budget_preflight(resumed, "new_work"), FALSE)
+
+  raised <- new_optimizer_budget(
+    optimizer_control(max_errors = 3L),
+    state = state,
+    clock = clock
+  )
+  raised_state <- optimizer_budget_state(raised)
+  expect_null(raised_state$stop_reason)
+  expect_identical(raised_state$attempts, 3L)
+  expect_identical(raised_state$successes, 1L)
+  expect_identical(raised_state$total_errors, 2L)
+  expect_identical(raised_state$consecutive_errors, 0L)
+})
+
+test_that("raised max-error caps fail closed after ambiguous batch outcomes", {
+  clock <- function() 0
+  budget <- new_optimizer_budget(
+    optimizer_control(max_errors = 2L),
+    clock = clock
+  )
+  for (success in c(FALSE, FALSE, FALSE, TRUE)) {
+    record_optimizer_outcome(budget, success, "completed_batch")
+  }
+  state <- optimizer_budget_state(budget)
+  expect_identical(state$stop_reason$observed, 2L)
+  expect_identical(state$total_errors, 3L)
+  expect_identical(state$consecutive_errors, 0L)
+
+  ambiguous <- new_optimizer_budget(
+    optimizer_control(max_errors = 3L),
+    state = state,
+    clock = clock
+  )
+  expect_true(optimizer_budget_stopped(ambiguous))
+  expect_identical(optimizer_budget_preflight(ambiguous, "new_work"), FALSE)
+
+  provably_raised <- new_optimizer_budget(
+    optimizer_control(max_errors = 4L),
+    state = state,
+    clock = clock
+  )
+  expect_false(optimizer_budget_stopped(provably_raised))
+  expect_identical(optimizer_budget_state(provably_raised)$attempts, 4L)
+})
+
 test_that("restored budgets fail closed under every stricter current limit", {
   base <- new_optimizer_budget(optimizer_control(max_errors = 10L))
   record_optimizer_usage(

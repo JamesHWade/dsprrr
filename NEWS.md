@@ -37,7 +37,8 @@ First development changelog. dsprrr is experimental; the API may change.
   mirai runs in a verified dsprrr-owned pool without replacing user topology;
   and every row reports requested and effective execution metadata. Explicit
   backends fail before provider work when their contract cannot be honored
-  (#dsprrr-ywhf).
+  (#dsprrr-ywhf). Owned mirai shutdown now initiates a non-blocking reset and
+  bounds verification against the batch deadline.
 
 * Cached requests now use versioned, account-partitioned identities covering
   conversation state, provider settings, exact schemas, and multimodal content.
@@ -96,7 +97,9 @@ First development changelog. dsprrr is experimental; the API may change.
   counters, lineage, best partial programs, and append-only trial logs;
   Bootstrap and MIPRO resume without repeating completed paid rows. GEPA,
   SIMBA, and COPRO share the same ledger and typed stop reasons while their
-  fine-grained resume engines remain explicitly tracked follow-ups
+  fine-grained resume engines remain explicitly tracked follow-ups. Sticky
+  error-budget stops survive checkpoint round-trips, and MIPRO retains its
+  requested worker count when no explicit optimizer control overrides it
   (#dsprrr-krq4).
 
 * `.cache` is now a validated, first-class argument to `run()` and `forward()`
@@ -127,9 +130,12 @@ First development changelog. dsprrr is experimental; the API may change.
   multimodal demos, and curated optimization state. Runtime objects use stable
   registry IDs by default or require dual `trusted = TRUE` opt-in; pins and
   standalone code export reuse the same validated manifest, and legacy v2 pins
-  migrate without retaining raw trial/runtime history. Local persistence rejects
-  same-file aliases before publication and documents its stable-local-filesystem
-  and trusted-directory atomicity boundary (#dsprrr-g6gq, #dsprrr-07u).
+  migrate without retaining raw trial/runtime history. Credential-like demo
+  fields now fail instead of silently changing program semantics, and remote
+  content rejects recognizable signed-path credentials. Local persistence
+  rejects same-file aliases before publication and documents its
+  stable-local-filesystem and trusted-directory atomicity boundary
+  (#dsprrr-g6gq, #dsprrr-07u).
 
 ## Internal
 

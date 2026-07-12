@@ -1441,6 +1441,7 @@ test_that("parallel execution works with mock factory", {
   skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
+  withr::local_options(dsprrr.parallel_timeout = 5)
 
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),
@@ -1455,13 +1456,8 @@ test_that("parallel execution works with mock factory", {
     class = "Chat"
   )
 
-  # Test parallel execution (will use chat from module)
-  # Note: Mock LLM closures may not serialize correctly to mirai workers,
-  # so we only verify that the parallel path executes without crashing
-  # and returns the correct number of results.
-  # We use mirai explicitly since the mock doesn't implement get_provider()
+  # Use mirai explicitly since the mock doesn't implement get_provider(),
   # which ellmer's parallel_chat_structured requires.
-  # Note: No warning expected here because .llm = NULL (uses mod$chat internally).
   results <- run(
     mod,
     text = c("a", "b", "c"),
@@ -1470,10 +1466,7 @@ test_that("parallel execution works with mock factory", {
     .progress = FALSE
   )
 
-  expect_length(results, 3)
-  # Results may be NA due to serialization issues with mock closures in workers,
-  # but the function should complete without error
-  expect_true(is.list(results))
+  expect_identical(results, rep(list("parallel_result"), 3L))
 })
 
 

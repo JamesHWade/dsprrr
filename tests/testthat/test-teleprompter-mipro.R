@@ -476,6 +476,37 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
   expect_equal(metadata$error_count, 1L)
 })
 
+test_that("MIPROv2 propagates num_threads into optimizer control", {
+  observed_control <- NULL
+
+  testthat::local_mocked_bindings(
+    generate_mipro_demo_candidates = function(..., control, budget) {
+      observed_control <<- control
+      list(
+        candidates = list(),
+        state = NULL,
+        complete = FALSE,
+        budget = budget
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  program <- module(signature("question -> answer"), type = "predict")
+  teleprompter <- MIPROv2(
+    metric = function(...) 1,
+    num_threads = 3L
+  )
+
+  dsprrr:::compile_mipro(
+    teleprompter,
+    program,
+    data.frame(question = "test", answer = "test")
+  )
+
+  expect_identical(observed_control@num_threads, 3L)
+})
+
 test_that("run_discrete_bo UCB explores untried candidates first", {
   candidates <- list(
     list(id = "a"),

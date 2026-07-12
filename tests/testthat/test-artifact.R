@@ -301,7 +301,6 @@ test_that("credentials and runtime history are excluded recursively", {
     trial_history = sentinel,
     stop_reason = "complete"
   )
-  program$demos <- list(list(text = "safe", password = sentinel))
   program$state$best_params <- list(temperature = 0.2, credentials = sentinel)
   program$state$traces <- list(list(prompt = sentinel, response = sentinel))
   program$state$trials <- tibble::tibble(prompt = sentinel)
@@ -327,7 +326,6 @@ test_that("credentials and runtime history are excluded recursively", {
   expect_null(restored$config$optimizer$instruction_candidates)
   expect_null(restored$config$optimizer$all_generations)
   expect_null(restored$config$optimizer$trial_history)
-  expect_null(restored$demos[[1]]$password)
   expect_identical(restored$state$best_params$temperature, 0.2)
   expect_null(restored$state$best_params$credentials)
   expect_length(restored$state$traces, 0L)
@@ -336,6 +334,32 @@ test_that("credentials and runtime history are excluded recursively", {
     vapply(artifact$exclusions, `[[`, character(1), "reason"),
     c("credential", "runtime-data")
   )
+})
+
+test_that("semantic demo fields are never silently redacted", {
+  sentinel <- "ARTIFACT_SEMANTIC_FIELD_SENTINEL"
+  program <- module(signature("token -> answer"))
+  program$demos <- list(list(token = sentinel, answer = "world"))
+
+  condition <- rlang::catch_cnd(program_artifact(program))
+
+  expect_s3_class(condition, "dsprrr_artifact_unsafe_value")
+  expect_match(conditionMessage(condition), "cannot be silently removed")
+  expect_false(grepl(sentinel, conditionMessage(condition), fixed = TRUE))
+
+  extra <- artifact_leaf()
+  extra$demos <- list(list(
+    text = "safe",
+    password = sentinel,
+    answer = "world"
+  ))
+  extra_condition <- rlang::catch_cnd(program_artifact(extra))
+  expect_s3_class(extra_condition, "dsprrr_artifact_unsafe_value")
+  expect_false(grepl(
+    sentinel,
+    conditionMessage(extra_condition),
+    fixed = TRUE
+  ))
 })
 
 test_that("credential names fail closed across camel and acronym styles", {
@@ -1339,7 +1363,11 @@ test_that("declarative content rejects unsafe URLs and malformed tags", {
     paste0("https://example.com/image.png?width=100&value=", secret),
     paste0("https://example.com/image.png#access_token=", secret),
     paste0("https://example.com/image.png#", secret),
-    "https://example.com/image.png?width=100"
+    "https://example.com/image.png?width=100",
+    paste0("https://cdn.example.com/s--", secret, "--/image.png"),
+    paste0("https://cdn.example.com/s%2D%2D", secret, "%2D%2D/image.png"),
+    paste0("https://cdn.example.com/signature/", secret, "/image.png"),
+    paste0("https://cdn.example.com/token-", secret, "/image.png")
   )
   for (url in unsafe_remote_urls) {
     program <- artifact_leaf()
@@ -1909,6 +1937,19 @@ test_that("v2 module configs migrate to the graph artifact contract", {
     migrated$multichain$inner_module$config$.module_kind,
     "chain_of_thought"
   )
+
+  nested_credential <- fixtures$multichain
+  nested_sentinel <- "DROP_NESTED_V2_CREDENTIAL"
+  nested_credential$fields$inner_module$fields$demos[[1]]$private_key <-
+    nested_sentinel
+  nested_restored <- restore_module_config(nested_credential)
+  expect_null(nested_restored$inner_module$demos[[1]]$private_key)
+  expect_false(grepl(
+    nested_sentinel,
+    paste(capture.output(dput(nested_restored)), collapse = "\n"),
+    fixed = TRUE
+  ))
+
   expect_true(all(vapply(
     migrated_artifacts,
     function(artifact) identical(artifact$metadata$migrated_from, 2L),

@@ -2155,7 +2155,38 @@ optimizer_budget_reconcile_current_limits <- function(
   budget,
   stage = "checkpoint_resume"
 ) {
+  restored_stop <- budget$stop_reason
   budget$stop_reason <- NULL
+
+  # A stop reached inside a completed batch remains sticky even when a later,
+  # already-started success reset the final streak. Checkpoint state does not
+  # retain the order of outcomes after the stop, so use the largest peak still
+  # possible from the recorded counters and fail closed when a raised cap could
+  # already have been reached.
+  post_stop_errors <- if (
+    !is.null(restored_stop) &&
+      identical(restored_stop$code, "max_errors")
+  ) {
+    max(0, budget$total_errors - restored_stop$total_errors)
+  } else {
+    0
+  }
+  possible_error_peak <- if (
+    !is.null(restored_stop) &&
+      identical(restored_stop$code, "max_errors")
+  ) {
+    as.numeric(restored_stop$observed) + as.numeric(post_stop_errors)
+  } else {
+    0
+  }
+  if (
+    !is.null(restored_stop) &&
+      identical(restored_stop$code, "max_errors") &&
+      budget$max_errors <= possible_error_peak
+  ) {
+    budget$stop_reason <- restored_stop
+    return(invisible(budget))
+  }
 
   if (budget$consecutive_errors >= max(1L, budget$max_errors)) {
     optimizer_budget_set_stop(
