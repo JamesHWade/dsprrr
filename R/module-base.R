@@ -661,9 +661,9 @@ Module <- R6::R6Class(
 
         # This will use the full run_dataset logic once migrated
         results <- tibble::tibble(
-          result = list(),
-          .chat = list(),
-          .metadata = list()
+          result = vector("list", nrow(inputs)),
+          .chat = vector("list", nrow(inputs)),
+          .metadata = vector("list", nrow(inputs))
         )
 
         # Process each row
@@ -671,9 +671,9 @@ Module <- R6::R6Class(
           row_inputs <- as.list(inputs[i, , drop = FALSE])
           result <- module$forward(row_inputs, .llm = .llm, trace = TRUE)
 
-          results$result[[i]] <- result$output[[1]]
-          results$.chat[[i]] <- result$chat[[1]] %||% NULL
-          results$.metadata[[i]] <- result$metadata[[1]] %||% list()
+          results$result[i] <- list(result$output[[1]])
+          results$.chat[i] <- list(result$chat[[1]] %||% NULL)
+          results$.metadata[i] <- list(result$metadata[[1]] %||% list())
         }
 
         if (.return_format == "simple") {

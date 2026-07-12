@@ -992,6 +992,71 @@ test_that("native ellmer preserves non-object row failures through a wrapper", {
   )
 })
 
+test_that("simple batches preserve valid optional NULL rows and traces", {
+  output_type <- ellmer::type_string(required = FALSE)
+  responses <- list(ROW_NULL = NULL, ROW_OK = "ok")
+  make_module <- function() {
+    module(
+      signature(
+        inputs = list(input("text", ellmer::type_string())),
+        output_type = output_type
+      ),
+      type = "predict"
+    )
+  }
+
+  sequential_module <- make_module()
+  sequential <- run(
+    sequential_module,
+    text = names(responses),
+    .llm = batch_shape_chat(responses),
+    .concurrency = concurrency_control(backend = "sequential"),
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  parallel_calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      parallel_calls <<- parallel_calls + 1L
+      tibble::tibble(
+        value = c(NA_character_, "ok"),
+        .error = list(NULL, NULL)
+      )
+    },
+    .package = "ellmer"
+  )
+  native_module <- make_module()
+  native <- run(
+    native_module,
+    text = names(responses),
+    .llm = batch_contract_chat(),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_identical(sequential, unname(responses))
+  expect_identical(native, unname(responses))
+  expect_identical(parallel_calls, 1L)
+  expect_length(sequential_module$state$traces, 2L)
+  expect_length(native_module$state$traces, 2L)
+  expect_true(all(vapply(
+    c(sequential_module$state$traces, native_module$state$traces),
+    function(trace) is.na(trace$metadata$error),
+    logical(1)
+  )))
+  expect_identical(
+    vapply(
+      native_module$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:2
+  )
+})
+
 test_that("native ellmer distinguishes empty arrays from failed array rows", {
   output_type <- ellmer::type_array(ellmer::type_string())
   observed_type <- NULL
@@ -1548,6 +1613,73 @@ test_that("malformed mirai records become typed traced failure rows", {
   )
 })
 
+test_that("mirai accepts valid optional NULL responses at its boundary", {
+  mod <- module(
+    signature(
+      inputs = list(input("text", ellmer::type_string())),
+      output_type = ellmer::type_string(required = FALSE)
+    ),
+    type = "predict"
+  )
+  request <- dsprrr:::build_module_request(mod, list(text = "row"))
+  now <- Sys.time()
+  record <- list(
+    ok = TRUE,
+    response = NULL,
+    usage_verified = TRUE,
+    started_at = now,
+    ended_at = now,
+    usage = list(),
+    model = "mirai-model",
+    turns_before = list()
+  )
+
+  result <- dsprrr:::mirai_worker_result(
+    record = record,
+    module = mod,
+    input_set = list(text = "row"),
+    request = request,
+    chat = batch_contract_chat(),
+    index = 1L,
+    .return_format = "simple"
+  )
+
+  expect_s3_class(result, "dsprrr_internal_null_batch_result")
+  expect_null(attr(result, "dsprrr_error_condition", exact = TRUE))
+  collected <- dsprrr:::collect_backend_traces(list(result))
+  traces <- attr(collected, "dsprrr_traces", exact = TRUE)
+  public <- dsprrr:::strip_backend_traces(collected)
+  expect_identical(public, list(NULL))
+  expect_length(traces, 1L)
+  expect_null(traces[[1L]]$output)
+  expect_true(is.na(traces[[1L]]$metadata$error))
+
+  json_type <- ellmer::type_from_schema(
+    text = '{"type":["string","null"]}'
+  )
+  json_module <- module(
+    signature(
+      inputs = list(input("text", ellmer::type_string())),
+      output_type = json_type
+    ),
+    type = "predict"
+  )
+  json_result <- dsprrr:::mirai_worker_result(
+    record = record,
+    module = json_module,
+    input_set = list(text = "row"),
+    request = dsprrr:::build_module_request(
+      json_module,
+      list(text = "row")
+    ),
+    chat = batch_contract_chat(),
+    index = 1L,
+    .return_format = "simple"
+  )
+  expect_s3_class(json_result, "dsprrr_internal_null_batch_result")
+  expect_identical(dsprrr:::mirai_output_allows_null(json_type), TRUE)
+})
+
 test_that("mirai timeouts stop tasks and commit typed elapsed failures", {
   skip_if_not_installed("mirai")
   current <- mirai::daemons(NULL)
@@ -1798,6 +1930,38 @@ test_that("datasets run specialized Predict modules through isolated scalar rows
     logical(1)
   )))
   expect_false(identical(result$.chat[[1]], result$.chat[[2]]))
+})
+
+test_that("scalar dataset adapters preserve valid NULL row positions", {
+  NullDatasetPredict <- R6::R6Class(
+    "BatchContractNullDatasetPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        value <- if (identical(batch$text, "null")) NULL else "ok"
+        tibble::tibble(
+          output = list(value),
+          chat = list(.llm),
+          metadata = list(list())
+        )
+      }
+    )
+  )
+  mod <- NullDatasetPredict$new(signature(
+    inputs = list(input("text", ellmer::type_string())),
+    output_type = ellmer::type_string(required = FALSE)
+  ))
+
+  result <- run_dataset(
+    mod,
+    data.frame(text = c("null", "value")),
+    .llm = specialized_dataset_chat(),
+    .progress = FALSE
+  )
+
+  expect_equal(nrow(result), 2L)
+  expect_identical(result$text, c("null", "value"))
+  expect_identical(result$result, list(NULL, "ok"))
 })
 
 test_that("specialized row traces and history inherit dataset metadata", {

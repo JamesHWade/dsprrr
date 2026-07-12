@@ -995,6 +995,12 @@ canonical_run_trace <- function(
 #' Attach a private trace envelope to an internal row result
 #' @noRd
 attach_run_trace <- function(result, trace, error = NULL) {
+  if (is.null(result)) {
+    result <- structure(
+      list(),
+      class = "dsprrr_internal_null_batch_result"
+    )
+  }
   attr(result, "dsprrr_trace") <- trace
   if (!is.null(error)) {
     attr(result, "dsprrr_error_condition") <- error
@@ -1005,9 +1011,13 @@ attach_run_trace <- function(result, trace, error = NULL) {
 #' Remove private execution attributes before returning a public value
 #' @noRd
 strip_run_trace <- function(result) {
+  null_result <- inherits(result, "dsprrr_internal_null_batch_result")
   attr(result, "dsprrr_trace") <- NULL
   attr(result, "dsprrr_error_condition") <- NULL
   attr(result, "error_message") <- NULL
+  if (null_result) {
+    return(NULL)
+  }
   result
 }
 
@@ -3088,12 +3098,20 @@ is_mirai_timeout_record <- function(record) {
     isTRUE(as.integer(record) == 5L)
 }
 
+#' Whether a converted mirai response may legitimately be NULL
+#' @noRd
+mirai_output_allows_null <- function(output_type) {
+  !isTRUE(output_type@required) ||
+    inherits(output_type, c("ellmer::TypeJsonSchema", "ellmer::TypeIgnore"))
+}
+
 #' Validate an untrusted record returned across the mirai process boundary
 #' @noRd
 validate_mirai_worker_record <- function(
   record,
   fallback_started_at,
-  fallback_ended_at
+  fallback_ended_at,
+  allow_null_response = FALSE
 ) {
   invalid <- function(message) {
     list(
@@ -3223,7 +3241,10 @@ validate_mirai_worker_record <- function(
         "successful mirai worker record has invalid usage verification"
       ))
     }
-    if (is.null(record$response) || inherits(record$response, "condition")) {
+    if (
+      (is.null(record$response) && !isTRUE(allow_null_response)) ||
+        inherits(record$response, "condition")
+    ) {
       return(invalid("successful mirai worker record has an invalid response"))
     }
     allowed <- c(required, success_required)
@@ -3315,7 +3336,10 @@ mirai_worker_result <- function(
   validated <- validate_mirai_worker_record(
     record,
     fallback_started_at = fallback_started_at,
-    fallback_ended_at = fallback_ended_at
+    fallback_ended_at = fallback_ended_at,
+    allow_null_response = mirai_output_allows_null(
+      module$signature@output_type
+    )
   )
   record <- validated$record
   error <- validated$error
@@ -4421,7 +4445,7 @@ run_scalar_dataset_rows <- function(
     row_inputs <- lapply(input_args, `[[`, i)
     trace_count_before <- length(module$state$traces %||% list())
     history_generation_before <- prompt_history_generation()
-    results[[i]] <- tryCatch(
+    row_result <- tryCatch(
       do.call(
         run,
         c(
@@ -4451,6 +4475,7 @@ run_scalar_dataset_rows <- function(
         )
       }
     )
+    results[i] <- list(row_result)
     reconcile_dataset_row_observability(
       module = module,
       trace_count_before = trace_count_before,
@@ -4459,20 +4484,20 @@ run_scalar_dataset_rows <- function(
       runtime = .concurrency_runtime
     )
     if (identical(.return_format, "simple")) {
-      results[[i]] <- extract_simple_output(
+      results[i] <- list(extract_simple_output(
         results[[i]],
         module$signature@output_type
-      )
+      ))
     }
-    results[[i]] <- annotate_concurrency_result(
+    results[i] <- list(annotate_concurrency_result(
       results[[i]],
       .concurrency_runtime,
       .return_format
-    )
+    ))
     if (identical(.return_format, "structured")) {
       results[[i]]$metadata$batch_index <- i
     } else {
-      results[[i]] <- strip_run_trace(results[[i]])
+      results[i] <- list(strip_run_trace(results[[i]]))
     }
 
     if (!is.null(progress_id)) {

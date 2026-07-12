@@ -129,6 +129,37 @@ test_that("as_vitals_solver handles multi-input modules", {
   expect_true(all(result$result == "answer"))
 })
 
+test_that("Module vitals solver preserves NULL output and chat positions", {
+  NullVitalsModule <- R6::R6Class(
+    "NullVitalsModule",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        value <- if (identical(batch$text, "null")) NULL else "ok"
+        tibble::tibble(
+          output = list(value),
+          chat = list(NULL),
+          metadata = list(list(text = batch$text))
+        )
+      }
+    )
+  )
+  mod <- NullVitalsModule$new(signature(
+    inputs = list(input("text", ellmer::type_string())),
+    output_type = ellmer::type_string(required = FALSE)
+  ))
+  solver <- mod$as_vitals_solver(.return_format = "structured")
+
+  result <- solver(data.frame(text = c("null", "value")))
+
+  expect_identical(result$result, list(NULL, "ok"))
+  expect_identical(result$solver_chat, list(NULL, NULL))
+  expect_identical(
+    vapply(result$metadata, `[[`, character(1), "text"),
+    c("null", "value")
+  )
+})
+
 test_that("as_vitals_solver returns plain strings for enum outputs", {
   sig <- Signature(
     inputs = list(input(name = "text", class = S7::class_character)),

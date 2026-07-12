@@ -24,9 +24,10 @@ First development changelog. dsprrr is experimental; the API may change.
   observable scheduler; unsupported custom and specialized modules reject
   vectorized execution before work instead of silently sharing mutable state
   or bypassing specialized logic. Native ellmer batches retain row failures for
-  non-object outputs through an internal typed wrapper, and schemas whose
-  optional nested presence is ambiguous use isolated scalar rows instead of
-  guessing between absent and present-empty values (#dsprrr-bbdm).
+  non-object outputs through an internal typed wrapper, including valid
+  optional `NULL` values, and schemas whose optional nested presence is
+  ambiguous use isolated scalar rows instead of guessing between absent and
+  present-empty values (#dsprrr-bbdm).
 
 * `concurrency_control()` now gives batch execution one enforceable contract
   for backend selection, exact in-flight limits, per-task and total timeouts,
