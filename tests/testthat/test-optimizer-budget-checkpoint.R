@@ -1159,11 +1159,41 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
   skip_if_not_installed("callr")
   directory <- withr::local_tempdir()
   path <- file.path(directory, "shared-checkpoint.rds")
-  project <- normalizePath(testthat::test_path("..", ".."), mustWork = TRUE)
+  package_context <- callr_dsprrr_context()
+  package_loader <- callr_load_dsprrr
   gate <- file.path(directory, "go")
   ready <- file.path(directory, c("ready-1", "ready-2"))
-  worker <- function(project, path, gate, ready, writer) {
-    pkgload::load_all(project, quiet = TRUE)
+  worker <- function(
+    package_context,
+    package_loader,
+    path,
+    gate,
+    ready,
+    writer
+  ) {
+    namespace <- package_loader(package_context)
+    module <- get("module", envir = namespace, inherits = FALSE)
+    signature <- get("signature", envir = namespace, inherits = FALSE)
+    metric_exact_match <- get(
+      "metric_exact_match",
+      envir = namespace,
+      inherits = FALSE
+    )
+    optimizer_control <- get(
+      "optimizer_control",
+      envir = namespace,
+      inherits = FALSE
+    )
+    optimizer_checkpoint_begin <- get(
+      "optimizer_checkpoint_begin",
+      envir = namespace,
+      inherits = FALSE
+    )
+    optimizer_checkpoint_write <- get(
+      "optimizer_checkpoint_write",
+      envir = namespace,
+      inherits = FALSE
+    )
     program <- module(signature("x -> y"), type = "predict")
     metric <- metric_exact_match(field = "y")
     context <- optimizer_checkpoint_begin(
@@ -1202,7 +1232,14 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
   processes <- lapply(seq_along(ready), function(i) {
     callr::r_bg(
       worker,
-      args = list(project, path, gate, ready[[i]], paste0("writer-", i)),
+      args = list(
+        package_context,
+        package_loader,
+        path,
+        gate,
+        ready[[i]],
+        paste0("writer-", i)
+      ),
       supervise = TRUE
     )
   })
@@ -1249,17 +1286,23 @@ test_that("checkpoint locks are released when a writer process dies", {
   directory <- withr::local_tempdir()
   path <- file.path(directory, "crash-checkpoint.rds")
   ready <- file.path(directory, "lock-held")
-  project <- normalizePath(testthat::test_path("..", ".."), mustWork = TRUE)
+  package_context <- callr_dsprrr_context()
+  package_loader <- callr_load_dsprrr
   holder <- callr::r_bg(
-    function(project, path, ready) {
-      pkgload::load_all(project, quiet = TRUE)
+    function(package_context, package_loader, path, ready) {
+      namespace <- package_loader(package_context)
+      optimizer_checkpoint_snapshot <- get(
+        "optimizer_checkpoint_snapshot",
+        envir = namespace,
+        inherits = FALSE
+      )
       options(dsprrr.optimizer_checkpoint_lock_hook = function() {
         file.create(ready)
         Sys.sleep(60)
       })
       optimizer_checkpoint_snapshot(path)
     },
-    args = list(project, path, ready),
+    args = list(package_context, package_loader, path, ready),
     supervise = TRUE
   )
   withr::defer(if (holder$is_alive()) holder$kill())

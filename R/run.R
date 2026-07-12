@@ -1144,7 +1144,7 @@ mock_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
       base_url = ""
     )
   }
-  mock <- getFromNamespace("Chat", "ellmer")$new(provider = provider)
+  mock <- utils::getFromNamespace("Chat", "ellmer")$new(provider = provider)
 
   prompt_contents <- if (
     is.list(prompt) &&
@@ -3174,13 +3174,15 @@ run_batch_parallel <- function(
   launch_one <- function(index) {
     task_started_at[[index]] <<- Sys.time()
     task_started_elapsed[[index]] <<- concurrency_elapsed()
+    i <- index
+    output_type <- module$signature@output_type
     tasks[[index]] <<- mirai::mirai(
       .expr = worker(i, requests, output_type, llm_template),
       .args = list(
         worker = worker,
-        i = index,
+        i = i,
         requests = requests,
-        output_type = module$signature@output_type,
+        output_type = output_type,
         llm_template = llm_template
       ),
       .timeout = task_timeout_ms,

@@ -474,7 +474,7 @@ export_module_code <- function(
     )
   }
 
-  dump <- capture.output(dput(artifact))
+  dump <- utils::capture.output(dput(artifact))
   lines <- c(
     "# dsprrr program artifact",
     paste0("# Format version: ", artifact$format_version),

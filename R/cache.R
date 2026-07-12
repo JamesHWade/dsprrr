@@ -970,7 +970,7 @@ cache_is_trusted_ellmer_chat <- function(llm) {
   }
 
   generator <- tryCatch(
-    getFromNamespace("Chat", "ellmer"),
+    utils::getFromNamespace("Chat", "ellmer"),
     error = function(e) NULL
   )
   enclosing <- tryCatch(llm$.__enclos_env__, error = function(e) NULL)
@@ -2488,7 +2488,7 @@ cache_replay_content <- function(content) {
     return(ellmer::ContentText(cache_replay_value(content@text)))
   }
   if (inherits(content, "ellmer::ContentJson")) {
-    constructor <- getFromNamespace("ContentJson", "ellmer")
+    constructor <- utils::getFromNamespace("ContentJson", "ellmer")
     return(constructor(
       data = cache_replay_value(content@data),
       string = cache_replay_value(content@string)
@@ -2542,7 +2542,7 @@ cache_replay_content <- function(content) {
     ))
   }
   if (inherits(content, "ellmer::ContentUploaded")) {
-    constructor <- getFromNamespace("ContentUploaded", "ellmer")
+    constructor <- utils::getFromNamespace("ContentUploaded", "ellmer")
     return(constructor(
       uri = cache_replay_value(content@uri),
       mime_type = cache_replay_value(content@mime_type)

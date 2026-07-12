@@ -660,11 +660,21 @@ test_that("failed atomic publication leaves journal and derived state intact", {
 test_that("two writers persist one identical trial idempotently", {
   skip_if_not_installed("callr")
   log_dir <- withr::local_tempdir()
-  project <- normalizePath(testthat::test_path("..", ".."), mustWork = TRUE)
+  package_context <- callr_dsprrr_context()
+  package_loader <- callr_load_dsprrr
   gate <- tempfile(tmpdir = log_dir)
   ready <- file.path(log_dir, c("ready-1", "ready-2"))
-  worker <- function(project, log_dir, gate, ready, value) {
-    pkgload::load_all(project, quiet = TRUE)
+  worker <- function(
+    package_context,
+    package_loader,
+    log_dir,
+    gate,
+    ready,
+    value
+  ) {
+    namespace <- package_loader(package_context)
+    Trial <- get("Trial", envir = namespace, inherits = FALSE)
+    TrialLog <- get("TrialLog", envir = namespace, inherits = FALSE)
     options(dsprrr.trial_log_lock_hook = function() Sys.sleep(0.1))
     file.create(ready)
     deadline <- Sys.time() + 20
@@ -702,7 +712,14 @@ test_that("two writers persist one identical trial idempotently", {
   processes <- lapply(seq_along(ready), function(i) {
     callr::r_bg(
       worker,
-      args = list(project, log_dir, gate, ready[[i]], "same"),
+      args = list(
+        package_context,
+        package_loader,
+        log_dir,
+        gate,
+        ready[[i]],
+        "same"
+      ),
       supervise = TRUE
     )
   })
@@ -737,11 +754,21 @@ test_that("two writers persist one identical trial idempotently", {
 test_that("two writers reject conflicting records for the same trial ID", {
   skip_if_not_installed("callr")
   log_dir <- withr::local_tempdir()
-  project <- normalizePath(testthat::test_path("..", ".."), mustWork = TRUE)
+  package_context <- callr_dsprrr_context()
+  package_loader <- callr_load_dsprrr
   gate <- tempfile(tmpdir = log_dir)
   ready <- file.path(log_dir, c("ready-1", "ready-2"))
-  worker <- function(project, log_dir, gate, ready, value) {
-    pkgload::load_all(project, quiet = TRUE)
+  worker <- function(
+    package_context,
+    package_loader,
+    log_dir,
+    gate,
+    ready,
+    value
+  ) {
+    namespace <- package_loader(package_context)
+    Trial <- get("Trial", envir = namespace, inherits = FALSE)
+    TrialLog <- get("TrialLog", envir = namespace, inherits = FALSE)
     options(dsprrr.trial_log_lock_hook = function() Sys.sleep(0.1))
     file.create(ready)
     deadline <- Sys.time() + 20
@@ -780,7 +807,14 @@ test_that("two writers reject conflicting records for the same trial ID", {
     function(ready_path, value) {
       callr::r_bg(
         worker,
-        args = list(project, log_dir, gate, ready_path, value),
+        args = list(
+          package_context,
+          package_loader,
+          log_dir,
+          gate,
+          ready_path,
+          value
+        ),
         supervise = TRUE
       )
     },
@@ -824,18 +858,20 @@ test_that("two writers reject conflicting records for the same trial ID", {
 test_that("process death releases the interprocess trial log lock", {
   skip_if_not_installed("callr")
   log_dir <- withr::local_tempdir()
-  project <- normalizePath(testthat::test_path("..", ".."), mustWork = TRUE)
+  package_context <- callr_dsprrr_context()
+  package_loader <- callr_load_dsprrr
   ready <- file.path(log_dir, "lock-held")
   holder <- callr::r_bg(
-    function(project, log_dir, ready) {
-      pkgload::load_all(project, quiet = TRUE)
+    function(package_context, package_loader, log_dir, ready) {
+      namespace <- package_loader(package_context)
+      TrialLog <- get("TrialLog", envir = namespace, inherits = FALSE)
       options(dsprrr.trial_log_lock_hook = function() {
         file.create(ready)
         Sys.sleep(60)
       })
       TrialLog$new("CrashOptimizer", log_dir)
     },
-    args = list(project, log_dir, ready),
+    args = list(package_context, package_loader, log_dir, ready),
     supervise = TRUE
   )
   withr::defer(if (holder$is_alive()) holder$kill())

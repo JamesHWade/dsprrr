@@ -49,6 +49,7 @@ Suggests:
     knitr,
     parsnip,
     pins,
+    pkgload,
     promises,
     shiny (>= 1.8.0),
     quarto,
