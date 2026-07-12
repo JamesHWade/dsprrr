@@ -480,14 +480,14 @@ test_that("mirai enforces actual peak concurrency for N one and two", {
 
   run_with <- function(workers) {
     mod <- module(signature("text -> answer"), type = "predict")
-    mod$chat <- concurrency_test_slow_chat(delay = 0.12)
+    mod$chat <- concurrency_test_slow_chat(delay = 1)
     run(
       mod,
       text = c("a", "b", "c", "d"),
       .concurrency = concurrency_control(
         backend = "mirai",
         max_active = workers,
-        total_timeout = 5
+        total_timeout = 30
       ),
       .return_format = "structured",
       .progress = FALSE,

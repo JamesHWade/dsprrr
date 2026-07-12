@@ -4,17 +4,10 @@
 \alias{restore_module_config}
 \title{Restore a Module from Pinned Configuration}
 \usage{
-restore_module_config(
-  config,
-  signature = NULL,
-  registry = list(),
-  trusted = FALSE
-)
+restore_module_config(config, registry = list(), trusted = FALSE)
 }
 \arguments{
 \item{config}{A configuration list (from \code{pins::pin_read()})}
-
-\item{signature}{Optional Signature object to use (overrides stored signature)}
 
 \item{registry}{Named runtime registry used to resolve stored IDs.}
 

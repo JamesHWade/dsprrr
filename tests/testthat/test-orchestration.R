@@ -137,26 +137,6 @@ test_that("restore_module_config restores optimization state", {
   expect_equal(restored$state$best_score, 0.9)
 })
 
-test_that("restore_module_config accepts custom signature", {
-  skip_if_not_installed("pins")
-
-  mod <- create_test_module()
-  board <- pins::board_temp()
-  pin_module_config(board, "with-sig", mod)
-  config <- pins::pin_read(board, "with-sig")
-
-  custom_sig <- Signature(
-    inputs = list(input(name = "custom_input")),
-    output_type = ellmer::type_string(),
-    instructions = "Custom instructions"
-  )
-
-  restored <- restore_module_config(config, signature = custom_sig)
-
-  expect_equal(restored$signature@instructions, "Custom instructions")
-  expect_equal(restored$signature@inputs[[1]]$name, "custom_input")
-})
-
 test_that("restore_module_config rejects legacy pinned configs", {
   legacy_config <- list(
     signature = list(

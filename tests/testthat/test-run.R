@@ -1171,6 +1171,245 @@ test_that("batch isolation allows ordinary locked package functions", {
   expect_identical(branches[[2]]$helper(2:4), 3L)
 })
 
+test_that("batch isolation normalizes canonical source metadata only", {
+  initializations <- new.env(parent = emptyenv())
+  initializations$lines <- 0L
+  initializations$parse_data <- 0L
+  srcfile <- srcfilecopy(
+    "<batch-isolation-test>",
+    "function(...) list(answer = 'ok')"
+  )
+  rm("lines", envir = srcfile)
+  delayedAssign(
+    "lines",
+    {
+      initializations$lines <- initializations$lines + 1L
+      "function(...) list(answer = 'ok')"
+    },
+    eval.env = environment(),
+    assign.env = srcfile
+  )
+  delayedAssign(
+    "parseData",
+    {
+      initializations$parse_data <- initializations$parse_data + 1L
+      structure(integer(), class = "parseData")
+    },
+    eval.env = environment(),
+    assign.env = srcfile
+  )
+  reference <- structure(
+    rep(1L, 8L),
+    class = "srcref",
+    srcfile = srcfile
+  )
+  chat_structured <- function(...) list(answer = "ok")
+  attr(chat_structured, "srcref") <- reference
+  chat <- structure(list(chat_structured = chat_structured), class = "Chat")
+
+  branches <- dsprrr:::batch_chat_branches(chat, 2L)
+
+  expect_length(branches, 2L)
+  expect_identical(initializations$lines, 0L)
+  expect_identical(initializations$parse_data, 0L)
+  expect_true(rlang::env_binding_are_lazy(srcfile, "lines"))
+  expect_true(rlang::env_binding_are_lazy(srcfile, "parseData"))
+  for (branch in branches) {
+    branch_reference <- attr(branch$chat_structured, "srcref", exact = TRUE)
+    branch_source <- attr(branch_reference, "srcfile", exact = TRUE)
+    expect_false(rlang::env_binding_are_lazy(branch_source, "lines"))
+    expect_identical(branch_source$lines, character())
+    expect_false(exists("parseData", envir = branch_source, inherits = FALSE))
+  }
+
+  unsafe <- function(...) list(answer = "unexpected")
+  unsafe_source <- new.env(parent = emptyenv())
+  delayedAssign("lines", "unsafe", assign.env = unsafe_source)
+  attr(unsafe, "srcref") <- unsafe_source
+  unsafe_chat <- structure(list(chat_structured = unsafe), class = "Chat")
+  expect_error(
+    dsprrr:::batch_chat_branches(unsafe_chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_true(rlang::env_binding_are_lazy(unsafe_source, "lines"))
+
+  spoofed <- function(...) list(answer = "unexpected")
+  spoofed_source <- new.env(parent = emptyenv())
+  class(spoofed_source) <- "srcref"
+  spoofed_source$shared <- globalenv()
+  attr(spoofed, "srcref") <- spoofed_source
+  spoofed_chat <- structure(list(chat_structured = spoofed), class = "Chat")
+  expect_error(
+    dsprrr:::batch_chat_branches(spoofed_chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+
+  hidden <- function(...) list(answer = "unexpected")
+  hidden_source <- srcfilecopy(
+    "<spoofed-batch-isolation-test>",
+    "function(...) list(answer = 'unexpected')"
+  )
+  hidden_source$shared <- globalenv()
+  attr(hidden, "srcref") <- structure(
+    rep(1L, 8L),
+    class = "srcref",
+    srcfile = hidden_source
+  )
+  hidden_chat <- structure(list(chat_structured = hidden), class = "Chat")
+  expect_error(
+    dsprrr:::batch_chat_branches(hidden_chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+
+  attributed <- function(...) list(answer = "unexpected")
+  attributed_source <- srcfilecopy(
+    "<attributed-batch-isolation-test>",
+    "function(...) list(answer = 'unexpected')"
+  )
+  attr(attributed_source, "shared") <- globalenv()
+  attr(attributed, "srcref") <- structure(
+    rep(1L, 8L),
+    class = "srcref",
+    srcfile = attributed_source
+  )
+  attributed_chat <- structure(
+    list(chat_structured = attributed),
+    class = "Chat"
+  )
+  expect_error(
+    dsprrr:::batch_chat_branches(attributed_chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+
+  locked <- function(...) list(answer = "unexpected")
+  locked_source <- srcfilecopy(
+    "<locked-batch-isolation-test>",
+    "function(...) list(answer = 'unexpected')"
+  )
+  rm("lines", envir = locked_source)
+  delayedAssign("lines", "locked", assign.env = locked_source)
+  lockEnvironment(locked_source, bindings = FALSE)
+  attr(locked, "srcref") <- structure(
+    rep(1L, 8L),
+    class = "srcref",
+    srcfile = locked_source
+  )
+  locked_chat <- structure(list(chat_structured = locked), class = "Chat")
+  expect_error(
+    dsprrr:::batch_chat_branches(locked_chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_true(rlang::env_binding_are_lazy(locked_source, "lines"))
+
+  dual_source <- srcfilecopy(
+    "<dual-role-batch-isolation-test>",
+    "function(...) list(answer = 'unexpected')"
+  )
+  dual <- function(...) list(answer = "unexpected")
+  attr(dual, "srcref") <- structure(
+    rep(1L, 8L),
+    class = "srcref",
+    srcfile = dual_source
+  )
+  source_first <- structure(
+    list(chat_structured = dual, state_source = dual_source),
+    class = "Chat"
+  )
+  runtime_first <- structure(
+    list(state_source = dual_source, chat_structured = dual),
+    class = "Chat"
+  )
+  expect_error(
+    dsprrr:::batch_chat_branches(source_first, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+  expect_error(
+    dsprrr:::batch_chat_branches(runtime_first, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+
+  captured <- local({
+    captured_reference <- reference
+    function(...) {
+      captured_source <- attr(
+        captured_reference,
+        "srcfile",
+        exact = TRUE
+      )
+      list(answer = length(base::getSrcLines(captured_source, 1L, 1L)))
+    }
+  })
+  captured_chat <- structure(
+    list(chat_structured = captured),
+    class = "Chat"
+  )
+  expect_error(
+    dsprrr:::batch_chat_branches(captured_chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+
+  counter <- ".dsprrr_source_metadata_initializations"
+  assign(counter, 0L, envir = globalenv())
+  withr::defer(rm(list = counter, envir = globalenv()))
+  executable_source <- srcfilecopy(
+    "<executable-batch-isolation-test>",
+    "function(...) list(answer = 0L)"
+  )
+  rm("lines", envir = executable_source)
+  delayedAssign(
+    "lines",
+    {
+      .dsprrr_source_metadata_initializations <<-
+        .dsprrr_source_metadata_initializations + 1L
+      "shared source state"
+    },
+    eval.env = globalenv(),
+    assign.env = executable_source
+  )
+  executable_reference <- structure(
+    rep(1L, 8L),
+    class = "srcref",
+    srcfile = executable_source
+  )
+  self_referencing <- local({
+    self <- function(...) {
+      self_reference <- attr(self, "srcref", exact = TRUE)
+      self_source <- attr(self_reference, "srcfile", exact = TRUE)
+      list(answer = length(base::getSrcLines(self_source, 1L, 1L)))
+    }
+    attr(self, "srcref") <- executable_reference
+    self
+  })
+  executable_chat <- structure(
+    list(chat_structured = self_referencing),
+    class = "Chat"
+  )
+  executable_branches <- dsprrr:::batch_chat_branches(executable_chat, 2L)
+  expect_identical(executable_branches[[1]]$chat_structured()$answer, 0L)
+  expect_identical(executable_branches[[2]]$chat_structured()$answer, 0L)
+  expect_identical(
+    get(counter, envir = globalenv(), inherits = FALSE),
+    0L
+  )
+  expect_true(rlang::env_binding_are_lazy(executable_source, "lines"))
+
+  alias_one <- srcfilealias("alias-one.R", srcfile)
+  alias_two <- srcfilealias("alias-two.R", alias_one)
+  alias_one$original <- alias_two
+  cyclic_reference <- structure(
+    rep(1L, 8L),
+    class = "srcref",
+    srcfile = alias_one
+  )
+  cyclic <- function(...) list(answer = "unexpected")
+  attr(cyclic, "srcref") <- cyclic_reference
+  cyclic_chat <- structure(list(chat_structured = cyclic), class = "Chat")
+  expect_error(
+    dsprrr:::batch_chat_branches(cyclic_chat, 1L),
+    class = "dsprrr_chat_isolation_error"
+  )
+})
+
 test_that("batch isolation aborts before rows when shared state remains", {
   binding <- ".dsprrr_opaque_batch_calls"
   assign(binding, 0L, envir = globalenv())

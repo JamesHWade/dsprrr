@@ -98,8 +98,10 @@ The pinned configuration includes:
 Functions, tools, retrievers, runners, and other runtime objects are not
 captured implicitly. Supply a named `registry` to persist stable IDs and pass
 the same registry to `restore_module_config()`. Arbitrary embedded runtime
-values require `trusted = TRUE` both when writing and restoring. Legacy v2 pins
-are validated and migrated automatically.
+values require `trusted = TRUE` both when writing and restoring. Restoration is
+forward-only: only the current closed artifact schema is accepted, and its
+stored signature is authoritative. To change a signature, update the source
+program and write a new artifact.
 
 ### Restoring a Module
 

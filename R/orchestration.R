@@ -108,7 +108,6 @@ pin_module_config <- function(
 #' you to load optimized modules in new sessions or different projects.
 #'
 #' @param config A configuration list (from `pins::pin_read()`)
-#' @param signature Optional Signature object to use (overrides stored signature)
 #' @param registry Named runtime registry used to resolve stored IDs.
 #' @param trusted Whether embedded runtime values may be restored. The default
 #'   is `FALSE`.
@@ -130,15 +129,13 @@ pin_module_config <- function(
 #' }
 restore_module_config <- function(
   config,
-  signature = NULL,
   registry = list(),
   trusted = FALSE
 ) {
   mod <- restore_program_artifact(
     config,
     registry = registry,
-    trusted = trusted,
-    signature = signature
+    trusted = trusted
   )
 
   cli::cli_inform(c(
@@ -149,218 +146,6 @@ restore_module_config <- function(
 
   mod
 }
-
-serialize_module_config_v2 <- function(module) {
-  if (inherits(module, "PipelineModule")) {
-    cli::cli_abort(c(
-      "Pipeline persistence is not yet supported",
-      "x" = "{.fn pin_module_config} cannot serialise a {.cls PipelineModule}",
-      "i" = "Persisting it here would silently drop every step and its demos",
-      "i" = "Pin each step module individually, or rebuild the pipeline from source"
-    ))
-  }
-
-  kind <- module_kind(module)
-  supported <- c("predict", "react", "chain_of_thought", "multichain")
-  if (!kind %in% supported) {
-    cli::cli_abort(c(
-      "Unsupported module type for v2 persistence",
-      "x" = "Got {.val {kind}}",
-      "i" = "Phase 1 supports: {.val {supported}}"
-    ))
-  }
-
-  if (identical(kind, "react") && length(module$tools %||% list()) > 0) {
-    cli::cli_abort(c(
-      "React tools are not serialised in v2 persistence",
-      "i" = "Reattach tools after restore, or pin a React module with no tools"
-    ))
-  }
-
-  fields <- list()
-  if (inherits(module, "PredictModule")) {
-    fields$template <- module$template
-    fields$demos <- module$demos
-  }
-  if (inherits(module, "ReactModule")) {
-    fields$max_iterations <- module$max_iterations
-    fields$tools <- list()
-  }
-  if (inherits(module, "MultiChainComparisonModule")) {
-    fields$M <- module$M
-    fields$temperature <- module$temperature
-    fields$comparison_template <- module$comparison_template
-    fields$inner_module <- serialize_module_config_v2(module$inner_module)
-  }
-
-  list(
-    format_version = 2L,
-    module_kind = kind,
-    signature = serialize_signature_v2(module$signature),
-    config = sanitize_module_config_v2(module$config),
-    state = serialize_module_state_v2(module$state),
-    fields = fields,
-    metadata = list(
-      module_class = class(module)[1]
-    )
-  )
-}
-
-serialize_signature_v2 <- function(signature) {
-  list(
-    inputs = lapply(signature@inputs, serialize_input_v2),
-    output_type = copy_ellmer_type(signature@output_type),
-    instructions = signature@instructions
-  )
-}
-
-serialize_input_v2 <- function(inp) {
-  extra <- inp[setdiff(names(inp), c("name", "type", "description"))]
-  list(
-    name = inp$name,
-    description = inp$description,
-    type = copy_ellmer_type(inp$type),
-    extra = extra
-  )
-}
-
-deserialize_signature_v2 <- function(signature) {
-  Signature(
-    inputs = lapply(signature$inputs, deserialize_input_v2),
-    output_type = copy_ellmer_type(signature$output_type),
-    instructions = signature$instructions %||% ""
-  )
-}
-
-deserialize_input_v2 <- function(inp) {
-  structure(
-    c(
-      list(
-        name = inp$name,
-        type = copy_ellmer_type(inp$type),
-        description = inp$description
-      ),
-      inp$extra %||% list()
-    ),
-    class = "dsprrr_input"
-  )
-}
-
-sanitize_module_config_v2 <- function(config) {
-  config <- normalize_module_config(config %||% list())
-  config <- config[setdiff(
-    names(config),
-    c(".module_kind", legacy_chat_config_fields())
-  )]
-  cleaned <- lapply(config, sanitize_persisted_value_v2)
-  cleaned[!vapply(cleaned, is.null, logical(1))]
-}
-
-sanitize_persisted_value_v2 <- function(value) {
-  if (
-    inherits(value, "Chat") ||
-      inherits(value, "ToolDef") ||
-      inherits(value, "ellmer::ToolDef")
-  ) {
-    return(NULL)
-  }
-
-  if (is.function(value)) {
-    return(NULL)
-  }
-
-  if (is.list(value) && !is.data.frame(value)) {
-    cleaned <- lapply(value, sanitize_persisted_value_v2)
-    cleaned[!vapply(cleaned, is.null, logical(1))]
-  } else {
-    value
-  }
-}
-
-serialize_module_state_v2 <- function(state) {
-  list(
-    compiled = isTRUE(state$compiled),
-    best_score = state$best_score,
-    best_trial = state$best_trial,
-    best_params = state$best_params,
-    trials = state$trials,
-    last_grid = state$last_grid,
-    optimization_history = state$optimization_history
-  )
-}
-
-restore_module_from_v2 <- function(config) {
-  kind <- config$module_kind
-  supported <- c("predict", "react", "chain_of_thought", "multichain")
-  if (!kind %in% supported) {
-    cli::cli_abort(c(
-      "Unsupported module type in pinned config",
-      "x" = "Got {.val {kind}}",
-      "i" = "Phase 1 supports: {.val {supported}}"
-    ))
-  }
-
-  signature <- deserialize_signature_v2(config$signature)
-  fields <- config$fields %||% list()
-  module_config <- normalize_module_config(config$config %||% list())
-
-  mod <- switch(
-    kind,
-    predict = PredictModule$new(
-      signature = signature,
-      template = fields$template %||% "",
-      demos = fields$demos %||% list(),
-      config = module_config
-    ),
-    react = ReactModule$new(
-      signature = signature,
-      tools = list(),
-      max_iterations = fields$max_iterations %||% 10L,
-      template = fields$template %||% "",
-      demos = fields$demos %||% list(),
-      config = module_config
-    ),
-    chain_of_thought = PredictModule$new(
-      signature = signature,
-      template = fields$template %||% "",
-      demos = fields$demos %||% list(),
-      config = module_config
-    ),
-    multichain = {
-      if (is.null(fields$inner_module)) {
-        cli::cli_abort(c(
-          "Pinned multichain config is incomplete",
-          "i" = "Missing serialized inner module definition"
-        ))
-      }
-
-      MultiChainComparisonModule$new(
-        signature = signature,
-        inner_module = restore_module_from_v2(fields$inner_module),
-        M = fields$M %||% 3L,
-        temperature = fields$temperature %||% 0.7,
-        comparison_template = fields$comparison_template,
-        config = module_config
-      )
-    }
-  )
-
-  mod$config$.module_kind <- kind
-  restore_module_state_v2(mod, config$state %||% list())
-  mod
-}
-
-restore_module_state_v2 <- function(module, state) {
-  module$state$compiled <- isTRUE(state$compiled)
-  module$state$best_score <- state$best_score
-  module$state$best_trial <- state$best_trial
-  module$state$best_params <- state$best_params
-  module$state$trials <- state$trials %||% tibble::tibble()
-  module$state$last_grid <- state$last_grid %||% tibble::tibble()
-  module$state$optimization_history <- state$optimization_history %||% list()
-  invisible(module)
-}
-
 
 # ---- Trace Persistence ----
 

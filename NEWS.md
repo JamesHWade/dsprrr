@@ -129,13 +129,14 @@ First development changelog. dsprrr is experimental; the API may change.
   a versioned whole-program contract for nested module graphs, shared identity,
   multimodal demos, and curated optimization state. Runtime objects use stable
   registry IDs by default or require dual `trusted = TRUE` opt-in; pins and
-  standalone code export reuse the same validated manifest, and legacy v2 pins
-  migrate without retaining raw trial/runtime history. Credential-like demo
-  fields now fail instead of silently changing program semantics, and remote
-  content rejects recognizable signed-path credentials. Local persistence
-  rejects same-file aliases before publication and documents its
-  stable-local-filesystem and trusted-directory atomicity boundary
-  (#dsprrr-g6gq, #dsprrr-07u).
+  standalone code export reuse the same validated, current-version manifest.
+  Unpublished legacy shapes are rejected rather than interpreted through a
+  second constructor path, and restoration uses the stored signature rather
+  than accepting an out-of-band override. Credential-like demo fields fail
+  instead of silently changing program semantics, and remote content rejects
+  recognizable signed-path credentials. Local persistence rejects same-file
+  aliases before publication and documents its stable-local-filesystem and
+  trusted-directory atomicity boundary (#dsprrr-g6gq, #dsprrr-07u).
 
 ## Internal
 

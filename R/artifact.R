@@ -240,13 +240,7 @@ artifact_validate_integrity <- function(artifact) {
 }
 
 artifact_validate_metadata <- function(metadata) {
-  allowed <- c(
-    "created_at",
-    "r_version",
-    "packages",
-    "migrated_from",
-    "source_dsprrr_version"
-  )
+  allowed <- c("created_at", "r_version", "packages")
   present <- c("created_at", "r_version", "packages")
   metadata_names <- names(metadata)
   valid <- artifact_is_plain_list(metadata) &&
@@ -284,31 +278,6 @@ artifact_validate_metadata <- function(metadata) {
   if (!valid) {
     cli::cli_abort(
       "Program artifact has invalid producer metadata",
-      class = "dsprrr_artifact_malformed"
-    )
-  }
-  if (
-    !is.null(metadata$migrated_from) &&
-      (!is.numeric(metadata$migrated_from) ||
-        length(metadata$migrated_from) != 1L)
-  ) {
-    cli::cli_abort(
-      "Program artifact has invalid migration metadata",
-      class = "dsprrr_artifact_malformed"
-    )
-  }
-  if (
-    !is.null(metadata$source_dsprrr_version) &&
-      (!is.character(metadata$source_dsprrr_version) ||
-        length(metadata$source_dsprrr_version) != 1L ||
-        is.na(metadata$source_dsprrr_version) ||
-        !grepl(
-          "^[0-9]+([.-][0-9A-Za-z]+)*$",
-          metadata$source_dsprrr_version
-        ))
-  ) {
-    cli::cli_abort(
-      "Program artifact has invalid source version metadata",
       class = "dsprrr_artifact_malformed"
     )
   }
@@ -600,14 +569,6 @@ artifact_serialize_fields <- function(
   trusted,
   exclusions
 ) {
-  # Legacy v2 manifests already promised credential redaction inside demos.
-  # Preserve that migration-only behavior, while new artifacts fail instead of
-  # silently changing semantic demo fields.
-  reject_demo_secret_names <- !isTRUE(attr(
-    module,
-    "dsprrr_legacy_demo_redaction",
-    exact = TRUE
-  ))
   clean <- function(
     value,
     name,
@@ -657,7 +618,7 @@ artifact_serialize_fields <- function(
       demos = clean(
         module$demos,
         "demos",
-        reject_secret_names = reject_demo_secret_names
+        reject_secret_names = TRUE
       ),
       max_iterations = module$max_iterations,
       tools = runtime_list(module$tools, "tools")
@@ -667,7 +628,7 @@ artifact_serialize_fields <- function(
       demos = clean(
         module$demos,
         "demos",
-        reject_secret_names = reject_demo_secret_names
+        reject_secret_names = TRUE
       )
     ),
     PipelineModule = list(
@@ -740,13 +701,13 @@ artifact_serialize_fields <- function(
       trainset_demos = clean(
         module$trainset_demos,
         "trainset_demos",
-        reject_secret_names = reject_demo_secret_names
+        reject_secret_names = TRUE
       ),
       merge_demos = module$merge_demos,
       original_demos = clean(
         module$original_demos,
         "original_demos",
-        reject_secret_names = reject_demo_secret_names
+        reject_secret_names = TRUE
       )
     ),
     FnModule = list(
@@ -2192,373 +2153,14 @@ artifact_read_rds <- function(path) {
   )
 }
 
-artifact_validate_v2_manifest <- function(config) {
-  malformed <- function(message) {
-    cli::cli_abort(
-      c("Malformed v2 dsprrr module artifact", "x" = message),
-      class = c(
-        "dsprrr_artifact_migration_error",
-        "dsprrr_artifact_malformed"
-      )
-    )
-  }
-  required <- c(
-    "format_version",
-    "module_kind",
-    "signature",
-    "config",
-    "state",
-    "fields",
-    "metadata"
-  )
-  allowed <- c(required, "optimization")
-  config_names <- names(config)
-  if (
-    !artifact_is_plain_list(config) ||
-      is.null(config_names) ||
-      anyDuplicated(config_names) ||
-      !all(required %in% config_names) ||
-      !all(config_names %in% allowed) ||
-      !identical(config$format_version, 2L) ||
-      !artifact_is_character_scalar(config$module_kind, nonempty = TRUE) ||
-      !config$module_kind %in%
-        c("predict", "react", "chain_of_thought", "multichain")
-  ) {
-    malformed("Artifact has an invalid top-level schema.")
-  }
-
-  artifact_validate_v2_signature(config$signature, malformed)
-  if (!artifact_is_plain_list(config$config)) {
-    malformed("config must be a plain list.")
-  }
-  artifact_validate_v2_safe_value(config$config, "config", malformed)
-  artifact_validate_v2_state(config$state, malformed)
-  artifact_validate_v2_fields(config, malformed)
-  artifact_validate_v2_metadata(config, malformed)
-  if (!is.null(config$optimization)) {
-    artifact_validate_v2_optimization(config, malformed)
-  }
-  invisible(config)
-}
-
-artifact_validate_v2_signature <- function(signature, malformed) {
-  valid <- artifact_is_plain_list(signature) &&
-    artifact_names_match(
-      names(signature),
-      c("inputs", "output_type", "instructions")
-    ) &&
-    artifact_is_plain_list(signature$inputs) &&
-    artifact_is_character_scalar(signature$instructions)
-  if (!isTRUE(valid)) {
-    malformed("Signature has an invalid schema.")
-  }
-  input_names <- character()
-  for (input in signature$inputs) {
-    valid_input <- artifact_is_plain_list(input) &&
-      artifact_names_match(
-        names(input),
-        c("name", "description", "type", "extra")
-      ) &&
-      artifact_is_character_scalar(input$name, nonempty = TRUE) &&
-      (is.null(input$description) ||
-        artifact_is_character_scalar(input$description)) &&
-      artifact_is_plain_list(input$extra)
-    if (!isTRUE(valid_input)) {
-      malformed("Signature contains an invalid input record.")
-    }
-    input_names <- c(input_names, input$name)
-    artifact_validate_v2_type(input$type, malformed)
-    artifact_validate_v2_safe_value(
-      input$extra,
-      "signature.input.extra",
-      malformed
-    )
-  }
-  if (anyDuplicated(input_names)) {
-    malformed("Signature input names must be unique.")
-  }
-  artifact_validate_v2_type(signature$output_type, malformed)
-  invisible(signature)
-}
-
-artifact_validate_v2_type <- function(type, malformed) {
-  record <- tryCatch(artifact_serialize_type(type), error = function(e) e)
-  if (inherits(record, "condition")) {
-    malformed("Signature contains an unsupported ellmer type.")
-  }
-  artifact_validate_type_record(record, malformed)
-  invisible(type)
-}
-
-artifact_validate_v2_safe_value <- function(value, path, malformed) {
-  if (is.null(value)) {
-    return(invisible(NULL))
-  }
-  if (inherits(value, "ellmer::Content")) {
-    content <- tryCatch(
-      artifact_encode_content(value, path),
-      error = function(e) e
-    )
-    if (inherits(content, "condition") || is.null(content)) {
-      malformed(paste0(path, " contains unsupported runtime content."))
-    }
-    return(invisible(NULL))
-  }
-  if (is.atomic(value)) {
-    exclusions <- new.env(parent = emptyenv())
-    exclusions$records <- list()
-    valid <- tryCatch(
-      {
-        artifact_sanitize_atomic(
-          value,
-          path,
-          exclusions,
-          drop_runtime_names = FALSE
-        )
-        TRUE
-      },
-      error = function(e) FALSE
-    )
-    if (!valid) {
-      malformed(paste0(path, " contains an unsafe atomic value."))
-    }
-    return(invisible(NULL))
-  }
-  if (!is.list(value)) {
-    malformed(paste0(path, " contains an unsafe runtime value."))
-  }
-  attributes <- attributes(value)
-  supported_data_frame <- is.data.frame(value) &&
-    artifact_is_supported_data_frame(value)
-  allowed_attributes <- if (supported_data_frame) {
-    c("class", "names", "row.names")
-  } else {
-    "names"
-  }
-  if (
-    (is.data.frame(value) && !supported_data_frame) ||
-      length(setdiff(names(attributes), allowed_attributes)) > 0L ||
-      (!supported_data_frame && !is.null(attr(value, "class")))
-  ) {
-    malformed(paste0(path, " contains an unsafe list value."))
-  }
-  for (i in seq_along(value)) {
-    artifact_validate_v2_safe_value(
-      value[[i]],
-      paste0(path, "[[", i, "]]"),
-      malformed
-    )
-  }
-  invisible(NULL)
-}
-
-artifact_validate_v2_state <- function(state, malformed) {
-  expected <- c(
-    "compiled",
-    "best_score",
-    "best_trial",
-    "best_params",
-    "trials",
-    "last_grid",
-    "optimization_history"
-  )
-  valid <- artifact_is_plain_list(state) &&
-    artifact_names_match(names(state), expected) &&
-    artifact_is_logical_scalar(state$compiled) &&
-    artifact_is_optional_number_scalar(state$best_score) &&
-    artifact_is_optional_number_scalar(
-      state$best_trial,
-      whole = TRUE,
-      minimum = 1
-    ) &&
-    is.data.frame(state$trials) &&
-    artifact_is_supported_data_frame(state$trials) &&
-    is.data.frame(state$last_grid) &&
-    artifact_is_supported_data_frame(state$last_grid) &&
-    is.list(state$optimization_history)
-  if (!isTRUE(valid)) {
-    malformed("Artifact has invalid persisted state.")
-  }
-  artifact_validate_v2_safe_value(
-    state[c("compiled", "best_score", "best_trial", "best_params")],
-    "state.curated",
-    malformed
-  )
-  invisible(state)
-}
-
-artifact_validate_v2_fields <- function(config, malformed) {
-  fields <- config$fields
-  expected <- switch(
-    config$module_kind,
-    predict = c("template", "demos"),
-    react = c("template", "demos", "max_iterations", "tools"),
-    chain_of_thought = c("template", "demos"),
-    multichain = c(
-      "M",
-      "temperature",
-      "comparison_template",
-      "inner_module"
-    )
-  )
-  if (
-    !artifact_is_plain_list(fields) ||
-      !artifact_names_match(names(fields), expected)
-  ) {
-    malformed("Artifact has invalid class-specific fields.")
-  }
-  valid <- switch(
-    config$module_kind,
-    predict = artifact_is_character_scalar(fields$template) &&
-      artifact_is_plain_list(fields$demos),
-    chain_of_thought = artifact_is_character_scalar(fields$template) &&
-      artifact_is_plain_list(fields$demos),
-    react = artifact_is_character_scalar(fields$template) &&
-      artifact_is_plain_list(fields$demos) &&
-      artifact_is_number_scalar(
-        fields$max_iterations,
-        whole = TRUE,
-        minimum = 1
-      ) &&
-      artifact_is_plain_list(fields$tools) &&
-      length(fields$tools) == 0L,
-    multichain = artifact_is_number_scalar(
-      fields$M,
-      whole = TRUE,
-      minimum = 1
-    ) &&
-      artifact_is_number_scalar(fields$temperature) &&
-      (is.null(fields$comparison_template) ||
-        artifact_is_character_scalar(fields$comparison_template)) &&
-      is.list(fields$inner_module),
-    FALSE
-  )
-  if (!isTRUE(valid)) {
-    malformed("Artifact has invalid class-specific field values.")
-  }
-  safe_fields <- fields[setdiff(names(fields), "inner_module")]
-  artifact_validate_v2_safe_value(safe_fields, "fields", malformed)
-  if (identical(config$module_kind, "multichain")) {
-    artifact_validate_v2_manifest(fields$inner_module)
-  }
-  invisible(fields)
-}
-
-artifact_validate_v2_metadata <- function(config, malformed) {
-  metadata <- config$metadata
-  allowed <- c(
-    "module_class",
-    "created_at",
-    "dsprrr_version",
-    "r_version",
-    "module_type"
-  )
-  metadata_names <- names(metadata)
-  expected_class <- switch(
-    config$module_kind,
-    predict = "PredictModule",
-    chain_of_thought = "PredictModule",
-    react = "ReactModule",
-    multichain = "MultiChainComparisonModule"
-  )
-  valid <- artifact_is_plain_list(metadata) &&
-    !is.null(metadata_names) &&
-    !anyDuplicated(metadata_names) &&
-    all(metadata_names %in% allowed) &&
-    "module_class" %in% metadata_names &&
-    identical(metadata$module_class, expected_class) &&
-    (is.null(metadata$dsprrr_version) ||
-      artifact_is_character_scalar(metadata$dsprrr_version, nonempty = TRUE)) &&
-    (is.null(metadata$r_version) ||
-      artifact_is_character_scalar(metadata$r_version, nonempty = TRUE)) &&
-    (is.null(metadata$module_type) ||
-      identical(metadata$module_type, expected_class))
-  if (!isTRUE(valid)) {
-    malformed("Artifact has invalid producer metadata.")
-  }
-  artifact_validate_v2_safe_value(metadata, "metadata", malformed)
-  invisible(metadata)
-}
-
-artifact_validate_v2_optimization <- function(config, malformed) {
-  optimization <- config$optimization
-  expected <- c(
-    "compiled",
-    "best_score",
-    "best_trial",
-    "best_params",
-    "n_trials"
-  )
-  valid <- artifact_is_plain_list(optimization) &&
-    artifact_names_match(names(optimization), expected) &&
-    identical(optimization$compiled, config$state$compiled) &&
-    identical(optimization$best_score, config$state$best_score) &&
-    identical(optimization$best_trial, config$state$best_trial) &&
-    identical(optimization$best_params, config$state$best_params) &&
-    artifact_is_number_scalar(
-      optimization$n_trials,
-      whole = TRUE,
-      minimum = 0
-    )
-  if (!isTRUE(valid)) {
-    malformed("Artifact has invalid optimization metadata.")
-  }
-  invisible(optimization)
-}
-
 restore_program_artifact <- function(
   artifact,
   registry = list(),
-  trusted = FALSE,
-  signature = NULL
+  trusted = FALSE
 ) {
   registry <- artifact_validate_registry(registry)
   trusted <- artifact_validate_trusted(trusted)
-
-  artifact_version <- if (is.list(artifact)) {
-    unclass(artifact)[["format_version"]]
-  } else {
-    NULL
-  }
-  if (identical(artifact_version, 2L)) {
-    artifact_validate_v2_manifest(artifact)
-    artifact <- migrate_program_artifact_v2(
-      artifact,
-      signature = signature,
-      registry = registry,
-      trusted = trusted
-    )
-    signature <- NULL
-  }
   artifact_validate_manifest(artifact)
-
-  if (!is.null(signature)) {
-    if (!inherits(signature, "dsprrr::Signature")) {
-      cli::cli_abort("{.arg signature} must be a Signature object")
-    }
-    root <- artifact$root
-    if (
-      length(artifact$graph$nodes) > 1L ||
-        length(artifact$graph$nodes[[root]]$children) > 0L
-    ) {
-      cli::cli_abort(
-        c(
-          "A stored signature cannot override a composite program",
-          "i" = "Update the source program's component signatures and create a new artifact."
-        ),
-        class = "dsprrr_artifact_signature_override_error"
-      )
-    }
-    placeholder <- new.env(parent = emptyenv())
-    placeholder$records <- list()
-    artifact$graph$nodes[[root]]$signature <- artifact_serialize_signature(
-      signature,
-      registry,
-      trusted,
-      placeholder,
-      paste0("graph.nodes.", root, ".signature")
-    )
-  }
 
   cache <- new.env(parent = emptyenv(), hash = TRUE)
   program <- artifact_build_node(
@@ -4520,69 +4122,6 @@ artifact_deserialize_type <- function(type) {
       class = "dsprrr_artifact_malformed"
     )
   )
-}
-
-migrate_program_artifact_v2 <- function(
-  config,
-  signature,
-  registry,
-  trusted
-) {
-  artifact_validate_v2_manifest(config)
-  migrated <- tryCatch(
-    {
-      source <- config
-      legacy_n_trials <- nrow(source$state$trials)
-      source$state$trials <- tibble::tibble()
-      source$state$last_grid <- tibble::tibble()
-      source$state$optimization_history <- list()
-      if (!is.null(signature)) {
-        if (!inherits(signature, "dsprrr::Signature")) {
-          cli::cli_abort("{.arg signature} must be a Signature object")
-        }
-        source$signature <- serialize_signature_v2(signature)
-      }
-      module <- restore_module_from_v2(source)
-      legacy_graph <- module_graph(
-        module,
-        boundaries = "cross",
-        cycles = "record"
-      )
-      for (legacy_module in legacy_graph$module) {
-        attr(legacy_module, "dsprrr_legacy_demo_redaction") <- TRUE
-      }
-      if (legacy_n_trials > 0L) {
-        optimizer <- module$config$optimizer %||% list()
-        optimizer$n_trials <- legacy_n_trials
-        module$config$optimizer <- optimizer
-      }
-      artifact <- program_artifact(
-        module,
-        registry = registry,
-        trusted = trusted
-      )
-      artifact$metadata$migrated_from <- 2L
-      source_version <- config$metadata$dsprrr_version
-      if (
-        is.character(source_version) &&
-          length(source_version) == 1L &&
-          !is.na(source_version)
-      ) {
-        artifact$metadata$source_dsprrr_version <- source_version
-      }
-      artifact$integrity <- artifact_integrity(artifact)
-      artifact
-    },
-    error = function(e) e
-  )
-  if (inherits(migrated, "condition")) {
-    cli::cli_abort(
-      "Could not migrate v2 module configuration",
-      parent = migrated,
-      class = "dsprrr_artifact_migration_error"
-    )
-  }
-  migrated
 }
 
 artifact_strip_demos <- function(artifact) {

@@ -1927,10 +1927,13 @@ run_batch_sequential <- function(
 
 #' Find mutable environments reachable from a Chat's state surface
 #' @noRd
-batch_chat_state_environments <- function(chat) {
+batch_chat_state_environments <- function(chat, normalize_source = FALSE) {
   found <- character()
   seen <- new.env(hash = TRUE, parent = emptyenv())
   expanded <- new.env(hash = TRUE, parent = emptyenv())
+  source_visiting <- new.env(hash = TRUE, parent = emptyenv())
+  runtime_environments <- new.env(hash = TRUE, parent = emptyenv())
+  source_environments <- new.env(hash = TRUE, parent = emptyenv())
   trusted_ellmer <- cache_is_trusted_ellmer_chat(chat)
 
   immutable_environment <- function(env) {
@@ -1948,6 +1951,87 @@ batch_chat_state_environments <- function(chat) {
 
   binding_is_lazy <- function(env, name) {
     isTRUE(unname(rlang::env_binding_are_lazy(env, name))[[1]])
+  }
+
+  runtime_attributes <- function(value) {
+    attributes(value) %||% list()
+  }
+
+  canonical_source_reference <- function(value) {
+    value_attributes <- attributes(value)
+    is.integer(value) &&
+      length(value) == 8L &&
+      !anyNA(value) &&
+      inherits(value, "srcref") &&
+      length(class(value)) == 1L &&
+      !is.null(value_attributes) &&
+      setequal(names(value_attributes), c("srcfile", "class")) &&
+      is.environment(attr(value, "srcfile", exact = TRUE))
+  }
+
+  source_file_schema <- function(source_file) {
+    source_class <- class(source_file)
+    source_attributes <- attributes(source_file)
+    schema <- if (identical(source_class, "srcfile")) {
+      list(
+        required = c("Enc", "encoding", "filename", "timestamp", "wd"),
+        allowed = c(
+          "Enc",
+          "encoding",
+          "filename",
+          "timestamp",
+          "wd",
+          "lines",
+          "parseData"
+        )
+      )
+    } else if (identical(source_class, c("srcfilecopy", "srcfile"))) {
+      list(
+        required = c(
+          "Enc",
+          "filename",
+          "fixedNewlines",
+          "isFile",
+          "lines",
+          "timestamp",
+          "wd"
+        ),
+        allowed = c(
+          "Enc",
+          "filename",
+          "fixedNewlines",
+          "isFile",
+          "lines",
+          "parseData",
+          "timestamp",
+          "wd"
+        )
+      )
+    } else if (identical(source_class, c("srcfilealias", "srcfile"))) {
+      list(
+        required = c("filename", "original"),
+        allowed = c("filename", "original", "parseData")
+      )
+    } else {
+      NULL
+    }
+    members <- ls(source_file, all.names = TRUE)
+    if (
+      is.null(schema) ||
+        !identical(parent.env(source_file), emptyenv()) ||
+        !identical(names(source_attributes), "class") ||
+        !all(schema$required %in% members) ||
+        !all(members %in% schema$allowed)
+    ) {
+      cli::cli_abort(
+        c(
+          "Cannot prove opaque Chat isolation",
+          "x" = "State contains noncanonical source metadata."
+        ),
+        class = "dsprrr_chat_isolation_error"
+      )
+    }
+    schema
   }
 
   check_binding <- function(env, name) {
@@ -2006,11 +2090,31 @@ batch_chat_state_environments <- function(chat) {
     already_seen
   }
 
-  record <- function(env) {
+  record <- function(env, role = "runtime") {
     if (immutable_environment(env)) {
       return(invisible(NULL))
     }
     address <- rlang::obj_address(env)
+    current <- if (identical(role, "source")) {
+      source_environments
+    } else {
+      runtime_environments
+    }
+    opposite <- if (identical(role, "source")) {
+      runtime_environments
+    } else {
+      source_environments
+    }
+    if (exists(address, envir = opposite, inherits = FALSE)) {
+      cli::cli_abort(
+        c(
+          "Cannot prove opaque Chat isolation",
+          "x" = "A source metadata environment is also reachable as ordinary runtime state."
+        ),
+        class = "dsprrr_chat_isolation_error"
+      )
+    }
+    assign(address, TRUE, envir = current)
     if (!mark_seen(env)) {
       found <<- c(found, address)
     }
@@ -2027,7 +2131,106 @@ batch_chat_state_environments <- function(chat) {
     )
   }
 
-  visit <- function(value) {
+  visit_attributes <- function(value) {
+    value_attributes <- runtime_attributes(value)
+    if (length(value_attributes) == 0L) {
+      return(invisible(NULL))
+    }
+    attribute_names <- names(value_attributes)
+    source_carrier <- is.function(value) ||
+      is.language(value) ||
+      is.pairlist(value) ||
+      is.expression(value)
+    for (index in seq_along(value_attributes)) {
+      source_edge <- source_carrier &&
+        attribute_names[[index]] %in% c("srcref", "wholeSrcref") &&
+        canonical_source_reference(value_attributes[[index]])
+      visit(value_attributes[[index]], source_metadata = source_edge)
+    }
+    invisible(NULL)
+  }
+
+  visit_source_file <- function(source_file) {
+    source_file_schema(source_file)
+    record(source_file, role = "source")
+    address <- rlang::obj_address(source_file)
+    if (exists(address, envir = expanded, inherits = FALSE)) {
+      return(invisible(NULL))
+    }
+    if (exists(address, envir = source_visiting, inherits = FALSE)) {
+      cli::cli_abort(
+        c(
+          "Cannot prove opaque Chat isolation",
+          "x" = "Source metadata contains a cyclic alias."
+        ),
+        class = "dsprrr_chat_isolation_error"
+      )
+    }
+    assign(address, TRUE, envir = source_visiting)
+    on.exit(rm(list = address, envir = source_visiting), add = TRUE)
+
+    members <- ls(source_file, all.names = TRUE)
+    for (name in members) {
+      if (bindingIsActive(name, source_file)) {
+        cli::cli_abort(
+          c(
+            "Cannot prove opaque Chat isolation",
+            "x" = "Source metadata references active binding {.field {name}}."
+          ),
+          class = "dsprrr_chat_isolation_error"
+        )
+      }
+      if (binding_is_lazy(source_file, name)) {
+        if (!name %in% c("lines", "parseData")) {
+          cli::cli_abort(
+            c(
+              "Cannot prove opaque Chat isolation",
+              "x" = "Source metadata references unexpected delayed binding {.field {name}}."
+            ),
+            class = "dsprrr_chat_isolation_error"
+          )
+        }
+        if (isTRUE(normalize_source)) {
+          if (
+            environmentIsLocked(source_file) ||
+              bindingIsLocked(name, source_file)
+          ) {
+            cli::cli_abort(
+              c(
+                "Cannot prove opaque Chat isolation",
+                "x" = "Executable source metadata retains locked delayed binding {.field {name}}."
+              ),
+              class = "dsprrr_chat_isolation_error"
+            )
+          }
+          rm(list = name, envir = source_file)
+          if (identical(name, "lines")) {
+            assign(name, character(), envir = source_file)
+          }
+        }
+        next
+      }
+      member <- get(name, envir = source_file, inherits = FALSE)
+      if (identical(name, "original")) {
+        if (!is.environment(member) || !inherits(member, "srcfile")) {
+          cli::cli_abort(
+            c(
+              "Cannot prove opaque Chat isolation",
+              "x" = "Source metadata contains an invalid alias target."
+            ),
+            class = "dsprrr_chat_isolation_error"
+          )
+        }
+        visit_source_file(member)
+      } else {
+        visit(member)
+      }
+    }
+    assign(address, TRUE, envir = expanded)
+    invisible(NULL)
+  }
+
+  visit <- function(value, source_metadata = FALSE) {
     if (is.null(value)) {
       return(invisible(NULL))
     }
@@ -2036,6 +2239,19 @@ batch_chat_state_environments <- function(chat) {
         (inherits(value, "ellmer::Provider") ||
           inherits(value, "ellmer::ToolDef"))
     ) {
+      return(invisible(NULL))
+    }
+    if (canonical_source_reference(value)) {
+      if (!isTRUE(source_metadata)) {
+        cli::cli_abort(
+          c(
+            "Cannot prove opaque Chat isolation",
+            "x" = "A source reference is reachable as ordinary runtime state."
+          ),
+          class = "dsprrr_chat_isolation_error"
+        )
+      }
+      visit_source_file(attr(value, "srcfile", exact = TRUE))
       return(invisible(NULL))
     }
     if (is.function(value)) {
@@ -2127,6 +2343,7 @@ batch_chat_state_environments <- function(chat) {
             "sys.call",
             "sys.calls",
             "sys.frame",
+            "sys.function",
             "topenv",
             "unlockBinding",
             "assignInNamespace",
@@ -2215,7 +2432,7 @@ batch_chat_state_environments <- function(chat) {
           }
         }
       }
-      lapply(attributes(value), visit)
+      visit_attributes(value)
       return(invisible(NULL))
     }
     if (is.environment(value)) {
@@ -2269,7 +2486,7 @@ batch_chat_state_environments <- function(chat) {
       lapply(methods::slotNames(value), function(name) {
         visit(methods::slot(value, name))
       })
-      lapply(attributes(value), visit)
+      visit_attributes(value)
       return(invisible(NULL))
     }
     if (is.list(value) || is.pairlist(value) || is.expression(value)) {
@@ -2277,12 +2494,12 @@ batch_chat_state_environments <- function(chat) {
         return(invisible(NULL))
       }
       lapply(value, visit)
-      lapply(attributes(value), visit)
+      visit_attributes(value)
       return(invisible(NULL))
     }
     if (is.language(value)) {
       visit(as.list(value))
-      lapply(attributes(value), visit)
+      visit_attributes(value)
       return(invisible(NULL))
     }
     if (typeof(value) %in% c("externalptr", "weakref")) {
@@ -2292,7 +2509,7 @@ batch_chat_state_environments <- function(chat) {
       is.atomic(value) ||
         typeof(value) %in% c("symbol", "builtin", "special")
     ) {
-      lapply(attributes(value), visit)
+      visit_attributes(value)
       return(invisible(NULL))
     }
     unsupported(value)
@@ -2369,7 +2586,10 @@ batch_chat_copy <- function(chat, stage, source_state = NULL) {
     )
   }
 
-  branch_envs <- batch_chat_state_environments(branch)
+  branch_envs <- batch_chat_state_environments(
+    branch,
+    normalize_source = !cache_is_trusted_ellmer_chat(chat)
+  )
   if (length(intersect(source_state$environments, branch_envs)) > 0L) {
     cli::cli_abort(
       c(

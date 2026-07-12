@@ -126,15 +126,6 @@
       Caused by error in `readRDS()`:
       ! unknown input format
 
-# v2 module configs migrate to the graph artifact contract
-
-    Code
-      restore_module_config(invalid)
-    Condition
-      Error in `malformed()`:
-      ! Malformed v2 dsprrr module artifact
-      x Artifact has an invalid top-level schema.
-
 # cycles and unsupported custom classes fail explicitly
 
     Code
@@ -155,16 +146,7 @@
       x Cannot reconstruct <ArtifactCycleProgram>.
       i This artifact version supports built-in module classes only; custom Module subclasses need an explicit artifact codec.
 
-# signature overrides cannot invalidate composite artifacts
-
-    Code
-      restore_module_config(artifact, signature = signature("different -> output"))
-    Condition
-      Error in `restore_program_artifact()`:
-      ! A stored signature cannot override a composite program
-      i Update the source program's component signatures and create a new artifact.
-
----
+# tampered composite signatures fail validation
 
     Code
       restore_module_config(tampered)

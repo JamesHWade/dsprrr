@@ -1883,122 +1883,28 @@ test_that("malformed, unsupported, and corrupt artifacts fail with typed errors"
   expect_snapshot(load_program(path), error = TRUE)
 })
 
-test_that("v2 module configs migrate to the graph artifact contract", {
-  fixture_environment <- new.env(parent = globalenv())
-  sys.source(
-    test_path("fixtures", "artifact-v2.R"),
-    envir = fixture_environment
+test_that("only the current artifact schema reaches constructors", {
+  legacy <- list(
+    format_version = 2L,
+    module_kind = "predict",
+    signature = list(),
+    config = list(),
+    state = list(),
+    fields = list(),
+    metadata = list()
   )
-  fixtures <- fixture_environment$artifact_v2_fixtures
-  expect_named(
-    fixtures,
-    c("predict", "react", "chain_of_thought", "multichain")
-  )
-
-  v2 <- fixtures$predict
-
-  restored <- restore_module_config(v2)
-  expect_identical(restored$demos[[1]]$text, "old")
-  expect_null(restored$demos[[1]]$private_key)
-  expect_null(restored$config$client_secret)
-  expect_null(restored$state$best_params$access_token)
-  expect_identical(restored$config$temperature, 0.3)
-  expect_identical(restored$is_compiled(), TRUE)
-
-  migrated_artifacts <- lapply(fixtures, function(fixture) {
-    dsprrr:::migrate_program_artifact_v2(
-      fixture,
-      signature = NULL,
-      registry = list(),
-      trusted = FALSE
-    )
-  })
-  migrated <- lapply(migrated_artifacts, restore_module_config)
-  expect_identical(
-    unname(vapply(
-      migrated,
-      function(program) program$config$.module_kind,
-      character(1)
-    )),
-    names(fixtures)
-  )
-  expect_identical(migrated$react$max_iterations, 7L)
-  expect_identical(migrated$multichain$M, 5L)
-  expect_identical(
-    migrated_artifacts$predict$graph$nodes[["$"]]$optimization$n_trials,
-    1L
-  )
-  expect_false(grepl(
-    "DROP_V2_RUNTIME_HISTORY",
-    paste(capture.output(dput(migrated_artifacts$predict)), collapse = "\n"),
-    fixed = TRUE
-  ))
-  expect_identical(
-    migrated$multichain$inner_module$config$.module_kind,
-    "chain_of_thought"
-  )
-
-  nested_credential <- fixtures$multichain
-  nested_sentinel <- "DROP_NESTED_V2_CREDENTIAL"
-  nested_credential$fields$inner_module$fields$demos[[1]]$private_key <-
-    nested_sentinel
-  nested_restored <- restore_module_config(nested_credential)
-  expect_null(nested_restored$inner_module$demos[[1]]$private_key)
-  expect_false(grepl(
-    nested_sentinel,
-    paste(capture.output(dput(nested_restored)), collapse = "\n"),
-    fixed = TRUE
-  ))
-
-  expect_true(all(vapply(
-    migrated_artifacts,
-    function(artifact) identical(artifact$metadata$migrated_from, 2L),
-    logical(1)
-  )))
-  expect_true(all(vapply(
-    migrated_artifacts,
-    function(artifact) {
-      identical(artifact$metadata$source_dsprrr_version, "0.0.0.9000")
+  constructor_called <- FALSE
+  testthat::local_mocked_bindings(
+    artifact_build_node = function(...) {
+      constructor_called <<- TRUE
+      cli::cli_abort("unexpected artifact construction")
     },
-    logical(1)
-  )))
-
-  invalid <- v2
-  invalid$module_kind <- "unknown"
-  expect_snapshot(restore_module_config(invalid), error = TRUE)
-  expect_s3_class(
-    rlang::catch_cnd(restore_module_config(invalid)),
-    "dsprrr_artifact_migration_error"
-  )
-})
-
-test_that("v2 artifacts are validated before constructors or S3 access", {
-  fixture_environment <- new.env(parent = globalenv())
-  sys.source(
-    test_path("fixtures", "artifact-v2.R"),
-    envir = fixture_environment
-  )
-  fixture <- fixture_environment$artifact_v2_fixtures$predict
-
-  unsafe <- fixture
-  unsafe$config$callback <- function() cli::cli_abort("must not execute")
-  expect_s3_class(
-    rlang::catch_cnd(restore_module_config(unsafe)),
-    "dsprrr_artifact_migration_error"
+    .package = "dsprrr"
   )
 
-  missing_compiled <- fixture
-  missing_compiled$state$compiled <- NA
-  expect_s3_class(
-    rlang::catch_cnd(restore_module_config(missing_compiled)),
-    "dsprrr_artifact_migration_error"
-  )
-
-  legacy_content <- fixture
-  legacy_content$fields$demos[[1]]$text <- ellmer::ContentText("legacy text")
-  restored_content <- restore_module_config(legacy_content)$demos[[1]]$text
-  expect_s7_class(restored_content, ellmer::ContentText)
-  expect_identical(restored_content@text, "legacy text")
+  condition <- rlang::catch_cnd(restore_module_config(legacy))
+  expect_s3_class(condition, "dsprrr_artifact_malformed")
+  expect_false(constructor_called)
 
   probe <- new.env(parent = emptyenv())
   probe$called <- FALSE
@@ -2020,13 +1926,12 @@ test_that("v2 artifacts are validated before constructors or S3 access", {
       rm(list = method_name, envir = globalenv())
     }
   })
-  class(fixture) <- c("artifact_evil", "list")
+  class(legacy) <- c("artifact_evil", "list")
 
-  expect_s3_class(
-    rlang::catch_cnd(restore_module_config(fixture)),
-    "dsprrr_artifact_migration_error"
-  )
+  condition <- rlang::catch_cnd(restore_module_config(legacy))
+  expect_s3_class(condition, "dsprrr_artifact_malformed")
   expect_false(probe$called)
+  expect_false(constructor_called)
 })
 
 test_that("cycles and unsupported custom classes fail explicitly", {
@@ -2038,17 +1943,9 @@ test_that("cycles and unsupported custom classes fail explicitly", {
   expect_snapshot(program_artifact(custom), error = TRUE)
 })
 
-test_that("signature overrides cannot invalidate composite artifacts", {
+test_that("tampered composite signatures fail validation", {
   program <- pipeline(artifact_leaf(), artifact_leaf("answer", "summary"))
   artifact <- program_artifact(program)
-
-  expect_snapshot(
-    restore_module_config(
-      artifact,
-      signature = signature("different -> output")
-    ),
-    error = TRUE
-  )
 
   tampered <- artifact
   tampered$graph$nodes[[
