@@ -18,8 +18,10 @@ First development changelog. dsprrr is experimental; the API may change.
   history state. Batch rows record one canonical ordered trace across
   sequential, native ellmer, mirai, cache-hit, and failure paths; mixed
   zero/non-zero inputs fail during typed preflight. Specialized Predict
-  subclasses preserve scalar `forward()` behavior and reject unsupported
-  vectorized execution instead of silently bypassing it (#dsprrr-bbdm).
+  subclasses preserve scalar `forward()` behavior; `run_dataset()` adapts them
+  through isolated sequential rows, while direct vectorized or concurrent
+  execution rejects before work instead of silently bypassing it
+  (#dsprrr-bbdm).
 
 * `concurrency_control()` now gives batch execution one enforceable contract
   for backend selection, exact in-flight limits, per-task and total timeouts,
@@ -72,6 +74,15 @@ First development changelog. dsprrr is experimental; the API may change.
 * `optimizer_control()` now applies `max_errors` as an exact consecutive-error
   boundary while retaining total-error and completed-evaluation overshoot
   metadata consistently across optimizers.
+
+* Optimizer controls now cap metric and provider calls, input/output/total
+  tokens, known cost, and monotonic elapsed time without treating unknown usage
+  as free. Private atomic checkpoints preserve fingerprints, RNG state,
+  counters, lineage, best partial programs, and append-only trial logs;
+  Bootstrap and MIPRO resume without repeating completed paid rows. GEPA,
+  SIMBA, and COPRO share the same ledger and typed stop reasons while their
+  fine-grained resume engines remain explicitly tracked follow-ups
+  (#dsprrr-krq4).
 
 * `.cache` is now a validated, first-class argument to `run()` and `forward()`
   for every module type, instead of triggering a spurious "unknown input"

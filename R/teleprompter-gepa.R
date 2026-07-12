@@ -198,6 +198,7 @@ compile_gepa <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
+  control = NULL,
   ...
 ) {
   if (!inherits(program, "Module")) {
@@ -233,15 +234,15 @@ compile_gepa <- function(
     set.seed(teleprompter@seed)
   }
 
-  control <- optimizer_control(
-    seed = teleprompter@seed,
-    max_errors = teleprompter@max_errors,
-    log_dir = teleprompter@log_dir,
-    progress = teleprompter@verbose
+  control <- optimizer_control_for_teleprompter(
+    teleprompter,
+    control = control
   )
+  optimizer_require_ledger_only_checkpoint(control, "GEPA")
+  budget <- new_optimizer_budget(control)
 
-  trial_log <- if (!is.null(teleprompter@log_dir)) {
-    TrialLog$new(optimizer_name = "GEPA", log_dir = teleprompter@log_dir)
+  trial_log <- if (!is.null(control@log_dir)) {
+    TrialLog$new(optimizer_name = "GEPA", log_dir = control@log_dir)
   } else {
     NULL
   }
@@ -250,17 +251,22 @@ compile_gepa <- function(
   population <- vector("list", teleprompter@population_size)
   population[[1]] <- base_instructions
   for (i in 2:teleprompter@population_size) {
+    if (optimizer_budget_stopped(budget)) {
+      break
+    }
     population[[i]] <- gepa_mutate_instruction(
       base_instructions,
       failed_examples = list(),
       .llm = .llm,
-      verbose = teleprompter@verbose
+      verbose = teleprompter@verbose,
+      budget = budget,
+      unit_id = paste0("gepa:initial_mutation:", i)
     )
   }
+  population <- Filter(Negate(is.null), population)
 
   all_generations <- list()
   selectable_records <- list()
-  budget <- new_optimizer_budget(control)
   best_record <- NULL
 
   for (generation in seq_len(teleprompter@generations)) {
@@ -283,6 +289,14 @@ compile_gepa <- function(
       primary_eval <- NULL
       last_eval <- NULL
       completed_metrics <- 0L
+      metric_unit_ids <- paste0(
+        "gepa:generation:",
+        generation,
+        ":candidate:",
+        i,
+        ":metric:",
+        seq_along(metrics)
+      )
 
       for (m in seq_along(metrics)) {
         if (optimizer_budget_stopped(budget)) {
@@ -291,12 +305,15 @@ compile_gepa <- function(
 
         candidate <- copy_module(program)
         candidate$apply_optimization_params(list(instructions = instructions))
-        eval_result <- eval_program(
+        eval_result <- optimizer_eval_candidate(
           candidate,
           dataset,
           metric = metrics[[m]],
           .llm = .llm,
-          control = control
+          control = control,
+          budget = budget,
+          stage = paste0("gepa_metric_", m),
+          unit_id = metric_unit_ids[[m]]
         )
 
         if (!S7::S7_inherits(eval_result, EvalResult)) {
@@ -309,12 +326,6 @@ compile_gepa <- function(
         last_eval <- eval_result
         scores[m] <- eval_result@mean_score
         completed_metrics <- m
-        record_eval_result_outcomes(
-          budget,
-          eval_result,
-          stage = paste0("gepa_metric_", m)
-        )
-
         if (m == 1) {
           primary_eval <- eval_result
           failed_examples <- gepa_failed_examples(
@@ -332,7 +343,14 @@ compile_gepa <- function(
         failed_examples = failed_examples,
         generation = generation,
         completed_metrics = completed_metrics,
-        complete = completed_metrics == length(metrics) && !anyNA(scores)
+        complete = all(vapply(
+          metric_unit_ids,
+          function(unit_id) {
+            optimizer_budget_unit_completed(budget, unit_id)
+          },
+          logical(1)
+        )) &&
+          !anyNA(scores)
       )
 
       records[[length(records) + 1L]] <- record
@@ -409,7 +427,9 @@ compile_gepa <- function(
       teleprompter@crossover_rate,
       teleprompter@selection,
       .llm,
-      verbose = teleprompter@verbose
+      verbose = teleprompter@verbose,
+      budget = budget,
+      generation = generation + 1L
     )
   }
 
@@ -418,7 +438,7 @@ compile_gepa <- function(
     optimized$apply_optimization_params(list(
       instructions = best_record$instructions
     ))
-  } else {
+  } else if (!optimizer_budget_stopped(budget)) {
     cli::cli_warn(c(
       "GEPA optimization failed to produce any valid candidates",
       "!" = "Returning unmodified program",
@@ -459,7 +479,8 @@ compile_gepa <- function(
     all_generations = all_generations,
     error_count = budget_summary$total_errors,
     budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason
+    stop_reason = budget_summary$stop_reason,
+    partial = optimizer_budget_stopped(budget)
   )
 
   if (!is.null(trial_log)) {
@@ -514,7 +535,9 @@ gepa_next_generation <- function(
   crossover_rate,
   selection,
   .llm,
-  verbose = FALSE
+  verbose = FALSE,
+  budget = NULL,
+  generation = NA_integer_
 ) {
   scores_matrix <- do.call(rbind, lapply(records, function(rec) rec$scores))
   if (selection == "pareto" && ncol(scores_matrix) > 1) {
@@ -551,7 +574,9 @@ gepa_next_generation <- function(
         child_instructions,
         failed_examples = parent1$failed_examples,
         .llm = .llm,
-        verbose = verbose
+        verbose = verbose,
+        budget = budget,
+        unit_id = paste0("gepa:generation:", generation, ":mutation:", i)
       )
     }
 
@@ -609,7 +634,9 @@ gepa_mutate_instruction <- function(
   instruction,
   failed_examples,
   .llm = NULL,
-  verbose = FALSE
+  verbose = FALSE,
+  budget = NULL,
+  unit_id = "gepa:reflection"
 ) {
   if (is.null(.llm) || is.null(.llm$chat_structured)) {
     return(gepa_fallback_mutation(instruction, failed_examples))
@@ -618,17 +645,40 @@ gepa_mutate_instruction <- function(
   prompt <- gepa_reflection_prompt(instruction, failed_examples)
   type <- ellmer::type_object(instructions = ellmer::type_string())
 
-  result <- tryCatch(
-    .llm$chat_structured(prompt, type = type, echo = "none"),
-    error = function(e) {
+  if (!is.null(budget)) {
+    request <- optimizer_budgeted_provider_call(
+      budget = budget,
+      model = .llm,
+      stage = "gepa_reflection",
+      unit_id = unit_id,
+      call = function() {
+        .llm$chat_structured(prompt, type = type, echo = "none")
+      },
+      success = function(value, condition) {
+        is.null(condition) && is.list(value) && !is.null(value$instructions)
+      }
+    )
+    result <- request$value
+    if (!is.null(request$condition)) {
       cli::cli_warn(c(
         "GEPA reflection LLM call failed, using fallback mutation",
-        "x" = conditionMessage(e),
+        "x" = conditionMessage(request$condition),
         "i" = "This may degrade optimization quality"
       ))
-      NULL
     }
-  )
+  } else {
+    result <- tryCatch(
+      .llm$chat_structured(prompt, type = type, echo = "none"),
+      error = function(e) {
+        cli::cli_warn(c(
+          "GEPA reflection LLM call failed, using fallback mutation",
+          "x" = conditionMessage(e),
+          "i" = "This may degrade optimization quality"
+        ))
+        NULL
+      }
+    )
+  }
 
   if (is.list(result) && !is.null(result$instructions)) {
     return(result$instructions)

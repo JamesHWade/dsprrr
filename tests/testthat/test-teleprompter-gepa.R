@@ -367,3 +367,134 @@ test_that("GEPA Pareto selection survives an interrupted worse generation", {
   expect_length(optimizer$all_generations[[2]]$population, 1L)
   expect_equal(optimizer$stop_reason$limit, 0L)
 })
+
+test_that("GEPA never selects or logs a biased partial metric evaluation", {
+  eval_calls <- 0L
+  log_dir <- withr::local_tempdir()
+
+  testthat::local_mocked_bindings(
+    eval_program = function(program, dataset, ...) {
+      eval_calls <<- eval_calls + 1L
+      score <- if (
+        identical(
+          program$signature@instructions,
+          "Biased partial candidate"
+        )
+      ) {
+        1
+      } else {
+        0.5
+      }
+      dsprrr:::EvalResult(
+        examples = data.frame(
+          score = score,
+          error = NA_character_,
+          predicted = "answer",
+          feedback = NA_character_
+        ),
+        mean_score = score,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        metric_calls = 1L
+      )
+    },
+    gepa_mutate_instruction = function(...) "Biased partial candidate",
+    .package = "dsprrr"
+  )
+
+  result <- dsprrr:::compile_gepa(
+    GEPA(
+      metrics = list(
+        quality = function(...) 1,
+        safety = function(...) 1
+      ),
+      population_size = 2L,
+      generations = 1L,
+      selection = "pareto",
+      verbose = FALSE
+    ),
+    module(
+      signature("question -> answer", instructions = "Baseline"),
+      type = "predict"
+    ),
+    data.frame(
+      question = c("q1", "q2"),
+      answer = c("a1", "a2")
+    ),
+    control = dsprrr:::optimizer_control(
+      max_metric_calls = 7L,
+      log_dir = log_dir
+    )
+  )
+  optimizer <- result$config$optimizer
+
+  expect_equal(eval_calls, 7L)
+  expect_identical(result$signature@instructions, "Baseline")
+  expect_equal(optimizer$best_scores, c(quality = 0.5, safety = 0.5))
+  expect_true(optimizer$partial)
+  expect_identical(optimizer$stop_reason$code, "max_metric_calls")
+  expect_true(all(
+    c(
+      "gepa:generation:1:candidate:1:metric:1",
+      "gepa:generation:1:candidate:1:metric:2",
+      "gepa:generation:1:candidate:2:metric:1"
+    ) %in%
+      optimizer$budget_summary$completed_units
+  ))
+  expect_false(
+    "gepa:generation:1:candidate:2:metric:2" %in%
+      optimizer$budget_summary$completed_units
+  )
+  expect_length(optimizer$all_generations[[1]]$population, 1L)
+
+  trials <- dsprrr:::read_trials_jsonl(file.path(log_dir, "trials.jsonl"))
+  expect_length(trials, 1L)
+  expect_identical(trials[[1]]@status, "completed")
+  expect_identical(trials[[1]]@params$index, 1L)
+})
+
+test_that("GEPA reports an early budget stop without a failure warning", {
+  testthat::local_mocked_bindings(
+    eval_program = function(...) {
+      dsprrr:::EvalResult(
+        examples = data.frame(
+          score = 1,
+          error = NA_character_,
+          predicted = "answer",
+          feedback = NA_character_
+        ),
+        mean_score = 1,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        metric_calls = 1L
+      )
+    },
+    gepa_mutate_instruction = function(...) "Partial candidate",
+    .package = "dsprrr"
+  )
+
+  result <- expect_no_warning(dsprrr:::compile_gepa(
+    GEPA(
+      metrics = list(quality = function(...) 1),
+      population_size = 2L,
+      generations = 1L,
+      verbose = FALSE
+    ),
+    module(
+      signature("question -> answer", instructions = "Baseline"),
+      type = "predict"
+    ),
+    data.frame(
+      question = c("q1", "q2"),
+      answer = c("a1", "a2")
+    ),
+    control = dsprrr:::optimizer_control(max_metric_calls = 1L)
+  ))
+  optimizer <- result$config$optimizer
+
+  expect_identical(result$signature@instructions, "Baseline")
+  expect_true(all(is.na(optimizer$best_scores)))
+  expect_true(optimizer$partial)
+  expect_identical(optimizer$stop_reason$code, "max_metric_calls")
+  expect_length(optimizer$all_generations[[1]]$population, 0L)
+})

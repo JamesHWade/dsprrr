@@ -253,3 +253,125 @@ test_that("SIMBA compile applies rules and demos when improved", {
   expect_true(length(result$demos) > 0)
   expect_true("SIMBA_RULE" %in% result$config$optimizer$rules)
 })
+
+test_that("SIMBA returns empty variability diagnostics when its budget stops", {
+  program <- module(
+    signature("question -> answer", instructions = "Baseline"),
+    type = "predict"
+  )
+  minibatch <- data.frame(
+    question = c("q1", "q2"),
+    answer = c("a1", "a2")
+  )
+  budget <- dsprrr:::new_optimizer_budget(
+    dsprrr:::optimizer_control(max_metric_calls = 0L)
+  )
+
+  variability <- dsprrr:::simba_variability(
+    program,
+    minibatch,
+    output_col = "answer",
+    metric = function(...) 1,
+    num_candidates = 1L,
+    control = dsprrr:::optimizer_control(max_metric_calls = 0L),
+    budget = budget
+  )
+
+  expect_s3_class(variability, "tbl_df")
+  expect_identical(
+    names(variability),
+    c("row_id", "variability", "mean_score", "difficulty")
+  )
+  expect_equal(nrow(variability), 0L)
+  expect_identical(
+    dsprrr:::optimizer_budget_summary(budget)$stop_reason$code,
+    "max_metric_calls"
+  )
+
+  testthat::local_mocked_bindings(
+    optimizer_eval_candidate = function(...) dsprrr:::EvalResult(),
+    .package = "dsprrr"
+  )
+  expect_error(
+    dsprrr:::simba_variability(
+      program,
+      minibatch,
+      output_col = "answer",
+      metric = function(...) 1,
+      num_candidates = 1L
+    ),
+    class = "dsprrr_simba_all_candidates_failed"
+  )
+})
+
+test_that("SIMBA preserves and reports a complete baseline over a biased partial", {
+  eval_calls <- 0L
+  log_dir <- withr::local_tempdir()
+
+  testthat::local_mocked_bindings(
+    eval_program = function(program, dataset, ...) {
+      eval_calls <<- eval_calls + 1L
+      score <- if (
+        grepl(
+          "SIMBA rule:",
+          program$signature@instructions,
+          fixed = TRUE
+        )
+      ) {
+        1
+      } else {
+        0.5
+      }
+      dsprrr:::EvalResult(
+        examples = data.frame(
+          score = score,
+          error = NA_character_,
+          predicted = "answer",
+          feedback = NA_character_
+        ),
+        mean_score = score,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  result <- dsprrr:::compile_simba(
+    SIMBA(
+      metric = function(...) 1,
+      bsize = 2L,
+      num_candidates = 1L,
+      max_steps = 1L,
+      max_demos = 0L,
+      seed = 1L
+    ),
+    module(
+      signature("question -> answer", instructions = "Baseline"),
+      type = "predict"
+    ),
+    data.frame(
+      question = c("q1", "q2"),
+      answer = c("a1", "a2")
+    ),
+    control = dsprrr:::optimizer_control(
+      max_metric_calls = 5L,
+      log_dir = log_dir
+    )
+  )
+  optimizer <- result$config$optimizer
+
+  expect_equal(eval_calls, 5L)
+  expect_identical(result$signature@instructions, "Baseline")
+  expect_equal(optimizer$best_score, 0.5)
+  expect_true(optimizer$best_complete)
+  expect_true(optimizer$partial)
+  expect_identical(optimizer$stop_reason$code, "max_metric_calls")
+  expect_true("simba:baseline" %in% optimizer$budget_summary$completed_units)
+  expect_false(
+    "simba:step:1:candidate" %in% optimizer$budget_summary$completed_units
+  )
+  trials_path <- file.path(log_dir, "trials.jsonl")
+  expect_length(dsprrr:::read_trials_jsonl(trials_path), 0L)
+})

@@ -154,6 +154,7 @@ compile_copro <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
+  control = NULL,
   ...
 ) {
   if (!inherits(program, "Module")) {
@@ -175,17 +176,17 @@ compile_copro <- function(
 
   evalset <- valset %||% trainset
 
-  control <- optimizer_control(
-    seed = teleprompter@seed,
-    max_errors = teleprompter@max_errors,
-    log_dir = teleprompter@log_dir
+  control <- optimizer_control_for_teleprompter(
+    teleprompter,
+    control = control
   )
+  optimizer_require_ledger_only_checkpoint(control, "COPRO")
   budget <- new_optimizer_budget(control)
 
-  trial_log <- if (!is.null(teleprompter@log_dir)) {
+  trial_log <- if (!is.null(control@log_dir)) {
     TrialLog$new(
       optimizer_name = "COPRO",
-      log_dir = teleprompter@log_dir
+      log_dir = control@log_dir
     )
   } else {
     NULL
@@ -223,7 +224,11 @@ compile_copro <- function(
     metric = teleprompter@metric,
     output_col = output_col,
     input_names = input_names,
-    .llm = .llm
+    .llm = .llm,
+    control = control,
+    budget = budget,
+    stage = "copro_failure_scan",
+    unit_id = "copro:failure_scan:initial"
   )
 
   # Initialize with current instructions
@@ -234,16 +239,19 @@ compile_copro <- function(
 
   # Evaluate baseline
   best_program <- copy_module(program)
-  best_eval <- eval_program(
+  best_eval <- optimizer_eval_candidate(
     best_program,
     evalset,
     metric = teleprompter@metric,
     .llm = .llm,
     control = control,
+    budget = budget,
+    stage = "copro_baseline",
+    unit_id = "copro:baseline",
     ...
   )
-  record_eval_result_outcomes(budget, best_eval, "copro_baseline")
   best_score <- best_eval@mean_score
+  best_complete <- optimizer_budget_unit_completed(budget, "copro:baseline")
   best_instructions <- current_instructions
 
   # Track history
@@ -252,7 +260,8 @@ compile_copro <- function(
       iteration = 0L,
       instructions = current_instructions,
       score = best_score,
-      is_best = TRUE
+      complete = best_complete,
+      is_best = best_complete
     )
   )
 
@@ -294,9 +303,10 @@ compile_copro <- function(
     }
 
     # Evaluate each candidate
-    iteration_best_score <- best_score
+    iteration_best_score <- if (best_complete) best_score else NA_real_
     iteration_best_instructions <- best_instructions
     iteration_best_program <- NULL
+    iteration_best_complete <- best_complete
 
     for (i in seq_along(candidates)) {
       candidate_instructions <- candidates[[i]]
@@ -316,14 +326,23 @@ compile_copro <- function(
 
       # Evaluate candidate
       eval_condition <- NULL
+      candidate_unit_id <- paste0(
+        "copro:iteration:",
+        iteration,
+        ":candidate:",
+        i
+      )
       eval_result <- tryCatch(
         {
-          eval_program(
+          optimizer_eval_candidate(
             candidate_program,
             evalset,
             metric = teleprompter@metric,
             .llm = .llm,
             control = control,
+            budget = budget,
+            stage = "copro_evaluation",
+            unit_id = candidate_unit_id,
             ...
           )
         },
@@ -353,13 +372,11 @@ compile_copro <- function(
         next
       }
 
-      record_eval_result_outcomes(
-        budget,
-        eval_result,
-        stage = "copro_evaluation"
-      )
-
       score <- eval_result@mean_score
+      candidate_complete <- optimizer_budget_unit_completed(
+        budget,
+        candidate_unit_id
+      )
 
       # Track in history
       if (teleprompter@track_stats) {
@@ -368,12 +385,13 @@ compile_copro <- function(
           candidate = i,
           instructions = candidate_instructions,
           score = score,
+          complete = candidate_complete,
           is_best = FALSE
         )
       }
 
       # Log trial if logging enabled
-      if (!is.null(trial_log)) {
+      if (!is.null(trial_log) && candidate_complete) {
         trial <- create_trial(
           optimizer_name = "COPRO",
           params = list(
@@ -388,12 +406,16 @@ compile_copro <- function(
 
       # Check if this is the best in this iteration
       if (
-        !is.na(score) &&
-          (is.na(iteration_best_score) || score > iteration_best_score)
+        candidate_complete &&
+          !is.na(score) &&
+          (!iteration_best_complete ||
+            is.na(iteration_best_score) ||
+            score > iteration_best_score)
       ) {
         iteration_best_score <- score
         iteration_best_instructions <- candidate_instructions
         iteration_best_program <- candidate_program
+        iteration_best_complete <- TRUE
       }
 
       if (optimizer_budget_stopped(budget)) {
@@ -403,10 +425,14 @@ compile_copro <- function(
 
     # Update best if improved
     if (
-      !is.na(iteration_best_score) &&
-        (is.na(best_score) || iteration_best_score > best_score)
+      iteration_best_complete &&
+        !is.na(iteration_best_score) &&
+        (!best_complete ||
+          is.na(best_score) ||
+          iteration_best_score > best_score)
     ) {
       best_score <- iteration_best_score
+      best_complete <- TRUE
       best_instructions <- iteration_best_instructions
       best_program <- iteration_best_program %||% best_program
 
@@ -437,7 +463,11 @@ compile_copro <- function(
         metric = teleprompter@metric,
         output_col = output_col,
         input_names = input_names,
-        .llm = .llm
+        .llm = .llm,
+        control = control,
+        budget = budget,
+        stage = "copro_failure_scan",
+        unit_id = paste0("copro:failure_scan:iteration:", iteration)
       )
     } else {
       cli::cli_alert_info(
@@ -471,12 +501,18 @@ compile_copro <- function(
     depth = teleprompter@depth,
     init_temperature = teleprompter@init_temperature,
     final_score = best_score,
+    best_complete = best_complete,
     baseline_score = best_eval@mean_score,
+    baseline_complete = optimizer_budget_unit_completed(
+      budget,
+      "copro:baseline"
+    ),
     history = if (teleprompter@track_stats) instruction_history else NULL,
     iterations_completed = iterations_completed,
     error_count = budget_summary$total_errors,
     budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason
+    stop_reason = budget_summary$stop_reason,
+    partial = optimizer_budget_stopped(budget)
   )
 
   best_program
@@ -541,15 +577,37 @@ generate_copro_candidates <- function(
       break
     }
 
-    candidate <- generate_single_copro_candidate(
-      generation_prompt,
-      prompt_model = prompt_model,
-      .llm = .llm,
-      temperature = temperature
-    )
+    model <- prompt_model %||% .llm
+    if (!is.null(budget) && !is.null(model)) {
+      request <- optimizer_budgeted_provider_call(
+        budget = budget,
+        model = model,
+        stage = stage,
+        unit_id = paste0(stage, ":", i),
+        call = function() {
+          generate_single_copro_candidate(
+            generation_prompt,
+            prompt_model = prompt_model,
+            .llm = .llm,
+            temperature = temperature
+          )
+        },
+        success = function(value, condition) {
+          is.null(condition) && !is.null(value) && nzchar(value)
+        }
+      )
+      candidate <- request$value
+    } else {
+      candidate <- generate_single_copro_candidate(
+        generation_prompt,
+        prompt_model = prompt_model,
+        .llm = .llm,
+        temperature = temperature
+      )
+    }
 
     usable <- !is.null(candidate) && nzchar(candidate)
-    if (!is.null(budget)) {
+    if (!is.null(budget) && is.null(model)) {
       record_optimizer_outcome(
         budget,
         success = usable,
@@ -673,7 +731,11 @@ identify_failed_examples <- function(
   output_col,
   input_names,
   .llm = NULL,
-  max_examples = 5L
+  max_examples = 5L,
+  control = NULL,
+  budget = NULL,
+  stage = "copro_failure_scan",
+  unit_id = "copro:failure_scan"
 ) {
   if (nrow(dataset) == 0) {
     return(data.frame())
@@ -684,18 +746,19 @@ identify_failed_examples <- function(
   sample_indices <- sample(nrow(dataset), sample_size)
   sample_data <- dataset[sample_indices, , drop = FALSE]
 
-  # Get predictions
-  predictions <- tryCatch(
+  # Get predictions and metric scores through the shared bounded evaluator.
+  evaluation <- tryCatch(
     {
-      result <- run_dataset(
+      optimizer_eval_candidate(
         program,
         sample_data,
+        metric = metric,
         .llm = .llm,
-        .parallel = FALSE,
-        .progress = FALSE,
-        .return_format = "simple"
+        control = control,
+        budget = budget,
+        stage = stage,
+        unit_id = unit_id
       )
-      result$result
     },
     error = function(e) {
       cli::cli_warn(
@@ -705,9 +768,23 @@ identify_failed_examples <- function(
         ),
         class = "dsprrr_copro_prediction_warning"
       )
-      rep(NA_character_, sample_size)
+      NULL
     }
   )
+  predictions <- if (is.null(evaluation)) {
+    rep(NA_character_, sample_size)
+  } else {
+    values <- rep(list(NA), sample_size)
+    values[evaluation@examples$row_id] <- evaluation@examples$predicted
+    values
+  }
+  scores <- if (is.null(evaluation)) {
+    rep(NA_real_, sample_size)
+  } else {
+    values <- rep(NA_real_, sample_size)
+    values[evaluation@examples$row_id] <- evaluation@examples$score
+    values
+  }
 
   # Score each prediction
   failed_rows <- list()
@@ -716,14 +793,7 @@ identify_failed_examples <- function(
     row <- sample_data[i, , drop = FALSE]
     pred <- predictions[[i]]
 
-    score <- tryCatch(
-      {
-        normalize_metric_result(metric(pred, row))$score
-      },
-      error = function(e) {
-        NA_real_
-      }
-    )
+    score <- scores[[i]] %||% NA_real_
 
     # Consider failed if score is low or NA
     is_failed <- is.na(score) || score < 0.5

@@ -780,10 +780,60 @@ artifact_provider_model <- function(chat) {
   if (is.null(chat)) {
     return(NULL)
   }
-  model <- tryCatch(chat$get_model(), error = function(e) NULL)
-  if (!is.null(model)) {
-    model <- as.character(model)[1]
+
+  scalar_text <- function(value) {
+    value <- tryCatch(as.character(value)[1L], error = function(e) NULL)
+    if (
+      is.null(value) ||
+        length(value) != 1L ||
+        is.na(value) ||
+        !nzchar(value)
+    ) {
+      return(NULL)
+    }
+    value
   }
+
+  get_model <- function() {
+    scalar_text(tryCatch(chat$get_model(), error = function(e) NULL))
+  }
+
+  provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
+  provider_props <- if (is.null(provider)) {
+    NULL
+  } else {
+    tryCatch(S7::props(provider), error = function(e) NULL)
+  }
+
+  if (is.list(provider_props)) {
+    provider_class <- scalar_text(class(provider)[1L])
+    provider_name <- scalar_text(provider_props$name)
+    base_url <- scalar_text(provider_props$base_url)
+    model <- scalar_text(provider_props$model) %||% get_model()
+
+    # Provider properties also contain credential closures, headers, and
+    # account-specific arguments. Persist only this closed, credential-free
+    # identity. Unsafe URLs are omitted rather than risking embedded secrets.
+    if (!is.null(base_url) && !artifact_is_safe_remote_url(base_url)) {
+      base_url <- NULL
+    }
+
+    if (!is.null(provider_class) && !is.null(provider_name)) {
+      descriptor <- as.character(jsonlite::toJSON(
+        list(
+          class = provider_class,
+          name = provider_name,
+          base_url = base_url
+        ),
+        auto_unbox = TRUE,
+        null = "null",
+        pretty = FALSE
+      ))
+      return(list(provider = descriptor, model = model))
+    }
+  }
+
+  model <- get_model()
   classes <- setdiff(class(chat), c("Chat", "R6"))
   list(
     provider = if (length(classes) > 0L) classes[[1]] else class(chat)[1],

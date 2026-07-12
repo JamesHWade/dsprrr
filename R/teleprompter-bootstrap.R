@@ -137,6 +137,12 @@ compile_bootstrap <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
+  control = NULL,
+  .optimizer_budget = NULL,
+  .checkpoint_context = NULL,
+  .checkpoint_namespace = "bootstrap",
+  .resume_state = NULL,
+  .checkpoint_callback = NULL,
   ...
 ) {
   # Validate inputs
@@ -166,6 +172,12 @@ compile_bootstrap <- function(
       trainset,
       valset = valset,
       .llm = .llm,
+      control = control,
+      .optimizer_budget = .optimizer_budget,
+      .checkpoint_context = .checkpoint_context,
+      .checkpoint_namespace = .checkpoint_namespace,
+      .resume_state = .resume_state,
+      .checkpoint_callback = .checkpoint_callback,
       ...
     ))
   }
@@ -173,12 +185,50 @@ compile_bootstrap <- function(
   # Apply default teacher settings if not provided
   teacher_settings <- teleprompter@teacher_settings %||% list(temperature = 0.7)
 
-  # Create control from teleprompter settings
-  control <- optimizer_control(
-    seed = teleprompter@seed,
-    max_errors = teleprompter@max_errors,
-    log_dir = teleprompter@log_dir
+  control <- optimizer_control_for_teleprompter(
+    teleprompter,
+    control = control
   )
+
+  checkpoint_context <- .checkpoint_context
+  if (
+    is.null(checkpoint_context) &&
+      is.null(.optimizer_budget) &&
+      optimizer_checkpoint_enabled(control)
+  ) {
+    checkpoint_context <- optimizer_checkpoint_begin(
+      optimizer_name = "BootstrapFewShot",
+      optimizer_version = 1L,
+      program = program,
+      data = list(trainset = trainset, valset = valset),
+      metric = teleprompter@metric,
+      config = list(
+        max_bootstrapped_demos = teleprompter@max_bootstrapped_demos,
+        max_labeled_demos = teleprompter@max_labeled_demos,
+        max_rounds = teleprompter@max_rounds,
+        metric_threshold = teleprompter@metric_threshold,
+        teacher_settings = teacher_settings,
+        seed = teleprompter@seed,
+        effective_runtime = optimizer_checkpoint_effective_runtime_identity(
+          program,
+          .llm = .llm,
+          registry = artifact_validate_registry(control@checkpoint_registry),
+          path = "effective_runtime"
+        ),
+        mode = "module"
+      ),
+      control = control,
+      initial_state = list(
+        kind = "module",
+        bootstrapped_demos = list(),
+        lineage = list()
+      ),
+      initial_phase = "bootstrap"
+    )
+    if (identical(checkpoint_context$phase, "complete")) {
+      return(checkpoint_context$best_program)
+    }
+  }
 
   # Initialize trial logging if log_dir specified
   trial_log <- if (!is.null(teleprompter@log_dir)) {
@@ -258,12 +308,62 @@ compile_bootstrap <- function(
   }
 
   # Phase 2: Bootstrap demonstrations
-  bootstrapped_demos <- list()
-  budget <- new_optimizer_budget(control)
+  checkpoint_state <- checkpoint_context$search_state %||%
+    .resume_state %||%
+    list()
+  if (
+    length(checkpoint_state) > 0L &&
+      !identical(checkpoint_state$kind %||% "module", "module")
+  ) {
+    cli::cli_abort(
+      "Bootstrap checkpoint has the wrong search-state kind",
+      class = "dsprrr_optimizer_checkpoint_malformed"
+    )
+  }
+  bootstrapped_demos <- checkpoint_state$bootstrapped_demos %||% list()
+  bootstrap_lineage <- checkpoint_state$lineage %||% list()
+  budget <- .optimizer_budget %||%
+    checkpoint_context$budget %||%
+    new_optimizer_budget(control)
+
+  if (!is.null(checkpoint_context) && isTRUE(checkpoint_context$resumed)) {
+    outer_rng <- optimizer_checkpoint_capture_rng()
+    optimizer_checkpoint_restore_rng(checkpoint_context$rng)
+    on.exit(optimizer_checkpoint_restore_rng(outer_rng), add = TRUE)
+  }
+
+  write_bootstrap_checkpoint <- function(phase = "bootstrap") {
+    partial <- copy_module(student)
+    partial$demos <- c(labeled_demos, bootstrapped_demos)
+    state <- list(
+      kind = "module",
+      bootstrapped_demos = bootstrapped_demos,
+      lineage = bootstrap_lineage
+    )
+    if (!is.null(checkpoint_context)) {
+      optimizer_checkpoint_write(
+        checkpoint_context,
+        phase = phase,
+        search_state = state,
+        lineage = bootstrap_lineage,
+        best_program = partial
+      )
+    }
+    if (is.function(.checkpoint_callback)) {
+      .checkpoint_callback(
+        state = state,
+        phase = phase,
+        best_program = partial,
+        budget = budget
+      )
+    }
+    invisible(NULL)
+  }
 
   for (round in seq_len(teleprompter@max_rounds)) {
     if (
       length(bootstrap_indices) == 0 ||
+        length(bootstrapped_demos) >= teleprompter@max_bootstrapped_demos ||
         optimizer_budget_stopped(budget)
     ) {
       break
@@ -276,6 +376,37 @@ compile_bootstrap <- function(
     # Process each bootstrap candidate
     for (idx in bootstrap_indices) {
       if (optimizer_budget_stopped(budget)) {
+        break
+      }
+
+      unit_id <- paste0(
+        .checkpoint_namespace,
+        ":round:",
+        round,
+        ":row:",
+        idx
+      )
+      if (optimizer_budget_unit_completed(budget, unit_id)) {
+        next
+      }
+      min_provider_calls <- optimizer_min_provider_calls(teacher)
+      planned <- list(trials = 1L, metric_calls = 1L)
+      if (min_provider_calls > 0L) {
+        planned$provider_calls <- min_provider_calls
+        planned$input_tokens <- 1L
+        planned$output_tokens <- 1L
+        planned$total_tokens <- 1L
+      }
+      if (
+        !optimizer_budget_preflight(
+          budget,
+          stage = "bootstrap_attempt",
+          planned = planned,
+          unit_id = unit_id,
+          work_unit = "bootstrap_training_row",
+          max_started = 0L
+        )
+      ) {
         break
       }
 
@@ -328,12 +459,23 @@ compile_bootstrap <- function(
       )
 
       if (is.null(result)) {
+        record_optimizer_usage(
+          budget,
+          optimizer_unknown_provider_usage(),
+          stage = "bootstrap_teacher",
+          unit_id = unit_id,
+          work_unit = "bootstrap_training_row",
+          max_started = 1L
+        )
+        optimizer_budget_count_trial(budget, "bootstrap_teacher", unit_id)
         record_optimizer_outcome(
           budget,
           success = FALSE,
           stage = "bootstrap_teacher",
           condition = teacher_condition
         )
+        optimizer_budget_complete_unit(budget, unit_id)
+        write_bootstrap_checkpoint()
         if (optimizer_budget_stopped(budget)) {
           break
         }
@@ -341,10 +483,23 @@ compile_bootstrap <- function(
       }
 
       # Evaluate with metric (feedback metrics return list(score, feedback))
+      prediction <- optimizer_forward_output(result)
+      metric_prediction <- if (
+        !is.null(metric_field) &&
+          !metric_field %in% (names(result) %||% character())
+      ) {
+        stats::setNames(list(prediction), metric_field)
+      } else {
+        result
+      }
       metric_condition <- NULL
       score <- tryCatch(
         {
-          normalize_metric_result(teleprompter@metric(result, expected))$score
+          normalize_metric_result(
+            # Field-aware metrics need the structured run result for field
+            # extraction; only the harvested demo stores the scalar output.
+            teleprompter@metric(metric_prediction, expected)
+          )$score
         },
         error = function(e) {
           metric_condition <<- e
@@ -359,6 +514,22 @@ compile_bootstrap <- function(
           NA_real_
         }
       )
+
+      usage <- optimizer_forward_usage(teacher, result)
+      usage$metric_calls <- 1L
+      record_optimizer_usage(
+        budget,
+        usage,
+        stage = if (is.null(metric_condition)) {
+          "bootstrap_attempt"
+        } else {
+          "bootstrap_metric"
+        },
+        unit_id = unit_id,
+        work_unit = "bootstrap_training_row",
+        max_started = 1L
+      )
+      optimizer_budget_count_trial(budget, "bootstrap_attempt", unit_id)
 
       record_optimizer_outcome(
         budget,
@@ -385,13 +556,22 @@ compile_bootstrap <- function(
       if (passes_threshold) {
         demo <- list(
           inputs = example_inputs,
-          output = result,
+          output = prediction,
           source = "bootstrapped",
           score = score,
           round = round
         )
         bootstrapped_demos <- append(bootstrapped_demos, list(demo))
+        bootstrap_lineage[[length(bootstrap_lineage) + 1L]] <- list(
+          child = paste0("demo:", length(bootstrapped_demos)),
+          parent = unit_id,
+          round = as.integer(round),
+          row = as.integer(idx)
+        )
       }
+
+      optimizer_budget_complete_unit(budget, unit_id)
+      write_bootstrap_checkpoint()
 
       # Check if we have enough bootstrapped demos
       if (length(bootstrapped_demos) >= teleprompter@max_bootstrapped_demos) {
@@ -488,6 +668,32 @@ compile_bootstrap <- function(
     trial_log$add_trial(trial)
   }
 
+  expected_units <- unlist(lapply(
+    seq_len(teleprompter@max_rounds),
+    function(round) {
+      paste0(
+        .checkpoint_namespace,
+        ":round:",
+        round,
+        ":row:",
+        bootstrap_indices
+      )
+    }
+  ))
+  bootstrap_complete <-
+    length(bootstrapped_demos) >= teleprompter@max_bootstrapped_demos ||
+    length(expected_units) == 0L ||
+    all(vapply(
+      expected_units,
+      function(id) {
+        optimizer_budget_unit_completed(budget, id)
+      },
+      logical(1)
+    ))
+  write_bootstrap_checkpoint(
+    if (bootstrap_complete) "complete" else "bootstrap"
+  )
+
   student
 }
 
@@ -506,13 +712,57 @@ compile_bootstrap_pipeline <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
+  control = NULL,
+  .optimizer_budget = NULL,
+  .checkpoint_context = NULL,
+  .checkpoint_namespace = "bootstrap_pipeline",
+  .resume_state = NULL,
+  .checkpoint_callback = NULL,
   ...
 ) {
-  control <- optimizer_control(
-    seed = teleprompter@seed,
-    max_errors = teleprompter@max_errors,
-    log_dir = teleprompter@log_dir
+  control <- optimizer_control_for_teleprompter(
+    teleprompter,
+    control = control
   )
+
+  checkpoint_context <- .checkpoint_context
+  if (
+    is.null(checkpoint_context) &&
+      is.null(.optimizer_budget) &&
+      optimizer_checkpoint_enabled(control)
+  ) {
+    checkpoint_context <- optimizer_checkpoint_begin(
+      optimizer_name = "BootstrapFewShot",
+      optimizer_version = 1L,
+      program = program,
+      data = list(trainset = trainset, valset = valset),
+      metric = teleprompter@metric,
+      config = list(
+        max_bootstrapped_demos = teleprompter@max_bootstrapped_demos,
+        max_labeled_demos = teleprompter@max_labeled_demos,
+        max_rounds = teleprompter@max_rounds,
+        metric_threshold = teleprompter@metric_threshold,
+        seed = teleprompter@seed,
+        effective_runtime = optimizer_checkpoint_effective_runtime_identity(
+          program,
+          .llm = .llm,
+          registry = artifact_validate_registry(control@checkpoint_registry),
+          path = "effective_runtime"
+        ),
+        mode = "pipeline"
+      ),
+      control = control,
+      initial_state = list(
+        kind = "pipeline",
+        step_demos = list(),
+        lineage = list()
+      ),
+      initial_phase = "bootstrap"
+    )
+    if (identical(checkpoint_context$phase, "complete")) {
+      return(checkpoint_context$best_program)
+    }
+  }
 
   trial_log <- if (!is.null(teleprompter@log_dir)) {
     TrialLog$new(
@@ -611,11 +861,75 @@ compile_bootstrap_pipeline <- function(
   }
 
   # Phase 2: bootstrap demos for every demo-capable step from passing traces
-  step_demos <- stats::setNames(
-    rep(list(list()), n_steps),
-    as.character(seq_len(n_steps))
-  )
-  budget <- new_optimizer_budget(control)
+  checkpoint_state <- checkpoint_context$search_state %||%
+    .resume_state %||%
+    list()
+  if (
+    length(checkpoint_state) > 0L &&
+      !identical(checkpoint_state$kind %||% "pipeline", "pipeline")
+  ) {
+    cli::cli_abort(
+      "Bootstrap checkpoint has the wrong pipeline search-state kind",
+      class = "dsprrr_optimizer_checkpoint_malformed"
+    )
+  }
+  step_demos <- checkpoint_state$step_demos
+  if (is.null(step_demos) || length(step_demos) == 0L) {
+    step_demos <- stats::setNames(
+      rep(list(list()), n_steps),
+      as.character(seq_len(n_steps))
+    )
+  }
+  if (!identical(names(step_demos), as.character(seq_len(n_steps)))) {
+    cli::cli_abort(
+      "Bootstrap pipeline checkpoint step state is incompatible",
+      class = "dsprrr_optimizer_checkpoint_malformed"
+    )
+  }
+  bootstrap_lineage <- checkpoint_state$lineage %||% list()
+  budget <- .optimizer_budget %||%
+    checkpoint_context$budget %||%
+    new_optimizer_budget(control)
+
+  if (!is.null(checkpoint_context) && isTRUE(checkpoint_context$resumed)) {
+    outer_rng <- optimizer_checkpoint_capture_rng()
+    optimizer_checkpoint_restore_rng(checkpoint_context$rng)
+    on.exit(optimizer_checkpoint_restore_rng(outer_rng), add = TRUE)
+  }
+
+  write_pipeline_checkpoint <- function(phase = "bootstrap") {
+    partial <- student$deepcopy()
+    for (i in demo_steps) {
+      key <- as.character(i)
+      partial$steps[[i]]@module$demos <- c(
+        labeled_demos[[key]],
+        step_demos[[key]]
+      )
+    }
+    state <- list(
+      kind = "pipeline",
+      step_demos = step_demos,
+      lineage = bootstrap_lineage
+    )
+    if (!is.null(checkpoint_context)) {
+      optimizer_checkpoint_write(
+        checkpoint_context,
+        phase = phase,
+        search_state = state,
+        lineage = bootstrap_lineage,
+        best_program = partial
+      )
+    }
+    if (is.function(.checkpoint_callback)) {
+      .checkpoint_callback(
+        state = state,
+        phase = phase,
+        best_program = partial,
+        budget = budget
+      )
+    }
+    invisible(NULL)
+  }
 
   all_steps_full <- function() {
     all(vapply(
@@ -646,6 +960,37 @@ compile_bootstrap_pipeline <- function(
 
     for (idx in bootstrap_indices) {
       if (optimizer_budget_stopped(budget)) {
+        break
+      }
+
+      unit_id <- paste0(
+        .checkpoint_namespace,
+        ":round:",
+        round,
+        ":row:",
+        idx
+      )
+      if (optimizer_budget_unit_completed(budget, unit_id)) {
+        next
+      }
+      min_provider_calls <- optimizer_min_provider_calls(teacher)
+      planned <- list(trials = 1L, metric_calls = 1L)
+      if (min_provider_calls > 0L) {
+        planned$provider_calls <- min_provider_calls
+        planned$input_tokens <- 1L
+        planned$output_tokens <- 1L
+        planned$total_tokens <- 1L
+      }
+      if (
+        !optimizer_budget_preflight(
+          budget,
+          stage = "bootstrap_pipeline_attempt",
+          planned = planned,
+          unit_id = unit_id,
+          work_unit = "bootstrap_pipeline_row",
+          max_started = 0L
+        )
+      ) {
         break
       }
 
@@ -686,12 +1031,27 @@ compile_bootstrap_pipeline <- function(
       )
 
       if (is.null(result)) {
+        record_optimizer_usage(
+          budget,
+          optimizer_unknown_provider_usage(),
+          stage = "bootstrap_pipeline_teacher",
+          unit_id = unit_id,
+          work_unit = "bootstrap_pipeline_row",
+          max_started = 1L
+        )
+        optimizer_budget_count_trial(
+          budget,
+          "bootstrap_pipeline_teacher",
+          unit_id
+        )
         record_optimizer_outcome(
           budget,
           success = FALSE,
           stage = "bootstrap_pipeline_teacher",
           condition = teacher_condition
         )
+        optimizer_budget_complete_unit(budget, unit_id)
+        write_pipeline_checkpoint()
         if (optimizer_budget_stopped(budget)) {
           break
         }
@@ -722,6 +1082,26 @@ compile_bootstrap_pipeline <- function(
           )
           NA_real_
         }
+      )
+
+      usage <- optimizer_forward_usage(teacher, result)
+      usage$metric_calls <- 1L
+      record_optimizer_usage(
+        budget,
+        usage,
+        stage = if (is.null(metric_condition)) {
+          "bootstrap_pipeline_attempt"
+        } else {
+          "bootstrap_pipeline_metric"
+        },
+        unit_id = unit_id,
+        work_unit = "bootstrap_pipeline_row",
+        max_started = 1L
+      )
+      optimizer_budget_count_trial(
+        budget,
+        "bootstrap_pipeline_attempt",
+        unit_id
       )
 
       record_optimizer_outcome(
@@ -766,8 +1146,22 @@ compile_bootstrap_pipeline <- function(
             round = round
           )
           step_demos[[key]] <- append(step_demos[[key]], list(demo))
+          bootstrap_lineage[[length(bootstrap_lineage) + 1L]] <- list(
+            child = paste0(
+              "step:",
+              i,
+              ":demo:",
+              length(step_demos[[key]])
+            ),
+            parent = unit_id,
+            round = as.integer(round),
+            row = as.integer(idx)
+          )
         }
       }
+
+      optimizer_budget_complete_unit(budget, unit_id)
+      write_pipeline_checkpoint()
 
       if (all_steps_full()) {
         break
@@ -862,6 +1256,29 @@ compile_bootstrap_pipeline <- function(
 
     trial_log$add_trial(trial)
   }
+
+  expected_units <- unlist(lapply(
+    seq_len(teleprompter@max_rounds),
+    function(round) {
+      paste0(
+        .checkpoint_namespace,
+        ":round:",
+        round,
+        ":row:",
+        bootstrap_indices
+      )
+    }
+  ))
+  pipeline_complete <- all_steps_full() ||
+    length(expected_units) == 0L ||
+    all(vapply(
+      expected_units,
+      function(id) {
+        optimizer_budget_unit_completed(budget, id)
+      },
+      logical(1)
+    ))
+  write_pipeline_checkpoint(if (pipeline_complete) "complete" else "bootstrap")
 
   student
 }

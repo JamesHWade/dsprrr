@@ -612,3 +612,80 @@ test_that("COPRO preserves the best candidate when evaluation exhausts budget", 
   expect_equal(optimizer$stop_reason$attempts, 6L)
   expect_identical(result$signature@instructions, "Instruction 2")
 })
+
+test_that("COPRO retains partial evidence without selecting or logging it", {
+  eval_calls <- 0L
+  log_dir <- withr::local_tempdir()
+
+  testthat::local_mocked_bindings(
+    identify_failed_examples = function(...) list(),
+    eval_program = function(program, dataset, ...) {
+      eval_calls <<- eval_calls + 1L
+      score <- if (
+        identical(
+          program$signature@instructions,
+          "Biased partial candidate"
+        )
+      ) {
+        1
+      } else {
+        0.5
+      }
+      dsprrr:::EvalResult(
+        examples = data.frame(
+          score = score,
+          error = NA_character_,
+          predicted = "answer",
+          feedback = NA_character_
+        ),
+        mean_score = score,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  result <- dsprrr:::compile_copro(
+    COPRO(
+      metric = function(...) 1,
+      prompt_model = function(...) "Biased partial candidate",
+      breadth = 1L,
+      depth = 1L,
+      track_stats = TRUE
+    ),
+    module(
+      signature("question -> answer", instructions = "Baseline"),
+      type = "predict"
+    ),
+    data.frame(
+      question = c("q1", "q2"),
+      answer = c("a1", "a2")
+    ),
+    control = dsprrr:::optimizer_control(
+      max_metric_calls = 3L,
+      log_dir = log_dir
+    )
+  )
+  optimizer <- result$config$optimizer
+
+  expect_equal(eval_calls, 3L)
+  expect_identical(result$signature@instructions, "Baseline")
+  expect_equal(optimizer$final_score, 0.5)
+  expect_true(optimizer$best_complete)
+  expect_true(optimizer$baseline_complete)
+  expect_true(optimizer$partial)
+  expect_identical(optimizer$stop_reason$code, "max_metric_calls")
+  expect_true("copro:baseline" %in% optimizer$budget_summary$completed_units)
+  expect_false(
+    "copro:iteration:1:candidate:1" %in%
+      optimizer$budget_summary$completed_units
+  )
+  expect_length(optimizer$history, 2L)
+  expect_equal(optimizer$history[[2]]$score, 1)
+  expect_false(optimizer$history[[2]]$complete)
+  expect_false(optimizer$history[[2]]$is_best)
+  trials_path <- file.path(log_dir, "trials.jsonl")
+  expect_length(dsprrr:::read_trials_jsonl(trials_path), 0L)
+})

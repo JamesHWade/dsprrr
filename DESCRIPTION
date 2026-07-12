@@ -30,6 +30,7 @@ Imports:
     codetools,
     digest,
     ellmer (>= 0.4.1),
+    filelock,
     fs,
     glue,
     jsonlite,
@@ -98,6 +99,7 @@ Collate:
     'module.R'
     'optimize.R'
     'optimizer-accessors.R'
+    'optimizer-checkpoint.R'
     'optimizer-core.R'
     'optimizer-discrete-bo.R'
     'optimizer-logging.R'

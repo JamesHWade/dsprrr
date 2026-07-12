@@ -7,6 +7,30 @@
 # - Reproducibility (seed support)
 # - Budget/stopping conditions
 
+optimizer_limit_validator <- function(
+  value,
+  name,
+  integer = FALSE,
+  positive = FALSE
+) {
+  if (is.null(value)) {
+    return(NULL)
+  }
+  if (
+    !is.numeric(value) ||
+      length(value) != 1L ||
+      is.na(value) ||
+      !is.finite(value) ||
+      value < (if (positive) 1 else 0) ||
+      (integer && value != as.integer(value))
+  ) {
+    qualifier <- if (positive) "positive" else "non-negative"
+    kind <- if (integer) "integer" else "number"
+    return(sprintf("%s must be a %s %s or NULL", name, qualifier, kind))
+  }
+  NULL
+}
+
 #' Optimizer Control Parameters
 #'
 #' @description
@@ -22,10 +46,36 @@
 #'   When a completed evaluation returns multiple outcomes, all are included in
 #'   the final counters even if the stop boundary was crossed partway through;
 #'   the first stop reason remains unchanged and prevents scheduling new work.
+#' @param max_metric_calls Maximum metric calls, or NULL for unlimited.
+#' @param max_provider_calls Maximum verified provider calls, or NULL for
+#'   unlimited. Ambiguous provider usage stops a run that has this cap.
+#' @param max_input_tokens Maximum verified input tokens, or NULL for unlimited.
+#' @param max_output_tokens Maximum verified output tokens, or NULL for unlimited.
+#' @param max_total_tokens Maximum verified input plus output tokens, or NULL for
+#'   unlimited.
+#' @param max_cost Maximum known provider cost in US dollars, or NULL for
+#'   unlimited. Unknown cost stops a run that has this cap.
+#' @param max_elapsed_seconds Maximum active optimizer elapsed time in seconds,
+#'   or NULL for unlimited. Checkpoint downtime is excluded.
 #' @param num_threads Number of threads for parallel evaluation. Default is 1.
 #' @param progress Whether to display progress. Default is TRUE in interactive sessions.
 #' @param log_dir Directory for trial logging. Default is NULL (no logging).
+#' @param checkpoint_path Optional optimizer checkpoint file.
+#' @param resume Whether to resume from `checkpoint_path`.
+#' @param checkpoint_registry Named runtime registry used by safe program
+#'   artifacts stored in checkpoints.
 #' @param verbose Whether to print detailed output. Default is FALSE
+#' @details
+#' Finite metric, provider, token, cost, and elapsed-time limits switch
+#' optimizer evaluation to row-sized work units. The maximum postflight
+#' overshoot is one already-started evaluation row, or one already-started
+#' direct provider request for optimizer-side generation. Unknown provider,
+#' token, or cost usage stops safely when the corresponding cap is finite.
+#'
+#' BootstrapFewShot and MIPROv2 support deterministic checkpoint resume. GEPA,
+#' SIMBA, and COPRO currently provide the shared ledger and return the best
+#' partial program, but reject `resume = TRUE` until their fine-grained search
+#' state is supported.
 #'
 #' @export
 OptimizerControl <- S7::new_class(
@@ -61,6 +111,53 @@ OptimizerControl <- S7::new_class(
         NULL
       }
     ),
+    max_metric_calls = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) {
+        optimizer_limit_validator(value, "max_metric_calls", integer = TRUE)
+      }
+    ),
+    max_provider_calls = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) {
+        optimizer_limit_validator(value, "max_provider_calls", integer = TRUE)
+      }
+    ),
+    max_input_tokens = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) {
+        optimizer_limit_validator(value, "max_input_tokens", integer = TRUE)
+      }
+    ),
+    max_output_tokens = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) {
+        optimizer_limit_validator(value, "max_output_tokens", integer = TRUE)
+      }
+    ),
+    max_total_tokens = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) {
+        optimizer_limit_validator(value, "max_total_tokens", integer = TRUE)
+      }
+    ),
+    max_cost = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) optimizer_limit_validator(value, "max_cost")
+    ),
+    max_elapsed_seconds = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) {
+        optimizer_limit_validator(value, "max_elapsed_seconds")
+      }
+    ),
     num_threads = S7::new_property(
       S7::class_integer,
       default = 1L,
@@ -91,6 +188,48 @@ OptimizerControl <- S7::new_class(
         NULL
       }
     ),
+    checkpoint_path = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) {
+        if (
+          !is.null(value) &&
+            (!is.character(value) ||
+              length(value) != 1L ||
+              is.na(value) ||
+              !nzchar(value))
+        ) {
+          return("checkpoint_path must be one non-empty string or NULL")
+        }
+        NULL
+      }
+    ),
+    resume = S7::new_property(
+      S7::class_logical,
+      default = FALSE,
+      validator = function(value) {
+        if (length(value) != 1L || is.na(value)) {
+          return("resume must be TRUE or FALSE")
+        }
+        NULL
+      }
+    ),
+    checkpoint_registry = S7::new_property(
+      S7::class_list,
+      default = list(),
+      validator = function(value) {
+        if (
+          length(value) > 0L &&
+            (is.null(names(value)) ||
+              anyNA(names(value)) ||
+              any(!nzchar(names(value))) ||
+              anyDuplicated(names(value)))
+        ) {
+          return("checkpoint_registry must have unique, non-empty names")
+        }
+        NULL
+      }
+    ),
     verbose = S7::new_property(
       S7::class_logical,
       default = FALSE
@@ -117,9 +256,19 @@ optimizer_control <- function(
   seed = NULL,
   max_trials = NULL,
   max_errors = 5L,
+  max_metric_calls = NULL,
+  max_provider_calls = NULL,
+  max_input_tokens = NULL,
+  max_output_tokens = NULL,
+  max_total_tokens = NULL,
+  max_cost = NULL,
+  max_elapsed_seconds = NULL,
   num_threads = 1L,
   progress = NA,
   log_dir = NULL,
+  checkpoint_path = NULL,
+  resume = FALSE,
+  checkpoint_registry = list(),
   verbose = FALSE
 ) {
   # Resolve progress default
@@ -127,15 +276,120 @@ optimizer_control <- function(
     progress <- interactive()
   }
 
-  OptimizerControl(
+  integer_limits <- list(
+    max_metric_calls = max_metric_calls,
+    max_provider_calls = max_provider_calls,
+    max_input_tokens = max_input_tokens,
+    max_output_tokens = max_output_tokens,
+    max_total_tokens = max_total_tokens
+  )
+  for (name in names(integer_limits)) {
+    message <- optimizer_limit_validator(
+      integer_limits[[name]],
+      name,
+      integer = TRUE
+    )
+    if (!is.null(message)) {
+      cli::cli_abort(message, class = "dsprrr_optimizer_control_error")
+    }
+  }
+
+  control <- OptimizerControl(
     seed = seed,
     max_trials = if (!is.null(max_trials)) as.integer(max_trials) else NULL,
     max_errors = as.integer(max_errors),
+    max_metric_calls = if (!is.null(max_metric_calls)) {
+      as.integer(max_metric_calls)
+    } else {
+      NULL
+    },
+    max_provider_calls = if (!is.null(max_provider_calls)) {
+      as.integer(max_provider_calls)
+    } else {
+      NULL
+    },
+    max_input_tokens = if (!is.null(max_input_tokens)) {
+      as.integer(max_input_tokens)
+    } else {
+      NULL
+    },
+    max_output_tokens = if (!is.null(max_output_tokens)) {
+      as.integer(max_output_tokens)
+    } else {
+      NULL
+    },
+    max_total_tokens = if (!is.null(max_total_tokens)) {
+      as.integer(max_total_tokens)
+    } else {
+      NULL
+    },
+    max_cost = max_cost,
+    max_elapsed_seconds = max_elapsed_seconds,
     num_threads = as.integer(num_threads),
     progress = progress,
     log_dir = log_dir,
+    checkpoint_path = checkpoint_path,
+    resume = resume,
+    checkpoint_registry = checkpoint_registry,
     verbose = verbose
   )
+
+  if (isTRUE(resume) && is.null(checkpoint_path)) {
+    cli::cli_abort(
+      c(
+        "Cannot resume without an optimizer checkpoint",
+        "i" = "Supply {.arg checkpoint_path} when {.code resume = TRUE}."
+      ),
+      class = "dsprrr_optimizer_checkpoint_config_error"
+    )
+  }
+
+  control
+}
+
+optimizer_control_for_teleprompter <- function(
+  teleprompter,
+  control = NULL,
+  num_threads = 1L
+) {
+  if (!is.null(control)) {
+    if (!inherits(control, "dsprrr::OptimizerControl")) {
+      cli::cli_abort(
+        "{.arg control} must be an OptimizerControl",
+        class = "dsprrr_optimizer_control_error"
+      )
+    }
+    return(control)
+  }
+  optimizer_control(
+    seed = tryCatch(teleprompter@seed, error = function(e) NULL),
+    max_errors = teleprompter@max_errors,
+    num_threads = num_threads,
+    log_dir = tryCatch(teleprompter@log_dir, error = function(e) NULL)
+  )
+}
+
+optimizer_require_ledger_only_checkpoint <- function(control, optimizer) {
+  if (isTRUE(control@resume)) {
+    cli::cli_abort(
+      c(
+        "{optimizer} does not yet support fine-grained checkpoint resume",
+        "i" = "Resource budgets and best-partial return are supported.",
+        "i" = "Start without {.code resume = TRUE}; resume support is tracked separately."
+      ),
+      class = "dsprrr_optimizer_checkpoint_unsupported_optimizer"
+    )
+  }
+  if (!is.null(control@checkpoint_path)) {
+    cli::cli_warn(
+      c(
+        "{optimizer} is running without checkpoint persistence",
+        "i" = "Its resource ledger and best partial program remain available in memory."
+      ),
+      class = "dsprrr_optimizer_checkpoint_unsupported_optimizer"
+    )
+  }
+  invisible(control)
 }
 
 #' Evaluation Result
@@ -159,8 +413,20 @@ EvalResult <- S7::new_class(
     n_evaluated = S7::new_property(S7::class_integer, default = 0L),
     n_errors = S7::new_property(S7::class_integer, default = 0L),
     # Cost tracking
+    input_tokens = S7::new_property(S7::class_integer, default = 0L),
+    output_tokens = S7::new_property(S7::class_integer, default = 0L),
     total_tokens = S7::new_property(S7::class_integer, default = 0L),
     total_cost = S7::new_property(S7::class_numeric, default = 0),
+    provider_calls = S7::new_property(S7::class_integer, default = 0L),
+    metric_calls = S7::new_property(S7::class_integer, default = 0L),
+    provider_usage_unknown = S7::new_property(
+      S7::class_logical,
+      default = FALSE
+    ),
+    token_usage_unknown = S7::new_property(
+      S7::class_logical,
+      default = FALSE
+    ),
     # Timing
     total_latency_ms = S7::new_property(S7::class_numeric, default = 0),
     start_time = S7::new_property(S7::class_any, default = NULL),
@@ -292,6 +558,13 @@ eval_program <- function(
   program_copy <- copy_module(program)
 
   # Run evaluation using existing evaluate() function with error handling
+  # OptimizerControl@max_errors is enforced by the optimizer outcome ledger.
+  # Batch max_errors has different row-cancellation semantics and must not
+  # truncate an optimizer evaluation before that ledger observes the result.
+  concurrency <- concurrency_control(
+    max_active = control@num_threads,
+    max_errors = Inf
+  )
   eval_result <- tryCatch(
     {
       evaluate(
@@ -299,7 +572,7 @@ eval_program <- function(
         data = dataset,
         metric = metric,
         .llm = .llm,
-        .parallel = control@num_threads > 1L,
+        .concurrency = concurrency,
         .progress = control@progress,
         .return_format = "structured",
         epochs = epochs,
@@ -334,8 +607,14 @@ eval_program <- function(
   )) *
     1000
 
-  # Extract cost information from traces
-  cost_info <- extract_cost_from_module(program_copy)
+  # Prefer the canonical per-row execution metadata returned by evaluate().
+  # Traces are only a fallback: one program trace is not necessarily one
+  # provider call for composite or iterative modules.
+  cost_info <- extract_optimizer_usage(
+    program_copy,
+    eval_result$metadata %||% NULL,
+    epochs = epochs
+  )
 
   # Build per-example tibble
   n <- nrow(dataset)
@@ -404,8 +683,14 @@ eval_program <- function(
     std_error = std_error,
     n_evaluated = as.integer(eval_result$n_evaluated),
     n_errors = as.integer(eval_result$n_errors),
+    input_tokens = as.integer(cost_info$tokens_in),
+    output_tokens = as.integer(cost_info$tokens_out),
     total_tokens = as.integer(cost_info$total_tokens),
     total_cost = cost_info$total_cost,
+    provider_calls = as.integer(cost_info$provider_calls),
+    metric_calls = as.integer(cost_info$metric_calls),
+    provider_usage_unknown = cost_info$provider_usage_unknown,
+    token_usage_unknown = cost_info$token_usage_unknown,
     total_latency_ms = total_latency_ms,
     start_time = start_time,
     end_time = end_time,
@@ -414,6 +699,179 @@ eval_program <- function(
     score_std = score_std,
     ci_lower = ci_values[1],
     ci_upper = ci_values[2]
+  )
+}
+
+optimizer_usage_scalar <- function(value, integer = FALSE) {
+  if (
+    is.null(value) ||
+      length(value) != 1L ||
+      !is.numeric(value) ||
+      is.na(value) ||
+      !is.finite(value) ||
+      value < 0
+  ) {
+    return(if (integer) NA_integer_ else NA_real_)
+  }
+  if (integer) as.integer(value) else as.numeric(value)
+}
+
+optimizer_usage_sum <- function(values, integer = FALSE) {
+  values <- unlist(values, use.names = FALSE)
+  if (length(values) == 0L) {
+    return(if (integer) 0L else 0)
+  }
+  if (anyNA(values)) {
+    return(if (integer) NA_integer_ else NA_real_)
+  }
+  total <- sum(values)
+  if (integer) as.integer(total) else total
+}
+
+optimizer_metadata_provider_calls <- function(program, metadata) {
+  explicit <- metadata$provider_calls %||% metadata$n_llm_calls
+  explicit <- optimizer_usage_scalar(explicit, integer = TRUE)
+  if (!is.na(explicit)) {
+    return(explicit)
+  }
+
+  if (identical(class(program)[1L], "PredictModule")) {
+    cache_status <- metadata$cache %||% "unknown"
+    if (identical(cache_status, "hit")) {
+      return(0L)
+    }
+    # The base Predict batch/scalar path invokes exactly one structured Chat
+    # request. Specialized subclasses are handled below as unknown unless they
+    # report an explicit count.
+    return(1L)
+  }
+
+  if (inherits(program, "PipelineModule")) {
+    step_metadata <- metadata$step_metadata %||%
+      metadata$aggregated$step_metadata %||%
+      list()
+    if (length(step_metadata) != length(program$steps)) {
+      return(NA_integer_)
+    }
+    calls <- vapply(
+      seq_along(program$steps),
+      function(i) {
+        optimizer_metadata_provider_calls(
+          program$steps[[i]]@module,
+          step_metadata[[i]]
+        )
+      },
+      integer(1)
+    )
+    return(optimizer_usage_sum(calls, integer = TRUE))
+  }
+
+  if (inherits(program, "FnModule") && is.null(metadata$model)) {
+    return(0L)
+  }
+
+  NA_integer_
+}
+
+optimizer_metadata_usage <- function(program, metadata) {
+  if (!is.list(metadata)) {
+    return(list(
+      tokens_in = NA_integer_,
+      tokens_out = NA_integer_,
+      total_tokens = NA_integer_,
+      total_cost = NA_real_,
+      provider_calls = NA_integer_
+    ))
+  }
+
+  provider_calls <- optimizer_metadata_provider_calls(program, metadata)
+  if (identical(metadata$cache %||% NULL, "hit")) {
+    return(list(
+      tokens_in = 0L,
+      tokens_out = 0L,
+      total_tokens = 0L,
+      total_cost = 0,
+      provider_calls = provider_calls
+    ))
+  }
+
+  tokens_in <- optimizer_usage_scalar(metadata$input_tokens, integer = TRUE)
+  tokens_out <- optimizer_usage_scalar(metadata$output_tokens, integer = TRUE)
+  total_tokens <- optimizer_usage_scalar(metadata$total_tokens, integer = TRUE)
+  if (is.na(total_tokens) && !anyNA(c(tokens_in, tokens_out))) {
+    total_tokens <- tokens_in + tokens_out
+  }
+
+  list(
+    tokens_in = tokens_in,
+    tokens_out = tokens_out,
+    total_tokens = total_tokens,
+    total_cost = optimizer_usage_scalar(
+      metadata$cost %||% metadata$total_cost,
+      integer = FALSE
+    ),
+    provider_calls = provider_calls
+  )
+}
+
+# Extract only usage that can be proved from canonical current-call metadata.
+# Ambiguous provider or token usage is represented explicitly rather than as 0.
+extract_optimizer_usage <- function(program, metadata, epochs = 1L) {
+  if (is.list(metadata) && length(metadata) > 0L && epochs == 1L) {
+    rows <- lapply(metadata, function(item) {
+      optimizer_metadata_usage(program, item)
+    })
+    tokens_in <- optimizer_usage_sum(
+      lapply(rows, `[[`, "tokens_in"),
+      integer = TRUE
+    )
+    tokens_out <- optimizer_usage_sum(
+      lapply(rows, `[[`, "tokens_out"),
+      integer = TRUE
+    )
+    total_tokens <- optimizer_usage_sum(
+      lapply(rows, `[[`, "total_tokens"),
+      integer = TRUE
+    )
+    total_cost <- optimizer_usage_sum(lapply(rows, `[[`, "total_cost"))
+    provider_calls <- optimizer_usage_sum(
+      lapply(rows, `[[`, "provider_calls"),
+      integer = TRUE
+    )
+    metric_calls <- sum(vapply(
+      metadata,
+      function(item) {
+        !optimizer_error_present(item$error %||% NULL)
+      },
+      logical(1)
+    ))
+
+    return(list(
+      tokens_in = tokens_in,
+      tokens_out = tokens_out,
+      total_tokens = total_tokens,
+      total_cost = total_cost,
+      provider_calls = provider_calls,
+      metric_calls = as.integer(metric_calls),
+      provider_usage_unknown = is.na(provider_calls),
+      token_usage_unknown = anyNA(c(tokens_in, tokens_out, total_tokens))
+    ))
+  }
+
+  fallback <- extract_cost_from_module(program)
+  list(
+    tokens_in = fallback$tokens_in,
+    tokens_out = fallback$tokens_out,
+    total_tokens = fallback$total_tokens,
+    total_cost = fallback$total_cost,
+    provider_calls = NA_integer_,
+    metric_calls = NA_integer_,
+    provider_usage_unknown = TRUE,
+    token_usage_unknown = anyNA(c(
+      fallback$tokens_in,
+      fallback$tokens_out,
+      fallback$total_tokens
+    ))
   )
 }
 
@@ -656,21 +1114,1146 @@ update_cost_summary <- function(summary, module) {
   )
 }
 
-# Create mutable state for a single optimizer error budget.
-new_optimizer_budget <- function(control = NULL) {
+# Resource limits are intentionally independent from execution concurrency.
+# Optimizers schedule bounded work units and record the effective in-flight
+# count reported by the shared concurrency contract.
+optimizer_budget_limit_map <- function() {
+  c(
+    max_trials = "trials",
+    max_metric_calls = "metric_calls",
+    max_provider_calls = "provider_calls",
+    max_input_tokens = "input_tokens",
+    max_output_tokens = "output_tokens",
+    max_total_tokens = "total_tokens",
+    max_cost = "known_cost",
+    max_elapsed_seconds = "elapsed_seconds"
+  )
+}
+
+optimizer_control_limits <- function(control) {
+  list(
+    max_trials = control@max_trials,
+    max_metric_calls = control@max_metric_calls,
+    max_provider_calls = control@max_provider_calls,
+    max_input_tokens = control@max_input_tokens,
+    max_output_tokens = control@max_output_tokens,
+    max_total_tokens = control@max_total_tokens,
+    max_cost = control@max_cost,
+    max_elapsed_seconds = control@max_elapsed_seconds
+  )
+}
+
+optimizer_monotonic_clock <- function() {
+  unname(proc.time()[["elapsed"]])
+}
+
+optimizer_budget_counter_names <- function() {
+  c(
+    "trials",
+    "metric_calls",
+    "provider_calls",
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "known_cost"
+  )
+}
+
+# Create mutable state for one optimizer-wide monotonic resource ledger.
+new_optimizer_budget <- function(control = NULL, state = NULL, clock = NULL) {
   if (is.null(control)) {
     control <- optimizer_control()
+  }
+  if (!inherits(control, "dsprrr::OptimizerControl")) {
+    cli::cli_abort(
+      "{.arg control} must be an OptimizerControl",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+  if (is.null(clock)) {
+    clock <- getOption("dsprrr.optimizer_clock", optimizer_monotonic_clock)
+  }
+  if (!is.function(clock)) {
+    cli::cli_abort(
+      "The optimizer monotonic clock must be a function",
+      class = "dsprrr_optimizer_invariant_error"
+    )
   }
 
   budget <- new.env(parent = emptyenv())
   budget$max_errors <- as.integer(control@max_errors)
+  budget$limits <- optimizer_control_limits(control)
   budget$attempts <- 0L
   budget$successes <- 0L
   budget$total_errors <- 0L
   budget$consecutive_errors <- 0L
+  for (name in optimizer_budget_counter_names()) {
+    budget[[name]] <- if (name == "known_cost") 0 else 0L
+  }
+  budget$unknown_metric_calls <- 0L
+  budget$unknown_provider_calls <- 0L
+  budget$unknown_input_tokens <- 0L
+  budget$unknown_output_tokens <- 0L
+  budget$unknown_total_tokens <- 0L
+  budget$unknown_cost_calls <- 0L
+  budget$trial_units <- character()
+  budget$completed_units <- character()
+  budget$overshoots <- list()
   budget$stop_reason <- NULL
+  budget$clock <- clock
+  budget$started_tick <- as.numeric(clock())
+  budget$elapsed_offset <- 0
+  budget$last_elapsed <- 0
   class(budget) <- c("dsprrr_optimizer_budget", "environment")
+
+  if (!is.null(state)) {
+    optimizer_budget_restore_state(budget, state)
+    optimizer_budget_reconcile_current_limits(budget)
+  }
+
   budget
+}
+
+optimizer_budget_elapsed <- function(budget) {
+  if (!inherits(budget, "dsprrr_optimizer_budget")) {
+    cli::cli_abort(
+      "{.arg budget} must be an optimizer budget",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+  tick <- as.numeric(budget$clock())
+  delta <- max(0, tick - budget$started_tick)
+  elapsed <- max(budget$last_elapsed, budget$elapsed_offset + delta)
+  budget$last_elapsed <- elapsed
+  elapsed
+}
+
+optimizer_budget_reason <- function(
+  code,
+  stage,
+  resource,
+  limit,
+  observed,
+  unit_id = NULL,
+  overshoot = 0,
+  work_unit = "optimizer_work_unit",
+  max_started = 1L,
+  message = NULL
+) {
+  if (is.null(message)) {
+    message <- sprintf("Reached %s limit (%s)", code, format(limit))
+  }
+  structure(
+    list(
+      code = code,
+      stage = as.character(stage)[1L],
+      resource = resource,
+      limit = limit,
+      observed = observed,
+      unit_id = unit_id,
+      overshoot = list(
+        amount = overshoot,
+        unit = work_unit,
+        max_started = as.integer(max_started)
+      ),
+      message = message
+    ),
+    class = c("dsprrr_optimizer_stop_reason", "list")
+  )
+}
+
+optimizer_budget_set_stop <- function(budget, reason) {
+  if (is.null(budget$stop_reason)) {
+    budget$stop_reason <- reason
+  }
+  invisible(budget)
+}
+
+optimizer_budget_validate_stage <- function(stage) {
+  if (
+    !is.character(stage) ||
+      length(stage) != 1L ||
+      is.na(stage) ||
+      !nzchar(stage)
+  ) {
+    cli::cli_abort(
+      "{.arg stage} must be a single non-empty string",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+  stage
+}
+
+optimizer_budget_increment_abort <- function(
+  resource,
+  stage,
+  current,
+  increment
+) {
+  cli::cli_abort(
+    c(
+      "Optimizer budget counter {.field {resource}} cannot be incremented",
+      "x" = "The increment would exceed its representable range.",
+      "i" = "The budget ledger was not changed."
+    ),
+    class = c(
+      "dsprrr_optimizer_budget_overflow",
+      "dsprrr_optimizer_invariant_error"
+    ),
+    resource = resource,
+    stage = stage,
+    current = current,
+    increment = increment
+  )
+}
+
+optimizer_budget_checked_increment <- function(
+  current,
+  increment,
+  resource,
+  stage,
+  integer = TRUE
+) {
+  if (
+    !is.numeric(increment) ||
+      length(increment) != 1L ||
+      is.na(increment) ||
+      !is.finite(increment) ||
+      increment < 0 ||
+      (integer &&
+        (increment != floor(increment) ||
+          increment > .Machine$integer.max))
+  ) {
+    cli::cli_abort(
+      "Optimizer budget increment for {.field {resource}} is invalid",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+
+  if (integer) {
+    increment <- as.integer(increment)
+    if (
+      !is.integer(current) ||
+        length(current) != 1L ||
+        is.na(current) ||
+        current < 0L
+    ) {
+      cli::cli_abort(
+        "Optimizer budget counter {.field {resource}} is invalid",
+        class = "dsprrr_optimizer_invariant_error"
+      )
+    }
+    if (increment > .Machine$integer.max - current) {
+      optimizer_budget_increment_abort(
+        resource,
+        stage,
+        current,
+        increment
+      )
+    }
+    return(current + increment)
+  }
+
+  if (
+    !is.numeric(current) ||
+      length(current) != 1L ||
+      is.na(current) ||
+      !is.finite(current) ||
+      current < 0
+  ) {
+    cli::cli_abort(
+      "Optimizer budget amount {.field {resource}} is invalid",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+  if (increment > .Machine$double.xmax - current) {
+    optimizer_budget_increment_abort(resource, stage, current, increment)
+  }
+  current + increment
+}
+
+optimizer_budget_require_outcome_capacity <- function(
+  budget,
+  successes,
+  total_errors,
+  stage
+) {
+  attempts <- optimizer_budget_checked_increment(
+    budget$attempts,
+    successes,
+    "attempts",
+    stage
+  )
+  optimizer_budget_checked_increment(
+    attempts,
+    total_errors,
+    "attempts",
+    stage
+  )
+  optimizer_budget_checked_increment(
+    budget$successes,
+    successes,
+    "successes",
+    stage
+  )
+  optimizer_budget_checked_increment(
+    budget$total_errors,
+    total_errors,
+    "total_errors",
+    stage
+  )
+  streak <- if (successes > 0) 0L else budget$consecutive_errors
+  optimizer_budget_checked_increment(
+    streak,
+    total_errors,
+    "consecutive_errors",
+    stage
+  )
+  invisible(budget)
+}
+
+optimizer_budget_limit_reason <- function(
+  budget,
+  limit_name,
+  stage,
+  observed,
+  unit_id,
+  overshoot = 0,
+  work_unit = "optimizer_work_unit",
+  max_started = 1L
+) {
+  resource <- optimizer_budget_limit_map()[[limit_name]]
+  optimizer_budget_reason(
+    code = limit_name,
+    stage = stage,
+    resource = resource,
+    limit = budget$limits[[limit_name]],
+    observed = observed,
+    unit_id = unit_id,
+    overshoot = overshoot,
+    work_unit = work_unit,
+    max_started = max_started
+  )
+}
+
+# Check every known counter before scheduling an expensive work unit. Planned
+# values are conservative lower bounds; postflight accounting may cross a cap
+# only within the explicitly named, already-started work-unit bound.
+optimizer_budget_preflight <- function(
+  budget,
+  stage,
+  planned = list(),
+  unit_id = NULL,
+  work_unit = "optimizer_work_unit",
+  max_started = 1L,
+  planned_outcomes = 1L
+) {
+  optimizer_budget_validate_stage(stage)
+  if (!inherits(budget, "dsprrr_optimizer_budget")) {
+    cli::cli_abort(
+      "{.arg budget} must be an optimizer budget",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+  if (optimizer_budget_stopped(budget)) {
+    return(FALSE)
+  }
+
+  optimizer_budget_require_outcome_capacity(
+    budget,
+    successes = planned_outcomes,
+    total_errors = 0L,
+    stage = stage
+  )
+
+  allowed <- optimizer_budget_counter_names()
+  if (length(setdiff(names(planned), allowed)) > 0L) {
+    cli::cli_abort(
+      "{.arg planned} contains unknown optimizer resources",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+
+  limit_map <- optimizer_budget_limit_map()
+  projected <- list()
+  amounts <- list()
+  for (limit_name in setdiff(names(limit_map), "max_elapsed_seconds")) {
+    resource <- limit_map[[limit_name]]
+    amount <- planned[[resource]] %||% 0
+    if (
+      !is.numeric(amount) ||
+        length(amount) != 1L ||
+        is.na(amount) ||
+        !is.finite(amount) ||
+        amount < 0 ||
+        (resource != "known_cost" && amount != floor(amount))
+    ) {
+      cli::cli_abort(
+        "Planned optimizer resource {.field {resource}} is invalid",
+        class = "dsprrr_optimizer_invariant_error"
+      )
+    }
+    observed <- budget[[resource]]
+    amounts[[limit_name]] <- amount
+    projected[[limit_name]] <- optimizer_budget_checked_increment(
+      observed,
+      amount,
+      resource,
+      stage,
+      integer = resource != "known_cost"
+    )
+  }
+
+  elapsed <- optimizer_budget_elapsed(budget)
+  elapsed_limit <- budget$limits$max_elapsed_seconds
+  if (!is.null(elapsed_limit) && elapsed >= elapsed_limit) {
+    optimizer_budget_set_stop(
+      budget,
+      optimizer_budget_limit_reason(
+        budget,
+        "max_elapsed_seconds",
+        stage,
+        observed = elapsed,
+        unit_id = unit_id,
+        work_unit = work_unit,
+        max_started = 0L
+      )
+    )
+    return(FALSE)
+  }
+
+  for (limit_name in names(projected)) {
+    limit <- budget$limits[[limit_name]]
+    resource <- limit_map[[limit_name]]
+    observed <- budget[[resource]]
+    if (
+      !is.null(limit) &&
+        amounts[[limit_name]] > 0 &&
+        projected[[limit_name]] > limit
+    ) {
+      optimizer_budget_set_stop(
+        budget,
+        optimizer_budget_limit_reason(
+          budget,
+          limit_name,
+          stage,
+          observed = observed,
+          unit_id = unit_id,
+          work_unit = work_unit,
+          max_started = 0L
+        )
+      )
+      return(FALSE)
+    }
+  }
+
+  TRUE
+}
+
+optimizer_budget_note_unknown <- function(
+  budget,
+  resource,
+  stage,
+  unit_id,
+  work_unit,
+  max_started
+) {
+  limit_name <- names(optimizer_budget_limit_map())[
+    optimizer_budget_limit_map() == sub("_calls$", "", resource)
+  ]
+  if (resource == "cost_calls") {
+    limit_name <- "max_cost"
+  } else if (resource == "metric_calls") {
+    limit_name <- "max_metric_calls"
+  } else if (resource == "provider_calls") {
+    limit_name <- "max_provider_calls"
+  } else if (resource == "input_tokens") {
+    limit_name <- "max_input_tokens"
+  } else if (resource == "output_tokens") {
+    limit_name <- "max_output_tokens"
+  } else if (resource == "total_tokens") {
+    limit_name <- "max_total_tokens"
+  }
+  limit_name <- limit_name[[1L]] %||% NULL
+  if (!is.null(limit_name) && !is.null(budget$limits[[limit_name]])) {
+    code <- paste0("unknown_", sub("_calls$", "", resource))
+    if (resource == "cost_calls") {
+      code <- "unknown_cost"
+    }
+    optimizer_budget_set_stop(
+      budget,
+      optimizer_budget_reason(
+        code = code,
+        stage = stage,
+        resource = resource,
+        limit = budget$limits[[limit_name]],
+        observed = NA_real_,
+        unit_id = unit_id,
+        overshoot = NA_real_,
+        work_unit = work_unit,
+        max_started = max_started,
+        message = sprintf(
+          "Cannot enforce %s because the completed work unit reported unknown usage",
+          limit_name
+        )
+      )
+    )
+  }
+  invisible(budget)
+}
+
+# Record verified postflight usage. NA is a first-class unknown value and is
+# never silently converted to zero.
+record_optimizer_usage <- function(
+  budget,
+  usage,
+  stage,
+  unit_id = NULL,
+  work_unit = "optimizer_work_unit",
+  max_started = 1L
+) {
+  optimizer_budget_validate_stage(stage)
+  if (!inherits(budget, "dsprrr_optimizer_budget") || !is.list(usage)) {
+    cli::cli_abort(
+      "Optimizer usage requires a budget and a named list",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+
+  aliases <- c(cost = "known_cost")
+  for (alias in names(aliases)) {
+    if (alias %in% names(usage) && !aliases[[alias]] %in% names(usage)) {
+      usage[[aliases[[alias]]]] <- usage[[alias]]
+    }
+  }
+
+  updates <- list()
+  unknown_resources <- character()
+  for (resource in optimizer_budget_counter_names()) {
+    if (!resource %in% names(usage)) {
+      next
+    }
+    value <- usage[[resource]]
+    if (is.null(value) || length(value) != 1L || is.na(value)) {
+      if (resource == "trials") {
+        cli::cli_abort(
+          "Observed optimizer resource {.field trials} cannot be unknown",
+          class = "dsprrr_optimizer_invariant_error"
+        )
+      }
+      unknown_name <- if (resource == "known_cost") {
+        "cost_calls"
+      } else {
+        resource
+      }
+      counter <- paste0("unknown_", unknown_name)
+      updates[[counter]] <- optimizer_budget_checked_increment(
+        budget[[counter]],
+        1L,
+        counter,
+        stage,
+        integer = TRUE
+      )
+      unknown_resources <- c(unknown_resources, unknown_name)
+      next
+    }
+    if (
+      !is.numeric(value) ||
+        !is.finite(value) ||
+        value < 0 ||
+        (resource != "known_cost" && value != floor(value))
+    ) {
+      cli::cli_abort(
+        "Observed optimizer resource {.field {resource}} is invalid",
+        class = "dsprrr_optimizer_invariant_error"
+      )
+    }
+    updates[[resource]] <- optimizer_budget_checked_increment(
+      budget[[resource]],
+      value,
+      resource,
+      stage,
+      integer = resource != "known_cost"
+    )
+  }
+
+  for (name in names(updates)) {
+    budget[[name]] <- updates[[name]]
+  }
+  for (resource in unknown_resources) {
+    optimizer_budget_note_unknown(
+      budget,
+      resource,
+      stage,
+      unit_id,
+      work_unit,
+      max_started
+    )
+  }
+
+  elapsed <- optimizer_budget_elapsed(budget)
+  limit_map <- optimizer_budget_limit_map()
+  for (limit_name in names(limit_map)) {
+    resource <- limit_map[[limit_name]]
+    observed <- if (resource == "elapsed_seconds") {
+      elapsed
+    } else {
+      budget[[resource]]
+    }
+    limit <- budget$limits[[limit_name]]
+    if (!is.null(limit) && observed >= limit) {
+      overshoot <- max(0, observed - limit)
+      if (overshoot > 0) {
+        budget$overshoots[[length(budget$overshoots) + 1L]] <- list(
+          resource = resource,
+          amount = overshoot,
+          unit = work_unit,
+          max_started = as.integer(max_started),
+          unit_id = unit_id
+        )
+      }
+      optimizer_budget_set_stop(
+        budget,
+        optimizer_budget_limit_reason(
+          budget,
+          limit_name,
+          stage,
+          observed = observed,
+          unit_id = unit_id,
+          overshoot = overshoot,
+          work_unit = work_unit,
+          max_started = max_started
+        )
+      )
+    }
+  }
+
+  invisible(budget)
+}
+
+optimizer_budget_complete_unit <- function(budget, unit_id) {
+  if (
+    !is.character(unit_id) ||
+      length(unit_id) != 1L ||
+      is.na(unit_id) ||
+      !nzchar(unit_id)
+  ) {
+    cli::cli_abort(
+      "{.arg unit_id} must be one non-empty string",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+  if (!unit_id %in% budget$completed_units) {
+    budget$completed_units <- c(budget$completed_units, unit_id)
+  }
+  invisible(budget)
+}
+
+optimizer_budget_count_trial <- function(budget, stage, unit_id) {
+  if (!unit_id %in% budget$trial_units) {
+    record_optimizer_usage(
+      budget,
+      list(trials = 1L),
+      stage,
+      unit_id = unit_id,
+      work_unit = "optimizer_trial",
+      max_started = 1L
+    )
+    budget$trial_units <- c(budget$trial_units, unit_id)
+  }
+  invisible(budget)
+}
+
+optimizer_budget_unit_completed <- function(budget, unit_id) {
+  unit_id %in% budget$completed_units
+}
+
+optimizer_budget_state <- function(budget) {
+  elapsed <- optimizer_budget_elapsed(budget)
+  list(
+    attempts = as.integer(budget$attempts),
+    successes = as.integer(budget$successes),
+    total_errors = as.integer(budget$total_errors),
+    consecutive_errors = as.integer(budget$consecutive_errors),
+    trials = as.integer(budget$trials),
+    metric_calls = as.integer(budget$metric_calls),
+    provider_calls = as.integer(budget$provider_calls),
+    input_tokens = as.integer(budget$input_tokens),
+    output_tokens = as.integer(budget$output_tokens),
+    total_tokens = as.integer(budget$total_tokens),
+    known_cost = as.numeric(budget$known_cost),
+    unknown_metric_calls = as.integer(budget$unknown_metric_calls),
+    unknown_provider_calls = as.integer(budget$unknown_provider_calls),
+    unknown_input_tokens = as.integer(budget$unknown_input_tokens),
+    unknown_output_tokens = as.integer(budget$unknown_output_tokens),
+    unknown_total_tokens = as.integer(budget$unknown_total_tokens),
+    unknown_cost_calls = as.integer(budget$unknown_cost_calls),
+    elapsed_seconds = as.numeric(elapsed),
+    trial_units = budget$trial_units,
+    completed_units = budget$completed_units,
+    overshoots = budget$overshoots,
+    stop_reason = if (is.null(budget$stop_reason)) {
+      NULL
+    } else {
+      unclass(budget$stop_reason)
+    }
+  )
+}
+
+optimizer_budget_checkpoint_abort <- function(message) {
+  cli::cli_abort(
+    message,
+    class = "dsprrr_optimizer_checkpoint_malformed"
+  )
+}
+
+optimizer_budget_checkpoint_text <- function(value) {
+  is.character(value) &&
+    length(value) == 1L &&
+    !is.na(value) &&
+    nzchar(value)
+}
+
+optimizer_budget_checkpoint_unit_id <- function(value) {
+  is.null(value) || optimizer_budget_checkpoint_text(value)
+}
+
+optimizer_budget_has_exact_outcome_partition <- function(
+  attempts,
+  successes,
+  total_errors
+) {
+  # Subtraction is safe after non-negative integer validation; adding the two
+  # partition counters could overflow before an inconsistent state is rejected.
+  successes <= attempts &&
+    total_errors <= attempts &&
+    identical(attempts - successes, total_errors)
+}
+
+optimizer_budget_validate_overshoot <- function(record, nested = FALSE) {
+  expected <- if (nested) {
+    c("amount", "unit", "max_started")
+  } else {
+    c("resource", "amount", "unit", "max_started", "unit_id")
+  }
+  if (
+    !artifact_is_plain_list(record) ||
+      !identical(names(record), expected)
+  ) {
+    return(FALSE)
+  }
+  amount <- record$amount
+  if (
+    !is.numeric(amount) ||
+      length(amount) != 1L ||
+      (!is.na(amount) && (!is.finite(amount) || amount < 0)) ||
+      !optimizer_budget_checkpoint_text(record$unit) ||
+      !is.integer(record$max_started) ||
+      length(record$max_started) != 1L ||
+      is.na(record$max_started) ||
+      record$max_started < 0L
+  ) {
+    return(FALSE)
+  }
+  if (nested) {
+    return(TRUE)
+  }
+  optimizer_budget_checkpoint_text(record$resource) &&
+    record$resource %in% unname(optimizer_budget_limit_map()) &&
+    !is.na(amount) &&
+    amount > 0 &&
+    optimizer_budget_checkpoint_unit_id(record$unit_id)
+}
+
+optimizer_budget_validate_stop_reason <- function(reason) {
+  if (is.null(reason)) {
+    return(TRUE)
+  }
+  if (!artifact_is_plain_list(reason)) {
+    return(FALSE)
+  }
+  if (identical(reason$code, "max_errors")) {
+    expected <- c(
+      "code",
+      "stage",
+      "limit",
+      "observed",
+      "total_errors",
+      "attempts",
+      "message"
+    )
+    if ("condition_class" %in% names(reason)) {
+      expected <- c(expected, "condition_class")
+    }
+    counts <- reason[c("limit", "observed", "total_errors", "attempts")]
+    return(
+      identical(names(reason), expected) &&
+        optimizer_budget_checkpoint_text(reason$stage) &&
+        optimizer_budget_checkpoint_text(reason$message) &&
+        all(vapply(
+          counts,
+          function(value) {
+            is.integer(value) &&
+              length(value) == 1L &&
+              !is.na(value) &&
+              value >= 0L
+          },
+          logical(1)
+        )) &&
+        reason$total_errors <= reason$attempts &&
+        reason$observed <= reason$total_errors &&
+        reason$observed >= max(1L, reason$limit) &&
+        (!"condition_class" %in% names(reason) ||
+          optimizer_budget_checkpoint_text(reason$condition_class))
+    )
+  }
+
+  expected <- c(
+    "code",
+    "stage",
+    "resource",
+    "limit",
+    "observed",
+    "unit_id",
+    "overshoot",
+    "message"
+  )
+  if (!identical(names(reason), expected)) {
+    return(FALSE)
+  }
+  unknown_resources <- c(
+    unknown_cost = "cost_calls",
+    unknown_provider = "provider_calls",
+    unknown_metric = "metric_calls",
+    unknown_input_tokens = "input_tokens",
+    unknown_output_tokens = "output_tokens",
+    unknown_total_tokens = "total_tokens"
+  )
+  limit_resources <- optimizer_budget_limit_map()
+  allowed_codes <- c(names(limit_resources), names(unknown_resources))
+  if (
+    !optimizer_budget_checkpoint_text(reason$code) ||
+      !reason$code %in% allowed_codes ||
+      !optimizer_budget_checkpoint_text(reason$stage) ||
+      !optimizer_budget_checkpoint_text(reason$resource) ||
+      !is.numeric(reason$limit) ||
+      length(reason$limit) != 1L ||
+      is.na(reason$limit) ||
+      !is.finite(reason$limit) ||
+      reason$limit < 0 ||
+      !is.numeric(reason$observed) ||
+      length(reason$observed) != 1L ||
+      !optimizer_budget_checkpoint_unit_id(reason$unit_id) ||
+      !optimizer_budget_validate_overshoot(reason$overshoot, nested = TRUE) ||
+      !optimizer_budget_checkpoint_text(reason$message)
+  ) {
+    return(FALSE)
+  }
+  expected_resource <- if (reason$code %in% names(limit_resources)) {
+    unname(limit_resources[[reason$code]])
+  } else {
+    unname(unknown_resources[[reason$code]])
+  }
+  is_unknown <- reason$code %in% names(unknown_resources)
+  identical(reason$resource, expected_resource) &&
+    if (is_unknown) {
+      is.na(reason$observed) && is.na(reason$overshoot$amount)
+    } else {
+      !is.na(reason$observed) &&
+        is.finite(reason$observed) &&
+        reason$observed >= 0 &&
+        !is.na(reason$overshoot$amount)
+    }
+}
+
+optimizer_budget_restore_state <- function(budget, state) {
+  count_names <- c(
+    "attempts",
+    "successes",
+    "total_errors",
+    "consecutive_errors",
+    setdiff(optimizer_budget_counter_names(), "known_cost"),
+    "unknown_metric_calls",
+    "unknown_provider_calls",
+    "unknown_input_tokens",
+    "unknown_output_tokens",
+    "unknown_total_tokens",
+    "unknown_cost_calls"
+  )
+  expected_names <- c(
+    "attempts",
+    "successes",
+    "total_errors",
+    "consecutive_errors",
+    optimizer_budget_counter_names(),
+    "unknown_metric_calls",
+    "unknown_provider_calls",
+    "unknown_input_tokens",
+    "unknown_output_tokens",
+    "unknown_total_tokens",
+    "unknown_cost_calls",
+    "elapsed_seconds",
+    "trial_units",
+    "completed_units",
+    "overshoots",
+    "stop_reason"
+  )
+  if (
+    !artifact_is_plain_list(state) ||
+      !identical(names(state), expected_names)
+  ) {
+    optimizer_budget_checkpoint_abort(
+      "Optimizer budget checkpoint has unknown, missing, or reordered fields"
+    )
+  }
+  for (name in count_names) {
+    value <- state[[name]]
+    if (
+      !is.integer(value) ||
+        length(value) != 1L ||
+        is.na(value) ||
+        value < 0L
+    ) {
+      optimizer_budget_checkpoint_abort(
+        paste0("Optimizer budget checkpoint count ", name, " is invalid")
+      )
+    }
+  }
+  for (name in c("known_cost", "elapsed_seconds")) {
+    value <- state[[name]]
+    if (
+      !is.double(value) ||
+        length(value) != 1L ||
+        is.na(value) ||
+        !is.finite(value) ||
+        value < 0
+    ) {
+      optimizer_budget_checkpoint_abort(
+        paste0("Optimizer budget checkpoint amount ", name, " is invalid")
+      )
+    }
+  }
+  if (
+    !optimizer_budget_has_exact_outcome_partition(
+      state$attempts,
+      state$successes,
+      state$total_errors
+    ) ||
+      state$consecutive_errors > state$total_errors
+  ) {
+    optimizer_budget_checkpoint_abort(
+      "Optimizer budget outcome counters are inconsistent"
+    )
+  }
+  valid_unit_ids <- function(value) {
+    is.character(value) &&
+      !anyNA(value) &&
+      !any(!nzchar(value)) &&
+      !anyDuplicated(value)
+  }
+  if (!valid_unit_ids(state$trial_units)) {
+    optimizer_budget_checkpoint_abort(
+      "Optimizer checkpoint trial unit IDs are invalid"
+    )
+  }
+  if (!valid_unit_ids(state$completed_units)) {
+    optimizer_budget_checkpoint_abort(
+      "Optimizer checkpoint completed unit IDs are invalid"
+    )
+  }
+  if (
+    !artifact_is_plain_list(state$overshoots) ||
+      !is.null(names(state$overshoots)) ||
+      !all(vapply(
+        state$overshoots,
+        optimizer_budget_validate_overshoot,
+        logical(1)
+      ))
+  ) {
+    optimizer_budget_checkpoint_abort(
+      "Optimizer checkpoint overshoot records are invalid"
+    )
+  }
+  if (!optimizer_budget_validate_stop_reason(state$stop_reason)) {
+    optimizer_budget_checkpoint_abort(
+      "Optimizer checkpoint stop reason is invalid"
+    )
+  }
+  if (!is.null(state$stop_reason) && state$stop_reason$code == "max_errors") {
+    reason <- state$stop_reason
+    if (
+      reason$attempts > state$attempts ||
+        reason$total_errors > state$total_errors ||
+        state$total_errors - reason$total_errors >
+          state$attempts - reason$attempts
+    ) {
+      optimizer_budget_checkpoint_abort(
+        "Optimizer checkpoint stop reason counters are inconsistent"
+      )
+    }
+  }
+  for (name in c(count_names, "known_cost")) {
+    budget[[name]] <- state[[name]]
+  }
+  budget$trial_units <- state$trial_units
+  budget$completed_units <- state$completed_units
+  budget$overshoots <- state$overshoots
+  budget$elapsed_offset <- state$elapsed_seconds
+  budget$last_elapsed <- state$elapsed_seconds
+  budget$started_tick <- as.numeric(budget$clock())
+  budget$stop_reason <- if (is.null(state$stop_reason)) {
+    NULL
+  } else {
+    structure(
+      state$stop_reason,
+      class = c("dsprrr_optimizer_stop_reason", "list")
+    )
+  }
+  invisible(budget)
+}
+
+optimizer_budget_clear_resumable_stop <- function(budget) {
+  reason <- budget$stop_reason
+  if (is.null(reason)) {
+    return(invisible(budget))
+  }
+  code <- reason$code %||% ""
+  clear <- FALSE
+  if (identical(code, "max_errors")) {
+    clear <- budget$consecutive_errors < max(1L, budget$max_errors)
+  } else if (code %in% names(budget$limits)) {
+    limit <- budget$limits[[code]]
+    resource <- optimizer_budget_limit_map()[[code]]
+    observed <- if (resource == "elapsed_seconds") {
+      budget$elapsed_offset
+    } else {
+      budget[[resource]]
+    }
+    clear <- is.null(limit) || observed < limit
+  } else {
+    unknown_limits <- c(
+      unknown_cost = "max_cost",
+      unknown_provider = "max_provider_calls",
+      unknown_metric = "max_metric_calls",
+      unknown_input_tokens = "max_input_tokens",
+      unknown_output_tokens = "max_output_tokens",
+      unknown_total_tokens = "max_total_tokens"
+    )
+    limit_name <- unknown_limits[[code]] %||% NULL
+    clear <- !is.null(limit_name) && is.null(budget$limits[[limit_name]])
+  }
+  if (clear) {
+    budget$stop_reason <- NULL
+  }
+  invisible(budget)
+}
+
+# Reconcile restored counters against the *current* control before any new
+# work can start. This permits raised/removed caps while failing closed for
+# stricter caps and for unknown historical usage under a newly finite cap.
+optimizer_budget_reconcile_current_limits <- function(
+  budget,
+  stage = "checkpoint_resume"
+) {
+  budget$stop_reason <- NULL
+
+  if (budget$consecutive_errors >= max(1L, budget$max_errors)) {
+    optimizer_budget_set_stop(
+      budget,
+      new_optimizer_stop_reason(budget, stage)
+    )
+    return(invisible(budget))
+  }
+
+  unknown_limits <- list(
+    max_metric_calls = list(
+      counter = "unknown_metric_calls",
+      code = "unknown_metric",
+      resource = "metric_calls"
+    ),
+    max_provider_calls = list(
+      counter = "unknown_provider_calls",
+      code = "unknown_provider",
+      resource = "provider_calls"
+    ),
+    max_input_tokens = list(
+      counter = "unknown_input_tokens",
+      code = "unknown_input_tokens",
+      resource = "input_tokens"
+    ),
+    max_output_tokens = list(
+      counter = "unknown_output_tokens",
+      code = "unknown_output_tokens",
+      resource = "output_tokens"
+    ),
+    max_total_tokens = list(
+      counter = "unknown_total_tokens",
+      code = "unknown_total_tokens",
+      resource = "total_tokens"
+    ),
+    max_cost = list(
+      counter = "unknown_cost_calls",
+      code = "unknown_cost",
+      resource = "cost_calls"
+    )
+  )
+  for (limit_name in names(unknown_limits)) {
+    entry <- unknown_limits[[limit_name]]
+    limit <- budget$limits[[limit_name]]
+    if (!is.null(limit) && budget[[entry$counter]] > 0L) {
+      optimizer_budget_set_stop(
+        budget,
+        optimizer_budget_reason(
+          code = entry$code,
+          stage = stage,
+          resource = entry$resource,
+          limit = limit,
+          observed = NA_real_,
+          overshoot = NA_real_,
+          work_unit = "checkpoint_history",
+          max_started = 0L,
+          message = sprintf(
+            "Cannot enforce %s because restored work reported unknown usage",
+            limit_name
+          )
+        )
+      )
+      return(invisible(budget))
+    }
+  }
+
+  elapsed <- optimizer_budget_elapsed(budget)
+  limit_map <- optimizer_budget_limit_map()
+  for (limit_name in names(limit_map)) {
+    limit <- budget$limits[[limit_name]]
+    if (is.null(limit)) {
+      next
+    }
+    resource <- limit_map[[limit_name]]
+    observed <- if (identical(resource, "elapsed_seconds")) {
+      elapsed
+    } else {
+      budget[[resource]]
+    }
+    if (observed >= limit) {
+      optimizer_budget_set_stop(
+        budget,
+        optimizer_budget_limit_reason(
+          budget,
+          limit_name,
+          stage,
+          observed = observed,
+          unit_id = NULL,
+          overshoot = max(0, observed - limit),
+          work_unit = "checkpoint_history",
+          max_started = 0L
+        )
+      )
+      return(invisible(budget))
+    }
+  }
+
+  invisible(budget)
 }
 
 new_optimizer_stop_reason <- function(budget, stage, condition = NULL) {
@@ -740,16 +2323,41 @@ record_optimizer_outcome <- function(
   # A completed batch can cross the boundary before all returned rows are
   # recorded. Keep accounting those executed outcomes while preserving the
   # first stop reason; callers use that sticky reason to prevent new work.
-  budget$attempts <- budget$attempts + 1L
+  next_attempts <- optimizer_budget_checked_increment(
+    budget$attempts,
+    1L,
+    "attempts",
+    stage
+  )
 
   if (isTRUE(success)) {
-    budget$successes <- budget$successes + 1L
+    next_successes <- optimizer_budget_checked_increment(
+      budget$successes,
+      1L,
+      "successes",
+      stage
+    )
+    budget$attempts <- next_attempts
+    budget$successes <- next_successes
     budget$consecutive_errors <- 0L
     return(invisible(budget))
   }
 
-  budget$total_errors <- budget$total_errors + 1L
-  budget$consecutive_errors <- budget$consecutive_errors + 1L
+  next_total_errors <- optimizer_budget_checked_increment(
+    budget$total_errors,
+    1L,
+    "total_errors",
+    stage
+  )
+  next_consecutive_errors <- optimizer_budget_checked_increment(
+    budget$consecutive_errors,
+    1L,
+    "consecutive_errors",
+    stage
+  )
+  budget$attempts <- next_attempts
+  budget$total_errors <- next_total_errors
+  budget$consecutive_errors <- next_consecutive_errors
 
   effective_limit <- max(1L, budget$max_errors)
   if (
@@ -839,6 +2447,13 @@ record_eval_result_outcomes <- function(budget, eval_result, stage) {
       }
     }
 
+    optimizer_budget_require_outcome_capacity(
+      budget,
+      successes = sum(!error_flags),
+      total_errors = sum(error_flags),
+      stage = stage
+    )
+
     for (index in seq_along(error_flags)) {
       is_error <- error_flags[[index]]
       condition <- if (is_error) {
@@ -862,9 +2477,22 @@ record_eval_result_outcomes <- function(budget, eval_result, stage) {
   }
 
   if (reported_successes == 0L && reported_errors == 0L) {
+    optimizer_budget_require_outcome_capacity(
+      budget,
+      successes = 1L,
+      total_errors = 0L,
+      stage = stage
+    )
     record_optimizer_outcome(budget, TRUE, stage)
     return(invisible(budget))
   }
+
+  optimizer_budget_require_outcome_capacity(
+    budget,
+    successes = reported_successes,
+    total_errors = reported_errors,
+    stage = stage
+  )
 
   # Without row detail, the actual ordering is unknowable. Record successes
   # first and group failures at the end so the reported failures form the
@@ -882,17 +2510,634 @@ record_eval_result_outcomes <- function(budget, eval_result, stage) {
   invisible(budget)
 }
 
+optimizer_min_provider_calls <- function(program) {
+  if (inherits(program, "FnModule")) {
+    return(0L)
+  }
+  if (inherits(program, "PipelineModule")) {
+    calls <- vapply(
+      program$steps,
+      function(step) {
+        optimizer_min_provider_calls(step@module)
+      },
+      integer(1)
+    )
+    return(sum(calls))
+  }
+  if (inherits(program, "MultiChainComparisonModule")) {
+    return(as.integer(program$M + 1L))
+  }
+  if (inherits(program, "ReActModule")) {
+    return(2L)
+  }
+  # All other current optimizer-supported Module implementations perform at
+  # least one provider operation. Exact postflight counts still come only from
+  # canonical metadata; this is a conservative preflight lower bound.
+  1L
+}
+
+optimizer_eval_usage <- function(eval_result) {
+  list(
+    metric_calls = if (is.na(eval_result@metric_calls)) {
+      NA_integer_
+    } else {
+      eval_result@metric_calls
+    },
+    provider_calls = if (isTRUE(eval_result@provider_usage_unknown)) {
+      NA_integer_
+    } else {
+      eval_result@provider_calls
+    },
+    input_tokens = if (isTRUE(eval_result@token_usage_unknown)) {
+      NA_integer_
+    } else {
+      eval_result@input_tokens
+    },
+    output_tokens = if (isTRUE(eval_result@token_usage_unknown)) {
+      NA_integer_
+    } else {
+      eval_result@output_tokens
+    },
+    total_tokens = if (isTRUE(eval_result@token_usage_unknown)) {
+      NA_integer_
+    } else {
+      eval_result@total_tokens
+    },
+    known_cost = eval_result@total_cost
+  )
+}
+
+optimizer_forward_output <- function(result) {
+  if (
+    is.data.frame(result) &&
+      "output" %in% names(result) &&
+      nrow(result) > 0L
+  ) {
+    return(result$output[[1L]])
+  }
+  result
+}
+
+optimizer_forward_usage <- function(program, result) {
+  metadata <- if (
+    is.data.frame(result) &&
+      "metadata" %in% names(result) &&
+      nrow(result) > 0L
+  ) {
+    result$metadata[[1L]]
+  } else {
+    NULL
+  }
+  usage <- optimizer_metadata_usage(program, metadata)
+  list(
+    provider_calls = usage$provider_calls,
+    input_tokens = usage$tokens_in,
+    output_tokens = usage$tokens_out,
+    total_tokens = usage$total_tokens,
+    known_cost = usage$total_cost
+  )
+}
+
+optimizer_unknown_provider_usage <- function() {
+  list(
+    provider_calls = NA_integer_,
+    input_tokens = NA_integer_,
+    output_tokens = NA_integer_,
+    total_tokens = NA_integer_,
+    known_cost = NA_real_
+  )
+}
+
+# Run one direct optimizer-side model request as a bounded work unit. A direct
+# request is one known provider call, but token/cost usage is only known when a
+# verified Chat turn delta exposes it. Opaque function/list adapters therefore
+# stop safely after this unit when a corresponding finite cap is active.
+optimizer_budgeted_provider_call <- function(
+  budget,
+  model,
+  stage,
+  unit_id,
+  call,
+  success = function(value, condition) is.null(condition),
+  work_unit = "optimizer_provider_call"
+) {
+  optimizer_budget_validate_stage(stage)
+  if (!is.function(call) || !is.function(success)) {
+    cli::cli_abort(
+      "{.arg call} and {.arg success} must be functions",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+  if (is.null(model)) {
+    return(list(started = FALSE, value = NULL, condition = NULL))
+  }
+  if (
+    !optimizer_budget_preflight(
+      budget,
+      stage = stage,
+      planned = list(
+        provider_calls = 1L,
+        input_tokens = 1L,
+        output_tokens = 1L,
+        total_tokens = 1L
+      ),
+      unit_id = unit_id,
+      work_unit = work_unit,
+      max_started = 0L
+    )
+  ) {
+    return(list(started = FALSE, value = NULL, condition = NULL))
+  }
+
+  turns_before <- if (inherits(model, "Chat")) {
+    batch_chat_turns(model)
+  } else {
+    NULL
+  }
+  condition <- NULL
+  value <- tryCatch(
+    call(),
+    error = function(e) {
+      condition <<- e
+      NULL
+    }
+  )
+  metadata <- if (inherits(model, "Chat")) {
+    chat_usage_metadata(model, turns_before = turns_before)
+  } else {
+    canonical_usage_metadata()
+  }
+  record_optimizer_usage(
+    budget,
+    list(
+      provider_calls = 1L,
+      input_tokens = metadata$input_tokens,
+      output_tokens = metadata$output_tokens,
+      total_tokens = metadata$total_tokens,
+      known_cost = metadata$cost
+    ),
+    stage = stage,
+    unit_id = unit_id,
+    work_unit = work_unit,
+    max_started = 1L
+  )
+  record_optimizer_outcome(
+    budget,
+    success = isTRUE(success(value, condition)),
+    stage = stage,
+    condition = condition
+  )
+  optimizer_budget_complete_unit(budget, unit_id)
+  list(started = TRUE, value = value, condition = condition)
+}
+
+optimizer_eval_row_record <- function(eval_result, row_index) {
+  example <- eval_result@examples[1L, , drop = FALSE]
+  list(
+    row_index = as.integer(row_index),
+    score = as.numeric(example$score[[1L]] %||% NA_real_),
+    error = as.character(example$error[[1L]] %||% NA_character_),
+    predicted = if ("predicted" %in% names(example)) {
+      example$predicted[[1L]]
+    } else {
+      NA
+    },
+    feedback = as.character(example$feedback[[1L]] %||% NA_character_),
+    input_tokens = eval_result@input_tokens,
+    output_tokens = eval_result@output_tokens,
+    total_tokens = eval_result@total_tokens,
+    total_cost = eval_result@total_cost,
+    provider_calls = eval_result@provider_calls,
+    metric_calls = eval_result@metric_calls,
+    provider_usage_unknown = eval_result@provider_usage_unknown,
+    tokens_unknown = eval_result@token_usage_unknown,
+    latency_ms = eval_result@total_latency_ms
+  )
+}
+
+optimizer_eval_checkpoint_records <- function(records) {
+  lapply(records, function(record) {
+    record$predicted <- NULL
+    record
+  })
+}
+
+optimizer_eval_restore_records <- function(records) {
+  if (is.null(records)) {
+    return(list())
+  }
+  if (!is.list(records)) {
+    cli::cli_abort(
+      "Partial optimizer evaluation state must be a list",
+      class = "dsprrr_optimizer_checkpoint_malformed"
+    )
+  }
+  lapply(records, function(record) {
+    if (!is.list(record) || is.null(record$row_index)) {
+      cli::cli_abort(
+        "Partial optimizer row state is malformed",
+        class = "dsprrr_optimizer_checkpoint_malformed"
+      )
+    }
+    record$predicted <- record$predicted %||% NA
+    record
+  })
+}
+
+optimizer_eval_known_sum <- function(records, field, integer = FALSE) {
+  values <- vapply(
+    records,
+    function(record) {
+      value <- record[[field]]
+      if (is.null(value) || length(value) != 1L) NA_real_ else as.numeric(value)
+    },
+    numeric(1)
+  )
+  if (length(values) == 0L || anyNA(values)) {
+    return(if (integer) NA_integer_ else NA_real_)
+  }
+  if (integer) as.integer(sum(values)) else sum(values)
+}
+
+optimizer_combine_eval_records <- function(records, dataset) {
+  if (length(records) == 0L) {
+    return(EvalResult(
+      examples = tibble::tibble(),
+      mean_score = NA_real_,
+      n_evaluated = 0L,
+      n_errors = 0L
+    ))
+  }
+  order_index <- order(vapply(records, `[[`, integer(1), "row_index"))
+  records <- records[order_index]
+  row_indices <- vapply(records, `[[`, integer(1), "row_index")
+  scores <- vapply(records, function(record) record$score, numeric(1))
+  errors <- vapply(
+    records,
+    function(record) {
+      record$error %||% NA_character_
+    },
+    character(1)
+  )
+  feedback <- vapply(
+    records,
+    function(record) {
+      record$feedback %||% NA_character_
+    },
+    character(1)
+  )
+  predictions <- lapply(records, `[[`, "predicted")
+  examples <- tibble::tibble(
+    row_id = row_indices,
+    score = scores,
+    error = errors,
+    predicted = predictions,
+    feedback = feedback
+  )
+  input_names <- intersect(names(dataset), names(dataset))
+  for (name in input_names) {
+    examples[[paste0("input_", name)]] <- dataset[[name]][row_indices]
+  }
+  valid_scores <- scores[!is.na(scores)]
+  std_error <- if (length(valid_scores) > 1L) {
+    stats::sd(valid_scores) / sqrt(length(valid_scores))
+  } else {
+    NA_real_
+  }
+  provider_unknown <- any(vapply(
+    records,
+    function(record) {
+      isTRUE(record$provider_usage_unknown)
+    },
+    logical(1)
+  ))
+  token_unknown <- any(vapply(
+    records,
+    function(record) {
+      isTRUE(record$tokens_unknown)
+    },
+    logical(1)
+  ))
+  total_cost <- optimizer_eval_known_sum(records, "total_cost")
+  provider_calls <- optimizer_eval_known_sum(
+    records,
+    "provider_calls",
+    integer = TRUE
+  )
+  metric_calls <- optimizer_eval_known_sum(
+    records,
+    "metric_calls",
+    integer = TRUE
+  )
+
+  EvalResult(
+    examples = examples,
+    mean_score = failure_adjusted_mean(scores),
+    std_error = std_error,
+    n_evaluated = as.integer(sum(!is.na(scores))),
+    n_errors = as.integer(sum(is.na(scores))),
+    input_tokens = optimizer_eval_known_sum(
+      records,
+      "input_tokens",
+      integer = TRUE
+    ),
+    output_tokens = optimizer_eval_known_sum(
+      records,
+      "output_tokens",
+      integer = TRUE
+    ),
+    total_tokens = optimizer_eval_known_sum(
+      records,
+      "total_tokens",
+      integer = TRUE
+    ),
+    total_cost = total_cost,
+    provider_calls = provider_calls,
+    metric_calls = metric_calls,
+    provider_usage_unknown = provider_unknown || is.na(provider_calls),
+    token_usage_unknown = token_unknown,
+    total_latency_ms = optimizer_eval_known_sum(records, "latency_ms")
+  )
+}
+
+optimizer_budget_requires_row_units <- function(budget) {
+  limits <- budget$limits[c(
+    "max_metric_calls",
+    "max_provider_calls",
+    "max_input_tokens",
+    "max_output_tokens",
+    "max_total_tokens",
+    "max_cost",
+    "max_elapsed_seconds"
+  )]
+  any(!vapply(limits, is.null, logical(1)))
+}
+
+# Evaluate one candidate while preserving the legacy whole-evaluation path when
+# no fine-grained resource cap is active. Any metric/provider/token/cost/time cap
+# switches to row units so its only postflight overshoot is one started row.
+optimizer_eval_candidate <- function(
+  program,
+  dataset,
+  metric,
+  .llm = NULL,
+  control = NULL,
+  budget = NULL,
+  stage,
+  unit_id,
+  ...
+) {
+  control <- control %||% optimizer_control()
+  budget <- budget %||% new_optimizer_budget(control)
+  if (optimizer_budget_requires_row_units(budget)) {
+    return(optimizer_eval_program(
+      program,
+      dataset,
+      metric,
+      .llm = .llm,
+      control = control,
+      budget = budget,
+      stage = stage,
+      unit_id = unit_id,
+      ...
+    ))
+  }
+  if (
+    !optimizer_budget_preflight(
+      budget,
+      stage = stage,
+      planned = list(trials = 1L),
+      unit_id = unit_id,
+      work_unit = "optimizer_trial",
+      max_started = 0L,
+      planned_outcomes = max(1L, nrow(dataset))
+    )
+  ) {
+    return(EvalResult())
+  }
+  result <- eval_program(
+    program,
+    dataset,
+    metric,
+    .llm = .llm,
+    control = control,
+    ...
+  )
+  record_optimizer_usage(
+    budget,
+    optimizer_eval_usage(result),
+    stage = stage,
+    unit_id = unit_id,
+    work_unit = "evaluation_dataset",
+    max_started = 1L
+  )
+  record_eval_result_outcomes(budget, result, stage)
+  optimizer_budget_count_trial(budget, stage, unit_id)
+  optimizer_budget_complete_unit(budget, unit_id)
+  result
+}
+
+# Evaluate one optimizer candidate in row-sized work units. The maximum
+# postflight overshoot is therefore the usage of one already-started evaluation
+# row in the current sequential implementation. When the shared concurrency
+# contract supplies `effective_workers`, callers may raise `max_started` to that
+# exact value without changing ledger semantics.
+optimizer_eval_program <- function(
+  program,
+  dataset,
+  metric,
+  .llm = NULL,
+  control = NULL,
+  budget,
+  stage,
+  unit_id,
+  partial_records = list(),
+  on_progress = NULL,
+  ...
+) {
+  if (is.null(control)) {
+    control <- optimizer_control()
+  }
+  if (!is.data.frame(dataset)) {
+    cli::cli_abort("{.arg dataset} must be a data frame")
+  }
+  optimizer_budget_validate_stage(stage)
+  records <- optimizer_eval_restore_records(partial_records)
+  completed_rows <- if (length(records) == 0L) {
+    integer()
+  } else {
+    vapply(records, `[[`, integer(1), "row_index")
+  }
+  started_trial <- length(records) > 0L
+
+  if (!started_trial) {
+    can_start <- optimizer_budget_preflight(
+      budget,
+      stage,
+      planned = list(trials = 1L),
+      unit_id = unit_id,
+      work_unit = "optimizer_trial",
+      max_started = 0L
+    )
+    if (!can_start) {
+      return(optimizer_combine_eval_records(records, dataset))
+    }
+  }
+
+  min_provider_calls <- optimizer_min_provider_calls(program)
+  planned <- list(metric_calls = 1L)
+  if (min_provider_calls > 0L) {
+    planned$provider_calls <- min_provider_calls
+    planned$input_tokens <- 1L
+    planned$output_tokens <- 1L
+    planned$total_tokens <- 1L
+  }
+
+  for (row_index in seq_len(nrow(dataset))) {
+    if (row_index %in% completed_rows) {
+      next
+    }
+    row_unit_id <- paste0(unit_id, ":row:", row_index)
+    if (
+      !optimizer_budget_preflight(
+        budget,
+        stage,
+        planned = planned,
+        unit_id = row_unit_id,
+        work_unit = "evaluation_row",
+        max_started = 0L
+      )
+    ) {
+      break
+    }
+    started_trial <- TRUE
+    row_result <- eval_program(
+      program,
+      dataset[row_index, , drop = FALSE],
+      metric,
+      .llm = .llm,
+      control = optimizer_control(
+        seed = control@seed,
+        max_errors = control@max_errors,
+        num_threads = 1L,
+        progress = FALSE,
+        log_dir = control@log_dir
+      ),
+      ...
+    )
+    record_optimizer_usage(
+      budget,
+      optimizer_eval_usage(row_result),
+      stage,
+      unit_id = row_unit_id,
+      work_unit = "evaluation_row",
+      max_started = 1L
+    )
+    record_eval_result_outcomes(budget, row_result, stage)
+    records[[length(records) + 1L]] <- optimizer_eval_row_record(
+      row_result,
+      row_index
+    )
+    optimizer_budget_complete_unit(budget, row_unit_id)
+    if (is.function(on_progress)) {
+      on_progress(
+        optimizer_eval_checkpoint_records(records),
+        row_index,
+        budget
+      )
+    }
+    if (optimizer_budget_stopped(budget)) {
+      break
+    }
+  }
+
+  result <- optimizer_combine_eval_records(records, dataset)
+  if (started_trial) {
+    optimizer_budget_count_trial(budget, stage, unit_id)
+  }
+  if (length(records) == nrow(dataset) && nrow(dataset) > 0L) {
+    optimizer_budget_complete_unit(budget, unit_id)
+  }
+  if (is.function(on_progress)) {
+    on_progress(
+      optimizer_eval_checkpoint_records(records),
+      if (length(records) == 0L) {
+        0L
+      } else {
+        max(vapply(
+          records,
+          `[[`,
+          integer(1),
+          "row_index"
+        ))
+      },
+      budget
+    )
+  }
+  result
+}
+
 optimizer_budget_stopped <- function(budget) {
   !is.null(budget$stop_reason)
 }
 
 optimizer_budget_summary <- function(budget) {
+  elapsed <- optimizer_budget_elapsed(budget)
   list(
     attempts = budget$attempts,
     successes = budget$successes,
     total_errors = budget$total_errors,
     consecutive_errors = budget$consecutive_errors,
     max_errors = budget$max_errors,
+    trials = budget$trials,
+    metric_calls = if (budget$unknown_metric_calls > 0L) {
+      NA_integer_
+    } else {
+      as.integer(budget$metric_calls)
+    },
+    known_metric_calls = as.integer(budget$metric_calls),
+    provider_calls = if (budget$unknown_provider_calls > 0L) {
+      NA_integer_
+    } else {
+      as.integer(budget$provider_calls)
+    },
+    known_provider_calls = as.integer(budget$provider_calls),
+    input_tokens = if (budget$unknown_input_tokens > 0L) {
+      NA_integer_
+    } else {
+      as.integer(budget$input_tokens)
+    },
+    known_input_tokens = as.integer(budget$input_tokens),
+    output_tokens = if (budget$unknown_output_tokens > 0L) {
+      NA_integer_
+    } else {
+      as.integer(budget$output_tokens)
+    },
+    known_output_tokens = as.integer(budget$output_tokens),
+    total_tokens = if (budget$unknown_total_tokens > 0L) {
+      NA_integer_
+    } else {
+      as.integer(budget$total_tokens)
+    },
+    known_total_tokens = as.integer(budget$total_tokens),
+    total_cost = if (budget$unknown_cost_calls > 0L) {
+      NA_real_
+    } else {
+      budget$known_cost
+    },
+    known_cost = budget$known_cost,
+    unknown_usage = list(
+      metric_calls = budget$unknown_metric_calls,
+      provider_calls = budget$unknown_provider_calls,
+      input_tokens = budget$unknown_input_tokens,
+      output_tokens = budget$unknown_output_tokens,
+      total_tokens = budget$unknown_total_tokens,
+      cost = budget$unknown_cost_calls
+    ),
+    elapsed_seconds = elapsed,
+    limits = budget$limits,
+    completed_units = budget$completed_units,
+    overshoots = budget$overshoots,
     stopped = optimizer_budget_stopped(budget),
     stop_reason = budget$stop_reason
   )

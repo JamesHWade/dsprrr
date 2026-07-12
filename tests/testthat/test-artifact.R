@@ -402,6 +402,104 @@ test_that("chat configuration records only provider and model", {
   expect_identical(restored_rlm_artifact$integrity, rlm_artifact$integrity)
 })
 
+test_that("ellmer provider metadata is specific and credential-free", {
+  make_artifact <- function(chat) {
+    program <- artifact_leaf()
+    program$chat <- chat
+    program_artifact(program)
+  }
+
+  openai_secret <- "OPENAI_PROVIDER_CREDENTIAL_SENTINEL"
+  anthropic_secret <- "ANTHROPIC_PROVIDER_CREDENTIAL_SENTINEL"
+  url_user_secret <- "URL_USERINFO_CREDENTIAL_SENTINEL"
+  url_query_secret <- "URL_QUERY_CREDENTIAL_SENTINEL"
+  model <- "shared-model"
+
+  openai <- ellmer::chat_openai(
+    credentials = function() openai_secret,
+    model = model
+  )
+  anthropic <- ellmer::chat_anthropic(
+    credentials = function() anthropic_secret,
+    model = model
+  )
+  other_endpoint <- ellmer::chat_openai(
+    credentials = function() openai_secret,
+    base_url = "https://gateway.example.test/v1",
+    model = model
+  )
+  unsafe_endpoint <- ellmer::chat_openai(
+    credentials = function() openai_secret,
+    base_url = paste0(
+      "https://user:",
+      url_user_secret,
+      "@gateway.example.test/v1?token=",
+      url_query_secret
+    ),
+    model = model
+  )
+
+  artifacts <- lapply(
+    list(openai, anthropic, other_endpoint, unsafe_endpoint),
+    make_artifact
+  )
+  metadata <- lapply(
+    artifacts,
+    function(artifact) artifact$graph$nodes[["$"]]$provider_model
+  )
+
+  expect_false(identical(metadata[[1L]], metadata[[2L]]))
+  expect_false(identical(metadata[[1L]], metadata[[3L]]))
+  expect_identical(metadata[[1L]]$model, model)
+
+  openai_provider <- jsonlite::fromJSON(metadata[[1L]]$provider)
+  anthropic_provider <- jsonlite::fromJSON(metadata[[2L]]$provider)
+  other_provider <- jsonlite::fromJSON(metadata[[3L]]$provider)
+  unsafe_provider <- jsonlite::fromJSON(metadata[[4L]]$provider)
+
+  expect_identical(
+    names(openai_provider),
+    c("class", "name", "base_url")
+  )
+  expect_identical(openai_provider$class, "ellmer::ProviderOpenAI")
+  expect_identical(openai_provider$name, "OpenAI")
+  expect_identical(
+    openai_provider$base_url,
+    "https://api.openai.com/v1"
+  )
+  expect_identical(anthropic_provider$name, "Anthropic")
+  expect_identical(
+    other_provider$base_url,
+    "https://gateway.example.test/v1"
+  )
+  expect_null(unsafe_provider$base_url)
+
+  rendered <- paste(capture.output(dput(artifacts)), collapse = "\n")
+  secrets <- c(
+    openai_secret,
+    anthropic_secret,
+    url_user_secret,
+    url_query_secret
+  )
+  expect_false(any(vapply(
+    secrets,
+    grepl,
+    logical(1),
+    x = rendered,
+    fixed = TRUE
+  )))
+  expect_false(any(vapply(
+    secrets,
+    grepl,
+    logical(1),
+    x = paste(
+      vapply(metadata, `[[`, character(1), "provider"),
+      collapse = "\n"
+    ),
+    fixed = TRUE
+  )))
+})
+
 test_that("registered function modules preserve behavior", {
   first_fn <- function(text, ...) list(intermediate = paste0(text, "!"))
   second_fn <- function(intermediate, ...) {
