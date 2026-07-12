@@ -1355,18 +1355,61 @@ test_that("checkpoint fingerprints reject secrets and stateful metrics", {
   unlink(path)
   fixture <- checkpoint_fixture(path)
 
-  expect_error(
-    optimizer_checkpoint_begin(
-      "Unsafe",
-      1L,
-      fixture$program,
-      fixture$data,
-      fixture$metric,
-      config = list(api_key = "secret"),
-      control = optimizer_control(checkpoint_path = path)
-    ),
-    class = "dsprrr_optimizer_checkpoint_unsafe_value"
+  secret_names <- c(
+    "api_key",
+    "openaiApiKey",
+    "openaiAPIKey",
+    "OpenAIAPIKey",
+    "OAuthAccessToken",
+    "clientSecret",
+    "ClientSecret",
+    "privateKey"
   )
+  for (name in secret_names) {
+    unsafe_config <- stats::setNames(list("secret"), name)
+    expect_error(
+      optimizer_checkpoint_begin(
+        "Unsafe",
+        1L,
+        fixture$program,
+        fixture$data,
+        fixture$metric,
+        config = unsafe_config,
+        control = optimizer_control(checkpoint_path = path)
+      ),
+      class = "dsprrr_optimizer_checkpoint_unsafe_value",
+      info = name
+    )
+  }
+
+  optimizer_checkpoint_write(
+    fixture$context,
+    "search",
+    search_state = list(index = 1L),
+    best_program = fixture$program
+  )
+  before <- readBin(path, "raw", n = file.info(path)$size)
+  for (name in secret_names[-1L]) {
+    unsafe_state <- stats::setNames(
+      list("CHECKPOINT_CAMEL_SECRET_SENTINEL"),
+      name
+    )
+    expect_error(
+      optimizer_checkpoint_write(
+        fixture$context,
+        "search",
+        search_state = unsafe_state,
+        best_program = fixture$program
+      ),
+      class = "dsprrr_optimizer_checkpoint_unsafe_value",
+      info = name
+    )
+    expect_identical(
+      readBin(path, "raw", n = file.info(path)$size),
+      before,
+      info = name
+    )
+  }
 
   stateful_value <- new.env(parent = emptyenv())
   stateful_value$value <- 1

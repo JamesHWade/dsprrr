@@ -1309,16 +1309,53 @@ artifact_is_supported_data_frame <- function(value) {
     identical(class(value), c("tbl_df", "tbl", "data.frame"))
 }
 
-artifact_is_secret_name <- function(name) {
+artifact_normalize_field_name <- function(name) {
+  if (
+    !is.character(name) ||
+      length(name) != 1L ||
+      is.na(name) ||
+      !nzchar(name)
+  ) {
+    return("")
+  }
+
+  # Split acronym-to-word before lower-to-upper so both `openaiAPIKey` and
+  # ordinary lower camel case retain semantic token boundaries.
+  name <- gsub(
+    "([A-Z]+)([A-Z][a-z])",
+    "\\1_\\2",
+    name,
+    perl = TRUE
+  )
+  name <- gsub(
+    "([a-z0-9])([A-Z])",
+    "\\1_\\2",
+    name,
+    perl = TRUE
+  )
   normalized <- gsub("[^a-z0-9]+", "_", tolower(name))
-  grepl(
+  gsub("^_+|_+$", "", normalized)
+}
+
+artifact_is_secret_name <- function(name) {
+  normalized <- artifact_normalize_field_name(name)
+  compact <- gsub("[^a-z0-9]+", "", tolower(name))
+  boundary_match <- grepl(
     paste0(
-      "(^|_)(api_?key|access_token|auth_token|authorization|",
+      "(^|_)(api_?key|access_key|access_token|auth_token|authorization|",
       "client_secret|cookies?|credentials?|password|passwd|private_key|",
-      "refresh_token|secret|session_token|token)(_|$)"
+      "refresh_token|secret|session_id|session_token|token)(_|$)"
     ),
     normalized
   )
+  compact_match <- grepl(
+    paste0(
+      "(apikey|accesskey|accesstoken|authtoken|clientsecret|privatekey|",
+      "refreshtoken|sessionid|sessiontoken)(file|path|value)?$"
+    ),
+    compact
+  )
+  boundary_match || compact_match
 }
 
 artifact_is_runtime_name <- function(name) {

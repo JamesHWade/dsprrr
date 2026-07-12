@@ -338,6 +338,61 @@ test_that("credentials and runtime history are excluded recursively", {
   )
 })
 
+test_that("credential names fail closed across camel and acronym styles", {
+  sentinel <- "ARTIFACT_CAMEL_SECRET_SENTINEL"
+  credential_names <- c(
+    "openaiApiKey",
+    "openaiAPIKey",
+    "OpenAIAPIKey",
+    "OAuthAccessToken",
+    "accessToken",
+    "clientSecret",
+    "ClientSecret",
+    "privateKey",
+    "refreshToken",
+    "sessionToken",
+    "apiKeyFile"
+  )
+  benign_names <- c(
+    "apiKeyboard",
+    "accessTokenizer",
+    "clientSecretariat",
+    "privateKeyboard",
+    "secretary",
+    "monKey"
+  )
+
+  expect_true(all(vapply(
+    credential_names,
+    dsprrr:::artifact_is_secret_name,
+    logical(1)
+  )))
+  expect_false(any(vapply(
+    benign_names,
+    dsprrr:::artifact_is_secret_name,
+    logical(1)
+  )))
+
+  program <- artifact_leaf()
+  for (name in credential_names) {
+    program$config[[name]] <- sentinel
+  }
+  for (name in benign_names) {
+    program$config[[name]] <- paste0("benign-", name)
+  }
+
+  artifact <- program_artifact(program)
+  rendered <- paste(capture.output(dput(artifact)), collapse = "\n")
+  restored <- restore_module_config(artifact)
+
+  expect_false(grepl(sentinel, rendered, fixed = TRUE))
+  expect_false(any(credential_names %in% names(restored$config)))
+  expect_identical(
+    unname(unlist(restored$config[benign_names], use.names = FALSE)),
+    paste0("benign-", benign_names)
+  )
+})
+
 test_that("chat configuration records only provider and model", {
   sentinel <- "CHAT_HISTORY_SENTINEL"
   fake_chat <- structure(
