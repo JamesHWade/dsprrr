@@ -2873,20 +2873,6 @@ optimizer_budget_requires_row_units <- function(budget) {
   any(!vapply(limits, is.null, logical(1)))
 }
 
-optimizer_validate_record_outcomes <- function(record_outcomes) {
-  if (
-    !is.logical(record_outcomes) ||
-      length(record_outcomes) != 1L ||
-      is.na(record_outcomes)
-  ) {
-    cli::cli_abort(
-      "{.arg record_outcomes} must be TRUE or FALSE",
-      class = "dsprrr_optimizer_invariant_error"
-    )
-  }
-  record_outcomes
-}
-
 # Evaluate one candidate while preserving the legacy whole-evaluation path when
 # no fine-grained resource cap is active. Any metric/provider/token/cost/time cap
 # switches to row units so its only postflight overshoot is one started row.
@@ -2899,10 +2885,8 @@ optimizer_eval_candidate <- function(
   budget = NULL,
   stage,
   unit_id,
-  record_outcomes = TRUE,
   ...
 ) {
-  record_outcomes <- optimizer_validate_record_outcomes(record_outcomes)
   control <- control %||% optimizer_control()
   budget <- budget %||% new_optimizer_budget(control)
   if (optimizer_budget_requires_row_units(budget)) {
@@ -2915,7 +2899,6 @@ optimizer_eval_candidate <- function(
       budget = budget,
       stage = stage,
       unit_id = unit_id,
-      record_outcomes = record_outcomes,
       ...
     ))
   }
@@ -2927,11 +2910,7 @@ optimizer_eval_candidate <- function(
       unit_id = unit_id,
       work_unit = "optimizer_trial",
       max_started = 0L,
-      planned_outcomes = if (record_outcomes) {
-        max(1L, nrow(dataset))
-      } else {
-        0L
-      }
+      planned_outcomes = max(1L, nrow(dataset))
     )
   ) {
     return(EvalResult())
@@ -2952,9 +2931,7 @@ optimizer_eval_candidate <- function(
     work_unit = "evaluation_dataset",
     max_started = 1L
   )
-  if (record_outcomes) {
-    record_eval_result_outcomes(budget, result, stage)
-  }
+  record_eval_result_outcomes(budget, result, stage)
   optimizer_budget_count_trial(budget, stage, unit_id)
   optimizer_budget_complete_unit(budget, unit_id)
   result
@@ -2976,10 +2953,8 @@ optimizer_eval_program <- function(
   unit_id,
   partial_records = list(),
   on_progress = NULL,
-  record_outcomes = TRUE,
   ...
 ) {
-  record_outcomes <- optimizer_validate_record_outcomes(record_outcomes)
   if (is.null(control)) {
     control <- optimizer_control()
   }
@@ -3030,8 +3005,7 @@ optimizer_eval_program <- function(
         planned = planned,
         unit_id = row_unit_id,
         work_unit = "evaluation_row",
-        max_started = 0L,
-        planned_outcomes = if (record_outcomes) 1L else 0L
+        max_started = 0L
       )
     ) {
       break
@@ -3059,9 +3033,7 @@ optimizer_eval_program <- function(
       work_unit = "evaluation_row",
       max_started = 1L
     )
-    if (record_outcomes) {
-      record_eval_result_outcomes(budget, row_result, stage)
-    }
+    record_eval_result_outcomes(budget, row_result, stage)
     records[[length(records) + 1L]] <- optimizer_eval_row_record(
       row_result,
       row_index

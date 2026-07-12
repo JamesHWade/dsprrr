@@ -528,6 +528,121 @@ test_that("Bootstrap random search honors caller resource controls", {
   expect_identical(budget$stop_reason$code, "max_metric_calls")
 })
 
+test_that("Bootstrap random search preserves mixed validation row outcomes", {
+  configs <- lapply(letters[1:2], function(name) {
+    list(name = name, type = "baseline")
+  })
+  eval_calls <- 0L
+
+  testthat::local_mocked_bindings(
+    generate_candidate_configs = function(...) configs,
+    compile_candidate = function(config, program, ...) copy_module(program),
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      EvalResult(
+        examples = tibble::tibble(
+          score = c(1, NA_real_),
+          error = c(NA_character_, "metric failed")
+        ),
+        mean_score = 0.5,
+        n_evaluated = 1L,
+        n_errors = 1L,
+        metric_calls = 2L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  teleprompter <- BootstrapFewShotWithRandomSearch(
+    metric = function(...) 1,
+    num_candidate_programs = 2L,
+    max_errors = 1L
+  )
+  result <- dsprrr:::compile_bootstrap_rs(
+    teleprompter,
+    module(signature("x -> y"), type = "predict"),
+    data.frame(x = "train", y = "train"),
+    valset = data.frame(
+      x = c("first", "second"),
+      y = c("first", "second")
+    )
+  )
+  optimizer <- result$config$optimizer
+  budget <- optimizer$budget_summary
+
+  expect_identical(eval_calls, 1L)
+  expect_identical(optimizer$num_candidates_evaluated, 1L)
+  expect_identical(optimizer$best_candidate, "a")
+  expect_identical(budget$attempts, 2L)
+  expect_identical(budget$successes, 1L)
+  expect_identical(budget$total_errors, 1L)
+  expect_identical(budget$consecutive_errors, 1L)
+  expect_true(budget$stopped)
+  expect_identical(budget$stop_reason$code, "max_errors")
+  expect_identical(
+    budget$stop_reason$stage,
+    "bootstrap_rs_validation"
+  )
+})
+
+test_that("Bootstrap random search returns baseline when validation is blocked", {
+  configs <- lapply(letters[1:2], function(name) {
+    list(name = name, type = "baseline")
+  })
+  eval_calls <- 0L
+
+  testthat::local_mocked_bindings(
+    generate_candidate_configs = function(...) configs,
+    compile_candidate = function(config, program, ...) {
+      compiled <- copy_module(program)
+      compiled$config$candidate_name <- config$name
+      compiled
+    },
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      EvalResult(mean_score = 1, n_evaluated = 1L, metric_calls = 1L)
+    },
+    .package = "dsprrr"
+  )
+
+  teleprompter <- BootstrapFewShotWithRandomSearch(
+    metric = function(...) 1,
+    num_candidate_programs = 2L
+  )
+  result <- dsprrr:::compile_bootstrap_rs(
+    teleprompter,
+    module(signature("x -> y"), type = "predict"),
+    data.frame(x = "train", y = "train"),
+    valset = data.frame(x = "val", y = "val"),
+    control = dsprrr:::optimizer_control(
+      max_metric_calls = 0L,
+      progress = FALSE
+    )
+  )
+  optimizer <- result$config$optimizer
+  budget <- optimizer$budget_summary
+
+  expect_s3_class(result, "PredictModule")
+  expect_identical(result$config$candidate_name, "a")
+  expect_identical(eval_calls, 0L)
+  expect_identical(optimizer$num_candidates_evaluated, 1L)
+  expect_true(optimizer$partial)
+  expect_false(optimizer$best_complete)
+  expect_identical(optimizer$best_candidate, NA_character_)
+  expect_identical(optimizer$best_score, NA_real_)
+  expect_false(optimizer$candidate_programs[[1L]]$complete)
+  expect_identical(budget$attempts, 0L)
+  expect_identical(budget$successes, 0L)
+  expect_identical(budget$total_errors, 0L)
+  expect_identical(budget$trials, 0L)
+  expect_identical(budget$metric_calls, 0L)
+  expect_true(budget$stopped)
+  expect_s3_class(budget$stop_reason, "dsprrr_optimizer_stop_reason")
+  expect_identical(optimizer$stop_reason, budget$stop_reason)
+  expect_identical(budget$stop_reason$code, "max_metric_calls")
+  expect_identical(budget$stop_reason$observed, 0L)
+})
+
 test_that("Bootstrap random search preserves its best at the exact limit", {
   configs <- lapply(letters[1:4], function(name) {
     list(name = name, type = "baseline")
@@ -618,14 +733,12 @@ test_that("Bootstrap random search rejects unusable evaluation scores", {
   expect_equal(eval_calls, 3L)
   expect_identical(optimizer$best_candidate, "a")
   expect_equal(optimizer$best_score, 0.9)
-  expect_equal(optimizer$budget_summary$attempts, 3L)
-  expect_equal(optimizer$budget_summary$successes, 1L)
+  expect_equal(optimizer$budget_summary$attempts, 5L)
+  expect_equal(optimizer$budget_summary$successes, 3L)
   expect_equal(optimizer$error_count, 2L)
-  expect_true(optimizer$budget_summary$stopped)
-  expect_identical(
-    optimizer$stop_reason$condition_class,
-    "dsprrr_optimizer_score_error"
-  )
+  expect_equal(optimizer$budget_summary$consecutive_errors, 1L)
+  expect_false(optimizer$budget_summary$stopped)
+  expect_null(optimizer$stop_reason)
   expect_equal(candidate_scores, c(0.9, NA_real_, NA_real_))
 })
 

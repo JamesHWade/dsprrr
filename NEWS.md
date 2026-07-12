@@ -75,7 +75,10 @@ First development changelog. dsprrr is experimental; the API may change.
 
 * `optimizer_control()` now applies `max_errors` as an exact consecutive-error
   boundary while retaining total-error and completed-evaluation overshoot
-  metadata consistently across optimizers.
+  metadata consistently across optimizers. Bootstrap random search preserves
+  validation outcomes row by row without adding a second candidate summary,
+  and returns its typed baseline/partial result when a strict resource budget
+  blocks the first validation.
 
 * Optimizer controls now cap metric and provider calls, input/output/total
   tokens, known cost, and monotonic elapsed time without treating unknown usage
