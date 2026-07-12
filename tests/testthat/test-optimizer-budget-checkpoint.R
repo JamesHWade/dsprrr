@@ -1482,6 +1482,67 @@ test_that("checkpoint program artifacts exclude camel runtime fields", {
   expect_silent(artifact_validate_manifest(checkpoint$best_program))
 })
 
+test_that("checkpoint program artifacts exclude connection credentials", {
+  path <- withr::local_tempfile(fileext = ".rds")
+  unlink(path)
+  fixture <- checkpoint_fixture(path)
+  credential_names <- c(
+    "databaseUrl",
+    "DATABASE_URL",
+    "connectionString",
+    "CONNECTION_STRING",
+    "dsn",
+    "DSN",
+    "jdbcUrl",
+    "redisUri",
+    "mongoUrl",
+    "postgresqlUri"
+  )
+  benign_names <- c(
+    "databaseUrlPolicy",
+    "connectionStringFormat",
+    "dsnDocumentation",
+    "redisUriTemplate"
+  )
+  sentinels <- stats::setNames(
+    paste0(
+      "CHECKPOINT_CONNECTION_SECRET_SENTINEL_",
+      seq_along(credential_names)
+    ),
+    credential_names
+  )
+  for (name in credential_names) {
+    fixture$program$config[[name]] <- sentinels[[name]]
+  }
+  for (name in benign_names) {
+    fixture$program$config[[name]] <- paste0("benign-", name)
+  }
+
+  optimizer_checkpoint_write(
+    fixture$context,
+    "search",
+    search_state = list(index = 1L),
+    best_program = fixture$program
+  )
+  checkpoint <- optimizer_checkpoint_read(path)
+  rendered <- paste(capture.output(dput(checkpoint)), collapse = "\n")
+  restored <- restore_module_config(checkpoint$best_program)
+
+  expect_false(any(vapply(
+    sentinels,
+    grepl,
+    logical(1),
+    x = rendered,
+    fixed = TRUE
+  )))
+  expect_false(any(credential_names %in% names(restored$config)))
+  expect_identical(
+    restored$config[benign_names],
+    as.list(stats::setNames(paste0("benign-", benign_names), benign_names))
+  )
+  expect_silent(artifact_validate_manifest(checkpoint$best_program))
+})
+
 test_that("Bootstrap module checkpoints bind the effective model by hash", {
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)

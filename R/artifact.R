@@ -1355,7 +1355,23 @@ artifact_is_secret_name <- function(name) {
     ),
     compact
   )
-  boundary_match || compact_match
+  connection_match <- normalized %in%
+    c(
+      "connection_string",
+      "connection_uri",
+      "connection_url",
+      "data_source_name",
+      "dsn"
+    ) ||
+    grepl(
+      paste0(
+        "^(database|db|jdbc|redis|mongo|mongodb|postgres|postgresql|",
+        "mysql|mariadb|mssql|sqlserver|snowflake|amqp|rabbitmq|broker|",
+        "smtp|ldap|elasticsearch|opensearch)_(url|uri)$"
+      ),
+      normalized
+    )
+  boundary_match || compact_match || connection_match
 }
 
 artifact_is_runtime_name <- function(name) {

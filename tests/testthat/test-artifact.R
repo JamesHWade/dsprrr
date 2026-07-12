@@ -393,6 +393,78 @@ test_that("credential names fail closed across camel and acronym styles", {
   )
 })
 
+test_that("credential-bearing connection fields fail closed", {
+  credential_names <- c(
+    "databaseUrl",
+    "DATABASE_URL",
+    "DatabaseURI",
+    "dbUrl",
+    "connectionString",
+    "ConnectionString",
+    "CONNECTION_STRING",
+    "connectionUri",
+    "dsn",
+    "DSN",
+    "dataSourceName",
+    "jdbcUrl",
+    "redisUrl",
+    "mongoUri",
+    "postgresqlUrl",
+    "mysqlUri"
+  )
+  benign_names <- c(
+    "databaseUrlPolicy",
+    "databaseUriParser",
+    "connectionStringFormat",
+    "connectionStringer",
+    "dsnDocumentation",
+    "dataSourceNamespace",
+    "redisUrlPolicy",
+    "mongoUriTemplate",
+    "webUrl"
+  )
+  sentinels <- stats::setNames(
+    paste0("ARTIFACT_CONNECTION_SECRET_SENTINEL_", seq_along(credential_names)),
+    credential_names
+  )
+
+  expect_true(all(vapply(
+    credential_names,
+    dsprrr:::artifact_is_secret_name,
+    logical(1)
+  )))
+  expect_false(any(vapply(
+    benign_names,
+    dsprrr:::artifact_is_secret_name,
+    logical(1)
+  )))
+
+  program <- artifact_leaf()
+  for (name in credential_names) {
+    program$config[[name]] <- sentinels[[name]]
+  }
+  for (name in benign_names) {
+    program$config[[name]] <- paste0("benign-", name)
+  }
+
+  artifact <- program_artifact(program)
+  rendered <- paste(capture.output(dput(artifact)), collapse = "\n")
+  restored <- restore_module_config(artifact)
+
+  expect_false(any(vapply(
+    sentinels,
+    grepl,
+    logical(1),
+    x = rendered,
+    fixed = TRUE
+  )))
+  expect_false(any(credential_names %in% names(restored$config)))
+  expect_identical(
+    restored$config[benign_names],
+    as.list(stats::setNames(paste0("benign-", benign_names), benign_names))
+  )
+})
+
 test_that("runtime fields are excluded across camel and acronym styles", {
   runtime_names <- c(
     "baseUrl",
