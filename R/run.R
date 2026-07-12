@@ -204,8 +204,7 @@ run.Module <- function(
   input_contract <- batch_input_contract(inputs)
   concurrency_runtime <- NULL
   if (identical(input_contract$kind, "batch")) {
-    runtime_chat <- .llm %||% module$chat %||%
-      get_default_chat(create = FALSE)
+    runtime_chat <- .llm %||% module$chat %||% get_default_chat(create = FALSE)
     concurrency_runtime <- normalize_concurrency_runtime(
       concurrency,
       .llm = .llm,
@@ -320,8 +319,7 @@ run.PredictModule <- function(
       )
     }
 
-    runtime_chat <- .llm %||% module$chat %||%
-      get_default_chat(create = FALSE)
+    runtime_chat <- .llm %||% module$chat %||% get_default_chat(create = FALSE)
     concurrency <- normalize_concurrency_runtime(
       concurrency,
       .llm = .llm,

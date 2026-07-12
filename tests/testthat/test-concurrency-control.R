@@ -544,7 +544,12 @@ test_that("mirai refuses to claim an occupied named profile", {
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
 
-  profile <- paste0("dsprrr-user-owned-", Sys.getpid(), "-", basename(tempfile()))
+  profile <- paste0(
+    "dsprrr-user-owned-",
+    Sys.getpid(),
+    "-",
+    basename(tempfile())
+  )
   mirai::daemons(1L, .compute = profile)
   withr::defer(mirai::daemons(0L, sync = TRUE, .compute = profile))
   deadline <- dsprrr:::concurrency_elapsed() + 5
@@ -833,7 +838,10 @@ test_that("mirai cancel false drains active work and quarantines queued rows", {
   )
 
   expect_true(file.exists(marker))
-  expect_identical(result[[1]]$metadata$error_class, "concurrency_test_provider_error")
+  expect_identical(
+    result[[1]]$metadata$error_class,
+    "concurrency_test_provider_error"
+  )
   expect_true(is.na(result[[2]]$metadata$error))
   expect_false(result[[2]]$metadata$cancelled)
   expect_identical(result[[3]]$metadata$cancellation_reason, "max_errors")

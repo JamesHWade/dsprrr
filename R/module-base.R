@@ -149,7 +149,8 @@ Module <- R6::R6Class(
             module_class = class(self)[1]
           )
         }
-        runtime_chat <- .llm %||% self$chat %||%
+        runtime_chat <- .llm %||%
+          self$chat %||%
           get_default_chat(create = FALSE)
         runtime <- .concurrency_runtime %||%
           normalize_concurrency_runtime(
