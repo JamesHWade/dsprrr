@@ -121,6 +121,120 @@ test_that("zero-row datasets preserve simple and structured shapes", {
   expect_length(dsprrr:::.dsprrr_env$prompt_history, 0L)
 })
 
+test_that("positive-row zero-input datasets execute every isolated row", {
+  sig <- Signature(
+    inputs = list(),
+    output_type = ellmer::type_object(answer = ellmer::type_string()),
+    instructions = "Return a constant answer"
+  )
+  data <- data.frame(row.names = seq_len(3L))
+
+  simple_mod <- module(sig, type = "predict")
+  simple_chat <- batch_contract_chat()
+  simple <- run_dataset(
+    simple_mod,
+    data,
+    .llm = simple_chat,
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_equal(nrow(simple), 3L)
+  expect_named(simple, "result")
+  expect_length(simple$result, 3L)
+  expect_true(all(vapply(simple$result, is.character, logical(1))))
+  expect_length(simple_mod$state$traces, 3L)
+  expect_equal(simple_chat$calls(), 0L)
+  expect_length(simple_chat$get_turns(), 0L)
+
+  clear_prompt_history()
+  structured_mod <- module(sig, type = "predict")
+  structured_chat <- batch_contract_chat()
+  control <- concurrency_control(backend = "sequential", max_active = 4L)
+  structured <- run_dataset(
+    structured_mod,
+    data,
+    .llm = structured_chat,
+    .concurrency = control,
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_equal(nrow(structured), 3L)
+  expect_named(structured, c("result", ".error", ".metadata", ".chat"))
+  expect_length(structured$result, 3L)
+  expect_true(all(is.na(structured$.error)))
+  expect_identical(
+    vapply(structured$.metadata, `[[`, integer(1), "batch_index"),
+    1:3
+  )
+  expect_identical(
+    vapply(structured$.metadata, `[[`, integer(1), "requested_workers"),
+    rep(4L, 3L)
+  )
+  expect_identical(
+    vapply(structured$.metadata, `[[`, integer(1), "effective_workers"),
+    rep(1L, 3L)
+  )
+  expect_true(all(vapply(
+    structured$.chat,
+    function(row_chat) {
+      length(row_chat$get_turns()) == 2L
+    },
+    logical(1)
+  )))
+  expect_length(structured_mod$state$traces, 3L)
+  expect_identical(
+    vapply(
+      structured_mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:3
+  )
+  expect_identical(
+    vapply(
+      structured_mod$state$traces,
+      function(trace) trace$metadata$requested_workers,
+      integer(1)
+    ),
+    rep(4L, 3L)
+  )
+  expect_identical(
+    vapply(
+      structured_mod$state$traces,
+      function(trace) trace$metadata$effective_workers,
+      integer(1)
+    ),
+    rep(1L, 3L)
+  )
+  history <- dsprrr:::.dsprrr_env$prompt_history
+  expect_length(history, 3L)
+  expect_identical(
+    vapply(history, function(entry) entry$metadata$batch_index, integer(1)),
+    1:3
+  )
+  expect_identical(
+    vapply(
+      history,
+      function(entry) entry$metadata$requested_workers,
+      integer(1)
+    ),
+    rep(4L, 3L)
+  )
+  expect_identical(
+    vapply(
+      history,
+      function(entry) entry$metadata$effective_workers,
+      integer(1)
+    ),
+    rep(1L, 3L)
+  )
+  expect_equal(structured_chat$calls(), 0L)
+  expect_length(structured_chat$get_turns(), 0L)
+})
+
 test_that("one-row datasets keep a simple result list-column", {
   mod <- module(signature("text -> answer"), type = "predict")
   result <- run_dataset(
@@ -225,7 +339,7 @@ test_that("scalar and sequential batch traces share one metadata contract", {
   expect_equal(length(dsprrr:::.dsprrr_env$prompt_history), 3L)
 })
 
-test_that("scalar simple output extracts the declared field like batch output", {
+test_that("scalar output stays named while batch rows stay simplified", {
   scalar_mod <- module(signature("text -> answer"), type = "predict")
   batch_mod <- module(signature("text -> answer"), type = "predict")
 
@@ -243,9 +357,10 @@ test_that("scalar simple output extracts the declared field like batch output", 
     .progress = FALSE
   )
 
-  expect_type(scalar, "character")
+  expect_named(scalar, "answer")
   expect_length(scalar, 1L)
-  expect_identical(scalar, batch[[1]])
+  expect_type(batch[[1]], "character")
+  expect_identical(scalar$answer, batch[[1]])
 })
 
 test_that("sequential failures still commit one ordered trace per row", {
@@ -969,6 +1084,468 @@ test_that("direct specialized Predict batches reject before forward work", {
   )
   expect_identical(mod$calls, 0L)
   expect_length(mod$state$traces, 0L)
+})
+
+specialized_dataset_chat <- function() {
+  turns <- list()
+  structure(
+    list(
+      get_turns = function(...) turns,
+      set_turns = function(value) {
+        turns <<- value
+        invisible(NULL)
+      },
+      record = function(value) {
+        turns <<- append(turns, list(value))
+        invisible(NULL)
+      }
+    ),
+    class = "Chat"
+  )
+}
+
+specialized_dataset_module <- function() {
+  SpecializedDatasetPredict <- R6::R6Class(
+    "BatchContractSpecializedDatasetPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      calls = list(),
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        self$calls <- append(self$calls, list(batch))
+        if (identical(batch$text, "bad")) {
+          stop("specialized row failed")
+        }
+        history_before <- length(.llm$get_turns())
+        .llm$record(batch$text)
+        tibble::tibble(
+          output = list(paste0("special:", batch$text)),
+          chat = list(.llm),
+          metadata = list(list(history_before = history_before))
+        )
+      }
+    )
+  )
+  SpecializedDatasetPredict$new(signature("text -> answer"))
+}
+
+test_that("datasets run specialized Predict modules through isolated scalar rows", {
+  mod <- specialized_dataset_module()
+  chat <- specialized_dataset_chat()
+
+  result <- run_dataset(
+    mod,
+    data.frame(text = c("one", "two")),
+    .llm = chat,
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_identical(result$result, list("special:one", "special:two"))
+  expect_identical(
+    vapply(result$.metadata, `[[`, integer(1), "history_before"),
+    c(0L, 0L)
+  )
+  expect_identical(
+    vapply(mod$calls, `[[`, character(1), "text"),
+    c("one", "two")
+  )
+  expect_true(all(lengths(mod$calls) == 1L))
+  expect_length(chat$get_turns(), 0L)
+  expect_true(all(vapply(
+    result$.chat,
+    function(row_chat) {
+      length(row_chat$get_turns()) == 1L
+    },
+    logical(1)
+  )))
+  expect_false(identical(result$.chat[[1]], result$.chat[[2]]))
+})
+
+test_that("specialized row traces and history inherit dataset metadata", {
+  TracingSpecializedPredict <- R6::R6Class(
+    "BatchContractTracingSpecializedPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        super$forward(batch, .llm = .llm, trace = trace, ...)
+      }
+    )
+  )
+  clear_prompt_history()
+  mod <- TracingSpecializedPredict$new(signature("text -> answer"))
+  chat <- batch_contract_chat()
+  control <- concurrency_control(backend = "sequential", max_active = 4L)
+
+  result <- run_dataset(
+    mod,
+    data.frame(text = c("one", "two")),
+    .llm = chat,
+    .concurrency = control,
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_identical(
+    vapply(result$.metadata, `[[`, integer(1), "batch_index"),
+    1:2
+  )
+  expect_identical(
+    vapply(result$.metadata, `[[`, integer(1), "requested_workers"),
+    rep(4L, 2L)
+  )
+  expect_length(mod$state$traces, 2L)
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:2
+  )
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$requested_workers,
+      integer(1)
+    ),
+    rep(4L, 2L)
+  )
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$effective_workers,
+      integer(1)
+    ),
+    rep(1L, 2L)
+  )
+  history <- dsprrr:::.dsprrr_env$prompt_history
+  expect_length(history, 2L)
+  expect_identical(
+    vapply(history, function(entry) entry$metadata$batch_index, integer(1)),
+    1:2
+  )
+  expect_identical(
+    vapply(
+      history,
+      function(entry) entry$metadata$requested_workers,
+      integer(1)
+    ),
+    rep(4L, 2L)
+  )
+  expect_identical(
+    vapply(
+      history,
+      function(entry) entry$metadata$effective_workers,
+      integer(1)
+    ),
+    rep(1L, 2L)
+  )
+  expect_equal(chat$calls(), 0L)
+  expect_length(chat$get_turns(), 0L)
+})
+
+test_that("history generation disambiguates identical ring replacements", {
+  RingTracingPredict <- R6::R6Class(
+    "BatchContractRingTracingPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        super$forward(batch, .llm = .llm, trace = trace, ...)
+      }
+    )
+  )
+  withr::local_options(dsprrr.prompt_history_max = 1L)
+  clear_prompt_history()
+  identical_entry <- list(
+    timestamp = as.POSIXct("2026-01-01", tz = "UTC"),
+    source = "PredictModule",
+    prompt = "identical",
+    response = "identical",
+    model = "identical"
+  )
+  testthat::local_mocked_bindings(
+    extract_history_entry = function(trace, source) {
+      rlang::duplicate(identical_entry, shallow = FALSE)
+    },
+    .package = "dsprrr"
+  )
+  add_to_global_history(list(), source = "PredictModule")
+  expect_identical(dsprrr:::prompt_history_generation(), 1)
+  expect_identical(dsprrr:::.dsprrr_env$prompt_history[[1]], identical_entry)
+
+  mod <- RingTracingPredict$new(signature("text -> answer"))
+  result <- run_dataset(
+    mod,
+    data.frame(text = "one"),
+    .llm = batch_contract_chat(),
+    .concurrency = concurrency_control(
+      backend = "sequential",
+      max_active = 4L
+    ),
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_length(result$result, 1L)
+  expect_length(mod$state$traces, 1L)
+  expect_length(dsprrr:::.dsprrr_env$prompt_history, 1L)
+  expect_identical(dsprrr:::prompt_history_generation(), 2)
+  expect_identical(
+    dsprrr:::.dsprrr_env$prompt_history[[1]]$metadata$batch_index,
+    1L
+  )
+  expect_identical(
+    dsprrr:::.dsprrr_env$prompt_history[[1]]$metadata$requested_workers,
+    4L
+  )
+  expect_identical(
+    dsprrr:::.dsprrr_env$prompt_history[[1]]$metadata$effective_workers,
+    1L
+  )
+})
+
+test_that("failed history capture never patches a prior entry", {
+  FailedHistoryTracingPredict <- R6::R6Class(
+    "BatchContractFailedHistoryTracingPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        super$forward(batch, .llm = .llm, trace = trace, ...)
+      }
+    )
+  )
+  clear_prompt_history()
+  add_to_global_history(
+    list(prompt = "prior", output = "prior", model = "prior"),
+    source = "prior"
+  )
+  .dsprrr_env$prompt_history[[1]]$metadata <- list(
+    batch_index = 99L,
+    requested_workers = 99L,
+    effective_workers = 99L
+  )
+  prior <- rlang::duplicate(
+    dsprrr:::.dsprrr_env$prompt_history[[1]],
+    shallow = FALSE
+  )
+  generation_before <- dsprrr:::prompt_history_generation()
+  testthat::local_mocked_bindings(
+    extract_history_entry = function(trace, source) {
+      stop("history capture probe failed")
+    },
+    .package = "dsprrr"
+  )
+
+  mod <- FailedHistoryTracingPredict$new(signature("text -> answer"))
+  expect_warning(
+    run_dataset(
+      mod,
+      data.frame(text = "one"),
+      .llm = batch_contract_chat(),
+      .concurrency = concurrency_control(
+        backend = "sequential",
+        max_active = 4L
+      ),
+      .return_format = "structured",
+      .progress = FALSE,
+      .cache = FALSE
+    ),
+    "Failed to capture prompt history"
+  )
+
+  expect_length(mod$state$traces, 1L)
+  expect_identical(mod$state$traces[[1]]$metadata$batch_index, 1L)
+  expect_identical(dsprrr:::prompt_history_generation(), generation_before)
+  expect_identical(dsprrr:::.dsprrr_env$prompt_history, list(prior))
+})
+
+test_that("specialized simple dataset rows have one stable output shape", {
+  NamedDatasetPredict <- R6::R6Class(
+    "BatchContractNamedDatasetPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        tibble::tibble(
+          output = list(list(answer = paste0("named:", batch$text))),
+          chat = list(.llm),
+          metadata = list(list())
+        )
+      }
+    )
+  )
+  mod <- NamedDatasetPredict$new(signature("text -> answer"))
+  chat <- specialized_dataset_chat()
+
+  one <- run_dataset(
+    mod,
+    data.frame(text = "one"),
+    .llm = chat,
+    .progress = FALSE
+  )
+  many <- run_dataset(
+    mod,
+    data.frame(text = c("one", "two")),
+    .llm = chat,
+    .progress = FALSE
+  )
+
+  expect_identical(one$result, list("named:one"))
+  expect_identical(many$result, list("named:one", "named:two"))
+  expect_identical(one$result[[1]], many$result[[1]])
+})
+
+test_that("specialized dataset concurrency intent rejects before row work", {
+  mod <- specialized_dataset_module()
+  chat <- specialized_dataset_chat()
+
+  expect_error(
+    run_dataset(
+      mod,
+      data.frame(text = c("one", "two")),
+      .llm = chat,
+      .concurrency = concurrency_control(backend = "auto", max_active = 2L),
+      .progress = FALSE
+    ),
+    class = "dsprrr_batch_unsupported_module"
+  )
+  expect_length(mod$calls, 0L)
+  expect_length(chat$get_turns(), 0L)
+})
+
+test_that("specialized row adapters reject unsupported controls before work", {
+  controls <- list(
+    concurrency_control(backend = "sequential", max_errors = 1L),
+    concurrency_control(backend = "sequential", task_timeout = 1),
+    concurrency_control(backend = "sequential", total_timeout = 1),
+    concurrency_control(backend = "sequential", cancel = FALSE)
+  )
+
+  for (control in controls) {
+    mod <- specialized_dataset_module()
+    chat <- specialized_dataset_chat()
+    expect_error(
+      run_dataset(
+        mod,
+        data.frame(text = c("one", "two")),
+        .llm = chat,
+        .concurrency = control,
+        .progress = FALSE
+      ),
+      class = "dsprrr_concurrency_unsupported_error"
+    )
+    expect_length(mod$calls, 0L)
+    expect_length(chat$get_turns(), 0L)
+  }
+})
+
+test_that("row adapters auto-resolve once and do not force local providers", {
+  auto_calls <- logical()
+  detected_chat <- specialized_dataset_chat()
+  testthat::local_mocked_bindings(
+    get_default_chat = function(create = TRUE) {
+      auto_calls <<- c(auto_calls, create)
+      if (create) detected_chat else NULL
+    },
+    .package = "dsprrr"
+  )
+  withr::local_envvar(c(
+    OPENAI_API_KEY = "mock-key",
+    ANTHROPIC_API_KEY = "",
+    GOOGLE_API_KEY = ""
+  ))
+
+  auto_mod <- specialized_dataset_module()
+  auto <- run_dataset(
+    auto_mod,
+    data.frame(text = c("one", "two")),
+    .return_format = "structured",
+    .progress = FALSE
+  )
+
+  expect_identical(auto_calls, TRUE)
+  expect_identical(auto$result, list("special:one", "special:two"))
+  expect_length(detected_chat$get_turns(), 0L)
+  expect_false(identical(auto$.chat[[1]], auto$.chat[[2]]))
+
+  LocalDatasetPredict <- R6::R6Class(
+    "BatchContractLocalDatasetPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        tibble::tibble(
+          output = list(paste0("local:", batch$text)),
+          chat = list(.llm),
+          metadata = list(list())
+        )
+      }
+    )
+  )
+  local_calls <- logical()
+  testthat::local_mocked_bindings(
+    get_default_chat = function(create = TRUE) {
+      local_calls <<- c(local_calls, create)
+      if (create) {
+        stop("provider creation must not be forced")
+      }
+      NULL
+    },
+    .package = "dsprrr"
+  )
+  withr::local_envvar(c(
+    OPENAI_API_KEY = "",
+    ANTHROPIC_API_KEY = "",
+    GOOGLE_API_KEY = ""
+  ))
+
+  local <- run_dataset(
+    LocalDatasetPredict$new(signature("text -> answer")),
+    data.frame(text = c("one", "two")),
+    .progress = FALSE
+  )
+  expect_identical(local_calls, FALSE)
+  expect_identical(local$result, list("local:one", "local:two"))
+})
+
+test_that("specialized dataset row failures preserve structured shape", {
+  mod <- specialized_dataset_module()
+  chat <- specialized_dataset_chat()
+
+  expect_warning(
+    result <- run_dataset(
+      mod,
+      data.frame(text = c("one", "bad", "three")),
+      .llm = chat,
+      .return_format = "structured",
+      .progress = FALSE
+    ),
+    "Failed to process item 2: specialized row failed"
+  )
+
+  expect_identical(result$result[[1]], "special:one")
+  expect_true(is.na(result$result[[2]]))
+  expect_identical(result$result[[3]], "special:three")
+  expect_true(is.na(result$.error[[1]]))
+  expect_match(result$.error[[2]], "specialized row failed")
+  expect_true(is.na(result$.error[[3]]))
+  expect_length(result$.metadata, 3L)
+  expect_length(result$.chat, 3L)
+  expect_length(mod$calls, 3L)
+  expect_length(chat$get_turns(), 0L)
+
+  simple_mod <- specialized_dataset_module()
+  expect_warning(
+    simple <- run_dataset(
+      simple_mod,
+      data.frame(text = c("one", "bad", "three")),
+      .llm = specialized_dataset_chat(),
+      .progress = FALSE
+    ),
+    "Failed to process item 2: specialized row failed"
+  )
+  expect_true(is.na(simple$result[[2]]))
+  expect_null(attributes(simple$result[[2]]))
 })
 
 test_that("cache observer failures never change model results", {

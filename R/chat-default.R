@@ -20,6 +20,7 @@ NULL
 .dsprrr_env <- new.env(parent = emptyenv())
 .dsprrr_env$prompt_history <- list()
 .dsprrr_env$prompt_history_max <- 100L
+.dsprrr_env$prompt_history_generation <- 0
 .dsprrr_env$scoped_lm <- NULL
 .dsprrr_env$cache_degraded <- FALSE
 .dsprrr_env$cache_degraded_reason <- NULL

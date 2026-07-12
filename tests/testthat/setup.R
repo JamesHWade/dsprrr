@@ -8,7 +8,13 @@
 # tempdirs, which take precedence over this default.
 
 dsprrr_test_cache_dir <- file.path(tempdir(), "dsprrr-test-cache")
-dir.create(dsprrr_test_cache_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(
+  dsprrr_test_cache_dir,
+  showWarnings = FALSE,
+  recursive = TRUE,
+  mode = "0700"
+)
+Sys.chmod(dsprrr_test_cache_dir, mode = "0700")
 
 withr::local_envvar(
   DSPRRR_CACHE_PATH = dsprrr_test_cache_dir,

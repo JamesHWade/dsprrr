@@ -1514,7 +1514,10 @@ run_predict_scalar <- function(
   }
 
   if (.return_format == "simple") {
-    extract_simple_output(item$output, module$signature@output_type)
+    # Preserve the scalar `run()` contract: structured provider responses stay
+    # named so callers can address declared output fields. Batch rows retain
+    # their historical single-field simplification in `process_batch_item()`.
+    item$output
   } else {
     structure(item, class = "dsprrr_result")
   }
@@ -3762,8 +3765,10 @@ run_dataset.Module <- function(
   if (length(required_names) > 0) {
     input_args <- as.list(data[required_names])
   } else {
-    # If no specific inputs, try to use all columns
-    input_args <- as.list(data)
+    # Rows still represent distinct evaluation attempts for a zero-input
+    # signature. Dataset-only columns (for example metric truth) are not module
+    # inputs and must not be used to manufacture a vectorized call.
+    input_args <- list()
   }
 
   # Run batch processing
@@ -3775,23 +3780,99 @@ run_dataset.Module <- function(
       .parallel_method = .parallel_method
     )
   }
-  results <- do.call(
-    run,
-    c(
-      list(module = module),
-      input_args,
-      c(
-        list(
-          .llm = .llm,
-          .verbose = .verbose,
-          .progress = .progress,
-          .return_format = .return_format
+  specialized_predict <- inherits(module, "PredictModule") &&
+    !identical(class(module)[1], "PredictModule")
+  scalar_row_adapter <- specialized_predict || length(required_names) == 0L
+
+  results <- if (scalar_row_adapter) {
+    unsupported_control <- is.finite(concurrency$max_errors) ||
+      is.finite(concurrency$task_timeout) ||
+      is.finite(concurrency$total_timeout) ||
+      !isTRUE(concurrency$cancel)
+    if (unsupported_control) {
+      cli::cli_abort(
+        c(
+          "Scalar dataset row execution cannot enforce this concurrency control",
+          "x" = "Finite error budgets, timeouts, and non-default cancellation are unsupported.",
+          "i" = "Use the default sequential control with unlimited errors and timeouts."
         ),
-        execution_args
-      ),
-      dots # Pass through additional arguments like .cache
+        class = c(
+          "dsprrr_batch_unsupported_module",
+          "dsprrr_concurrency_unsupported_error"
+        ),
+        module_class = class(module)[1]
+      )
+    }
+    concurrent_request <- concurrency$backend %in%
+      c("ellmer", "mirai") ||
+      (identical(concurrency$backend, "auto") && concurrency$max_active > 1L)
+    if (concurrent_request) {
+      cli::cli_abort(
+        c(
+          "Concurrent dataset execution is not supported for scalar row adapters",
+          "x" = "{.cls {class(module)[1]}} requires the scalar row execution contract.",
+          "i" = "Use sequential execution so every dataset row is isolated and observable."
+        ),
+        class = c(
+          "dsprrr_batch_unsupported_module",
+          "dsprrr_concurrency_unsupported_error"
+        ),
+        module_class = class(module)[1]
+      )
+    }
+
+    runtime_chat <- resolve_dataset_row_chat(module, .llm)
+    concurrency_runtime <- normalize_concurrency_runtime(
+      concurrency,
+      .llm = .llm,
+      .chat = runtime_chat
     )
-  )
+    if (!identical(concurrency_runtime$effective_backend, "sequential")) {
+      cli::cli_abort(
+        c(
+          "Concurrent dataset execution is not supported for scalar row adapters",
+          "x" = "{.cls {class(module)[1]}} requires the scalar row execution contract.",
+          "i" = "Use sequential execution so every dataset row is isolated and observable."
+        ),
+        class = c(
+          "dsprrr_batch_unsupported_module",
+          "dsprrr_concurrency_unsupported_error"
+        ),
+        module_class = class(module)[1]
+      )
+    }
+
+    run_scalar_dataset_rows(
+      module = module,
+      input_args = input_args,
+      n = nrow(data),
+      .runtime_chat = runtime_chat,
+      .verbose = .verbose,
+      .progress = .progress,
+      .return_format = .return_format,
+      .concurrency = concurrency,
+      .concurrency_runtime = concurrency_runtime,
+      dots = dots
+    )
+  } else {
+    do.call(
+      run,
+      c(
+        list(module = module),
+        input_args,
+        c(
+          list(
+            .llm = .llm,
+            .verbose = .verbose,
+            .progress = .progress,
+            .return_format = .return_format
+          ),
+          execution_args
+        ),
+        dots # Pass through additional arguments like .cache
+      )
+    )
+  }
 
   if (.return_format == "structured" && inherits(results, "dsprrr_result")) {
     results <- list(results)
@@ -3799,7 +3880,14 @@ run_dataset.Module <- function(
 
   # Add results to data
   if (.return_format == "simple") {
-    if (nrow(data) == 1L || length(results) != nrow(data)) {
+    if (nrow(data) == 1L) {
+      # `run()` preserves named scalar responses, while dataset rows use the
+      # same simplified shape as rows produced by vectorized batch execution.
+      results <- list(extract_simple_output(
+        results,
+        module$signature@output_type
+      ))
+    } else if (length(results) != nrow(data)) {
       results <- list(results)
     }
     data$result <- results
@@ -3816,6 +3904,187 @@ run_dataset.Module <- function(
   }
 
   tibble::as_tibble(data)
+}
+
+#' Resolve one optional Chat for isolated scalar dataset rows
+#' @noRd
+resolve_dataset_row_chat <- function(module, .llm) {
+  runtime_chat <- .llm %||% module$chat
+  if (!is.null(runtime_chat)) {
+    return(runtime_chat)
+  }
+
+  provider_env_available <- any(nzchar(Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))))
+  get_default_chat(create = provider_env_available)
+}
+
+#' Execute dataset attempts through an isolated scalar row contract
+#' @noRd
+run_scalar_dataset_rows <- function(
+  module,
+  input_args,
+  n,
+  .runtime_chat,
+  .verbose,
+  .progress,
+  .return_format,
+  .concurrency,
+  .concurrency_runtime,
+  dots
+) {
+  results <- vector("list", n)
+  row_llms <- if (is.null(.runtime_chat)) {
+    rep(list(NULL), n)
+  } else {
+    batch_chat_branches(.runtime_chat, n)
+  }
+  progress_id <- NULL
+  if (.progress && n > 1L) {
+    progress_id <- cli::cli_progress_bar(
+      format = "Processing {cli::pb_current}/{cli::pb_total} | {cli::pb_percent} | ETA: {cli::pb_eta}",
+      total = n,
+      clear = FALSE
+    )
+  }
+
+  for (i in seq_len(n)) {
+    row_inputs <- lapply(input_args, `[[`, i)
+    trace_count_before <- length(module$state$traces %||% list())
+    history_generation_before <- prompt_history_generation()
+    results[[i]] <- tryCatch(
+      do.call(
+        run,
+        c(
+          list(module = module),
+          row_inputs,
+          list(
+            .llm = row_llms[[i]],
+            .verbose = .verbose,
+            .concurrency = .concurrency,
+            .progress = FALSE,
+            .return_format = .return_format
+          ),
+          dots
+        )
+      ),
+      error = function(error) {
+        cli::cli_warn(
+          "Failed to process item {i}: {run_error_message(error)}"
+        )
+        create_error_result(
+          error = error,
+          index = i,
+          prompt = "",
+          instructions = module$signature@instructions %||% "",
+          llm = row_llms[[i]],
+          .return_format = .return_format
+        )
+      }
+    )
+    reconcile_dataset_row_observability(
+      module = module,
+      trace_count_before = trace_count_before,
+      history_generation_before = history_generation_before,
+      row_index = i,
+      runtime = .concurrency_runtime
+    )
+    if (identical(.return_format, "simple")) {
+      results[[i]] <- extract_simple_output(
+        results[[i]],
+        module$signature@output_type
+      )
+    }
+    results[[i]] <- annotate_concurrency_result(
+      results[[i]],
+      .concurrency_runtime,
+      .return_format
+    )
+    if (identical(.return_format, "structured")) {
+      results[[i]]$metadata$batch_index <- i
+    } else {
+      results[[i]] <- strip_run_trace(results[[i]])
+    }
+
+    if (!is.null(progress_id)) {
+      cli::cli_progress_update(id = progress_id)
+    }
+  }
+
+  if (!is.null(progress_id)) {
+    cli::cli_progress_done(id = progress_id)
+  }
+  if (identical(.return_format, "simple") && n == 1L) {
+    results[[1]]
+  } else {
+    results
+  }
+}
+
+#' Reconcile an already-committed scalar trace with its dataset row contract
+#' @noRd
+reconcile_dataset_row_observability <- function(
+  module,
+  trace_count_before,
+  history_generation_before,
+  row_index,
+  runtime
+) {
+  fields <- concurrency_metadata(runtime)
+  fields$backend <- runtime$effective_backend
+  fields$batch_index <- as.integer(row_index)
+
+  traces <- module$state$traces %||% list()
+  trace_count_after <- length(traces)
+  trace_indices <- if (trace_count_after > trace_count_before) {
+    seq.int(trace_count_before + 1L, trace_count_after)
+  } else {
+    integer()
+  }
+  patched_traces <- vector("list", length(trace_indices))
+  for (offset in seq_along(trace_indices)) {
+    index <- trace_indices[[offset]]
+    trace <- traces[[index]]
+    trace$metadata <- trace$metadata %||% list()
+    trace$metadata[names(fields)] <- fields
+    traces[[index]] <- trace
+    patched_traces[[offset]] <- trace
+  }
+  module$state$traces <- traces
+
+  history <- .dsprrr_env$prompt_history %||% list()
+  history_count_after <- length(history)
+  successful_appends <- prompt_history_generation_delta(
+    history_generation_before,
+    prompt_history_generation()
+  )
+  history_added <- min(successful_appends, as.numeric(history_count_after))
+  if (history_added > 0L) {
+    history_indices <- seq.int(
+      history_count_after - history_added + 1L,
+      history_count_after
+    )
+    trace_offset <- max(0L, length(patched_traces) - length(history_indices))
+    for (offset in seq_along(history_indices)) {
+      index <- history_indices[[offset]]
+      entry <- history[[index]]
+      patched_index <- trace_offset + offset
+      metadata <- if (patched_index <= length(patched_traces)) {
+        patched_traces[[patched_index]]$metadata
+      } else {
+        entry$metadata %||% list()
+      }
+      metadata[names(fields)] <- fields
+      entry$metadata <- metadata
+      history[[index]] <- entry
+    }
+    .dsprrr_env$prompt_history <- history
+  }
+
+  invisible(module)
 }
 
 # Internal: Show prompt preview before LLM call
