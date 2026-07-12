@@ -165,53 +165,28 @@ test_that("BootstrapFewShot compile adds labeled demos from trainset", {
 })
 
 test_that("BootstrapFewShot compile bootstraps demos with metric", {
-  MockBootstrapModule <- R6::R6Class(
-    "MockBootstrapModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      call_count = 0,
-      initialize = function(
-        signature,
-        template = "",
-        demos = list(),
-        config = list()
-      ) {
-        super$initialize(
-          signature,
-          template = template,
-          demos = demos,
-          config = config
-        )
-      },
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        self$call_count <- self$call_count + 1
-        # Return predictable output based on input
-        input_val <- batch[[1]][[1]]
-        output_val <- switch(
-          input_val,
-          "What is 2+2?" = "4",
-          "What is 3+3?" = "6",
-          "What is 4+4?" = "8",
-          "What is 5+5?" = "10",
-          "unknown"
-        )
-        tibble::tibble(
-          output = list(output_val),
-          chat = list(NULL),
-          metadata = list(list())
-        )
-      }
-      # No need to override deepcopy - parent's clone-based impl preserves subclass
-    )
-  )
-
   sig <- Signature(
     inputs = list(input(name = "question", class = S7::class_character)),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
-  mod <- MockBootstrapModule$new(signature = sig, template = "{question}")
+  mod <- module(signature = sig, type = "predict", template = "{question}")
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, ...) {
+      lines <- trimws(strsplit(prompt, "\n", fixed = TRUE)[[1L]])
+      question <- utils::tail(lines[nzchar(lines)], 1L)
+      switch(
+        question,
+        "What is 2+2?" = "4",
+        "What is 3+3?" = "6",
+        "What is 4+4?" = "8",
+        "What is 5+5?" = "10",
+        "unknown"
+      )
+    }),
+    class = "Chat"
+  )
 
   trainset <- data.frame(
     question = c(
@@ -238,7 +213,7 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset)
+  result <- compile(tp, mod, trainset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
@@ -248,7 +223,7 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
   n_bootstrapped <- result$config$optimizer$n_bootstrapped_demos
 
   expect_equal(n_labeled, 1)
-  expect_gte(n_bootstrapped, 0) # May have bootstrapped some
+  expect_equal(n_bootstrapped, 2)
 
   # Total demos should not exceed limits
   expect_lte(length(result$demos), 3) # 1 labeled + up to 2 bootstrapped
@@ -432,41 +407,17 @@ test_that("BootstrapFewShot print method works", {
 })
 
 test_that("BootstrapFewShot respects metric_threshold", {
-  MockThresholdModule <- R6::R6Class(
-    "MockThresholdModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      initialize = function(
-        signature,
-        template = "",
-        demos = list(),
-        config = list()
-      ) {
-        super$initialize(
-          signature,
-          template = template,
-          demos = demos,
-          config = config
-        )
-      },
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        tibble::tibble(
-          output = list("predicted"),
-          chat = list(NULL),
-          metadata = list(list())
-        )
-      }
-      # No need to override deepcopy - parent's clone-based impl preserves subclass
-    )
-  )
-
   sig <- Signature(
     inputs = list(input(name = "x", class = S7::class_character)),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
 
-  mod <- MockThresholdModule$new(signature = sig)
+  mod <- module(signature = sig, type = "predict")
+  mock_llm <- structure(
+    list(chat_structured = function(...) "predicted"),
+    class = "Chat"
+  )
 
   trainset <- data.frame(
     x = c("a", "b", "c", "d"),
@@ -484,7 +435,7 @@ test_that("BootstrapFewShot respects metric_threshold", {
     max_bootstrapped_demos = 2L
   )
 
-  result_high <- compile(tp_high_threshold, mod, trainset)
+  result_high <- compile(tp_high_threshold, mod, trainset, .llm = mock_llm)
   expect_equal(result_high$config$optimizer$n_bootstrapped_demos, 0)
 
   # Threshold of 0.2 - demos should pass
@@ -495,8 +446,8 @@ test_that("BootstrapFewShot respects metric_threshold", {
     max_bootstrapped_demos = 2L
   )
 
-  result_low <- compile(tp_low_threshold, mod, trainset)
-  expect_gte(result_low$config$optimizer$n_bootstrapped_demos, 0)
+  result_low <- compile(tp_low_threshold, mod, trainset, .llm = mock_llm)
+  expect_equal(result_low$config$optimizer$n_bootstrapped_demos, 2)
 })
 
 test_that("compile_module works with BootstrapFewShot", {
