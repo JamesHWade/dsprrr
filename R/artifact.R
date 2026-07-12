@@ -30,10 +30,13 @@
 #' @param trusted Whether arbitrary runtime values may be embedded or restored.
 #'   This is `FALSE` by default and should be enabled only for artifacts and code
 #'   you trust.
-#' @param path A local artifact file. `save_program()` stages and validates a
-#'   temporary file in the same directory, then atomically creates or replaces
-#'   the destination. If the final replacement fails, an existing destination
-#'   is left unchanged.
+#' @param path An artifact path on a stable local filesystem, in a containing
+#'   directory trusted against hostile concurrent mutation. `save_program()`
+#'   stages and validates a private temporary file in the same directory, then
+#'   publishes it with a same-filesystem atomic move. An ordinary move failure
+#'   leaves an existing destination unchanged, or publishes no destination. If
+#'   verification after a successful move fails, `save_program()` errors but the
+#'   new destination may already be present.
 #'
 #' @return
 #' * `program_artifact()` returns a `dsprrr_program_artifact` manifest.
@@ -1851,13 +1854,6 @@ artifact_write_lines <- function(lines, path) {
 }
 
 artifact_atomic_identity <- function(path) {
-  if (
-    !file.exists(path) ||
-      cache_path_is_symlink(path) ||
-      !cache_path_is_regular(path)
-  ) {
-    return(NULL)
-  }
   info <- tryCatch(
     suppressWarnings(fs::file_info(path, follow = FALSE, fail = FALSE)),
     error = function(e) NULL
@@ -1866,9 +1862,11 @@ artifact_atomic_identity <- function(path) {
     is.null(info) ||
       nrow(info) != 1L ||
       !all(
-        c("device_id", "inode", "size", "modification_time") %in%
+        c("type", "device_id", "inode", "size", "modification_time") %in%
           names(info)
-      )
+      ) ||
+      is.na(info$type[[1L]]) ||
+      !identical(as.character(info$type[[1L]]), "file")
   ) {
     return(NULL)
   }
@@ -1887,6 +1885,13 @@ artifact_atomic_identity <- function(path) {
     return(NULL)
   }
   identity
+}
+
+artifact_atomic_same_file <- function(left, right) {
+  !is.null(left) &&
+    !is.null(right) &&
+    identical(left$device_id, right$device_id) &&
+    identical(left$inode, right$inode)
 }
 
 artifact_file_hold <- function(path) {
@@ -1981,6 +1986,12 @@ artifact_atomic_replace <- function(source, destination, what) {
     if (is.null(destination_identity)) {
       cli::cli_abort(
         "Could not verify the existing {what} destination at {.path {destination}}",
+        class = "dsprrr_artifact_io_error"
+      )
+    }
+    if (artifact_atomic_same_file(source_identity, destination_identity)) {
+      cli::cli_abort(
+        "Could not atomically publish {what}: staging and destination paths reference the same existing file",
         class = "dsprrr_artifact_io_error"
       )
     }

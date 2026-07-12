@@ -125,8 +125,9 @@ First development changelog. dsprrr is experimental; the API may change.
   multimodal demos, and curated optimization state. Runtime objects use stable
   registry IDs by default or require dual `trusted = TRUE` opt-in; pins and
   standalone code export reuse the same validated manifest, and legacy v2 pins
-  migrate without retaining raw trial/runtime history (#dsprrr-g6gq,
-  #dsprrr-07u).
+  migrate without retaining raw trial/runtime history. Local persistence rejects
+  same-file aliases before publication and documents its stable-local-filesystem
+  and trusted-directory atomicity boundary (#dsprrr-g6gq, #dsprrr-07u).
 
 ## Internal
 

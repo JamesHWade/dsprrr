@@ -1629,6 +1629,90 @@ test_that("atomic replacement rejects cross-directory publication", {
   expect_identical(readLines(source), "new")
 })
 
+test_that("atomic replacement rejects hard-link aliases without mutation", {
+  directory <- withr::local_tempdir()
+  source <- file.path(directory, "staged.txt")
+  destination <- file.path(directory, "published.txt")
+  writeLines("staged-content", source)
+  linked <- suppressWarnings(file.link(source, destination))
+  skip_if_not(isTRUE(linked), "hard links are unavailable")
+  before_source <- readBin(source, "raw", n = file.info(source)$size)
+  before_destination <- readBin(
+    destination,
+    "raw",
+    n = file.info(destination)$size
+  )
+  source_identity <- dsprrr:::artifact_atomic_identity(source)
+  destination_identity <- dsprrr:::artifact_atomic_identity(destination)
+
+  condition <- rlang::catch_cnd(
+    dsprrr:::artifact_atomic_replace(source, destination, "test artifact")
+  )
+
+  expect_s3_class(condition, "dsprrr_artifact_io_error")
+  expect_match(conditionMessage(condition), "same existing file")
+  expect_identical(
+    dsprrr:::artifact_atomic_identity(source),
+    source_identity
+  )
+  expect_identical(
+    dsprrr:::artifact_atomic_identity(destination),
+    destination_identity
+  )
+  expect_identical(
+    readBin(source, "raw", n = file.info(source)$size),
+    before_source
+  )
+  expect_identical(
+    readBin(destination, "raw", n = file.info(destination)$size),
+    before_destination
+  )
+})
+
+test_that("atomic replacement rejects case aliases where supported", {
+  directory <- withr::local_tempdir()
+  source <- file.path(directory, "staged.txt")
+  destination <- file.path(directory, "STAGED.txt")
+  writeLines("staged-content", source)
+  skip_if_not(
+    file.exists(destination),
+    "the filesystem is case-sensitive"
+  )
+  source_identity <- dsprrr:::artifact_atomic_identity(source)
+  destination_identity <- dsprrr:::artifact_atomic_identity(destination)
+  skip_if_not(
+    dsprrr:::artifact_atomic_same_file(
+      source_identity,
+      destination_identity
+    ),
+    "case variants do not identify the same file"
+  )
+  before <- readBin(source, "raw", n = file.info(source)$size)
+
+  condition <- rlang::catch_cnd(
+    dsprrr:::artifact_atomic_replace(source, destination, "test artifact")
+  )
+
+  expect_s3_class(condition, "dsprrr_artifact_io_error")
+  expect_match(conditionMessage(condition), "same existing file")
+  expect_identical(
+    dsprrr:::artifact_atomic_identity(source),
+    source_identity
+  )
+  expect_identical(
+    dsprrr:::artifact_atomic_identity(destination),
+    destination_identity
+  )
+  expect_identical(
+    readBin(source, "raw", n = file.info(source)$size),
+    before
+  )
+  expect_identical(
+    readBin(destination, "raw", n = file.info(destination)$size),
+    before
+  )
+})
+
 test_that("artifact staging is private before any RDS content is written", {
   skip_if(.Platform$OS.type != "unix")
   writer <- dsprrr:::artifact_write_rds

@@ -23,10 +23,13 @@ contain registry names, never the registered values themselves.}
 This is \code{FALSE} by default and should be enabled only for artifacts and code
 you trust.}
 
-\item{path}{A local artifact file. \code{save_program()} stages and validates a
-temporary file in the same directory, then atomically creates or replaces
-the destination. If the final replacement fails, an existing destination
-is left unchanged.}
+\item{path}{An artifact path on a stable local filesystem, in a containing
+directory trusted against hostile concurrent mutation. \code{save_program()}
+stages and validates a private temporary file in the same directory, then
+publishes it with a same-filesystem atomic move. An ordinary move failure
+leaves an existing destination unchanged, or publishes no destination. If
+verification after a successful move fails, \code{save_program()} errors but the
+new destination may already be present.}
 }
 \value{
 \itemize{
