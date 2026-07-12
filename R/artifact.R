@@ -1356,17 +1356,18 @@ artifact_is_secret_name <- function(name) {
     ),
     compact
   )
-  connection_match <- normalized %in%
-    c(
-      "connection_string",
-      "connection_uri",
-      "connection_url",
-      "data_source_name",
-      "dsn"
-    ) ||
+  connection_match <- grepl(
+    paste0(
+      "(^|_)(connection_(string|uri|url)|data_source_name|dsn)",
+      "(_(file|path|value))?$"
+    ),
+    normalized
+  ) ||
     grepl(
       paste0(
-        "^(database|db|jdbc|redis|mongo|mongodb|postgres|postgresql|",
+        "(^|_)(database|db|datasource|data_source|jdbc|redis|mongo|",
+        "mongodb|neo4j|cassandra|clickhouse|couchbase|influxdb|",
+        "postgres|postgresql|",
         "mysql|mariadb|mssql|sqlserver|snowflake|amqp|rabbitmq|broker|",
         "smtp|ldap|elasticsearch|opensearch)_(url|uri)$"
       ),
@@ -1375,7 +1376,12 @@ artifact_is_secret_name <- function(name) {
   key_material_match <- grepl(
     paste0(
       "(^|_)(passphrase|pass_phrase|encryption_key|signing_key|ssh_key|",
-      "license_key|service_account_key|totp_seed)(_(file|path|value))?$"
+      "hmac_key|tls_key|ssl_key|master_key|fernet_key|license_key|",
+      "service_account_key|storage_account_key|totp_seed)",
+      "(_(file|path|value|pem|data|bytes|hex|base32|base64|b64|json|",
+      "jwk|der|pkcs8))?$|",
+      "(^|_)service_account_json",
+      "(_(file|path|value|data|bytes|base64))?$"
     ),
     normalized
   )

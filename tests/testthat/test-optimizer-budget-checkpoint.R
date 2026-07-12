@@ -1450,6 +1450,97 @@ test_that("checkpoint fingerprints reject secrets and stateful metrics", {
   )
 })
 
+test_that("checkpoint publication rejects direct credential fields", {
+  raw_contains <- function(bytes, text) {
+    needle <- charToRaw(text)
+    if (length(bytes) < length(needle)) {
+      return(FALSE)
+    }
+    starts <- which(bytes == needle[[1L]])
+    starts <- starts[starts + length(needle) - 1L <= length(bytes)]
+    any(vapply(
+      starts,
+      function(start) {
+        identical(
+          bytes[seq.int(start, length.out = length(needle))],
+          needle
+        )
+      },
+      logical(1)
+    ))
+  }
+
+  path <- withr::local_tempfile(fileext = ".rds")
+  unlink(path)
+  fixture <- checkpoint_fixture(path)
+  optimizer_checkpoint_write(
+    fixture$context,
+    "search",
+    search_state = list(index = 1L),
+    best_program = fixture$program
+  )
+  before <- readBin(path, "raw", n = file.info(path)$size)
+  direct_sentinels <- c(
+    databaseConnectionString = "DIRECT_DATABASE_CONNECTION_STRING_SENTINEL",
+    sentryDsn = "DIRECT_SENTRY_DSN_SENTINEL",
+    signingKeyPem = "DIRECT_SIGNING_KEY_PEM_SENTINEL",
+    primaryConnectionUri = "DIRECT_PRIMARY_CONNECTION_URI_SENTINEL",
+    databaseConnectionUrl = "DIRECT_DATABASE_CONNECTION_URL_SENTINEL",
+    redisConnectionUri = "DIRECT_REDIS_CONNECTION_URI_SENTINEL",
+    databaseDsn = "DIRECT_DATABASE_DSN_SENTINEL",
+    odbcDsn = "DIRECT_ODBC_DSN_SENTINEL",
+    neo4jUri = "DIRECT_NEO4J_URI_SENTINEL",
+    cassandraUrl = "DIRECT_CASSANDRA_URL_SENTINEL",
+    clickhouseUrl = "DIRECT_CLICKHOUSE_URL_SENTINEL",
+    couchbaseUri = "DIRECT_COUCHBASE_URI_SENTINEL",
+    influxdbUrl = "DIRECT_INFLUXDB_URL_SENTINEL",
+    totpSeedBase32 = "DIRECT_TOTP_SEED_BASE32_SENTINEL",
+    signingKeyJwk = "DIRECT_SIGNING_KEY_JWK_SENTINEL",
+    signingKeyDer = "DIRECT_SIGNING_KEY_DER_SENTINEL",
+    signingKeyPkcs8 = "DIRECT_SIGNING_KEY_PKCS8_SENTINEL",
+    signingKeyB64 = "DIRECT_SIGNING_KEY_B64_SENTINEL",
+    storageAccountKey = "DIRECT_STORAGE_ACCOUNT_KEY_SENTINEL",
+    azureStorageAccountKey = "DIRECT_AZURE_STORAGE_ACCOUNT_KEY_SENTINEL"
+  )
+
+  for (name in names(direct_sentinels)) {
+    sentinel <- direct_sentinels[[name]]
+    expect_error(
+      optimizer_checkpoint_begin(
+        "Unsafe",
+        1L,
+        fixture$program,
+        fixture$data,
+        fixture$metric,
+        config = stats::setNames(list(sentinel), name),
+        control = optimizer_control(checkpoint_path = path)
+      ),
+      class = "dsprrr_optimizer_checkpoint_unsafe_value",
+      info = name
+    )
+    after_config <- readBin(path, "raw", n = file.info(path)$size)
+    expect_identical(after_config, before, info = name)
+    expect_false(raw_contains(after_config, sentinel), info = name)
+  }
+
+  for (name in names(direct_sentinels)) {
+    sentinel <- direct_sentinels[[name]]
+    expect_error(
+      optimizer_checkpoint_write(
+        fixture$context,
+        "search",
+        search_state = stats::setNames(list(sentinel), name),
+        best_program = fixture$program
+      ),
+      class = "dsprrr_optimizer_checkpoint_unsafe_value",
+      info = name
+    )
+    after_state <- readBin(path, "raw", n = file.info(path)$size)
+    expect_identical(after_state, before, info = name)
+    expect_false(raw_contains(after_state, sentinel), info = name)
+  }
+})
+
 test_that("checkpoint program artifacts exclude camel runtime fields", {
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
@@ -1501,18 +1592,52 @@ test_that("checkpoint program artifacts exclude connection credentials", {
     "DATABASE_URL",
     "connectionString",
     "CONNECTION_STRING",
+    "primaryConnectionUri",
+    "readReplicaConnectionUrl",
+    "databaseConnectionUrl",
+    "redisConnectionUri",
+    "databaseConnectionString",
+    "redisConnectionString",
     "dsn",
     "DSN",
+    "sentryDsn",
+    "databaseDsn",
+    "odbcDsn",
+    "odbcDataSourceName",
     "jdbcUrl",
+    "jdbcDatabaseUrl",
     "redisUri",
     "mongoUrl",
-    "postgresqlUri"
+    "neo4jUri",
+    "cassandraUrl",
+    "clickhouseUrl",
+    "couchbaseUri",
+    "influxdbUrl",
+    "postgresqlUri",
+    "springDatasourceUrl"
   )
   benign_names <- c(
     "databaseUrlPolicy",
     "connectionStringFormat",
+    "primaryConnectionUriPolicy",
+    "readReplicaConnectionUrlDocumentation",
+    "databaseConnectionUrlFormat",
+    "redisConnectionUriPolicy",
+    "databaseConnectionStringFormat",
+    "redisConnectionStringPolicy",
     "dsnDocumentation",
-    "redisUriTemplate"
+    "sentryDsnFormat",
+    "databaseDsnPolicy",
+    "odbcDsnDocumentation",
+    "odbcDataSourceNameDocumentation",
+    "redisUriTemplate",
+    "neo4jUriTemplate",
+    "cassandraUrlPolicy",
+    "clickhouseUrlFormat",
+    "couchbaseUriTemplate",
+    "influxdbUrlDocumentation",
+    "jdbcDatabaseUrlTemplate",
+    "springDatasourceUrlDocumentation"
   )
   sentinels <- stats::setNames(
     paste0(
@@ -1562,16 +1687,46 @@ test_that("checkpoint program artifacts exclude secret key material", {
     "passPhrase",
     "encryptionKey",
     "signingKey",
+    "signingKeyPem",
+    "signingKeyJwk",
+    "signingKeyDer",
+    "signingKeyPkcs8",
+    "signingKeyB64",
     "sshKey",
+    "sshKeyPem",
+    "hmacKey",
+    "tlsKey",
+    "sslKeyData",
+    "masterKeyHex",
+    "fernetKeyBase64",
     "licenseKey",
     "serviceAccountKey",
-    "totpSeed"
+    "storageAccountKey",
+    "azureStorageAccountKey",
+    "serviceAccountJson",
+    "totpSeed",
+    "totpSeedBase32"
   )
   benign_names <- c(
     "signingKeyAlgorithm",
+    "signingKeyPemFormat",
+    "signingKeyJwkParser",
+    "signingKeyDerFormat",
+    "signingKeyPkcs8Policy",
+    "signingKeyB64Template",
+    "sshKeyPemParser",
+    "hmacKeyAlgorithm",
+    "tlsKeyUsage",
+    "sslKeyDataFormat",
+    "masterKeyHexParser",
+    "fernetKeyBase64Policy",
     "licenseKeyFormat",
     "serviceAccountKeyPolicy",
-    "passphraseHint"
+    "storageAccountKeyPolicy",
+    "azureStorageAccountKeyFormat",
+    "serviceAccountJsonSchema",
+    "passphraseHint",
+    "totpSeedBase32Format"
   )
   sentinels <- stats::setNames(
     paste0("CHECKPOINT_KEY_MATERIAL_SENTINEL_", seq_along(credential_names)),
