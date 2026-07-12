@@ -240,21 +240,22 @@ test_that("epoch results use all no-failure observations consistently", {
   # Mock LLM with varying correctness
   # Epoch 1: score 0.5, Epoch 2: score 1.0, Epoch 3: score 0.0
   responses <- c("4", "wrong", "4", "4", "wrong", "wrong")
-  call_idx <- 0
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(...) {
-          call_idx <<- call_idx + 1
-          responses[call_idx]
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  # Model the provider as an external ordered response stream. Chat instances
+  # are intentionally isolated per row, so a counter captured inside the Chat
+  # would be copied from the same baseline for every row.
+  response_path <- withr::local_tempfile()
+  writeLines(responses, response_path)
+  mock_llm <- list(
+    chat_structured = function(...) {
+      remaining <- readLines(response_path)
+      if (length(remaining) == 0) {
+        stop("The deterministic provider response stream is exhausted")
+      }
+      response <- remaining[[1]]
+      writeLines(remaining[-1], response_path)
+      response
+    }
+  )
 
   dataset <- tibble::tibble(
     question = c("Q1", "Q2"),

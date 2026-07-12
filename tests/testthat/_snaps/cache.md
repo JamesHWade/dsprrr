@@ -5,6 +5,7 @@
     Condition
       Error in `configure_cache()`:
       ! `disk_private` must be a single non-missing logical value
+
 ---
 
     Code
