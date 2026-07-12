@@ -305,6 +305,93 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
   expect_true(result$config$compiled)
   # Verify error_count is actually tracked (was a scoping bug)
   expect_equal(result$config$optimizer$error_count, 2)
+  expect_equal(result$config$optimizer$total_attempts, 4L)
+  expect_equal(result$config$optimizer$budget_summary$successes, 2L)
+  expect_equal(
+    result$config$optimizer$budget_summary$consecutive_errors,
+    0L
+  )
+  expect_false(result$config$optimizer$budget_summary$stopped)
+})
+
+test_that("BootstrapFewShot counts metric failures by training-row attempt", {
+  metric_calls <- 0L
+  testthat::local_mocked_bindings(
+    run_with_settings = function(...) "prediction",
+    .package = "dsprrr"
+  )
+
+  metric <- function(pred, expected) {
+    metric_calls <<- metric_calls + 1L
+    if (metric_calls %in% c(1L, 3L)) {
+      stop("metric failed")
+    }
+    0.1
+  }
+
+  program <- module(signature("x -> y"), type = "predict")
+  teleprompter <- BootstrapFewShot(
+    metric = metric,
+    metric_threshold = 0.5,
+    max_labeled_demos = 0L,
+    max_bootstrapped_demos = 3L,
+    max_errors = 2L,
+    max_rounds = 1L
+  )
+
+  result <- expect_test_warnings(
+    dsprrr:::compile_bootstrap(
+      teleprompter,
+      program,
+      data.frame(x = c("a", "b", "c"), y = c("a", "b", "c"))
+    ),
+    "Metric evaluation failed"
+  )
+  budget <- result$config$optimizer$budget_summary
+
+  expect_equal(budget$attempts, 3L)
+  expect_equal(budget$successes, 1L)
+  expect_equal(budget$total_errors, 2L)
+  expect_equal(budget$consecutive_errors, 1L)
+  expect_false(budget$stopped)
+  expect_equal(result$config$optimizer$n_bootstrapped_demos, 0L)
+})
+
+test_that("BootstrapFewShot max_errors zero stops after the first attempt", {
+  teacher_calls <- 0L
+  testthat::local_mocked_bindings(
+    run_with_settings = function(...) {
+      teacher_calls <<- teacher_calls + 1L
+      stop("teacher failed")
+    },
+    .package = "dsprrr"
+  )
+
+  program <- module(signature("x -> y"), type = "predict")
+  teleprompter <- BootstrapFewShot(
+    metric = function(...) 1,
+    max_labeled_demos = 0L,
+    max_bootstrapped_demos = 2L,
+    max_errors = 0L,
+    max_rounds = 1L
+  )
+
+  result <- expect_test_warnings(
+    dsprrr:::compile_bootstrap(
+      teleprompter,
+      program,
+      data.frame(x = c("a", "b"), y = c("a", "b"))
+    ),
+    "Bootstrap attempt failed"
+  )
+  budget <- result$config$optimizer$budget_summary
+
+  expect_equal(teacher_calls, 1L)
+  expect_equal(budget$attempts, 1L)
+  expect_equal(budget$total_errors, 1L)
+  expect_true(budget$stopped)
+  expect_equal(budget$stop_reason$limit, 0L)
+  expect_identical(result$config$optimizer$stop_reason, budget$stop_reason)
 })
 
 test_that("find_output_column identifies common output columns", {

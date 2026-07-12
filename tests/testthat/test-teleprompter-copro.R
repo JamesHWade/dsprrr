@@ -485,3 +485,130 @@ test_that("generate_copro_candidates deduplicates results", {
   expect_equal(length(candidates), 1)
   expect_equal(candidates[[1]], "Same instruction")
 })
+
+test_that("COPRO generation budget follows requested candidate order", {
+  calls <- 0L
+  prompt_model <- function(prompt) {
+    calls <<- calls + 1L
+    if (calls == 1L) {
+      return(NULL)
+    }
+    if (calls == 2L) {
+      return("usable instruction")
+    }
+    stop("generation failed")
+  }
+  budget <- dsprrr:::new_optimizer_budget(
+    dsprrr:::optimizer_control(max_errors = 2L)
+  )
+
+  candidates <- expect_test_warnings(
+    dsprrr:::generate_copro_candidates(
+      current_instructions = "Original",
+      failed_examples = list(),
+      input_names = "question",
+      output_col = "answer",
+      breadth = 3L,
+      prompt_model = prompt_model,
+      budget = budget
+    ),
+    "instruction generation function failed"
+  )
+  summary <- dsprrr:::optimizer_budget_summary(budget)
+
+  expect_equal(calls, 3L)
+  expect_identical(candidates, list("usable instruction"))
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 1L)
+  expect_false(summary$stopped)
+})
+
+test_that("COPRO generation max_errors zero stops after its first request", {
+  calls <- 0L
+  budget <- dsprrr:::new_optimizer_budget(
+    dsprrr:::optimizer_control(max_errors = 0L)
+  )
+
+  candidates <- dsprrr:::generate_copro_candidates(
+    current_instructions = "Original",
+    failed_examples = list(),
+    input_names = "question",
+    output_col = "answer",
+    breadth = 3L,
+    prompt_model = function(prompt) {
+      calls <<- calls + 1L
+      NULL
+    },
+    budget = budget
+  )
+  summary <- dsprrr:::optimizer_budget_summary(budget)
+
+  expect_equal(calls, 1L)
+  expect_length(candidates, 0L)
+  expect_equal(summary$attempts, 1L)
+  expect_equal(summary$total_errors, 1L)
+  expect_true(summary$stopped)
+  expect_equal(summary$stop_reason$limit, 0L)
+})
+
+test_that("COPRO preserves the best candidate when evaluation exhausts budget", {
+  eval_calls <- 0L
+  generation_calls <- 0L
+  eval_result <- function(mean_score, scores, errors) {
+    dsprrr:::EvalResult(
+      examples = data.frame(score = scores, error = errors),
+      mean_score = mean_score,
+      n_evaluated = as.integer(sum(!is.na(scores))),
+      n_errors = as.integer(sum(is.na(scores)))
+    )
+  }
+
+  testthat::local_mocked_bindings(
+    identify_failed_examples = function(...) list(),
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      if (eval_calls == 1L) {
+        return(eval_result(0.5, 0.5, NA_character_))
+      }
+      if (eval_calls == 2L) {
+        return(eval_result(0.7, 0.7, NA_character_))
+      }
+      eval_result(
+        0.9,
+        c(NA_real_, NA_real_),
+        c("first failure", "second failure")
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  prompt_model <- list(chat = function(prompt) {
+    generation_calls <<- generation_calls + 1L
+    paste("Instruction", generation_calls)
+  })
+  teleprompter <- COPRO(
+    metric = function(...) 1,
+    breadth = 2L,
+    depth = 1L,
+    max_errors = 2L,
+    prompt_model = prompt_model,
+    track_stats = TRUE
+  )
+  result <- dsprrr:::compile_copro(
+    teleprompter,
+    module(signature("question -> answer"), type = "predict"),
+    data.frame(question = "q", answer = "a")
+  )
+  optimizer <- result$config$optimizer
+
+  expect_equal(eval_calls, 3L)
+  expect_equal(generation_calls, 2L)
+  expect_equal(optimizer$budget_summary$attempts, 6L)
+  expect_equal(optimizer$budget_summary$successes, 4L)
+  expect_equal(optimizer$error_count, 2L)
+  expect_true(optimizer$budget_summary$stopped)
+  expect_equal(optimizer$stop_reason$attempts, 6L)
+  expect_identical(result$signature@instructions, "Instruction 2")
+})

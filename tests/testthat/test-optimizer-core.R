@@ -190,7 +190,9 @@ test_that("optimizer budget stops on the failure reaching the limit", {
 
   record_optimizer_outcome(budget, TRUE, "after_stop")
   expect_identical(optimizer_budget_summary(budget)$stop_reason, reason)
-  expect_equal(optimizer_budget_summary(budget)$attempts, 2L)
+  expect_equal(optimizer_budget_summary(budget)$attempts, 3L)
+  expect_equal(optimizer_budget_summary(budget)$successes, 1L)
+  expect_equal(optimizer_budget_summary(budget)$consecutive_errors, 0L)
 })
 
 test_that("zero max_errors stops on its first failure", {
@@ -212,20 +214,23 @@ test_that("zero max_errors stops on its first failure", {
 test_that("EvalResult outcomes preserve row order and reconcile errors", {
   budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
   result <- EvalResult(
-    examples = data.frame(error = c(NA_character_, "row failed")),
+    examples = data.frame(
+      score = c(1, NA_real_),
+      error = c(NA_character_, NA_character_)
+    ),
     n_evaluated = 1L,
-    n_errors = 2L
+    n_errors = 1L
   )
 
   record_eval_result_outcomes(budget, result, "minibatch")
   summary <- optimizer_budget_summary(budget)
 
-  expect_true(summary$stopped)
-  expect_equal(summary$attempts, 3L)
+  expect_false(summary$stopped)
+  expect_equal(summary$attempts, 2L)
   expect_equal(summary$successes, 1L)
-  expect_equal(summary$total_errors, 2L)
-  expect_equal(summary$consecutive_errors, 2L)
-  expect_identical(summary$stop_reason$stage, "minibatch")
+  expect_equal(summary$total_errors, 1L)
+  expect_equal(summary$consecutive_errors, 1L)
+  expect_null(summary$stop_reason)
 })
 
 test_that("fully successful EvalResult resets an existing streak", {
@@ -245,6 +250,30 @@ test_that("fully successful EvalResult resets an existing streak", {
   expect_equal(summary$total_errors, 1L)
   expect_equal(summary$consecutive_errors, 0L)
   expect_false(summary$stopped)
+})
+
+test_that("completed EvalResult accounts bounded overshoot after stopping", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 1L))
+  result <- EvalResult(
+    examples = data.frame(
+      score = c(NA_real_, 1, NA_real_),
+      error = c("first", NA_character_, "third")
+    ),
+    n_evaluated = 1L,
+    n_errors = 2L
+  )
+
+  record_eval_result_outcomes(budget, result, "evaluation")
+  summary <- optimizer_budget_summary(budget)
+
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 1L)
+  expect_true(summary$stopped)
+  expect_equal(summary$stop_reason$attempts, 1L)
+  expect_equal(summary$stop_reason$total_errors, 1L)
+  expect_identical(summary$stop_reason$stage, "evaluation")
 })
 
 test_that("EvalResult counts summary outcomes when row detail is absent", {
@@ -650,6 +679,44 @@ test_that("eval_program handles empty dataset", {
   expect_s3_class(result, "dsprrr::EvalResult")
   expect_true(is.na(result@mean_score))
   expect_equal(result@n_evaluated, 0L)
+})
+
+test_that("eval_program restores compact errors to their ordered rows", {
+  testthat::local_mocked_bindings(
+    evaluate = function(...) {
+      list(
+        scores = c(1, NA_real_),
+        predictions = c("ok", NA_character_),
+        errors = "second row failed",
+        feedbacks = c(NA_character_, NA_character_),
+        mean_score = 0.5,
+        n_evaluated = 1L,
+        n_errors = 1L,
+        epoch_scores = NULL,
+        score_std = NA_real_,
+        ci_95 = c(NA_real_, NA_real_)
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  result <- eval_program(
+    module(signature("x -> y"), type = "predict"),
+    data.frame(x = c("a", "b"), y = c("a", "b")),
+    metric = function(...) 1,
+    control = optimizer_control(progress = FALSE)
+  )
+
+  expect_equal(
+    result@examples$error,
+    c(NA_character_, "second row failed")
+  )
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  record_eval_result_outcomes(budget, result, "evaluation")
+  summary <- optimizer_budget_summary(budget)
+  expect_equal(summary$attempts, 2L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 1L)
 })
 
 test_that("eval_program works with mock LLM", {

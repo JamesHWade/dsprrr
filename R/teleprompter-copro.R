@@ -180,6 +180,7 @@ compile_copro <- function(
     max_errors = teleprompter@max_errors,
     log_dir = teleprompter@log_dir
   )
+  budget <- new_optimizer_budget(control)
 
   trial_log <- if (!is.null(teleprompter@log_dir)) {
     TrialLog$new(
@@ -241,6 +242,7 @@ compile_copro <- function(
     control = control,
     ...
   )
+  record_eval_result_outcomes(budget, best_eval, "copro_baseline")
   best_score <- best_eval@mean_score
   best_instructions <- current_instructions
 
@@ -254,15 +256,13 @@ compile_copro <- function(
     )
   )
 
-  error_count <- 0L
+  iterations_completed <- 0L
 
   for (iteration in seq_len(teleprompter@depth)) {
-    # Check error budget
-    budget_check <- check_budget(iteration - 1L, error_count, control)
-    if (budget_check$should_stop) {
-      cli::cli_warn(budget_check$reason)
+    if (optimizer_budget_stopped(budget)) {
       break
     }
+    iterations_completed <- iteration
 
     cli::cli_alert_info(
       "COPRO iteration {iteration}/{teleprompter@depth}: generating {teleprompter@breadth} candidates"
@@ -277,14 +277,19 @@ compile_copro <- function(
       breadth = teleprompter@breadth,
       prompt_model = teleprompter@prompt_model,
       .llm = .llm,
-      temperature = teleprompter@init_temperature
+      temperature = teleprompter@init_temperature,
+      budget = budget,
+      stage = "copro_generation"
     )
+
+    if (optimizer_budget_stopped(budget)) {
+      break
+    }
 
     if (length(candidates) == 0) {
       cli::cli_warn(
         "No instruction candidates generated at iteration {iteration}"
       )
-      error_count <- error_count + 1L
       next
     }
 
@@ -310,6 +315,7 @@ compile_copro <- function(
       )
 
       # Evaluate candidate
+      eval_condition <- NULL
       eval_result <- tryCatch(
         {
           eval_program(
@@ -322,6 +328,7 @@ compile_copro <- function(
           )
         },
         error = function(e) {
+          eval_condition <<- e
           cli::cli_warn(
             c(
               "COPRO candidate {i}/{length(candidates)} evaluation failed",
@@ -329,14 +336,28 @@ compile_copro <- function(
             ),
             class = "dsprrr_copro_eval_warning"
           )
-          error_count <<- error_count + 1L
           NULL
         }
       )
 
       if (is.null(eval_result)) {
+        record_optimizer_outcome(
+          budget,
+          success = FALSE,
+          stage = "copro_evaluation",
+          condition = eval_condition
+        )
+        if (optimizer_budget_stopped(budget)) {
+          break
+        }
         next
       }
+
+      record_eval_result_outcomes(
+        budget,
+        eval_result,
+        stage = "copro_evaluation"
+      )
 
       score <- eval_result@mean_score
 
@@ -373,6 +394,10 @@ compile_copro <- function(
         iteration_best_score <- score
         iteration_best_instructions <- candidate_instructions
         iteration_best_program <- candidate_program
+      }
+
+      if (optimizer_budget_stopped(budget)) {
+        break
       }
     }
 
@@ -419,6 +444,10 @@ compile_copro <- function(
         "COPRO iteration {iteration}: no improvement (best: {round(best_score, 4)})"
       )
     }
+
+    if (optimizer_budget_stopped(budget)) {
+      break
+    }
   }
 
   # Finalize the best program
@@ -436,6 +465,7 @@ compile_copro <- function(
   best_program$state$compiled <- TRUE
   best_program$config$compiled <- TRUE
   best_program$config$teleprompter <- "COPRO"
+  budget_summary <- optimizer_budget_summary(budget)
   best_program$config$optimizer <- list(
     breadth = teleprompter@breadth,
     depth = teleprompter@depth,
@@ -443,7 +473,10 @@ compile_copro <- function(
     final_score = best_score,
     baseline_score = best_eval@mean_score,
     history = if (teleprompter@track_stats) instruction_history else NULL,
-    iterations_completed = min(teleprompter@depth, iteration %||% 0L)
+    iterations_completed = iterations_completed,
+    error_count = budget_summary$total_errors,
+    budget_summary = budget_summary,
+    stop_reason = budget_summary$stop_reason
   )
 
   best_program
@@ -459,7 +492,9 @@ generate_copro_candidates <- function(
   breadth,
   prompt_model,
   .llm = NULL,
-  temperature = 1.4
+  temperature = 1.4,
+  budget = NULL,
+  stage = "copro_generation"
 ) {
   candidates <- list()
 
@@ -502,6 +537,10 @@ generate_copro_candidates <- function(
 
   # Generate candidates
   for (i in seq_len(breadth)) {
+    if (!is.null(budget) && optimizer_budget_stopped(budget)) {
+      break
+    }
+
     candidate <- generate_single_copro_candidate(
       generation_prompt,
       prompt_model = prompt_model,
@@ -509,7 +548,16 @@ generate_copro_candidates <- function(
       temperature = temperature
     )
 
-    if (!is.null(candidate) && nzchar(candidate)) {
+    usable <- !is.null(candidate) && nzchar(candidate)
+    if (!is.null(budget)) {
+      record_optimizer_outcome(
+        budget,
+        success = usable,
+        stage = stage
+      )
+    }
+
+    if (usable) {
       candidates[[length(candidates) + 1L]] <- candidate
     }
   }

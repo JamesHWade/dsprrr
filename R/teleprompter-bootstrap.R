@@ -259,11 +259,13 @@ compile_bootstrap <- function(
 
   # Phase 2: Bootstrap demonstrations
   bootstrapped_demos <- list()
-  error_count <- 0
-  total_attempts <- 0
+  budget <- new_optimizer_budget(control)
 
   for (round in seq_len(teleprompter@max_rounds)) {
-    if (length(bootstrap_indices) == 0) {
+    if (
+      length(bootstrap_indices) == 0 ||
+        optimizer_budget_stopped(budget)
+    ) {
       break
     }
 
@@ -273,15 +275,11 @@ compile_bootstrap <- function(
 
     # Process each bootstrap candidate
     for (idx in bootstrap_indices) {
-      # Check error budget
-      budget_check <- check_budget(total_attempts, error_count, control)
-      if (budget_check$should_stop) {
-        cli::cli_warn(budget_check$reason)
+      if (optimizer_budget_stopped(budget)) {
         break
       }
 
       row <- trainset[idx, , drop = FALSE]
-      total_attempts <- total_attempts + 1
 
       # Extract inputs for this example
       example_inputs <- list()
@@ -304,6 +302,7 @@ compile_bootstrap <- function(
       }
 
       # Run teacher with temperature for diversity
+      teacher_condition <- NULL
       result <- tryCatch(
         {
           # Apply teacher settings (like temperature)
@@ -315,12 +314,12 @@ compile_bootstrap <- function(
           )
         },
         error = function(e) {
-          error_count <<- error_count + 1
+          teacher_condition <<- e
           cli::cli_warn(
             c(
               "Bootstrap attempt failed",
               "x" = conditionMessage(e),
-              "i" = "Error count: {error_count}/{control@max_errors}"
+              "i" = "The training-row attempt will count as failed"
             ),
             class = "dsprrr_bootstrap_warning"
           )
@@ -329,15 +328,26 @@ compile_bootstrap <- function(
       )
 
       if (is.null(result)) {
+        record_optimizer_outcome(
+          budget,
+          success = FALSE,
+          stage = "bootstrap_teacher",
+          condition = teacher_condition
+        )
+        if (optimizer_budget_stopped(budget)) {
+          break
+        }
         next
       }
 
       # Evaluate with metric (feedback metrics return list(score, feedback))
+      metric_condition <- NULL
       score <- tryCatch(
         {
           normalize_metric_result(teleprompter@metric(result, expected))$score
         },
         error = function(e) {
+          metric_condition <<- e
           cli::cli_warn(
             c(
               "Metric evaluation failed for example {idx}",
@@ -348,6 +358,17 @@ compile_bootstrap <- function(
           )
           NA_real_
         }
+      )
+
+      record_optimizer_outcome(
+        budget,
+        success = is.null(metric_condition),
+        stage = if (is.null(metric_condition)) {
+          "bootstrap_attempt"
+        } else {
+          "bootstrap_metric"
+        },
+        condition = metric_condition
       )
 
       # Check threshold
@@ -376,10 +397,17 @@ compile_bootstrap <- function(
       if (length(bootstrapped_demos) >= teleprompter@max_bootstrapped_demos) {
         break
       }
+
+      if (optimizer_budget_stopped(budget)) {
+        break
+      }
     }
 
     # Early exit if we have enough demos
-    if (length(bootstrapped_demos) >= teleprompter@max_bootstrapped_demos) {
+    if (
+      length(bootstrapped_demos) >= teleprompter@max_bootstrapped_demos ||
+        optimizer_budget_stopped(budget)
+    ) {
       break
     }
   }
@@ -405,16 +433,19 @@ compile_bootstrap <- function(
   student$state$compiled <- TRUE
   student$config$compiled <- TRUE
   student$config$teleprompter <- "BootstrapFewShot"
+  budget_summary <- optimizer_budget_summary(budget)
   student$config$optimizer <- list(
     n_labeled_demos = length(labeled_demos),
     n_bootstrapped_demos = length(bootstrapped_demos),
-    total_attempts = total_attempts,
-    error_count = error_count,
+    total_attempts = budget_summary$attempts,
+    error_count = budget_summary$total_errors,
     max_rounds = teleprompter@max_rounds,
     rounds_completed = min(
       teleprompter@max_rounds,
-      ceiling(total_attempts / max(1, length(bootstrap_indices)))
-    )
+      ceiling(budget_summary$attempts / max(1, length(bootstrap_indices)))
+    ),
+    budget_summary = budget_summary,
+    stop_reason = budget_summary$stop_reason
   )
 
   # Log trial if logging enabled
@@ -449,7 +480,7 @@ compile_bootstrap <- function(
         trial,
         EvalResult(
           n_evaluated = as.integer(length(bootstrapped_demos)),
-          n_errors = as.integer(error_count)
+          n_errors = as.integer(budget_summary$total_errors)
         )
       )
     }
@@ -584,8 +615,7 @@ compile_bootstrap_pipeline <- function(
     rep(list(list()), n_steps),
     as.character(seq_len(n_steps))
   )
-  error_count <- 0L
-  total_attempts <- 0L
+  budget <- new_optimizer_budget(control)
 
   all_steps_full <- function() {
     all(vapply(
@@ -599,7 +629,11 @@ compile_bootstrap_pipeline <- function(
   }
 
   for (round in seq_len(teleprompter@max_rounds)) {
-    if (length(bootstrap_indices) == 0 || all_steps_full()) {
+    if (
+      length(bootstrap_indices) == 0 ||
+        all_steps_full() ||
+        optimizer_budget_stopped(budget)
+    ) {
       break
     }
 
@@ -611,14 +645,11 @@ compile_bootstrap_pipeline <- function(
     }
 
     for (idx in bootstrap_indices) {
-      budget_check <- check_budget(total_attempts, error_count, control)
-      if (budget_check$should_stop) {
-        cli::cli_warn(budget_check$reason)
+      if (optimizer_budget_stopped(budget)) {
         break
       }
 
       row <- trainset[idx, , drop = FALSE]
-      total_attempts <- total_attempts + 1L
 
       example_inputs <- list()
       for (name in pipeline_inputs) {
@@ -637,15 +668,16 @@ compile_bootstrap_pipeline <- function(
         NULL
       }
 
+      teacher_condition <- NULL
       result <- tryCatch(
         teacher$forward(example_inputs, .llm = .llm, trace = TRUE),
         error = function(e) {
-          error_count <<- error_count + 1L
+          teacher_condition <<- e
           cli::cli_warn(
             c(
               "Bootstrap attempt failed",
               "x" = conditionMessage(e),
-              "i" = "Error count: {error_count}/{control@max_errors}"
+              "i" = "The training-row attempt will count as failed"
             ),
             class = "dsprrr_bootstrap_warning"
           )
@@ -654,6 +686,15 @@ compile_bootstrap_pipeline <- function(
       )
 
       if (is.null(result)) {
+        record_optimizer_outcome(
+          budget,
+          success = FALSE,
+          stage = "bootstrap_pipeline_teacher",
+          condition = teacher_condition
+        )
+        if (optimizer_budget_stopped(budget)) {
+          break
+        }
         next
       }
 
@@ -664,11 +705,13 @@ compile_bootstrap_pipeline <- function(
 
       final_output <- result$output[[1]]
 
+      metric_condition <- NULL
       score <- tryCatch(
         normalize_metric_result(
           teleprompter@metric(final_output, expected)
         )$score,
         error = function(e) {
+          metric_condition <<- e
           cli::cli_warn(
             c(
               "Metric evaluation failed for example {idx}",
@@ -679,6 +722,17 @@ compile_bootstrap_pipeline <- function(
           )
           NA_real_
         }
+      )
+
+      record_optimizer_outcome(
+        budget,
+        success = is.null(metric_condition),
+        stage = if (is.null(metric_condition)) {
+          "bootstrap_pipeline_attempt"
+        } else {
+          "bootstrap_pipeline_metric"
+        },
+        condition = metric_condition
       )
 
       passes_threshold <- if (!is.na(score)) {
@@ -718,9 +772,13 @@ compile_bootstrap_pipeline <- function(
       if (all_steps_full()) {
         break
       }
+
+      if (optimizer_budget_stopped(budget)) {
+        break
+      }
     }
 
-    if (all_steps_full()) {
+    if (all_steps_full() || optimizer_budget_stopped(budget)) {
       break
     }
   }
@@ -747,6 +805,7 @@ compile_bootstrap_pipeline <- function(
   student$state$compiled <- TRUE
   student$config$compiled <- TRUE
   student$config$teleprompter <- "BootstrapFewShot"
+  budget_summary <- optimizer_budget_summary(budget)
   student$config$optimizer <- list(
     joint_pipeline = TRUE,
     n_steps = n_steps,
@@ -759,9 +818,11 @@ compile_bootstrap_pipeline <- function(
       }),
       as.character(demo_steps)
     ),
-    total_attempts = total_attempts,
-    error_count = error_count,
-    max_rounds = teleprompter@max_rounds
+    total_attempts = budget_summary$attempts,
+    error_count = budget_summary$total_errors,
+    max_rounds = teleprompter@max_rounds,
+    budget_summary = budget_summary,
+    stop_reason = budget_summary$stop_reason
   )
 
   if (!is.null(trial_log)) {
@@ -794,7 +855,7 @@ compile_bootstrap_pipeline <- function(
         trial,
         EvalResult(
           n_evaluated = n_bootstrapped_total,
-          n_errors = error_count
+          n_errors = budget_summary$total_errors
         )
       )
     }

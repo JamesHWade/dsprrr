@@ -421,6 +421,201 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
   expect_true(result$config$compiled)
 })
 
+test_that("Bootstrap random search resets its outer budget on valid candidates", {
+  configs <- lapply(letters[1:3], function(name) {
+    list(name = name, type = "baseline")
+  })
+  eval_calls <- 0L
+
+  testthat::local_mocked_bindings(
+    generate_candidate_configs = function(...) configs,
+    compile_candidate = function(config, program, ...) {
+      compiled <- copy_module(program)
+      compiled$config$candidate_name <- config$name
+      compiled
+    },
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      if (eval_calls %in% c(1L, 3L)) {
+        stop("candidate evaluation failed")
+      }
+      EvalResult(mean_score = 0.8, n_evaluated = 1L)
+    },
+    .package = "dsprrr"
+  )
+
+  teleprompter <- BootstrapFewShotWithRandomSearch(
+    metric = function(...) 1,
+    num_candidate_programs = 3L,
+    max_errors = 2L
+  )
+  result <- expect_test_warnings(
+    dsprrr:::compile_bootstrap_rs(
+      teleprompter,
+      module(signature("x -> y"), type = "predict"),
+      data.frame(x = "train", y = "train"),
+      valset = data.frame(x = "val", y = "val")
+    ),
+    "Failed to evaluate candidate"
+  )
+  budget <- result$config$optimizer$budget_summary
+
+  expect_equal(budget$attempts, 3L)
+  expect_equal(budget$successes, 1L)
+  expect_equal(budget$total_errors, 2L)
+  expect_equal(budget$consecutive_errors, 1L)
+  expect_false(budget$stopped)
+  expect_identical(result$config$optimizer$best_candidate, "b")
+})
+
+test_that("Bootstrap random search preserves its best at the exact limit", {
+  configs <- lapply(letters[1:4], function(name) {
+    list(name = name, type = "baseline")
+  })
+  eval_calls <- 0L
+
+  testthat::local_mocked_bindings(
+    generate_candidate_configs = function(...) configs,
+    compile_candidate = function(config, program, ...) {
+      compiled <- copy_module(program)
+      compiled$config$candidate_name <- config$name
+      compiled$config$optimizer <- list(error_count = 99L)
+      compiled
+    },
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      if (eval_calls > 1L) {
+        stop("candidate evaluation failed")
+      }
+      EvalResult(mean_score = 0.9, n_evaluated = 1L)
+    },
+    .package = "dsprrr"
+  )
+
+  teleprompter <- BootstrapFewShotWithRandomSearch(
+    metric = function(...) 1,
+    num_candidate_programs = 4L,
+    max_errors = 2L
+  )
+  result <- expect_test_warnings(
+    dsprrr:::compile_bootstrap_rs(
+      teleprompter,
+      module(signature("x -> y"), type = "predict"),
+      data.frame(x = "train", y = "train"),
+      valset = data.frame(x = "val", y = "val")
+    ),
+    "Failed to evaluate candidate"
+  )
+  optimizer <- result$config$optimizer
+
+  expect_equal(eval_calls, 3L)
+  expect_equal(optimizer$num_candidates_evaluated, 3L)
+  expect_identical(optimizer$best_candidate, "a")
+  expect_equal(optimizer$error_count, 2L)
+  expect_true(optimizer$budget_summary$stopped)
+  expect_equal(optimizer$stop_reason$observed, 2L)
+  expect_equal(optimizer$stop_reason$attempts, 3L)
+})
+
+test_that("Bootstrap random search rejects unusable evaluation scores", {
+  configs <- lapply(letters[1:3], function(name) {
+    list(name = name, type = "baseline")
+  })
+  eval_calls <- 0L
+  scores <- c(0.9, NA_real_, Inf)
+
+  testthat::local_mocked_bindings(
+    generate_candidate_configs = function(...) configs,
+    compile_candidate = function(config, program, ...) copy_module(program),
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      EvalResult(mean_score = scores[[eval_calls]], n_evaluated = 1L)
+    },
+    .package = "dsprrr"
+  )
+
+  teleprompter <- BootstrapFewShotWithRandomSearch(
+    metric = function(...) 1,
+    num_candidate_programs = 3L,
+    max_errors = 2L
+  )
+  result <- expect_test_warnings(
+    dsprrr:::compile_bootstrap_rs(
+      teleprompter,
+      module(signature("x -> y"), type = "predict"),
+      data.frame(x = "train", y = "train"),
+      valset = data.frame(x = "val", y = "val")
+    ),
+    "unusable score"
+  )
+  optimizer <- result$config$optimizer
+  candidate_scores <- vapply(
+    optimizer$candidate_programs,
+    function(candidate) candidate$score,
+    numeric(1)
+  )
+
+  expect_equal(eval_calls, 3L)
+  expect_identical(optimizer$best_candidate, "a")
+  expect_equal(optimizer$best_score, 0.9)
+  expect_equal(optimizer$budget_summary$attempts, 3L)
+  expect_equal(optimizer$budget_summary$successes, 1L)
+  expect_equal(optimizer$error_count, 2L)
+  expect_true(optimizer$budget_summary$stopped)
+  expect_identical(
+    optimizer$stop_reason$condition_class,
+    "dsprrr_optimizer_score_error"
+  )
+  expect_equal(candidate_scores, c(0.9, NA_real_, NA_real_))
+})
+
+test_that("Bootstrap random search max_errors zero stops after one failure", {
+  configs <- lapply(letters[1:3], function(name) {
+    list(name = name, type = "baseline")
+  })
+  compile_calls <- 0L
+
+  testthat::local_mocked_bindings(
+    generate_candidate_configs = function(...) configs,
+    compile_candidate = function(config, program, ...) {
+      compile_calls <<- compile_calls + 1L
+      if (config$name == "b") {
+        stop("candidate compilation failed")
+      }
+      compiled <- copy_module(program)
+      compiled$config$optimizer <- list(error_count = 99L)
+      compiled
+    },
+    eval_program = function(...) {
+      EvalResult(mean_score = 0.7, n_evaluated = 1L)
+    },
+    .package = "dsprrr"
+  )
+
+  teleprompter <- BootstrapFewShotWithRandomSearch(
+    metric = function(...) 1,
+    num_candidate_programs = 3L,
+    max_errors = 0L
+  )
+  result <- expect_test_warnings(
+    dsprrr:::compile_bootstrap_rs(
+      teleprompter,
+      module(signature("x -> y"), type = "predict"),
+      data.frame(x = "train", y = "train"),
+      valset = data.frame(x = "val", y = "val")
+    ),
+    "Failed to compile candidate"
+  )
+  budget <- result$config$optimizer$budget_summary
+
+  expect_equal(compile_calls, 2L)
+  expect_equal(budget$attempts, 2L)
+  expect_equal(budget$successes, 1L)
+  expect_equal(budget$total_errors, 1L)
+  expect_equal(budget$stop_reason$limit, 0L)
+  expect_identical(result$config$optimizer$best_candidate, "a")
+})
+
 test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
   # Use a standard module with a mock LLM that always fails
   sig <- Signature(

@@ -160,6 +160,27 @@ BootstrapFewShotWithRandomSearch <- S7::new_class(
   )
 )
 
+new_optimizer_score_error <- function(candidate_name, score) {
+  score_label <- if (length(score) == 0L) {
+    "missing"
+  } else {
+    as.character(score[[1L]])
+  }
+
+  structure(
+    list(
+      message = paste0(
+        "Candidate ",
+        candidate_name,
+        " returned an unusable mean_score: ",
+        score_label
+      ),
+      call = NULL
+    ),
+    class = c("dsprrr_optimizer_score_error", "error", "condition")
+  )
+}
+
 #' Compile method for BootstrapFewShotWithRandomSearch
 #' @noRd
 compile_bootstrap_rs <- function(
@@ -255,8 +276,13 @@ compile_bootstrap_rs <- function(
   best_score <- -Inf
   best_candidate <- NULL
   best_program <- NULL
+  budget <- new_optimizer_budget(control)
 
   for (i in seq_along(candidates)) {
+    if (optimizer_budget_stopped(budget)) {
+      break
+    }
+
     config <- candidates[[i]]
 
     cli::cli_progress_step(
@@ -290,6 +316,16 @@ compile_bootstrap_rs <- function(
     )
 
     if (is.null(compiled)) {
+      record_optimizer_outcome(
+        budget,
+        success = FALSE,
+        stage = "bootstrap_rs_compile",
+        condition = if (!is.null(compile_error_msg)) {
+          simpleError(compile_error_msg)
+        } else {
+          NULL
+        }
+      )
       results[[i]] <- list(
         name = config$name,
         config = config,
@@ -298,6 +334,9 @@ compile_bootstrap_rs <- function(
         error = TRUE,
         error_message = compile_error_msg %||% "Unknown compilation error"
       )
+      if (optimizer_budget_stopped(budget)) {
+        break
+      }
       next
     }
 
@@ -326,8 +365,48 @@ compile_bootstrap_rs <- function(
       }
     )
 
-    score <- if (!is.null(eval_result)) eval_result@mean_score else NA_real_
-    has_error <- is.null(eval_result)
+    raw_score <- if (!is.null(eval_result)) {
+      eval_result@mean_score
+    } else {
+      NA_real_
+    }
+    usable_score <- !is.null(eval_result) &&
+      length(raw_score) == 1L &&
+      !is.na(raw_score) &&
+      is.finite(raw_score)
+    score_condition <- NULL
+    if (!is.null(eval_result) && !usable_score) {
+      score_condition <- new_optimizer_score_error(config$name, raw_score)
+      eval_error_msg <- conditionMessage(score_condition)
+      cli::cli_warn(
+        c(
+          "Candidate {config$name} returned an unusable score",
+          "x" = eval_error_msg,
+          "i" = "The candidate will count as an evaluation failure"
+        ),
+        class = "dsprrr_optimizer_score_warning"
+      )
+    }
+
+    score <- if (usable_score) raw_score else NA_real_
+    has_error <- !usable_score
+
+    record_optimizer_outcome(
+      budget,
+      success = !has_error,
+      stage = if (has_error) {
+        "bootstrap_rs_evaluation"
+      } else {
+        "bootstrap_rs_candidate"
+      },
+      condition = if (!is.null(score_condition)) {
+        score_condition
+      } else if (has_error && !is.null(eval_error_msg)) {
+        simpleError(eval_error_msg)
+      } else {
+        NULL
+      }
+    )
 
     results[[i]] <- list(
       name = config$name,
@@ -355,7 +434,7 @@ compile_bootstrap_rs <- function(
     }
 
     # Log trial
-    if (!is.null(trial_log) && !is.null(eval_result)) {
+    if (!is.null(trial_log) && !has_error) {
       trial <- create_trial(
         optimizer_name = "BootstrapFewShotWithRandomSearch",
         params = config
@@ -366,6 +445,10 @@ compile_bootstrap_rs <- function(
         compiled_artifact_ref = compiled
       )
       trial_log$add_trial(trial)
+    }
+
+    if (optimizer_budget_stopped(budget)) {
+      break
     }
 
     # Early stopping
@@ -424,6 +507,7 @@ compile_bootstrap_rs <- function(
   best_program$state$compiled <- TRUE
   best_program$config$compiled <- TRUE
   best_program$config$teleprompter <- "BootstrapFewShotWithRandomSearch"
+  budget_summary <- optimizer_budget_summary(budget)
   best_program$config$optimizer <- list(
     num_candidates_evaluated = length(results),
     best_candidate = if (!is.null(best_candidate)) {
@@ -438,7 +522,10 @@ compile_bootstrap_rs <- function(
         score = r$score,
         config = r$config
       )
-    })
+    }),
+    error_count = budget_summary$total_errors,
+    budget_summary = budget_summary,
+    stop_reason = budget_summary$stop_reason
   )
 
   best_program

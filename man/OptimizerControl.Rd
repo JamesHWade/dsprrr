@@ -19,7 +19,13 @@ OptimizerControl(
 
 \item{max_trials}{Maximum number of trials to run. Default is NULL (unlimited).}
 
-\item{max_errors}{Maximum consecutive errors before stopping. Default is 5.}
+\item{max_errors}{Non-negative integer error budget. Optimizers report total
+errors while stopping on a separate consecutive-error streak; each success
+resets only that streak. A positive value stops on the failure that reaches
+the limit. Zero permits work to begin but stops after the first failure.
+When a completed evaluation returns multiple outcomes, all are included in
+the final counters even if the stop boundary was crossed partway through;
+the first stop reason remains unchanged and prevents scheduling new work.}
 
 \item{num_threads}{Number of threads for parallel evaluation. Default is 1.}
 

@@ -15,7 +15,13 @@
 #'
 #' @param seed Random seed for reproducibility. Default is NULL (no seed).
 #' @param max_trials Maximum number of trials to run. Default is NULL (unlimited).
-#' @param max_errors Maximum consecutive errors before stopping. Default is 5.
+#' @param max_errors Non-negative integer error budget. Optimizers report total
+#'   errors while stopping on a separate consecutive-error streak; each success
+#'   resets only that streak. A positive value stops on the failure that reaches
+#'   the limit. Zero permits work to begin but stops after the first failure.
+#'   When a completed evaluation returns multiple outcomes, all are included in
+#'   the final counters even if the stop boundary was crossed partway through;
+#'   the first stop reason remains unchanged and prevents scheduling new work.
 #' @param num_threads Number of threads for parallel evaluation. Default is 1.
 #' @param progress Whether to display progress. Default is TRUE in interactive sessions.
 #' @param log_dir Directory for trial logging. Default is NULL (no logging).
@@ -333,14 +339,23 @@ eval_program <- function(
 
   # Build per-example tibble
   n <- nrow(dataset)
+  ordered_errors <- rep(NA_character_, n)
+  compact_errors <- eval_result$errors %||% character(0)
+  if (length(compact_errors) == n) {
+    ordered_errors <- compact_errors
+  } else if (length(compact_errors) > 0L) {
+    failed_rows <- which(is.na(eval_result$scores))
+    assign_count <- min(length(compact_errors), length(failed_rows))
+    if (assign_count > 0L) {
+      ordered_errors[failed_rows[seq_len(assign_count)]] <-
+        compact_errors[seq_len(assign_count)]
+    }
+  }
+
   examples <- tibble::tibble(
     row_id = seq_len(n),
     score = eval_result$scores,
-    error = if (length(eval_result$errors) == n) {
-      eval_result$errors
-    } else {
-      rep(NA_character_, n)
-    },
+    error = ordered_errors,
     predicted = eval_result$predictions,
     feedback = if (length(eval_result$feedbacks %||% character(0)) == n) {
       eval_result$feedbacks
@@ -722,12 +737,9 @@ record_optimizer_outcome <- function(
     )
   }
 
-  # Exhaustion is sticky. Optimizers must stop scheduling once it is reached,
-  # so later outcomes cannot rewrite the boundary or its accounting snapshot.
-  if (!is.null(budget$stop_reason)) {
-    return(invisible(budget))
-  }
-
+  # A completed batch can cross the boundary before all returned rows are
+  # recorded. Keep accounting those executed outcomes while preserving the
+  # first stop reason; callers use that sticky reason to prevent new work.
   budget$attempts <- budget$attempts + 1L
 
   if (isTRUE(success)) {
@@ -740,7 +752,10 @@ record_optimizer_outcome <- function(
   budget$consecutive_errors <- budget$consecutive_errors + 1L
 
   effective_limit <- max(1L, budget$max_errors)
-  if (budget$consecutive_errors >= effective_limit) {
+  if (
+    is.null(budget$stop_reason) &&
+      budget$consecutive_errors >= effective_limit
+  ) {
     budget$stop_reason <- new_optimizer_stop_reason(
       budget,
       stage = stage,
@@ -808,12 +823,30 @@ record_eval_result_outcomes <- function(budget, eval_result, stage) {
   if (has_ordered_errors) {
     row_errors <- examples$error
     error_flags <- vapply(row_errors, optimizer_error_present, logical(1))
+    if ("score" %in% names(examples)) {
+      error_flags <- error_flags | is.na(examples$score)
+    }
 
-    observed_errors <- 0L
+    # Reconcile summaries inside the known row set. Never synthesize extra
+    # attempts: if detail omitted some failures, promote trailing clean rows.
+    missing_failures <- max(0L, reported_errors - sum(error_flags))
+    if (missing_failures > 0L) {
+      clean_rows <- which(!error_flags)
+      promote_count <- min(missing_failures, length(clean_rows))
+      if (promote_count > 0L) {
+        promoted <- utils::tail(clean_rows, promote_count)
+        error_flags[promoted] <- TRUE
+      }
+    }
+
     for (index in seq_along(error_flags)) {
       is_error <- error_flags[[index]]
       condition <- if (is_error) {
-        optimizer_error_condition(row_errors[[index]])
+        if (optimizer_error_present(row_errors[[index]])) {
+          optimizer_error_condition(row_errors[[index]])
+        } else {
+          simpleError("Evaluation row failed without error detail")
+        }
       } else {
         NULL
       }
@@ -823,23 +856,6 @@ record_eval_result_outcomes <- function(budget, eval_result, stage) {
         stage = stage,
         condition = condition
       )
-      observed_errors <- observed_errors + as.integer(is_error)
-
-      if (optimizer_budget_stopped(budget)) {
-        return(invisible(budget))
-      }
-    }
-
-    # EvalResult summaries can report failures omitted from the row detail.
-    # Preserve the known row order, then conservatively append the difference.
-    unreported_errors <- max(0L, reported_errors - observed_errors)
-    if (unreported_errors > 0L) {
-      for (index in seq_len(unreported_errors)) {
-        record_optimizer_outcome(budget, FALSE, stage)
-        if (optimizer_budget_stopped(budget)) {
-          break
-        }
-      }
     }
 
     return(invisible(budget))
@@ -861,9 +877,6 @@ record_eval_result_outcomes <- function(budget, eval_result, stage) {
 
   for (index in seq_len(reported_errors)) {
     record_optimizer_outcome(budget, FALSE, stage)
-    if (optimizer_budget_stopped(budget)) {
-      break
-    }
   }
 
   invisible(budget)
