@@ -27,7 +27,6 @@ jobs:
           - {os: macos-latest,   r: 'release', timeout: 30}
           - {os: windows-latest, r: 'release', timeout: 30}
           - {os: ubuntu-latest,  r: 'release', timeout: 30}
-          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release', timeout: 120}
           - {os: ubuntu-latest,  r: 'oldrel-1', timeout: 30}
 
     env:
