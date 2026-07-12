@@ -465,6 +465,73 @@ test_that("credential-bearing connection fields fail closed", {
   )
 })
 
+test_that("credential-bearing key material fields fail closed", {
+  credential_names <- c(
+    "passphrase",
+    "passPhrase",
+    "databasePassphrase",
+    "encryptionKey",
+    "ENCRYPTION_KEY",
+    "signingKey",
+    "jwtSigningKey",
+    "sshKey",
+    "sshKeyFile",
+    "licenseKey",
+    "licenseKeyValue",
+    "serviceAccountKey",
+    "totpSeed"
+  )
+  benign_names <- c(
+    "signingKeyAlgorithm",
+    "licenseKeyFormat",
+    "serviceAccountKeyPolicy",
+    "passphraseHint",
+    "encryptionKeyboard",
+    "sshKeynote",
+    "totpSeedLength"
+  )
+  sentinels <- stats::setNames(
+    paste0("ARTIFACT_KEY_MATERIAL_SENTINEL_", seq_along(credential_names)),
+    credential_names
+  )
+
+  expect_true(all(vapply(
+    credential_names,
+    dsprrr:::artifact_is_secret_name,
+    logical(1)
+  )))
+  expect_false(any(vapply(
+    benign_names,
+    dsprrr:::artifact_is_secret_name,
+    logical(1)
+  )))
+
+  program <- artifact_leaf()
+  for (name in credential_names) {
+    program$config[[name]] <- sentinels[[name]]
+  }
+  for (name in benign_names) {
+    program$config[[name]] <- paste0("benign-", name)
+  }
+
+  artifact <- program_artifact(program)
+  rendered <- paste(capture.output(dput(artifact)), collapse = "\n")
+  restored <- restore_module_config(artifact)
+
+  expect_false(any(vapply(
+    sentinels,
+    grepl,
+    logical(1),
+    x = rendered,
+    fixed = TRUE
+  )))
+  expect_false(any(credential_names %in% names(restored$config)))
+  expect_identical(
+    restored$config[benign_names],
+    as.list(stats::setNames(paste0("benign-", benign_names), benign_names))
+  )
+})
+
 test_that("runtime fields are excluded across camel and acronym styles", {
   runtime_names <- c(
     "baseUrl",

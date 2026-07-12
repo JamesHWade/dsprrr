@@ -1372,7 +1372,14 @@ artifact_is_secret_name <- function(name) {
       ),
       normalized
     )
-  boundary_match || compact_match || connection_match
+  key_material_match <- grepl(
+    paste0(
+      "(^|_)(passphrase|pass_phrase|encryption_key|signing_key|ssh_key|",
+      "license_key|service_account_key|totp_seed)(_(file|path|value))?$"
+    ),
+    normalized
+  )
+  boundary_match || compact_match || connection_match || key_material_match
 }
 
 artifact_is_runtime_name <- function(name) {
