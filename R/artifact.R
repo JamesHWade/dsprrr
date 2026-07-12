@@ -14,8 +14,8 @@
 #' retrievers, stores, and code runners.
 #'
 #' Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
-#' through a closed codec. Remote content URLs must be stable and free of user
-#' information or credential/signature query parameters. Thinking, tool-call,
+#' through a closed codec. Remote content URLs must be stable HTTPS URLs without
+#' user information, query strings, or fragments. Thinking, tool-call,
 #' uploaded, and other runtime content still requires a registry or trusted
 #' embedding. The payload digest detects changes but is not an authenticity or
 #' trust signal.
@@ -1082,7 +1082,8 @@ artifact_is_safe_remote_url <- function(url) {
   if (
     !artifact_is_character_scalar(url, nonempty = TRUE) ||
       grepl("[[:cntrl:] ]", url) ||
-      !grepl("^https://", url, ignore.case = TRUE)
+      !grepl("^https://", url, ignore.case = TRUE) ||
+      grepl("[?#]", url)
   ) {
     return(FALSE)
   }
@@ -1094,26 +1095,7 @@ artifact_is_safe_remote_url <- function(url) {
   ) {
     return(FALSE)
   }
-  if (!grepl("?", url, fixed = TRUE)) {
-    return(TRUE)
-  }
-  query <- sub("^[^?]*[?]", "", url)
-  query <- sub("#.*$", "", query)
-  if (!nzchar(query)) {
-    return(TRUE)
-  }
-  keys <- vapply(
-    strsplit(query, "[&;]")[[1]],
-    function(item) utils::URLdecode(sub("=.*$", "", item)),
-    character(1)
-  )
-  sensitive <- vapply(keys, artifact_is_secret_name, logical(1)) |
-    grepl(
-      "(^|[-_])(sig(nature)?|auth|credential|expires?)($|[-_])|^x-(amz|goog)-",
-      keys,
-      ignore.case = TRUE
-    )
-  !any(sensitive)
+  TRUE
 }
 
 artifact_validate_content_ref <- function(record, path) {

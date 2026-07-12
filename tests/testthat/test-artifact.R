@@ -1009,17 +1009,25 @@ test_that("declarative ellmer content round-trips through demos", {
 })
 
 test_that("declarative content rejects unsafe URLs and malformed tags", {
-  program <- artifact_leaf()
-  program$demos <- list(list(
-    text = ellmer::ContentImageRemote(
-      "https://example.com/image.png?X-Amz-Signature=secret"
-    ),
-    answer = "no"
-  ))
-  expect_s3_class(
-    rlang::catch_cnd(program_artifact(program)),
-    "dsprrr_artifact_unsafe_value"
+  secret <- "ARTIFACT_REMOTE_URL_SECRET_SENTINEL"
+  unsafe_remote_urls <- c(
+    paste0("https://example.com/image.png?X-Amz-Signature=", secret),
+    paste0("https://example.com/image.png?key=", secret),
+    paste0("https://example.com/image.png?width=100&value=", secret),
+    paste0("https://example.com/image.png#access_token=", secret),
+    paste0("https://example.com/image.png#", secret),
+    "https://example.com/image.png?width=100"
   )
+  for (url in unsafe_remote_urls) {
+    program <- artifact_leaf()
+    program$demos <- list(list(
+      text = ellmer::ContentImageRemote(url),
+      answer = "no"
+    ))
+    condition <- rlang::catch_cnd(program_artifact(program))
+    expect_s3_class(condition, "dsprrr_artifact_unsafe_value")
+    expect_false(grepl(secret, conditionMessage(condition), fixed = TRUE))
+  }
 
   credential_url <- artifact_leaf()
   credential_url$demos <- list(list(

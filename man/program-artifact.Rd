@@ -49,8 +49,8 @@ Registry IDs are the recommended contract for tools, custom functions,
 retrievers, stores, and code runners.
 
 Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
-through a closed codec. Remote content URLs must be stable and free of user
-information or credential/signature query parameters. Thinking, tool-call,
+through a closed codec. Remote content URLs must be stable HTTPS URLs without
+user information, query strings, or fragments. Thinking, tool-call,
 uploaded, and other runtime content still requires a registry or trusted
 embedding. The payload digest detects changes but is not an authenticity or
 trust signal.
