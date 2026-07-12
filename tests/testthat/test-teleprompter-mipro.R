@@ -259,6 +259,31 @@ test_that("run_discrete_bo selects best candidate", {
   expect_true(nrow(result$trial_history) == 10)
 })
 
+test_that("run_discrete_bo does not descend past a completed resume cursor", {
+  candidates <- list(list(id = "candidate"))
+  resume_state <- dsprrr:::discrete_bo_restore_state(NULL, candidates)
+  resume_state$next_trial <- 3L
+  calls <- integer()
+
+  result <- dsprrr:::run_discrete_bo(
+    candidates = candidates,
+    eval_fn = function(candidate, eval_type, trial_idx) {
+      calls <<- c(calls, trial_idx)
+      dsprrr:::EvalResult(mean_score = 1, n_evaluated = 1L)
+    },
+    control = dsprrr:::optimizer_control(),
+    max_trials = 2L,
+    minibatch_size = 1L,
+    full_eval_every = 2L,
+    resume_state = resume_state
+  )
+
+  expect_identical(calls, integer())
+  expect_identical(result$resume_state$next_trial, 3L)
+  expect_identical(result$complete, TRUE)
+  expect_identical(result$budget_summary$trials, 0L)
+})
+
 test_that("run_discrete_bo respects error limit", {
   candidates <- list(list(id = "test"))
 

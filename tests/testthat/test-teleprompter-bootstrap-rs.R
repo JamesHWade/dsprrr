@@ -468,6 +468,66 @@ test_that("Bootstrap random search resets its outer budget on valid candidates",
   expect_identical(result$config$optimizer$best_candidate, "b")
 })
 
+test_that("Bootstrap random search honors caller resource controls", {
+  configs <- lapply(letters[1:3], function(name) {
+    list(name = name, type = "baseline")
+  })
+  eval_calls <- 0L
+
+  testthat::local_mocked_bindings(
+    generate_candidate_configs = function(...) configs,
+    compile_candidate = function(config, program, ...) copy_module(program),
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      EvalResult(
+        examples = tibble::tibble(
+          score = 0.8,
+          error = NA_character_,
+          predicted = "answer",
+          feedback = NA_character_
+        ),
+        mean_score = 0.8,
+        n_evaluated = 1L,
+        input_tokens = 2L,
+        output_tokens = 1L,
+        total_tokens = 3L,
+        total_cost = 0.01,
+        provider_calls = 1L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  teleprompter <- BootstrapFewShotWithRandomSearch(
+    metric = function(...) 1,
+    num_candidate_programs = 3L
+  )
+  result <- dsprrr:::compile_bootstrap_rs(
+    teleprompter,
+    module(signature("x -> y"), type = "predict"),
+    data.frame(x = "train", y = "train"),
+    valset = data.frame(x = "val", y = "val"),
+    control = dsprrr:::optimizer_control(
+      max_metric_calls = 2L,
+      progress = FALSE
+    )
+  )
+  budget <- result$config$optimizer$budget_summary
+
+  expect_identical(eval_calls, 2L)
+  expect_identical(budget$trials, 2L)
+  expect_identical(budget$metric_calls, 2L)
+  expect_identical(budget$provider_calls, 2L)
+  expect_identical(budget$input_tokens, 4L)
+  expect_identical(budget$output_tokens, 2L)
+  expect_identical(budget$total_tokens, 6L)
+  expect_equal(budget$total_cost, 0.02)
+  expect_identical(budget$attempts, 2L)
+  expect_identical(budget$successes, 2L)
+  expect_identical(budget$stop_reason$code, "max_metric_calls")
+})
+
 test_that("Bootstrap random search preserves its best at the exact limit", {
   configs <- lapply(letters[1:4], function(name) {
     list(name = name, type = "baseline")

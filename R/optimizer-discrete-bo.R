@@ -296,7 +296,13 @@ run_discrete_bo <- function(
     which.max(ucb_scores)
   }
 
-  for (trial_idx in seq.int(next_trial, max_trials)) {
+  trial_indices <- if (next_trial > max_trials) {
+    integer()
+  } else {
+    seq.int(next_trial, max_trials)
+  }
+
+  for (trial_idx in trial_indices) {
     if (optimizer_budget_stopped(budget)) {
       break
     }

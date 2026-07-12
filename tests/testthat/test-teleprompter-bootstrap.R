@@ -369,6 +369,47 @@ test_that("BootstrapFewShot max_errors zero stops after the first attempt", {
   expect_identical(result$config$optimizer$stop_reason, budget$stop_reason)
 })
 
+test_that("BootstrapFewShot logging cannot bypass the shared metric budget", {
+  log_dir <- tempfile("bootstrap-budget-log-")
+  dir.create(log_dir, mode = "0700")
+  withr::defer(unlink(log_dir, recursive = TRUE, force = TRUE))
+  eval_calls <- 0L
+
+  testthat::local_mocked_bindings(
+    eval_program = function(...) {
+      eval_calls <<- eval_calls + 1L
+      stop("logging validation must not run past the budget")
+    },
+    .package = "dsprrr"
+  )
+
+  teleprompter <- BootstrapFewShot(
+    metric = function(...) 1,
+    max_labeled_demos = 1L,
+    max_bootstrapped_demos = 0L,
+    log_dir = log_dir
+  )
+  result <- dsprrr:::compile_bootstrap(
+    teleprompter,
+    module(signature("x -> y"), type = "predict"),
+    data.frame(x = "train", y = "train"),
+    valset = data.frame(x = "validation", y = "validation"),
+    control = dsprrr:::optimizer_control(
+      max_metric_calls = 0L,
+      progress = FALSE
+    )
+  )
+
+  trials <- read_trials_jsonl(file.path(log_dir, "trials.jsonl"))
+  budget <- result$config$optimizer$budget_summary
+  expect_identical(eval_calls, 0L)
+  expect_identical(budget$metric_calls, 0L)
+  expect_identical(budget$trials, 0L)
+  expect_identical(budget$stop_reason$code, "max_metric_calls")
+  expect_length(trials, 1L)
+  expect_identical(trials[[1L]]@cost_summary$metric_calls, 0L)
+})
+
 test_that("find_output_column identifies common output columns", {
   input_names <- c("question", "context")
 

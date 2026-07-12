@@ -129,6 +129,77 @@ BootstrapFewShot <- S7::new_class(
   )
 )
 
+bootstrap_budget_eval_result <- function(budget) {
+  summary <- optimizer_budget_summary(budget)
+  token_usage_unknown <- any(
+    c(
+      summary$unknown_usage$input_tokens,
+      summary$unknown_usage$output_tokens,
+      summary$unknown_usage$total_tokens
+    ) >
+      0L
+  )
+
+  EvalResult(
+    mean_score = NA_real_,
+    n_evaluated = as.integer(summary$successes),
+    n_errors = as.integer(summary$total_errors),
+    input_tokens = as.integer(summary$input_tokens),
+    output_tokens = as.integer(summary$output_tokens),
+    total_tokens = as.integer(summary$total_tokens),
+    total_cost = summary$total_cost,
+    provider_calls = as.integer(summary$provider_calls),
+    metric_calls = as.integer(summary$metric_calls),
+    provider_usage_unknown = summary$unknown_usage$provider_calls > 0L,
+    token_usage_unknown = token_usage_unknown,
+    total_latency_ms = summary$elapsed_seconds * 1000
+  )
+}
+
+bootstrap_log_trial <- function(
+  trial_log,
+  student,
+  valset,
+  metric,
+  .llm,
+  control,
+  budget,
+  params,
+  stage,
+  unit_id
+) {
+  trial <- create_trial(
+    optimizer_name = "BootstrapFewShot",
+    params = params
+  )
+  eval_result <- if (is.null(valset)) {
+    bootstrap_budget_eval_result(budget)
+  } else {
+    optimizer_eval_candidate(
+      student,
+      valset,
+      metric,
+      .llm = .llm,
+      control = control,
+      budget = budget,
+      stage = stage,
+      unit_id = unit_id
+    )
+  }
+  trial <- complete_trial(
+    trial,
+    eval_result,
+    compiled_artifact_ref = student,
+    notes = if (is.null(valset)) {
+      "Search-ledger summary; no additional validation was run for logging."
+    } else {
+      "Validation was metered through the shared optimizer budget."
+    }
+  )
+  trial_log$add_trial(trial)
+  invisible(eval_result)
+}
+
 #' Compile method for BootstrapFewShot
 #' @noRd
 compile_bootstrap <- function(
@@ -630,42 +701,28 @@ compile_bootstrap <- function(
 
   # Log trial if logging enabled
   if (!is.null(trial_log)) {
-    trial <- create_trial(
-      optimizer_name = "BootstrapFewShot",
+    bootstrap_log_trial(
+      trial_log = trial_log,
+      student = student,
+      valset = valset,
+      metric = teleprompter@metric,
+      .llm = .llm,
+      control = control,
+      budget = budget,
       params = list(
         max_bootstrapped_demos = teleprompter@max_bootstrapped_demos,
         max_labeled_demos = teleprompter@max_labeled_demos,
         max_rounds = teleprompter@max_rounds,
         metric_threshold = teleprompter@metric_threshold
-      )
+      ),
+      stage = "bootstrap_log_validation",
+      unit_id = paste0(.checkpoint_namespace, ":log-validation")
     )
-
-    # If valset provided, evaluate
-    if (!is.null(valset)) {
-      eval_result <- eval_program(
-        student,
-        valset,
-        teleprompter@metric,
-        .llm = .llm,
-        control = control
-      )
-      trial <- complete_trial(
-        trial,
-        eval_result,
-        compiled_artifact_ref = student
-      )
-    } else {
-      # Create a minimal eval result
-      trial <- complete_trial(
-        trial,
-        EvalResult(
-          n_evaluated = as.integer(length(bootstrapped_demos)),
-          n_errors = as.integer(budget_summary$total_errors)
-        )
-      )
-    }
-
-    trial_log$add_trial(trial)
+    budget_summary <- optimizer_budget_summary(budget)
+    student$config$optimizer$total_attempts <- budget_summary$attempts
+    student$config$optimizer$error_count <- budget_summary$total_errors
+    student$config$optimizer$budget_summary <- budget_summary
+    student$config$optimizer$stop_reason <- budget_summary$stop_reason
   }
 
   expected_units <- unlist(lapply(
@@ -1220,41 +1277,29 @@ compile_bootstrap_pipeline <- function(
   )
 
   if (!is.null(trial_log)) {
-    trial <- create_trial(
-      optimizer_name = "BootstrapFewShot",
+    bootstrap_log_trial(
+      trial_log = trial_log,
+      student = student,
+      valset = valset,
+      metric = teleprompter@metric,
+      .llm = .llm,
+      control = control,
+      budget = budget,
       params = list(
         joint_pipeline = TRUE,
         max_bootstrapped_demos = teleprompter@max_bootstrapped_demos,
         max_labeled_demos = teleprompter@max_labeled_demos,
         max_rounds = teleprompter@max_rounds,
         metric_threshold = teleprompter@metric_threshold
-      )
+      ),
+      stage = "bootstrap_pipeline_log_validation",
+      unit_id = paste0(.checkpoint_namespace, ":log-validation")
     )
-
-    if (!is.null(valset)) {
-      eval_result <- eval_program(
-        student,
-        valset,
-        teleprompter@metric,
-        .llm = .llm,
-        control = control
-      )
-      trial <- complete_trial(
-        trial,
-        eval_result,
-        compiled_artifact_ref = student
-      )
-    } else {
-      trial <- complete_trial(
-        trial,
-        EvalResult(
-          n_evaluated = n_bootstrapped_total,
-          n_errors = budget_summary$total_errors
-        )
-      )
-    }
-
-    trial_log$add_trial(trial)
+    budget_summary <- optimizer_budget_summary(budget)
+    student$config$optimizer$total_attempts <- budget_summary$attempts
+    student$config$optimizer$error_count <- budget_summary$total_errors
+    student$config$optimizer$budget_summary <- budget_summary
+    student$config$optimizer$stop_reason <- budget_summary$stop_reason
   }
 
   expected_units <- unlist(lapply(
