@@ -4,7 +4,14 @@
 \alias{export_module_code}
 \title{Export Module Configuration as R Code}
 \usage{
-export_module_code(module, name = "mod", include_demos = TRUE, file = NULL)
+export_module_code(
+  module,
+  name = "mod",
+  include_demos = TRUE,
+  file = NULL,
+  registry = list(),
+  trusted = FALSE
+)
 }
 \arguments{
 \item{module}{A DSPrrr module to export.}
@@ -16,15 +23,22 @@ Default is "mod".}
 in the generated code. Default is TRUE.}
 
 \item{file}{Optional file path to write the code to. If NULL (default),
-returns the code as a character string.}
+returns the code as a character string. Existing files are atomically
+replaced only after the staged output parses successfully.}
+
+\item{registry}{Named runtime registry; see \link{program-artifact}.}
+
+\item{trusted}{Whether trusted runtime values may be embedded. Standalone
+code export rejects registry and embedded runtime references.}
 }
 \value{
-If \code{file} is NULL, returns the R code as a character string
-(invisibly). If \code{file} is specified, writes to file and returns invisibly.
+If \code{file} is NULL, returns the R code as a character string. If
+\code{file} is specified, writes it atomically and returns the code invisibly.
 }
 \description{
-Generate R code that recreates a module with its current configuration.
-Useful for documenting optimized configurations and ensuring reproducibility.
+Generate R code containing the complete program artifact and its restoration
+call. This preserves nested graphs and exact schemas without hand-rendering
+module fields.
 }
 \examples{
 if (FALSE) {
@@ -40,12 +54,12 @@ export_module_code(mod, file = "optimized_module.R")
 }
 }
 \seealso{
-Other optimizer accessors: 
-\code{\link{apply_best_config}()},
-\code{\link{best_demos}()},
-\code{\link{best_params}()},
-\code{\link{config_diff}()},
-\code{\link{optimization_summary}()},
-\code{\link{top_trials}()}
+Other optimizer accessors:
+\code{\link[=apply_best_config]{apply_best_config()}},
+\code{\link[=best_demos]{best_demos()}},
+\code{\link[=best_params]{best_params()}},
+\code{\link[=config_diff]{config_diff()}},
+\code{\link[=optimization_summary]{optimization_summary()}},
+\code{\link[=top_trials]{top_trials()}}
 }
 \concept{optimizer accessors}

@@ -148,7 +148,7 @@ optimizers operate on single modules).
 | Streaming | `streamify()` + `StreamListener` | `run_stream()` + `stream_listener()`; token streaming for single string fields, status events per pipeline step |
 | Usage tracking | `track_usage` | `get_tokens()`, `get_cost()`, `session_cost()` |
 | Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.parallel = TRUE)` via mirai or ellmer's native parallelism |
-| Saving programs | `save`/`load`; sanitized LM state and explicit unsafe-class opt-in in 3.3 beta | `pin_module_config()` / `restore_module_config()` (pins-based); safe versioned nested-program state is planned |
+| Saving programs | `save`/`load`; sanitized LM state and explicit unsafe-class opt-in in 3.3 beta | Versioned whole-program artifacts via `save_program()` / `load_program()` or pins, with registry-backed runtime IDs and explicit trusted opt-in |
 | Observability | MLflow autolog, OpenTelemetry callbacks | Traces tibble, `inspect_history()`, `export_traces()`; package-level OpenTelemetry spans are planned on top of ellmer |
 | Adapters (Chat/JSON/XML/TwoStep/BAML) | Yes | No adapter layer; ellmer's `chat_structured()` handles structured output |
 | Evaluation framework | `dspy.Evaluate` | `evaluate()`, `eval_program()`, plus **vitals** integration |

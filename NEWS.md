@@ -71,9 +71,13 @@ First development changelog. dsprrr is experimental; the API may change.
   `refine(best_of_n(mod))`) compose their ids cleanly instead of crashing with
   a duplicate-argument error (#dsprrr-pcd, #dsprrr-wx6).
 
-* `pin_module_config()` now errors clearly for pipelines and other unsupported
-  module types instead of silently serialising them as an empty `PredictModule`
-  and dropping every step on restore (#dsprrr-07u).
+* New `program_artifact()`, `save_program()`, and `load_program()` APIs provide
+  a versioned whole-program contract for nested module graphs, shared identity,
+  multimodal demos, and curated optimization state. Runtime objects use stable
+  registry IDs by default or require dual `trusted = TRUE` opt-in; pins and
+  standalone code export reuse the same validated manifest, and legacy v2 pins
+  migrate without retaining raw trial/runtime history (#dsprrr-g6gq,
+  #dsprrr-07u).
 
 ## Internal
 

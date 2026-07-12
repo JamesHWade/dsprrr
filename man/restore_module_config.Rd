@@ -4,12 +4,22 @@
 \alias{restore_module_config}
 \title{Restore a Module from Pinned Configuration}
 \usage{
-restore_module_config(config, signature = NULL)
+restore_module_config(
+  config,
+  signature = NULL,
+  registry = list(),
+  trusted = FALSE
+)
 }
 \arguments{
 \item{config}{A configuration list (from \code{pins::pin_read()})}
 
 \item{signature}{Optional Signature object to use (overrides stored signature)}
+
+\item{registry}{Named runtime registry used to resolve stored IDs.}
+
+\item{trusted}{Whether embedded runtime values may be restored. The default
+is \code{FALSE}.}
 }
 \value{
 A DSPrrr module with the restored configuration
@@ -30,12 +40,12 @@ result <- run(mod, text = "This is great!", .llm = llm)
 }
 }
 \seealso{
-Other orchestration: 
+Other orchestration:
 \code{\link{orchestration}},
-\code{\link{pin_module_config}()},
-\code{\link{pin_trace}()},
-\code{\link{pin_vitals_log}()},
-\code{\link{use_dsprrr_template}()},
-\code{\link{validate_workflow}()}
+\code{\link[=pin_module_config]{pin_module_config()}},
+\code{\link[=pin_trace]{pin_trace()}},
+\code{\link[=pin_vitals_log]{pin_vitals_log()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}}
 }
 \concept{orchestration}

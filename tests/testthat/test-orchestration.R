@@ -45,21 +45,31 @@ test_that("pin_module_config saves correct structure", {
   pin_module_config(board, "test-module", mod)
   config <- pins::pin_read(board, "test-module")
 
-  # Check structure
-  expect_true("signature" %in% names(config))
-  expect_true("config" %in% names(config))
-  expect_true("optimization" %in% names(config))
-  expect_true("metadata" %in% names(config))
+  expect_identical(config$format, "dsprrr-program")
+  expect_identical(config$format_version, 3L)
+  expect_named(
+    config,
+    c(
+      "format",
+      "format_version",
+      "root",
+      "graph",
+      "metadata",
+      "exclusions",
+      "integrity"
+    )
+  )
+  root <- config$graph$nodes[[config$root]]
 
   # Check signature
-  expect_equal(length(config$signature$inputs), 1)
-  expect_equal(config$signature$inputs[[1]]$name, "text")
-  expect_equal(config$signature$instructions, "Test instructions")
+  expect_equal(length(root$signature$inputs), 1)
+  expect_equal(root$signature$inputs[[1]]$name, "text")
+  expect_equal(root$signature$instructions, "Test instructions")
 
   # Check metadata
-  expect_equal(config$metadata$module_type, "PredictModule")
-  expect_true(!is.null(config$metadata$created_at))
-  expect_true(!is.null(config$metadata$dsprrr_version))
+  expect_equal(root$class, "PredictModule")
+  expect_false(is.null(config$metadata$created_at))
+  expect_false(is.null(config$metadata$packages$dsprrr))
 })
 
 test_that("pin_module_config captures optimization state", {
@@ -78,12 +88,13 @@ test_that("pin_module_config captures optimization state", {
   board <- pins::board_temp()
   pin_module_config(board, "optimized-module", mod)
   config <- pins::pin_read(board, "optimized-module")
+  root <- config$graph$nodes[[config$root]]
 
-  expect_true(config$optimization$compiled)
-  expect_equal(config$optimization$best_score, 0.85)
-  expect_equal(config$optimization$best_trial, 2)
-  expect_equal(config$optimization$best_params$temperature, 0.3)
-  expect_equal(config$optimization$n_trials, 3)
+  expect_true(root$optimization$compiled)
+  expect_equal(root$optimization$best_score, 0.85)
+  expect_equal(root$optimization$best_trial, 2)
+  expect_equal(root$optimization$best_params$temperature, 0.3)
+  expect_equal(root$optimization$n_trials, 3)
 })
 
 # ---- restore_module_config tests ----
@@ -156,10 +167,7 @@ test_that("restore_module_config rejects legacy pinned configs", {
     config = list()
   )
 
-  expect_error(
-    restore_module_config(legacy_config),
-    "Re-pin this module using the v2 format"
-  )
+  expect_snapshot(restore_module_config(legacy_config), error = TRUE)
 })
 
 test_that("pin_module_config round-trips chain_of_thought kind", {
@@ -172,7 +180,8 @@ test_that("pin_module_config round-trips chain_of_thought kind", {
   config <- pins::pin_read(board, "cot")
   restored <- restore_module_config(config)
 
-  expect_equal(config$module_kind, "chain_of_thought")
+  root <- config$graph$nodes[[config$root]]
+  expect_equal(root$kind, "chain_of_thought")
   expect_equal(restored$config$.module_kind, "chain_of_thought")
   expect_true("reasoning" %in% names(restored$signature@output_type@properties))
 })
@@ -187,7 +196,8 @@ test_that("pin_module_config round-trips multichain core state", {
   config <- pins::pin_read(board, "mcc")
   restored <- restore_module_config(config)
 
-  expect_equal(config$module_kind, "multichain")
+  root <- config$graph$nodes[[config$root]]
+  expect_equal(root$kind, "multichain")
   expect_s3_class(restored, "Module")
   expect_equal(restored$config$.module_kind, "multichain")
   expect_equal(restored$M, 4)
@@ -602,7 +612,7 @@ test_that("module config round-trips correctly", {
   expect_equal(restored$state$best_score, 0.92)
 })
 
-test_that("pin_module_config refuses to silently destroy pipelines (dsprrr-07u)", {
+test_that("pin_module_config preserves complete pipelines (dsprrr-07u)", {
   skip_if_not_installed("pins")
 
   m1 <- module(signature("question -> thought"), type = "predict")
@@ -610,11 +620,10 @@ test_that("pin_module_config refuses to silently destroy pipelines (dsprrr-07u)"
   pipe <- pipeline(m1, m2)
   board <- pins::board_temp()
 
-  # Regression: module_kind() collapsed unknown classes to "predict", so a
-  # pipeline pinned without error and restored as a single empty PredictModule,
-  # silently losing every step and its bootstrapped demos.
-  expect_error(
-    pin_module_config(board, "pipe", pipe),
-    "[Pp]ipeline"
-  )
+  pin_module_config(board, "pipe", pipe)
+  artifact <- pins::pin_read(board, "pipe")
+  restored <- restore_module_config(artifact)
+
+  expect_s3_class(restored, "PipelineModule")
+  expect_identical(module_graph(restored)$path, module_graph(pipe)$path)
 })

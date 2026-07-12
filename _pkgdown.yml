@@ -376,6 +376,10 @@ reference:
   - title: Production & Deployment
     desc: Pin configurations, validate workflows, and deploy to production
     contents:
+    - program-artifact
+    - program_artifact
+    - save_program
+    - load_program
     - orchestration
     - pin_module_config
     - restore_module_config

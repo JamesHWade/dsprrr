@@ -14,14 +14,18 @@ NULL
 #' Pin a Module Configuration
 #'
 #' @description
-#' Save a module's configuration and signature to a pins board for later retrieval.
-#' This enables sharing optimized modules across projects and team members.
+#' Save a complete module program artifact to a pins board for later retrieval.
+#' This uses the versioned manifest documented in [program-artifact], including
+#' nested programs and shared module identity.
 #'
 #' @param board A pins board object (e.g., from `pins::board_folder()`)
 #' @param name Character name for the pin
 #' @param module A DSPrrr module whose configuration should be saved
 #' @param description Optional description for the pin
 #' @param versioned Logical; whether to version the pin (default TRUE)
+#' @param registry Named runtime registry; see [program-artifact].
+#' @param trusted Whether trusted runtime values may be embedded. The default is
+#'   `FALSE`.
 #' @param ... Additional arguments passed to `pins::pin_write()`
 #'
 #' @return The pin name (invisibly)
@@ -58,7 +62,9 @@ pin_module_config <- function(
   module,
   description = NULL,
   versioned = TRUE,
-  ...
+  ...,
+  registry = list(),
+  trusted = FALSE
 ) {
   rlang::check_installed("pins", reason = "to save module configurations")
 
@@ -66,23 +72,10 @@ pin_module_config <- function(
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
 
-  config_data <- serialize_module_config_v2(module)
-  config_data$metadata$created_at <- Sys.time()
-  config_data$metadata$dsprrr_version <- as.character(
-    utils::packageVersion("dsprrr")
-  )
-  config_data$metadata$r_version <- R.version.string
-  config_data$metadata$module_type <- class(module)[1]
-  config_data$optimization <- list(
-    compiled = isTRUE(config_data$state$compiled),
-    best_score = config_data$state$best_score,
-    best_trial = config_data$state$best_trial,
-    best_params = config_data$state$best_params,
-    n_trials = if (is.data.frame(config_data$state$trials)) {
-      nrow(config_data$state$trials)
-    } else {
-      0L
-    }
+  config_data <- program_artifact(
+    module,
+    registry = registry,
+    trusted = trusted
   )
 
   # Write to pins
@@ -90,16 +83,18 @@ pin_module_config <- function(
     board = board,
     x = config_data,
     name = name,
-    description = description %||% paste("dsprrr module config:", name),
+    description = description %||% paste("dsprrr program artifact:", name),
     type = "rds",
     versioned = versioned,
     ...
   )
 
+  root <- config_data$graph$nodes[[config_data$root]]
   cli::cli_inform(c(
-    "v" = "Pinned module configuration: {.val {name}}",
-    "i" = "Module kind: {.val {config_data$module_kind}}",
-    "i" = "Compiled: {.val {isTRUE(config_data$state$compiled)}}"
+    "v" = "Pinned program artifact: {.val {name}}",
+    "i" = "Root module: {.cls {root$class}}",
+    "i" = "Graph nodes: {.val {length(config_data$graph$nodes)}}",
+    "i" = "Compiled: {.val {isTRUE(root$state$compiled)}}"
   ))
 
   invisible(name)
@@ -114,6 +109,9 @@ pin_module_config <- function(
 #'
 #' @param config A configuration list (from `pins::pin_read()`)
 #' @param signature Optional Signature object to use (overrides stored signature)
+#' @param registry Named runtime registry used to resolve stored IDs.
+#' @param trusted Whether embedded runtime values may be restored. The default
+#'   is `FALSE`.
 #'
 #' @return A DSPrrr module with the restored configuration
 #'
@@ -130,29 +128,23 @@ pin_module_config <- function(
 #' # Use the restored module
 #' result <- run(mod, text = "This is great!", .llm = llm)
 #' }
-restore_module_config <- function(config, signature = NULL) {
-  if (!identical(config$format_version, 2L)) {
-    cli::cli_abort(c(
-      "Unsupported pinned module format",
-      "i" = "Legacy pinned configs are not supported in phase 1",
-      "i" = "Re-pin this module using the v2 format with {.code pin_module_config()}"
-    ))
-  }
-
-  config_to_restore <- config
-  if (!is.null(signature)) {
-    if (!inherits(signature, "dsprrr::Signature")) {
-      cli::cli_abort("{.arg signature} must be a Signature object")
-    }
-    config_to_restore$signature <- serialize_signature_v2(signature)
-  }
-
-  mod <- restore_module_from_v2(config_to_restore)
+restore_module_config <- function(
+  config,
+  signature = NULL,
+  registry = list(),
+  trusted = FALSE
+) {
+  mod <- restore_program_artifact(
+    config,
+    registry = registry,
+    trusted = trusted,
+    signature = signature
+  )
 
   cli::cli_inform(c(
-    "v" = "Restored module from configuration",
-    "i" = "Module kind: {.val {config$module_kind}}",
-    "i" = "Original dsprrr version: {.val {config$metadata$dsprrr_version}}"
+    "v" = "Restored program artifact",
+    "i" = "Root module: {.cls {class(mod)[1]}}",
+    "i" = "Artifact version: {.val {artifact_format_version()}}"
   ))
 
   mod

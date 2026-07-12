@@ -391,8 +391,9 @@ config_diff <- function(module, baseline = NULL) {
 #' Export Module Configuration as R Code
 #'
 #' @description
-#' Generate R code that recreates a module with its current configuration.
-#' Useful for documenting optimized configurations and ensuring reproducibility.
+#' Generate R code containing the complete program artifact and its restoration
+#' call. This preserves nested graphs and exact schemas without hand-rendering
+#' module fields.
 #'
 #' @param module A DSPrrr module to export.
 #' @param name Character; variable name for the module in generated code.
@@ -400,10 +401,14 @@ config_diff <- function(module, baseline = NULL) {
 #' @param include_demos Logical; whether to include demonstration examples
 #'   in the generated code. Default is TRUE.
 #' @param file Optional file path to write the code to. If NULL (default),
-#'   returns the code as a character string.
+#'   returns the code as a character string. Existing files are atomically
+#'   replaced only after the staged output parses successfully.
+#' @param registry Named runtime registry; see [program-artifact].
+#' @param trusted Whether trusted runtime values may be embedded. Standalone
+#'   code export rejects registry and embedded runtime references.
 #'
-#' @return If `file` is NULL, returns the R code as a character string
-#'   (invisibly). If `file` is specified, writes to file and returns invisibly.
+#' @return If `file` is NULL, returns the R code as a character string. If
+#'   `file` is specified, writes it atomically and returns the code invisibly.
 #'
 #' @export
 #' @family optimizer accessors
@@ -424,141 +429,65 @@ export_module_code <- function(
   module,
   name = "mod",
   include_demos = TRUE,
-  file = NULL
+  file = NULL,
+  registry = list(),
+  trusted = FALSE
 ) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
+  if (
+    !is.character(name) ||
+      length(name) != 1L ||
+      is.na(name) ||
+      !nzchar(name) ||
+      !identical(make.names(name), name)
+  ) {
+    cli::cli_abort("{.arg name} must be one syntactic R name")
+  }
+  if (
+    !is.logical(include_demos) ||
+      length(include_demos) != 1L ||
+      is.na(include_demos)
+  ) {
+    cli::cli_abort("{.arg include_demos} must be TRUE or FALSE")
+  }
 
-  lines <- character()
-
-  # Header comment
-  lines <- c(lines, "# DSPrrr Module Configuration")
-  lines <- c(
-    lines,
-    paste0(
-      "# Generated: ",
-      format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-    )
+  artifact <- program_artifact(
+    module,
+    registry = registry,
+    trusted = trusted
   )
-  if (module$is_compiled()) {
-    lines <- c(
-      lines,
-      paste0(
-        "# Best score: ",
-        round(module$state$best_score %||% NA, 4)
-      )
+  if (!include_demos) {
+    artifact <- artifact_strip_demos(artifact)
+  }
+  runtime_kinds <- artifact_runtime_kinds(artifact)
+  unsupported <- intersect(runtime_kinds, c("registry", "trusted"))
+  if (length(unsupported) > 0L) {
+    cli::cli_abort(
+      c(
+        "Standalone R code cannot embed this program's runtime dependencies",
+        "x" = "Artifact contains {.val {unsupported}} runtime reference{?s}.",
+        "i" = "Use {.fn save_program} with a registry-backed deployment contract instead."
+      ),
+      class = "dsprrr_artifact_code_export_unsupported"
     )
   }
-  lines <- c(lines, "")
 
-  # Signature
-  sig <- module$signature
-  input_names <- vapply(sig@inputs, function(x) x$name, character(1))
-
-  if (length(input_names) > 0) {
-    sig_str <- paste0(
-      paste(input_names, collapse = ", "),
-      " -> output"
-    )
-  } else {
-    sig_str <- "input -> output"
-  }
-
-  lines <- c(lines, "# Create signature")
-  if (nzchar(sig@instructions)) {
-    lines <- c(
-      lines,
-      paste0(
-        "sig <- signature(\"",
-        sig_str,
-        "\","
-      )
-    )
-    # Format instructions nicely
-    instructions_escaped <- gsub("\"", "\\\\\"", sig@instructions)
-    instructions_escaped <- gsub("\n", "\\\\n", instructions_escaped)
-    lines <- c(
-      lines,
-      paste0(
-        "  instructions = \"",
-        instructions_escaped,
-        "\""
-      )
-    )
-    lines <- c(lines, ")")
-  } else {
-    lines <- c(lines, paste0("sig <- signature(\"", sig_str, "\")"))
-  }
-  lines <- c(lines, "")
-
-  # Module creation
-  lines <- c(lines, "# Create module")
-  lines <- c(lines, paste0(name, " <- module(sig, type = \"predict\")"))
-  lines <- c(lines, "")
-
-  # Apply configuration
-  config <- module$config
-  config_params <- config[
-    !names(config) %in% c("demos", "compiled", "teleprompter")
-  ]
-
-  if (length(config_params) > 0) {
-    lines <- c(lines, "# Apply optimized configuration")
-    for (param_name in names(config_params)) {
-      val <- config_params[[param_name]]
-      if (!is.null(val) && length(val) > 0) {
-        val_str <- format_value_for_code(val)
-        lines <- c(lines, paste0(name, "$config$", param_name, " <- ", val_str))
-      }
-    }
-    lines <- c(lines, "")
-  }
-
-  # Demos - PredictModule uses $demos field
-  demos <- module$demos %||% module$config$demos
-  if (include_demos && !is.null(demos) && length(demos) > 0) {
-    lines <- c(lines, "# Few-shot demonstrations")
-    lines <- c(lines, paste0(name, "$demos <- list("))
-    for (i in seq_along(demos)) {
-      demo <- demos[[i]]
-      demo_parts <- vapply(
-        names(demo),
-        function(n) {
-          paste0(n, " = ", format_value_for_code(demo[[n]]))
-        },
-        character(1)
-      )
-      demo_str <- paste0("  list(", paste(demo_parts, collapse = ", "), ")")
-      if (i < length(demos)) {
-        demo_str <- paste0(demo_str, ",")
-      }
-      lines <- c(lines, demo_str)
-    }
-    lines <- c(lines, ")")
-    lines <- c(lines, "")
-  }
-
-  # Mark as compiled
-  if (module$is_compiled()) {
-    lines <- c(lines, "# Mark as compiled")
-    lines <- c(lines, paste0(name, "$state$compiled <- TRUE"))
-    if (!is.null(module$state$best_score)) {
-      lines <- c(
-        lines,
-        paste0(
-          name,
-          "$state$best_score <- ",
-          module$state$best_score
-        )
-      )
-    }
-  }
-
+  dump <- capture.output(dput(artifact))
+  lines <- c(
+    "# dsprrr program artifact",
+    paste0("# Format version: ", artifact$format_version),
+    paste0(name, " <- local({"),
+    "  artifact <-",
+    paste0("  ", dump),
+    "  dsprrr::restore_module_config(artifact)",
+    "})"
+  )
   code <- paste(lines, collapse = "\n")
 
   if (!is.null(file)) {
-    writeLines(code, file)
+    artifact_atomic_write_lines(lines, file)
     cli::cli_inform("Module code written to {.file {file}}")
     invisible(code)
   } else {
