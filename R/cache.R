@@ -172,6 +172,36 @@ configure_cache <- function(
   invisible(old_config)
 }
 
+cache_recompose_active_tiers <- function() {
+  config <- get_cache_config()
+  if (!isTRUE(config$enable)) {
+    .dsprrr_env$cache <- NULL
+    return(invisible(NULL))
+  }
+
+  memory_cache <- if (isTRUE(config$enable_memory)) {
+    .dsprrr_env$cache_memory
+  } else {
+    NULL
+  }
+  disk_cache <- if (
+    isTRUE(config$enable_disk) && !isTRUE(.dsprrr_env$cache_degraded)
+  ) {
+    .dsprrr_env$cache_disk
+  } else {
+    NULL
+  }
+
+  .dsprrr_env$cache <- if (is.null(memory_cache)) {
+    disk_cache
+  } else if (is.null(disk_cache)) {
+    memory_cache
+  } else {
+    cachem::cache_layered(memory_cache, disk_cache)
+  }
+  invisible(.dsprrr_env$cache)
+}
+
 #' Clear dsprrr Cache
 #'
 #' @description
@@ -250,8 +280,36 @@ clear_cache <- function(which = c("all", "memory", "disk")) {
     disk_method <- if (which == "all") "destroy" else "reset"
     attempt("disk", {
       cache_verify_disk_cleanup_guard(disk_guard)
-      disk_cache[[disk_method]]()
+      result <- disk_cache[[disk_method]]()
+      if (which == "disk") {
+        cache_verify_disk_cleanup_guard(disk_guard)
+      }
+      result
     })
+  }
+
+  # A targeted clear empties a tier; it does not change the configured cache
+  # topology. Reattach only a tier whose cleanup completed successfully, then
+  # rebuild the layer from the still-valid handles. Failed tiers stay detached.
+  if (which == "memory" && !is.null(memory_cache) && is.null(errors$memory)) {
+    config <- get_cache_config()
+    if (isTRUE(config$enable) && isTRUE(config$enable_memory)) {
+      .dsprrr_env$cache_memory <- memory_cache
+    }
+  }
+  if (which == "disk" && !is.null(disk_cache) && is.null(errors$disk)) {
+    config <- get_cache_config()
+    if (
+      isTRUE(config$enable) &&
+        isTRUE(config$enable_disk) &&
+        !isTRUE(.dsprrr_env$cache_degraded)
+    ) {
+      .dsprrr_env$cache_disk <- disk_cache
+      .dsprrr_env$cache_disk_guard <- disk_guard
+    }
+  }
+  if (which != "all") {
+    cache_recompose_active_tiers()
   }
 
   # Tier methods may invoke guard callbacks that mutate package state. Restore

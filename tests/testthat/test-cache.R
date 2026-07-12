@@ -656,6 +656,11 @@ test_that("clear_cache with 'memory' only clears memory", {
 
   result <- cache$get("test_key")
   expect_true(cachem::is.key_missing(result))
+  rebuilt <- dsprrr:::get_cache()
+  expect_s3_class(rebuilt, "cache_mem")
+  rebuilt$set("fresh_key", "fresh_value")
+  expect_identical(rebuilt$get("fresh_key"), "fresh_value")
+  expect_true(dsprrr:::get_cache_config()$enable_memory)
 })
 
 test_that("DSPRRR_CACHE_ENABLED=false disables cache", {
@@ -1600,7 +1605,7 @@ test_that("clear all detaches state and attempts every tier before errors", {
   expect_false(pkg_env$cache_first_hit_shown)
 })
 
-test_that("targeted clears preserve the untouched safe tier", {
+test_that("targeted clears preserve configured tiers and untouched entries", {
   skip_on_os("windows")
   local_reset_cache()
 
@@ -1614,15 +1619,18 @@ test_that("targeted clears preserve the untouched safe tier", {
   cache <- dsprrr:::get_cache()
   cache$set("key", list(answer = "both"))
   pkg_env <- asNamespace("dsprrr")$.dsprrr_env
+  memory <- pkg_env$cache_memory
   disk <- pkg_env$cache_disk
   guard <- pkg_env$cache_disk_guard
 
   clear_cache("memory")
-  expect_identical(pkg_env$cache, disk)
-  expect_null(pkg_env$cache_memory)
+  expect_s3_class(pkg_env$cache, "cache_layered")
+  expect_identical(pkg_env$cache_memory, memory)
   expect_identical(pkg_env$cache_disk, disk)
   expect_identical(pkg_env$cache_disk_guard, guard)
+  expect_identical(memory$size(), 0L)
   expect_identical(pkg_env$cache$get("key")$answer, "both")
+  expect_true(dsprrr:::get_cache_config()$enable_memory)
 
   configure_cache(
     enable_memory = TRUE,
@@ -1632,12 +1640,16 @@ test_that("targeted clears preserve the untouched safe tier", {
   cache <- dsprrr:::get_cache()
   cache$set("key", list(answer = "both-again"))
   memory <- pkg_env$cache_memory
+  disk <- pkg_env$cache_disk
+  guard <- pkg_env$cache_disk_guard
   clear_cache("disk")
-  expect_identical(pkg_env$cache, memory)
+  expect_s3_class(pkg_env$cache, "cache_layered")
   expect_identical(pkg_env$cache_memory, memory)
-  expect_null(pkg_env$cache_disk)
-  expect_null(pkg_env$cache_disk_guard)
+  expect_identical(pkg_env$cache_disk, disk)
+  expect_identical(pkg_env$cache_disk_guard, guard)
+  expect_identical(disk$size(), 0L)
   expect_identical(pkg_env$cache$get("key")$answer, "both-again")
+  expect_true(dsprrr:::get_cache_config()$enable_disk)
 })
 
 test_that("failed targeted cleanup still leaves only the safe tier reachable", {
