@@ -1440,6 +1440,48 @@ test_that("checkpoint fingerprints reject secrets and stateful metrics", {
   )
 })
 
+test_that("checkpoint program artifacts exclude camel runtime fields", {
+  path <- withr::local_tempfile(fileext = ".rds")
+  unlink(path)
+  fixture <- checkpoint_fixture(path)
+  runtime_names <- c(
+    "baseUrl",
+    "apiArgs",
+    "extraHeaders",
+    "providerArgs",
+    "requestArgs",
+    "runtimeHistory",
+    "trialHistory",
+    "generatedPrompts",
+    "allGenerations"
+  )
+  sentinels <- stats::setNames(
+    paste0("CHECKPOINT_CAMEL_RUNTIME_SENTINEL_", seq_along(runtime_names)),
+    runtime_names
+  )
+  for (name in runtime_names) {
+    fixture$program$config[[name]] <- sentinels[[name]]
+  }
+
+  optimizer_checkpoint_write(
+    fixture$context,
+    "search",
+    search_state = list(index = 1L),
+    best_program = fixture$program
+  )
+  checkpoint <- optimizer_checkpoint_read(path)
+  rendered <- paste(capture.output(dput(checkpoint)), collapse = "\n")
+
+  expect_false(any(vapply(
+    sentinels,
+    grepl,
+    logical(1),
+    x = rendered,
+    fixed = TRUE
+  )))
+  expect_silent(artifact_validate_manifest(checkpoint$best_program))
+})
+
 test_that("Bootstrap module checkpoints bind the effective model by hash", {
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)

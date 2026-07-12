@@ -393,6 +393,71 @@ test_that("credential names fail closed across camel and acronym styles", {
   )
 })
 
+test_that("runtime fields are excluded across camel and acronym styles", {
+  runtime_names <- c(
+    "baseUrl",
+    "apiArgs",
+    "extraHeaders",
+    "providerArgs",
+    "requestArgs",
+    "runtimeHistory",
+    "trialHistory",
+    "generatedPrompts",
+    "allGenerations"
+  )
+  sentinels <- stats::setNames(
+    paste0("ARTIFACT_CAMEL_RUNTIME_SENTINEL_", seq_along(runtime_names)),
+    runtime_names
+  )
+  benign_names <- c(
+    "baseUrlPolicy",
+    "apiArgumentCount",
+    "headerStyle",
+    "providerArgumentSchema",
+    "requestArgumentCount",
+    "runtimeHistorical",
+    "trialHistorian",
+    "promptStyle",
+    "allergenCount"
+  )
+
+  expect_true(all(vapply(
+    runtime_names,
+    dsprrr:::artifact_is_runtime_name,
+    logical(1)
+  )))
+  expect_false(any(vapply(
+    benign_names,
+    dsprrr:::artifact_is_runtime_name,
+    logical(1)
+  )))
+
+  program <- artifact_leaf()
+  for (name in runtime_names) {
+    program$config[[name]] <- sentinels[[name]]
+  }
+  for (name in benign_names) {
+    program$config[[name]] <- paste0("benign-", name)
+  }
+
+  artifact <- program_artifact(program)
+  rendered <- paste(capture.output(dput(artifact)), collapse = "\n")
+  restored <- restore_module_config(artifact)
+
+  expect_false(any(vapply(
+    sentinels,
+    grepl,
+    logical(1),
+    x = rendered,
+    fixed = TRUE
+  )))
+  expect_false(any(runtime_names %in% names(restored$config)))
+  expect_identical(
+    unname(unlist(restored$config[benign_names], use.names = FALSE)),
+    paste0("benign-", benign_names)
+  )
+})
+
 test_that("chat configuration records only provider and model", {
   sentinel <- "CHAT_HISTORY_SENTINEL"
   fake_chat <- structure(

@@ -1359,7 +1359,7 @@ artifact_is_secret_name <- function(name) {
 }
 
 artifact_is_runtime_name <- function(name) {
-  normalized <- gsub("[^a-z0-9]+", "_", tolower(name))
+  normalized <- artifact_normalize_field_name(name)
   exact <- normalized %in%
     c(
       "account_id",
