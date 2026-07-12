@@ -119,7 +119,7 @@ validate_cache_arg <- function(.cache) {
 #' provider call for a dataset with no rows.
 #' @noRd
 batch_input_contract <- function(inputs) {
-  input_lengths <- lengths(inputs)
+  input_lengths <- vapply(inputs, batch_input_length, integer(1))
   if (length(input_lengths) == 0L) {
     return(list(kind = "scalar", size = 1L, lengths = input_lengths))
   }
@@ -161,6 +161,43 @@ batch_input_contract <- function(inputs) {
   )
 }
 
+#' Treat opaque runtime values as scalar batch inputs
+#' @noRd
+batch_input_is_identity_scalar <- function(value) {
+  inherits(value, "S7_object") ||
+    is.environment(value) ||
+    is.function(value) ||
+    isS4(value) ||
+    is.language(value) ||
+    typeof(value) %in% c("externalptr", "weakref")
+}
+
+#' Measure one batch input without dispatching through an unsafe length method
+#' @noRd
+batch_input_length <- function(value) {
+  if (batch_input_is_identity_scalar(value)) {
+    return(1L)
+  }
+  as.integer(length(value))
+}
+
+#' Recycle one scalar input while preserving opaque object identity
+#' @noRd
+batch_recycle_input <- function(value, size) {
+  if (batch_input_length(value) != 1L) {
+    return(value)
+  }
+  if (batch_input_is_identity_scalar(value)) {
+    return(rep(list(value), size))
+  }
+
+  replicated <- tryCatch(rep(value, size), error = function(error) error)
+  if (inherits(replicated, "condition")) {
+    return(rep(list(value), size))
+  }
+  replicated
+}
+
 #' Construct an empty batch result without touching runtime state
 #' @noRd
 empty_batch_result <- function(.return_format) {
@@ -198,6 +235,7 @@ run.Module <- function(
   )
   explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
   .parallel_method <- match.arg(.parallel_method)
+  .return_format <- match.arg(.return_format, c("simple", "structured"))
   validate_cache_arg(.cache)
 
   inputs <- list(...)
@@ -229,6 +267,42 @@ run.Module <- function(
   # Show prompt preview if requested
   if (.show_prompt) {
     show_prompt_preview(module)
+  }
+
+  if (identical(input_contract$kind, "batch")) {
+    unsupported_control <- is.finite(concurrency$max_errors) ||
+      !isTRUE(concurrency$cancel)
+    if (unsupported_control) {
+      cli::cli_abort(
+        c(
+          "Generic Module row execution cannot enforce this concurrency control",
+          "x" = "Finite error budgets and non-default cancellation are unsupported.",
+          "i" = "Use the default sequential control or a Predict module with an isolated batch adapter."
+        ),
+        class = c(
+          "dsprrr_batch_unsupported_module",
+          "dsprrr_concurrency_unsupported_error"
+        ),
+        module_class = class(module)[1]
+      )
+    }
+    inputs <- lapply(inputs, batch_recycle_input, size = input_contract$size)
+    results <- run_scalar_dataset_rows(
+      module = module,
+      input_args = inputs,
+      n = input_contract$size,
+      .runtime_chat = runtime_chat,
+      .verbose = .verbose,
+      .progress = .progress,
+      .return_format = .return_format,
+      .concurrency = concurrency,
+      .concurrency_runtime = concurrency_runtime,
+      dots = list(.cache = .cache)
+    )
+    if (identical(.return_format, "structured")) {
+      class(results) <- c("dsprrr_batch_result", "list")
+    }
+    return(results)
   }
 
   # Delegate to the module's run method
@@ -327,9 +401,7 @@ run.PredictModule <- function(
     )
 
     # Expand scalar inputs to match batch size
-    inputs <- lapply(inputs, function(x) {
-      if (length(x) == 1L) rep(x, input_contract$size) else x
-    })
+    inputs <- lapply(inputs, batch_recycle_input, size = input_contract$size)
 
     # Process batch
     return(run_batch(
@@ -2270,6 +2342,161 @@ batch_chat_branches <- function(chat, n) {
   branches
 }
 
+#' Reconstruct one scalar value from ellmer's vectorized batch representation
+#' @noRd
+ellmer_parallel_scalar_value <- function(value, type) {
+  if (is.null(value)) {
+    return(NULL)
+  }
+
+  if (inherits(type, "ellmer::TypeObject")) {
+    if (is.data.frame(value)) {
+      if (nrow(value) != 1L) {
+        cli::cli_abort(
+          "Nested ellmer object output did not contain exactly one row",
+          class = "dsprrr_parallel_response_error"
+        )
+      }
+      return(ellmer_parallel_response_row(value, 1L, type))
+    }
+    if (!is.list(value) || is.null(names(value))) {
+      cli::cli_abort(
+        "Nested ellmer object output is not a named record",
+        class = "dsprrr_parallel_response_error"
+      )
+    }
+
+    properties <- type@properties
+    result <- lapply(names(properties), function(name) {
+      if (!name %in% names(value)) {
+        if (!isTRUE(properties[[name]]@required)) {
+          return(NULL)
+        }
+        cli::cli_abort(
+          "ellmer output is missing required field {.field {name}}",
+          class = "dsprrr_parallel_response_error"
+        )
+      }
+      ellmer_parallel_scalar_value(value[[name]], properties[[name]])
+    })
+    names(result) <- names(properties)
+    if (isTRUE(type@additional_properties)) {
+      extras <- setdiff(names(value), names(properties))
+      result <- c(result, value[extras])
+    }
+    return(result)
+  }
+
+  if (inherits(type, "ellmer::TypeBasic")) {
+    if (is.list(value) && length(value) == 1L) {
+      value <- value[[1L]]
+    }
+    if (
+      !isTRUE(type@required) &&
+        length(value) == 1L &&
+        is.atomic(value) &&
+        is.na(value)
+    ) {
+      return(NULL)
+    }
+    return(switch(
+      type@type,
+      boolean = as.logical(value),
+      integer = as.integer(value),
+      number = as.numeric(value),
+      string = as.character(value),
+      value
+    ))
+  }
+
+  if (inherits(type, "ellmer::TypeEnum")) {
+    if (!isTRUE(type@required) && length(value) == 1L && is.na(value)) {
+      return(NULL)
+    }
+    return(as.character(value))
+  }
+
+  if (inherits(type, "ellmer::TypeIgnore")) {
+    return(NULL)
+  }
+
+  # TypeArray and TypeJsonSchema values are already converted per row by
+  # ellmer. In particular, arrays of objects are tibbles and must not be
+  # collapsed to a one-row list column.
+  value
+}
+
+#' Extract one row from a vectorized ellmer output column
+#' @noRd
+ellmer_parallel_column_value <- function(column, index, type) {
+  if (inherits(type, "ellmer::TypeObject") && is.data.frame(column)) {
+    return(ellmer_parallel_response_row(column, index, type))
+  }
+  if (index > length(column)) {
+    cli::cli_abort(
+      "ellmer output column ended before row {index}",
+      class = "dsprrr_parallel_response_error"
+    )
+  }
+  ellmer_parallel_scalar_value(column[[index]], type)
+}
+
+#' Reconstruct one scalar response from ellmer's typed batch output
+#' @noRd
+ellmer_parallel_response_row <- function(responses, index, output_type) {
+  if (!inherits(output_type, "ellmer::TypeObject")) {
+    if (index > length(responses)) {
+      cli::cli_abort(
+        "ellmer output ended before row {index}",
+        class = "dsprrr_parallel_response_error"
+      )
+    }
+    return(ellmer_parallel_scalar_value(responses[[index]], output_type))
+  }
+
+  if (!is.data.frame(responses)) {
+    if (!is.list(responses) || index > length(responses)) {
+      cli::cli_abort(
+        "ellmer object output is not a row-oriented record",
+        class = "dsprrr_parallel_response_error"
+      )
+    }
+    return(ellmer_parallel_scalar_value(responses[[index]], output_type))
+  }
+  if (index > nrow(responses)) {
+    cli::cli_abort(
+      "ellmer output ended before row {index}",
+      class = "dsprrr_parallel_response_error"
+    )
+  }
+
+  properties <- output_type@properties
+  result <- lapply(names(properties), function(name) {
+    if (!name %in% names(responses)) {
+      if (!isTRUE(properties[[name]]@required)) {
+        return(NULL)
+      }
+      cli::cli_abort(
+        "ellmer output is missing required field {.field {name}}",
+        class = "dsprrr_parallel_response_error"
+      )
+    }
+    ellmer_parallel_column_value(
+      responses[[name]],
+      index,
+      properties[[name]]
+    )
+  })
+  names(result) <- names(properties)
+  if (isTRUE(output_type@additional_properties)) {
+    extras <- setdiff(names(responses), names(properties))
+    extra_values <- lapply(extras, function(name) responses[[name]][[index]])
+    names(extra_values) <- extras
+    result <- c(result, extra_values)
+  }
+  result
+}
+
 #' Run batch processing using ellmer's parallel_chat_structured
 #'
 #' Uses ellmer's native parallel processing for structured outputs.
@@ -2497,10 +2724,13 @@ run_batch_ellmer_parallel <- function(
       })
       responses[usage_fields] <- NULL
     }
-    responses_list <- lapply(
-      seq_len(nrow(responses)),
-      function(i) as.list(responses[i, ])
-    )
+    responses_list <- lapply(seq_len(nrow(responses)), function(i) {
+      ellmer_parallel_response_row(
+        responses,
+        i,
+        module$signature@output_type
+      )
+    })
   } else if (is.list(responses)) {
     if (length(responses) != n) {
       cli::cli_abort(c(
@@ -2516,11 +2746,28 @@ run_batch_ellmer_parallel <- function(
         NULL
       }
     })
-    responses_list <- responses
+    responses_list <- lapply(seq_len(n), function(i) {
+      if (!is.null(response_errors[[i]])) {
+        return(responses[[i]])
+      }
+      ellmer_parallel_response_row(
+        responses,
+        i,
+        module$signature@output_type
+      )
+    })
+  } else if (is.atomic(responses) && length(responses) == n) {
+    responses_list <- lapply(seq_len(n), function(i) {
+      ellmer_parallel_response_row(
+        responses,
+        i,
+        module$signature@output_type
+      )
+    })
   } else {
     cli::cli_abort(c(
       "Unexpected response format from parallel_chat_structured()",
-      "x" = "Got {.cls {class(responses)[1]}} instead of data.frame or list",
+      "x" = "Got {.cls {class(responses)[1]}} instead of a typed batch value",
       "i" = "This may be a version mismatch with ellmer"
     ))
   }

@@ -289,6 +289,53 @@ test_that("mixed zero and incompatible lengths fail before execution", {
   expect_length(mod$state$traces, 0L)
 })
 
+test_that("scalar runtime objects recycle by identity in both public paths", {
+  output_type <- ellmer::type_object(answer = ellmer::type_string())
+  sig <- signature(
+    inputs = list(
+      input("text", ellmer::type_string()),
+      input("content", ellmer::type_string())
+    ),
+    output_type = output_type
+  )
+  content <- ellmer::ContentText("shared multimodal input")
+  observed <- list()
+  testthat::local_mocked_bindings(
+    run_batch = function(module, inputs, n, ...) {
+      observed[[length(observed) + 1L]] <<- inputs
+      rep(list("ok"), n)
+    },
+    .package = "dsprrr"
+  )
+
+  generic <- module(sig, type = "predict")
+  direct <- module(sig, type = "predict")
+  suppressWarnings(run(
+    generic,
+    text = c("one", "two"),
+    content = content,
+    .progress = FALSE
+  ))
+  suppressWarnings(direct$run(
+    text = c("one", "two"),
+    content = content,
+    .progress = FALSE
+  ))
+
+  expect_length(observed, 2L)
+  for (inputs in observed) {
+    expect_type(inputs$content, "list")
+    expect_length(inputs$content, 2L)
+    expect_identical(inputs$content[[1L]], content)
+    expect_identical(inputs$content[[2L]], content)
+  }
+
+  nonreplicable <- new.env(parent = emptyenv())
+  recycled <- dsprrr:::batch_recycle_input(nonreplicable, 2L)
+  expect_type(recycled, "list")
+  expect_identical(recycled, list(nonreplicable, nonreplicable))
+})
+
 test_that("scalar and sequential batch traces share one metadata contract", {
   clear_prompt_history()
   scalar_mod <- module(signature("text -> answer"), type = "predict")
@@ -337,6 +384,80 @@ test_that("scalar and sequential batch traces share one metadata contract", {
     logical(1)
   )))
   expect_equal(length(dsprrr:::.dsprrr_env$prompt_history), 3L)
+})
+
+test_that("direct Predict batches use isolated canonical row execution", {
+  clear_prompt_history()
+  baseline <- list(
+    ellmer::UserTurn(contents = list(ellmer::ContentText("prior question"))),
+    ellmer::AssistantTurn(contents = list(ellmer::ContentText("prior answer")))
+  )
+  caller <- batch_contract_chat(initial_turns = baseline)
+  mod <- module(signature("text -> answer"), type = "predict")
+
+  result <- mod$run(
+    text = c("one", "two"),
+    .llm = caller,
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_s3_class(result, "dsprrr_batch_result")
+  expect_identical(caller$get_turns(), baseline)
+  expect_equal(caller$calls(), 0L)
+  expect_length(mod$state$traces, 2L)
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:2
+  )
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$backend,
+      character(1)
+    ),
+    rep("sequential", 2L)
+  )
+  expect_length(dsprrr:::.dsprrr_env$prompt_history, 2L)
+  row_chat_ids <- vapply(
+    result,
+    function(row) rlang::obj_address(row$chat),
+    character(1)
+  )
+  expect_length(unique(row_chat_ids), 2L)
+})
+
+test_that("direct custom Module batches reject before forward work", {
+  DirectBatchProbe <- R6::R6Class(
+    "DirectBatchContractProbe",
+    inherit = dsprrr:::Module,
+    public = list(
+      calls = 0L,
+      initialize = function() {
+        super$initialize(signature("text -> answer"))
+      },
+      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+        self$calls <- self$calls + 1L
+        tibble::tibble(
+          output = list(list(answer = "unexpected")),
+          chat = list(NULL),
+          metadata = list(list())
+        )
+      }
+    )
+  )
+  mod <- DirectBatchProbe$new()
+
+  error <- rlang::catch_cnd(mod$run(text = c("one", "two")))
+
+  expect_s3_class(error, "dsprrr_batch_unsupported_module")
+  expect_equal(mod$calls, 0L)
+  expect_length(mod$state$traces, 0L)
 })
 
 test_that("scalar output stays named while batch rows stay simplified", {
@@ -648,6 +769,76 @@ test_that("native ellmer parallel traces successes and character errors", {
     function(trace) identical(trace$metadata$cache, "bypass"),
     logical(1)
   )))
+})
+
+test_that("native ellmer rows reconstruct nested and array output types", {
+  output_type <- ellmer::type_object(
+    summary = ellmer::type_string(),
+    details = ellmer::type_object(
+      score = ellmer::type_number(),
+      tags = ellmer::type_array(ellmer::type_string())
+    ),
+    choices = ellmer::type_array(ellmer::type_object(
+      label = ellmer::type_string(),
+      confidence = ellmer::type_number()
+    ))
+  )
+  sig <- signature(
+    inputs = list(input("text", ellmer::type_string())),
+    output_type = output_type
+  )
+  choices <- list(
+    tibble::tibble(
+      label = c("alpha", "beta"),
+      confidence = c(0.7, 0.3)
+    ),
+    tibble::tibble(label = "gamma", confidence = 1)
+  )
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      tibble::tibble(
+        summary = c("first", "second"),
+        details = tibble::tibble(
+          score = c(0.9, 0.8),
+          tags = list(c("red", "blue"), "green")
+        ),
+        choices = choices,
+        .error = list(NULL, NULL)
+      )
+    },
+    .package = "ellmer"
+  )
+  mod <- module(sig, type = "predict")
+
+  result <- run(
+    mod,
+    text = c("one", "two"),
+    .llm = batch_contract_chat(),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_identical(
+    result[[1L]]$output,
+    list(
+      summary = "first",
+      details = list(score = 0.9, tags = c("red", "blue")),
+      choices = choices[[1L]]
+    )
+  )
+  expect_identical(
+    result[[2L]]$output,
+    list(
+      summary = "second",
+      details = list(score = 0.8, tags = "green"),
+      choices = choices[[2L]]
+    )
+  )
+  expect_type(result[[1L]]$output$details, "list")
+  expect_s3_class(result[[1L]]$output$choices, "tbl_df")
 })
 
 test_that("native ellmer row chats preserve baseline while traces keep deltas", {

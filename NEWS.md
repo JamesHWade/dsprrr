@@ -17,11 +17,13 @@ First development changelog. dsprrr is experimental; the API may change.
   empty results without resolving a provider or changing cache, trace, or
   history state. Batch rows record one canonical ordered trace across
   sequential, native ellmer, mirai, cache-hit, and failure paths; mixed
-  zero/non-zero inputs fail during typed preflight. Specialized Predict
-  subclasses preserve scalar `forward()` behavior; `run_dataset()` adapts them
-  through isolated sequential rows, while direct vectorized or concurrent
-  execution rejects before work instead of silently bypassing it
-  (#dsprrr-bbdm).
+  zero/non-zero inputs fail during typed preflight. Scalar ellmer content and
+  other opaque runtime objects recycle without losing identity, and native
+  ellmer batches reconstruct nested objects and arrays with the same row types
+  as scalar calls. Direct `PredictModule$run()` batches now use the isolated,
+  observable scheduler; unsupported custom and specialized modules reject
+  vectorized execution before work instead of silently sharing mutable state
+  or bypassing specialized logic (#dsprrr-bbdm).
 
 * `concurrency_control()` now gives batch execution one enforceable contract
   for backend selection, exact in-flight limits, per-task and total timeouts,

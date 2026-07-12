@@ -118,6 +118,7 @@ Module <- R6::R6Class(
       # via the run() generic, which validates separately), so a malformed
       # value must fail loudly instead of being silently forwarded.
       validate_cache_arg(.cache)
+      .return_format <- match.arg(.return_format, c("simple", "structured"))
 
       inputs <- list(...)
 
@@ -132,7 +133,6 @@ Module <- R6::R6Class(
       )
 
       input_contract <- batch_input_contract(inputs)
-      is_batch <- input_contract$kind %in% c("batch", "empty")
 
       if (identical(input_contract$kind, "batch")) {
         if (
@@ -149,6 +149,17 @@ Module <- R6::R6Class(
             module_class = class(self)[1]
           )
         }
+        if (!identical(class(self)[1], "PredictModule")) {
+          cli::cli_abort(
+            c(
+              "Batch execution is not supported for this module",
+              "x" = "{.cls {class(self)[1]}} does not implement the isolated Predict row contract.",
+              "i" = "Run scalar inputs or implement a dedicated isolated row adapter."
+            ),
+            class = "dsprrr_batch_unsupported_module",
+            module_class = class(self)[1]
+          )
+        }
         runtime_chat <- .llm %||%
           self$chat %||%
           get_default_chat(create = FALSE)
@@ -158,56 +169,32 @@ Module <- R6::R6Class(
             .llm = .llm,
             .chat = runtime_chat
           )
-        if (!identical(runtime$effective_backend, "sequential")) {
-          cli::cli_abort(
-            c(
-              "Concurrent batch execution is not supported for this module",
-              "x" = "{.cls {class(self)[1]}} does not implement the isolated Predict row contract.",
-              "i" = "Use sequential execution or run scalar inputs."
-            ),
-            class = c(
-              "dsprrr_batch_unsupported_module",
-              "dsprrr_concurrency_unsupported_error"
-            ),
-            module_class = class(self)[1]
-          )
-        }
       }
 
       if (identical(input_contract$kind, "empty")) {
         return(empty_batch_result(.return_format))
       }
 
-      # Handle batch inputs by iterating over forward()
+      # Exact Predict modules share the same scheduler whether callers use the
+      # generic or the public R6 method. This avoids mutating one caller Chat
+      # across rows and commits canonical traces in deterministic order.
       if (identical(input_contract$kind, "batch")) {
-        # Expand scalar inputs
-        inputs <- lapply(inputs, function(x) {
-          if (length(x) == 1L) rep(x, input_contract$size) else x
-        })
-
-        # Process each item
-        results <- vector("list", input_contract$size)
-        for (i in seq_len(input_contract$size)) {
-          input_set <- lapply(inputs, `[[`, i)
-          result <- self$forward(
-            input_set,
-            .llm = .llm,
-            trace = TRUE,
-            .cache = .cache
-          )
-
-          if (.return_format == "simple") {
-            results[[i]] <- result$output[[1]]
-          } else {
-            results[[i]] <- list(
-              output = result$output[[1]],
-              chat = result$chat[[1]],
-              metadata = result$metadata[[1]]
-            )
-          }
-        }
-
-        return(results)
+        inputs <- lapply(
+          inputs,
+          batch_recycle_input,
+          size = input_contract$size
+        )
+        return(run_batch(
+          module = self,
+          inputs = inputs,
+          n = input_contract$size,
+          .llm = .llm,
+          .verbose = .verbose,
+          .progress = .progress,
+          .return_format = .return_format,
+          .cache = .cache,
+          .concurrency = runtime
+        ))
       }
 
       # Single input processing
