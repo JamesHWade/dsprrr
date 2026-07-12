@@ -1445,6 +1445,8 @@ test_that("native ellmer row chats preserve baseline while traces keep deltas", 
 
 test_that("mirai workers return records committed by the parent in row order", {
   skip_if_not_installed("mirai")
+  skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
+  withr::local_options(list(dsprrr.parallel_timeout = 5))
   current <- mirai::daemons(NULL)
   if (is.null(current) || current == 0L) {
     mirai::daemons(n = 1L)
@@ -1489,6 +1491,8 @@ test_that("mirai workers return records committed by the parent in row order", {
 test_that("mirai row failures retain ordered parent traces and error metadata", {
   clear_prompt_history()
   skip_if_not_installed("mirai")
+  skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
+  withr::local_options(list(dsprrr.parallel_timeout = 5))
   current <- mirai::daemons(NULL)
   if (is.null(current) || current == 0L) {
     mirai::daemons(n = 1L)

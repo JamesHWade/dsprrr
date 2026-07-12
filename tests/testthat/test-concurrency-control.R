@@ -534,8 +534,18 @@ test_that("mirai preserves the user-owned default topology", {
 
   expect_identical(mirai::status()$connections, before)
   probe <- mirai::mirai(42L)
-  while (mirai::unresolved(probe)) {
+  deadline <- dsprrr:::concurrency_elapsed() + 5
+  while (
+    mirai::unresolved(probe) &&
+      dsprrr:::concurrency_elapsed() < deadline
+  ) {
     Sys.sleep(0.005)
+  }
+  if (mirai::unresolved(probe)) {
+    stop(
+      "Mirai topology probe did not resolve within 5 seconds.",
+      call. = FALSE
+    )
   }
   expect_identical(probe[["data"]], 42L)
 })
