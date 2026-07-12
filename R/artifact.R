@@ -964,9 +964,13 @@ artifact_sanitize_value <- function(
       drop_runtime_names
     )
     if (!artifact_is_omit(item)) {
-      result[[length(result) + 1L]] <- item
+      # Single-bracket assignment preserves declarative NULL values. Using
+      # `[[<- NULL` removes the element and can also corrupt the following
+      # name assignment, making otherwise safe configs impossible to persist.
+      position <- length(result) + 1L
+      result[position] <- list(item)
       if (!is.null(item_names)) {
-        names(result)[[length(result)]] <- item_names[[i]]
+        names(result)[[position]] <- item_names[[i]]
       }
     }
   }

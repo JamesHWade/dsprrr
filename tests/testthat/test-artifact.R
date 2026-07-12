@@ -170,6 +170,33 @@ test_that("artifacts round-trip nested graphs and shared identity", {
   expect_identical(round_trip$integrity, artifact$integrity)
 })
 
+test_that("safe artifact lists preserve nested named and unnamed NULLs", {
+  program <- artifact_leaf()
+  program$config$null_contract <- list(
+    named = NULL,
+    unnamed = list("before", NULL, list(inner = NULL), "after"),
+    nested = list(
+      left = list(NULL, value = 1L),
+      right = list(value = 2L, NULL)
+    ),
+    api_key = "must-not-be-persisted"
+  )
+
+  artifact <- program_artifact(program)
+  restored <- restore_module_config(artifact)
+  contract <- restored$config$null_contract
+
+  expect_named(contract, c("named", "unnamed", "nested"))
+  expect_null(contract$named)
+  expect_length(contract$unnamed, 4L)
+  expect_null(contract$unnamed[[2L]])
+  expect_null(contract$unnamed[[3L]]$inner)
+  expect_identical(contract$unnamed[c(1L, 4L)], list("before", "after"))
+  expect_null(contract$nested$left[[1L]])
+  expect_null(contract$nested$right[[2L]])
+  expect_false("api_key" %in% names(contract))
+})
+
 test_that("signature schemas and complex strings round-trip exactly", {
   sig <- signature(
     inputs = list(
