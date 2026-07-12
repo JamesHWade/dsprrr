@@ -53,6 +53,50 @@ batch_contract_chat <- function(fail_on = NULL, initial_turns = list()) {
   )
 }
 
+batch_shape_chat <- function(responses) {
+  force(responses)
+  turns <- list()
+  calls <- 0L
+
+  structure(
+    list(
+      calls = function() calls,
+      get_turns = function(...) turns,
+      set_turns = function(value) {
+        turns <<- value
+        invisible(NULL)
+      },
+      get_model = function() "batch-shape-model",
+      chat_structured = function(prompt, ...) {
+        calls <<- calls + 1L
+        prompt <- as.character(prompt)
+        matches <- names(responses)[vapply(
+          names(responses),
+          function(name) grepl(name, prompt, fixed = TRUE),
+          logical(1)
+        )]
+        if (length(matches) != 1L) {
+          stop("could not select one batch-shape response")
+        }
+        response <- responses[[matches]]
+        turns <<- c(
+          turns,
+          list(
+            ellmer::UserTurn(
+              contents = list(ellmer::ContentText(prompt))
+            ),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentText("ok"))
+            )
+          )
+        )
+        response
+      }
+    ),
+    class = "Chat"
+  )
+}
+
 batch_contract_metadata_names <- c(
   "usage",
   "error",
@@ -841,25 +885,23 @@ test_that("native ellmer rows reconstruct nested and array output types", {
   expect_s3_class(result[[1L]]$output$choices, "tbl_df")
 })
 
-test_that("native ellmer preserves optional nested-object presence", {
+test_that("native ellmer ignores ambiguous child probes for parent presence", {
   output_type <- ellmer::type_object(
     label = ellmer::type_string(),
     details = ellmer::type_object(
       score = ellmer::type_number(),
-      .required = FALSE
-    ),
-    sparse = ellmer::type_object(
-      note = ellmer::type_string(required = FALSE),
+      meta = ellmer::type_object(
+        note = ellmer::type_string(required = FALSE)
+      ),
       .required = FALSE
     )
   )
   raw_rows <- list(
     list(
       label = "present",
-      details = list(score = 0.8),
-      sparse = list()
+      details = list(score = 0.8, meta = list())
     ),
-    list(label = "absent", sparse = list())
+    list(label = "absent")
   )
   convert_from_type <- get("convert_from_type", asNamespace("ellmer"))
   scalar_rows <- lapply(raw_rows, convert_from_type, type = output_type)
@@ -867,8 +909,12 @@ test_that("native ellmer preserves optional nested-object presence", {
     raw_rows,
     ellmer::type_array(output_type)
   )
+  parallel_calls <- 0L
   testthat::local_mocked_bindings(
-    parallel_chat_structured = function(...) parallel_rows,
+    parallel_chat_structured = function(...) {
+      parallel_calls <<- parallel_calls + 1L
+      parallel_rows
+    },
     .package = "ellmer"
   )
   mod <- module(
@@ -889,11 +935,358 @@ test_that("native ellmer preserves optional nested-object presence", {
     .progress = FALSE,
     .cache = FALSE
   )
-  native_rows <- lapply(result, `[[`, "output")
+  batch_rows <- lapply(result, `[[`, "output")
 
-  expect_identical(native_rows, scalar_rows)
-  expect_null(native_rows[[2L]]$details)
-  expect_identical(native_rows[[2L]]$sparse, list(note = NULL))
+  expect_identical(batch_rows, scalar_rows)
+  expect_null(batch_rows[[2L]]$details)
+  expect_identical(parallel_calls, 1L)
+})
+
+test_that("native ellmer preserves non-object row failures through a wrapper", {
+  output_type <- ellmer::type_string()
+  observed_type <- NULL
+  parallel_calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(type, ...) {
+      parallel_calls <<- parallel_calls + 1L
+      observed_type <<- type
+      tibble::tibble(
+        value = c("ok", NA_character_),
+        .error = c(NA_character_, "native string row failed")
+      )
+    },
+    .package = "ellmer"
+  )
+  mod <- module(
+    signature(
+      inputs = list(input("text", ellmer::type_string())),
+      output_type = output_type
+    ),
+    type = "predict"
+  )
+
+  result <- run(
+    mod,
+    text = c("one", "two"),
+    .llm = batch_contract_chat(),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_s3_class(observed_type, "ellmer::TypeObject")
+  expect_identical(observed_type@properties$value, output_type)
+  expect_identical(parallel_calls, 1L)
+  expect_identical(result[[1L]]$output, "ok")
+  expect_true(is.na(result[[2L]]$output))
+  expect_match(result[[2L]]$metadata$error, "native string row failed")
+  expect_identical(
+    vapply(
+      mod$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    1:2
+  )
+})
+
+test_that("native ellmer distinguishes empty arrays from failed array rows", {
+  output_type <- ellmer::type_array(ellmer::type_string())
+  observed_type <- NULL
+  parallel_calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(type, ...) {
+      parallel_calls <<- parallel_calls + 1L
+      observed_type <<- type
+      tibble::tibble(
+        value = list(character(), character()),
+        .error = list(NULL, simpleError("native array row failed"))
+      )
+    },
+    .package = "ellmer"
+  )
+  mod <- module(
+    signature(
+      inputs = list(input("text", ellmer::type_string())),
+      output_type = output_type
+    ),
+    type = "predict"
+  )
+
+  result <- run(
+    mod,
+    text = c("one", "two"),
+    .llm = batch_contract_chat(),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_s3_class(observed_type, "ellmer::TypeObject")
+  expect_identical(observed_type@properties$value, output_type)
+  expect_identical(parallel_calls, 1L)
+  expect_identical(result[[1L]]$output, character())
+  expect_true(is.na(result[[2L]]$output))
+  expect_match(result[[2L]]$metadata$error, "native array row failed")
+  expect_identical(
+    dsprrr:::ellmer_parallel_schema_supported(
+      ellmer::type_array(ellmer::type_string(), required = FALSE)
+    ),
+    TRUE
+  )
+})
+
+test_that("ambiguous required-array presence uses isolated scalar rows", {
+  output_type <- ellmer::type_object(
+    label = ellmer::type_string(),
+    details = ellmer::type_object(
+      tags = ellmer::type_array(ellmer::type_string()),
+      .required = FALSE
+    )
+  )
+  raw_rows <- list(
+    ROW_ARRAY_PRESENT = list(
+      label = "present",
+      details = list(tags = character())
+    ),
+    ROW_ARRAY_ABSENT = list(label = "absent")
+  )
+  convert_from_type <- get("convert_from_type", asNamespace("ellmer"))
+  scalar_rows <- lapply(raw_rows, convert_from_type, type = output_type)
+  parallel_calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      parallel_calls <<- parallel_calls + 1L
+      stop("native path must not run")
+    },
+    .package = "ellmer"
+  )
+  chat <- batch_shape_chat(scalar_rows)
+  mod <- module(
+    signature(
+      inputs = list(input("text", ellmer::type_string())),
+      output_type = output_type
+    ),
+    type = "predict"
+  )
+
+  result <- run(
+    mod,
+    text = names(raw_rows),
+    .llm = chat,
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+  batch_rows <- lapply(result, `[[`, "output")
+
+  expect_identical(batch_rows, unname(scalar_rows))
+  expect_identical(batch_rows[[1L]]$details$tags, character())
+  expect_null(batch_rows[[2L]]$details)
+  expect_identical(parallel_calls, 0L)
+  expect_identical(
+    sum(vapply(result, function(row) row$chat$calls(), integer(1))),
+    2L
+  )
+  expect_identical(
+    vapply(result, function(row) row$metadata$requested_backend, character(1)),
+    rep("ellmer", 2L)
+  )
+  expect_identical(
+    vapply(result, function(row) row$metadata$effective_backend, character(1)),
+    rep("sequential", 2L)
+  )
+  expect_true(all(vapply(
+    result,
+    function(row) grepl("present-empty", row$metadata$fallback_reason),
+    logical(1)
+  )))
+})
+
+test_that("ambiguous object without required evidence preserves scalar shape", {
+  output_type <- ellmer::type_object(
+    label = ellmer::type_string(),
+    details = ellmer::type_object(
+      note = ellmer::type_string(required = FALSE),
+      .required = FALSE
+    )
+  )
+  raw_rows <- list(
+    ROW_SPARSE_PRESENT = list(label = "present", details = list()),
+    ROW_SPARSE_ABSENT = list(label = "absent")
+  )
+  convert_from_type <- get("convert_from_type", asNamespace("ellmer"))
+  scalar_rows <- lapply(raw_rows, convert_from_type, type = output_type)
+  parallel_calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      parallel_calls <<- parallel_calls + 1L
+      stop("native path must not run")
+    },
+    .package = "ellmer"
+  )
+  result <- run(
+    module(
+      signature(
+        inputs = list(input("text", ellmer::type_string())),
+        output_type = output_type
+      ),
+      type = "predict"
+    ),
+    text = names(raw_rows),
+    .llm = batch_shape_chat(scalar_rows),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+  batch_rows <- lapply(result, `[[`, "output")
+
+  expect_identical(batch_rows, unname(scalar_rows))
+  expect_identical(batch_rows[[1L]]$details, list(note = NULL))
+  expect_null(batch_rows[[2L]]$details)
+  expect_identical(parallel_calls, 0L)
+  expect_identical(
+    sum(vapply(result, function(row) row$chat$calls(), integer(1))),
+    2L
+  )
+})
+
+test_that("reserved top-level error fields use isolated scalar rows", {
+  output_type <- ellmer::type_object(.error = ellmer::type_string())
+  raw_rows <- list(
+    ROW_ERROR_ONE = list(.error = "model-one"),
+    ROW_ERROR_TWO = list(.error = "model-two")
+  )
+  convert_from_type <- get("convert_from_type", asNamespace("ellmer"))
+  scalar_rows <- lapply(raw_rows, convert_from_type, type = output_type)
+  parallel_calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      parallel_calls <<- parallel_calls + 1L
+      stop("native path must not run")
+    },
+    .package = "ellmer"
+  )
+
+  result <- run(
+    module(
+      signature(
+        inputs = list(input("text", ellmer::type_string())),
+        output_type = output_type
+      ),
+      type = "predict"
+    ),
+    text = names(raw_rows),
+    .llm = batch_shape_chat(scalar_rows),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_identical(lapply(result, `[[`, "output"), unname(scalar_rows))
+  expect_identical(parallel_calls, 0L)
+  expect_true(all(vapply(
+    result,
+    function(row) is.na(row$metadata$error),
+    logical(1)
+  )))
+  expect_identical(
+    vapply(result, function(row) row$metadata$effective_backend, character(1)),
+    rep("sequential", 2L)
+  )
+})
+
+test_that("empty object schemas preserve row count through scalar fallback", {
+  output_type <- ellmer::type_object()
+  scalar_rows <- list(ROW_EMPTY_ONE = list(), ROW_EMPTY_TWO = list())
+  parallel_calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      parallel_calls <<- parallel_calls + 1L
+      stop("native path must not run")
+    },
+    .package = "ellmer"
+  )
+
+  result <- run(
+    module(
+      signature(
+        inputs = list(input("text", ellmer::type_string())),
+        output_type = output_type
+      ),
+      type = "predict"
+    ),
+    text = names(scalar_rows),
+    .llm = batch_shape_chat(scalar_rows),
+    .parallel = TRUE,
+    .parallel_method = "ellmer",
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_identical(lapply(result, `[[`, "output"), unname(scalar_rows))
+  expect_identical(length(result), 2L)
+  expect_identical(parallel_calls, 0L)
+})
+
+test_that("explicit ellmer rejects ambiguous schemas before provider work", {
+  output_type <- ellmer::type_object(
+    details = ellmer::type_object(
+      tags = ellmer::type_array(ellmer::type_string()),
+      .required = FALSE
+    )
+  )
+  parallel_calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      parallel_calls <<- parallel_calls + 1L
+      stop("native path must not run")
+    },
+    .package = "ellmer"
+  )
+  chat <- batch_shape_chat(list(ROW_ONE = list(details = NULL)))
+  condition <- tryCatch(
+    run(
+      module(
+        signature(
+          inputs = list(input("text", ellmer::type_string())),
+          output_type = output_type
+        ),
+        type = "predict"
+      ),
+      text = c("ROW_ONE", "ROW_TWO"),
+      .llm = chat,
+      .concurrency = concurrency_control(
+        backend = "ellmer",
+        max_active = 2L
+      ),
+      .progress = FALSE,
+      .cache = FALSE
+    ),
+    error = function(error) error
+  )
+
+  expect_s3_class(condition, "dsprrr_parallel_schema_unsupported_error")
+  expect_identical(parallel_calls, 0L)
+  expect_identical(chat$calls(), 0L)
+  json_type <- ellmer::type_from_schema(
+    text = '{"type":"object","additionalProperties":true}'
+  )
+  expect_identical(
+    dsprrr:::ellmer_parallel_schema_supported(json_type),
+    FALSE
+  )
 })
 
 test_that("native ellmer row chats preserve baseline while traces keep deltas", {

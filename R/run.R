@@ -1595,6 +1595,111 @@ run_predict_scalar <- function(
   }
 }
 
+#' Whether ellmer's batch conversion preserves one type's presence
+#'
+#' Basic and enum values have an unambiguous missing sentinel. Objects are
+#' observable only when at least one required property eventually reaches such
+#' a sentinel. Empty arrays, arbitrary JSON, and objects without required
+#' scalar/enum evidence collapse absent and present-empty values together.
+#' @noRd
+ellmer_parallel_presence_observable <- function(type) {
+  if (inherits(type, c("ellmer::TypeBasic", "ellmer::TypeEnum"))) {
+    return(TRUE)
+  }
+  if (!inherits(type, "ellmer::TypeObject")) {
+    return(FALSE)
+  }
+
+  properties <- type@properties
+  required <- properties[vapply(
+    properties,
+    function(property) isTRUE(property@required),
+    logical(1)
+  )]
+  length(required) > 0L &&
+    any(vapply(
+      required,
+      ellmer_parallel_presence_observable,
+      logical(1)
+    ))
+}
+
+#' Whether native ellmer batching can reconstruct a schema without guessing
+#' @noRd
+ellmer_parallel_schema_supported <- function(type, top_level = TRUE) {
+  if (inherits(type, "ellmer::TypeJsonSchema")) {
+    return(FALSE)
+  }
+  if (inherits(type, "ellmer::TypeIgnore")) {
+    return(FALSE)
+  }
+  if (
+    inherits(type, "ellmer::TypeObject") &&
+      !isTRUE(type@required) &&
+      !ellmer_parallel_presence_observable(type)
+  ) {
+    return(FALSE)
+  }
+  if (inherits(type, "ellmer::TypeArray")) {
+    return(ellmer_parallel_schema_supported(type@items, top_level = FALSE))
+  }
+  if (!inherits(type, "ellmer::TypeObject")) {
+    return(TRUE)
+  }
+  if (length(type@properties) == 0L) {
+    return(FALSE)
+  }
+  if (isTRUE(top_level) && ".error" %in% names(type@properties)) {
+    return(FALSE)
+  }
+  if (isTRUE(type@additional_properties)) {
+    return(FALSE)
+  }
+  all(vapply(
+    type@properties,
+    function(property) {
+      ellmer_parallel_schema_supported(property, top_level = FALSE)
+    },
+    logical(1)
+  ))
+}
+
+#' Select a truthful runtime for the output schema before provider work
+#' @noRd
+ellmer_parallel_schema_runtime <- function(module, runtime) {
+  if (
+    !identical(runtime$effective_backend, "ellmer") ||
+      ellmer_parallel_schema_supported(module$signature@output_type)
+  ) {
+    return(runtime)
+  }
+
+  reason <- paste(
+    "ellmer batch conversion cannot preserve absent versus present-empty",
+    "values for this output schema"
+  )
+  may_fallback <- identical(runtime$requested_backend, "auto") ||
+    isTRUE(runtime$legacy)
+  if (!may_fallback) {
+    cli::cli_abort(
+      c(
+        "The requested ellmer backend cannot preserve this output schema",
+        "x" = reason,
+        "i" = "Use {.code backend = \"sequential\"} or {.code backend = \"auto\"}."
+      ),
+      class = c(
+        "dsprrr_parallel_schema_unsupported_error",
+        "dsprrr_concurrency_unsupported_error"
+      )
+    )
+  }
+
+  runtime$effective_backend <- "sequential"
+  runtime$effective_workers <- 1L
+  runtime$fallback_reason <- reason
+  runtime
+}
+
 #' Process batch inputs
 #' @noRd
 run_batch <- function(
@@ -1611,6 +1716,7 @@ run_batch <- function(
   if (n == 0L) {
     return(empty_batch_result(.return_format))
   }
+  .concurrency <- ellmer_parallel_schema_runtime(module, .concurrency)
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
 
   # The backend is fully normalized before any Chat or topology is resolved.
@@ -2483,7 +2589,7 @@ ellmer_parallel_object_row_missing <- function(responses, index, type) {
     logical(1)
   )]
   if (length(required) == 0L) {
-    return(FALSE)
+    return(NA)
   }
 
   probes <- vapply(
@@ -2501,7 +2607,10 @@ ellmer_parallel_object_row_missing <- function(responses, index, type) {
     logical(1)
   )
   probes <- probes[!is.na(probes)]
-  length(probes) > 0L && all(probes)
+  if (length(probes) == 0L) {
+    return(NA)
+  }
+  all(probes)
 }
 
 #' Extract one row from a vectorized ellmer output column
@@ -2579,6 +2688,37 @@ ellmer_parallel_response_row <- function(responses, index, output_type) {
     result <- c(result, extra_values)
   }
   result
+}
+
+#' Wrap non-object outputs so ellmer retains its per-row error column
+#'
+#' `parallel_chat_structured()` only appends `.error` when conversion produces
+#' a data frame. A one-field object wrapper makes every non-object output use
+#' that lossless row channel while preserving the public output after unwrapping.
+#' @noRd
+ellmer_parallel_native_output <- function(output_type) {
+  if (inherits(output_type, "ellmer::TypeObject")) {
+    return(list(type = output_type, wrapped = FALSE))
+  }
+  list(
+    type = ellmer::type_object(value = output_type),
+    wrapped = TRUE
+  )
+}
+
+#' Reconstruct and unwrap one successful native ellmer response
+#' @noRd
+ellmer_parallel_native_response <- function(
+  responses,
+  index,
+  native_output
+) {
+  response <- ellmer_parallel_response_row(
+    responses,
+    index,
+    native_output$type
+  )
+  if (isTRUE(native_output$wrapped)) response$value else response
 }
 
 #' Run batch processing using ellmer's parallel_chat_structured
@@ -2728,7 +2868,9 @@ run_batch_ellmer_parallel <- function(
 
   start_time <- Sys.time()
 
-  output_fields <- output_field_names(module$signature@output_type)
+  output_type <- module$signature@output_type
+  native_output <- ellmer_parallel_native_output(output_type)
+  output_fields <- output_field_names(output_type)
   token_fields <- c("input_tokens", "output_tokens", "cached_input_tokens")
   include_tokens <- !any(token_fields %in% output_fields)
   include_cost <- !"cost" %in% output_fields
@@ -2739,7 +2881,7 @@ run_batch_ellmer_parallel <- function(
       ellmer::parallel_chat_structured(
         chat = chat,
         prompts = prompts,
-        type = module$signature@output_type,
+        type = native_output$type,
         include_tokens = include_tokens,
         include_cost = include_cost,
         max_active = .concurrency$requested_workers,
@@ -2809,11 +2951,10 @@ run_batch_ellmer_parallel <- function(
       responses[usage_fields] <- NULL
     }
     responses_list <- lapply(seq_len(nrow(responses)), function(i) {
-      ellmer_parallel_response_row(
-        responses,
-        i,
-        module$signature@output_type
-      )
+      if (!is.null(response_errors[[i]])) {
+        return(NULL)
+      }
+      ellmer_parallel_native_response(responses, i, native_output)
     })
   } else if (is.list(responses)) {
     if (length(responses) != n) {
@@ -2832,21 +2973,13 @@ run_batch_ellmer_parallel <- function(
     })
     responses_list <- lapply(seq_len(n), function(i) {
       if (!is.null(response_errors[[i]])) {
-        return(responses[[i]])
+        return(NULL)
       }
-      ellmer_parallel_response_row(
-        responses,
-        i,
-        module$signature@output_type
-      )
+      ellmer_parallel_native_response(responses, i, native_output)
     })
   } else if (is.atomic(responses) && length(responses) == n) {
     responses_list <- lapply(seq_len(n), function(i) {
-      ellmer_parallel_response_row(
-        responses,
-        i,
-        module$signature@output_type
-      )
+      ellmer_parallel_native_response(responses, i, native_output)
     })
   } else {
     cli::cli_abort(c(
