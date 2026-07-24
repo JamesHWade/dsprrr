@@ -19,6 +19,24 @@
       ! <dsprrr::Omni> object properties are invalid:
       - @explorers explorers must be named
 
+---
+
+    Code
+      make_omni(seed = 1.5)
+    Condition
+      Error:
+      ! <dsprrr::Omni> object properties are invalid:
+      - @seed seed must be a single whole number between -2147483647 and 2147483647, or NULL
+
+---
+
+    Code
+      make_omni(seed = .Machine$integer.max + 1)
+    Condition
+      Error:
+      ! <dsprrr::Omni> object properties are invalid:
+      - @seed seed must be a single whole number between -2147483647 and 2147483647, or NULL
+
 # Omni isolates explorer failures
 
     Code
@@ -67,6 +85,17 @@
     Condition
       Error in `validate_omni_step_args()`:
       ! `continuation_compile_args` must contain only named arguments
+
+# Omni requires worker-visible credentials for parallel exploration
+
+    Code
+      compile(make_omni(parallel = TRUE), make_omni_mock_module(), omni_trainset,
+      valset = omni_valset)
+    Condition
+      Error in `compile_omni()`:
+      ! Parallel Omni exploration requires worker-visible provider credentials
+      i Set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`
+      i Otherwise use `parallel = FALSE`
 
 # Omni rejects unsafe parallel chat serialization
 

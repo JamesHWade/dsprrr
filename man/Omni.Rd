@@ -38,14 +38,15 @@ candidate.}
 comparison when \code{valset} is not supplied.}
 
 \item{parallel}{Whether to compile exploration branches concurrently with
-mirai. Parallel exploration requires \code{.llm = NULL}; worker-visible default
-chat configuration must be available independently in each process.}
+mirai. Parallel exploration requires \code{.llm = NULL}. Each worker creates
+its own default chat from \code{OPENAI_API_KEY}, \code{ANTHROPIC_API_KEY}, or
+\code{GOOGLE_API_KEY}.}
 
 \item{num_workers}{Number of mirai workers for parallel exploration. \code{NULL}
 uses one worker per explorer.}
 
-\item{seed}{Optional random seed for reproducible splitting, sequential
-exploration, and mirai worker streams.}
+\item{seed}{Optional whole-number random seed within R's integer range for
+reproducible splitting, sequential exploration, and mirai worker streams.}
 
 \item{verbose}{Whether to print progress messages.}
 

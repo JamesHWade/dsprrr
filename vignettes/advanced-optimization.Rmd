@@ -462,8 +462,9 @@ compiled$config$optimizer$candidate_programs
 
 Set `parallel = TRUE` to run the exploration branches with mirai. Parallel
 exploration requires `.llm = NULL`, because live ellmer chat objects are not
-safe to serialize across worker processes. Each worker must be able to
-auto-detect its chat from provider environment variables.
+safe to serialize across worker processes. Each worker creates its own chat
+from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`; a session-only
+chat configured with `set_default_chat()` is not visible to the workers.
 
 ## Ensemble
 

@@ -41,6 +41,33 @@ S7::method(compile, list(OmniFailingTeleprompter, S7::class_any)) <- function(
   cli::cli_abort("intentional Omni explorer failure")
 }
 
+OmniWorkerLlmTeleprompter <- S7::new_class(
+  "OmniWorkerLlmTeleprompter",
+  parent = Teleprompter,
+  properties = list(
+    marker = S7::new_property(S7::class_character)
+  )
+)
+
+S7::method(compile, list(OmniWorkerLlmTeleprompter, S7::class_any)) <- function(
+  teleprompter,
+  program,
+  trainset,
+  .llm = NULL,
+  ...
+) {
+  if (!inherits(.llm, "Chat")) {
+    cli::cli_abort("Omni worker did not create a local Chat")
+  }
+  compiled <- dsprrr:::copy_module(program)
+  compiled$config$input_marker <- compiled$config$marker
+  compiled$config$marker <- teleprompter@marker
+  compiled$config$compiled <- TRUE
+  compiled$config$teleprompter <- "OmniWorkerLlmTeleprompter"
+  compiled$state$compiled <- TRUE
+  compiled
+}
+
 make_omni_mock_module <- function(marker = "seed") {
   OmniMockModule <- R6::R6Class(
     "OmniMockModule",
@@ -78,7 +105,7 @@ omni_metric <- function(prediction, expected_row) {
   unname(scores[[as.character(prediction)]] %||% 0)
 }
 
-make_omni <- function(continuation = NULL, parallel = FALSE) {
+make_omni <- function(continuation = NULL, parallel = FALSE, seed = NULL) {
   if (is.null(continuation)) {
     continuation <- OmniMarkingTeleprompter(marker = "-c", append = TRUE)
   }
@@ -90,6 +117,7 @@ make_omni <- function(continuation = NULL, parallel = FALSE) {
     ),
     continuation = continuation,
     parallel = parallel,
+    seed = seed,
     verbose = FALSE
   )
 }
@@ -120,6 +148,16 @@ test_that("Omni validates its optimizer surface", {
       ),
       continuation = OmniMarkingTeleprompter(marker = "-c", append = TRUE)
     )
+  )
+
+  expect_snapshot(
+    error = TRUE,
+    make_omni(seed = 1.5)
+  )
+
+  expect_snapshot(
+    error = TRUE,
+    make_omni(seed = .Machine$integer.max + 1)
   )
 })
 
@@ -250,9 +288,24 @@ test_that("Omni validates per-optimizer compile arguments", {
 
 test_that("Omni supports mirai exploration without a shared chat object", {
   withr::local_options(dsprrr.omni_parallel_sync = TRUE)
+  withr::local_envvar(c(
+    OPENAI_API_KEY = "test-key",
+    ANTHROPIC_API_KEY = NA,
+    GOOGLE_API_KEY = NA
+  ))
 
+  tp <- Omni(
+    metric = omni_metric,
+    explorers = list(
+      a = OmniWorkerLlmTeleprompter(marker = "a"),
+      b = OmniWorkerLlmTeleprompter(marker = "b")
+    ),
+    continuation = OmniMarkingTeleprompter(marker = "-c", append = TRUE),
+    parallel = TRUE,
+    verbose = FALSE
+  )
   compiled <- compile(
-    make_omni(parallel = TRUE),
+    tp,
     make_omni_mock_module(),
     omni_trainset,
     valset = omni_valset
@@ -260,6 +313,24 @@ test_that("Omni supports mirai exploration without a shared chat object", {
 
   expect_equal(compiled$config$marker, "b-c")
   expect_equal(compiled$config$optimizer$parallel, TRUE)
+})
+
+test_that("Omni requires worker-visible credentials for parallel exploration", {
+  withr::local_envvar(c(
+    OPENAI_API_KEY = NA,
+    ANTHROPIC_API_KEY = NA,
+    GOOGLE_API_KEY = NA
+  ))
+
+  expect_snapshot(
+    error = TRUE,
+    compile(
+      make_omni(parallel = TRUE),
+      make_omni_mock_module(),
+      omni_trainset,
+      valset = omni_valset
+    )
+  )
 })
 
 test_that("Omni rejects unsafe parallel chat serialization", {

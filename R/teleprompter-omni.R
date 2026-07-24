@@ -36,12 +36,13 @@
 #' @param valset_ratio Fraction of `trainset` to hold out for candidate
 #'   comparison when `valset` is not supplied.
 #' @param parallel Whether to compile exploration branches concurrently with
-#'   mirai. Parallel exploration requires `.llm = NULL`; worker-visible default
-#'   chat configuration must be available independently in each process.
+#'   mirai. Parallel exploration requires `.llm = NULL`. Each worker creates
+#'   its own default chat from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or
+#'   `GOOGLE_API_KEY`.
 #' @param num_workers Number of mirai workers for parallel exploration. `NULL`
 #'   uses one worker per explorer.
-#' @param seed Optional random seed for reproducible splitting, sequential
-#'   exploration, and mirai worker streams.
+#' @param seed Optional whole-number random seed within R's integer range for
+#'   reproducible splitting, sequential exploration, and mirai worker streams.
 #' @param verbose Whether to print progress messages.
 #'
 #' @export
@@ -235,6 +236,13 @@ compile_omni <- function(
     cli::cli_abort(c(
       "Parallel Omni exploration requires {.code .llm = NULL}",
       "i" = "Configure worker-visible default chat credentials, or use {.code parallel = FALSE}"
+    ))
+  }
+  if (isTRUE(parallel) && !omni_provider_env_available()) {
+    cli::cli_abort(c(
+      "Parallel Omni exploration requires worker-visible provider credentials",
+      "i" = "Set {.envvar OPENAI_API_KEY}, {.envvar ANTHROPIC_API_KEY}, or {.envvar GOOGLE_API_KEY}",
+      "i" = "Otherwise use {.code parallel = FALSE}"
     ))
   }
 
@@ -460,10 +468,44 @@ validate_omni_seed <- function(seed) {
   if (is.null(seed)) {
     return(NULL)
   }
-  if (!is.numeric(seed) || length(seed) != 1L || is.na(seed)) {
-    return("seed must be a single non-missing numeric value or NULL")
+  if (
+    !is.numeric(seed) ||
+      length(seed) != 1L ||
+      is.na(seed) ||
+      !is.finite(seed) ||
+      seed != trunc(seed) ||
+      abs(seed) > .Machine$integer.max
+  ) {
+    return(
+      paste0(
+        "seed must be a single whole number between ",
+        -.Machine$integer.max,
+        " and ",
+        .Machine$integer.max,
+        ", or NULL"
+      )
+    )
   }
   NULL
+}
+
+omni_provider_env_available <- function() {
+  any(nzchar(Sys.getenv(c(
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY"
+  ))))
+}
+
+omni_worker_chat <- function() {
+  chat <- auto_detect_chat()
+  if (is.null(chat)) {
+    cli::cli_abort(c(
+      "Omni worker could not create a local Chat",
+      "i" = "Set a supported provider API key in the worker environment"
+    ))
+  }
+  chat
 }
 
 validate_omni_parallel_args <- function(parallel, num_workers) {
@@ -652,15 +694,16 @@ omni_compile_explorers_parallel <- function(
 
   mapped <- mirai::mirai_map(
     jobs,
-    function(job, compile_fn) {
+    function(job, compile_fn, worker_chat_fn) {
       tryCatch(
         {
+          worker_llm <- worker_chat_fn()
           call_args <- list(
             teleprompter = job$optimizer,
             program = job$program,
             trainset = job$trainset,
             valset = job$valset,
-            .llm = NULL
+            .llm = worker_llm
           )
           for (name in names(job$step_args)) {
             call_args[[name]] <- job$step_args[[name]]
@@ -675,7 +718,10 @@ omni_compile_explorers_parallel <- function(
         }
       )
     },
-    .args = list(compile_fn = compile),
+    .args = list(
+      compile_fn = compile,
+      worker_chat_fn = omni_worker_chat
+    ),
     .compute = profile
   )[]
 
