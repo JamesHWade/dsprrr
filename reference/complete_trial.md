@@ -20,7 +20,8 @@ complete_trial(trial, eval_result, compiled_artifact_ref = NULL, notes = NULL)
 
 - compiled_artifact_ref:
 
-  Optional reference to the compiled module.
+  Optional compiled module to persist as the best safe program artifact
+  when this trial wins.
 
 - notes:
 

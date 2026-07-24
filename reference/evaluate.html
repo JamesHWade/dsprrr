@@ -115,6 +115,8 @@ module's signature inputs plus any expected fields used by metric.</p></li>
 <code>metric(prediction, expected_row)</code>.</p></li>
 </ul><p>Additional arguments passed to <code><a href="run_dataset.html">run_dataset()</a></code>:</p><ul><li><p><code>.llm</code>: Optional ellmer chat object</p></li>
 <li><p><code>.parallel</code>: Logical; whether to allow parallel execution</p></li>
+<li><p><code>.concurrency</code>: A policy created by <code><a href="concurrency_control.html">concurrency_control()</a></code>. Do not also
+pass <code>.parallel</code> when using an explicit policy.</p></li>
 <li><p><code>.progress</code>: Logical; whether to display progress while evaluating</p></li>
 <li><p><code>.return_format</code>: Character; <code>"simple"</code> returns just scores and predictions,
 <code>"structured"</code> (default) includes full metadata and data</p></li>

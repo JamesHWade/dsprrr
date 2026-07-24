@@ -85,10 +85,23 @@ pin_module_config(
 
 The pinned configuration includes:
 
-- **Signature**: Input/output specifications
-- **Configuration**: Temperature, prompt style, template
-- **Optimization state**: Best parameters, trial history
-- **Metadata**: Package version, timestamps
+- **Whole program graph**: Nested modules and shared module identity
+- **Signature and configuration**: Exact input/output schemas,
+  templates, and demos
+- **Curated optimization state**: Best parameters, scores, trial counts,
+  and provenance (not raw trial or execution history)
+- **Metadata and integrity**: Package/R requirements, format version,
+  and payload digest
+
+Functions, tools, retrievers, runners, and other runtime objects are not
+captured implicitly. Supply a named `registry` to persist stable IDs and
+pass the same registry to
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md).
+Arbitrary embedded runtime values require `trusted = TRUE` both when
+writing and restoring. Restoration is forward-only: only the current
+closed artifact schema is accepted, and its stored signature is
+authoritative. To change a signature, update the source program and
+write a new artifact.
 
 ### Restoring a Module
 

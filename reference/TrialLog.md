@@ -1,8 +1,17 @@
 # Trial Log
 
 R6 class for managing a collection of trials with optional persistence.
-Provides methods for adding trials, querying results, and saving to
-disk.
+Existing JSONL records are loaded when `log_dir` already contains a log.
+New trials are appended one record at a time; matching trial IDs are
+idempotent, while conflicting records with the same ID are rejected. The
+`trials.jsonl` journal is authoritative. `metadata.json`, `README.md`,
+and `best_program.rds` are independently refreshed, best-effort derived
+views; they may lag after an interruption and are rebuilt by a later
+successful save. Persistent Unix logs require an effective-user-owned
+directory with a safe parent chain and reject symbolic-link targets;
+Windows uses the account's filesystem ACLs, which base R cannot verify
+as owner-only, and fails closed if stable device and file identifiers
+are unavailable.
 
 ## Public fields
 
@@ -26,7 +35,7 @@ disk.
 
 ### Public methods
 
-- [`TrialLog$new()`](#method-TrialLog-new)
+- [`TrialLog$new()`](#method-TrialLog-initialize)
 
 - [`TrialLog$add_trial()`](#method-TrialLog-add_trial)
 
@@ -46,9 +55,10 @@ disk.
 
 ------------------------------------------------------------------------
 
-### Method `new()`
+### `TrialLog$new()`
 
-Create a new TrialLog.
+Create or resume a TrialLog. Existing JSONL records are loaded without
+rewriting the file.
 
 #### Usage
 
@@ -70,9 +80,11 @@ Create a new TrialLog.
 
 ------------------------------------------------------------------------
 
-### Method `add_trial()`
+### `TrialLog$add_trial()`
 
-Add a trial to the log.
+Add a trial to the log. Persisted trials atomically append one
+authoritative JSONL record. Derived metadata, summaries, and the best
+program are then refreshed independently on a best-effort basis.
 
 #### Usage
 
@@ -90,7 +102,7 @@ Add a trial to the log.
 
 ------------------------------------------------------------------------
 
-### Method `n_trials()`
+### `TrialLog$n_trials()`
 
 Get the number of trials.
 
@@ -104,7 +116,7 @@ Integer count of trials.
 
 ------------------------------------------------------------------------
 
-### Method `as_tibble()`
+### `TrialLog$as_tibble()`
 
 Get trials as a tibble.
 
@@ -118,7 +130,7 @@ A tibble with one row per trial.
 
 ------------------------------------------------------------------------
 
-### Method `best_trial()`
+### `TrialLog$best_trial()`
 
 Get the best trial by score.
 
@@ -138,7 +150,7 @@ The best Trial object, or NULL if no completed trials.
 
 ------------------------------------------------------------------------
 
-### Method [`summary()`](https://rdrr.io/r/base/summary.html)
+### `TrialLog$summary()`
 
 Get summary statistics for all trials.
 
@@ -152,9 +164,12 @@ A list with summary statistics.
 
 ------------------------------------------------------------------------
 
-### Method [`save()`](https://rdrr.io/r/base/save.html)
+### `TrialLog$save()`
 
-Save the trial log to disk.
+Save the trial log to disk. Only records missing from the destination
+are appended to the authoritative journal. Derived files are
+independently refreshed on a best-effort basis and may lag if that
+refresh warns.
 
 #### Usage
 
@@ -172,7 +187,7 @@ Invisibly returns self. Throws error on critical failure.
 
 ------------------------------------------------------------------------
 
-### Method [`print()`](https://rdrr.io/r/base/print.html)
+### `TrialLog$print()`
 
 Print the trial log summary.
 
@@ -182,7 +197,7 @@ Print the trial log summary.
 
 ------------------------------------------------------------------------
 
-### Method `clone()`
+### `TrialLog$clone()`
 
 The objects of this class are cloneable with this method.
 

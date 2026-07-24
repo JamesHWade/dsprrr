@@ -47,6 +47,8 @@ Create, run, and inspect LLM modules
   Execute an LLM Module
 - [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
   : Execute Module on Data
+- [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
+  : Control Batch Concurrency
 - [`predict(`*`<Module>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
   [`predict(`*`<PredictModule>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
   : Predict Method for Modules (tidymodels-style)
@@ -56,6 +58,16 @@ Create, run, and inspect LLM modules
   : Create a Module from a Chat
 - [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
   : Callable Module
+- [`module_graph()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`named_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`named_parameters()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`map_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`replace_module()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`freeze_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`is_module_frozen()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`set_module_lm()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`module_children()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  : Traverse and Transform Module Graphs
 - [`get_last_trace()`](https://jameshwade.github.io/dsprrr/reference/get_last_trace.md)
   : Get the Last DSP Trace
 
@@ -400,6 +412,10 @@ Extract outputs, costs, and display formatted results
 
 Pin configurations, validate workflows, and deploy to production
 
+- [`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  [`load_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  : Persist Complete dsprrr Programs
 - [`orchestration`](https://jameshwade.github.io/dsprrr/reference/orchestration.md)
   : Orchestration Helpers for Production Workflows
 - [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)

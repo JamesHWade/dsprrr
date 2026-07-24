@@ -1,8 +1,9 @@
 # Pin a Module Configuration
 
-Save a module's configuration and signature to a pins board for later
-retrieval. This enables sharing optimized modules across projects and
-team members.
+Save a complete module program artifact to a pins board for later
+retrieval. This uses the versioned manifest documented in
+[program-artifact](https://jameshwade.github.io/dsprrr/reference/program-artifact.md),
+including nested programs and shared module identity.
 
 ## Usage
 
@@ -13,7 +14,9 @@ pin_module_config(
   module,
   description = NULL,
   versioned = TRUE,
-  ...
+  ...,
+  registry = list(),
+  trusted = FALSE
 )
 ```
 
@@ -44,6 +47,16 @@ pin_module_config(
 
   Additional arguments passed to
   [`pins::pin_write()`](https://pins.rstudio.com/reference/pin_read.html)
+
+- registry:
+
+  Named runtime registry; see
+  [program-artifact](https://jameshwade.github.io/dsprrr/reference/program-artifact.md).
+
+- trusted:
+
+  Whether trusted runtime values may be embedded. The default is
+  `FALSE`.
 
 ## Value
 

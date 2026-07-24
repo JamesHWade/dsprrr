@@ -6,7 +6,7 @@ you to load optimized modules in new sessions or different projects.
 ## Usage
 
 ``` r
-restore_module_config(config, signature = NULL)
+restore_module_config(config, registry = list(), trusted = FALSE)
 ```
 
 ## Arguments
@@ -16,9 +16,14 @@ restore_module_config(config, signature = NULL)
   A configuration list (from
   [`pins::pin_read()`](https://pins.rstudio.com/reference/pin_read.html))
 
-- signature:
+- registry:
 
-  Optional Signature object to use (overrides stored signature)
+  Named runtime registry used to resolve stored IDs.
+
+- trusted:
+
+  Whether embedded runtime values may be restored. The default is
+  `FALSE`.
 
 ## Value
 

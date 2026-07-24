@@ -132,6 +132,11 @@ parallelism (more efficient, single process).
 "mirai" uses mirai for multi-process parallelism (requires <code>.llm = NULL</code>
 so each worker can create an independent client).</p></dd>
 
+<dt>.concurrency</dt>
+<dd><p>A validated policy created by
+<code><a href="concurrency_control.html">concurrency_control()</a></code>. When supplied, do not also pass <code>.parallel</code> or
+<code>.parallel_method</code>.</p></dd>
+
 <dt>.progress</dt>
 <dd><p>Logical indicating whether to show progress bar for batch processing (default TRUE)</p></dd>
 
@@ -153,15 +158,27 @@ If FALSE, bypasses cache for this call only.</p></dd>
     <p>For single inputs with .return_format="simple": The parsed output according to the module's signature.
 For single inputs with .return_format="structured": A list with components:</p><ul><li><p>output: The parsed output</p></li>
 <li><p>chat: The ellmer chat object used</p></li>
-<li><p>metadata: Additional metadata (tokens used, latency, etc.)
-For batch inputs: A list of results matching the input length</p></li>
-</ul></div>
+<li><p>metadata: Additional metadata (tokens used, latency, etc.)</p></li>
+</ul><p>For batch inputs: A list of results matching the input length. Empty
+batches return a zero-length list (with class <code>dsprrr_batch_result</code> for
+structured output).</p>
+    </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><strong>Retry Behavior:</strong> ellmer automatically retries failed requests up to 3 times
 (configurable via <code>options(ellmer_max_tries = n)</code>). This handles transient
 errors like rate limits and connection failures. See ellmer documentation
 for more details.</p>
+<p>Zero-length inputs form an empty batch only when every input is zero length.
+Empty batches return immediately without resolving a Chat or touching cache,
+trace, or prompt-history state. Mixing zero-length and non-empty inputs is an
+error.</p>
+<p>Scalar and batch Predict calls record one trace per attempted row. Structured
+metadata reports usage, error, cache, backend, and batch-index fields. Native
+ellmer and mirai workers return row records that are committed to module and
+global trace state by the parent in input order. Specialized Predict
+subclasses, such as ReAct, preserve their scalar <code>forward()</code> method and
+currently reject vectorized inputs rather than bypassing specialized logic.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

@@ -91,6 +91,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/complete_trial.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/concurrency_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/config_diff.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/configure_cache.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_search_tool.html</loc></url>
@@ -142,6 +143,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-codeact.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-ensemble.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/module-graph.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-multichain.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module-react.html</loc></url>
@@ -181,6 +183,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_evaluation.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.dsprrr_optimization_summary.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/print.ragnar_tool.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/program-artifact.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/program_of_thought.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/prompt-visibility.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/provider_defaults.html</loc></url>

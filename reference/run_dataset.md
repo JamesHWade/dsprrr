@@ -1,6 +1,9 @@
 # Execute Module on Data
 
 Execute a module on a data frame/tibble with optimized batch processing.
+Zero-row data frames return a zero-row tibble with the same result
+columns as a non-empty call, without resolving a Chat or changing
+runtime state.
 
 ## Usage
 
@@ -15,6 +18,7 @@ run_dataset(
   .verbose = FALSE,
   .parallel = FALSE,
   .parallel_method = c("ellmer", "mirai"),
+  .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
   ...
@@ -57,6 +61,12 @@ run_dataset(
   for native async HTTP parallelism (more efficient, single process).
   "mirai" uses mirai for multi-process parallelism (requires
   `.llm = NULL`).
+
+- .concurrency:
+
+  Optional batch policy created by
+  [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
+  Do not combine it with `.parallel` or `.parallel_method`.
 
 - .progress:
 

@@ -35,6 +35,10 @@ evaluate(module, ...)
 
   - `.parallel`: Logical; whether to allow parallel execution
 
+  - `.concurrency`: A policy created by
+    [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
+    Do not also pass `.parallel` when using an explicit policy.
+
   - `.progress`: Logical; whether to display progress while evaluating
 
   - `.return_format`: Character; `"simple"` returns just scores and

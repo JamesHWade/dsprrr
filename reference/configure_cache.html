@@ -99,6 +99,7 @@ and disk caching are enabled.</p>
 <span>  enable_memory <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  enable_disk <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  disk_path <span class="op">=</span> <span class="fu">default_disk_cache_path</span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  disk_private <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  memory_max_entries <span class="op">=</span> <span class="fl">1000L</span>,</span>
 <span>  disk_max_size <span class="op">=</span> <span class="fl">500</span> <span class="op">*</span> <span class="fl">1024</span><span class="op">^</span><span class="fl">2</span>,</span>
 <span>  disk_max_age <span class="op">=</span> <span class="cn">Inf</span></span>
@@ -124,7 +125,15 @@ Default <code>TRUE</code>.</p></dd>
 
 <dt id="arg-disk-path">disk_path<a class="anchor" aria-label="anchor" href="#arg-disk-path"></a></dt>
 <dd><p>Character. Path for disk cache directory.
-Default <code>".dsprrr_cache"</code>.</p></dd>
+Defaults to <code>tools::R_user_dir("dsprrr", "cache")</code>, unless overridden by
+<code>DSPRRR_CACHE_PATH</code>.</p></dd>
+
+
+<dt id="arg-disk-private">disk_private<a class="anchor" aria-label="anchor" href="#arg-disk-private"></a></dt>
+<dd><p>Logical. Enforce private cache storage. On Unix, require
+effective ownership and private POSIX modes for the directory and response
+files. On Windows, use inherited ACLs and report privacy as unverified. Set
+to <code>FALSE</code> only for an explicitly trusted shared cache. Default <code>TRUE</code>.</p></dd>
 
 
 <dt id="arg-memory-max-entries">memory_max_entries<a class="anchor" aria-label="anchor" href="#arg-memory-max-entries"></a></dt>
@@ -148,12 +157,36 @@ Default <code>Inf</code> (no age limit).</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The cache stores parsed LLM responses (lists, tibbles, vectors) keyed by
-a hash of the prompt, model, temperature, and output type. This avoids
-redundant API calls during development and optimization.</p>
+    <p>The cache stores versioned envelopes containing parsed LLM responses and,
+when needed, semantic conversation-turn deltas used to restore an ellmer
+Chat after a cache hit. Although cache keys hash request identity, envelope
+values may contain raw request content and model outputs. Treat persistent
+cache files as sensitive data.</p>
+<p><strong>Disk privacy</strong>: By default, the disk cache uses the platform-specific
+per-user cache directory. On Unix, dsprrr verifies effective ownership,
+canonical path identity, a <code>0700</code> cache directory, and <code>0600</code> response files
+before serialized reads and writes. Unsafe disk caches fall back to memory
+when enabled; otherwise no cache tier remains active.
+On Windows, the per-user directory inherits the account's filesystem ACLs;
+base R cannot verify that those ACLs are owner-only. Set <code>disk_private = FALSE</code> only for a cache whose writers and readers are all trusted.</p>
+<p>Existing Unix caches that were readable but not writable by other accounts
+are tightened before reuse. Caches that were writable by another account,
+contain symbolic links or non-regular filesystem entries, or cannot be
+verified are not read; dsprrr uses memory caching when enabled and otherwise
+runs uncached. A shared writable cache could replace an RDS response envelope
+and must be treated as untrusted serialized input.</p>
+<p>POSIX modes cannot describe every filesystem policy. dsprrr does not inspect
+extended ACLs, administrators can still access owner files, and some network
+filesystems do not honor local mode changes. A same-account process can also
+race path checks and file opens; dsprrr checks identity before and after I/O
+but base R does not expose descriptor-level <code>openat()</code>/<code>fstat()</code> guarantees.
+Avoid shared or network cache paths for sensitive workloads. In CI, disable
+caching with <code>DSPRRR_CACHE_ENABLED=false</code> or use a job-specific
+<code>DSPRRR_CACHE_PATH</code>.</p>
 <p><strong>Environment variable</strong>: Set <code>DSPRRR_CACHE_ENABLED=false</code> (or <code>0</code>, <code>no</code>,
 <code>off</code>) to globally disable caching, useful for CI/testing environments.</p>
-<p><strong>Git</strong>: If using disk caching, add <code>.dsprrr_cache/</code> to your <code>.gitignore</code>:</p>
+<p><strong>Git</strong>: The default cache is outside the project. If you explicitly use a
+project-local path, add it to <code>.gitignore</code>, for example:</p>
 <p></p><div class="sourceCode"><pre><code><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># dsprrr LLM response cache</span></span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>.dsprrr_cache<span class="sc">/</span></span></code></pre><p></p></div>
     </div>
@@ -174,6 +207,12 @@ redundant API calls during development and optimization.</p>
 <span class="r-in"><span><span class="fu">configure_cache</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  disk_path <span class="op">=</span> <span class="st">"~/.dsprrr_cache"</span>,</span></span>
 <span class="r-in"><span>  disk_max_size <span class="op">=</span> <span class="fl">1024</span><span class="op">^</span><span class="fl">3</span>  <span class="co"># 1GB</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Trusted shared caches require an explicit privacy opt-out</span></span></span>
+<span class="r-in"><span><span class="fu">configure_cache</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  disk_path <span class="op">=</span> <span class="st">"/srv/trusted-team/dsprrr-cache"</span>,</span></span>
+<span class="r-in"><span>  disk_private <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>

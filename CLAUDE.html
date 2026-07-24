@@ -96,7 +96,7 @@
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># or: git checkout -b fix/&lt;short-description&gt;</span></span>
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co"># 2. Then claim the issue and start work</span></span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress</span></code></pre></div>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">kata</span> claim <span class="op">&lt;</span>id<span class="op">&gt;</span> --agent</span></code></pre></div>
 <p>This is mandatory even for small changes. The only commits to main should be merge commits from PRs.</p>
 </div>
 <div class="section level2">
@@ -486,50 +486,39 @@
 <li>Instruction-level optimizers (MIPROv2, GEPA, COPRO) operate on single modules; only BootstrapFewShot compiles pipelines jointly</li>
 </ul></div>
 <div class="section level2">
-<h2 id="issue-tracking-with-beads">Issue Tracking with Beads<a class="anchor" aria-label="anchor" href="#issue-tracking-with-beads"></a></h2>
-<p>This project uses <strong>bd</strong> (beads) for issue tracking. Issues are stored in <code>.beads/</code> and synced via git.</p>
-<div class="section level3">
-<h3 id="git-integration">Git Integration<a class="anchor" aria-label="anchor" href="#git-integration"></a></h3>
-<p>Beads integrates with git via: - <strong>JSONL sync</strong>: Issues stored in <code>.beads/issues.jsonl</code> (git-tracked) - <strong>Merge driver</strong>: Intelligent JSONL conflict resolution (auto-configured) - <strong>Hooks</strong>: Auto-sync on git operations</p>
-<p>Files that should be committed: <code>.beads/.gitignore</code>, <code>.gitattributes</code> Files that are gitignored: <code>.beads/beads.db</code>, daemon files</p>
-</div>
+<h2 id="issue-tracking-with-kata">Issue Tracking with Kata<a class="anchor" aria-label="anchor" href="#issue-tracking-with-kata"></a></h2>
+<p>This project uses <strong>Kata</strong> for its persistent backlog. The committed <code>.kata.toml</code> binds every checkout and worktree to the <code>dsprrr</code> Kata project; issue data lives in the Kata daemon rather than in git-tracked database files.</p>
+<p>The former Beads IDs are preserved as <code>beads-id:dsprrr-...</code> labels and in each migrated issue body. To resolve an old reference, run <code>kata search "dsprrr-..." --agent</code>.</p>
 <div class="section level3">
 <h3 id="essential-commands">Essential Commands<a class="anchor" aria-label="anchor" href="#essential-commands"></a></h3>
 <div class="sourceCode" id="cb25"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># Finding work</span></span>
-<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Show issues ready to work (no blockers)</span></span>
-<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a><span class="ex">bd</span> list <span class="at">--status</span><span class="op">=</span>open                 <span class="co"># All open issues</span></span>
-<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Detailed issue view with dependencies</span></span>
-<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a></span>
-<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a><span class="co"># Working on issues</span></span>
-<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Claim work</span></span>
-<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Mark complete</span></span>
-<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id1<span class="op">&gt;</span> <span class="op">&lt;</span>id2<span class="op">&gt;</span> ...              <span class="co"># Close multiple issues</span></span>
-<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a></span>
-<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a><span class="co"># Creating issues (always include description for context)</span></span>
-<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Fix bug"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"Details here"</span> <span class="at">-t</span> bug <span class="at">-p</span> 1</span>
-<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a></span>
-<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a><span class="co"># Dependencies</span></span>
-<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a><span class="ex">bd</span> dep add <span class="op">&lt;</span>issue<span class="op">&gt;</span> <span class="op">&lt;</span>depends-on<span class="op">&gt;</span>       <span class="co"># Add dependency</span></span>
-<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a><span class="ex">bd</span> blocked                            <span class="co"># Show blocked issues</span></span>
-<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a><span class="ex">bd</span> dep tree <span class="op">&lt;</span>id<span class="op">&gt;</span>                      <span class="co"># View dependency tree</span></span>
-<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a></span>
-<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a><span class="co"># Sync</span></span>
-<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync with git remote</span></span>
-<span id="cb25-21"><a href="#cb25-21" tabindex="-1"></a><span class="ex">bd</span> sync <span class="at">--status</span>                      <span class="co"># Check sync status</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="when-to-use-beads-vs-todowrite">When to Use Beads vs TodoWrite<a class="anchor" aria-label="anchor" href="#when-to-use-beads-vs-todowrite"></a></h3>
-<table class="table"><thead><tr><th>Use <strong>Beads (<code>bd</code>)</strong> for</th>
-<th>Use <strong>TodoWrite</strong> for</th>
-</tr></thead><tbody><tr><td>Multi-session work</td>
-<td>Single-session execution</td>
-</tr><tr><td>Work with dependencies</td>
-<td>Simple task checklists</td>
-</tr><tr><td>Discovered work needing tracking</td>
-<td>Immediate step-by-step tasks</td>
-</tr><tr><td>Collaborative/handed-off work</td>
-<td>Personal progress tracking</td>
-</tr></tbody></table><p>When in doubt, prefer beads—persistence you don’t need beats lost context.</p>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="ex">kata</span> ready <span class="at">--agent</span>                    <span class="co"># Open, unblocked work</span></span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a><span class="ex">kata</span> list <span class="at">--status</span> open <span class="at">--agent</span>       <span class="co"># All active issues</span></span>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a><span class="ex">kata</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span> --agent                <span class="co"># Details, comments, and relationships</span></span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a><span class="ex">kata</span> search <span class="st">"text"</span> <span class="at">--agent</span>            <span class="co"># Search before creating</span></span>
+<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a></span>
+<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a><span class="co"># Working on issues</span></span>
+<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a><span class="ex">kata</span> claim <span class="op">&lt;</span>id<span class="op">&gt;</span> --agent               <span class="co"># Claim after creating a feature branch</span></span>
+<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a><span class="ex">kata</span> comment <span class="op">&lt;</span>id<span class="op">&gt;</span> --body <span class="st">"Progress"</span> <span class="at">--agent</span></span>
+<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a><span class="ex">kata</span> unassign <span class="op">&lt;</span>id<span class="op">&gt;</span> --agent            <span class="co"># Release unfinished work</span></span>
+<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a></span>
+<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a><span class="co"># Creating work safely</span></span>
+<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a><span class="ex">kata</span> create <span class="st">"Fix bug"</span> <span class="dt">\</span></span>
+<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a>  <span class="at">--body</span> <span class="st">"Observed behavior and intended outcome."</span> <span class="dt">\</span></span>
+<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a>  <span class="at">--priority</span> 1 <span class="dt">\</span></span>
+<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a>  <span class="at">--label</span> bug <span class="dt">\</span></span>
+<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a>  <span class="at">--idempotency-key</span> <span class="st">"fix-bug-YYYY-MM-DD"</span> <span class="dt">\</span></span>
+<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a>  <span class="at">--agent</span></span>
+<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a></span>
+<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a><span class="co"># Relationships</span></span>
+<span id="cb25-21"><a href="#cb25-21" tabindex="-1"></a><span class="ex">kata</span> edit <span class="op">&lt;</span>id<span class="op">&gt;</span> --blocked-by <span class="op">&lt;</span>ref<span class="op">&gt;</span> --agent</span>
+<span id="cb25-22"><a href="#cb25-22" tabindex="-1"></a><span class="ex">kata</span> edit <span class="op">&lt;</span>id<span class="op">&gt;</span> --related <span class="op">&lt;</span>ref<span class="op">&gt;</span> --agent</span>
+<span id="cb25-23"><a href="#cb25-23" tabindex="-1"></a></span>
+<span id="cb25-24"><a href="#cb25-24" tabindex="-1"></a><span class="co"># Close only after verification, with evidence</span></span>
+<span id="cb25-25"><a href="#cb25-25" tabindex="-1"></a><span class="ex">kata</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span> --done <span class="dt">\</span></span>
+<span id="cb25-26"><a href="#cb25-26" tabindex="-1"></a>  <span class="at">--message</span> <span class="st">"Implemented the fix and verified the package checks."</span> <span class="dt">\</span></span>
+<span id="cb25-27"><a href="#cb25-27" tabindex="-1"></a>  <span class="at">--commit</span> <span class="op">&lt;</span>sha<span class="op">&gt;</span></span></code></pre></div>
+<p>Use Kata for multi-session work, dependencies, and discovered follow-ups. A short in-session checklist can still be used for immediate execution steps, but it does not replace the persistent Kata issue.</p>
 </div>
 </div>
 <div class="section level2">
@@ -537,19 +526,19 @@
 <div class="section level3">
 <h3 id="id_1-find-work-and-create-feature-branch">1. Find Work and Create Feature Branch<a class="anchor" aria-label="anchor" href="#id_1-find-work-and-create-feature-branch"></a></h3>
 <p><strong>⚠️ IMPORTANT: Create the feature branch BEFORE claiming the issue or writing any code.</strong></p>
-<div class="sourceCode" id="cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Find available work</span></span>
-<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Review issue details</span></span>
+<div class="sourceCode" id="cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="ex">kata</span> ready <span class="at">--agent</span>                    <span class="co"># Find available work</span></span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a><span class="ex">kata</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span> --agent                <span class="co"># Review issue details</span></span>
 <span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a></span>
 <span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a><span class="co"># CREATE BRANCH FIRST - before any code changes!</span></span>
 <span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
 <span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a><span class="co"># or: git checkout -b fix/&lt;short-description&gt;</span></span>
 <span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a></span>
-<span id="cb26-8"><a href="#cb26-8" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Now claim the work</span></span></code></pre></div>
+<span id="cb26-8"><a href="#cb26-8" tabindex="-1"></a><span class="ex">kata</span> claim <span class="op">&lt;</span>id<span class="op">&gt;</span> --agent               <span class="co"># Now claim the work</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="id_2-work-and-sync">2. Work and Sync<a class="anchor" aria-label="anchor" href="#id_2-work-and-sync"></a></h3>
+<h3 id="id_2-work-and-record-progress">2. Work and Record Progress<a class="anchor" aria-label="anchor" href="#id_2-work-and-record-progress"></a></h3>
 <div class="sourceCode" id="cb27"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="co"># Make changes...</span></span>
-<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync beads periodically</span></span></code></pre></div>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a><span class="ex">kata</span> comment <span class="op">&lt;</span>id<span class="op">&gt;</span> --body <span class="st">"Implemented the first verified slice."</span> <span class="at">--agent</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="id_3-run-quality-gates">3. Run Quality Gates<a class="anchor" aria-label="anchor" href="#id_3-run-quality-gates"></a></h3>
@@ -571,13 +560,15 @@
 <div class="section level3">
 <h3 id="id_4-create-pr-and-close-issue">4. Create PR and Close Issue<a class="anchor" aria-label="anchor" href="#id_4-create-pr-and-close-issue"></a></h3>
 <p>When code is complete and ready for review:</p>
-<div class="sourceCode" id="cb29"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="fu">git</span> add .</span>
-<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr-xxx)"</span>  <span class="co"># Include beads issue ID!</span></span>
-<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Close beads issue - work is done</span></span>
-<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a><span class="ex">bd</span> sync</span>
-<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
-<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves beads-XXX"</span></span></code></pre></div>
-<p><strong>Important</strong>: Close the beads issue when the <em>work</em> is complete, not when the PR is merged. The issue tracks your work; the PR tracks the review/merge process.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="fu">git</span> add <span class="op">&lt;</span>specific-files<span class="op">&gt;</span></span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr#&lt;id&gt;)"</span></span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a><span class="va">commit_sha</span><span class="op">=</span><span class="st">"</span><span class="va">$(</span><span class="fu">git</span> rev-parse HEAD<span class="va">)</span><span class="st">"</span></span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a><span class="ex">kata</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span> --done <span class="dt">\</span></span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>  <span class="at">--message</span> <span class="st">"Implemented and verified the requested work."</span> <span class="dt">\</span></span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>  <span class="at">--commit</span> <span class="st">"</span><span class="va">$commit_sha</span><span class="st">"</span></span>
+<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
+<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves dsprrr#&lt;id&gt;"</span></span></code></pre></div>
+<p><strong>Important</strong>: Close the Kata issue when the work is complete and verified, not merely because a PR exists. The issue tracks implementation; the PR tracks review and merge.</p>
 </div>
 <div class="section level3">
 <h3 id="id_5-human-reviews-and-merges-pr">5. Human Reviews and Merges PR<a class="anchor" aria-label="anchor" href="#id_5-human-reviews-and-merges-pr"></a></h3>
@@ -602,28 +593,35 @@
 <span id="cb32-2"><a href="#cb32-2" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">--show-current</span>  <span class="co"># Should NOT be 'main'</span></span>
 <span id="cb32-3"><a href="#cb32-3" tabindex="-1"></a></span>
 <span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a><span class="co"># 2. File issues for remaining work</span></span>
-<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Follow-up task"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"..."</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
-<span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a></span>
-<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a><span class="co"># 3. Run quality gates (if code changed)</span></span>
-<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
-<span id="cb32-9"><a href="#cb32-9" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
-<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
-<span id="cb32-11"><a href="#cb32-11" tabindex="-1"></a></span>
-<span id="cb32-12"><a href="#cb32-12" tabindex="-1"></a><span class="co"># 4. Update issue status</span></span>
-<span id="cb32-13"><a href="#cb32-13" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>completed-issues<span class="op">&gt;</span>           <span class="co"># Include reason if helpful</span></span>
-<span id="cb32-14"><a href="#cb32-14" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>in-progress-issues<span class="op">&gt;</span> --status=open  <span class="co"># If not finished</span></span>
+<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a><span class="ex">kata</span> create <span class="st">"Follow-up task"</span> <span class="dt">\</span></span>
+<span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a>  <span class="at">--body</span> <span class="st">"What remains and why it is separate."</span> <span class="dt">\</span></span>
+<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a>  <span class="at">--priority</span> 2 <span class="dt">\</span></span>
+<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a>  <span class="at">--idempotency-key</span> <span class="st">"follow-up-YYYY-MM-DD"</span> <span class="dt">\</span></span>
+<span id="cb32-9"><a href="#cb32-9" tabindex="-1"></a>  <span class="at">--agent</span></span>
+<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a></span>
+<span id="cb32-11"><a href="#cb32-11" tabindex="-1"></a><span class="co"># 3. Run quality gates (if code changed)</span></span>
+<span id="cb32-12"><a href="#cb32-12" tabindex="-1"></a><span class="ex">air</span> format R/ tests/testthat/</span>
+<span id="cb32-13"><a href="#cb32-13" tabindex="-1"></a><span class="ex">jarl</span> check R/</span>
+<span id="cb32-14"><a href="#cb32-14" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span></span>
 <span id="cb32-15"><a href="#cb32-15" tabindex="-1"></a></span>
-<span id="cb32-16"><a href="#cb32-16" tabindex="-1"></a><span class="co"># 5. Commit with beads issue ID</span></span>
-<span id="cb32-17"><a href="#cb32-17" tabindex="-1"></a><span class="fu">git</span> add .</span>
-<span id="cb32-18"><a href="#cb32-18" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr-xxx)"</span>  <span class="co"># Always include issue ID!</span></span>
-<span id="cb32-19"><a href="#cb32-19" tabindex="-1"></a><span class="ex">bd</span> sync</span>
-<span id="cb32-20"><a href="#cb32-20" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
-<span id="cb32-21"><a href="#cb32-21" tabindex="-1"></a></span>
-<span id="cb32-22"><a href="#cb32-22" tabindex="-1"></a><span class="co"># 6. Create PR (if not already created)</span></span>
-<span id="cb32-23"><a href="#cb32-23" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves dsprrr-xxx"</span></span>
-<span id="cb32-24"><a href="#cb32-24" tabindex="-1"></a></span>
-<span id="cb32-25"><a href="#cb32-25" tabindex="-1"></a><span class="co"># 7. Verify</span></span>
-<span id="cb32-26"><a href="#cb32-26" tabindex="-1"></a><span class="fu">git</span> status  <span class="co"># Should show "up to date with origin"</span></span></code></pre></div>
+<span id="cb32-16"><a href="#cb32-16" tabindex="-1"></a><span class="co"># 4. Release unfinished work with durable context</span></span>
+<span id="cb32-17"><a href="#cb32-17" tabindex="-1"></a><span class="ex">kata</span> comment <span class="op">&lt;</span>unfinished-id<span class="op">&gt;</span> --body <span class="st">"What remains and the next step."</span> <span class="at">--agent</span></span>
+<span id="cb32-18"><a href="#cb32-18" tabindex="-1"></a><span class="ex">kata</span> unassign <span class="op">&lt;</span>unfinished-id<span class="op">&gt;</span> --agent</span>
+<span id="cb32-19"><a href="#cb32-19" tabindex="-1"></a></span>
+<span id="cb32-20"><a href="#cb32-20" tabindex="-1"></a><span class="co"># 5. Commit specific files, then close completed work with that evidence</span></span>
+<span id="cb32-21"><a href="#cb32-21" tabindex="-1"></a><span class="fu">git</span> add <span class="op">&lt;</span>specific-files<span class="op">&gt;</span></span>
+<span id="cb32-22"><a href="#cb32-22" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (dsprrr#&lt;id&gt;)"</span></span>
+<span id="cb32-23"><a href="#cb32-23" tabindex="-1"></a><span class="va">commit_sha</span><span class="op">=</span><span class="st">"</span><span class="va">$(</span><span class="fu">git</span> rev-parse HEAD<span class="va">)</span><span class="st">"</span></span>
+<span id="cb32-24"><a href="#cb32-24" tabindex="-1"></a><span class="ex">kata</span> close <span class="op">&lt;</span>completed-id<span class="op">&gt;</span> --done <span class="dt">\</span></span>
+<span id="cb32-25"><a href="#cb32-25" tabindex="-1"></a>  <span class="at">--message</span> <span class="st">"Implemented and verified the completed work."</span> <span class="dt">\</span></span>
+<span id="cb32-26"><a href="#cb32-26" tabindex="-1"></a>  <span class="at">--commit</span> <span class="st">"</span><span class="va">$commit_sha</span><span class="st">"</span></span>
+<span id="cb32-27"><a href="#cb32-27" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
+<span id="cb32-28"><a href="#cb32-28" tabindex="-1"></a></span>
+<span id="cb32-29"><a href="#cb32-29" tabindex="-1"></a><span class="co"># 6. Create PR (if not already created)</span></span>
+<span id="cb32-30"><a href="#cb32-30" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves dsprrr#&lt;id&gt;"</span></span>
+<span id="cb32-31"><a href="#cb32-31" tabindex="-1"></a></span>
+<span id="cb32-32"><a href="#cb32-32" tabindex="-1"></a><span class="co"># 7. Verify</span></span>
+<span id="cb32-33"><a href="#cb32-33" tabindex="-1"></a><span class="fu">git</span> status  <span class="co"># Should show "up to date with origin"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="critical-rules">Critical Rules<a class="anchor" aria-label="anchor" href="#critical-rules"></a></h3>
@@ -633,24 +631,27 @@
 <li>NEVER stop before pushing—that leaves work stranded locally</li>
 <li>NEVER say “ready to push when you are”—YOU must push</li>
 <li>If push fails, resolve and retry until it succeeds</li>
-<li>Always run <code>bd sync</code> before ending session</li>
-<li>Always include beads issue ID in commit messages (enables <code>bd doctor</code> to detect orphans)</li>
+<li>Record unfinished follow-up work in Kata before ending the session</li>
+<li>Include the Kata issue ID in commit messages when work is issue-driven</li>
 </ul></div>
 </div>
 <div class="section level2">
 <h2 id="parallel-sessions--worktrees">Parallel Sessions &amp; Worktrees<a class="anchor" aria-label="anchor" href="#parallel-sessions--worktrees"></a></h2>
-<p>This project supports parallel work via git worktrees. The beads daemon commits changes to a dedicated branch, preventing conflicts when multiple Claude sessions run simultaneously.</p>
+<p>This project supports parallel work via git worktrees. Every worktree resolves the same Kata project through <code>.kata.toml</code>, so backlog changes are immediately visible without a tracker-specific git branch or merge driver.</p>
 <div class="section level3">
 <h3 id="creating-worktrees-for-parallel-features">Creating Worktrees for Parallel Features<a class="anchor" aria-label="anchor" href="#creating-worktrees-for-parallel-features"></a></h3>
 <div class="sourceCode" id="cb33"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="co"># From main repo, create worktree for a feature</span></span>
 <span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a><span class="fu">git</span> worktree add ../dsprrr-feature-x <span class="at">-b</span> feature/feature-x</span>
 <span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a><span class="bu">cd</span> ../dsprrr-feature-x</span>
 <span id="cb33-4"><a href="#cb33-4" tabindex="-1"></a></span>
-<span id="cb33-5"><a href="#cb33-5" tabindex="-1"></a><span class="co"># Beads commands work normally - shared database, safe daemon</span></span>
-<span id="cb33-6"><a href="#cb33-6" tabindex="-1"></a><span class="ex">bd</span> ready</span>
-<span id="cb33-7"><a href="#cb33-7" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Implement feature"</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
-<span id="cb33-8"><a href="#cb33-8" tabindex="-1"></a><span class="ex">bd</span> sync</span></code></pre></div>
-<p>All worktrees share the same <code>.beads</code> database in the main repo. Changes are immediately visible across sessions.</p>
+<span id="cb33-5"><a href="#cb33-5" tabindex="-1"></a><span class="co"># Kata commands resolve the shared dsprrr project</span></span>
+<span id="cb33-6"><a href="#cb33-6" tabindex="-1"></a><span class="ex">kata</span> ready <span class="at">--agent</span></span>
+<span id="cb33-7"><a href="#cb33-7" tabindex="-1"></a><span class="ex">kata</span> create <span class="st">"Implement feature"</span> <span class="dt">\</span></span>
+<span id="cb33-8"><a href="#cb33-8" tabindex="-1"></a>  <span class="at">--body</span> <span class="st">"Implementation scope."</span> <span class="dt">\</span></span>
+<span id="cb33-9"><a href="#cb33-9" tabindex="-1"></a>  <span class="at">--priority</span> 2 <span class="dt">\</span></span>
+<span id="cb33-10"><a href="#cb33-10" tabindex="-1"></a>  <span class="at">--idempotency-key</span> <span class="st">"implement-feature-YYYY-MM-DD"</span> <span class="dt">\</span></span>
+<span id="cb33-11"><a href="#cb33-11" tabindex="-1"></a>  <span class="at">--agent</span></span></code></pre></div>
+<p>Do not create worktree-local tracker databases or reintroduce <code>.beads/</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="cleanup-after-pr-merged">Cleanup After PR Merged<a class="anchor" aria-label="anchor" href="#cleanup-after-pr-merged"></a></h3>
@@ -659,8 +660,8 @@
 </div>
 <div class="section level3">
 <h3 id="troubleshooting-branch-already-checked-out">Troubleshooting: “Branch already checked out”<a class="anchor" aria-label="anchor" href="#troubleshooting-branch-already-checked-out"></a></h3>
-<p>If git says a branch is checked out in a beads worktree:</p>
-<div class="sourceCode" id="cb35"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> .git/beads-worktrees</span>
+<p>If git says a branch is checked out in another worktree:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a><span class="fu">git</span> worktree list</span>
 <span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
 </div>
 </div>

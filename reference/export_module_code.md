@@ -1,13 +1,20 @@
 # Export Module Configuration as R Code
 
-Generate R code that recreates a module with its current configuration.
-Useful for documenting optimized configurations and ensuring
-reproducibility.
+Generate R code containing the complete program artifact and its
+restoration call. This preserves nested graphs and exact schemas without
+hand-rendering module fields.
 
 ## Usage
 
 ``` r
-export_module_code(module, name = "mod", include_demos = TRUE, file = NULL)
+export_module_code(
+  module,
+  name = "mod",
+  include_demos = TRUE,
+  file = NULL,
+  registry = list(),
+  trusted = FALSE
+)
 ```
 
 ## Arguments
@@ -29,12 +36,23 @@ export_module_code(module, name = "mod", include_demos = TRUE, file = NULL)
 - file:
 
   Optional file path to write the code to. If NULL (default), returns
-  the code as a character string.
+  the code as a character string. Existing files are atomically replaced
+  only after the staged output parses successfully.
+
+- registry:
+
+  Named runtime registry; see
+  [program-artifact](https://jameshwade.github.io/dsprrr/reference/program-artifact.md).
+
+- trusted:
+
+  Whether trusted runtime values may be embedded. Standalone code export
+  rejects registry and embedded runtime references.
 
 ## Value
 
-If `file` is NULL, returns the R code as a character string (invisibly).
-If `file` is specified, writes to file and returns invisibly.
+If `file` is NULL, returns the R code as a character string. If `file`
+is specified, writes it atomically and returns the code invisibly.
 
 ## See also
 

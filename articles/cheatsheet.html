@@ -195,10 +195,10 @@
 </h3>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Caching is enabled by default (memory + disk)</span></span>
-<span><span class="co"># Configure cache behavior</span></span>
+<span><span class="co"># The disk tier uses a platform-specific per-user cache directory</span></span>
 <span><span class="fu"><a href="../reference/configure_cache.html">configure_cache</a></span><span class="op">(</span></span>
-<span> enable_disk <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  disk_path <span class="op">=</span> <span class="st">".dsprrr_cache"</span>,</span>
+<span>  enable_disk <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  disk_private <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  memory_max_entries <span class="op">=</span> <span class="fl">1000L</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -213,8 +213,20 @@
 <span></span>
 <span><span class="co"># Disable caching globally via environment variable</span></span>
 <span><span class="co"># DSPRRR_CACHE_ENABLED=false</span></span></code></pre></div>
-<p><strong>Tip</strong>: Add <code>.dsprrr_cache/</code> to your
-<code>.gitignore</code> when using disk caching.</p>
+<p>Disk envelopes can contain raw request content, model outputs, and
+semantic conversation turns. On Unix, dsprrr verifies owner-only
+directory (<code>0700</code>) and file (<code>0600</code>) modes. On
+Windows, the per-user cache inherits account ACLs that base R cannot
+verify. Administrators, extended ACLs, and network filesystems remain
+outside this guarantee. On shared workstations, keep the default path;
+in CI, disable caching or set a job-specific
+<code>DSPRRR_CACHE_PATH</code>.</p>
+<p>If you explicitly configure a project-local path such as
+<code>.dsprrr_cache</code>, keep it in <code>.gitignore</code>. Set
+<code>disk_private = FALSE</code> only when every cache reader and
+writer is trusted; writable shared RDS caches can be poisoned. Legacy
+project-local caches are not migrated automatically and should be
+removed or reviewed before reuse.</p>
 <hr>
 </div>
 </div>

@@ -11,6 +11,7 @@ configure_cache(
   enable_memory = TRUE,
   enable_disk = TRUE,
   disk_path = default_disk_cache_path(),
+  disk_private = TRUE,
   memory_max_entries = 1000L,
   disk_max_size = 500 * 1024^2,
   disk_max_age = Inf
@@ -33,7 +34,17 @@ configure_cache(
 
 - disk_path:
 
-  Character. Path for disk cache directory. Default `".dsprrr_cache"`.
+  Character. Path for disk cache directory. Defaults to
+  `tools::R_user_dir("dsprrr", "cache")`, unless overridden by
+  `DSPRRR_CACHE_PATH`.
+
+- disk_private:
+
+  Logical. Enforce private cache storage. On Unix, require effective
+  ownership and private POSIX modes for the directory and response
+  files. On Windows, use inherited ACLs and report privacy as
+  unverified. Set to `FALSE` only for an explicitly trusted shared
+  cache. Default `TRUE`.
 
 - memory_max_entries:
 
@@ -55,16 +66,45 @@ Invisibly returns the previous cache configuration as a list.
 
 ## Details
 
-The cache stores parsed LLM responses (lists, tibbles, vectors) keyed by
-a hash of the prompt, model, temperature, and output type. This avoids
-redundant API calls during development and optimization.
+The cache stores versioned envelopes containing parsed LLM responses
+and, when needed, semantic conversation-turn deltas used to restore an
+ellmer Chat after a cache hit. Although cache keys hash request
+identity, envelope values may contain raw request content and model
+outputs. Treat persistent cache files as sensitive data.
+
+**Disk privacy**: By default, the disk cache uses the platform-specific
+per-user cache directory. On Unix, dsprrr verifies effective ownership,
+canonical path identity, a `0700` cache directory, and `0600` response
+files before serialized reads and writes. Unsafe disk caches fall back
+to memory when enabled; otherwise no cache tier remains active. On
+Windows, the per-user directory inherits the account's filesystem ACLs;
+base R cannot verify that those ACLs are owner-only. Set
+`disk_private = FALSE` only for a cache whose writers and readers are
+all trusted.
+
+Existing Unix caches that were readable but not writable by other
+accounts are tightened before reuse. Caches that were writable by
+another account, contain symbolic links or non-regular filesystem
+entries, or cannot be verified are not read; dsprrr uses memory caching
+when enabled and otherwise runs uncached. A shared writable cache could
+replace an RDS response envelope and must be treated as untrusted
+serialized input.
+
+POSIX modes cannot describe every filesystem policy. dsprrr does not
+inspect extended ACLs, administrators can still access owner files, and
+some network filesystems do not honor local mode changes. A same-account
+process can also race path checks and file opens; dsprrr checks identity
+before and after I/O but base R does not expose descriptor-level
+`openat()`/`fstat()` guarantees. Avoid shared or network cache paths for
+sensitive workloads. In CI, disable caching with
+`DSPRRR_CACHE_ENABLED=false` or use a job-specific `DSPRRR_CACHE_PATH`.
 
 **Environment variable**: Set `DSPRRR_CACHE_ENABLED=false` (or `0`,
 `no`, `off`) to globally disable caching, useful for CI/testing
 environments.
 
-**Git**: If using disk caching, add `.dsprrr_cache/` to your
-`.gitignore`:
+**Git**: The default cache is outside the project. If you explicitly use
+a project-local path, add it to `.gitignore`, for example:
 
     # dsprrr LLM response cache
     .dsprrr_cache/
@@ -86,6 +126,12 @@ configure_cache(enable = FALSE)
 configure_cache(
   disk_path = "~/.dsprrr_cache",
   disk_max_size = 1024^3  # 1GB
+)
+
+# Trusted shared caches require an explicit privacy opt-out
+configure_cache(
+  disk_path = "/srv/trusted-team/dsprrr-cache",
+  disk_private = FALSE
 )
 } # }
 ```

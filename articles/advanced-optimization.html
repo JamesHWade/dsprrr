@@ -728,9 +728,27 @@ optimization strategies.</p>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Log directory contains:</span></span>
-<span><span class="co"># - trials.jsonl: All trial results</span></span>
-<span><span class="co"># - best_program.rds: Serialized best module</span></span>
-<span><span class="co"># - config.json: Optimizer configuration</span></span></code></pre></div>
+<span><span class="co"># - trials.jsonl: Authoritative append-only trial journal</span></span>
+<span><span class="co"># - metadata.json: Best-effort derived run summary</span></span>
+<span><span class="co"># - README.md: Best-effort human-readable summary</span></span>
+<span><span class="co"># - best_program.rds: Best-effort safe program artifact</span></span></code></pre></div>
+<p><code>TrialLog</code> treats <code>trials.jsonl</code> as the source
+of truth. It publishes each journal update atomically under an
+interprocess lock, then refreshes <code>metadata.json</code>,
+<code>README.md</code>, and <code>best_program.rds</code> independently.
+A crash or warning during those derived refreshes does not roll back a
+durable journal record, so derived files can temporarily lag. Delete a
+stale derived file and call <code><a href="https://rdrr.io/r/base/save.html" class="external-link">save()</a></code> on the loaded log to
+rebuild it from the journal.</p>
+<p>Persistent log directories are sensitive storage. On Unix, dsprrr
+binds a log to its canonical, effective-user-owned directory identity,
+restricts the directory and files to owner access, rejects writable
+non-sticky ancestors and symbolic-link targets, and verifies
+device/inode identity around reads and atomic publications. Use a local,
+account-private path rather than a shared or network directory. On
+Windows, account filesystem ACLs apply, but base R cannot verify that
+they are owner-only; dsprrr fails closed if the platform cannot provide
+stable device and file identifiers.</p>
 </div>
 <div class="section level3">
 <h3 id="analyzing-trials">Analyzing Trials<a class="anchor" aria-label="anchor" href="#analyzing-trials"></a>
@@ -770,10 +788,123 @@ optimization strategies.</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="resource-budgets-and-checkpoints">Resource Budgets and Checkpoints<a class="anchor" aria-label="anchor" href="#resource-budgets-and-checkpoints"></a>
+</h2>
+<p>Use <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> when an optimization must stay
+inside a hard call, token, cost, or active-time envelope. Pass the
+control object to <code><a href="../reference/compile.html">compile()</a></code>:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">checkpoint</span> <span class="op">&lt;-</span> <span class="st">"optimization_logs/bootstrap-checkpoint.rds"</span></span>
+<span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
+<span>  max_trials <span class="op">=</span> <span class="fl">50L</span>,</span>
+<span>  max_metric_calls <span class="op">=</span> <span class="fl">500L</span>,</span>
+<span>  max_provider_calls <span class="op">=</span> <span class="fl">500L</span>,</span>
+<span>  max_total_tokens <span class="op">=</span> <span class="fl">250000L</span>,</span>
+<span>  max_cost <span class="op">=</span> <span class="fl">25</span>,</span>
+<span>  max_elapsed_seconds <span class="op">=</span> <span class="fl">3600</span>,</span>
+<span>  checkpoint_path <span class="op">=</span> <span class="va">checkpoint</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">partial</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="va">qa_module</span>,</span>
+<span>  <span class="va">trainset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  control <span class="op">=</span> <span class="va">control</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">partial</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">budget_summary</span></span>
+<span><span class="va">partial</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">stop_reason</span></span></code></pre></div>
+<p>Counters are checked before each bounded work unit. Evaluation is
+subdivided into rows when a metric, provider, token, cost, or time cap
+is active, so the maximum post-call overshoot is the usage of one
+already-started evaluation row. Optimizer-side reflection or instruction
+generation has a bound of one already-started provider request. The
+typed stop reason records the resource, observed value, limit, work-unit
+type, and overshoot.</p>
+<p>Unknown usage is not treated as zero. If provider calls, tokens, or
+cost cannot be verified and the matching finite cap is active, the
+optimizer stops after that work unit and returns its best partial
+program. <code>budget_summary</code> reports known totals and unknown
+counts separately. Elapsed-time budgets use a monotonic active-run
+clock; time spent stopped between checkpointed runs is not charged.</p>
+<div class="section level3">
+<h3 id="resume-support">Resume Support<a class="anchor" aria-label="anchor" href="#resume-support"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="27%">
+<col width="36%">
+<col width="36%">
+</colgroup>
+<thead><tr class="header">
+<th>Optimizer</th>
+<th align="right">Budget ledger and best partial</th>
+<th align="right">Deterministic checkpoint resume</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>
+<code>BootstrapFewShot</code> (module and pipeline)</td>
+<td align="right">Yes</td>
+<td align="right">Yes, by training row</td>
+</tr>
+<tr class="even">
+<td><code>MIPROv2</code></td>
+<td align="right">Yes</td>
+<td align="right">Yes, through demo generation and BO evaluation
+rows</td>
+</tr>
+<tr class="odd">
+<td><code>GEPA</code></td>
+<td align="right">Yes</td>
+<td align="right">Not yet</td>
+</tr>
+<tr class="even">
+<td><code>SIMBA</code></td>
+<td align="right">Yes</td>
+<td align="right">Not yet</td>
+</tr>
+<tr class="odd">
+<td><code>COPRO</code></td>
+<td align="right">Yes</td>
+<td align="right">Not yet</td>
+</tr>
+</tbody>
+</table>
+<p>GEPA, SIMBA, and COPRO reject <code>resume = TRUE</code> with a typed
+error rather than silently restarting. Their fine-grained resume work is
+tracked separately.</p>
+<p>Resume Bootstrap or MIPRO by raising or removing a resource limit
+while keeping the original program, data, metric, and search
+settings:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">resumed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="va">qa_module</span>,</span>
+<span>  <span class="va">trainset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
+<span>    max_cost <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>    checkpoint_path <span class="op">=</span> <span class="va">checkpoint</span>,</span>
+<span>    resume <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Checkpoints are atomically replaced safe program artifacts, not
+arbitrary serialized runtime environments. They store versioned search
+state, counters, RNG state, lineage, the best partial program, and
+deterministic hashes for the program, data, and metric. A changed
+identity is rejected with a field-level compatibility diff. Register
+custom metrics, model adapters, and other runtime objects with stable
+IDs in <code>checkpoint_registry</code>; opaque or stateful identities
+and credential-like fields are rejected.</p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="reproducibility">Reproducibility<a class="anchor" aria-label="anchor" href="#reproducibility"></a>
 </h2>
 <p>All optimizers support deterministic seeds:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Set seed for reproducibility</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -791,7 +922,7 @@ optimization strategies.</p>
 <h2 id="error-handling">Error Handling<a class="anchor" aria-label="anchor" href="#error-handling"></a>
 </h2>
 <p>Optimizers gracefully handle LLM errors:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  max_errors <span class="op">=</span> <span class="fl">10L</span>  <span class="co"># Allow up to 10 errors before failing</span></span>
@@ -809,7 +940,7 @@ optimization strategies.</p>
 <div class="section level3">
 <h3 id="start-simple-then-advance">1. Start Simple, Then Advance<a class="anchor" aria-label="anchor" href="#start-simple-then-advance"></a>
 </h3>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Step 1: Try LabeledFewShot first</span></span>
 <span><span class="va">simple</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span><span class="va">simple_score</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">simple</span>, <span class="va">valset</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span></span>
@@ -849,7 +980,7 @@ optimization strategies.</p>
 <div class="section level3">
 <h3 id="use-parallel-evaluation">2. Use Parallel Evaluation<a class="anchor" aria-label="anchor" href="#use-parallel-evaluation"></a>
 </h3>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># BootstrapFewShotWithRandomSearch supports parallel evaluation</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
 <span>  num_candidate_programs <span class="op">=</span> <span class="fl">16L</span>,</span>
@@ -859,7 +990,7 @@ optimization strategies.</p>
 <div class="section level3">
 <h3 id="cache-embeddings-for-knnfewshot">3. Cache Embeddings for KNNFewShot<a class="anchor" aria-label="anchor" href="#cache-embeddings-for-knnfewshot"></a>
 </h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Enable embedding caching in KNNFewShot</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span></span>
 <span>  k <span class="op">=</span> <span class="fl">3L</span>,</span>
@@ -884,7 +1015,7 @@ optimization strategies.</p>
 <div class="section level3">
 <h3 id="monitor-costs">4. Monitor Costs<a class="anchor" aria-label="anchor" href="#monitor-costs"></a>
 </h3>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Track costs during optimization</span></span>
 <span><span class="fu"><a href="../reference/session_cost.html">session_cost</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># Total cost so far</span></span>
 <span></span>

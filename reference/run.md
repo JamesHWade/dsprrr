@@ -49,6 +49,12 @@ run(module, ...)
       (requires `.llm = NULL` so each worker can create an independent
       client).
 
+  .concurrency
+
+  :   A validated policy created by
+      [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
+      When supplied, do not also pass `.parallel` or `.parallel_method`.
+
   .progress
 
   :   Logical indicating whether to show progress bar for batch
@@ -77,8 +83,11 @@ according to the module's signature. For single inputs with
 
 - chat: The ellmer chat object used
 
-- metadata: Additional metadata (tokens used, latency, etc.) For batch
-  inputs: A list of results matching the input length
+- metadata: Additional metadata (tokens used, latency, etc.)
+
+For batch inputs: A list of results matching the input length. Empty
+batches return a zero-length list (with class `dsprrr_batch_result` for
+structured output).
 
 ## Details
 
@@ -86,6 +95,19 @@ according to the module's signature. For single inputs with
 times (configurable via `options(ellmer_max_tries = n)`). This handles
 transient errors like rate limits and connection failures. See ellmer
 documentation for more details.
+
+Zero-length inputs form an empty batch only when every input is zero
+length. Empty batches return immediately without resolving a Chat or
+touching cache, trace, or prompt-history state. Mixing zero-length and
+non-empty inputs is an error.
+
+Scalar and batch Predict calls record one trace per attempted row.
+Structured metadata reports usage, error, cache, backend, and
+batch-index fields. Native ellmer and mirai workers return row records
+that are committed to module and global trace state by the parent in
+input order. Specialized Predict subclasses, such as ReAct, preserve
+their scalar `forward()` method and currently reject vectorized inputs
+rather than bypassing specialized logic.
 
 ## See also
 

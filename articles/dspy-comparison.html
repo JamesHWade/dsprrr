@@ -543,10 +543,9 @@ parallelism</td>
 <td>
 <code>save</code>/<code>load</code>; sanitized LM state and explicit
 unsafe-class opt-in in 3.3 beta</td>
-<td>
-<code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> /
-<code><a href="../reference/restore_module_config.html">restore_module_config()</a></code> (pins-based); safe versioned
-nested-program state is planned</td>
+<td>Versioned whole-program artifacts via <code><a href="../reference/program-artifact.html">save_program()</a></code> /
+<code><a href="../reference/program-artifact.html">load_program()</a></code> or pins, with registry-backed runtime IDs
+and explicit trusted opt-in</td>
 </tr>
 <tr class="odd">
 <td>Observability</td>

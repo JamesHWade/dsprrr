@@ -56,7 +56,9 @@ Trial(
 
 - compiled_artifact_ref:
 
-  Optional reference to compiled module (file path or object).
+  Optional compiled module. The best module is persisted with
+  [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  rather than serialized as a live R object.
 
 - status:
 

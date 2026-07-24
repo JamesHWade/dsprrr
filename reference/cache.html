@@ -4,12 +4,18 @@ and reduce costs. The cache uses a two-tier architecture:
 Memory cache: Fast in-session LRU cache
 Disk cache: Persistent cache across R sessions
 
-"><meta property="og:description" content="dsprrr provides automatic caching of LLM responses to speed up development
+
+Versioned cache envelopes can contain raw request content, parsed model
+outputs, and semantic conversation-turn deltas. Persistent cache directories
+must therefore be treated as sensitive storage; see configure_cache()."><meta property="og:description" content="dsprrr provides automatic caching of LLM responses to speed up development
 and reduce costs. The cache uses a two-tier architecture:
 Memory cache: Fast in-session LRU cache
 Disk cache: Persistent cache across R sessions
 
-"><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
+
+Versioned cache envelopes can contain raw request content, parsed model
+outputs, and semantic conversation-turn deltas. Persistent cache directories
+must therefore be treated as sensitive storage; see configure_cache()."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -99,7 +105,10 @@ Disk cache: Persistent cache across R sessions
     <p>dsprrr provides automatic caching of LLM responses to speed up development
 and reduce costs. The cache uses a two-tier architecture:</p><ol><li><p><strong>Memory cache</strong>: Fast in-session LRU cache</p></li>
 <li><p><strong>Disk cache</strong>: Persistent cache across R sessions</p></li>
-</ol></div>
+</ol><p>Versioned cache envelopes can contain raw request content, parsed model
+outputs, and semantic conversation-turn deltas. Persistent cache directories
+must therefore be treated as sensitive storage; see <code><a href="configure_cache.html">configure_cache()</a></code>.</p>
+    </div>
 
 
 

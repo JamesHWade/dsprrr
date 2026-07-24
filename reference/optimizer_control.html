@@ -95,9 +95,19 @@
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_trials <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_errors <span class="op">=</span> <span class="fl">5L</span>,</span>
+<span>  max_metric_calls <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_provider_calls <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_input_tokens <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_output_tokens <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_total_tokens <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_cost <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_elapsed_seconds <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  num_threads <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  log_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  checkpoint_path <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  resume <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  checkpoint_registry <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -115,7 +125,45 @@
 
 
 <dt id="arg-max-errors">max_errors<a class="anchor" aria-label="anchor" href="#arg-max-errors"></a></dt>
-<dd><p>Maximum consecutive errors before stopping. Default is 5.</p></dd>
+<dd><p>Non-negative integer error budget. Optimizers report total
+errors while stopping on a separate consecutive-error streak; each success
+resets only that streak. A positive value stops on the failure that reaches
+the limit. Zero permits work to begin but stops after the first failure.
+When a completed evaluation returns multiple outcomes, all are included in
+the final counters even if the stop boundary was crossed partway through;
+the first stop reason remains unchanged and prevents scheduling new work.</p></dd>
+
+
+<dt id="arg-max-metric-calls">max_metric_calls<a class="anchor" aria-label="anchor" href="#arg-max-metric-calls"></a></dt>
+<dd><p>Maximum metric calls, or NULL for unlimited.</p></dd>
+
+
+<dt id="arg-max-provider-calls">max_provider_calls<a class="anchor" aria-label="anchor" href="#arg-max-provider-calls"></a></dt>
+<dd><p>Maximum verified provider calls, or NULL for
+unlimited. Ambiguous provider usage stops a run that has this cap.</p></dd>
+
+
+<dt id="arg-max-input-tokens">max_input_tokens<a class="anchor" aria-label="anchor" href="#arg-max-input-tokens"></a></dt>
+<dd><p>Maximum verified input tokens, or NULL for unlimited.</p></dd>
+
+
+<dt id="arg-max-output-tokens">max_output_tokens<a class="anchor" aria-label="anchor" href="#arg-max-output-tokens"></a></dt>
+<dd><p>Maximum verified output tokens, or NULL for unlimited.</p></dd>
+
+
+<dt id="arg-max-total-tokens">max_total_tokens<a class="anchor" aria-label="anchor" href="#arg-max-total-tokens"></a></dt>
+<dd><p>Maximum verified input plus output tokens, or NULL for
+unlimited.</p></dd>
+
+
+<dt id="arg-max-cost">max_cost<a class="anchor" aria-label="anchor" href="#arg-max-cost"></a></dt>
+<dd><p>Maximum known provider cost in US dollars, or NULL for
+unlimited. Unknown cost stops a run that has this cap.</p></dd>
+
+
+<dt id="arg-max-elapsed-seconds">max_elapsed_seconds<a class="anchor" aria-label="anchor" href="#arg-max-elapsed-seconds"></a></dt>
+<dd><p>Maximum active optimizer elapsed time in seconds,
+or NULL for unlimited. Checkpoint downtime is excluded.</p></dd>
 
 
 <dt id="arg-num-threads">num_threads<a class="anchor" aria-label="anchor" href="#arg-num-threads"></a></dt>
@@ -128,6 +176,19 @@
 
 <dt id="arg-log-dir">log_dir<a class="anchor" aria-label="anchor" href="#arg-log-dir"></a></dt>
 <dd><p>Directory for trial logging. Default is NULL (no logging).</p></dd>
+
+
+<dt id="arg-checkpoint-path">checkpoint_path<a class="anchor" aria-label="anchor" href="#arg-checkpoint-path"></a></dt>
+<dd><p>Optional optimizer checkpoint file.</p></dd>
+
+
+<dt id="arg-resume">resume<a class="anchor" aria-label="anchor" href="#arg-resume"></a></dt>
+<dd><p>Whether to resume from <code>checkpoint_path</code>.</p></dd>
+
+
+<dt id="arg-checkpoint-registry">checkpoint_registry<a class="anchor" aria-label="anchor" href="#arg-checkpoint-registry"></a></dt>
+<dd><p>Named runtime registry used by safe program
+artifacts stored in checkpoints.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
