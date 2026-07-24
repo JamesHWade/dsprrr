@@ -65,6 +65,16 @@
     compile_better_together(teleprompter, program, trainset, ...)
   }
 
+  S7::method(compile, list(Omni, S7::class_any)) <- function(
+    teleprompter,
+    program,
+    trainset,
+    ...
+  ) {
+    abort_if_fn_module(program)
+    compile_omni(teleprompter, program, trainset, ...)
+  }
+
   S7::method(compile, list(KNNFewShot, S7::class_any)) <- function(
     teleprompter,
     program,

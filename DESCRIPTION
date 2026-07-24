@@ -125,6 +125,7 @@ Collate:
     'teleprompter-gepa.R'
     'teleprompter-knn.R'
     'teleprompter-mipro.R'
+    'teleprompter-omni.R'
     'teleprompter-simba.R'
     'traces.R'
     'utils.R'
