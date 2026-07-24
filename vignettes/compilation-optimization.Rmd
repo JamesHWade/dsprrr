@@ -28,6 +28,14 @@ if (should_eval) {
   # Disable dsprrr cache to ensure consistent HTTP recordings
   dsprrr:::configure_cache(enable_memory = FALSE, enable_disk = FALSE)
 
+  # Match stable transport identity rather than prompt bodies. Optimizer
+  # internals may change request batching without changing the example's
+  # documented behavior, and the cassette supplies responses in call order.
+  vcr::vcr_configure(
+    dir = "_vcr",
+    match_requests_on = c("method", "uri")
+  )
+
   # Ensure no cassettes are left over from previous vignettes
   if (!is.null(vcr::current_cassette())) {
     try(vcr::eject_cassette(), silent = TRUE)

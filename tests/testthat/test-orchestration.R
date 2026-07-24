@@ -45,21 +45,31 @@ test_that("pin_module_config saves correct structure", {
   pin_module_config(board, "test-module", mod)
   config <- pins::pin_read(board, "test-module")
 
-  # Check structure
-  expect_true("signature" %in% names(config))
-  expect_true("config" %in% names(config))
-  expect_true("optimization" %in% names(config))
-  expect_true("metadata" %in% names(config))
+  expect_identical(config$format, "dsprrr-program")
+  expect_identical(config$format_version, 3L)
+  expect_named(
+    config,
+    c(
+      "format",
+      "format_version",
+      "root",
+      "graph",
+      "metadata",
+      "exclusions",
+      "integrity"
+    )
+  )
+  root <- config$graph$nodes[[config$root]]
 
   # Check signature
-  expect_equal(length(config$signature$inputs), 1)
-  expect_equal(config$signature$inputs[[1]]$name, "text")
-  expect_equal(config$signature$instructions, "Test instructions")
+  expect_equal(length(root$signature$inputs), 1)
+  expect_equal(root$signature$inputs[[1]]$name, "text")
+  expect_equal(root$signature$instructions, "Test instructions")
 
   # Check metadata
-  expect_equal(config$metadata$module_type, "PredictModule")
-  expect_true(!is.null(config$metadata$created_at))
-  expect_true(!is.null(config$metadata$dsprrr_version))
+  expect_equal(root$class, "PredictModule")
+  expect_false(is.null(config$metadata$created_at))
+  expect_false(is.null(config$metadata$packages$dsprrr))
 })
 
 test_that("pin_module_config captures optimization state", {
@@ -78,12 +88,13 @@ test_that("pin_module_config captures optimization state", {
   board <- pins::board_temp()
   pin_module_config(board, "optimized-module", mod)
   config <- pins::pin_read(board, "optimized-module")
+  root <- config$graph$nodes[[config$root]]
 
-  expect_true(config$optimization$compiled)
-  expect_equal(config$optimization$best_score, 0.85)
-  expect_equal(config$optimization$best_trial, 2)
-  expect_equal(config$optimization$best_params$temperature, 0.3)
-  expect_equal(config$optimization$n_trials, 3)
+  expect_true(root$optimization$compiled)
+  expect_equal(root$optimization$best_score, 0.85)
+  expect_equal(root$optimization$best_trial, 2)
+  expect_equal(root$optimization$best_params$temperature, 0.3)
+  expect_equal(root$optimization$n_trials, 3)
 })
 
 # ---- restore_module_config tests ----
@@ -126,26 +137,6 @@ test_that("restore_module_config restores optimization state", {
   expect_equal(restored$state$best_score, 0.9)
 })
 
-test_that("restore_module_config accepts custom signature", {
-  skip_if_not_installed("pins")
-
-  mod <- create_test_module()
-  board <- pins::board_temp()
-  pin_module_config(board, "with-sig", mod)
-  config <- pins::pin_read(board, "with-sig")
-
-  custom_sig <- Signature(
-    inputs = list(input(name = "custom_input")),
-    output_type = ellmer::type_string(),
-    instructions = "Custom instructions"
-  )
-
-  restored <- restore_module_config(config, signature = custom_sig)
-
-  expect_equal(restored$signature@instructions, "Custom instructions")
-  expect_equal(restored$signature@inputs[[1]]$name, "custom_input")
-})
-
 test_that("restore_module_config rejects legacy pinned configs", {
   legacy_config <- list(
     signature = list(
@@ -156,10 +147,7 @@ test_that("restore_module_config rejects legacy pinned configs", {
     config = list()
   )
 
-  expect_error(
-    restore_module_config(legacy_config),
-    "Re-pin this module using the v2 format"
-  )
+  expect_snapshot(restore_module_config(legacy_config), error = TRUE)
 })
 
 test_that("pin_module_config round-trips chain_of_thought kind", {
@@ -172,7 +160,8 @@ test_that("pin_module_config round-trips chain_of_thought kind", {
   config <- pins::pin_read(board, "cot")
   restored <- restore_module_config(config)
 
-  expect_equal(config$module_kind, "chain_of_thought")
+  root <- config$graph$nodes[[config$root]]
+  expect_equal(root$kind, "chain_of_thought")
   expect_equal(restored$config$.module_kind, "chain_of_thought")
   expect_true("reasoning" %in% names(restored$signature@output_type@properties))
 })
@@ -187,7 +176,8 @@ test_that("pin_module_config round-trips multichain core state", {
   config <- pins::pin_read(board, "mcc")
   restored <- restore_module_config(config)
 
-  expect_equal(config$module_kind, "multichain")
+  root <- config$graph$nodes[[config$root]]
+  expect_equal(root$kind, "multichain")
   expect_s3_class(restored, "Module")
   expect_equal(restored$config$.module_kind, "multichain")
   expect_equal(restored$M, 4)
@@ -402,6 +392,142 @@ test_that("use_dsprrr_template creates targets template", {
   }
 })
 
+test_that("targets template parses and declares a valid graph", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
+
+  project_dir <- withr::local_tempdir()
+  script <- file.path(project_dir, "_targets.R")
+  use_dsprrr_template("targets", path = project_dir)
+
+  parsed <- parse(script)
+  expect_gt(length(parsed), 0L)
+
+  withr::local_package("targets")
+  withr::local_package("tarchetypes")
+  graph <- source(
+    script,
+    local = new.env(parent = globalenv())
+  )$value
+
+  expect_type(graph, "list")
+  expect_length(graph, 12L)
+
+  manifest <- targets::tar_manifest(
+    script = script,
+    fields = c("name", "format"),
+    callr_function = NULL
+  )
+  expect_setequal(
+    manifest$name,
+    c(
+      "train_data",
+      "test_data",
+      "module_definition",
+      "llm_client",
+      "optimized_module",
+      "evaluation_results",
+      "pins_board",
+      "pinned_config",
+      "pinned_traces",
+      "pinned_evaluation",
+      "summary_stats",
+      "summary_json"
+    )
+  )
+  expect_equal(
+    manifest$format[manifest$name == "summary_json"],
+    "file"
+  )
+})
+
+test_that("generated targets workflow runs its core graph end to end", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
+  skip_if_not_installed("jsonlite")
+
+  make_mock_chat <- function() {
+    structure(
+      list(
+        chat_structured = function(prompt, type, ...) {
+          sentiment <- if (
+            grepl(
+              "terrible|not recommend|worst|waste|disappointing|not worth",
+              prompt,
+              ignore.case = TRUE
+            )
+          ) {
+            "negative"
+          } else if (
+            grepl(
+              "amazing|love|exceeded|great|highly recommend",
+              prompt,
+              ignore.case = TRUE
+            )
+          ) {
+            "positive"
+          } else {
+            "neutral"
+          }
+
+          list(sentiment = sentiment)
+        },
+        get_turns = function(...) list(),
+        set_turns = function(...) invisible(NULL),
+        last_turn = function(...) NULL,
+        get_model = function() "deterministic-test",
+        clone = function(deep = FALSE) make_mock_chat()
+      ),
+      class = "Chat"
+    )
+  }
+
+  project_dir <- withr::local_tempdir()
+  use_dsprrr_template("targets", path = project_dir)
+  withr::local_dir(project_dir)
+  withr::local_envvar(DSPRRR_CACHE_ENABLED = "false")
+  old_cache <- configure_cache(enable = FALSE)
+  withr::defer(do.call(configure_cache, old_cache))
+  withr::local_options(
+    dsprrr.targets.llm_factory = function(model) make_mock_chat()
+  )
+
+  targets::tar_make(
+    names = "summary_json",
+    callr_function = NULL,
+    reporter = "silent"
+  )
+
+  optimized <- targets::tar_read_raw("optimized_module")
+  evaluation <- targets::tar_read_raw("evaluation_results")
+  summary_path <- targets::tar_read_raw("summary_json")
+  metadata <- targets::tar_meta(
+    fields = c("name", "error")
+  )
+  completed <- metadata[
+    metadata$name %in%
+      c("optimized_module", "evaluation_results", "summary_json"),
+    ,
+    drop = FALSE
+  ]
+
+  expect_true(optimized$is_compiled())
+  expect_s3_class(evaluation, "dsprrr_evaluation")
+  expect_equal(evaluation$n_evaluated, 3L)
+  expect_equal(evaluation$n_errors, 0L)
+  expect_equal(evaluation$mean_score, 1)
+  expect_true(file.exists(summary_path))
+  expect_equal(
+    jsonlite::read_json(summary_path, simplifyVector = TRUE)$accuracy,
+    1
+  )
+  expect_setequal(
+    completed$name,
+    c("optimized_module", "evaluation_results", "summary_json")
+  )
+  expect_length(stats::na.omit(completed$error), 0L)
+})
+
 test_that("use_dsprrr_template respects overwrite argument", {
   skip_on_cran()
 
@@ -466,7 +592,7 @@ test_that("module config round-trips correctly", {
   expect_equal(restored$state$best_score, 0.92)
 })
 
-test_that("pin_module_config refuses to silently destroy pipelines (dsprrr-07u)", {
+test_that("pin_module_config preserves complete pipelines (dsprrr-07u)", {
   skip_if_not_installed("pins")
 
   m1 <- module(signature("question -> thought"), type = "predict")
@@ -474,11 +600,10 @@ test_that("pin_module_config refuses to silently destroy pipelines (dsprrr-07u)"
   pipe <- pipeline(m1, m2)
   board <- pins::board_temp()
 
-  # Regression: module_kind() collapsed unknown classes to "predict", so a
-  # pipeline pinned without error and restored as a single empty PredictModule,
-  # silently losing every step and its bootstrapped demos.
-  expect_error(
-    pin_module_config(board, "pipe", pipe),
-    "[Pp]ipeline"
-  )
+  pin_module_config(board, "pipe", pipe)
+  artifact <- pins::pin_read(board, "pipe")
+  restored <- restore_module_config(artifact)
+
+  expect_s3_class(restored, "PipelineModule")
+  expect_identical(module_graph(restored)$path, module_graph(pipe)$path)
 })

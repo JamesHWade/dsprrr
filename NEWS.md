@@ -4,6 +4,53 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Bug fixes
 
+* `configure_cache()` now keeps persistent response envelopes in the
+  platform-specific per-user cache directory by default. Unix cache directories
+  and files are bound to their effective owner, canonical identity, and private
+  POSIX modes before every serialized read or write. Unsafe or unverifiable
+  caches fall back to memory when enabled, or leave no cache tier active;
+  extended ACL and Windows inherited-ACL boundaries are reported honestly.
+  Project-local and shared caches require an explicit path, and disabling
+  privacy enforcement requires `disk_private = FALSE` (#dsprrr-etge).
+
+* Empty Predict batches and zero-row datasets now return correctly shaped
+  empty results without resolving a provider or changing cache, trace, or
+  history state. Batch rows record one canonical ordered trace across
+  sequential, native ellmer, mirai, cache-hit, and failure paths; mixed
+  zero/non-zero inputs fail during typed preflight. Scalar ellmer content and
+  other opaque runtime objects recycle without losing identity, and native
+  ellmer batches reconstruct nested objects and arrays with the same row types
+  as scalar calls. Direct `PredictModule$run()` batches now use the isolated,
+  observable scheduler; unsupported custom and specialized modules reject
+  vectorized execution before work instead of silently sharing mutable state
+  or bypassing specialized logic. `Module$predict()` retains named output
+  records for compatibility even though simple `run()` batches simplify a
+  single-field row. Native ellmer batches retain row failures for non-object
+  outputs through an internal typed wrapper, including valid optional `NULL`
+  values, and schemas whose optional nested presence is ambiguous use isolated
+  scalar rows instead of guessing between absent and present-empty values
+  (#dsprrr-bbdm).
+
+* `concurrency_control()` now gives batch execution one enforceable contract
+  for backend selection, exact in-flight limits, per-task and total timeouts,
+  error budgets, and cancellation. Ellmer receives the requested `max_active`;
+  mirai runs in a verified dsprrr-owned pool without replacing user topology;
+  and every row reports requested and effective execution metadata. Explicit
+  backends fail before provider work when their contract cannot be honored
+  (#dsprrr-ywhf). Owned mirai shutdown now initiates a non-blocking reset and
+  bounds verification against the batch deadline.
+
+* Cached requests now use versioned, account-partitioned identities covering
+  conversation state, provider settings, exact schemas, and multimodal content.
+  Cache hits replay provider-recorded semantic turns, including ellmer's native
+  structured JSON content, without fabricated usage. Assistant metadata adapts
+  to the installed ellmer contract, preserving finish reasons when available
+  while remaining cacheable with CRAN ellmer 0.4.1. Opaque/custom Chats and
+  registered tools bypass caching. Sequential batch rows preserve isolated,
+  completed Chat histories instead of sharing or replacing state. Persistent
+  cache envelopes can contain request content, outputs, and turn deltas and must
+  be treated as sensitive storage.
+
 * Batch and evaluation failures now preserve the original LLM/provider error.
   Structured `run_dataset()` results expose a row-level `.error` column, and
   `evaluate()` reports run failures separately from metric failures instead of
@@ -21,7 +68,9 @@ First development changelog. dsprrr is experimental; the API may change.
 * The built-in R code runner now advertises its real trust boundary: callr
   provides process isolation, not a security sandbox. Code-executing modules
   accept external container/OS sandbox backends through a documented
-  `execute()` + `policy()` protocol (#dsprrr-ady).
+  `execute()` + `policy()` protocol. Subprocess workers shed parent-process
+  source metadata before transport, avoiding instrumented-namespace startup
+  costs without weakening execution checks (#dsprrr-ady).
 
 * Failed items in a batch are now counted and reported. Previously
   `print()` on a batch result always said "All items completed successfully"
@@ -34,6 +83,24 @@ First development changelog. dsprrr is experimental; the API may change.
 * `optimize_grid()` now gives a clear error when every trial fails (for
   example, when the API is unreachable) instead of a cryptic
   "attempt to select less than one element" (#dsprrr-hew).
+
+* `optimizer_control()` now applies `max_errors` as an exact consecutive-error
+  boundary while retaining total-error and completed-evaluation overshoot
+  metadata consistently across optimizers. Bootstrap random search preserves
+  validation outcomes row by row without adding a second candidate summary,
+  and returns its typed baseline/partial result when a strict resource budget
+  blocks the first validation.
+
+* Optimizer controls now cap metric and provider calls, input/output/total
+  tokens, known cost, and monotonic elapsed time without treating unknown usage
+  as free. Private atomic checkpoints preserve fingerprints, RNG state,
+  counters, lineage, best partial programs, and append-only trial logs;
+  Bootstrap and MIPRO resume without repeating completed paid rows. GEPA,
+  SIMBA, and COPRO share the same ledger and typed stop reasons while their
+  fine-grained resume engines remain explicitly tracked follow-ups. Sticky
+  error-budget stops survive checkpoint round-trips, and MIPRO retains its
+  requested worker count when no explicit optimizer control overrides it
+  (#dsprrr-krq4).
 
 * `.cache` is now a validated, first-class argument to `run()` and `forward()`
   for every module type, instead of triggering a spurious "unknown input"
@@ -58,9 +125,18 @@ First development changelog. dsprrr is experimental; the API may change.
   `refine(best_of_n(mod))`) compose their ids cleanly instead of crashing with
   a duplicate-argument error (#dsprrr-pcd, #dsprrr-wx6).
 
-* `pin_module_config()` now errors clearly for pipelines and other unsupported
-  module types instead of silently serialising them as an empty `PredictModule`
-  and dropping every step on restore (#dsprrr-07u).
+* New `program_artifact()`, `save_program()`, and `load_program()` APIs provide
+  a versioned whole-program contract for nested module graphs, shared identity,
+  multimodal demos, and curated optimization state. Runtime objects use stable
+  registry IDs by default or require dual `trusted = TRUE` opt-in; pins and
+  standalone code export reuse the same validated, current-version manifest.
+  Unpublished legacy shapes are rejected rather than interpreted through a
+  second constructor path, and restoration uses the stored signature rather
+  than accepting an out-of-band override. Credential-like demo fields fail
+  instead of silently changing program semantics, and remote content rejects
+  recognizable signed-path credentials. Local persistence rejects same-file
+  aliases before publication and documents its stable-local-filesystem and
+  trusted-directory atomicity boundary (#dsprrr-g6gq, #dsprrr-07u).
 
 ## Internal
 

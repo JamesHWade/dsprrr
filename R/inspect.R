@@ -262,12 +262,52 @@ format_history_transcript <- function(entries) {
 clear_prompt_history <- function() {
   n_cleared <- length(.dsprrr_env$prompt_history %||% list())
   .dsprrr_env$prompt_history <- list()
+  .dsprrr_env$prompt_history_generation <- 0
 
   if (n_cleared > 0) {
     cli::cli_inform("Cleared {n_cleared} prompt history entr{?y/ies}")
   }
 
   invisible(n_cleared)
+}
+
+# Largest consecutive integer exactly representable by an R double.
+prompt_history_generation_max <- 2^53 - 1
+
+# Internal: read a valid append-generation token.
+prompt_history_generation <- function() {
+  generation <- .dsprrr_env$prompt_history_generation
+  valid <- is.numeric(generation) &&
+    length(generation) == 1L &&
+    !is.na(generation) &&
+    is.finite(generation) &&
+    generation >= 0 &&
+    generation <= prompt_history_generation_max &&
+    generation == floor(generation)
+  if (valid) as.numeric(generation) else 0
+}
+
+# Internal: advance only after an entry has been appended successfully.
+advance_prompt_history_generation <- function() {
+  generation <- prompt_history_generation()
+  next_generation <- if (generation >= prompt_history_generation_max) {
+    0
+  } else {
+    generation + 1
+  }
+  .dsprrr_env$prompt_history_generation <- next_generation
+  next_generation
+}
+
+# Internal: count successful appends across one possible counter wrap.
+prompt_history_generation_delta <- function(before, after) {
+  before <- as.numeric(before)
+  after <- as.numeric(after)
+  if (after >= before) {
+    after - before
+  } else {
+    (prompt_history_generation_max - before) + after + 1
+  }
 }
 
 # Internal: Add an entry to the global prompt history
@@ -288,6 +328,7 @@ add_to_global_history <- function(trace, source = "unknown") {
         .dsprrr_env$prompt_history,
         list(entry)
       )
+      advance_prompt_history_generation()
 
       # Prune if needed (ring buffer behavior)
       max_history <- getOption(

@@ -23,6 +23,8 @@
 ^dspy$
 ^\.claude$
 ^\.beads$
+^\.kata\.toml$
+^\.kata\.local\.toml$
 ^examples$
 ^getting-started\.md$
 ^gh-issue.*\.md$

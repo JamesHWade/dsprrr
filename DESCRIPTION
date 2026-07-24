@@ -27,8 +27,11 @@ Depends:
 Imports:
     cachem,
     cli,
+    codetools,
     digest,
     ellmer (>= 0.4.1),
+    filelock,
+    fs,
     glue,
     jsonlite,
     methods,
@@ -46,6 +49,7 @@ Suggests:
     knitr,
     parsnip,
     pins,
+    pkgload,
     promises,
     shiny (>= 1.8.0),
     quarto,
@@ -62,12 +66,14 @@ Suggests:
     yardstick
 Collate:
     'accessors.R'
+    'artifact.R'
     'assertion-helpers.R'
     'assertion.R'
     'async.R'
     'cache.R'
     'chat-default.R'
     'compile.R'
+    'concurrency-control.R'
     'demo.R'
     'dsp.R'
     'dsprrr-package.R'
@@ -81,6 +87,7 @@ Collate:
     'module-codeact.R'
     'module-ensemble.R'
     'module-fn.R'
+    'module-graph.R'
     'module-knn.R'
     'module-multichain.R'
     'module-predict.R'
@@ -93,6 +100,7 @@ Collate:
     'module.R'
     'optimize.R'
     'optimizer-accessors.R'
+    'optimizer-checkpoint.R'
     'optimizer-core.R'
     'optimizer-discrete-bo.R'
     'optimizer-logging.R'

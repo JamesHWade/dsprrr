@@ -116,10 +116,10 @@ my_analysis <- function(data) {
 ```{r caching}
 #| eval: false
 # Caching is enabled by default (memory + disk)
-# Configure cache behavior
+# The disk tier uses a platform-specific per-user cache directory
 configure_cache(
- enable_disk = TRUE,
-  disk_path = ".dsprrr_cache",
+  enable_disk = TRUE,
+  disk_private = TRUE,
   memory_max_entries = 1000L
 )
 
@@ -136,7 +136,18 @@ clear_cache("memory") # Memory only
 # DSPRRR_CACHE_ENABLED=false
 ```
 
-**Tip**: Add `.dsprrr_cache/` to your `.gitignore` when using disk caching.
+Disk envelopes can contain raw request content, model outputs, and semantic
+conversation turns. On Unix, dsprrr verifies owner-only directory (`0700`) and
+file (`0600`) modes. On Windows, the per-user cache inherits account ACLs that
+base R cannot verify. Administrators, extended ACLs, and network filesystems
+remain outside this guarantee. On shared workstations, keep the default path;
+in CI, disable caching or set a job-specific `DSPRRR_CACHE_PATH`.
+
+If you explicitly configure a project-local path such as `.dsprrr_cache`, keep
+it in `.gitignore`. Set `disk_private = FALSE` only when every cache reader and
+writer is trusted; writable shared RDS caches can be poisoned. Legacy
+project-local caches are not migrated automatically and should be removed or
+reviewed before reuse.
 
 ---
 

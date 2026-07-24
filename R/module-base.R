@@ -73,6 +73,8 @@ Module <- R6::R6Class(
     #' @param .llm Optional ellmer chat object
     #' @param .verbose Logical for debug output (currently unused, for API consistency)
     #' @param .parallel Logical for parallel batch processing (requires using run() generic)
+    #' @param .parallel_method Legacy parallel backend passed through by [run()]
+    #' @param .concurrency Optional policy created by [concurrency_control()]
     #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
     #' @return Module outputs. For .return_format="simple", returns the output value directly.
@@ -82,14 +84,52 @@ Module <- R6::R6Class(
       .llm = NULL,
       .verbose = FALSE,
       .parallel = FALSE,
+      .parallel_method = c("ellmer", "mirai"),
+      .concurrency = NULL,
+      .concurrency_runtime = NULL,
       .progress = TRUE,
       .return_format = "simple",
-      .cache = NULL
+      .cache = NULL,
+      .predict_compat = FALSE
     ) {
+      parallel_missing <- missing(.parallel)
+      parallel_method_missing <- missing(.parallel_method)
+      concurrency_missing <- missing(.concurrency)
+      if (is.null(.concurrency_runtime)) {
+        concurrency <- resolve_concurrency_control(
+          .concurrency = .concurrency,
+          concurrency_missing = concurrency_missing,
+          .parallel = .parallel,
+          parallel_missing = parallel_missing,
+          .parallel_method = .parallel_method,
+          parallel_method_missing = parallel_method_missing
+        )
+      } else if (
+        !inherits(
+          .concurrency_runtime,
+          "dsprrr_concurrency_runtime"
+        )
+      ) {
+        cli::cli_abort(
+          "Internal concurrency runtime is invalid",
+          class = "dsprrr_concurrency_config_error"
+        )
+      }
       # Validate .cache here too: callers can reach $run() directly (not only
       # via the run() generic, which validates separately), so a malformed
       # value must fail loudly instead of being silently forwarded.
       validate_cache_arg(.cache)
+      .return_format <- match.arg(.return_format, c("simple", "structured"))
+      if (
+        !is.logical(.predict_compat) ||
+          length(.predict_compat) != 1L ||
+          is.na(.predict_compat)
+      ) {
+        cli::cli_abort(
+          "Internal predict compatibility mode is invalid",
+          class = "dsprrr_runtime_config_error"
+        )
+      }
 
       inputs <- list(...)
 
@@ -103,59 +143,85 @@ Module <- R6::R6Class(
         context = "inputs"
       )
 
-      # Check for batch inputs - warn if parallel requested but using $run()
-      input_lengths <- lengths(inputs)
-      is_batch <- any(input_lengths > 1)
+      input_contract <- batch_input_contract(inputs)
 
-      if (is_batch && .parallel) {
-        cli::cli_warn(c(
-          "Parallel batch processing requires using the {.fn run} generic function",
-          "i" = "Use {.code run(module, ...)} instead of {.code module$run(...)}"
-        ))
+      if (identical(input_contract$kind, "batch")) {
+        if (
+          inherits(self, "PredictModule") &&
+            !identical(class(self)[1], "PredictModule")
+        ) {
+          cli::cli_abort(
+            c(
+              "Batch execution is not yet supported for specialized Predict modules",
+              "x" = "{.cls {class(self)[1]}} overrides the row execution contract.",
+              "i" = "Run scalar inputs so the module's specialized {.fn forward} method is preserved."
+            ),
+            class = "dsprrr_batch_unsupported_module",
+            module_class = class(self)[1]
+          )
+        }
+        if (!identical(class(self)[1], "PredictModule")) {
+          cli::cli_abort(
+            c(
+              "Batch execution is not supported for this module",
+              "x" = "{.cls {class(self)[1]}} does not implement the isolated Predict row contract.",
+              "i" = "Run scalar inputs or implement a dedicated isolated row adapter."
+            ),
+            class = "dsprrr_batch_unsupported_module",
+            module_class = class(self)[1]
+          )
+        }
+        runtime_chat <- .llm %||%
+          self$chat %||%
+          get_default_chat(create = FALSE)
+        runtime <- .concurrency_runtime %||%
+          normalize_concurrency_runtime(
+            concurrency,
+            .llm = .llm,
+            .chat = runtime_chat
+          )
+        if (
+          isTRUE(.predict_compat) &&
+            !identical(runtime$effective_backend, "sequential")
+        ) {
+          cli::cli_abort(
+            c(
+              "Stateful predict batches require sequential execution",
+              "i" = "Use {.fn run} for isolated concurrent batch execution."
+            ),
+            class = c(
+              "dsprrr_predict_concurrency_unsupported",
+              "dsprrr_concurrency_unsupported_error"
+            )
+          )
+        }
       }
 
-      # Handle batch inputs by iterating over forward()
-      if (is_batch) {
-        max_length <- max(input_lengths)
+      if (identical(input_contract$kind, "empty")) {
+        return(empty_batch_result(.return_format))
+      }
 
-        # Validate all inputs have compatible lengths
-        invalid_lengths <- input_lengths[
-          input_lengths != 1 & input_lengths != max_length
-        ]
-        if (length(invalid_lengths) > 0) {
-          cli::cli_abort(
-            "All inputs must have the same length or length 1 for batch processing"
-          )
-        }
-
-        # Expand scalar inputs
-        inputs <- lapply(inputs, function(x) {
-          if (length(x) == 1) rep(x, max_length) else x
-        })
-
-        # Process each item
-        results <- vector("list", max_length)
-        for (i in seq_len(max_length)) {
-          input_set <- lapply(inputs, `[[`, i)
-          result <- self$forward(
-            input_set,
-            .llm = .llm,
-            trace = TRUE,
-            .cache = .cache
-          )
-
-          if (.return_format == "simple") {
-            results[[i]] <- result$output[[1]]
-          } else {
-            results[[i]] <- list(
-              output = result$output[[1]],
-              chat = result$chat[[1]],
-              metadata = result$metadata[[1]]
-            )
-          }
-        }
-
-        return(results)
+      # Exact Predict modules share the same scheduler whether callers use the
+      # generic or the public R6 method. This avoids mutating one caller Chat
+      # across rows and commits canonical traces in deterministic order.
+      if (identical(input_contract$kind, "batch")) {
+        inputs <- lapply(
+          inputs,
+          batch_recycle_input,
+          size = input_contract$size
+        )
+        return(run_batch(
+          module = self,
+          inputs = inputs,
+          n = input_contract$size,
+          .llm = .llm,
+          .verbose = .verbose,
+          .progress = .progress,
+          .return_format = .return_format,
+          .cache = .cache,
+          .concurrency = runtime,
+          .isolate_rows = !isTRUE(.predict_compat)
+        ))
       }
 
       # Single input processing
@@ -183,9 +249,19 @@ Module <- R6::R6Class(
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object (uses stored chat if not provided)
-    #' @return The output value(s) from the module
+    #' @return The declared output record, or a list of output records for a
+    #'   batch. Single-field object outputs retain their field name.
     predict = function(..., .llm = NULL) {
-      self$run(..., .llm = .llm, .return_format = "simple")
+      result <- self$run(
+        ...,
+        .llm = .llm,
+        .return_format = "structured",
+        .predict_compat = TRUE
+      )
+      if (inherits(result, "dsprrr_batch_result")) {
+        return(lapply(result, `[[`, "output"))
+      }
+      result$output
     },
 
     #' @description
@@ -622,9 +698,9 @@ Module <- R6::R6Class(
 
         # This will use the full run_dataset logic once migrated
         results <- tibble::tibble(
-          result = list(),
-          .chat = list(),
-          .metadata = list()
+          result = vector("list", nrow(inputs)),
+          .chat = vector("list", nrow(inputs)),
+          .metadata = vector("list", nrow(inputs))
         )
 
         # Process each row
@@ -632,9 +708,9 @@ Module <- R6::R6Class(
           row_inputs <- as.list(inputs[i, , drop = FALSE])
           result <- module$forward(row_inputs, .llm = .llm, trace = TRUE)
 
-          results$result[[i]] <- result$output[[1]]
-          results$.chat[[i]] <- result$chat[[1]] %||% NULL
-          results$.metadata[[i]] <- result$metadata[[1]] %||% list()
+          results$result[i] <- list(result$output[[1]])
+          results$.chat[i] <- list(result$chat[[1]] %||% NULL)
+          results$.metadata[i] <- list(result$metadata[[1]] %||% list())
         }
 
         if (.return_format == "simple") {

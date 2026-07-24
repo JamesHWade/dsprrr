@@ -21,6 +21,8 @@ Additional arguments passed to \code{\link[=run_dataset]{run_dataset()}}:
 \itemize{
 \item \code{.llm}: Optional ellmer chat object
 \item \code{.parallel}: Logical; whether to allow parallel execution
+\item \code{.concurrency}: A policy created by \code{\link[=concurrency_control]{concurrency_control()}}. Do not also
+pass \code{.parallel} when using an explicit policy.
 \item \code{.progress}: Logical; whether to display progress while evaluating
 \item \code{.return_format}: Character; \code{"simple"} returns just scores and predictions,
 \code{"structured"} (default) includes full metadata and data

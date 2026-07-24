@@ -20,6 +20,9 @@ Can be single values or vectors for batch processing. Additional parameters:
 parallelism (more efficient, single process).
 "mirai" uses mirai for multi-process parallelism (requires \code{.llm = NULL}
 so each worker can create an independent client).}
+\item{.concurrency}{A validated policy created by
+\code{\link[=concurrency_control]{concurrency_control()}}. When supplied, do not also pass \code{.parallel} or
+\code{.parallel_method}.}
 \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 \item{.return_format}{Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
@@ -35,8 +38,11 @@ For single inputs with .return_format="structured": A list with components:
 \item output: The parsed output
 \item chat: The ellmer chat object used
 \item metadata: Additional metadata (tokens used, latency, etc.)
-For batch inputs: A list of results matching the input length
 }
+
+For batch inputs: A list of results matching the input length. Empty
+batches return a zero-length list (with class \code{dsprrr_batch_result} for
+structured output).
 }
 \description{
 Execute a module with the provided inputs to generate LLM output.
@@ -51,6 +57,18 @@ across workers.
 (configurable via \code{options(ellmer_max_tries = n)}). This handles transient
 errors like rate limits and connection failures. See ellmer documentation
 for more details.
+
+Zero-length inputs form an empty batch only when every input is zero length.
+Empty batches return immediately without resolving a Chat or touching cache,
+trace, or prompt-history state. Mixing zero-length and non-empty inputs is an
+error.
+
+Scalar and batch Predict calls record one trace per attempted row. Structured
+metadata reports usage, error, cache, backend, and batch-index fields. Native
+ellmer and mirai workers return row records that are committed to module and
+global trace state by the parent in input order. Specialized Predict
+subclasses, such as ReAct, preserve their scalar \code{forward()} method and
+currently reject vectorized inputs rather than bypassing specialized logic.
 }
 \examples{
 \dontrun{

@@ -1,16 +1,20 @@
 # Isolate the on-disk cache during the test suite.
 #
-# Without this, the default disk cache writes into the working directory
-# (tests/testthat/.dsprrr_cache during R CMD check), which pollutes the package
-# source tree and leaks state across runs -- a documented source of flaky tests.
-#
-# We redirect the cache to a temporary directory via DSPRRR_CACHE_PATH (so even
-# bare configure_cache() calls land there) and disable the disk tier by default.
+# The production default is a per-user directory, which test runs must not
+# mutate or share. We redirect the cache via DSPRRR_CACHE_PATH (so even bare
+# configure_cache() calls land in a temporary directory) and disable the disk
+# tier by default.
 # Cache-behavior tests that need disk caching opt back in with their own
 # tempdirs, which take precedence over this default.
 
 dsprrr_test_cache_dir <- file.path(tempdir(), "dsprrr-test-cache")
-dir.create(dsprrr_test_cache_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(
+  dsprrr_test_cache_dir,
+  showWarnings = FALSE,
+  recursive = TRUE,
+  mode = "0700"
+)
+Sys.chmod(dsprrr_test_cache_dir, mode = "0700")
 
 withr::local_envvar(
   DSPRRR_CACHE_PATH = dsprrr_test_cache_dir,
@@ -36,11 +40,11 @@ withr::defer(
     dsprrr::clear_cache()
     unlink(dsprrr_test_cache_dir, recursive = TRUE)
     unlink(dsprrr_test_vitals_dir, recursive = TRUE)
-    # Restore the production default explicitly. teardown defers run LIFO, so
-    # DSPRRR_CACHE_PATH set by local_envvar() above is still in scope here; a
-    # bare configure_cache() would otherwise re-read it and point disk_path at
-    # the just-unlinked test dir.
-    dsprrr::configure_cache(disk_path = ".dsprrr_cache")
+    # Restore the production path explicitly. Teardown defers run LIFO, so the
+    # test override is still in scope here.
+    dsprrr::configure_cache(
+      disk_path = tools::R_user_dir("dsprrr", "cache")
+    )
   },
   envir = testthat::teardown_env()
 )

@@ -14,14 +14,18 @@ NULL
 #' Pin a Module Configuration
 #'
 #' @description
-#' Save a module's configuration and signature to a pins board for later retrieval.
-#' This enables sharing optimized modules across projects and team members.
+#' Save a complete module program artifact to a pins board for later retrieval.
+#' This uses the versioned manifest documented in [program-artifact], including
+#' nested programs and shared module identity.
 #'
 #' @param board A pins board object (e.g., from `pins::board_folder()`)
 #' @param name Character name for the pin
 #' @param module A DSPrrr module whose configuration should be saved
 #' @param description Optional description for the pin
 #' @param versioned Logical; whether to version the pin (default TRUE)
+#' @param registry Named runtime registry; see [program-artifact].
+#' @param trusted Whether trusted runtime values may be embedded. The default is
+#'   `FALSE`.
 #' @param ... Additional arguments passed to `pins::pin_write()`
 #'
 #' @return The pin name (invisibly)
@@ -58,7 +62,9 @@ pin_module_config <- function(
   module,
   description = NULL,
   versioned = TRUE,
-  ...
+  ...,
+  registry = list(),
+  trusted = FALSE
 ) {
   rlang::check_installed("pins", reason = "to save module configurations")
 
@@ -66,23 +72,10 @@ pin_module_config <- function(
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
 
-  config_data <- serialize_module_config_v2(module)
-  config_data$metadata$created_at <- Sys.time()
-  config_data$metadata$dsprrr_version <- as.character(
-    utils::packageVersion("dsprrr")
-  )
-  config_data$metadata$r_version <- R.version.string
-  config_data$metadata$module_type <- class(module)[1]
-  config_data$optimization <- list(
-    compiled = isTRUE(config_data$state$compiled),
-    best_score = config_data$state$best_score,
-    best_trial = config_data$state$best_trial,
-    best_params = config_data$state$best_params,
-    n_trials = if (is.data.frame(config_data$state$trials)) {
-      nrow(config_data$state$trials)
-    } else {
-      0L
-    }
+  config_data <- program_artifact(
+    module,
+    registry = registry,
+    trusted = trusted
   )
 
   # Write to pins
@@ -90,16 +83,18 @@ pin_module_config <- function(
     board = board,
     x = config_data,
     name = name,
-    description = description %||% paste("dsprrr module config:", name),
+    description = description %||% paste("dsprrr program artifact:", name),
     type = "rds",
     versioned = versioned,
     ...
   )
 
+  root <- config_data$graph$nodes[[config_data$root]]
   cli::cli_inform(c(
-    "v" = "Pinned module configuration: {.val {name}}",
-    "i" = "Module kind: {.val {config_data$module_kind}}",
-    "i" = "Compiled: {.val {isTRUE(config_data$state$compiled)}}"
+    "v" = "Pinned program artifact: {.val {name}}",
+    "i" = "Root module: {.cls {root$class}}",
+    "i" = "Graph nodes: {.val {length(config_data$graph$nodes)}}",
+    "i" = "Compiled: {.val {isTRUE(root$state$compiled)}}"
   ))
 
   invisible(name)
@@ -113,7 +108,9 @@ pin_module_config <- function(
 #' you to load optimized modules in new sessions or different projects.
 #'
 #' @param config A configuration list (from `pins::pin_read()`)
-#' @param signature Optional Signature object to use (overrides stored signature)
+#' @param registry Named runtime registry used to resolve stored IDs.
+#' @param trusted Whether embedded runtime values may be restored. The default
+#'   is `FALSE`.
 #'
 #' @return A DSPrrr module with the restored configuration
 #'
@@ -130,245 +127,25 @@ pin_module_config <- function(
 #' # Use the restored module
 #' result <- run(mod, text = "This is great!", .llm = llm)
 #' }
-restore_module_config <- function(config, signature = NULL) {
-  if (!identical(config$format_version, 2L)) {
-    cli::cli_abort(c(
-      "Unsupported pinned module format",
-      "i" = "Legacy pinned configs are not supported in phase 1",
-      "i" = "Re-pin this module using the v2 format with {.code pin_module_config()}"
-    ))
-  }
-
-  config_to_restore <- config
-  if (!is.null(signature)) {
-    if (!inherits(signature, "dsprrr::Signature")) {
-      cli::cli_abort("{.arg signature} must be a Signature object")
-    }
-    config_to_restore$signature <- serialize_signature_v2(signature)
-  }
-
-  mod <- restore_module_from_v2(config_to_restore)
+restore_module_config <- function(
+  config,
+  registry = list(),
+  trusted = FALSE
+) {
+  mod <- restore_program_artifact(
+    config,
+    registry = registry,
+    trusted = trusted
+  )
 
   cli::cli_inform(c(
-    "v" = "Restored module from configuration",
-    "i" = "Module kind: {.val {config$module_kind}}",
-    "i" = "Original dsprrr version: {.val {config$metadata$dsprrr_version}}"
+    "v" = "Restored program artifact",
+    "i" = "Root module: {.cls {class(mod)[1]}}",
+    "i" = "Artifact version: {.val {artifact_format_version()}}"
   ))
 
   mod
 }
-
-serialize_module_config_v2 <- function(module) {
-  if (inherits(module, "PipelineModule")) {
-    cli::cli_abort(c(
-      "Pipeline persistence is not yet supported",
-      "x" = "{.fn pin_module_config} cannot serialise a {.cls PipelineModule}",
-      "i" = "Persisting it here would silently drop every step and its demos",
-      "i" = "Pin each step module individually, or rebuild the pipeline from source"
-    ))
-  }
-
-  kind <- module_kind(module)
-  supported <- c("predict", "react", "chain_of_thought", "multichain")
-  if (!kind %in% supported) {
-    cli::cli_abort(c(
-      "Unsupported module type for v2 persistence",
-      "x" = "Got {.val {kind}}",
-      "i" = "Phase 1 supports: {.val {supported}}"
-    ))
-  }
-
-  if (identical(kind, "react") && length(module$tools %||% list()) > 0) {
-    cli::cli_abort(c(
-      "React tools are not serialised in v2 persistence",
-      "i" = "Reattach tools after restore, or pin a React module with no tools"
-    ))
-  }
-
-  fields <- list()
-  if (inherits(module, "PredictModule")) {
-    fields$template <- module$template
-    fields$demos <- module$demos
-  }
-  if (inherits(module, "ReactModule")) {
-    fields$max_iterations <- module$max_iterations
-    fields$tools <- list()
-  }
-  if (inherits(module, "MultiChainComparisonModule")) {
-    fields$M <- module$M
-    fields$temperature <- module$temperature
-    fields$comparison_template <- module$comparison_template
-    fields$inner_module <- serialize_module_config_v2(module$inner_module)
-  }
-
-  list(
-    format_version = 2L,
-    module_kind = kind,
-    signature = serialize_signature_v2(module$signature),
-    config = sanitize_module_config_v2(module$config),
-    state = serialize_module_state_v2(module$state),
-    fields = fields,
-    metadata = list(
-      module_class = class(module)[1]
-    )
-  )
-}
-
-serialize_signature_v2 <- function(signature) {
-  list(
-    inputs = lapply(signature@inputs, serialize_input_v2),
-    output_type = copy_ellmer_type(signature@output_type),
-    instructions = signature@instructions
-  )
-}
-
-serialize_input_v2 <- function(inp) {
-  extra <- inp[setdiff(names(inp), c("name", "type", "description"))]
-  list(
-    name = inp$name,
-    description = inp$description,
-    type = copy_ellmer_type(inp$type),
-    extra = extra
-  )
-}
-
-deserialize_signature_v2 <- function(signature) {
-  Signature(
-    inputs = lapply(signature$inputs, deserialize_input_v2),
-    output_type = copy_ellmer_type(signature$output_type),
-    instructions = signature$instructions %||% ""
-  )
-}
-
-deserialize_input_v2 <- function(inp) {
-  structure(
-    c(
-      list(
-        name = inp$name,
-        type = copy_ellmer_type(inp$type),
-        description = inp$description
-      ),
-      inp$extra %||% list()
-    ),
-    class = "dsprrr_input"
-  )
-}
-
-sanitize_module_config_v2 <- function(config) {
-  config <- normalize_module_config(config %||% list())
-  config <- config[setdiff(
-    names(config),
-    c(".module_kind", legacy_chat_config_fields())
-  )]
-  cleaned <- lapply(config, sanitize_persisted_value_v2)
-  cleaned[!vapply(cleaned, is.null, logical(1))]
-}
-
-sanitize_persisted_value_v2 <- function(value) {
-  if (
-    inherits(value, "Chat") ||
-      inherits(value, "ToolDef") ||
-      inherits(value, "ellmer::ToolDef")
-  ) {
-    return(NULL)
-  }
-
-  if (is.function(value)) {
-    return(NULL)
-  }
-
-  if (is.list(value) && !is.data.frame(value)) {
-    cleaned <- lapply(value, sanitize_persisted_value_v2)
-    cleaned[!vapply(cleaned, is.null, logical(1))]
-  } else {
-    value
-  }
-}
-
-serialize_module_state_v2 <- function(state) {
-  list(
-    compiled = isTRUE(state$compiled),
-    best_score = state$best_score,
-    best_trial = state$best_trial,
-    best_params = state$best_params,
-    trials = state$trials,
-    last_grid = state$last_grid,
-    optimization_history = state$optimization_history
-  )
-}
-
-restore_module_from_v2 <- function(config) {
-  kind <- config$module_kind
-  supported <- c("predict", "react", "chain_of_thought", "multichain")
-  if (!kind %in% supported) {
-    cli::cli_abort(c(
-      "Unsupported module type in pinned config",
-      "x" = "Got {.val {kind}}",
-      "i" = "Phase 1 supports: {.val {supported}}"
-    ))
-  }
-
-  signature <- deserialize_signature_v2(config$signature)
-  fields <- config$fields %||% list()
-  module_config <- normalize_module_config(config$config %||% list())
-
-  mod <- switch(
-    kind,
-    predict = PredictModule$new(
-      signature = signature,
-      template = fields$template %||% "",
-      demos = fields$demos %||% list(),
-      config = module_config
-    ),
-    react = ReactModule$new(
-      signature = signature,
-      tools = list(),
-      max_iterations = fields$max_iterations %||% 10L,
-      template = fields$template %||% "",
-      demos = fields$demos %||% list(),
-      config = module_config
-    ),
-    chain_of_thought = PredictModule$new(
-      signature = signature,
-      template = fields$template %||% "",
-      demos = fields$demos %||% list(),
-      config = module_config
-    ),
-    multichain = {
-      if (is.null(fields$inner_module)) {
-        cli::cli_abort(c(
-          "Pinned multichain config is incomplete",
-          "i" = "Missing serialized inner module definition"
-        ))
-      }
-
-      MultiChainComparisonModule$new(
-        signature = signature,
-        inner_module = restore_module_from_v2(fields$inner_module),
-        M = fields$M %||% 3L,
-        temperature = fields$temperature %||% 0.7,
-        comparison_template = fields$comparison_template,
-        config = module_config
-      )
-    }
-  )
-
-  mod$config$.module_kind <- kind
-  restore_module_state_v2(mod, config$state %||% list())
-  mod
-}
-
-restore_module_state_v2 <- function(module, state) {
-  module$state$compiled <- isTRUE(state$compiled)
-  module$state$best_score <- state$best_score
-  module$state$best_trial <- state$best_trial
-  module$state$best_params <- state$best_params
-  module$state$trials <- state$trials %||% tibble::tibble()
-  module$state$last_grid <- state$last_grid %||% tibble::tibble()
-  module$state$optimization_history <- state$optimization_history %||% list()
-  invisible(module)
-}
-
 
 # ---- Trace Persistence ----
 

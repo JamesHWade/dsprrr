@@ -11,7 +11,8 @@ complete_trial(trial, eval_result, compiled_artifact_ref = NULL, notes = NULL)
 
 \item{eval_result}{An EvalResult object from eval_program().}
 
-\item{compiled_artifact_ref}{Optional reference to the compiled module.}
+\item{compiled_artifact_ref}{Optional compiled module to persist as the best
+safe program artifact when this trial wins.}
 
 \item{notes}{Optional additional notes.}
 }

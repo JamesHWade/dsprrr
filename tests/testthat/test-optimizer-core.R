@@ -137,6 +137,168 @@ test_that("check_budget detects max_errors", {
   expect_match(result$reason, "max_errors")
 })
 
+test_that("check_budget lets a zero error budget attempt work", {
+  ctrl <- optimizer_control(max_errors = 0L)
+
+  expect_false(check_budget(0L, 0L, ctrl)$should_stop)
+  expect_true(check_budget(1L, 1L, ctrl)$should_stop)
+})
+
+test_that("optimizer budget resets only the consecutive error streak", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+
+  record_optimizer_outcome(budget, FALSE, "minibatch")
+  record_optimizer_outcome(budget, TRUE, "minibatch")
+  record_optimizer_outcome(budget, FALSE, "full")
+
+  summary <- optimizer_budget_summary(budget)
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 1L)
+  expect_false(summary$stopped)
+  expect_null(summary$stop_reason)
+})
+
+test_that("optimizer budget stops on the failure reaching the limit", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+
+  record_optimizer_outcome(budget, FALSE, "minibatch")
+  expect_false(optimizer_budget_stopped(budget))
+
+  record_optimizer_outcome(
+    budget,
+    FALSE,
+    "full",
+    condition = simpleError("provider failed")
+  )
+  reason <- optimizer_budget_summary(budget)$stop_reason
+
+  expect_true(optimizer_budget_stopped(budget))
+  expect_s3_class(reason, "dsprrr_optimizer_stop_reason")
+  expect_identical(reason$code, "max_errors")
+  expect_identical(reason$stage, "full")
+  expect_equal(reason$limit, 2L)
+  expect_equal(reason$observed, 2L)
+  expect_equal(reason$total_errors, 2L)
+  expect_equal(reason$attempts, 2L)
+  expect_identical(
+    reason$message,
+    "Reached max_errors limit (2 consecutive errors)"
+  )
+  expect_identical(reason$condition_class, "simpleError")
+
+  record_optimizer_outcome(budget, TRUE, "after_stop")
+  expect_identical(optimizer_budget_summary(budget)$stop_reason, reason)
+  expect_equal(optimizer_budget_summary(budget)$attempts, 3L)
+  expect_equal(optimizer_budget_summary(budget)$successes, 1L)
+  expect_equal(optimizer_budget_summary(budget)$consecutive_errors, 0L)
+})
+
+test_that("zero max_errors stops on its first failure", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 0L))
+
+  expect_false(optimizer_budget_stopped(budget))
+  record_optimizer_outcome(budget, TRUE, "initial")
+  expect_false(optimizer_budget_stopped(budget))
+  record_optimizer_outcome(budget, FALSE, "evaluation")
+
+  reason <- optimizer_budget_summary(budget)$stop_reason
+  expect_true(optimizer_budget_stopped(budget))
+  expect_equal(reason$limit, 0L)
+  expect_equal(reason$observed, 1L)
+  expect_equal(reason$total_errors, 1L)
+  expect_equal(reason$attempts, 2L)
+})
+
+test_that("EvalResult outcomes preserve row order and reconcile errors", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  result <- EvalResult(
+    examples = data.frame(
+      score = c(1, NA_real_),
+      error = c(NA_character_, NA_character_)
+    ),
+    n_evaluated = 1L,
+    n_errors = 1L
+  )
+
+  record_eval_result_outcomes(budget, result, "minibatch")
+  summary <- optimizer_budget_summary(budget)
+
+  expect_false(summary$stopped)
+  expect_equal(summary$attempts, 2L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 1L)
+  expect_equal(summary$consecutive_errors, 1L)
+  expect_null(summary$stop_reason)
+})
+
+test_that("fully successful EvalResult resets an existing streak", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  record_optimizer_outcome(budget, FALSE, "minibatch")
+  result <- EvalResult(
+    examples = data.frame(error = c(NA_character_, NA_character_)),
+    n_evaluated = 2L,
+    n_errors = 0L
+  )
+
+  record_eval_result_outcomes(budget, result, "full")
+  summary <- optimizer_budget_summary(budget)
+
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 2L)
+  expect_equal(summary$total_errors, 1L)
+  expect_equal(summary$consecutive_errors, 0L)
+  expect_false(summary$stopped)
+})
+
+test_that("completed EvalResult accounts bounded overshoot after stopping", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 1L))
+  result <- EvalResult(
+    examples = data.frame(
+      score = c(NA_real_, 1, NA_real_),
+      error = c("first", NA_character_, "third")
+    ),
+    n_evaluated = 1L,
+    n_errors = 2L
+  )
+
+  record_eval_result_outcomes(budget, result, "evaluation")
+  summary <- optimizer_budget_summary(budget)
+
+  expect_equal(summary$attempts, 3L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 1L)
+  expect_true(summary$stopped)
+  expect_equal(summary$stop_reason$attempts, 1L)
+  expect_equal(summary$stop_reason$total_errors, 1L)
+  expect_identical(summary$stop_reason$stage, "evaluation")
+})
+
+test_that("EvalResult counts summary outcomes when row detail is absent", {
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  result <- EvalResult(
+    n_evaluated = 2L,
+    n_errors = 2L
+  )
+
+  record_eval_result_outcomes(budget, result, "full")
+  summary <- optimizer_budget_summary(budget)
+
+  expect_equal(summary$attempts, 4L)
+  expect_equal(summary$successes, 2L)
+  expect_equal(summary$total_errors, 2L)
+  expect_equal(summary$consecutive_errors, 2L)
+  expect_true(summary$stopped)
+
+  empty_budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  record_eval_result_outcomes(empty_budget, EvalResult(), "full")
+  empty_summary <- optimizer_budget_summary(empty_budget)
+  expect_equal(empty_summary$attempts, 1L)
+  expect_equal(empty_summary$successes, 1L)
+})
+
 test_that("generate_trial_id creates unique IDs", {
   ids <- replicate(100, generate_trial_id())
   expect_equal(length(unique(ids)), 100)
@@ -323,6 +485,115 @@ test_that("TrialLog summary works", {
   expect_equal(summary$best_score, 0.8)
 })
 
+test_that("TrialLog cost summaries distinguish unknown from zero", {
+  completed_trial <- function(id, cost) {
+    trial <- create_trial("TestOptimizer", trial_id = id)
+    complete_trial(
+      trial,
+      EvalResult(mean_score = 0.8, n_evaluated = 1L, total_cost = cost)
+    )
+  }
+
+  empty_log <- TrialLog$new("TestOptimizer")
+  expect_equal(empty_log$summary()$total_cost, 0)
+
+  unknown_log <- TrialLog$new("TestOptimizer")
+  unknown_log$add_trial(
+    completed_trial("unknown_1", NA_real_),
+    persist = FALSE
+  )
+  unknown_log$add_trial(
+    completed_trial("unknown_2", NA_real_),
+    persist = FALSE
+  )
+  expect_true(is.na(unknown_log$summary()$total_cost))
+  expect_equal(is.na(unknown_log$as_tibble()$total_cost), c(TRUE, TRUE))
+
+  zero_log <- TrialLog$new("TestOptimizer")
+  zero_log$add_trial(completed_trial("zero", 0), persist = FALSE)
+  expect_equal(zero_log$summary()$total_cost, 0)
+  expect_equal(zero_log$as_tibble()$total_cost, 0)
+
+  mixed_log <- TrialLog$new("TestOptimizer")
+  mixed_log$add_trial(completed_trial("known", 0.25), persist = FALSE)
+  mixed_log$add_trial(completed_trial("unknown", NA_real_), persist = FALSE)
+  expect_true(is.na(mixed_log$summary()$total_cost))
+  expect_equal(mixed_log$as_tibble()$total_cost, c(0.25, NA_real_))
+})
+
+test_that("TrialLog JSONL roundtrip preserves unknown and zero costs", {
+  completed_trial <- function(id, cost) {
+    trial <- create_trial("TestOptimizer", trial_id = id)
+    complete_trial(
+      trial,
+      EvalResult(mean_score = 0.8, n_evaluated = 1L, total_cost = cost)
+    )
+  }
+
+  path <- withr::local_tempfile(fileext = ".jsonl")
+  write_trials_jsonl(
+    list(
+      completed_trial("unknown", NA_real_),
+      completed_trial("zero", 0)
+    ),
+    path
+  )
+
+  trials <- read_trials_jsonl(path)
+  expect_true(is.na(trials[[1]]@cost_summary$total_cost))
+  expect_equal(trials[[2]]@cost_summary$total_cost, 0)
+
+  log <- TrialLog$new("TestOptimizer")
+  for (trial in trials) {
+    log$add_trial(trial, persist = FALSE)
+  }
+  expect_true(is.na(log$summary()$total_cost))
+})
+
+test_that("TrialLog print and README render cost state explicitly", {
+  completed_trial <- function(id, cost) {
+    trial <- create_trial("TestOptimizer", trial_id = id)
+    complete_trial(
+      trial,
+      EvalResult(mean_score = 0.8, n_evaluated = 1L, total_cost = cost)
+    )
+  }
+
+  unknown_dir <- withr::local_tempdir()
+  unknown_log <- TrialLog$new("TestOptimizer", log_dir = unknown_dir)
+  unknown_log$add_trial(completed_trial("unknown", NA_real_))
+
+  unknown_output <- paste(
+    capture.output(unknown_log$print(), type = "message"),
+    collapse = "\n"
+  )
+  expect_match(unknown_output, "Total Cost: Unknown", fixed = TRUE)
+  unknown_readme <- readLines(file.path(unknown_dir, "README.md"))
+  expect_identical(
+    grep("Total Cost", unknown_readme, value = TRUE, fixed = TRUE),
+    "- Total Cost: Unknown"
+  )
+
+  loaded <- load_trial_log(unknown_dir)
+  expect_true(is.na(loaded$summary()$total_cost))
+  expect_true(is.na(loaded$as_tibble()$total_cost))
+
+  zero_dir <- withr::local_tempdir()
+  zero_log <- TrialLog$new("TestOptimizer", log_dir = zero_dir)
+  zero_log$add_trial(completed_trial("zero", 0))
+
+  zero_output <- paste(
+    capture.output(zero_log$print(), type = "message"),
+    collapse = "\n"
+  )
+  expect_match(zero_output, "Total Cost: $0.0000", fixed = TRUE)
+  zero_readme <- readLines(file.path(zero_dir, "README.md"))
+  expect_identical(
+    grep("Total Cost", zero_readme, value = TRUE, fixed = TRUE),
+    "- Total Cost: $0.0000"
+  )
+})
+
 test_that("write_trials_jsonl and read_trials_jsonl roundtrip", {
   trials <- list(
     create_trial("Opt1", list(a = 1, b = "x")),
@@ -408,6 +679,44 @@ test_that("eval_program handles empty dataset", {
   expect_s3_class(result, "dsprrr::EvalResult")
   expect_true(is.na(result@mean_score))
   expect_equal(result@n_evaluated, 0L)
+})
+
+test_that("eval_program restores compact errors to their ordered rows", {
+  testthat::local_mocked_bindings(
+    evaluate = function(...) {
+      list(
+        scores = c(1, NA_real_),
+        predictions = c("ok", NA_character_),
+        errors = "second row failed",
+        feedbacks = c(NA_character_, NA_character_),
+        mean_score = 0.5,
+        n_evaluated = 1L,
+        n_errors = 1L,
+        epoch_scores = NULL,
+        score_std = NA_real_,
+        ci_95 = c(NA_real_, NA_real_)
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  result <- eval_program(
+    module(signature("x -> y"), type = "predict"),
+    data.frame(x = c("a", "b"), y = c("a", "b")),
+    metric = function(...) 1,
+    control = optimizer_control(progress = FALSE)
+  )
+
+  expect_equal(
+    result@examples$error,
+    c(NA_character_, "second row failed")
+  )
+  budget <- new_optimizer_budget(optimizer_control(max_errors = 2L))
+  record_eval_result_outcomes(budget, result, "evaluation")
+  summary <- optimizer_budget_summary(budget)
+  expect_equal(summary$attempts, 2L)
+  expect_equal(summary$successes, 1L)
+  expect_equal(summary$total_errors, 1L)
 })
 
 test_that("eval_program works with mock LLM", {

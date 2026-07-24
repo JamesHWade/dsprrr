@@ -183,10 +183,12 @@ reference:
     - module
     - run
     - run_dataset
+    - concurrency_control
     - predict.Module
     - dsp
     - as_module
     - module_fn
+    - module-graph
     - get_last_trace
 
   - title: Pipelines
@@ -375,6 +377,10 @@ reference:
   - title: Production & Deployment
     desc: Pin configurations, validate workflows, and deploy to production
     contents:
+    - program-artifact
+    - program_artifact
+    - save_program
+    - load_program
     - orchestration
     - pin_module_config
     - restore_module_config

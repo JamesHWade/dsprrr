@@ -14,7 +14,7 @@ git checkout -b feature/<short-description>
 # or: git checkout -b fix/<short-description>
 
 # 2. Then claim the issue and start work
-bd update <id> --status=in_progress
+kata claim <id> --agent
 ```
 
 This is mandatory even for small changes. The only commits to main should be merge commits from PRs.
@@ -533,56 +533,51 @@ Suggested:
 - Instruction-level optimizers (MIPROv2, GEPA, COPRO) operate on single
   modules; only BootstrapFewShot compiles pipelines jointly
 
-## Issue Tracking with Beads
+## Issue Tracking with Kata
 
-This project uses **bd** (beads) for issue tracking. Issues are stored in `.beads/` and synced via git.
+This project uses **Kata** for its persistent backlog. The committed
+`.kata.toml` binds every checkout and worktree to the `dsprrr` Kata project;
+issue data lives in the Kata daemon rather than in git-tracked database files.
 
-### Git Integration
-
-Beads integrates with git via:
-- **JSONL sync**: Issues stored in `.beads/issues.jsonl` (git-tracked)
-- **Merge driver**: Intelligent JSONL conflict resolution (auto-configured)
-- **Hooks**: Auto-sync on git operations
-
-Files that should be committed: `.beads/.gitignore`, `.gitattributes`
-Files that are gitignored: `.beads/beads.db`, daemon files
+The former Beads IDs are preserved as `beads-id:dsprrr-...` labels and in each
+migrated issue body. To resolve an old reference, run
+`kata search "dsprrr-..." --agent`.
 
 ### Essential Commands
 
 ```bash
 # Finding work
-bd ready                              # Show issues ready to work (no blockers)
-bd list --status=open                 # All open issues
-bd show <id>                          # Detailed issue view with dependencies
+kata ready --agent                    # Open, unblocked work
+kata list --status open --agent       # All active issues
+kata show <id> --agent                # Details, comments, and relationships
+kata search "text" --agent            # Search before creating
 
 # Working on issues
-bd update <id> --status=in_progress   # Claim work
-bd close <id>                         # Mark complete
-bd close <id1> <id2> ...              # Close multiple issues
+kata claim <id> --agent               # Claim after creating a feature branch
+kata comment <id> --body "Progress" --agent
+kata unassign <id> --agent            # Release unfinished work
 
-# Creating issues (always include description for context)
-bd create "Fix bug" --description="Details here" -t bug -p 1
+# Creating work safely
+kata create "Fix bug" \
+  --body "Observed behavior and intended outcome." \
+  --priority 1 \
+  --label bug \
+  --idempotency-key "fix-bug-YYYY-MM-DD" \
+  --agent
 
-# Dependencies
-bd dep add <issue> <depends-on>       # Add dependency
-bd blocked                            # Show blocked issues
-bd dep tree <id>                      # View dependency tree
+# Relationships
+kata edit <id> --blocked-by <ref> --agent
+kata edit <id> --related <ref> --agent
 
-# Sync
-bd sync                               # Sync with git remote
-bd sync --status                      # Check sync status
+# Close only after verification, with evidence
+kata close <id> --done \
+  --message "Implemented the fix and verified the package checks." \
+  --commit <sha>
 ```
 
-### When to Use Beads vs TodoWrite
-
-| Use **Beads (`bd`)** for | Use **TodoWrite** for |
-|--------------------------|----------------------|
-| Multi-session work | Single-session execution |
-| Work with dependencies | Simple task checklists |
-| Discovered work needing tracking | Immediate step-by-step tasks |
-| Collaborative/handed-off work | Personal progress tracking |
-
-When in doubt, prefer beads—persistence you don't need beats lost context.
+Use Kata for multi-session work, dependencies, and discovered follow-ups. A
+short in-session checklist can still be used for immediate execution steps,
+but it does not replace the persistent Kata issue.
 
 ## Feature Branch + PR Workflow
 
@@ -591,21 +586,21 @@ When in doubt, prefer beads—persistence you don't need beats lost context.
 **⚠️ IMPORTANT: Create the feature branch BEFORE claiming the issue or writing any code.**
 
 ```bash
-bd ready                              # Find available work
-bd show <id>                          # Review issue details
+kata ready --agent                    # Find available work
+kata show <id> --agent                # Review issue details
 
 # CREATE BRANCH FIRST - before any code changes!
 git checkout -b feature/<short-description>
 # or: git checkout -b fix/<short-description>
 
-bd update <id> --status=in_progress   # Now claim the work
+kata claim <id> --agent               # Now claim the work
 ```
 
-### 2. Work and Sync
+### 2. Work and Record Progress
 
 ```bash
 # Make changes...
-bd sync                               # Sync beads periodically
+kata comment <id> --body "Implemented the first verified slice." --agent
 ```
 
 ### 3. Run Quality Gates
@@ -632,15 +627,19 @@ Rscript -e "devtools::document(); pkgdown::build_site(preview = FALSE)"
 When code is complete and ready for review:
 
 ```bash
-git add .
-git commit -m "feat: description (dsprrr-xxx)"  # Include beads issue ID!
-bd close <id>                         # Close beads issue - work is done
-bd sync
+git add <specific-files>
+git commit -m "feat: description (dsprrr#<id>)"
+commit_sha="$(git rev-parse HEAD)"
+kata close <id> --done \
+  --message "Implemented and verified the requested work." \
+  --commit "$commit_sha"
 git push -u origin HEAD
-gh pr create --title "..." --body "Resolves beads-XXX"
+gh pr create --title "..." --body "Resolves dsprrr#<id>"
 ```
 
-**Important**: Close the beads issue when the *work* is complete, not when the PR is merged. The issue tracks your work; the PR tracks the review/merge process.
+**Important**: Close the Kata issue when the work is complete and verified, not
+merely because a PR exists. The issue tracks implementation; the PR tracks
+review and merge.
 
 ### 5. Human Reviews and Merges PR
 
@@ -670,25 +669,32 @@ usethis::pr_finish()
 git branch --show-current  # Should NOT be 'main'
 
 # 2. File issues for remaining work
-bd create "Follow-up task" --description="..." -t task -p 2
+kata create "Follow-up task" \
+  --body "What remains and why it is separate." \
+  --priority 2 \
+  --idempotency-key "follow-up-YYYY-MM-DD" \
+  --agent
 
 # 3. Run quality gates (if code changed)
 air format R/ tests/testthat/
 jarl check R/
 Rscript -e "devtools::check()"
 
-# 4. Update issue status
-bd close <completed-issues>           # Include reason if helpful
-bd update <in-progress-issues> --status=open  # If not finished
+# 4. Release unfinished work with durable context
+kata comment <unfinished-id> --body "What remains and the next step." --agent
+kata unassign <unfinished-id> --agent
 
-# 5. Commit with beads issue ID
-git add .
-git commit -m "feat: description (dsprrr-xxx)"  # Always include issue ID!
-bd sync
+# 5. Commit specific files, then close completed work with that evidence
+git add <specific-files>
+git commit -m "feat: description (dsprrr#<id>)"
+commit_sha="$(git rev-parse HEAD)"
+kata close <completed-id> --done \
+  --message "Implemented and verified the completed work." \
+  --commit "$commit_sha"
 git push -u origin HEAD
 
 # 6. Create PR (if not already created)
-gh pr create --title "..." --body "Resolves dsprrr-xxx"
+gh pr create --title "..." --body "Resolves dsprrr#<id>"
 
 # 7. Verify
 git status  # Should show "up to date with origin"
@@ -701,12 +707,14 @@ git status  # Should show "up to date with origin"
 - NEVER stop before pushing—that leaves work stranded locally
 - NEVER say "ready to push when you are"—YOU must push
 - If push fails, resolve and retry until it succeeds
-- Always run `bd sync` before ending session
-- Always include beads issue ID in commit messages (enables `bd doctor` to detect orphans)
+- Record unfinished follow-up work in Kata before ending the session
+- Include the Kata issue ID in commit messages when work is issue-driven
 
 ## Parallel Sessions & Worktrees
 
-This project supports parallel work via git worktrees. The beads daemon commits changes to a dedicated branch, preventing conflicts when multiple Claude sessions run simultaneously.
+This project supports parallel work via git worktrees. Every worktree resolves
+the same Kata project through `.kata.toml`, so backlog changes are immediately
+visible without a tracker-specific git branch or merge driver.
 
 ### Creating Worktrees for Parallel Features
 
@@ -715,13 +723,16 @@ This project supports parallel work via git worktrees. The beads daemon commits 
 git worktree add ../dsprrr-feature-x -b feature/feature-x
 cd ../dsprrr-feature-x
 
-# Beads commands work normally - shared database, safe daemon
-bd ready
-bd create "Implement feature" -t task -p 2
-bd sync
+# Kata commands resolve the shared dsprrr project
+kata ready --agent
+kata create "Implement feature" \
+  --body "Implementation scope." \
+  --priority 2 \
+  --idempotency-key "implement-feature-YYYY-MM-DD" \
+  --agent
 ```
 
-All worktrees share the same `.beads` database in the main repo. Changes are immediately visible across sessions.
+Do not create worktree-local tracker databases or reintroduce `.beads/`.
 
 ### Cleanup After PR Merged
 
@@ -732,10 +743,10 @@ git worktree prune
 
 ### Troubleshooting: "Branch already checked out"
 
-If git says a branch is checked out in a beads worktree:
+If git says a branch is checked out in another worktree:
 
 ```bash
-rm -rf .git/beads-worktrees
+git worktree list
 git worktree prune
 ```
 

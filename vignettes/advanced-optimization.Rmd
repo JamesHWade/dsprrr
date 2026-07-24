@@ -485,10 +485,27 @@ tp <- BootstrapFewShotWithRandomSearch(
 compiled <- compile(tp, qa_module, trainset, .llm = llm)
 
 # Log directory contains:
-# - trials.jsonl: All trial results
-# - best_program.rds: Serialized best module
-# - config.json: Optimizer configuration
+# - trials.jsonl: Authoritative append-only trial journal
+# - metadata.json: Best-effort derived run summary
+# - README.md: Best-effort human-readable summary
+# - best_program.rds: Best-effort safe program artifact
 ```
+
+`TrialLog` treats `trials.jsonl` as the source of truth. It publishes each
+journal update atomically under an interprocess lock, then refreshes
+`metadata.json`, `README.md`, and `best_program.rds` independently. A crash or
+warning during those derived refreshes does not roll back a durable journal
+record, so derived files can temporarily lag. Delete a stale derived file and
+call `save()` on the loaded log to rebuild it from the journal.
+
+Persistent log directories are sensitive storage. On Unix, dsprrr binds a log
+to its canonical, effective-user-owned directory identity, restricts the
+directory and files to owner access, rejects writable non-sticky ancestors and
+symbolic-link targets, and verifies device/inode identity around reads and
+atomic publications. Use a local, account-private path rather than a shared or
+network directory. On Windows, account filesystem ACLs apply, but base R cannot
+verify that they are owner-only; dsprrr fails closed if the platform cannot
+provide stable device and file identifiers.
 
 ### Analyzing Trials
 
@@ -525,6 +542,87 @@ compiled$config$optimizer$history
 # For GEPA (multi-objective)
 compiled$config$optimizer$pareto_frontier
 ```
+
+## Resource Budgets and Checkpoints
+
+Use `optimizer_control()` when an optimization must stay inside a hard call,
+token, cost, or active-time envelope. Pass the control object to `compile()`:
+
+```{r optimizer-budgets, eval=FALSE}
+checkpoint <- "optimization_logs/bootstrap-checkpoint.rds"
+control <- optimizer_control(
+  max_trials = 50L,
+  max_metric_calls = 500L,
+  max_provider_calls = 500L,
+  max_total_tokens = 250000L,
+  max_cost = 25,
+  max_elapsed_seconds = 3600,
+  checkpoint_path = checkpoint
+)
+
+partial <- compile(
+  BootstrapFewShot(metric = metric_exact_match(field = "answer")),
+  qa_module,
+  trainset,
+  .llm = llm,
+  control = control
+)
+
+partial$config$optimizer$budget_summary
+partial$config$optimizer$stop_reason
+```
+
+Counters are checked before each bounded work unit. Evaluation is subdivided
+into rows when a metric, provider, token, cost, or time cap is active, so the
+maximum post-call overshoot is the usage of one already-started evaluation row.
+Optimizer-side reflection or instruction generation has a bound of one
+already-started provider request. The typed stop reason records the resource,
+observed value, limit, work-unit type, and overshoot.
+
+Unknown usage is not treated as zero. If provider calls, tokens, or cost cannot
+be verified and the matching finite cap is active, the optimizer stops after
+that work unit and returns its best partial program. `budget_summary` reports
+known totals and unknown counts separately. Elapsed-time budgets use a
+monotonic active-run clock; time spent stopped between checkpointed runs is not
+charged.
+
+### Resume Support
+
+| Optimizer | Budget ledger and best partial | Deterministic checkpoint resume |
+|---|---:|---:|
+| `BootstrapFewShot` (module and pipeline) | Yes | Yes, by training row |
+| `MIPROv2` | Yes | Yes, through demo generation and BO evaluation rows |
+| `GEPA` | Yes | Not yet |
+| `SIMBA` | Yes | Not yet |
+| `COPRO` | Yes | Not yet |
+
+GEPA, SIMBA, and COPRO reject `resume = TRUE` with a typed error rather than
+silently restarting. Their fine-grained resume work is tracked separately.
+
+Resume Bootstrap or MIPRO by raising or removing a resource limit while keeping
+the original program, data, metric, and search settings:
+
+```{r optimizer-resume, eval=FALSE}
+resumed <- compile(
+  BootstrapFewShot(metric = metric_exact_match(field = "answer")),
+  qa_module,
+  trainset,
+  .llm = llm,
+  control = optimizer_control(
+    max_cost = 50,
+    checkpoint_path = checkpoint,
+    resume = TRUE
+  )
+)
+```
+
+Checkpoints are atomically replaced safe program artifacts, not arbitrary
+serialized runtime environments. They store versioned search state, counters,
+RNG state, lineage, the best partial program, and deterministic hashes for the
+program, data, and metric. A changed identity is rejected with a field-level
+compatibility diff. Register custom metrics, model adapters, and other runtime
+objects with stable IDs in `checkpoint_registry`; opaque or stateful identities
+and credential-like fields are rejected.
 
 ## Reproducibility
 

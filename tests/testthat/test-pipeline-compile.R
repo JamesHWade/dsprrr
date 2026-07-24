@@ -173,6 +173,10 @@ test_that("joint pipeline compilation respects metric threshold", {
   expect_length(compiled$steps[[1]]@module$demos, 0)
   expect_length(compiled$steps[[2]]@module$demos, 0)
   expect_equal(compiled$config$optimizer$n_bootstrapped_demos, 0L)
+  expect_equal(compiled$config$optimizer$total_attempts, 4L)
+  expect_equal(compiled$config$optimizer$error_count, 0L)
+  expect_equal(compiled$config$optimizer$budget_summary$successes, 4L)
+  expect_false(compiled$config$optimizer$budget_summary$stopped)
 })
 
 test_that("joint pipeline compilation skips labeled demos when fields absent", {
