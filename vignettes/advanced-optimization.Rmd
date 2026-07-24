@@ -466,6 +466,10 @@ safe to serialize across worker processes. Each worker creates its own chat
 from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`; a session-only
 chat configured with `set_default_chat()` is not visible to the workers.
 
+See [Composing Optimizers with Omni](omni-meta-optimization.html) for the full
+composition contract, matched-budget guidance, candidate provenance, failure
+behavior, and differences from the GEPA implementation that inspired it.
+
 ## Ensemble
 
 Combines multiple compiled modules using voting or aggregation strategies.

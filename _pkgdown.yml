@@ -93,6 +93,8 @@ navbar:
           href: articles/advanced-modules.html
         - text: "Advanced Optimization"
           href: articles/advanced-optimization.html
+        - text: "Composing Optimizers with Omni"
+          href: articles/omni-meta-optimization.html
         - text: "Reasoning Models"
           href: articles/reasoning-models.html
     reference:
@@ -146,6 +148,7 @@ articles:
     - articles/how-rlm-works
     - advanced-modules
     - advanced-optimization
+    - articles/omni-meta-optimization
     - reasoning-models
 
   - title: Reference
