@@ -271,6 +271,7 @@ reference:
     - BootstrapFewShotWithRandomSearch
     - KNNFewShot
     - BetterTogether
+    - Omni
     - SIMBA
     - GEPA
     - MIPROv2

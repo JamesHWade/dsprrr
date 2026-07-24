@@ -2,6 +2,12 @@
 
 First development changelog. dsprrr is experimental; the API may change.
 
+## New features
+
+* `Omni()` explores multiple teleprompters from the same seed, selects their
+  best program with one shared validation metric, and runs a fresh continuation
+  optimizer without allowing a regressing stage to replace a better candidate.
+
 ## Bug fixes
 
 * `configure_cache()` now keeps persistent response envelopes in the
