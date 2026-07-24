@@ -21,6 +21,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/llms-txt.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/orchestration.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/rag-workflows.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/reasoning-models.html</loc></url>
@@ -49,6 +50,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/KNNFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/MIPROv2.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/Omni.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/OptimizerControl.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/SIMBA.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/Teleprompter.html</loc></url>

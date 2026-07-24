@@ -1,0 +1,272 @@
+# Composing Optimizers with Omni
+
+No optimizer wins on every task. Demo selection may be the decisive
+lever for one module, while instruction search or reflective mutation
+wins for another.
+[`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) treats
+that uncertainty as part of the optimization problem: it runs several
+teleprompters from the same seed program, compares every result with one
+validation metric, and gives a fresh continuation optimizer the
+strongest candidate.
+
+This design is inspired by the [`omni`
+meta-optimizer](https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/)
+from the open-source [GEPA project](https://github.com/gepa-ai/gepa).
+The GEPA team showed that different optimization engines plateau on
+different Frontier-CS tasks, and that exploring several engines before
+continuing from the best result can outperform any one engine under a
+matched budget.
+
+dsprrr adapts that composition pattern to `Module` objects and
+`Teleprompter`s. It is not a port of GEPA’s arbitrary-text engine API,
+and the published Frontier-CS result should not be assumed to transfer
+to an R module or a different evaluation budget. Benchmark the
+composition on your own task.
+
+## The Optimization Shape
+
+For explorers `A`, `B`, and `C`, Omni performs this sequence:
+
+``` text
+                         +-> explorer A --+
+                         |                |
+seed program + baseline -+-> explorer B --+-> shared validation -> winner
+                         |                |                         |
+                         +-> explorer C --+                         v
+                                                        fresh continuation
+                                                                  |
+                                                                  v
+                                                 shared validation + best
+```
+
+There are three important contracts:
+
+1.  Every explorer receives an independent copy of the same seed
+    program.
+2.  The seed and all successful optimizer outputs are re-scored with the
+    same metric and validation rows.
+3.  The seed remains eligible through final selection, so a regressing
+    explorer or continuation step cannot replace a better candidate on
+    that comparison set.
+
+The continuation optimizer is a fresh teleprompter object run from the
+exploration winner. It does not resume an explorer’s internal search
+state.
+
+## A Complete Configuration
+
+Start with optimizers that search in meaningfully different ways. The
+example below combines demo search, coordinate instruction search, and
+reflective evolution before continuing with a new GEPA run.
+
+``` r
+
+library(dsprrr)
+
+metric <- metric_exact_match(field = "answer")
+
+omni <- Omni(
+  metric = metric,
+  explorers = list(
+    demos = BootstrapFewShotWithRandomSearch(
+      metric = metric,
+      num_candidate_programs = 8L
+    ),
+    instructions = COPRO(
+      metric = metric,
+      breadth = 8L,
+      depth = 2L
+    ),
+    reflection = GEPA(
+      metric = metric,
+      population_size = 8L,
+      generations = 3L
+    )
+  ),
+  continuation = GEPA(
+    metric = metric,
+    population_size = 8L,
+    generations = 3L
+  ),
+  seed = 42L
+)
+
+compiled <- compile(
+  omni,
+  qa_module,
+  trainset,
+  valset = valset,
+  .llm = llm
+)
+```
+
+Explorer names are part of the result provenance, so use short names
+that describe the strategy rather than its position in the list.
+
+If an optimizer needs arguments at compile time, pass them by explorer
+name. Arguments cannot replace Omni’s core `program`, `trainset`,
+`valset`, or `.llm` inputs.
+
+``` r
+
+compiled <- compile(
+  omni,
+  qa_module,
+  trainset,
+  valset = valset,
+  .llm = llm,
+  explorer_compile_args = list(
+    demos = list(control = optimizer_control(max_metric_calls = 40L)),
+    reflection = list(control = optimizer_control(max_metric_calls = 40L))
+  ),
+  continuation_compile_args = list(
+    control = optimizer_control(max_metric_calls = 40L)
+  )
+)
+```
+
+## Use an Explicit Validation Set
+
+Omni can split `trainset` automatically with `valset_ratio`, but an
+explicit validation set makes comparisons easier to reproduce and audit:
+
+``` r
+
+split <- split_dataset(examples, prop = 0.8, seed = 42L)
+trainset <- split$train
+valset <- split$val
+```
+
+All explorers train on `trainset`; Omni uses `valset` to choose the
+exploration winner and the final program. Keep a third, untouched test
+set for the final estimate if you will try several Omni configurations.
+Repeatedly choosing explorers against the same validation rows can
+overfit the choice itself.
+
+## Budget the Comparison Pass
+
+[`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) does
+not impose one universal budget because dsprrr teleprompters expose
+different native controls. Give explorers comparable budgets before
+constructing Omni, then account for its shared comparison work
+separately.
+
+With `k` successful explorers, the common scoring pass performs up to
+`k + 2` full validation evaluations:
+
+- one for the original seed;
+- one for each successful explorer;
+- one for the continuation result.
+
+Those evaluations are additional to work performed inside each
+optimizer. For a fair benchmark, record at least:
+
+| Quantity | Why it matters |
+|----|----|
+| Metric calls | Makes search effort comparable |
+| Provider calls and tokens | Captures optimizer-side reflection and generation |
+| Cost | Allows matched-budget comparisons across models |
+| Elapsed time | Shows the value of parallel exploration |
+| Seed, standalone, and Omni scores | Separates composition gains from optimizer strength |
+
+Compare each explorer standalone against the same explorer inside Omni.
+A strong result is not merely “Omni won”; it shows whether diversity
+plus continuation improved the best standalone candidate at a similar
+total budget.
+
+## Inspect Candidate Provenance
+
+The selected module stores a row for the baseline, every explorer, and
+the continuation:
+
+``` r
+
+candidates <- compiled$config$optimizer$candidate_programs
+candidates[, c("phase", "optimizer", "score", "selected", "error")]
+```
+
+The `program` list-column contains a copy of each successful candidate
+for deeper inspection:
+
+``` r
+
+winner <- candidates$program[[which(candidates$selected)]]
+winner$config
+
+compiled$config$optimizer$exploration_winner
+compiled$config$optimizer$best_phase
+compiled$config$optimizer$best_optimizer
+```
+
+An explorer failure is recorded in `error` and does not stop the other
+branches. If continuation fails, Omni returns the best exploration
+candidate. The `flag_compilation_error_occurred` field makes either case
+visible without discarding a usable result.
+
+## Parallel Exploration
+
+Set `parallel = TRUE` when branch runtime dominates and the provider can
+handle the added concurrency:
+
+``` r
+
+omni_parallel <- Omni(
+  metric = metric,
+  explorers = omni@explorers,
+  continuation = omni@continuation,
+  parallel = TRUE,
+  num_workers = 3L,
+  seed = 42L
+)
+
+compiled <- compile(
+  omni_parallel,
+  qa_module,
+  trainset,
+  valset = valset,
+  .llm = NULL
+)
+```
+
+Live ellmer chat objects are not serialized to mirai workers. Parallel
+exploration therefore requires `.llm = NULL` and a worker-visible
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`. A chat
+configured only with
+[`set_default_chat()`](https://jameshwade.github.io/dsprrr/reference/set_default_chat.md)
+in the main R session is not available inside workers.
+
+Parallel execution reduces wall-clock time, not evaluation cost.
+Provider rate limits and simultaneous request caps may make fewer
+workers faster in practice.
+
+## Choosing Explorers
+
+Favor complementary search behavior over several minor variations of the
+same teleprompter:
+
+| Search need | Candidate explorer |
+|----|----|
+| Select or bootstrap demonstrations | `BootstrapFewShotWithRandomSearch` |
+| Rewrite instructions directly | `COPRO` |
+| Focus on hard examples | `SIMBA` |
+| Reflect on failures and evolve candidates | `GEPA` |
+| Tune a known, finite parameter grid | `GridSearchTeleprompter` |
+
+Two or three deliberately different explorers are usually a better first
+experiment than a large portfolio. Add another branch only when it
+represents a plausible search behavior that the current set does not
+cover.
+
+## Where dsprrr Differs from GEPA Omni
+
+| GEPA `optimize_anything` | dsprrr [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) |
+|----|----|
+| Composes engines over arbitrary text artifacts | Composes teleprompters over dsprrr modules |
+| Ships GEPA, AutoResearch, and Meta-Harness engines | Accepts any named set of dsprrr teleprompters |
+| Terrarium enforces a shared task, server, and budget contract | Users align heterogeneous teleprompter budgets |
+| Published Frontier-CS results use a matched \$20 budget | No cross-task performance claim; benchmark locally |
+| Continues the best artifact with a selected engine | Compiles a fresh continuation teleprompter from the winning module |
+
+The shared idea is optimizer diversity: when search strategies fail in
+different ways, the strongest partial result can give a fresh optimizer
+a better starting point than the original seed.

@@ -78,6 +78,12 @@ Understand the philosophy, design, and theory behind dsprrr
 - [Advanced Optimizer
   Guide](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md):
 
+- [Composing Optimizers with
+  Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md):
+
+  Explore several dsprrr teleprompters from one seed, compare them
+  fairly, and continue from the strongest candidate.
+
 - [Working with Reasoning
   Models](https://jameshwade.github.io/dsprrr/articles/reasoning-models.md):
 

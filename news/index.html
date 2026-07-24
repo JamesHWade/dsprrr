@@ -57,6 +57,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
     <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
   </ul></li>
 <li class="nav-item dropdown">
@@ -87,6 +88,11 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="dsprrr-0009000">dsprrr 0.0.0.9000<a class="anchor" aria-label="anchor" href="#dsprrr-0009000"></a></h2>
 <p>First development changelog. dsprrr is experimental; the API may change.</p>
+<div class="section level3">
+<h3 id="new-features-0-0-0-9000">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-0-9000"></a></h3>
+<ul><li>
+<code><a href="../reference/Omni.html">Omni()</a></code> explores multiple teleprompters from the same seed, selects their best program with one shared validation metric, and runs a fresh continuation optimizer without allowing a regressing stage to replace a better candidate.</li>
+</ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-0-0-9000">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-0-9000"></a></h3>
 <ul><li><p><code><a href="../reference/configure_cache.html">configure_cache()</a></code> now keeps persistent response envelopes in the platform-specific per-user cache directory by default. Unix cache directories and files are bound to their effective owner, canonical identity, and private POSIX modes before every serialized read or write. Unsafe or unverifiable caches fall back to memory when enabled, or leave no cache tier active; extended ACL and Windows inherited-ACL boundaries are reported honestly. Project-local and shared caches require an explicit path, and disabling privacy enforcement requires <code>disk_private = FALSE</code> (#dsprrr-etge).</p></li>

@@ -224,6 +224,9 @@ Automated prompt optimization strategies
   : KNNFewShot Teleprompter
 - [`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md)
   : BetterTogether Teleprompter
+- [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
+  [`print(`*`<Omni>`*`)`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
+  : Omni Teleprompter
 - [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
   SIMBA Teleprompter
 - [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) :

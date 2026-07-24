@@ -69,6 +69,7 @@ feedback injection.
 | `GRPO` (RL via Arbor) | — | Not implemented |
 | `BootstrapFewShotWithOptuna`, `AvatarOptimizer`, `InferRules` | — | Niche/legacy in DSPy; not planned |
 | — | `GridSearchTeleprompter`, [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) | dsprrr addition: tidymodels-style grid search over module parameters |
+| — | `Omni` | dsprrr addition: independent best-of exploration plus a fresh continuation optimizer, with common validation scoring and optional mirai concurrency |
 
 ### GEPA feedback metrics
 

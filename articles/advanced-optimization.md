@@ -21,6 +21,7 @@ For basic optimization concepts, see
 | Joint instruction + demo optimization | `MIPROv2` | High |
 | Focus on hard examples | `SIMBA` | Medium |
 | Multi-objective optimization | `GEPA` | High |
+| Explore several optimizers, then continue the winner | `Omni` | High |
 | Combine multiple strategies | `Ensemble` | Low |
 
 ### Decision Tree
@@ -39,6 +40,7 @@ flowchart TB
   Optimize -->|Both instructions + demos| MIPRO["MIPROv2"]
   Optimize -->|Handle hard cases better| SIMBA["SIMBA"]
   Optimize -->|Balance quality vs cost| GEPA["GEPA"]
+  Optimize -->|Unsure which optimizer will win| Omni["Omni"]
   Optimize -->|Combine multiple optimized modules| Ensemble["Ensemble"]
 ```
 
@@ -424,6 +426,72 @@ print(pareto)
 - `selection`: Selection strategy (`"tournament"` or `"pareto"`)
 - `mutation_rate`, `crossover_rate`: Genetic algorithm parameters
 
+## Omni
+
+Explores several teleprompters independently, compares their outputs
+with one validation metric, and runs a fresh continuation optimizer from
+the winner. The seed remains eligible throughout, so a regressing branch
+cannot make the result worse on the comparison set.
+
+**Best for:** Tasks where several optimizer families are plausible and
+you can give each one a comparable budget. This design is inspired by
+the [Omni
+meta-optimizer](https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/)
+from the [GEPA project](https://github.com/gepa-ai/gepa). GEPA’s
+published Frontier-CS gains do not establish the same gain for dsprrr
+modules; benchmark your own task and budget.
+
+Omni’s common comparison pass re-evaluates the seed, every explorer
+result, and the continuation result on `valset`. Those calls are
+additional to each teleprompter’s native budget and should be included
+in your experiment budget.
+
+``` r
+
+metric <- metric_exact_match(field = "answer")
+
+tp <- Omni(
+  metric = metric,
+  explorers = list(
+    bootstrap = BootstrapFewShotWithRandomSearch(
+      metric = metric,
+      num_candidate_programs = 8L
+    ),
+    copro = COPRO(metric = metric, breadth = 8L, depth = 2L),
+    gepa = GEPA(
+      metric = metric,
+      population_size = 8L,
+      generations = 3L
+    )
+  ),
+  continuation = GEPA(
+    metric = metric,
+    population_size = 8L,
+    generations = 3L
+  ),
+  seed = 42
+)
+
+compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+
+# Every branch was re-scored with `metric` on the same validation rows.
+compiled$config$optimizer$candidate_programs
+```
+
+Set `parallel = TRUE` to run the exploration branches with mirai.
+Parallel exploration requires `.llm = NULL`, because live ellmer chat
+objects are not safe to serialize across worker processes. Each worker
+creates its own chat from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or
+`GOOGLE_API_KEY`; a session-only chat configured with
+[`set_default_chat()`](https://jameshwade.github.io/dsprrr/reference/set_default_chat.md)
+is not visible to the workers.
+
+See [Composing Optimizers with
+Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md)
+for the full composition contract, matched-budget guidance, candidate
+provenance, failure behavior, and differences from the GEPA
+implementation that inspired it.
+
 ## Ensemble
 
 Combines multiple compiled modules using voting or aggregation
@@ -799,6 +867,7 @@ session_cost()  # Total cost so far
 | `MIPROv2` | Instructions + Demos | High (100+) | High |
 | `SIMBA` | Hard Example Demos | Medium (50+) | Medium |
 | `GEPA` | Multi-objective | High (100+) | High |
+| `Omni` | Optimizer composition | High (100+) | High |
 | `Ensemble` | Combines modules | N/A | Varies |
 
 ## Further Reading

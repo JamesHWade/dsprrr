@@ -16,6 +16,7 @@ articles:
   getting-started: getting-started.html
   articles/how-rlm-works: how-rlm-works.html
   llms-txt: llms-txt.html
+  articles/omni-meta-optimization: omni-meta-optimization.html
   orchestration: orchestration.html
   rag-workflows: rag-workflows.html
   reasoning-models: reasoning-models.html
@@ -31,7 +32,7 @@ articles:
   tutorial-structured-outputs: tutorial-structured-outputs.html
   vitals-integration: vitals-integration.html
   vitals-recipes: vitals-recipes.html
-last_built: 2026-07-24T15:04Z
+last_built: 2026-07-24T22:45Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles
