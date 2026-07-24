@@ -46,10 +46,14 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          # ragnar pulls in DuckDB. The scheduled R-devel qualification lane
+          # installs it; keep pull-request checks safe from source-build misses.
+          extra-packages: any::rcmdcheck, ragnar=?ignore
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
+        env:
+          _R_CHECK_FORCE_SUGGESTS_: false
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'

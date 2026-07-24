@@ -33,7 +33,8 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, local::.
+          # The site examples do not execute ragnar; avoid its DuckDB build.
+          extra-packages: any::pkgdown, local::., ragnar=?ignore
           needs: website
 
       - name: Build site
