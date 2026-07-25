@@ -1,0 +1,367 @@
+---
+title: "Agentic Optimization with AutoResearch and Meta-Harness"
+description: >
+  Run persistent or frontier-driven research agents against a trusted dsprrr
+  evaluator, with Posit mcp-repl sandboxing, budgets, lineage, and checkpoints.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Agentic Optimization with AutoResearch and Meta-Harness}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+Most dsprrr teleprompters own both candidate generation and selection.
+`AutoResearch()` and `MetaHarness()` split those responsibilities differently:
+an LLM proposes experiments, while a trusted R evaluator applies validated
+edits, runs the program, enforces budgets, and preserves the best result.
+
+Both harnesses can jointly edit the instructions and templates of every
+optimizable leaf in a module graph. This makes them useful when the search
+problem is not "find one better prompt," but "repair the contract among several
+pipeline stages."
+
+## Choose the Search Owner
+
+| Harness | Who owns the loop? | Agent memory | Candidate shape |
+|---|---|---|---|
+| `AutoResearch()` | One research agent | Persistent across experiments | One candidate per evaluate action |
+| `MetaHarness()` | Trusted R outer loop | Fresh proposer each iteration | A bounded candidate batch |
+
+`AutoResearch()` is the better fit when a researcher should pursue a line of
+inquiry, use earlier results as working memory, branch, and decide when to stop.
+`MetaHarness()` is the better fit when you want independent proposals,
+explicit frontier selection, and less dependence on one conversation's hidden
+state.
+
+In both cases, dsprrr:
+
+1. evaluates the unmodified program as a baseline;
+2. gives every candidate a content fingerprint and parent id;
+3. rejects unknown module paths and unsupported fields;
+4. deduplicates equivalent program snapshots;
+5. evaluates candidates through `optimizer_control()`; and
+6. returns the best scored program, including when a budget stops the run.
+
+## Keep Code Execution Sandboxed
+
+The harnesses require an operating-system-sandboxed runner by default.
+`mcp_repl_runner()` connects to Posit's open-source
+[`mcp-repl`](https://github.com/posit-dev/mcp-repl), which provides a
+persistent R session behind one MCP `repl(input, timeout_ms)` tool.
+
+Install the executable and the R MCP client:
+
+```sh
+pipx install posit-mcp-repl
+# or: uv tool install posit-mcp-repl
+```
+
+```{r}
+install.packages("mcptools")
+```
+
+Then create the runner:
+
+```{r}
+runner <- mcp_repl_runner(
+  sandbox = "workspace-write",
+  timeout = 30
+)
+```
+
+The default mcp-repl policy uses OS primitives, disables network access, and
+limits writes to the workspace and runtime temp paths. The REPL remains alive
+across calls, so an agent can load a package or construct an analysis once and
+iterate on it. `runner$reset()` starts a clean session.
+
+`r_code_runner()` is intentionally rejected while sandboxing is enabled. Its
+callr subprocess is useful for trusted code, but it retains the host user's
+permissions and is not a security boundary.
+
+Set `sandbox = FALSE` on a harness only to remove the sandbox action entirely.
+Any supplied runner is then ignored; the agent can still propose program edits
+but cannot execute code.
+
+## AutoResearch: One Persistent Research Session
+
+Use separate chats for the program under test and the research agent. That
+separates task traces, model choice, and cost attribution.
+
+```{r}
+library(dsprrr)
+library(ellmer)
+
+task_chat <- chat_openai(model = "gpt-4.1-mini")
+research_chat <- chat_anthropic(model = "claude-sonnet-4-6")
+
+metric <- metric_with_feedback(
+  function(prediction, expected) {
+    correct <- identical(as.character(prediction), expected$answer)
+    list(
+      score = as.numeric(correct),
+      feedback = if (correct) {
+        "Correct."
+      } else {
+        paste("Expected", expected$answer, "but received", prediction)
+      }
+    )
+  },
+  field = "answer"
+)
+
+research <- AutoResearch(
+  metric = metric,
+  max_iterations = 16L,
+  patience = 5L,
+  target_score = 0.95,
+  max_context_examples = 20L,
+  max_feedback_examples = 8L,
+  seed = 42L
+)
+
+compiled <- compile(
+  research,
+  qa_program,
+  trainset,
+  valset = valset,
+  .llm = task_chat,
+  .agent_llm = research_chat,
+  runner = runner,
+  objective = paste(
+    "Answer from supplied evidence.",
+    "Do not invent facts when the context is insufficient."
+  ),
+  .cache = FALSE
+)
+```
+
+On each turn the agent must choose one typed action:
+
+- `sandbox`: run bounded R analysis against a context containing the editable
+  program manifest, visible training rows, and current frontier;
+- `propose`: branch from a known candidate and submit one or more complete
+  instruction or template replacements; or
+- `finish`: stop when another evaluation is unlikely to improve the result.
+
+The agent owns the research policy, but it cannot write directly into the
+module or evaluator. dsprrr re-validates and applies every candidate.
+
+## Meta-Harness: Fresh Proposers, Trusted Selection
+
+Meta-Harness creates a fresh proposer chat for each outer iteration. The
+proposer sees persisted evidence rather than relying on earlier conversation
+state:
+
+```{r}
+harness <- MetaHarness(
+  metric = metric,
+  max_iterations = 8L,
+  max_candidates_per_iteration = 4L,
+  frontier_size = 8L,
+  patience = 3L,
+  seed = 42L
+)
+
+compiled <- compile(
+  harness,
+  qa_program,
+  trainset,
+  valset = valset,
+  .llm = task_chat,
+  .agent_llm = research_chat,
+  runner = runner,
+  objective = "Improve factual accuracy without increasing abstention errors."
+)
+```
+
+Within an iteration, the proposer may request a few sandbox steps before it
+submits its batch. The outer loop then:
+
+1. materializes each proposal from its declared parent;
+2. rejects invalid or duplicate snapshots;
+3. evaluates every unique candidate that fits the remaining budget;
+4. updates the scored frontier; and
+5. checkpoints the new lineage before starting a fresh proposer.
+
+This is a useful boundary for coding-agent experiments: the agent can inspect
+and hypothesize, but the scorer, budget, and accepted state remain host-owned.
+
+## Joint Pipeline Edits
+
+Candidate paths come from `named_parameters()` and remain stable within one
+program graph:
+
+```{r}
+names(named_parameters(qa_pipeline, boundaries = "respect"))
+#> [1] "$/steps/1" "$/steps/2" "$/steps/3"
+```
+
+A single candidate may replace fields at several paths. For example, a
+retriever stage can promise a citation-bearing intermediate format while the
+answer stage is changed to consume exactly that format. The candidate ledger
+stores the complete resulting snapshot, not only the patch, so fingerprints,
+resume behavior, and comparisons are deterministic.
+
+Protected graph boundaries are respected. If you intentionally need to expose
+an inner component, change the module graph boundary before compiling rather
+than asking the agent to bypass it.
+
+## Budget Every Kind of Work
+
+The shared optimizer ledger accounts for baseline and candidate evaluations as
+trials, program calls and tokens during evaluation, proposer calls and tokens,
+metric calls, cost, elapsed time, and errors:
+
+```{r}
+control <- optimizer_control(
+  max_trials = 25L,
+  max_metric_calls = 200L,
+  max_provider_calls = 250L,
+  max_total_tokens = 500000L,
+  max_cost = 10,
+  max_elapsed_seconds = 1800,
+  checkpoint_path = "meta-harness-checkpoint.rds"
+)
+
+compiled <- compile(
+  harness,
+  qa_program,
+  trainset,
+  valset = valset,
+  .llm = task_chat,
+  .agent_llm = research_chat,
+  runner = runner,
+  control = control
+)
+```
+
+A finite provider, token, or cost cap fails closed when a custom chat cannot
+report verified usage. A stopped run returns its best partial program and a
+typed stop reason:
+
+```{r}
+compiled$config$optimizer$budget_summary
+compiled$config$optimizer$stop_reason
+compiled$config$optimizer$partial
+```
+
+## Resume and Audit a Run
+
+Both harnesses support optimizer checkpoints. Resume with the same program,
+data, metric, and harness configuration; resource limits may be raised:
+
+```{r}
+resumed <- compile(
+  harness,
+  qa_program,
+  trainset,
+  valset = valset,
+  .llm = task_chat,
+  .agent_llm = research_chat,
+  runner = runner,
+  control = optimizer_control(
+    max_trials = 40L,
+    max_cost = 20,
+    checkpoint_path = "meta-harness-checkpoint.rds",
+    resume = TRUE
+  )
+)
+```
+
+The candidate ledger is attached to the returned module:
+
+```{r}
+candidates <- resumed$config$optimizer$candidates
+candidates[, c(
+  "id",
+  "parent_id",
+  "name",
+  "iteration",
+  "score",
+  "selected",
+  "status"
+)]
+
+# Complete per-candidate program state and evaluation feedback:
+candidates$snapshot[[1]]
+candidates$feedback[[1]]
+
+resumed$config$optimizer$frontier_ids
+resumed$config$optimizer$events
+resumed$config$optimizer$termination
+```
+
+With `log_dir` in the teleprompter or `optimizer_control()`, evaluations are
+also written through `TrialLog`.
+
+Checkpoint resume restores candidate lineage, evaluation evidence, budgets, and
+random-number state. It starts a new chat and mcp-repl connection rather than
+trying to serialize hidden provider or interpreter session state.
+
+## Compose Harnesses with Omni
+
+These are ordinary `Teleprompter` objects, so sequential `Omni()` runs can use
+them as explorers or as the continuation stage. Pass their agent and runner
+dependencies through the per-step argument lists:
+
+```{r}
+omni <- Omni(
+  metric = metric,
+  explorers = list(
+    demos = BootstrapFewShotWithRandomSearch(metric = metric),
+    meta = MetaHarness(metric = metric, max_iterations = 4L)
+  ),
+  continuation = AutoResearch(metric = metric, max_iterations = 6L)
+)
+
+compiled <- compile(
+  omni,
+  qa_program,
+  trainset,
+  valset = valset,
+  .llm = task_chat,
+  explorer_compile_args = list(
+    meta = list(.agent_llm = research_chat, runner = runner)
+  ),
+  continuation_compile_args = list(
+    .agent_llm = research_chat,
+    runner = runner
+  )
+)
+```
+
+Do not use a live chat or runner with Omni's mirai `parallel = TRUE` mode.
+Those stateful runtime objects are intentionally not serialized to workers.
+
+## Inspiration and Differences
+
+The design credits three open projects:
+
+- Andrej Karpathy's
+  [`autoresearch`](https://github.com/karpathy/autoresearch), for the explicit
+  baseline, experiment, score, keep-or-revert loop;
+- the
+  [GEPA optimize-anything](https://github.com/gepa-ai/gepa) AutoResearch and
+  Meta-Harness engines, for a common trusted evaluation boundary and
+  optimizer composition;
+- the
+  [Meta-Harness paper](https://arxiv.org/abs/2603.28052), for the fresh-proposer
+  outer-loop design; and
+- Posit's [`mcp-repl`](https://github.com/posit-dev/mcp-repl), for persistent
+  R execution with OS-level sandboxing.
+
+dsprrr does not launch a particular coding-agent CLI, expose an HTTP evaluator,
+or ask an agent to edit arbitrary files. It uses provider-neutral ellmer chats,
+typed actions, canonical module snapshots, the package's optimizer ledger, and
+safe program checkpoints. Benchmark these harnesses on your own task and
+budget; results reported by the source projects do not automatically transfer
+to a different model, metric, or program.

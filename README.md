@@ -166,6 +166,8 @@ several optimizers from DSPy:
   Bayesian search
 - **GEPA**: Reflection-based instruction optimization—sample efficient
   and often outperforms manual prompts
+- **AutoResearch and MetaHarness**: Agentic, sandboxed search over
+  multi-module instructions and templates
 
 ``` r
 # Compile with few-shot examples

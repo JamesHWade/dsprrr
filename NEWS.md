@@ -4,6 +4,21 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## New features
 
+* `AutoResearch()` runs a persistent, provider-neutral research agent over
+  validated multi-module instruction and template snapshots. The agent can
+  request OS-sandboxed R experiments, branch from prior candidates, and choose
+  when to finish while dsprrr owns evaluation, budgets, lineage, checkpoints,
+  and best-partial selection.
+
+* `mcp_repl_runner()` connects code-executing modules and agentic optimizers to
+  Posit's persistent `mcp-repl` R runtime with OS-enforced workspace-write
+  sandboxing and network access disabled by default.
+
+* `MetaHarness()` uses fresh proposer sessions to generate bounded candidate
+  batches from a persisted scored frontier. Its trusted R outer loop validates,
+  deduplicates, evaluates, checkpoints, and selects joint edits across module
+  graphs.
+
 * `Omni()` explores multiple teleprompters from the same seed, selects their
   best program with one shared validation metric, and runs a fresh continuation
   optimizer without allowing a regressing stage to replace a better candidate.

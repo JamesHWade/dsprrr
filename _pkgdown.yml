@@ -95,6 +95,8 @@ navbar:
           href: articles/advanced-optimization.html
         - text: "Composing Optimizers with Omni"
           href: articles/omni-meta-optimization.html
+        - text: "Agentic Optimization Harnesses"
+          href: articles/agentic-optimization-harnesses.html
         - text: "Reasoning Models"
           href: articles/reasoning-models.html
     reference:
@@ -149,6 +151,7 @@ articles:
     - advanced-modules
     - advanced-optimization
     - articles/omni-meta-optimization
+    - articles/agentic-optimization-harnesses
     - reasoning-models
 
   - title: Reference
@@ -228,6 +231,7 @@ reference:
     - rag_module
     - r_code_runner
     - r-code-runner
+    - mcp_repl_runner
     - program_of_thought
     - module-program-of-thought
     - code_act
@@ -275,6 +279,8 @@ reference:
     - KNNFewShot
     - BetterTogether
     - Omni
+    - AutoResearch
+    - MetaHarness
     - SIMBA
     - GEPA
     - MIPROv2
@@ -375,6 +381,8 @@ reference:
     - print.BootstrapFewShot
     - print.BootstrapFewShotWithRandomSearch
     - print.GEPA
+    - print.AutoResearch
+    - print.MetaHarness
     - print.SIMBA
     - print.COPRO
 
