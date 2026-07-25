@@ -58,6 +58,35 @@ test_that("mcp_repl_runner normalizes MCP errors and resets the session", {
   expect_identical(utils::tail(inputs, 1L), "\u0004")
 })
 
+test_that("mcp_repl_runner rounds timeout milliseconds up safely", {
+  timeout_values <- integer()
+  repl <- function(input, timeout_ms) {
+    timeout_values <<- c(timeout_values, timeout_ms)
+    list(result = list(content = list()))
+  }
+  runner <- mcp_repl_runner(repl = repl, timeout = 0.0001)
+
+  runner$execute("1 + 1")
+  runner$reset()
+
+  expect_identical(timeout_values, c(1L, 1L))
+})
+
+test_that("mcp_repl_runner requires integer-valued output limits", {
+  invalid_limits <- c(Inf, 10.5, .Machine$integer.max + 1)
+
+  for (limit in invalid_limits) {
+    expect_error(
+      mcp_repl_runner(
+        repl = function(input, timeout_ms) input,
+        max_output_chars = limit
+      ),
+      "must be a positive integer",
+      info = paste("max_output_chars =", limit)
+    )
+  }
+})
+
 test_that("mcp_repl_runner refuses an unsandboxed policy", {
   expect_snapshot(
     error = TRUE,

@@ -228,7 +228,10 @@ AutoResearch <- S7::new_class(
 #' `sandbox = TRUE`, the runner must advertise an OS sandbox such as
 #' [mcp_repl_runner()]. Proposer sessions are fresh by design, so each
 #' iteration must reason from the persisted frontier rather than hidden chat
-#' history.
+#' history. An ellmer `Chat` is cloned and reset automatically. A custom
+#' proposer must either provide `chat_structured()` and `clone()`, or be supplied
+#' as a zero-argument `.agent_llm` factory that returns a fresh compatible
+#' proposer on every call. Non-cloneable proposer objects are rejected.
 #'
 #' @section Compilation arguments:
 #' In addition to the standard [compile()] arguments, this teleprompter accepts
@@ -344,7 +347,7 @@ compile_autoresearch <- function(
     )
   }
 
-  agent <- harness_fresh_agent(setup$agent)
+  agent <- harness_agent_instance(setup$agent)
   no_eval_steps <- 0L
 
   while (!harness_search_done(state, teleprompter, setup$budget)) {
@@ -448,19 +451,20 @@ compile_autoresearch <- function(
     }
 
     before <- state$best_score
-    state$iteration <- as.integer(state$iteration + 1L)
+    iteration <- as.integer(state$iteration + 1L)
     candidates_before <- length(state$candidates)
     evaluated <- harness_evaluate_proposal(
       setup = setup,
       state = state,
       proposal = proposals[[1L]],
-      iteration = state$iteration,
+      iteration = iteration,
       best_program = best_program,
       stage = "autoresearch_candidate"
     )
     state <- evaluated$state
     best_program <- evaluated$best_program
-    no_eval_steps <- if (length(state$candidates) > candidates_before) {
+    accepted <- length(state$candidates) > candidates_before
+    no_eval_steps <- if (accepted) {
       0L
     } else {
       no_eval_steps + 1L
@@ -468,12 +472,15 @@ compile_autoresearch <- function(
     if (no_eval_steps >= teleprompter@max_agent_steps) {
       state$termination <- "no_evaluation_progress"
     }
-    state$no_improvement <- if (
-      harness_score_improved(state$best_score, before)
-    ) {
-      0L
-    } else {
-      as.integer(state$no_improvement + 1L)
+    if (accepted) {
+      state$iteration <- iteration
+      state$no_improvement <- if (
+        harness_score_improved(state$best_score, before)
+      ) {
+        0L
+      } else {
+        as.integer(state$no_improvement + 1L)
+      }
     }
     harness_checkpoint(
       setup$checkpoint,
@@ -548,7 +555,7 @@ compile_meta_harness <- function(
   while (!harness_search_done(state, teleprompter, setup$budget)) {
     state$iteration <- as.integer(state$iteration + 1L)
     iteration <- state$iteration
-    agent <- harness_fresh_agent(setup$agent)
+    agent <- harness_agent_instance(setup$agent, require_fresh = TRUE)
     action <- NULL
 
     for (step in seq_len(teleprompter@max_agent_steps)) {
@@ -753,6 +760,9 @@ harness_setup <- function(
 
   runner <- harness_validate_runner(runner, required = teleprompter@sandbox)
   agent <- harness_resolve_agent(.agent_llm, .llm)
+  if (S7::S7_inherits(teleprompter, MetaHarness)) {
+    harness_require_fresh_agent(agent)
+  }
   control <- optimizer_control_for_teleprompter(
     teleprompter,
     control = control
@@ -916,11 +926,16 @@ harness_validate_eval_args <- function(eval_args) {
 harness_resolve_agent <- function(.agent_llm, .llm) {
   agent <- .agent_llm %||% .llm
   if (is.function(agent)) {
-    agent <- agent()
+    return(list(factory = agent, prototype = NULL))
   }
   if (is.null(agent)) {
     agent <- get_default_chat(create = TRUE)
   }
+  harness_validate_agent(agent)
+  list(factory = NULL, prototype = agent)
+}
+
+harness_validate_agent <- function(agent) {
   chat_structured <- tryCatch(
     agent[["chat_structured"]],
     error = function(e) NULL
@@ -934,24 +949,87 @@ harness_resolve_agent <- function(.agent_llm, .llm) {
   agent
 }
 
-harness_fresh_agent <- function(agent) {
-  if (!inherits(agent, "Chat")) {
-    return(agent)
+harness_agent_instance <- function(spec, require_fresh = FALSE) {
+  if (!is.null(spec$factory)) {
+    agent <- tryCatch(
+      spec$factory(),
+      error = function(e) {
+        cli::cli_abort(c(
+          "Could not create an agentic harness proposer",
+          "x" = conditionMessage(e),
+          "i" = "{.arg .agent_llm} factories must return a compatible proposer."
+        ))
+      }
+    )
+    return(harness_validate_agent(agent))
   }
-  tryCatch(
-    {
-      fresh <- agent$clone(deep = TRUE)
-      fresh$set_turns(list())
-      fresh
+
+  agent <- spec$prototype
+  if (inherits(agent, "Chat") || isTRUE(require_fresh)) {
+    return(harness_fresh_agent(agent))
+  }
+  harness_validate_agent(agent)
+}
+
+harness_require_fresh_agent <- function(spec) {
+  if (!is.null(spec$factory)) {
+    return(invisible(spec))
+  }
+  clone <- tryCatch(
+    spec$prototype[["clone"]],
+    error = function(e) NULL
+  )
+  if (!is.function(clone)) {
+    cli::cli_abort(c(
+      "MetaHarness requires a fresh proposer session for every iteration",
+      "x" = "The supplied proposer does not provide {.code clone()}.",
+      "i" = "Supply an ellmer Chat, a cloneable custom adapter, or a zero-argument {.arg .agent_llm} factory."
+    ))
+  }
+  invisible(spec)
+}
+
+harness_fresh_agent <- function(agent) {
+  clone <- tryCatch(
+    agent[["clone"]],
+    error = function(e) NULL
+  )
+  if (!is.function(clone)) {
+    cli::cli_abort(c(
+      "Could not create a fresh agent session",
+      "x" = "The supplied proposer does not provide {.code clone()}.",
+      "i" = "Supply an ellmer Chat, a cloneable custom adapter, or a zero-argument {.arg .agent_llm} factory."
+    ))
+  }
+
+  clone_args <- names(formals(clone))
+  fresh <- tryCatch(
+    if (any(c("deep", "...") %in% clone_args)) {
+      clone(deep = TRUE)
+    } else {
+      clone()
     },
     error = function(e) {
       cli::cli_abort(c(
         "Could not create a fresh agent session",
         "x" = conditionMessage(e),
-        "i" = "Supply a cloneable ellmer Chat as {.arg .agent_llm}."
+        "i" = "Supply an ellmer Chat, a cloneable custom adapter, or a zero-argument {.arg .agent_llm} factory."
       ))
     }
   )
+  if (inherits(fresh, "Chat")) {
+    tryCatch(
+      fresh$set_turns(list()),
+      error = function(e) {
+        cli::cli_abort(c(
+          "Could not reset the fresh agent session",
+          "x" = conditionMessage(e),
+          "i" = "Supply an ellmer Chat with {.code set_turns()} or a zero-argument {.arg .agent_llm} factory."
+        ))
+      }
+    )
+  }
+  harness_validate_agent(fresh)
 }
 
 harness_action_type <- function() {

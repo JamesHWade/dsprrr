@@ -89,7 +89,10 @@ mcp_repl_runner <- function(
     !is.numeric(max_output_chars) ||
       length(max_output_chars) != 1L ||
       is.na(max_output_chars) ||
-      max_output_chars < 1
+      !is.finite(max_output_chars) ||
+      max_output_chars < 1 ||
+      max_output_chars != floor(max_output_chars) ||
+      max_output_chars > .Machine$integer.max
   ) {
     cli::cli_abort("{.arg max_output_chars} must be a positive integer")
   }
@@ -182,18 +185,18 @@ mcp_repl_tool <- function(
   )
 
   tools <- mcptools::mcp_tools(config = config_path)
-  names <- vapply(
+  tool_names <- vapply(
     tools,
     function(tool) {
       tryCatch(as.character(tool@name)[[1L]], error = function(e) "")
     },
     character(1)
   )
-  repl_index <- which(names == "repl")
+  repl_index <- which(tool_names == "repl")
   if (length(repl_index) != 1L) {
     cli::cli_abort(c(
       "The configured mcp-repl server did not expose exactly one {.code repl} tool",
-      "i" = "Exposed tools: {.val {names[nzchar(names)]}}"
+      "i" = "Exposed tools: {.val {tool_names[nzchar(tool_names)]}}"
     ))
   }
   tools[[repl_index]]
@@ -238,7 +241,7 @@ McpReplRunner <- R6::R6Class(
       response <- tryCatch(
         self$repl(
           input = input,
-          timeout_ms = as.integer(self$timeout * 1000)
+          timeout_ms = mcp_repl_timeout_ms(self$timeout)
         ),
         error = function(e) e
       )
@@ -283,7 +286,7 @@ McpReplRunner <- R6::R6Class(
       response <- tryCatch(
         self$repl(
           input = "\u0004",
-          timeout_ms = as.integer(self$timeout * 1000)
+          timeout_ms = mcp_repl_timeout_ms(self$timeout)
         ),
         error = function(e) e
       )
@@ -321,6 +324,13 @@ McpReplRunner <- R6::R6Class(
     }
   )
 )
+
+mcp_repl_timeout_ms <- function(timeout) {
+  as.integer(min(
+    .Machine$integer.max,
+    max(1, ceiling(timeout * 1000))
+  ))
+}
 
 mcp_repl_input <- function(code, context) {
   if (length(context) == 0L) {

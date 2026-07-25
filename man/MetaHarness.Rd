@@ -89,7 +89,10 @@ Those analyses execute only through \code{runner}; with the default
 \code{sandbox = TRUE}, the runner must advertise an OS sandbox such as
 \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}. Proposer sessions are fresh by design, so each
 iteration must reason from the persisted frontier rather than hidden chat
-history.
+history. An ellmer \code{Chat} is cloned and reset automatically. A custom
+proposer must either provide \code{chat_structured()} and \code{clone()}, or be supplied
+as a zero-argument \code{.agent_llm} factory that returns a fresh compatible
+proposer on every call. Non-cloneable proposer objects are rejected.
 }
 \section{Compilation arguments}{
 

@@ -19,6 +19,11 @@ make_harness_agent <- function(responses) {
   )
 }
 
+make_harness_agent_factory <- function(responses) {
+  force(responses)
+  function() make_harness_agent(responses)
+}
+
 make_harness_runner <- function(output = "[1] 2") {
   inputs <- character()
   runner <- mcp_repl_runner(repl = function(input, timeout_ms) {
@@ -114,7 +119,7 @@ test_that("AutoResearch owns a persistent sandbox and experiment loop", {
 
 test_that("MetaHarness evaluates a batch and controls the frontier", {
   sandbox <- make_harness_runner()
-  agent <- make_harness_agent(list(
+  agent <- make_harness_agent_factory(list(
     list(
       action = "propose",
       rationale = "Compare a weak and strong edit.",
@@ -173,7 +178,7 @@ test_that("MetaHarness can optimize multiple pipeline components jointly", {
       "no"
     }
   )
-  agent <- make_harness_agent(list(list(
+  agent <- make_harness_agent_factory(list(list(
     action = "propose",
     rationale = "Coordinate both stages.",
     candidates = list(list(
@@ -217,7 +222,7 @@ test_that("MetaHarness can optimize multiple pipeline components jointly", {
 test_that("MetaHarness deduplicates candidates by canonical snapshot", {
   sandbox <- make_harness_runner()
   proposal <- candidate_proposal("perfect")
-  agent <- make_harness_agent(list(
+  agent <- make_harness_agent_factory(list(
     list(
       action = "propose",
       rationale = "Duplicate batch.",
@@ -245,6 +250,77 @@ test_that("MetaHarness deduplicates candidates by canonical snapshot", {
   event_types <- vapply(events, `[[`, character(1), "type")
   expect_equal(nrow(candidates), 2L)
   expect_in("candidate_duplicate", event_types)
+})
+
+test_that("MetaHarness clones custom proposers for every iteration", {
+  calls_per_session <- integer()
+  TestProposer <- R6::R6Class(
+    "FreshMetaHarnessTestProposer",
+    public = list(
+      calls = 0L,
+      chat_structured = function(prompt, type, ...) {
+        self$calls <- as.integer(self$calls + 1L)
+        calls_per_session <<- c(calls_per_session, self$calls)
+        iteration <- regmatches(
+          prompt,
+          regexpr('"iteration": [0-9]+', prompt)
+        )
+        instructions <- if (identical(iteration, '"iteration": 1')) {
+          "still weak"
+        } else {
+          "perfect"
+        }
+        list(
+          action = "propose",
+          rationale = "Exercise a fresh custom proposer.",
+          candidates = list(candidate_proposal(instructions))
+        )
+      }
+    )
+  )
+  proposer <- TestProposer$new()
+  tp <- MetaHarness(
+    metric = harness_metric,
+    max_iterations = 2L,
+    max_candidates_per_iteration = 1L,
+    verbose = FALSE
+  )
+
+  compiled <- compile(
+    tp,
+    harness_program(),
+    harness_data(),
+    .llm = make_harness_task_llm(),
+    .agent_llm = proposer,
+    runner = make_harness_runner()$runner
+  )
+
+  expect_identical(calls_per_session, c(1L, 1L))
+  expect_identical(proposer$calls, 0L)
+  expect_identical(compiled$signature@instructions, "perfect")
+})
+
+test_that("MetaHarness rejects custom proposers that cannot be refreshed", {
+  tp <- MetaHarness(
+    metric = harness_metric,
+    max_iterations = 1L,
+    verbose = FALSE
+  )
+
+  expect_error(
+    compile(
+      tp,
+      harness_program(),
+      harness_data(),
+      .llm = make_harness_task_llm(),
+      .agent_llm = make_harness_agent(list(list(
+        action = "finish",
+        rationale = "unused"
+      ))),
+      runner = make_harness_runner()$runner
+    ),
+    "requires a fresh proposer session"
+  )
 })
 
 test_that("agentic harnesses require an OS-sandboxed runner by default", {
@@ -322,7 +398,7 @@ test_that("sandbox false disables agent code execution", {
   expect_identical(compiled$config$optimizer$sandbox$backend, "disabled")
 })
 
-test_that("AutoResearch rejects unknown component paths without evaluation", {
+test_that("AutoResearch limits count only accepted evaluations", {
   sandbox <- make_harness_runner()
   agent <- make_harness_agent(list(
     list(
@@ -335,14 +411,21 @@ test_that("AutoResearch rejects unknown component paths without evaluation", {
       ))
     ),
     list(
-      action = "finish",
-      rationale = "done"
+      action = "propose",
+      rationale = "Duplicate the baseline.",
+      candidates = list(candidate_proposal("seed"))
+    ),
+    list(
+      action = "propose",
+      rationale = "Evaluate a valid candidate.",
+      candidates = list(candidate_proposal("perfect"))
     )
   ))
   tp <- AutoResearch(
     metric = harness_metric,
-    max_iterations = 2L,
-    patience = 2L,
+    max_iterations = 1L,
+    patience = 1L,
+    max_agent_steps = 3L,
     verbose = FALSE
   )
 
@@ -358,8 +441,11 @@ test_that("AutoResearch rejects unknown component paths without evaluation", {
   events <- compiled$config$optimizer$events
   event_types <- vapply(events, `[[`, character(1), "type")
   expect_in("candidate_rejected", event_types)
-  expect_equal(nrow(compiled$config$optimizer$candidates), 1L)
-  expect_identical(compiled$signature@instructions, "seed")
+  expect_in("candidate_duplicate", event_types)
+  expect_equal(nrow(compiled$config$optimizer$candidates), 2L)
+  expect_identical(compiled$config$optimizer$iterations, 1L)
+  expect_identical(compiled$config$optimizer$termination, "max_iterations")
+  expect_identical(compiled$signature@instructions, "perfect")
 })
 
 test_that("non-improving candidates never displace the baseline", {
@@ -453,7 +539,7 @@ test_that("MetaHarness checkpoints and resumes without repeating baseline", {
     harness_program(),
     harness_data(),
     .llm = make_harness_task_llm(),
-    .agent_llm = make_harness_agent(list(list(
+    .agent_llm = make_harness_agent_factory(list(list(
       action = "finish",
       rationale = "unused"
     ))),
@@ -470,7 +556,7 @@ test_that("MetaHarness checkpoints and resumes without repeating baseline", {
     harness_program(),
     harness_data(),
     .llm = make_harness_task_llm(),
-    .agent_llm = make_harness_agent(list(list(
+    .agent_llm = make_harness_agent_factory(list(list(
       action = "propose",
       rationale = "Resume with one edit.",
       candidates = list(candidate_proposal("perfect"))
