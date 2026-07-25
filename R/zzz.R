@@ -75,6 +75,26 @@
     compile_omni(teleprompter, program, trainset, ...)
   }
 
+  S7::method(compile, list(AutoResearch, S7::class_any)) <- function(
+    teleprompter,
+    program,
+    trainset,
+    ...
+  ) {
+    abort_if_fn_module(program)
+    compile_autoresearch(teleprompter, program, trainset, ...)
+  }
+
+  S7::method(compile, list(MetaHarness, S7::class_any)) <- function(
+    teleprompter,
+    program,
+    trainset,
+    ...
+  ) {
+    abort_if_fn_module(program)
+    compile_meta_harness(teleprompter, program, trainset, ...)
+  }
+
   S7::method(compile, list(KNNFewShot, S7::class_any)) <- function(
     teleprompter,
     program,

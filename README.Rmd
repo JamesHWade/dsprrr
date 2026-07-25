@@ -108,6 +108,7 @@ Automatically improve prompts using training data. dsprrr implements several opt
 - **LabeledFewShot**: Add examples from your training set as demonstrations
 - **MIPROv2**: Joint optimization of instructions and examples using Bayesian search
 - **GEPA**: Reflection-based instruction optimization—sample efficient and often outperforms manual prompts
+- **AutoResearch and MetaHarness**: Agentic, sandboxed search over multi-module instructions and templates
 
 ```{r optimization, eval=FALSE}
 # Compile with few-shot examples

@@ -47,6 +47,7 @@ Suggests:
     coro,
     dials,
     knitr,
+    mcptools,
     parsnip,
     pins,
     pkgload,
@@ -81,6 +82,7 @@ Collate:
     'evaluate.R'
     'input.R'
     'inspect.R'
+    'mcp-repl-runner.R'
     'metrics.R'
     'module-assert.R'
     'module-base.R'
@@ -123,6 +125,7 @@ Collate:
     'teleprompter-copro.R'
     'teleprompter-ensemble.R'
     'teleprompter-gepa.R'
+    'teleprompter-harness.R'
     'teleprompter-knn.R'
     'teleprompter-mipro.R'
     'teleprompter-omni.R'

@@ -357,6 +357,9 @@ dsprrr can automatically optimize your prompts using your data.
     <button class="nav-link" id="grid-tab" data-bs-toggle="tab" data-bs-target="#grid" type="button" role="tab">Grid Search</button>
   </li>
   <li class="nav-item" role="presentation">
+    <button class="nav-link" id="agentic-opt-tab" data-bs-toggle="tab" data-bs-target="#agentic-opt" type="button" role="tab">Agentic</button>
+  </li>
+  <li class="nav-item" role="presentation">
     <button class="nav-link" id="eval-tab" data-bs-toggle="tab" data-bs-target="#eval" type="button" role="tab">Evaluation</button>
   </li>
 </ul>
@@ -408,6 +411,36 @@ module_trials(classifier)
 ```
 
 **Result**: Find the best configuration for your task.
+
+  </div>
+  <div class="tab-pane fade" id="agentic-opt" role="tabpanel">
+
+```r
+# Keep agent-proposed analysis inside an OS sandbox
+runner <- mcp_repl_runner()
+
+harness <- MetaHarness(
+  metric = metric_exact_match(field = "sentiment"),
+  max_iterations = 6L,
+  max_candidates_per_iteration = 3L
+)
+
+optimized <- compile(
+  harness,
+  classifier,
+  trainset,
+  valset = validation_data,
+  .llm = task_chat,
+  .agent_llm = proposer_chat,
+  runner = runner
+)
+```
+
+**Result**: Search coordinated instructions and templates across an entire
+module graph while dsprrr retains control of evaluation, budgets, lineage, and
+accepted state.
+
+[Run agentic optimization &rarr;](articles/agentic-optimization-harnesses.html)
 
   </div>
   <div class="tab-pane fade" id="eval" role="tabpanel">
@@ -492,6 +525,7 @@ solver <- as_vitals_solver(classifier)
 
 - [Getting Started](articles/getting-started.html) — Your first dsprrr module
 - [Compilation & Optimization](articles/compilation-optimization.html) — Improve with data
+- [Agentic Optimization Harnesses](articles/agentic-optimization-harnesses.html) — Run sandboxed AutoResearch and Meta-Harness loops
 - [Vitals Integration](articles/vitals-integration.html) — Advanced evaluation
 - [Production Orchestration](articles/orchestration.html) — Deploy to production
 
@@ -508,5 +542,7 @@ dsprrr integrates with much of Posit's LLM ecosystem:
 | [ellmer](https://ellmer.tidyverse.org) | Chat with LLMs from R |
 | [vitals](https://vitals.tidyverse.org) | LLM evaluation framework |
 | [shinychat](https://posit-dev.github.io/shinychat/) | Chat UIs for Shiny |
+| [mcptools](https://posit-dev.github.io/mcptools/) | Connect R programs to MCP tools |
+| [mcp-repl](https://github.com/posit-dev/mcp-repl) | Persistent OS-sandboxed R execution |
 
 Inspired by [DSPy](https://dspy.ai) from Stanford NLP.
