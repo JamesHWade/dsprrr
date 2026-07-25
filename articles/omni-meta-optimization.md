@@ -262,7 +262,7 @@ cover.
 | GEPA `optimize_anything` | dsprrr [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) |
 |----|----|
 | Composes engines over arbitrary text artifacts | Composes teleprompters over dsprrr modules |
-| Ships GEPA, AutoResearch, and Meta-Harness engines | Accepts any named set of dsprrr teleprompters |
+| Ships GEPA, AutoResearch, and Meta-Harness engines | Ships [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md), [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md), and [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md) as composable dsprrr teleprompters |
 | Terrarium enforces a shared task, server, and budget contract | Users align heterogeneous teleprompter budgets |
 | Published Frontier-CS results use a matched \$20 budget | No cross-task performance claim; benchmark locally |
 | Continues the best artifact with a selected engine | Compiles a fresh continuation teleprompter from the winning module |

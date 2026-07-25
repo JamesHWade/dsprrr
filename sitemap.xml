@@ -9,6 +9,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/advanced-ellmer.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/advanced-modules.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/advanced-optimization.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/chaining-modules.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/cheatsheet.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html</loc></url>
@@ -40,6 +41,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/authors.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/news/index.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/AutoResearch.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BetterTogether.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.html</loc></url>
@@ -50,6 +52,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/KNNFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/MIPROv2.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/MetaHarness.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/Omni.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/OptimizerControl.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/SIMBA.html</loc></url>
@@ -135,6 +138,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/load_trial_log.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/local_lm.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/map_inputs.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/merge_optimization_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_contains.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_custom.html</loc></url>

@@ -84,6 +84,13 @@ Understand the philosophy, design, and theory behind dsprrr
   Explore several dsprrr teleprompters from one seed, compare them
   fairly, and continue from the strongest candidate.
 
+- [Agentic Optimization with AutoResearch and
+  Meta-Harness](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md):
+
+  Run persistent or frontier-driven research agents against a trusted
+  dsprrr evaluator, with Posit mcp-repl sandboxing, budgets, lineage,
+  and checkpoints.
+
 - [Working with Reasoning
   Models](https://jameshwade.github.io/dsprrr/articles/reasoning-models.md):
 

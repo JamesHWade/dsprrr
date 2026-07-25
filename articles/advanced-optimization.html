@@ -84,6 +84,7 @@
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
     <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
   </ul>
 </li>
@@ -199,6 +200,16 @@ guide covers the advanced optimizers beyond basic few-shot learning.</p>
 <td>High</td>
 </tr>
 <tr class="even">
+<td>Let one research agent own an experiment loop</td>
+<td><code>AutoResearch</code></td>
+<td>High</td>
+</tr>
+<tr class="odd">
+<td>Generate batches from a scored frontier</td>
+<td><code>MetaHarness</code></td>
+<td>High</td>
+</tr>
+<tr class="even">
 <td>Combine multiple strategies</td>
 <td><code>Ensemble</code></td>
 <td>Low</td>
@@ -222,6 +233,7 @@ guide covers the advanced optimizers beyond basic few-shot learning.</p>
   Optimize --&gt;|Handle hard cases better| SIMBA["SIMBA"]
   Optimize --&gt;|Balance quality vs cost| GEPA["GEPA"]
   Optimize --&gt;|Unsure which optimizer will win| Omni["Omni"]
+  Optimize --&gt;|Run an agentic research loop| Agentic["AutoResearch or MetaHarness"]
   Optimize --&gt;|Combine multiple optimized modules| Ensemble["Ensemble"]</code></pre>
 </div>
 </div>
@@ -717,13 +729,47 @@ candidate provenance, failure behavior, and differences from the GEPA
 implementation that inspired it.</p>
 </div>
 <div class="section level2">
+<h2 id="autoresearch-and-meta-harness">AutoResearch and Meta-Harness<a class="anchor" aria-label="anchor" href="#autoresearch-and-meta-harness"></a>
+</h2>
+<p>These agentic teleprompters jointly edit instructions and templates
+across optimizable module-graph leaves. <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>
+keeps one research session alive and lets it choose sandbox, evaluate,
+or finish actions. <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> starts a fresh proposer
+for each iteration and keeps candidate selection in a trusted R outer
+loop.</p>
+<p>Both require an OS-sandboxed runner by default:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/MetaHarness.html">MetaHarness</a></span><span class="op">(</span></span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  max_iterations <span class="op">=</span> <span class="fl">6L</span>,</span>
+<span>  max_candidates_per_iteration <span class="op">=</span> <span class="fl">3L</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">tp</span>,</span>
+<span>  <span class="va">qa_module</span>,</span>
+<span>  <span class="va">trainset</span>,</span>
+<span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .agent_llm <span class="op">=</span> <span class="va">proposer_chat</span>,</span>
+<span>  runner <span class="op">=</span> <span class="va">runner</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>They use the shared optimizer ledger, preserve candidate lineage and
+per-example feedback, return the best partial program under budget
+exhaustion, and support deterministic checkpoint resume. See <a href="agentic-optimization-harnesses.html">Agentic Optimization with
+AutoResearch and Meta-Harness</a> for the sandbox, budget, provenance,
+and composition contracts.</p>
+</div>
+<div class="section level2">
 <h2 id="ensemble">Ensemble<a class="anchor" aria-label="anchor" href="#ensemble"></a>
 </h2>
 <p>Combines multiple compiled modules using voting or aggregation
 strategies.</p>
 <p><strong>Best for:</strong> Maximum robustness by combining diverse
 optimization strategies.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># First, compile modules with different strategies</span></span>
 <span><span class="va">mod_bootstrap</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span><span class="va">mod_copro</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
@@ -747,7 +793,7 @@ optimization strategies.</p>
 <div class="section level3">
 <h3 id="reduce-functions">Reduce Functions<a class="anchor" aria-label="anchor" href="#reduce-functions"></a>
 </h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Majority voting (default)</span></span>
 <span><span class="fu"><a href="../reference/reduce_majority.html">reduce_majority</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -765,7 +811,7 @@ optimization strategies.</p>
 <div class="section level3">
 <h3 id="ensemble-via-teleprompter">Ensemble via Teleprompter<a class="anchor" aria-label="anchor" href="#ensemble-via-teleprompter"></a>
 </h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Ensemble teleprompter wraps existing compiled modules</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/Ensemble.html">Ensemble</a></span><span class="op">(</span></span>
 <span>  reduce_fn <span class="op">=</span> <span class="fu"><a href="../reference/reduce_weighted_vote.html">reduce_weighted_vote</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -782,7 +828,7 @@ optimization strategies.</p>
 <div class="section level3">
 <h3 id="trial-logging">Trial Logging<a class="anchor" aria-label="anchor" href="#trial-logging"></a>
 </h3>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Enable logging to a directory</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -818,7 +864,7 @@ stable device and file identifiers.</p>
 <div class="section level3">
 <h3 id="analyzing-trials">Analyzing Trials<a class="anchor" aria-label="anchor" href="#analyzing-trials"></a>
 </h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Read trial logs</span></span>
 <span><span class="va">trials</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_trials_jsonl.html">read_trials_jsonl</a></span><span class="op">(</span><span class="st">"optimization_logs/experiment_001/trials.jsonl"</span><span class="op">)</span></span>
 <span></span>
@@ -835,7 +881,7 @@ stable device and file identifiers.</p>
 <div class="section level3">
 <h3 id="accessing-optimizer-state">Accessing Optimizer State<a class="anchor" aria-label="anchor" href="#accessing-optimizer-state"></a>
 </h3>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># After compilation, access optimizer metadata</span></span>
 <span><span class="va">compiled</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">name</span></span>
 <span><span class="va">compiled</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">params</span></span>
@@ -858,7 +904,7 @@ stable device and file identifiers.</p>
 <p>Use <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> when an optimization must stay
 inside a hard call, token, cost, or active-time envelope. Pass the
 control object to <code><a href="../reference/compile.html">compile()</a></code>:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">checkpoint</span> <span class="op">&lt;-</span> <span class="st">"optimization_logs/bootstrap-checkpoint.rds"</span></span>
 <span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
 <span>  max_trials <span class="op">=</span> <span class="fl">50L</span>,</span>
@@ -921,6 +967,16 @@ clock; time spent stopped between checkpointed runs is not charged.</p>
 rows</td>
 </tr>
 <tr class="odd">
+<td><code>AutoResearch</code></td>
+<td align="right">Yes</td>
+<td align="right">Yes, by experiment</td>
+</tr>
+<tr class="even">
+<td><code>MetaHarness</code></td>
+<td align="right">Yes</td>
+<td align="right">Yes, by candidate and iteration</td>
+</tr>
+<tr class="odd">
 <td><code>GEPA</code></td>
 <td align="right">Yes</td>
 <td align="right">Not yet</td>
@@ -943,7 +999,7 @@ tracked separately.</p>
 <p>Resume Bootstrap or MIPRO by raising or removing a resource limit
 while keeping the original program, data, metric, and search
 settings:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">resumed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="va">qa_module</span>,</span>
@@ -969,7 +1025,7 @@ and credential-like fields are rejected.</p>
 <h2 id="reproducibility">Reproducibility<a class="anchor" aria-label="anchor" href="#reproducibility"></a>
 </h2>
 <p>All optimizers support deterministic seeds:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Set seed for reproducibility</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -987,7 +1043,7 @@ and credential-like fields are rejected.</p>
 <h2 id="error-handling">Error Handling<a class="anchor" aria-label="anchor" href="#error-handling"></a>
 </h2>
 <p>Optimizers gracefully handle LLM errors:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  max_errors <span class="op">=</span> <span class="fl">10L</span>  <span class="co"># Allow up to 10 errors before failing</span></span>
@@ -1005,7 +1061,7 @@ and credential-like fields are rejected.</p>
 <div class="section level3">
 <h3 id="start-simple-then-advance">1. Start Simple, Then Advance<a class="anchor" aria-label="anchor" href="#start-simple-then-advance"></a>
 </h3>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Step 1: Try LabeledFewShot first</span></span>
 <span><span class="va">simple</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span><span class="va">simple_score</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">simple</span>, <span class="va">valset</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span></span>
@@ -1045,7 +1101,7 @@ and credential-like fields are rejected.</p>
 <div class="section level3">
 <h3 id="use-parallel-evaluation">2. Use Parallel Evaluation<a class="anchor" aria-label="anchor" href="#use-parallel-evaluation"></a>
 </h3>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># BootstrapFewShotWithRandomSearch supports parallel evaluation</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
 <span>  num_candidate_programs <span class="op">=</span> <span class="fl">16L</span>,</span>
@@ -1055,7 +1111,7 @@ and credential-like fields are rejected.</p>
 <div class="section level3">
 <h3 id="cache-embeddings-for-knnfewshot">3. Cache Embeddings for KNNFewShot<a class="anchor" aria-label="anchor" href="#cache-embeddings-for-knnfewshot"></a>
 </h3>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Enable embedding caching in KNNFewShot</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span></span>
 <span>  k <span class="op">=</span> <span class="fl">3L</span>,</span>
@@ -1080,7 +1136,7 @@ and credential-like fields are rejected.</p>
 <div class="section level3">
 <h3 id="monitor-costs">4. Monitor Costs<a class="anchor" aria-label="anchor" href="#monitor-costs"></a>
 </h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Track costs during optimization</span></span>
 <span><span class="fu"><a href="../reference/session_cost.html">session_cost</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># Total cost so far</span></span>
 <span></span>
@@ -1157,6 +1213,18 @@ and credential-like fields are rejected.</p>
 <td><code>Omni</code></td>
 <td>Optimizer composition</td>
 <td>High (100+)</td>
+<td>High</td>
+</tr>
+<tr class="even">
+<td><code>AutoResearch</code></td>
+<td>Agent-owned program search</td>
+<td>Medium (30+)</td>
+<td>High</td>
+</tr>
+<tr class="odd">
+<td><code>MetaHarness</code></td>
+<td>Frontier-driven program search</td>
+<td>Medium (30+)</td>
 <td>High</td>
 </tr>
 <tr class="even">

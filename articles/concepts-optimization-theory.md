@@ -355,6 +355,18 @@ Uses evolutionary algorithms (selection, mutation, crossover) to explore
 the prompt space. Good when you have compute budget and want creative
 exploration.
 
+### AutoResearch and Meta-Harness: Agentic Program Search
+
+These harnesses use an LLM as an experiment proposer while dsprrr
+retains the trusted evaluator, budget ledger, and accepted program
+state.
+[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+gives one persistent agent ownership of the experiment loop;
+[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+evaluates bounded batches from fresh proposer sessions and maintains a
+scored frontier. Both can edit several module-graph components in one
+candidate and require OS-sandboxed code execution by default.
+
 ## Choosing an Optimizer
 
 Use this decision tree:
@@ -368,6 +380,7 @@ flowchart TB
   Start -->|Best results with compute budget| MIPRO["MIPROv2 or BootstrapFewShotWithRandomSearch"]
   Start -->|Diverse inputs, need adaptive demos| KNN["KNNFewShot"]
   Start -->|Explore creatively| GEPA["GEPA"]
+  Start -->|Search a multi-module program with an agent| Harness["AutoResearch or MetaHarness"]
 ```
 
 ## The Evaluation Loop
@@ -420,13 +433,15 @@ examples.
 
 Optimization requires many LLM calls. Rough estimates per optimizer:
 
-| Optimizer        | LLM Calls (100 examples)            |
-|------------------|-------------------------------------|
-| LabeledFewShot   | 0 (no evaluation)                   |
-| BootstrapFewShot | 100-200                             |
-| GridSearch       | variants × examples                 |
-| MIPROv2          | 500-2000                            |
-| GEPA             | population × generations × examples |
+| Optimizer        | LLM Calls (100 examples)                         |
+|------------------|--------------------------------------------------|
+| LabeledFewShot   | 0 (no evaluation)                                |
+| BootstrapFewShot | 100-200                                          |
+| GridSearch       | variants × examples                              |
+| MIPROv2          | 500-2000                                         |
+| GEPA             | population × generations × examples              |
+| AutoResearch     | baseline + agent-selected experiments            |
+| MetaHarness      | baseline + iterations × candidates per iteration |
 
 Use cheaper models during optimization, then evaluate final config on
 your target model.

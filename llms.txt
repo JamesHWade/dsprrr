@@ -298,6 +298,7 @@ dsprrr can automatically optimize your prompts using your data.
 
 - Few-Shot
 - Grid Search
+- Agentic
 - Evaluation
 
 ``` r
@@ -344,6 +345,35 @@ module_trials(classifier)
 ```
 
 **Result**: Find the best configuration for your task.
+
+``` r
+
+# Keep agent-proposed analysis inside an OS sandbox
+runner <- mcp_repl_runner()
+
+harness <- MetaHarness(
+  metric = metric_exact_match(field = "sentiment"),
+  max_iterations = 6L,
+  max_candidates_per_iteration = 3L
+)
+
+optimized <- compile(
+  harness,
+  classifier,
+  trainset,
+  valset = validation_data,
+  .llm = task_chat,
+  .agent_llm = proposer_chat,
+  runner = runner
+)
+```
+
+**Result**: Search coordinated instructions and templates across an
+entire module graph while dsprrr retains control of evaluation, budgets,
+lineage, and accepted state.
+
+[Run agentic optimization
+→](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)
 
 ``` r
 
@@ -406,6 +436,9 @@ vetiver.
 - [Compilation &
   Optimization](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
   — Improve with data
+- [Agentic Optimization
+  Harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)
+  — Run sandboxed AutoResearch and Meta-Harness loops
 - [Vitals
   Integration](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md)
   — Advanced evaluation
@@ -428,6 +461,8 @@ dsprrr integrates with much of Posit’s LLM ecosystem:
 | [ellmer](https://ellmer.tidyverse.org) | Chat with LLMs from R |
 | [vitals](https://vitals.tidyverse.org) | LLM evaluation framework |
 | [shinychat](https://posit-dev.github.io/shinychat/) | Chat UIs for Shiny |
+| [mcptools](https://posit-dev.github.io/mcptools/) | Connect R programs to MCP tools |
+| [mcp-repl](https://github.com/posit-dev/mcp-repl) | Persistent OS-sandboxed R execution |
 
 Inspired by [DSPy](https://dspy.ai) from Stanford NLP.
 
@@ -562,6 +597,8 @@ Tool use, code execution, RAG, and recursive language models
   : Create an R Code Runner
 - [`r-code-runner`](https://jameshwade.github.io/dsprrr/reference/r-code-runner.md)
   : R Code Execution Backend
+- [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+  : Posit mcp-repl Code Runner
 - [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
   : Create a Program of Thought Module
 - [`module-program-of-thought`](https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.md)
@@ -660,6 +697,12 @@ Automated prompt optimization strategies
 - [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
   [`print(`*`<Omni>`*`)`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
   : Omni Teleprompter
+- [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  [`print(`*`<AutoResearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  : AutoResearch Teleprompter
+- [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  [`print(`*`<MetaHarness>`*`)`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  : Meta-Harness Teleprompter
 - [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
   SIMBA Teleprompter
 - [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) :
@@ -839,6 +882,12 @@ Extract outputs, costs, and display formatted results
   : Print method for BootstrapFewShotWithRandomSearch
 - [`print(`*`<GEPA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.GEPA.md)
   : Print method for GEPA
+- [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  [`print(`*`<AutoResearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  : AutoResearch Teleprompter
+- [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  [`print(`*`<MetaHarness>`*`)`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  : Meta-Harness Teleprompter
 - [`print(`*`<SIMBA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.SIMBA.md)
   : Print method for SIMBA
 - [`print(`*`<COPRO>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.COPRO.md)
@@ -1033,6 +1082,13 @@ Understand the philosophy, design, and theory behind dsprrr
 
   Explore several dsprrr teleprompters from one seed, compare them
   fairly, and continue from the strongest candidate.
+
+- [Agentic Optimization with AutoResearch and
+  Meta-Harness](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md):
+
+  Run persistent or frontier-driven research agents against a trusted
+  dsprrr evaluator, with Posit mcp-repl sandboxing, budgets, lineage,
+  and checkpoints.
 
 - [Working with Reasoning
   Models](https://jameshwade.github.io/dsprrr/articles/reasoning-models.md):

@@ -22,6 +22,8 @@ For basic optimization concepts, see
 | Focus on hard examples | `SIMBA` | Medium |
 | Multi-objective optimization | `GEPA` | High |
 | Explore several optimizers, then continue the winner | `Omni` | High |
+| Let one research agent own an experiment loop | `AutoResearch` | High |
+| Generate batches from a scored frontier | `MetaHarness` | High |
 | Combine multiple strategies | `Ensemble` | Low |
 
 ### Decision Tree
@@ -41,6 +43,7 @@ flowchart TB
   Optimize -->|Handle hard cases better| SIMBA["SIMBA"]
   Optimize -->|Balance quality vs cost| GEPA["GEPA"]
   Optimize -->|Unsure which optimizer will win| Omni["Omni"]
+  Optimize -->|Run an agentic research loop| Agentic["AutoResearch or MetaHarness"]
   Optimize -->|Combine multiple optimized modules| Ensemble["Ensemble"]
 ```
 
@@ -492,6 +495,47 @@ for the full composition contract, matched-budget guidance, candidate
 provenance, failure behavior, and differences from the GEPA
 implementation that inspired it.
 
+## AutoResearch and Meta-Harness
+
+These agentic teleprompters jointly edit instructions and templates
+across optimizable module-graph leaves.
+[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+keeps one research session alive and lets it choose sandbox, evaluate,
+or finish actions.
+[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+starts a fresh proposer for each iteration and keeps candidate selection
+in a trusted R outer loop.
+
+Both require an OS-sandboxed runner by default:
+
+``` r
+
+runner <- mcp_repl_runner()
+
+tp <- MetaHarness(
+  metric = metric,
+  max_iterations = 6L,
+  max_candidates_per_iteration = 3L
+)
+
+compiled <- compile(
+  tp,
+  qa_module,
+  trainset,
+  valset = valset,
+  .llm = task_chat,
+  .agent_llm = proposer_chat,
+  runner = runner
+)
+```
+
+They use the shared optimizer ledger, preserve candidate lineage and
+per-example feedback, return the best partial program under budget
+exhaustion, and support deterministic checkpoint resume. See [Agentic
+Optimization with AutoResearch and
+Meta-Harness](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)
+for the sandbox, budget, provenance, and composition contracts.
+
 ## Ensemble
 
 Combines multiple compiled modules using voting or aggregation
@@ -691,6 +735,8 @@ stopped between checkpointed runs is not charged.
 |----|---:|---:|
 | `BootstrapFewShot` (module and pipeline) | Yes | Yes, by training row |
 | `MIPROv2` | Yes | Yes, through demo generation and BO evaluation rows |
+| `AutoResearch` | Yes | Yes, by experiment |
+| `MetaHarness` | Yes | Yes, by candidate and iteration |
 | `GEPA` | Yes | Not yet |
 | `SIMBA` | Yes | Not yet |
 | `COPRO` | Yes | Not yet |
@@ -868,6 +914,8 @@ session_cost()  # Total cost so far
 | `SIMBA` | Hard Example Demos | Medium (50+) | Medium |
 | `GEPA` | Multi-objective | High (100+) | High |
 | `Omni` | Optimizer composition | High (100+) | High |
+| `AutoResearch` | Agent-owned program search | Medium (30+) | High |
+| `MetaHarness` | Frontier-driven program search | Medium (30+) | High |
 | `Ensemble` | Combines modules | N/A | Varies |
 
 ## Further Reading

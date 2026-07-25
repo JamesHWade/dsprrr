@@ -129,6 +129,8 @@ Tool use, code execution, RAG, and recursive language models
   : Create an R Code Runner
 - [`r-code-runner`](https://jameshwade.github.io/dsprrr/reference/r-code-runner.md)
   : R Code Execution Backend
+- [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+  : Posit mcp-repl Code Runner
 - [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
   : Create a Program of Thought Module
 - [`module-program-of-thought`](https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.md)
@@ -227,6 +229,12 @@ Automated prompt optimization strategies
 - [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
   [`print(`*`<Omni>`*`)`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
   : Omni Teleprompter
+- [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  [`print(`*`<AutoResearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  : AutoResearch Teleprompter
+- [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  [`print(`*`<MetaHarness>`*`)`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  : Meta-Harness Teleprompter
 - [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
   SIMBA Teleprompter
 - [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) :
@@ -406,6 +414,12 @@ Extract outputs, costs, and display formatted results
   : Print method for BootstrapFewShotWithRandomSearch
 - [`print(`*`<GEPA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.GEPA.md)
   : Print method for GEPA
+- [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  [`print(`*`<AutoResearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  : AutoResearch Teleprompter
+- [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  [`print(`*`<MetaHarness>`*`)`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  : Meta-Harness Teleprompter
 - [`print(`*`<SIMBA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.SIMBA.md)
   : Print method for SIMBA
 - [`print(`*`<COPRO>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.COPRO.md)

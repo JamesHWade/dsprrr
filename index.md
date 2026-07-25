@@ -298,6 +298,7 @@ dsprrr can automatically optimize your prompts using your data.
 
 - Few-Shot
 - Grid Search
+- Agentic
 - Evaluation
 
 ``` r
@@ -344,6 +345,35 @@ module_trials(classifier)
 ```
 
 **Result**: Find the best configuration for your task.
+
+``` r
+
+# Keep agent-proposed analysis inside an OS sandbox
+runner <- mcp_repl_runner()
+
+harness <- MetaHarness(
+  metric = metric_exact_match(field = "sentiment"),
+  max_iterations = 6L,
+  max_candidates_per_iteration = 3L
+)
+
+optimized <- compile(
+  harness,
+  classifier,
+  trainset,
+  valset = validation_data,
+  .llm = task_chat,
+  .agent_llm = proposer_chat,
+  runner = runner
+)
+```
+
+**Result**: Search coordinated instructions and templates across an
+entire module graph while dsprrr retains control of evaluation, budgets,
+lineage, and accepted state.
+
+[Run agentic optimization
+→](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)
 
 ``` r
 
@@ -406,6 +436,9 @@ vetiver.
 - [Compilation &
   Optimization](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
   — Improve with data
+- [Agentic Optimization
+  Harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)
+  — Run sandboxed AutoResearch and Meta-Harness loops
 - [Vitals
   Integration](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md)
   — Advanced evaluation
@@ -428,5 +461,7 @@ dsprrr integrates with much of Posit’s LLM ecosystem:
 | [ellmer](https://ellmer.tidyverse.org) | Chat with LLMs from R |
 | [vitals](https://vitals.tidyverse.org) | LLM evaluation framework |
 | [shinychat](https://posit-dev.github.io/shinychat/) | Chat UIs for Shiny |
+| [mcptools](https://posit-dev.github.io/mcptools/) | Connect R programs to MCP tools |
+| [mcp-repl](https://github.com/posit-dev/mcp-repl) | Persistent OS-sandboxed R execution |
 
 Inspired by [DSPy](https://dspy.ai) from Stanford NLP.

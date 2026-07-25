@@ -58,6 +58,7 @@
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
     <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
   </ul></li>
 <li class="nav-item dropdown">
@@ -90,8 +91,10 @@
 <p>First development changelog. dsprrr is experimental; the API may change.</p>
 <div class="section level3">
 <h3 id="new-features-0-0-0-9000">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-0-9000"></a></h3>
-<ul><li>
-<code><a href="../reference/Omni.html">Omni()</a></code> explores multiple teleprompters from the same seed, selects their best program with one shared validation metric, and runs a fresh continuation optimizer without allowing a regressing stage to replace a better candidate.</li>
+<ul><li><p><code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> runs a persistent, provider-neutral research agent over validated multi-module instruction and template snapshots. The agent can request OS-sandboxed R experiments, branch from prior candidates, and choose when to finish while dsprrr owns evaluation, budgets, lineage, checkpoints, and best-partial selection.</p></li>
+<li><p><code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> connects code-executing modules and agentic optimizers to Posit’s persistent <code>mcp-repl</code> R runtime with OS-enforced workspace-write sandboxing and network access disabled by default.</p></li>
+<li><p><code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> uses fresh proposer sessions to generate bounded candidate batches from a persisted scored frontier. Its trusted R outer loop validates, deduplicates, evaluates, checkpoints, and selects joint edits across module graphs.</p></li>
+<li><p><code><a href="../reference/Omni.html">Omni()</a></code> explores multiple teleprompters from the same seed, selects their best program with one shared validation metric, and runs a fresh continuation optimizer without allowing a regressing stage to replace a better candidate.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-0-0-9000">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-0-9000"></a></h3>

@@ -84,6 +84,7 @@
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
     <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
   </ul>
 </li>
@@ -465,6 +466,17 @@ budget for state-of-the-art results.</p>
 explore the prompt space. Good when you have compute budget and want
 creative exploration.</p>
 </div>
+<div class="section level3">
+<h3 id="autoresearch-and-meta-harness-agentic-program-search">AutoResearch and Meta-Harness: Agentic Program Search<a class="anchor" aria-label="anchor" href="#autoresearch-and-meta-harness-agentic-program-search"></a>
+</h3>
+<p>These harnesses use an LLM as an experiment proposer while dsprrr
+retains the trusted evaluator, budget ledger, and accepted program
+state. <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> gives one persistent agent ownership
+of the experiment loop; <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> evaluates bounded
+batches from fresh proposer sessions and maintains a scored frontier.
+Both can edit several module-graph components in one candidate and
+require OS-sandboxed code execution by default.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="choosing-an-optimizer">Choosing an Optimizer<a class="anchor" aria-label="anchor" href="#choosing-an-optimizer"></a>
@@ -477,7 +489,8 @@ creative exploration.</p>
   Start --&gt;|Specific instruction variants to test| Grid["GridSearchTeleprompter"]
   Start --&gt;|Best results with compute budget| MIPRO["MIPROv2 or BootstrapFewShotWithRandomSearch"]
   Start --&gt;|Diverse inputs, need adaptive demos| KNN["KNNFewShot"]
-  Start --&gt;|Explore creatively| GEPA["GEPA"]</code></pre>
+  Start --&gt;|Explore creatively| GEPA["GEPA"]
+  Start --&gt;|Search a multi-module program with an agent| Harness["AutoResearch or MetaHarness"]</code></pre>
 </div>
 <div class="section level2">
 <h2 id="the-evaluation-loop">The Evaluation Loop<a class="anchor" aria-label="anchor" href="#the-evaluation-loop"></a>
@@ -576,6 +589,14 @@ optimizer:</p>
 <tr class="odd">
 <td>GEPA</td>
 <td>population × generations × examples</td>
+</tr>
+<tr class="even">
+<td>AutoResearch</td>
+<td>baseline + agent-selected experiments</td>
+</tr>
+<tr class="odd">
+<td>MetaHarness</td>
+<td>baseline + iterations × candidates per iteration</td>
 </tr>
 </tbody>
 </table>

@@ -70,6 +70,8 @@ feedback injection.
 | `BootstrapFewShotWithOptuna`, `AvatarOptimizer`, `InferRules` | — | Niche/legacy in DSPy; not planned |
 | — | `GridSearchTeleprompter`, [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) | dsprrr addition: tidymodels-style grid search over module parameters |
 | — | `Omni` | dsprrr addition: independent best-of exploration plus a fresh continuation optimizer, with common validation scoring and optional mirai concurrency |
+| — | `AutoResearch` | dsprrr addition: persistent research-agent loop over validated, jointly editable module snapshots with sandboxed R analysis |
+| — | `MetaHarness` | dsprrr addition: fresh batch proposers plus host-owned frontier selection, lineage, budgets, and checkpoint resume |
 
 ### GEPA feedback metrics
 
