@@ -48,7 +48,7 @@ Suggests:
     coro,
     dials,
     knitr,
-    mcptools,
+    mcptools (>= 1.0.1),
     parsnip,
     pins,
     pkgload,
@@ -94,6 +94,7 @@ Collate:
     'module-knn.R'
     'module-multichain.R'
     'module-predict.R'
+    'module-flex.R'
     'module-program-of-thought.R'
     'module-rag.R'
     'module-react-doc.R'
@@ -125,6 +126,7 @@ Collate:
     'teleprompter-bootstrap-rs.R'
     'teleprompter-copro.R'
     'teleprompter-ensemble.R'
+    'teleprompter-gepa-flex.R'
     'teleprompter-gepa.R'
     'teleprompter-harness.R'
     'teleprompter-knn.R'

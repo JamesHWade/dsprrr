@@ -34,7 +34,13 @@
 #' deterministic tests. It must be a function with the mcp-repl tool contract:
 #' `repl(input, timeout_ms)`. Because dsprrr did not launch that function's
 #' server, its runner policy is deliberately marked unverified and it is
-#' rejected by optimizers that require an OS sandbox.
+#' rejected by optimizers that require an OS sandbox. Calling `$close()` makes
+#' the wrapper terminal but does not close that caller-managed connection.
+#'
+#' A managed runner captures and closes only the mcp-repl transport it starts.
+#' Some supported mcptools versions do not expose public per-server teardown,
+#' so dsprrr uses a guarded compatibility shim and fails setup if deterministic
+#' ownership cannot be captured. This path is tested against mcptools 1.0.1.
 #'
 #' @param repl Optional function implementing the mcp-repl `repl` tool.
 #' @param command Path or command name for the `mcp-repl` executable.
@@ -143,14 +149,17 @@ mcp_repl_runner <- function(
   }
 
   managed_connection <- is.null(repl)
+  close_connection <- NULL
   if (managed_connection) {
-    repl <- mcp_repl_tool(
+    managed <- mcp_repl_tool(
       command = command,
       interpreter = interpreter,
       sandbox = sandbox,
       oversized_output = oversized_output,
       extra_args = extra_args
     )
+    repl <- managed$repl
+    close_connection <- managed$close
   }
   if (!is.function(repl)) {
     cli::cli_abort(
@@ -164,7 +173,9 @@ mcp_repl_runner <- function(
     max_output_chars = as.integer(max_output_chars),
     sandbox = sandbox,
     sandbox_verified = managed_connection,
-    oversized_output = oversized_output
+    oversized_output = oversized_output,
+    close_connection = close_connection,
+    connection_owned = managed_connection
   )
 }
 
@@ -204,6 +215,20 @@ mcp_repl_tool <- function(
     oversized_output = oversized_output,
     interpreter = interpreter
   )
+  process_key <- paste(c(unname(command_path), args), collapse = " ")
+  process_snapshot <- tryCatch(
+    mcp_repl_registry_processes(mcp_repl_registry()),
+    error = function(condition) {
+      cli::cli_abort(
+        c(
+          "Could not capture the managed mcp-repl lifecycle before startup",
+          "i" = "The installed {.pkg mcptools} version does not expose the process state dsprrr needs for deterministic teardown."
+        ),
+        class = "dsprrr_mcp_repl_lifecycle_error",
+        parent = condition
+      )
+    }
+  )
   config <- list(mcpServers = list())
   config$mcpServers[[server_name]] <- list(
     command = unname(command_path),
@@ -216,7 +241,50 @@ mcp_repl_tool <- function(
     pretty = TRUE
   )
 
+  close <- NULL
+  handed_off <- FALSE
+  cleanup_done <- FALSE
+  cleanup_setup <- function() {
+    if (cleanup_done) {
+      return(NULL)
+    }
+    cleanup_done <<- TRUE
+    if (is.function(close)) {
+      return(tryCatch(
+        {
+          close()
+          NULL
+        },
+        interrupt = function(condition) condition,
+        error = function(condition) condition
+      ))
+    }
+    mcp_repl_best_effort_close(
+      server_name,
+      process_snapshot = process_snapshot,
+      process_key = process_key
+    )
+  }
+  # Register cleanup before asking mcptools to start the configured server:
+  # startup can fail after partially populating its internal registry.
+  on.exit(
+    if (!handed_off) {
+      try(cleanup_setup(), silent = TRUE)
+    },
+    add = TRUE
+  )
+
   tools <- mcptools::mcp_tools(config = config_path)
+  close <- tryCatch(
+    mcp_repl_managed_closer(server_name),
+    error = function(condition) {
+      cleanup_error <- cleanup_setup()
+      if (inherits(cleanup_error, "condition")) {
+        attr(condition, "dsprrr_interpreter_close_error") <- cleanup_error
+      }
+      stop(condition)
+    }
+  )
   tool_names <- vapply(
     tools,
     function(tool) {
@@ -231,7 +299,225 @@ mcp_repl_tool <- function(
       "i" = "Exposed tools: {.val {tool_names[nzchar(tool_names)]}}"
     ))
   }
-  tools[[repl_index]]
+  bundle <- list(
+    repl = tools[[repl_index]],
+    close = close
+  )
+  handed_off <- TRUE
+  bundle
+}
+
+# Some supported mcptools versions do not expose a public connection-close API.
+# Keep access to the internal registry behind guarded compatibility shims.
+mcp_repl_registry <- function() {
+  namespace <- asNamespace("mcptools")
+  registry <- get("the", namespace)
+  if (!is.environment(registry)) {
+    stop("mcptools registry is unavailable")
+  }
+  registry
+}
+
+mcp_repl_registry_processes <- function(registry) {
+  processes <- registry$server_processes %||% list()
+  if (!is.list(processes)) {
+    stop("mcptools process registry is unavailable")
+  }
+  processes
+}
+
+mcp_repl_process_is_in <- function(process, processes) {
+  length(processes) > 0L &&
+    any(vapply(processes, identical, logical(1), y = process))
+}
+
+mcp_repl_stop_process <- function(process) {
+  if (is.null(process)) {
+    return(FALSE)
+  }
+  alive <- tryCatch(
+    isTRUE(process$is_alive()),
+    interrupt = function(condition) NA,
+    error = function(condition) NA
+  )
+  if (identical(alive, FALSE)) {
+    return(TRUE)
+  }
+  tryCatch(
+    {
+      process$kill()
+      TRUE
+    },
+    interrupt = function(condition) FALSE,
+    error = function(condition) FALSE
+  )
+}
+
+mcp_repl_prune_process <- function(registry, process) {
+  if (is.null(process)) {
+    return(invisible(NULL))
+  }
+  processes <- mcp_repl_registry_processes(registry)
+  keep <- !vapply(processes, identical, logical(1), y = process)
+  registry$server_processes <- processes[keep]
+  invisible(NULL)
+}
+
+mcp_repl_close_captured <- function(
+  registry,
+  server_name,
+  transport,
+  process,
+  close_transport
+) {
+  transport_error <- NULL
+  transport_closed <- FALSE
+  if (!is.null(transport) && is.function(close_transport)) {
+    transport_closed <- tryCatch(
+      {
+        close_transport(transport)
+        TRUE
+      },
+      interrupt = function(condition) {
+        transport_error <<- condition
+        FALSE
+      },
+      error = function(condition) {
+        transport_error <<- condition
+        FALSE
+      }
+    )
+  }
+
+  process_closed <- if (is.null(process)) {
+    FALSE
+  } else {
+    mcp_repl_stop_process(process)
+  }
+  closed <- if (is.null(process)) transport_closed else process_closed
+  if (!closed) {
+    cli::cli_abort(
+      "Managed mcp-repl transport could not be closed",
+      class = "dsprrr_mcp_repl_lifecycle_error",
+      parent = transport_error
+    )
+  }
+
+  current <- registry$mcp_servers[[server_name]]
+  if (
+    !is.null(current) &&
+      (identical(current$transport, transport) ||
+        (!is.null(process) && identical(current$process, process)))
+  ) {
+    registry$mcp_servers[[server_name]] <- NULL
+  }
+  mcp_repl_prune_process(registry, process)
+  invisible(NULL)
+}
+
+mcp_repl_best_effort_close <- function(
+  server_name,
+  process_snapshot = list(),
+  process_key = NULL
+) {
+  tryCatch(
+    {
+      namespace <- asNamespace("mcptools")
+      registry <- mcp_repl_registry()
+      server <- registry$mcp_servers[[server_name]]
+      close_transport <- tryCatch(
+        get("mcp_transport_close", namespace),
+        error = function(condition) NULL
+      )
+
+      if (!is.null(server)) {
+        transport <- server$transport
+        process <- transport$process %||% server$process
+        mcp_repl_close_captured(
+          registry,
+          server_name,
+          transport,
+          process,
+          close_transport
+        )
+        return(NULL)
+      }
+
+      processes <- mcp_repl_registry_processes(registry)
+      is_new <- !vapply(
+        processes,
+        mcp_repl_process_is_in,
+        logical(1),
+        processes = process_snapshot
+      )
+      if (!is.null(process_key) && !is.null(names(processes))) {
+        is_new <- is_new & names(processes) == process_key
+      }
+      candidates <- processes[is_new]
+      if (length(candidates) == 0L) {
+        return(NULL)
+      }
+      if (length(candidates) != 1L) {
+        stop("managed mcp-repl startup left ambiguous process state")
+      }
+      process <- candidates[[1L]]
+      mcp_repl_close_captured(
+        registry,
+        server_name,
+        transport = NULL,
+        process = process,
+        close_transport = NULL
+      )
+      NULL
+    },
+    interrupt = function(condition) condition,
+    error = function(condition) condition
+  )
+}
+
+mcp_repl_managed_closer <- function(server_name) {
+  namespace <- asNamespace("mcptools")
+  registry <- tryCatch(mcp_repl_registry(), error = function(e) NULL)
+  close_transport <- tryCatch(
+    get("mcp_transport_close", namespace),
+    error = function(e) NULL
+  )
+  server <- if (is.environment(registry)) {
+    registry$mcp_servers[[server_name]]
+  } else {
+    NULL
+  }
+  if (
+    is.null(server) ||
+      is.null(server$transport) ||
+      !is.function(close_transport)
+  ) {
+    cli::cli_abort(
+      c(
+        "Could not capture the managed mcp-repl lifecycle",
+        "i" = "The installed {.pkg mcptools} version does not expose the transport state dsprrr needs for deterministic teardown."
+      ),
+      class = "dsprrr_mcp_repl_lifecycle_error"
+    )
+  }
+
+  transport <- server$transport
+  process <- transport$process %||% server$process
+  closed <- FALSE
+  function() {
+    if (closed) {
+      return(invisible(NULL))
+    }
+    mcp_repl_close_captured(
+      registry,
+      server_name,
+      transport,
+      process,
+      close_transport
+    )
+    closed <<- TRUE
+    invisible(NULL)
+  }
 }
 
 validate_mcp_repl_extra_args <- function(extra_args) {
@@ -285,6 +571,9 @@ McpReplRunner <- R6::R6Class(
     sandbox_verified = NULL,
     oversized_output = NULL,
     control_frame_limit = 3000L,
+    close_connection = NULL,
+    connection_owned = FALSE,
+    closed = FALSE,
 
     initialize = function(
       repl,
@@ -292,7 +581,9 @@ McpReplRunner <- R6::R6Class(
       max_output_chars,
       sandbox,
       sandbox_verified,
-      oversized_output
+      oversized_output,
+      close_connection = NULL,
+      connection_owned = FALSE
     ) {
       self$repl <- repl
       self$timeout <- timeout
@@ -300,9 +591,12 @@ McpReplRunner <- R6::R6Class(
       self$sandbox <- sandbox
       self$sandbox_verified <- isTRUE(sandbox_verified)
       self$oversized_output <- oversized_output
+      self$close_connection <- close_connection
+      self$connection_owned <- isTRUE(connection_owned)
     },
 
     execute = function(code, context = list(), .control_nonce = NULL) {
+      private$assert_open()
       if (!is.character(code) || length(code) != 1L || is.na(code)) {
         cli::cli_abort("{.arg code} must be a single non-missing string")
       }
@@ -385,6 +679,7 @@ McpReplRunner <- R6::R6Class(
     },
 
     reset = function() {
+      private$assert_open()
       response <- tryCatch(
         self$repl(
           input = "\u0004",
@@ -414,6 +709,20 @@ McpReplRunner <- R6::R6Class(
       invisible(self)
     },
 
+    close = function() {
+      if (self$closed) {
+        return(invisible(self))
+      }
+      # Terminal state is committed before teardown so a failing closer cannot
+      # make later calls reuse a partially closed interpreter or trigger an
+      # implicit lifecycle retry from the finalizer.
+      self$closed <- TRUE
+      if (is.function(self$close_connection)) {
+        self$close_connection()
+      }
+      invisible(self)
+    },
+
     policy = function() {
       if (!self$sandbox_verified) {
         return(list(
@@ -422,6 +731,7 @@ McpReplRunner <- R6::R6Class(
           sandboxed = FALSE,
           process_isolation = NA,
           persistent = TRUE,
+          connection_owned = FALSE,
           filesystem_access = "unknown",
           network_access = "unknown",
           sandbox_enforcement = "unverified",
@@ -435,6 +745,7 @@ McpReplRunner <- R6::R6Class(
         sandboxed = TRUE,
         process_isolation = TRUE,
         persistent = TRUE,
+        connection_owned = self$connection_owned,
         filesystem_access = self$sandbox,
         network_access = "disabled",
         sandbox_enforcement = "operating-system",
@@ -461,6 +772,25 @@ McpReplRunner <- R6::R6Class(
         trust_bullet
       ))
       invisible(self)
+    }
+  ),
+
+  private = list(
+    assert_open = function() {
+      if (self$closed) {
+        cli::cli_abort(
+          "The mcp-repl runner is closed",
+          class = c(
+            "dsprrr_mcp_repl_closed_error",
+            "dsprrr_interpreter_closed_error"
+          )
+        )
+      }
+      invisible(NULL)
+    },
+
+    finalize = function() {
+      try(self$close(), silent = TRUE)
     }
   )
 )

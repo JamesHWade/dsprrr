@@ -14,17 +14,25 @@
 #' 2. Agent iteratively calls tools or executes code until it has enough info
 #' 3. Agent produces final structured answer
 #'
-#' Security: Code execution requires explicit opt-in via a runner parameter.
+#' Security: Code execution requires explicit opt-in via `runner` or
+#' `interpreter_factory`.
 #' The built-in runner uses a separate process but is NOT a security sandbox.
 #' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
 #' runner backed by OS-level sandboxing.
 #'
-#' Runner lifecycle: a `CodeActModule` reuses the runner object supplied at
-#' construction. A persistent backend therefore retains state between separate
-#' `forward()` calls until `runner$reset()` is called. Do not share one
-#' persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr
-#' does not yet expose an interpreter factory that creates and tears down a
-#' fresh backend per invocation.
+#' Runner lifecycle: supply exactly one runtime source. `runner` is
+#' caller-owned, reused across calls, and never closed by dsprrr. The backend determines
+#' whether execution state persists and whether `reset()` is available;
+#' serialize access to stateful backends. `interpreter_factory` is a
+#' zero-argument function that returns a fresh runner implementing `execute()`,
+#' `policy()`, and `close()`. The module owns that runner for one invocation and
+#' calls `close()` exactly once on success, error, or interrupt. Any retained
+#' code tool becomes terminal after that close.
+#'
+#' [run_async()], [stream_async()], and a module's `$stream()` method reject
+#' CodeAct because their direct provider path would bypass execution. The
+#' [run_stream()] one-shot `forward()` fallback remains available, but an actual
+#' token-stream request is rejected before provider or factory work.
 #'
 #' @examples
 #' \dontrun{
@@ -59,18 +67,25 @@ NULL
 #' @description
 #' Factory function to create a CodeActModule that can use both tools and
 #' R code execution to solve problems.
+#' Use [run()] to execute it. Generic async and module `$stream()` entry points
+#' reject CodeAct graphs before provider or factory work. [run_stream()]
+#' preserves the synchronous `forward()` fallback unless a matching
+#' token-stream request is active; that request is rejected first.
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
 #' @param tools List of ellmer ToolDef objects for the agent to use. Non-empty
 #'   list element names become the registered tool names; unnamed elements keep
 #'   their ToolDef name. Effective names may contain only letters, numbers,
 #'   hyphens, and underscores.
-#' @param runner A code runner implementing `execute()` and `policy()`. Required.
-#'   The module retains this object; reset persistent runners between logically
-#'   isolated jobs and do not use one runner concurrently.
+#' @param runner Optional caller-owned code runner implementing `execute()` and
+#'   `policy()`. It is retained, never automatically closed, and must not be
+#'   shared concurrently when persistent.
 #' @param max_iterations Maximum outer agent iterations and maximum tool calls
 #'   within one invocation (default 10). Exceeding the inner tool-call budget
 #'   raises a `dsprrr_codeact_iteration_limit` error.
+#' @param interpreter_factory Optional zero-argument function returning a fresh
+#'   runner with `execute()`, `policy()`, and idempotent terminal `close()`.
+#'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param ... Additional arguments passed to the module
 #'
 #' @return A CodeActModule object
@@ -89,20 +104,16 @@ NULL
 code_act <- function(
   signature,
   tools = list(),
-  runner,
+  runner = NULL,
   max_iterations = 10L,
-  ...
+  ...,
+  interpreter_factory = NULL
 ) {
-  # Validate runner
-  if (missing(runner) || is.null(runner)) {
-    cli::cli_abort(c(
-      "CodeAct requires an explicit runner for code execution",
-      "i" = "Create one with: {.code runner <- r_code_runner()}",
-      "i" = "Then pass it: {.code code_act(..., runner = runner)}"
-    ))
-  }
-
-  validate_code_runner(runner)
+  binding <- normalize_code_runner_binding(
+    runner = runner,
+    interpreter_factory = interpreter_factory,
+    module_name = "CodeAct"
+  )
   tools <- validate_codeact_tools(tools)
 
   # Parse signature if string
@@ -122,7 +133,8 @@ code_act <- function(
   CodeActModule$new(
     signature = signature,
     tools = tools,
-    runner = runner,
+    runner = binding$runner,
+    interpreter_factory = binding$interpreter_factory,
     max_iterations = max_iterations,
     ...
   )
@@ -264,6 +276,9 @@ CodeActModule <- R6::R6Class(
     #' @field runner Code runner for code execution
     runner = NULL,
 
+    #' @field interpreter_factory Factory for an invocation-owned code runner
+    interpreter_factory = NULL,
+
     #' @field max_iterations Maximum iterations
     max_iterations = NULL,
 
@@ -276,15 +291,22 @@ CodeActModule <- R6::R6Class(
     #' @param max_iterations Maximum iterations
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
+    #' @param interpreter_factory Optional zero-argument invocation-owned runner
+    #'   factory. Supply exactly one of this and `runner`.
     initialize = function(
       signature,
       tools = list(),
-      runner,
+      runner = NULL,
       max_iterations = 10L,
       config = list(),
-      chat = NULL
+      chat = NULL,
+      interpreter_factory = NULL
     ) {
-      validate_code_runner(runner)
+      binding <- normalize_code_runner_binding(
+        runner = runner,
+        interpreter_factory = interpreter_factory,
+        module_name = "CodeAct"
+      )
       tools <- validate_codeact_tools(tools)
       max_iterations <- normalize_codeact_iterations(max_iterations)
       super$initialize(
@@ -294,7 +316,8 @@ CodeActModule <- R6::R6Class(
       )
 
       self$tools <- tools
-      self$runner <- runner
+      self$runner <- binding$runner
+      self$interpreter_factory <- binding$interpreter_factory
       self$max_iterations <- max_iterations
 
       # Store trajectory history
@@ -326,184 +349,197 @@ CodeActModule <- R6::R6Class(
       # Clone the chat for a fresh conversation
       llm <- base_llm$clone()
 
-      get_turns_safe <- function() {
-        tryCatch(
-          {
-            if (!is.function(llm$get_turns)) {
-              return(list())
-            }
-            llm$get_turns()
-          },
-          error = function(e) list()
-        )
-      }
-      start_turn_count <- length(get_turns_safe())
-
-      start_time <- Sys.time()
-      trajectory <- list()
-
-      # Build all tools including code execution
-      all_tools <- private$build_tools(inputs)
-
-      # Register tools with the chat
-      for (tool in all_tools) {
-        llm$register_tool(tool)
-      }
-
-      # Build the initial prompt
-      task_prompt <- private$build_task_prompt(inputs)
-
-      # ellmer can execute several tools inside one chat() call. Guard the
-      # callback itself so max_iterations constrains that hidden inner loop.
-      tool_calls <- 0L
-      if (is.function(llm$on_tool_request)) {
-        remove_tool_guard <- llm$on_tool_request(function(request) {
-          tool_calls <<- tool_calls + 1L
-          if (tool_calls > self$max_iterations) {
-            cli::cli_abort(
-              "CodeAct exceeded max_iterations ({self$max_iterations})",
-              class = "dsprrr_codeact_iteration_limit"
+      with_code_runner_lease(
+        self$runner,
+        self$interpreter_factory,
+        "CodeAct",
+        function(runner, lease) {
+          get_turns_safe <- function() {
+            tryCatch(
+              {
+                if (!is.function(llm$get_turns)) {
+                  return(list())
+                }
+                llm$get_turns()
+              },
+              error = function(e) list()
             )
           }
-          invisible(NULL)
-        })
-        if (is.function(remove_tool_guard)) {
-          on.exit(remove_tool_guard(), add = TRUE)
-        }
-      }
+          start_turn_count <- length(get_turns_safe())
 
-      # Run the agent loop - ellmer handles tool calling automatically
-      # We use chat() which processes tool calls internally
-      iterations <- 0
-      last_response <- NULL
-      consecutive_failures <- 0
-      max_consecutive_failures <- 3
+          start_time <- Sys.time()
+          trajectory <- list()
 
-      while (iterations < self$max_iterations) {
-        iterations <- iterations + 1
+          # Build all tools including code execution
+          all_tools <- private$build_tools(inputs, runner)
 
-        # Send message and let ellmer handle tool calls
-        response <- tryCatch(
-          {
-            if (iterations == 1) {
-              llm$chat(task_prompt)
-            } else {
-              # Continue the conversation if we're iterating
-              llm$chat(
-                "Continue working on the task. If you have enough information, provide your final answer."
-              )
+          # Register tools with the chat
+          for (tool in all_tools) {
+            llm$register_tool(tool)
+          }
+
+          # Build the initial prompt
+          task_prompt <- private$build_task_prompt(inputs)
+
+          # ellmer can execute several tools inside one chat() call. Guard the
+          # callback itself so max_iterations constrains that hidden inner loop.
+          tool_calls <- 0L
+          if (is.function(llm$on_tool_request)) {
+            remove_tool_guard <- llm$on_tool_request(function(request) {
+              tool_calls <<- tool_calls + 1L
+              if (tool_calls > self$max_iterations) {
+                cli::cli_abort(
+                  "CodeAct exceeded max_iterations ({self$max_iterations})",
+                  class = "dsprrr_codeact_iteration_limit"
+                )
+              }
+              invisible(NULL)
+            })
+            if (is.function(remove_tool_guard)) {
+              on.exit(remove_tool_guard(), add = TRUE)
             }
-          },
-          error = function(e) {
-            if (inherits(e, "dsprrr_codeact_iteration_limit")) {
-              stop(e)
-            }
-            consecutive_failures <<- consecutive_failures + 1
-            cli::cli_warn(c(
-              "Agent iteration {iterations} failed ({consecutive_failures}/{max_consecutive_failures})",
-              "x" = "Error: {e$message}"
-            ))
+          }
 
-            if (consecutive_failures >= max_consecutive_failures) {
-              cli::cli_abort(c(
-                "Agent aborted after {max_consecutive_failures} consecutive LLM failures",
-                "x" = "Last error: {e$message}",
-                "i" = "Check your API key, network connection, and rate limits"
+          # Run the agent loop - ellmer handles tool calling automatically
+          # We use chat() which processes tool calls internally
+          iterations <- 0
+          last_response <- NULL
+          consecutive_failures <- 0
+          max_consecutive_failures <- 3
+
+          while (iterations < self$max_iterations) {
+            iterations <- iterations + 1
+
+            # Send message and let ellmer handle tool calls
+            response <- tryCatch(
+              {
+                if (iterations == 1) {
+                  llm$chat(task_prompt)
+                } else {
+                  # Continue the conversation if we're iterating
+                  llm$chat(
+                    "Continue working on the task. If you have enough information, provide your final answer."
+                  )
+                }
+              },
+              error = function(e) {
+                if (inherits(e, "dsprrr_codeact_iteration_limit")) {
+                  stop(e)
+                }
+                consecutive_failures <<- consecutive_failures + 1
+                cli::cli_warn(c(
+                  "Agent iteration {iterations} failed ({consecutive_failures}/{max_consecutive_failures})",
+                  "x" = "Error: {e$message}"
+                ))
+
+                if (consecutive_failures >= max_consecutive_failures) {
+                  cli::cli_abort(c(
+                    "Agent aborted after {max_consecutive_failures} consecutive LLM failures",
+                    "x" = "Last error: {e$message}",
+                    "i" = "Check your API key, network connection, and rate limits"
+                  ))
+                }
+                NULL
+              }
+            )
+
+            if (!is.null(response)) {
+              consecutive_failures <- 0 # Reset on success
+              last_response <- response
+
+              # Check if the agent seems done (no pending tool calls)
+              turns <- get_turns_safe()
+              last_turn <- if (length(turns) > 0L) {
+                turns[[length(turns)]]
+              } else {
+                list()
+              }
+              current_turns <- if (length(turns) > start_turn_count) {
+                turns[seq.int(start_turn_count + 1L, length(turns))]
+              } else {
+                list()
+              }
+              observed_tool_calls <- sum(vapply(
+                current_turns,
+                private$count_tool_requests,
+                integer(1)
               ))
+              tool_calls <- max(tool_calls, observed_tool_calls)
+              if (tool_calls > self$max_iterations) {
+                cli::cli_abort(
+                  "CodeAct exceeded max_iterations ({self$max_iterations})",
+                  class = "dsprrr_codeact_iteration_limit"
+                )
+              }
+
+              # Record in trajectory
+              trajectory[[iterations]] <- list(
+                iteration = iterations,
+                response = response,
+                has_tool_calls = private$has_pending_tools(last_turn)
+              )
+
+              # If no tool calls in the response, we're done
+              if (!private$has_pending_tools(last_turn)) {
+                break
+              }
             }
-            NULL
           }
-        )
 
-        if (!is.null(response)) {
-          consecutive_failures <- 0 # Reset on success
-          last_response <- response
+          # Check for complete failure
+          if (is.null(last_response)) {
+            cli::cli_abort(c(
+              "Agent failed to produce any response in {iterations} iterations",
+              "i" = "All LLM calls failed. Check API connectivity and error messages above."
+            ))
+          }
 
-          # Check if the agent seems done (no pending tool calls)
-          turns <- get_turns_safe()
-          last_turn <- if (length(turns) > 0L) {
-            turns[[length(turns)]]
-          } else {
-            list()
-          }
-          current_turns <- if (length(turns) > start_turn_count) {
-            turns[seq.int(start_turn_count + 1L, length(turns))]
-          } else {
-            list()
-          }
-          observed_tool_calls <- sum(vapply(
-            current_turns,
-            private$count_tool_requests,
-            integer(1)
-          ))
-          tool_calls <- max(tool_calls, observed_tool_calls)
-          if (tool_calls > self$max_iterations) {
-            cli::cli_abort(
-              "CodeAct exceeded max_iterations ({self$max_iterations})",
-              class = "dsprrr_codeact_iteration_limit"
+          # Extract final answer using structured output
+          answer <- private$extract_final_answer(inputs, last_response, llm)
+
+          # Build output matching signature
+          output <- private$build_output(answer)
+
+          duration_ms <- as.numeric(
+            difftime(Sys.time(), start_time, units = "secs")
+          ) *
+            1000
+
+          # Store trajectory
+          if (trace) {
+            self$state$trajectories <- c(
+              self$state$trajectories,
+              list(list(
+                timestamp = start_time,
+                inputs = inputs,
+                trajectory = trajectory,
+                iterations = iterations
+              ))
             )
           }
 
-          # Record in trajectory
-          trajectory[[iterations]] <- list(
-            iteration = iterations,
-            response = response,
-            has_tool_calls = private$has_pending_tools(last_turn)
+          # Build metadata
+          metadata <- list(
+            model = "codeact",
+            iterations = iterations,
+            trajectory_length = length(trajectory),
+            tool_calls = tool_calls,
+            duration_ms = round(duration_ms, 2),
+            tools_available = codeact_tool_names(all_tools),
+            runner_policy = lease$policy_summary,
+            runner_lifecycle = if (lease$owned) {
+              "invocation-owned"
+            } else {
+              "caller-owned"
+            }
           )
 
-          # If no tool calls in the response, we're done
-          if (!private$has_pending_tools(last_turn)) {
-            break
-          }
+          tibble::tibble(
+            output = list(output),
+            chat = list(llm),
+            metadata = list(metadata)
+          )
         }
-      }
-
-      # Check for complete failure
-      if (is.null(last_response)) {
-        cli::cli_abort(c(
-          "Agent failed to produce any response in {iterations} iterations",
-          "i" = "All LLM calls failed. Check API connectivity and error messages above."
-        ))
-      }
-
-      # Extract final answer using structured output
-      answer <- private$extract_final_answer(inputs, last_response, llm)
-
-      # Build output matching signature
-      output <- private$build_output(answer)
-
-      duration_ms <- as.numeric(
-        difftime(Sys.time(), start_time, units = "secs")
-      ) *
-        1000
-
-      # Store trajectory
-      if (trace) {
-        self$state$trajectories <- c(
-          self$state$trajectories,
-          list(list(
-            timestamp = start_time,
-            inputs = inputs,
-            trajectory = trajectory,
-            iterations = iterations
-          ))
-        )
-      }
-
-      # Build metadata
-      metadata <- list(
-        model = "codeact",
-        iterations = iterations,
-        trajectory_length = length(trajectory),
-        tool_calls = tool_calls,
-        duration_ms = round(duration_ms, 2),
-        tools_available = codeact_tool_names(all_tools)
-      )
-
-      tibble::tibble(
-        output = list(output),
-        chat = list(llm),
-        metadata = list(metadata)
       )
     },
 
@@ -522,10 +558,28 @@ CodeActModule <- R6::R6Class(
         signature = self$signature,
         tools = self$tools,
         runner = self$runner,
+        interpreter_factory = self$interpreter_factory,
         max_iterations = self$max_iterations,
         config = self$config,
         chat = self$chat
       )
+    },
+
+    #' @description
+    #' Create a deep copy while preserving the configured runtime source
+    #' @return New CodeActModule with copied state
+    deepcopy = function() {
+      copied <- CodeActModule$new(
+        signature = self$signature,
+        tools = self$tools,
+        runner = self$runner,
+        max_iterations = self$max_iterations,
+        config = lapply(self$config, identity),
+        chat = self$chat,
+        interpreter_factory = self$interpreter_factory
+      )
+      copied$state <- lapply(self$state, identity)
+      copied
     },
 
     #' @description
@@ -554,7 +608,7 @@ CodeActModule <- R6::R6Class(
         "*" = "Signature: {sig_str}",
         "*" = "Max iterations: {.val {self$max_iterations}}",
         "*" = "User tools: {.val {tool_names}}",
-        "*" = "Code execution: enabled (timeout: {self$runner$timeout}s)"
+        "*" = "Runner: {code_runner_binding_label(self$runner, self$interpreter_factory)}"
       ))
       invisible(self)
     }
@@ -574,7 +628,7 @@ CodeActModule <- R6::R6Class(
     },
 
     #' Build all tools including code execution
-    build_tools = function(inputs) {
+    build_tools = function(inputs, runner) {
       # Start with user-provided tools
       all_tools <- stats::setNames(
         self$tools,
@@ -582,12 +636,11 @@ CodeActModule <- R6::R6Class(
       )
 
       # Add code execution tool
-      runner <- self$runner
       context <- inputs
 
       execute_r_code <- ellmer::tool(
         fun = function(code) {
-          result <- runner$execute(code, context = context)
+          result <- execute_code_runner(runner, code, context = context)
           if (result$success) {
             # Format successful result
             output <- paste0(

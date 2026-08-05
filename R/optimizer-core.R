@@ -740,6 +740,36 @@ optimizer_metadata_provider_calls <- function(program, metadata) {
     return(explicit)
   }
 
+  if (inherits(program, "FlexModule")) {
+    predictor_calls <- optimizer_usage_scalar(
+      metadata$predictor_calls,
+      integer = TRUE
+    )
+    step_metadata <- metadata$steps %||% list()
+    if (
+      is.na(predictor_calls) ||
+        length(step_metadata) != predictor_calls
+    ) {
+      return(predictor_calls)
+    }
+    calls <- vapply(
+      step_metadata,
+      function(step) {
+        item <- step$metadata %||% list()
+        item_explicit <- optimizer_usage_scalar(
+          item$provider_calls %||% item$n_llm_calls,
+          integer = TRUE
+        )
+        if (!is.na(item_explicit)) {
+          return(item_explicit)
+        }
+        if (identical(item$cache %||% "unknown", "hit")) 0L else 1L
+      },
+      integer(1)
+    )
+    return(optimizer_usage_sum(calls, integer = TRUE))
+  }
+
   if (identical(class(program)[1L], "PredictModule")) {
     cache_status <- metadata$cache %||% "unknown"
     if (identical(cache_status, "hit")) {
@@ -2549,6 +2579,9 @@ record_eval_result_outcomes <- function(budget, eval_result, stage) {
 optimizer_min_provider_calls <- function(program) {
   if (inherits(program, "FnModule")) {
     return(0L)
+  }
+  if (inherits(program, "FlexModule")) {
+    return(flex_predictor_call_count(program))
   }
   if (inherits(program, "PipelineModule")) {
     calls <- vapply(

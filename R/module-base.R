@@ -137,13 +137,13 @@ Module <- R6::R6Class(
       validate_signature_inputs(
         self$signature,
         inputs,
-        missing = "error",
-        extra = "warn",
-        type = "warn",
+        missing = if (inherits(self, "FlexModule")) "ignore" else "error",
+        extra = if (inherits(self, "FlexModule")) "error" else "warn",
+        type = if (inherits(self, "FlexModule")) "error" else "warn",
         context = "inputs"
       )
 
-      input_contract <- batch_input_contract(inputs)
+      input_contract <- module_input_contract(self, inputs)
 
       if (identical(input_contract$kind, "batch")) {
         if (
@@ -900,6 +900,8 @@ Module <- R6::R6Class(
     #'
     #' Returns a promise that resolves to the structured output.
     #' Useful for running multiple modules in parallel.
+    #' This direct provider path supports ordinary Predict modules only;
+    #' use [run()] for modules with specialized execution workflows.
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
@@ -912,6 +914,8 @@ Module <- R6::R6Class(
     #' Stream module output asynchronously
     #'
     #' Returns a promise that resolves to an async generator.
+    #' This direct provider path supports ordinary Predict modules only;
+    #' use [run()] for modules with specialized execution workflows.
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
@@ -924,7 +928,9 @@ Module <- R6::R6Class(
     #' Stream text output from the module
     #'
     #' Returns a coro generator that yields text chunks as they arrive.
-    #' Note: Streaming bypasses structured output - use run() for structured results.
+    #' Note: Streaming bypasses structured output; use [run()] for structured
+    #' results.
+    #' This direct provider path supports ordinary Predict modules only.
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
@@ -932,6 +938,7 @@ Module <- R6::R6Class(
     #' @return If callback is NULL, returns a coro generator. Otherwise, returns
     #'   the full response text invisibly after streaming completes.
     stream = function(..., .llm = NULL, callback = NULL) {
+      assert_direct_provider_async_supported(self, "stream")
       inputs <- list(...)
       request <- build_module_request(self, inputs)
       llm <- resolve_module_llm(self, .llm = .llm)

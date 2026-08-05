@@ -1,0 +1,208 @@
+---
+title: "Structural Optimization with Flex"
+description: >
+  Build and validate experimental predictor graphs with dsprrr's constrained
+  JSON intermediate representation.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Structural Optimization with Flex}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+`flex()` is an experimental module whose predictor structure is part of the
+program state. It gives optimizers a structural edit surface without giving
+them an arbitrary code-execution surface.
+
+That distinction is important. dsprrr Flex source is a bounded, versioned JSON
+intermediate representation (IR), parsed strictly as data. It is never
+evaluated as R or Python. This is intentionally narrower than DSPy's
+experimental Flex module and is not a claim of full DSPy Flex parity.
+
+## Start with the safe baseline
+
+With no `module_src`, `flex()` creates one Predict step over the outer
+signature:
+
+```{r baseline}
+library(dsprrr)
+
+program <- flex("question -> answer")
+program$module_src
+
+result <- run(
+  program,
+  question = "Why does ice float?",
+  .llm = ellmer::chat_openai()
+)
+```
+
+The `module_src` active binding is read-only and canonical. Equivalent input
+JSON is normalized to one stable representation, which supports reliable
+fingerprints, comparisons, and optimizer candidates.
+
+## Describe a two-step plan
+
+Version 1 source has exactly three top-level fields:
+
+- `schema_version`, currently the number `1`;
+- `steps`, a non-empty ordered array; and
+- `outputs`, a mapping for every output in the outer signature.
+
+Each step declares a unique `name`, an allowlisted `primitive`, a `signature`,
+and an `inputs` mapping. Optional `instructions` refine the step. Input and
+output references may point to an outer input (`$input.<field>`) or an output
+from an earlier step (`$step.<name>.<field>`).
+
+```{r two-step}
+source <- jsonlite::toJSON(
+  list(
+    schema_version = 1,
+    steps = list(
+      list(
+        name = "draft",
+        primitive = "chain_of_thought",
+        signature = "question -> draft",
+        instructions = "Work out the relevant causal mechanism.",
+        inputs = list(question = "$input.question")
+      ),
+      list(
+        name = "final",
+        primitive = "predict",
+        signature = "draft -> answer",
+        instructions = "Give a concise answer for a general reader.",
+        inputs = list(draft = "$step.draft.draft")
+      )
+    ),
+    outputs = list(answer = "$step.final.answer")
+  ),
+  auto_unbox = TRUE
+)
+
+program <- flex(
+  "question -> answer",
+  module_src = source,
+  max_predictor_calls = 4
+)
+```
+
+Version 1 permits only `predict` and `chain_of_thought`. Step names and
+references follow a restricted grammar, references can only point backwards,
+and every step-signature input needs exactly one compatible binding while every
+outer output needs exactly one compatible mapping. A plan may reuse or ignore
+outer inputs, although runtime inputs must still match the outer signature.
+`max_predictor_calls` bounds graph size before execution.
+Version 1 supports ellmer string, number, integer, boolean, enum, array, and
+non-empty object field types. Opaque `TypeJsonSchema` values and empty objects
+are rejected explicitly; the IR does not guess whether an arbitrary JSON
+Schema is assignable.
+
+## Replace a plan transactionally
+
+Use `bind()` to replace the active source:
+
+```{r bind}
+program$bind(source)
+program$module_src # The validated, canonical source is now active
+```
+
+dsprrr parses, validates, type-checks, and compiles the complete candidate
+before changing the module. If validation fails, the previous source and plan
+remain active. Direct assignment is rejected:
+
+```{r read-only}
+program$module_src <- source
+# Error: module_src is read-only; use bind()
+```
+
+Optimizer infrastructure can use
+`program$apply_optimization_params(list(module_src = candidate))` as the same
+transactional boundary. The module advertises its graph as an optimization
+parameter, but an optimizer only changes `module_src` if that optimizer
+explicitly supports structural candidates. Ordinary prompt optimization does
+not silently rewrite the plan.
+
+## Search complete plans with GEPA-lite
+
+`GEPA()` explicitly supports Flex structural candidates. For a program that
+contains Flex leaves, each candidate is a complete set of ordinary instruction
+values and complete canonical `module_src` values. Source text is never spliced
+or evaluated: dsprrr copies the program, validates and binds each source
+transactionally, then evaluates the resulting program.
+
+```{r gepa-flex}
+metric <- metric_exact_match(field = "answer")
+optimizer <- GEPA(
+  metric = metric,
+  population_size = 6L,
+  generations = 2L,
+  seed = 42L
+)
+
+optimized <- compile(
+  optimizer,
+  program,
+  trainset = question_answer_data,
+  .llm = llm
+)
+
+optimized$module_src
+optimized$config$optimizer$component_semantics
+```
+
+The structured proposer sees row-aligned inputs, expected output, prediction,
+and metric feedback. An invalid proposal receives aligned failure records for
+audit and budget accounting but is never selectable. GEPA-lite's Pareto
+selection ranks complete programs. It does not reproduce DSPy's independent
+per-component Pareto frontiers or inference-time search; those limits are
+recorded in `config$optimizer$component_semantics`.
+
+Freezing a module removes its components from this search. If the complete
+graph has no mutable components, GEPA returns a fresh unchanged program without
+calling the proposer or evaluator and records
+`skip_reason = "no_mutable_components"` in optimizer metadata.
+
+## Understand the safety boundary
+
+Flex controls what predictors run and how typed values flow between them. It
+does not make the LLM calls themselves trusted, and it does not provide a
+general programming environment.
+
+In particular, Flex source cannot:
+
+- evaluate R or Python expressions;
+- call arbitrary functions, tools, files, or network services;
+- construct module classes outside the allowlist;
+- reference a later step or create a cycle; or
+- exceed its source-size and predictor-call bounds.
+
+If a task needs generated R code, use `program_of_thought()`, `code_act()`, or
+`rlm_module()` with an explicitly selected code runner. Those modules have a
+separate execution and lifecycle contract; Flex does not bypass it.
+
+Flex currently runs through synchronous `run()`. `run_async()`,
+`stream_async()`, and module `$stream()` reject a program graph containing a
+Flex leaf before making a provider call. `run_stream()` without a matching
+token listener preserves the ordinary synchronous `forward()` path; a matching
+token-stream request is rejected before provider work so it cannot bypass
+Flex's validated step workflow.
+
+## Choose Flex deliberately
+
+Use `flex()` when the search question is structural: for example, whether a
+task benefits from an intermediate draft or a Chain-of-Thought step. Use a
+regular module when one known topology plus optimized instructions is enough.
+Use an explicit pipeline when humans should own and review the topology.
+
+Because Flex and its version 1 schema are experimental, persist the canonical
+`module_src`, pin package versions, and revalidate a candidate when upgrading
+dsprrr.

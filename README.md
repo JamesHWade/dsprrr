@@ -157,17 +157,21 @@ rag_pipeline <- pipeline(
 
 ### Optimization
 
-Automatically improve prompts using training data. dsprrr implements
-several optimizers from DSPy:
+Automatically improve programs using training data. dsprrr implements
+several optimizers inspired by DSPy:
 
 - **LabeledFewShot**: Add examples from your training set as
   demonstrations
 - **MIPROv2**: Joint optimization of instructions and examples using
   Bayesian search
-- **GEPA**: Reflection-based instruction optimization—sample efficient
-  and often outperforms manual prompts
+- **GEPA**: Reflection-based instruction and constrained Flex-structure
+  optimization with whole-program Pareto selection
 - **AutoResearch and MetaHarness**: Agentic, sandboxed search over
   multi-module instructions and templates
+
+`flex()` is an experimental module, not an optimizer. It exposes a
+validated JSON predictor plan that GEPA can search as a structural
+parameter.
 
 ``` r
 # Compile with few-shot examples
@@ -222,13 +226,16 @@ result <- run(
 
 ## Module types
 
-| Type                 | Use case                                |
-|----------------------|-----------------------------------------|
-| `predict`            | Basic text generation                   |
-| `react`              | Tool use (wraps ellmer tools)           |
-| `chain_of_thought`   | Step-by-step reasoning                  |
-| `multichain`         | Ensemble reasoning with multiple chains |
-| `program_of_thought` | Generate and execute R code             |
+| Type | Use case |
+|----|----|
+| `predict` | Basic text generation |
+| `react` | Tool use (wraps ellmer tools) |
+| `chain_of_thought` | Step-by-step reasoning |
+| `multichain` | Ensemble reasoning with multiple chains |
+| `program_of_thought` | Generate and execute R code |
+| `codeact` | Combine tools with R code execution |
+| `rlm` | Explore large context through an R REPL |
+| `flex` | Execute a validated, structurally optimizable predictor plan (experimental) |
 
 ``` r
 # ReAct agent with tools
@@ -240,6 +247,63 @@ agent <- module(
 
 # Chain of thought
 mod <- module(signature("question -> answer"), type = "chain_of_thought")
+```
+
+### Experimental structural programs
+
+`flex()` represents a predictor graph as a canonical, versioned JSON
+intermediate representation. Version 1 permits only allowlisted
+`predict` and `chain_of_thought` steps with typed references between
+them. The source is parsed as data—it is never evaluated as R or
+Python—and `module_src` is read-only; use `bind()` to validate and
+replace it transactionally.
+
+``` r
+program <- flex("question -> answer")
+program$module_src
+
+optimized <- compile(
+  GEPA(metric = metric_exact_match(field = "answer"), seed = 42L),
+  program,
+  trainset = question_answer_data,
+  .llm = llm
+)
+```
+
+This constrained design is intentionally narrower than DSPy’s
+experimental Flex module; dsprrr does not claim arbitrary-source or full
+Flex parity. GEPA-lite proposes complete source values, validates them
+transactionally, and ranks whole-program candidates. It does not
+reproduce DSPy’s independent per-component frontiers or inference-time
+search. See [Structural Optimization with
+Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html)
+for the JSON schema and safety boundary.
+
+### Code-runner lifecycles
+
+`program_of_thought()`, `code_act()`, and `rlm_module()` require exactly
+one of two execution bindings:
+
+- `runner` is a caller-owned object that dsprrr reuses and never closes.
+  Whether execution state persists, and whether `reset()` exists,
+  depends on the backend. Serialize stateful backends and reset them
+  between isolated jobs when the backend supports it.
+- `interpreter_factory` is a zero-argument function. dsprrr calls it
+  once per invocation, uses the fresh runner only for that invocation,
+  and closes it exactly once, including when execution fails.
+
+Use synchronous `run()` for these specialized modules. `run_async()`,
+`stream_async()`, and `$stream()` reject their direct provider path
+before creating a factory runner or making a provider call.
+`run_stream()` preserves its one-shot `forward()` fallback, but
+preflights and rejects an actual token stream request that would bypass
+a specialized step.
+
+``` r
+pot <- program_of_thought(
+  "question -> answer",
+  interpreter_factory = function() r_code_runner(timeout = 30)
+)
 ```
 
 ## ellmer compatibility

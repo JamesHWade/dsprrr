@@ -105,6 +105,44 @@ pin_module_config(board, "ticket-router-v2", optimized)
 </div>
 </div>
 
+## Experimental structural optimization
+
+`flex()` makes a predictor plan an optimization parameter without evaluating
+optimizer-authored R or Python. Its canonical, versioned JSON source permits
+only allowlisted Predict and Chain-of-Thought steps, typed input references,
+and explicit output wiring. Invalid candidates are rejected before they can
+replace the active plan.
+
+```r
+program <- flex("question -> answer")
+program$module_src
+
+optimized <- compile(
+  GEPA(metric = metric_exact_match(field = "answer"), seed = 42L),
+  program,
+  trainset = question_answer_data,
+  .llm = llm
+)
+```
+
+This is a deliberately constrained dsprrr design, not a claim of full DSPy
+Flex parity. GEPA-lite searches complete instruction and `module_src`
+components, rejects invalid sources before selection, and ranks whole-program
+candidates. It does not implement DSPy's per-component frontiers or
+inference-time search. [Read the Flex design and schema &rarr;](articles/flex-optimization.html)
+
+Code-executing modules now make ownership explicit. Pass `runner` for a
+caller-owned backend object that dsprrr reuses and never closes. State
+persistence and reset support are backend-specific. Alternatively, pass a
+mutually exclusive zero-argument `interpreter_factory` for a fresh
+invocation-owned runner that dsprrr closes exactly once. The factory contract
+applies to ProgramOfThought, CodeAct, and RLM. Use synchronous `run()` for
+these modules. `run_async()`, `stream_async()`, and module `$stream()` reject
+their program graphs before creating a factory runner or making a provider
+call. `run_stream()` without a matching token listener preserves the ordinary
+synchronous `forward()` path; a matching token-stream request is rejected
+before provider or factory work.
+
 ## Getting Started: Configure Your LLM
 
 <ul class="nav nav-tabs" id="providerTabs" role="tablist">

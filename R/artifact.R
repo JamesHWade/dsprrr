@@ -11,7 +11,11 @@
 #' `registry` to store stable IDs, or set `trusted = TRUE` to embed them. Embedded
 #' values are restored only when `trusted = TRUE` is also supplied while loading.
 #' Registry IDs are the recommended contract for tools, custom functions,
-#' retrievers, stores, and code runners.
+#' retrievers, stores, code runners, and interpreter factories. Format version 4
+#' records exactly one runner or factory for each code-executing module without
+#' invoking a factory during write or restore. Valid version 3 runner-only
+#' manifests are checked against their original schema and integrity digest,
+#' then upgraded in memory; other historical versions are rejected.
 #'
 #' Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 #' through a closed codec. Remote content URLs must be stable HTTPS URLs without
@@ -57,7 +61,11 @@
 #' @name program-artifact
 NULL
 
-artifact_format_version <- function() 3L
+artifact_format_version <- function() 4L
+
+artifact_supported_format_versions <- function() {
+  c(3L, artifact_format_version())
+}
 
 #' @rdname program-artifact
 #' @export
@@ -436,8 +444,10 @@ artifact_module_class <- function(module) {
   class
 }
 
-artifact_supported_module_classes <- function() {
-  c(
+artifact_supported_module_classes <- function(
+  version = artifact_format_version()
+) {
+  classes <- c(
     "ReactModule",
     "PredictModule",
     "PipelineModule",
@@ -453,6 +463,7 @@ artifact_supported_module_classes <- function() {
     "RLMModule",
     "RAGModule"
   )
+  if (version >= 4L) c(classes, "FlexModule") else classes
 }
 
 artifact_module_kind <- function(module) {
@@ -484,7 +495,8 @@ artifact_module_kind <- function(module) {
     ProgramOfThoughtModule = "program_of_thought",
     CodeActModule = "codeact",
     RLMModule = "rlm",
-    RAGModule = "rag"
+    RAGModule = "rag",
+    FlexModule = "flex"
   )
   kind
 }
@@ -506,6 +518,7 @@ artifact_expected_kinds <- function(class) {
     CodeActModule = "codeact",
     RLMModule = "rlm",
     RAGModule = "rag",
+    FlexModule = "flex",
     character()
   )
 }
@@ -718,16 +731,28 @@ artifact_serialize_fields <- function(
     ),
     ProgramOfThoughtModule = list(
       runner = runtime(module$runner, "runner"),
+      interpreter_factory = runtime(
+        module$interpreter_factory,
+        "interpreter_factory"
+      ),
       max_iters = module$max_iters,
       extract_answer = module$extract_answer
     ),
     CodeActModule = list(
       runner = runtime(module$runner, "runner"),
+      interpreter_factory = runtime(
+        module$interpreter_factory,
+        "interpreter_factory"
+      ),
       tools = runtime_list(module$tools, "tools"),
       max_iterations = module$max_iterations
     ),
     RLMModule = list(
       runner = runtime(module$runner, "runner"),
+      interpreter_factory = runtime(
+        module$interpreter_factory,
+        "interpreter_factory"
+      ),
       max_iterations = module$max_iterations,
       max_llm_calls = module$max_llm_calls,
       max_output_chars = module$max_output_chars,
@@ -741,6 +766,10 @@ artifact_serialize_fields <- function(
       retriever = runtime(module$retriever, "retriever"),
       k = module$k,
       context_format = module$context_format
+    ),
+    FlexModule = list(
+      module_src = module$module_src,
+      max_predictor_calls = module$max_predictor_calls
     )
   )
 }
@@ -2161,6 +2190,7 @@ restore_program_artifact <- function(
   registry <- artifact_validate_registry(registry)
   trusted <- artifact_validate_trusted(trusted)
   artifact_validate_manifest(artifact)
+  artifact <- artifact_upgrade_manifest(artifact)
 
   cache <- new.env(parent = emptyenv(), hash = TRUE)
   program <- artifact_build_node(
@@ -2230,13 +2260,13 @@ artifact_validate_manifest <- function(artifact) {
     malformed("format_version must be one integer.")
   }
   if (
-    version != artifact_format_version() ||
+    !version %in% artifact_supported_format_versions() ||
       version != as.integer(version)
   ) {
     cli::cli_abort(
       c(
         "Unsupported dsprrr program artifact version",
-        "x" = "Got version {.val {version}}; this package supports version {.val {artifact_format_version()}}."
+        "x" = "Got version {.val {version}}; this package supports versions {.val {artifact_supported_format_versions()}}."
       ),
       class = "dsprrr_artifact_unsupported_version"
     )
@@ -2299,7 +2329,7 @@ artifact_validate_manifest <- function(artifact) {
       ))
     }
     artifact_validate_child_refs(node$children, names(nodes), malformed)
-    artifact_validate_node_payload(node, malformed)
+    artifact_validate_node_payload(node, malformed, version = version)
   }
   edges <- artifact$graph$edges
   if (!artifact_is_plain_list(edges)) {
@@ -2327,6 +2357,35 @@ artifact_validate_manifest <- function(artifact) {
   artifact_validate_integrity(artifact)
   artifact_validate_dependencies(artifact$metadata)
   invisible(artifact)
+}
+
+artifact_upgrade_manifest <- function(artifact) {
+  if (!identical(as.integer(artifact$format_version), 3L)) {
+    return(artifact)
+  }
+
+  upgraded <- artifact
+  runtime_classes <- c(
+    "ProgramOfThoughtModule",
+    "CodeActModule",
+    "RLMModule"
+  )
+  for (id in names(upgraded$graph$nodes)) {
+    node <- upgraded$graph$nodes[[id]]
+    if (node$class %in% runtime_classes) {
+      runner_position <- match("runner", names(node$fields))
+      node$fields <- append(
+        node$fields,
+        list(interpreter_factory = NULL),
+        after = runner_position
+      )
+      upgraded$graph$nodes[[id]] <- node
+    }
+  }
+  upgraded$format_version <- artifact_format_version()
+  upgraded$integrity <- artifact_integrity(upgraded)
+  artifact_validate_manifest(upgraded)
+  upgraded
 }
 
 artifact_validate_restored_graph <- function(program, artifact) {
@@ -2421,7 +2480,7 @@ artifact_is_optional_number_scalar <- function(
   is.null(value) || artifact_is_number_scalar(value, whole, minimum)
 }
 
-artifact_validate_node_payload <- function(node, malformed) {
+artifact_validate_node_payload <- function(node, malformed, version) {
   expected_names <- c(
     "id",
     "path",
@@ -2441,7 +2500,7 @@ artifact_validate_node_payload <- function(node, malformed) {
   if (
     !is.character(node$class) ||
       length(node$class) != 1L ||
-      !node$class %in% artifact_supported_module_classes()
+      !node$class %in% artifact_supported_module_classes(version)
   ) {
     malformed(paste0("Node ", node$id, " has an unsupported class."))
   }
@@ -2470,7 +2529,7 @@ artifact_validate_node_payload <- function(node, malformed) {
   }
   artifact_validate_state_and_optimization(node, malformed)
   artifact_validate_provider_model(node$provider_model, node$id, malformed)
-  artifact_validate_fields(node, malformed)
+  artifact_validate_fields(node, malformed, version = version)
   artifact_validate_children_schema(node, malformed)
   invisible(node)
 }
@@ -2937,7 +2996,12 @@ artifact_validate_provider_model <- function(value, id, malformed) {
   invisible(value)
 }
 
-artifact_validate_fields <- function(node, malformed) {
+artifact_validate_fields <- function(node, malformed, version) {
+  runtime_binding_fields <- if (version >= 4L) {
+    c("runner", "interpreter_factory")
+  } else {
+    "runner"
+  }
   allowed <- switch(
     node$class,
     ReactModule = c("template", "demos", "max_iterations", "tools"),
@@ -2979,10 +3043,14 @@ artifact_validate_fields <- function(node, malformed) {
       "original_demos"
     ),
     FnModule = "forward_fn",
-    ProgramOfThoughtModule = c("runner", "max_iters", "extract_answer"),
-    CodeActModule = c("runner", "tools", "max_iterations"),
+    ProgramOfThoughtModule = c(
+      runtime_binding_fields,
+      "max_iters",
+      "extract_answer"
+    ),
+    CodeActModule = c(runtime_binding_fields, "tools", "max_iterations"),
     RLMModule = c(
-      "runner",
+      runtime_binding_fields,
       "max_iterations",
       "max_llm_calls",
       "max_output_chars",
@@ -2990,7 +3058,8 @@ artifact_validate_fields <- function(node, malformed) {
       "verbose",
       "tools"
     ),
-    RAGModule = c("store", "retriever", "k", "context_format")
+    RAGModule = c("store", "retriever", "k", "context_format"),
+    FlexModule = c("module_src", "max_predictor_calls")
   )
   if (
     !artifact_is_plain_list(node$fields) ||
@@ -3003,7 +3072,11 @@ artifact_validate_fields <- function(node, malformed) {
     paste0("graph.nodes.", node$id, ".fields"),
     drop_runtime_names = FALSE
   )
-  runtime_paths <- artifact_validate_nested_fields(node, malformed)
+  runtime_paths <- artifact_validate_nested_fields(
+    node,
+    malformed,
+    version = version
+  )
   for (i in seq_along(runtime_paths)) {
     artifact_validate_runtime_field(
       runtime_paths[[i]],
@@ -3013,7 +3086,7 @@ artifact_validate_fields <- function(node, malformed) {
   if (identical(node$class, "RLMModule")) {
     artifact_validate_provider_model(node$fields$sub_lm, node$id, malformed)
   }
-  artifact_validate_field_domains(node, malformed)
+  artifact_validate_field_domains(node, malformed, version = version)
   invisible(node$fields)
 }
 
@@ -3037,7 +3110,7 @@ artifact_validate_runtime_field <- function(value, path) {
   invisible(value)
 }
 
-artifact_validate_field_domains <- function(node, malformed) {
+artifact_validate_field_domains <- function(node, malformed, version) {
   invalid <- function(label = "class-specific field values") {
     malformed(paste0("Node ", node$id, " has invalid ", label, "."))
   }
@@ -3049,6 +3122,11 @@ artifact_validate_field_domains <- function(node, malformed) {
   }
   nonnegative_integer <- function(value) {
     artifact_is_number_scalar(value, whole = TRUE, minimum = 0)
+  }
+  valid_runtime_binding <- function(fields) {
+    has_runner <- !is.null(fields$runner)
+    has_factory <- !is.null(fields$interpreter_factory)
+    xor(has_runner, has_factory)
   }
 
   valid <- switch(
@@ -3084,18 +3162,27 @@ artifact_validate_field_domains <- function(node, malformed) {
       artifact_is_character_scalar(fields$feedback_template),
     KNNFewShotModule = artifact_validate_knn_fields(node, malformed),
     FnModule = !is.null(fields$forward_fn),
-    ProgramOfThoughtModule = !is.null(fields$runner) &&
+    ProgramOfThoughtModule = valid_runtime_binding(fields) &&
       positive_integer(fields$max_iters) &&
       artifact_is_logical_scalar(fields$extract_answer),
-    CodeActModule = !is.null(fields$runner) &&
+    CodeActModule = valid_runtime_binding(fields) &&
       positive_integer(fields$max_iterations),
-    RLMModule = !is.null(fields$runner) &&
+    RLMModule = valid_runtime_binding(fields) &&
       positive_integer(fields$max_iterations) &&
-      positive_integer(fields$max_llm_calls) &&
+      (if (version >= 4L) {
+        nonnegative_integer(fields$max_llm_calls)
+      } else {
+        positive_integer(fields$max_llm_calls)
+      }) &&
       positive_integer(fields$max_output_chars) &&
       artifact_is_logical_scalar(fields$verbose),
     RAGModule = positive_integer(fields$k) &&
       artifact_is_character_scalar(fields$context_format, nonempty = TRUE),
+    FlexModule = artifact_is_character_scalar(
+      fields$module_src,
+      nonempty = TRUE
+    ) &&
+      positive_integer(fields$max_predictor_calls),
     FALSE
   )
   if (!isTRUE(valid)) {
@@ -3187,7 +3274,8 @@ artifact_validate_children_schema <- function(node, malformed) {
     "ProgramOfThoughtModule",
     "CodeActModule",
     "RLMModule",
-    "RAGModule"
+    "RAGModule",
+    "FlexModule"
   )
   if (node$class %in% leaf_classes) {
     if (!artifact_is_plain_list(children) || length(children) != 0L) {
@@ -3234,7 +3322,7 @@ artifact_validate_children_schema <- function(node, malformed) {
   invisible(children)
 }
 
-artifact_validate_nested_fields <- function(node, malformed) {
+artifact_validate_nested_fields <- function(node, malformed, version) {
   runtime_collection <- function(values, label) {
     if (!artifact_is_plain_list(values)) {
       malformed(paste0("Node ", node$id, " has invalid ", label, "."))
@@ -3303,13 +3391,22 @@ artifact_validate_nested_fields <- function(node, malformed) {
       node$fields$input_text
     ),
     FnModule = list(node$fields$forward_fn),
-    ProgramOfThoughtModule = list(node$fields$runner),
+    ProgramOfThoughtModule = list(
+      node$fields$runner,
+      if (version >= 4L) node$fields$interpreter_factory else NULL
+    ),
     CodeActModule = c(
-      list(node$fields$runner),
+      list(
+        node$fields$runner,
+        if (version >= 4L) node$fields$interpreter_factory else NULL
+      ),
       runtime_collection(node$fields$tools, "tools")
     ),
     RLMModule = c(
-      list(node$fields$runner),
+      list(
+        node$fields$runner,
+        if (version >= 4L) node$fields$interpreter_factory else NULL
+      ),
       runtime_collection(node$fields$tools, "tools")
     ),
     RAGModule = list(node$fields$store, node$fields$retriever),
@@ -3784,6 +3881,7 @@ artifact_construct_module <- function(node, children, registry, trusted) {
     ProgramOfThoughtModule = ProgramOfThoughtModule$new(
       signature = signature,
       runner = runtime(fields$runner),
+      interpreter_factory = runtime(fields$interpreter_factory),
       max_iters = fields$max_iters,
       extract_answer = fields$extract_answer,
       config = config,
@@ -3793,6 +3891,7 @@ artifact_construct_module <- function(node, children, registry, trusted) {
       signature = signature,
       tools = runtime_list(fields$tools),
       runner = runtime(fields$runner),
+      interpreter_factory = runtime(fields$interpreter_factory),
       max_iterations = fields$max_iterations,
       config = config,
       chat = NULL
@@ -3800,6 +3899,7 @@ artifact_construct_module <- function(node, children, registry, trusted) {
     RLMModule = RLMModule$new(
       signature = signature,
       runner = runtime(fields$runner),
+      interpreter_factory = runtime(fields$interpreter_factory),
       max_iterations = fields$max_iterations,
       max_llm_calls = fields$max_llm_calls,
       max_output_chars = fields$max_output_chars,
@@ -3815,6 +3915,13 @@ artifact_construct_module <- function(node, children, registry, trusted) {
       retriever = runtime(fields$retriever),
       k = fields$k,
       context_format = fields$context_format,
+      config = config,
+      chat = NULL
+    ),
+    FlexModule = FlexModule$new(
+      signature = signature,
+      module_src = fields$module_src,
+      max_predictor_calls = fields$max_predictor_calls,
       config = config,
       chat = NULL
     ),

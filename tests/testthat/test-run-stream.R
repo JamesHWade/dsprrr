@@ -301,3 +301,52 @@ test_that("run_stream works across pipeline steps with status events", {
   # No traces recorded during streaming execution
   expect_length(p$state$traces, 0)
 })
+
+test_that("run_stream preserves specialized one-shot fallback execution", {
+  executed <- 0L
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      executed <<- executed + 1L
+      list(success = TRUE, result = 42L)
+    },
+    policy = function() {
+      list(
+        backend = "stream-fallback-test",
+        trust = "test-only",
+        sandboxed = TRUE,
+        persistent = FALSE
+      )
+    }
+  )
+  chat <- NULL
+  chat <- list(
+    clone = function(...) chat,
+    chat_structured = function(...) {
+      list(code = "42L", explanation = "constant")
+    },
+    chat = function(...) "42"
+  )
+  program <- program_of_thought(
+    "question -> answer",
+    runner = runner,
+    max_iters = 1L,
+    extract_answer = FALSE
+  )
+  events <- list()
+
+  result <- run_stream(
+    program,
+    question = "What is six times seven?",
+    .llm = chat,
+    on_status = function(event) {
+      events[[length(events) + 1L]] <<- event
+    }
+  )
+
+  expect_identical(result$answer, "42")
+  expect_identical(executed, 1L)
+  expect_identical(
+    vapply(events, `[[`, character(1), "type"),
+    c("step_start", "step_end")
+  )
+})

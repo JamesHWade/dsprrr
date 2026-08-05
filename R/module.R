@@ -4,8 +4,8 @@
 #' The primary function for creating executable LLM modules. Supports
 #' "predict" for standard structured prediction, "react" for ReAct-style
 #' tool-using modules, "chain_of_thought" for step-by-step reasoning,
-#' "multichain" for multi-chain comparison, and "program_of_thought" for
-#' code execution modules.
+#' "multichain" for multi-chain comparison, "program_of_thought" for code
+#' execution modules, and experimental "flex" for declarative predictor graphs.
 #'
 #' @param signature A Signature object defining the module's interface
 #' @param type Character string specifying the module type:
@@ -13,9 +13,11 @@
 #'   - `"react"`: ReAct-style module with tool support
 #'   - `"chain_of_thought"`: Adds step-by-step reasoning to the signature
 #'   - `"multichain"`: MultiChainComparison module for ensemble reasoning
-#'   - `"program_of_thought"`: Code execution module (requires runner)
-#'   - `"codeact"`: Hybrid agent with tools + code execution (requires runner)
-#'   - `"rlm"`: Recursive Language Model for REPL-based context exploration (requires runner)
+#'   - `"program_of_thought"`: Code execution module (requires a runtime source)
+#'   - `"codeact"`: Hybrid agent with tools + code execution (requires a runtime source)
+#'   - `"rlm"`: Recursive Language Model for REPL-based context exploration
+#'     (requires a runtime source)
+#'   - `"flex"`: Experimental declarative predictor graph
 #' @param tools Optional tools configuration:
 #'   - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef objects.
 #'   - for `type = "rlm"`: named list of R functions injected into the REPL.
@@ -25,8 +27,8 @@
 #'   caps tool calls within one invocation; exceeding that inner budget errors.
 #' @param M Number of reasoning chains for multichain (default: 3)
 #' @param temperature Temperature for multichain diversity (default: 0.7)
-#' @param runner Code runner implementing `execute()` and `policy()` for code
-#'   execution types. Create the built-in backend with `r_code_runner()`.
+#' @param runner Optional caller-owned code runner implementing `execute()` and
+#'   `policy()` for code execution types. It is never automatically closed.
 #' @param max_iters Maximum code repair iterations for program_of_thought
 #'   (default: 3), or the DSPy 3.3-compatible alias for RLM's
 #'   `max_iterations`. For RLM, supply only one spelling.
@@ -37,7 +39,16 @@
 #' @param config Optional configuration list
 #' @param chat Optional ellmer Chat object for LLM operations. If provided, the
 #'   module will use this Chat for all predictions unless overridden with `.llm`.
-#' @param ... Additional arguments for future module types
+#' @param interpreter_factory Optional zero-argument factory for
+#'   program-of-thought, CodeAct, and RLM modules. It creates one fresh runner
+#'   per invocation. It must implement terminal `close()`, which dsprrr calls
+#'   exactly once on success, error, or interrupt. Supply exactly one of
+#'   `runner` and `interpreter_factory` for code-executing types.
+#' @param module_src Optional version 1 declarative JSON source for
+#'   `type = "flex"`.
+#' @param max_predictor_calls Maximum predictor steps allowed by a Flex source.
+#' @param ... Additional arguments forwarded to [rlm_module()] when
+#'   `type = "rlm"`. Reserved and required to be empty for `type = "flex"`.
 #'
 #' @return A module object (R6) that can be executed with `run()`
 #' @export
@@ -95,7 +106,10 @@ module <- function(
   demos = list(),
   config = list(),
   chat = NULL,
-  ...
+  ...,
+  interpreter_factory = NULL,
+  module_src = NULL,
+  max_predictor_calls = 100L
 ) {
   # Validate signature
   if (!inherits(signature, "dsprrr::Signature")) {
@@ -131,9 +145,46 @@ module <- function(
       "multichain",
       "program_of_thought",
       "codeact",
-      "rlm"
+      "rlm",
+      "flex"
     )
   )
+
+  code_execution_types <- c("program_of_thought", "codeact", "rlm")
+  if (!type %in% code_execution_types && !is.null(interpreter_factory)) {
+    cli::cli_abort(
+      "{.arg interpreter_factory} is only supported for code-executing module types.",
+      class = "dsprrr_module_type_argument_error"
+    )
+  }
+  if (!identical(type, "flex") && !is.null(module_src)) {
+    cli::cli_abort(
+      "{.arg module_src} is only supported when {.code type = \"flex\"}.",
+      class = "dsprrr_module_type_argument_error"
+    )
+  }
+  if (!identical(type, "flex") && !missing(max_predictor_calls)) {
+    cli::cli_abort(
+      "{.arg max_predictor_calls} is only supported when {.code type = \"flex\"}.",
+      class = "dsprrr_module_type_argument_error"
+    )
+  }
+
+  if (
+    type %in%
+      code_execution_types &&
+      is.null(runner) &&
+      is.null(interpreter_factory)
+  ) {
+    cli::cli_abort(
+      c(
+        "{type} requires a runner or interpreter_factory",
+        "i" = "Use {.code runner = r_code_runner()} for a caller-owned runner.",
+        "i" = "Use {.code interpreter_factory = r_code_runner} for a fresh runner per invocation."
+      ),
+      class = "dsprrr_interpreter_binding_error"
+    )
+  }
 
   # Create the appropriate R6 module based on type
   mod <- switch(
@@ -169,50 +220,32 @@ module <- function(
       chat = chat
     ),
     program_of_thought = {
-      if (is.null(runner)) {
-        cli::cli_abort(c(
-          "program_of_thought requires a runner",
-          "i" = "Create one with: {.code runner <- r_code_runner()}",
-          "i" = "Then pass it: {.code module(..., runner = runner)}"
-        ))
-      }
       ProgramOfThoughtModule$new(
         signature = signature,
         runner = runner,
         max_iters = max_iters,
         extract_answer = extract_answer,
         config = config,
-        chat = chat
+        chat = chat,
+        interpreter_factory = interpreter_factory
       )
     },
     codeact = {
-      if (is.null(runner)) {
-        cli::cli_abort(c(
-          "codeact requires a runner",
-          "i" = "Create one with: {.code runner <- r_code_runner()}",
-          "i" = "Then pass it: {.code module(..., runner = runner)}"
-        ))
-      }
       CodeActModule$new(
         signature = signature,
         tools = tools %||% list(),
         runner = runner,
         max_iterations = max_iterations,
         config = config,
-        chat = chat
+        chat = chat,
+        interpreter_factory = interpreter_factory
       )
     },
     rlm = {
-      if (is.null(runner)) {
-        cli::cli_abort(c(
-          "rlm requires a runner",
-          "i" = "Create one with: {.code runner <- r_code_runner()}",
-          "i" = "Then pass it: {.code module(..., runner = runner)}"
-        ))
-      }
       rlm_args <- list(
         signature = signature,
         runner = runner,
+        interpreter_factory = interpreter_factory,
         tools = tools %||% list(),
         config = config,
         chat = chat
@@ -231,6 +264,16 @@ module <- function(
         rlm_args$max_iterations <- max_iterations
       }
       do.call(rlm_module, c(rlm_args, list(...)))
+    },
+    flex = {
+      rlang::check_dots_empty()
+      flex(
+        signature = signature,
+        module_src = module_src,
+        max_predictor_calls = max_predictor_calls,
+        config = config,
+        chat = chat
+      )
     },
     cli::cli_abort("Unknown module type: {type}")
   )

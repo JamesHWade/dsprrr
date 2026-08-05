@@ -1281,6 +1281,64 @@ test_that("RLM control frames authenticate and fail closed", {
   )
 })
 
+test_that("RLM never accepts control values from failed execution", {
+  failed_runner <- function(control_value) {
+    list(
+      execute = function(code, context = list(), ...) {
+        list(
+          success = FALSE,
+          result = control_value,
+          error = "execution failed"
+        )
+      },
+      policy = function() {
+        list(
+          backend = "failed-control-test",
+          trust = "test-only",
+          sandboxed = TRUE
+        )
+      }
+    )
+  }
+  failed_values <- list(
+    final = structure(
+      list(answer = "must not be accepted"),
+      class = c("rlm_final", "list"),
+      rlm_final = TRUE
+    ),
+    query = structure(
+      list(query = "must not run", context = NULL, batch = FALSE),
+      class = c("rlm_query_request", "list")
+    )
+  )
+
+  for (kind in names(failed_values)) {
+    runner <- failed_runner(failed_values[[kind]])
+    program <- rlm_module(
+      "question -> answer",
+      runner = runner,
+      sub_lm = list()
+    )
+    call_counter <- new.env(parent = emptyenv())
+    call_counter$count <- 0L
+
+    result <- program$.__enclos_env__$private$execute_with_rlm_tools(
+      code = "ignored",
+      inputs = list(question = "test"),
+      call_counter = call_counter,
+      runner = runner,
+      runner_policy = runner$policy()
+    )
+
+    expect_false(result$success, info = kind)
+    expect_false(result$is_final, info = kind)
+    expect_null(result$final_value, info = kind)
+    expect_identical(result$error, "execution failed", info = kind)
+    expect_match(result$formatted_output, "execution failed", info = kind)
+    expect_identical(call_counter$count, 0L, info = kind)
+  }
+})
+
 test_that("strip_rlm_code_fences removes markdown fences", {
   expect_equal(
     dsprrr:::strip_rlm_code_fences("```r\nx <- 1\nSUBMIT(x)\n```"),

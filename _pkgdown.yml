@@ -89,6 +89,8 @@ navbar:
           href: articles/how-rlm-works.html
         - text: "---"
         - text: "Deep Dives"
+        - text: "Structural Optimization with Flex"
+          href: articles/flex-optimization.html
         - text: "Advanced Reasoning"
           href: articles/advanced-modules.html
         - text: "Advanced Optimization"
@@ -148,6 +150,7 @@ articles:
     - concepts-optimization-theory
     - concepts-why-metrics-matter
     - articles/how-rlm-works
+    - articles/flex-optimization
     - advanced-modules
     - advanced-optimization
     - articles/omni-meta-optimization
@@ -189,6 +192,7 @@ reference:
     desc: Create, run, and inspect LLM modules
     contents:
     - module
+    - flex
     - run
     - run_dataset
     - concurrency_control

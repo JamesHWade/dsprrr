@@ -48,8 +48,8 @@ GEPA(
 \item{track_stats}{Whether to record generation statistics.}
 }
 \description{
-Genetic/evolutionary prompt optimizer that evolves instruction variants
-using reflection on failed examples.
+Reflective optimizer for instructions and declarative Flex components, using
+row-level failures and metric feedback to propose improved candidates.
 }
 \details{
 \subsection{Feedback metrics}{
@@ -66,13 +66,23 @@ sees only inputs, expected, and predicted values.
 
 \subsection{Differences from DSPy's GEPA}{
 
-This is an adapted ("GEPA-lite") implementation. It shares the core
-ideas — reflective mutation of instructions guided by failures and
-feedback, plus Pareto-frontier selection over multiple metrics — but
-uses a fixed population/generations evolutionary loop rather than
-DSPy's budget-driven candidate search, and does not yet support
-per-component selection in multi-step programs or inference-time
-search. Expect qualitatively similar behavior, not identical results.
+This is an adapted ("GEPA-lite") implementation. It shares reflective
+mutation guided by failures and feedback plus Pareto-frontier selection over
+multiple metrics, but uses a fixed population/generations loop rather than
+DSPy's budget-driven candidate search.
+
+Programs containing \code{\link[=flex]{flex()}} leaves use complete component candidates:
+ordinary instructions and complete declarative \code{module_src} values are
+proposed, copied, validated, and bound transactionally. Invalid Flex sources
+receive an auditable failure score and are never selectable. The structured
+source proposer receives row-aligned inputs, expected output, prediction, and
+metric feedback. It never evaluates proposed source as R code.
+
+Pareto selection still ranks whole-program candidates. GEPA-lite does not
+implement DSPy's independent per-component Pareto frontiers or inference-time
+search. Compiled programs record this distinction under
+\code{config$optimizer$component_semantics}. Expect qualitatively similar
+behavior, not identical upstream results.
 }
 }
 \examples{

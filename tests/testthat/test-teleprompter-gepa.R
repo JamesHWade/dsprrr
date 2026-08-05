@@ -21,6 +21,10 @@ test_that("GEPA validates properties", {
   expect_error(GEPA(crossover_rate = 1.2), "between 0 and 1")
   expect_error(GEPA(selection = "unknown"), "selection must")
   expect_error(GEPA(metrics = list("not a function")), "functions")
+  expect_no_error(GEPA(seed = 42))
+  for (seed in list(NA_real_, Inf, 1.5, -1, .Machine$integer.max + 1)) {
+    expect_error(GEPA(seed = seed), "whole number")
+  }
 })
 
 test_that("Pareto utilities identify frontier", {
@@ -497,4 +501,41 @@ test_that("GEPA reports an early budget stop without a failure warning", {
   expect_true(optimizer$partial)
   expect_identical(optimizer$stop_reason$code, "max_metric_calls")
   expect_length(optimizer$all_generations[[1]]$population, 0L)
+})
+
+test_that("GEPA restores the caller RNG state", {
+  testthat::local_mocked_bindings(
+    eval_program = function(...) {
+      dsprrr:::EvalResult(
+        examples = data.frame(
+          row_id = 1L,
+          score = 1,
+          error = NA_character_,
+          predicted = I(list("answer")),
+          feedback = NA_character_
+        ),
+        mean_score = 1,
+        n_evaluated = 1L,
+        n_errors = 0L
+      )
+    },
+    gepa_mutate_instruction = function(...) "Candidate",
+    .package = "dsprrr"
+  )
+  withr::local_seed(892L)
+  before <- get(".Random.seed", envir = globalenv())
+
+  dsprrr:::compile_gepa(
+    GEPA(
+      metric = function(...) 1,
+      population_size = 2L,
+      generations = 1L,
+      seed = 31L,
+      verbose = FALSE
+    ),
+    module(signature("question -> answer")),
+    data.frame(question = "q", answer = "a")
+  )
+
+  expect_identical(get(".Random.seed", envir = globalenv()), before)
 })

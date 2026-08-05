@@ -7,6 +7,10 @@ author: "James H. Wade"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 bibliography: references.bib
+vignette: >
+  %\VignetteIndexEntry{How the Recursive Language Model (RLM) Works}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
@@ -58,7 +62,12 @@ RLMs were introduced by Alex Zhang, Tim Kraska, and Omar Khattab at MIT [@zhang2
 
 The idea has since spread quickly. DSPy integrated RLMs as a first-class module ([`dspy.RLM`](https://dspy.ai/api/modules/RLM/)) in version 3.1.2+, using a Pyodide WASM sandbox for code execution. Google's Agent Development Kit [re-implemented the pattern](https://medium.com/google-cloud/recursive-language-models-in-adk-d9dc736f0478) with Gemini models. The [official `rlm` Python package](https://github.com/alexzhang13/rlm), a [community implementation](https://github.com/ysz/recursive-llm), and [Prime Intellect's research program](https://www.primeintellect.ai/blog/rlm) round out the ecosystem. The [comparison table below](#how-dsprrrs-rlm-compares) summarizes the key differences.
 
-dsprrr's `rlm_module()` brings the same approach to R, using R as the REPL language instead of Python, with subprocess isolation via [callr](https://callr.r-lib.org/) and structured outputs via [ellmer](https://ellmer.tidyverse.org/).
+dsprrr's `rlm_module()` brings the same approach to R, using R as the REPL
+language instead of Python and structured outputs via
+[ellmer](https://ellmer.tidyverse.org/). Execution is delegated to the selected
+runner backend: the built-in `r_code_runner()` uses
+[callr](https://callr.r-lib.org/), while the default managed
+`mcp_repl_runner()` uses an OS-sandboxed persistent session.
 
 ## How dsprrr Implements RLM
 
@@ -66,7 +75,8 @@ The rest of this article walks through dsprrr's implementation. For a practical 
 
 ### The User-Facing API
 
-Creating an RLM module requires two things: a signature declaring inputs and outputs, and a code runner for subprocess isolation:
+Creating an RLM module requires a signature plus exactly one execution binding.
+To reuse a caller-owned runner object, pass `runner`:
 
 ```{r}
 library(dsprrr)
@@ -212,9 +222,11 @@ The `.rlm_output_fields` variable is not magic. It is injected into the subproce
 
 The `rlm_final` class is a sentinel: when the parent process sees it in the subprocess result, it exits the loop and extracts the answer.
 
-### Subprocess Isolation
+### Runner-Selected Isolation
 
-All model-generated code runs in an isolated R subprocess via `callr::r()`. The `RCodeRunner` class in `R/r-code-runner.R` handles this:
+The example in this article uses `RCodeRunner`, so each generated code fragment
+runs in an isolated R subprocess via `callr::r()`. The `RCodeRunner` class in
+`R/r-code-runner.R` handles that backend:
 
 ```{r}
 # From R/r-code-runner.R -- subprocess execution (simplified)
@@ -323,12 +335,26 @@ OS-enforced workspace-write sandbox and network access disabled. A user-supplied
 `repl` function is reported as unverified and is not accepted where dsprrr
 requires sandboxed execution.
 
-**Persistent state is explicit.** The callr runner starts a fresh subprocess for
-each iteration. mcp-repl instead retains an R session, so variables and loaded
-packages survive iterations and separate `forward()` calls. Call
-`runner$reset()` between logically isolated jobs and never share one persistent
-runner across concurrent invocations. dsprrr does not yet mirror DSPy 3.3's
-per-invocation interpreter factory.
+**Runner ownership is explicit.** A directly supplied `runner` is caller-owned
+and reused across separate `forward()` calls; dsprrr never closes it. The
+backend determines whether execution state persists and whether `reset()` is
+available. mcp-repl retains variables and loaded packages until you call
+`runner$reset()`. Reset that persistent backend between logically isolated
+jobs and never share it across concurrent invocations.
+
+For isolated invocations, pass `interpreter_factory` instead. It must be a
+zero-argument function returning a valid runner. dsprrr calls it once per
+invocation, owns that fresh runner, and closes it exactly once when the
+invocation ends, including after a failure:
+
+```{r rlm-interpreter-factory, eval=FALSE}
+rlm <- rlm_module(
+  "document, question -> answer",
+  interpreter_factory = function() r_code_runner(timeout = 30)
+)
+```
+
+`runner` and `interpreter_factory` are mutually exclusive, and one is required.
 
 **mcp-repl control results are intentionally bounded.** RLM submit and recursive
 query frames are capped at 3,000 encoded bytes to stay inline. If incidental

@@ -26,10 +26,19 @@ runner backed by a container or OS-level sandbox.
 
 Code-executing modules accept any runner that implements the dsprrr runner
 protocol. A runner must expose \code{execute(code, context = list())} and
-\code{policy()} methods. \code{policy()} returns a named list containing at least
-\code{backend} (character), \code{trust} (character), and \code{sandboxed} (logical).
-\code{execute()} returns a list with \code{success}, \code{result}, \code{stdout}, \code{stderr},
-\code{messages}, \code{warnings}, \code{error}, and \code{duration_ms} fields.
+\code{policy()} methods. \code{policy()} returns a uniquely named list containing at
+least \code{backend} (character), \code{trust} (character), and \code{sandboxed} (logical).
+\code{execute()} returns one uniquely named list. \code{success} and \code{result} are
+required. Missing \code{stdout}, \code{stderr}, \code{messages}, and \code{warnings} fields are
+normalized to empty strings, and missing \code{duration_ms} is normalized to
+\code{NA}. A failed result must include a non-empty \code{error}; a successful result
+may omit it.
+
+Code-executing modules accept exactly one runtime source. Passing \code{runner}
+retains that caller-owned object and never closes it. Passing a zero-argument
+\code{interpreter_factory} creates one fresh invocation-owned runner; factory
+results must also implement idempotent terminal \code{close()}, which dsprrr calls
+exactly once on success, error, or interrupt.
 }
 \examples{
 \dontrun{

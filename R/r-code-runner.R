@@ -21,10 +21,19 @@
 #'
 #' Code-executing modules accept any runner that implements the dsprrr runner
 #' protocol. A runner must expose `execute(code, context = list())` and
-#' `policy()` methods. `policy()` returns a named list containing at least
-#' `backend` (character), `trust` (character), and `sandboxed` (logical).
-#' `execute()` returns a list with `success`, `result`, `stdout`, `stderr`,
-#' `messages`, `warnings`, `error`, and `duration_ms` fields.
+#' `policy()` methods. `policy()` returns a uniquely named list containing at
+#' least `backend` (character), `trust` (character), and `sandboxed` (logical).
+#' `execute()` returns one uniquely named list. `success` and `result` are
+#' required. Missing `stdout`, `stderr`, `messages`, and `warnings` fields are
+#' normalized to empty strings, and missing `duration_ms` is normalized to
+#' `NA`. A failed result must include a non-empty `error`; a successful result
+#' may omit it.
+#'
+#' Code-executing modules accept exactly one runtime source. Passing `runner`
+#' retains that caller-owned object and never closes it. Passing a zero-argument
+#' `interpreter_factory` creates one fresh invocation-owned runner; factory
+#' results must also implement idempotent terminal `close()`, which dsprrr calls
+#' exactly once on success, error, or interrupt.
 #'
 #' @examples
 #' \dontrun{
@@ -102,31 +111,46 @@ validate_code_runner <- function(runner) {
   policy <- tryCatch(runner[["policy"]], error = function(e) NULL)
 
   if (!is.function(execute) || !is.function(policy)) {
-    cli::cli_abort(c(
-      "runner must implement the dsprrr code-runner protocol",
-      "x" = "A runner needs {.code execute(code, context)} and {.code policy()} methods.",
-      "i" = "Use {.code r_code_runner()} for trusted inputs or provide a sandboxed backend."
-    ))
+    cli::cli_abort(
+      c(
+        "runner must implement the dsprrr code-runner protocol",
+        "x" = "A runner needs {.code execute(code, context)} and {.code policy()} methods.",
+        "i" = "Use {.code r_code_runner()} for trusted inputs or provide a sandboxed backend."
+      ),
+      class = "dsprrr_code_runner_protocol_error"
+    )
   }
 
   runner_policy <- tryCatch(
     policy(),
     error = function(e) {
-      cli::cli_abort(c(
-        "runner$policy() failed",
-        "x" = conditionMessage(e)
-      ))
+      cli::cli_abort(
+        c(
+          "runner$policy() failed",
+          "x" = conditionMessage(e)
+        ),
+        class = "dsprrr_code_runner_protocol_error"
+      )
     }
   )
+  policy_names <- names(runner_policy)
   required <- c("backend", "trust", "sandboxed")
-  missing_fields <- setdiff(required, names(runner_policy))
+  missing_fields <- setdiff(required, policy_names)
 
-  if (!is.list(runner_policy) || length(missing_fields) > 0) {
-    cli::cli_abort(c(
-      "runner$policy() must return a named list",
-      "x" = "Missing required fields: {.field {missing_fields}}",
-      "i" = "Required fields are {.field backend}, {.field trust}, and {.field sandboxed}."
-    ))
+  valid_names <- is.list(runner_policy) &&
+    !is.null(policy_names) &&
+    !anyNA(policy_names) &&
+    all(nzchar(policy_names)) &&
+    !anyDuplicated(policy_names)
+  if (!valid_names || length(missing_fields) > 0) {
+    cli::cli_abort(
+      c(
+        "runner$policy() must return a uniquely named list",
+        "x" = "Missing required fields: {.field {missing_fields}}",
+        "i" = "Required fields are {.field backend}, {.field trust}, and {.field sandboxed}."
+      ),
+      class = "dsprrr_code_runner_protocol_error"
+    )
   }
 
   valid_backend <- is.character(runner_policy$backend) &&
@@ -142,14 +166,421 @@ validate_code_runner <- function(runner) {
     !is.na(runner_policy$sandboxed)
 
   if (!valid_backend || !valid_trust || !valid_sandboxed) {
-    cli::cli_abort(c(
-      "runner$policy() returned invalid metadata",
-      "i" = "{.field backend} and {.field trust} must be non-empty strings.",
-      "i" = "{.field sandboxed} must be TRUE or FALSE."
+    cli::cli_abort(
+      c(
+        "runner$policy() returned invalid metadata",
+        "i" = "{.field backend} and {.field trust} must be non-empty strings.",
+        "i" = "{.field sandboxed} must be TRUE or FALSE."
+      ),
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+
+  invisible(runner_policy)
+}
+
+
+summarize_code_runner_policy <- function(policy) {
+  list(
+    backend = policy$backend,
+    trust = policy$trust,
+    sandboxed = policy$sandboxed,
+    persistent = if (
+      is.logical(policy$persistent) &&
+        length(policy$persistent) == 1L &&
+        !is.na(policy$persistent)
+    ) {
+      policy$persistent
+    } else {
+      NA
+    }
+  )
+}
+
+
+validate_code_runner_result <- function(result) {
+  result_names <- names(result)
+  if (
+    !is.list(result) ||
+      is.null(result_names) ||
+      anyNA(result_names) ||
+      any(!nzchar(result_names)) ||
+      anyDuplicated(result_names)
+  ) {
+    cli::cli_abort(
+      "runner$execute() must return one named result list",
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+  required <- c("success", "result")
+  missing <- setdiff(required, names(result))
+  if (length(missing) > 0L) {
+    cli::cli_abort(
+      c(
+        "runner$execute() returned an incomplete result",
+        "x" = "Missing field{?s}: {.field {missing}}"
+      ),
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+  if (
+    !is.logical(result$success) ||
+      length(result$success) != 1L ||
+      is.na(result$success)
+  ) {
+    cli::cli_abort(
+      "runner$execute() field {.field success} must be TRUE or FALSE",
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+
+  normalize_text <- function(name) {
+    value <- result[[name]]
+    if (is.null(value)) {
+      return("")
+    }
+    if (!is.character(value) || length(value) != 1L || is.na(value)) {
+      cli::cli_abort(
+        "runner$execute() field {.field {name}} must be one non-missing string",
+        class = "dsprrr_code_runner_protocol_error"
+      )
+    }
+    value
+  }
+  for (name in c("stdout", "stderr", "messages", "warnings")) {
+    result[[name]] <- normalize_text(name)
+  }
+
+  error <- result$error
+  if (isTRUE(result$success)) {
+    if (
+      !is.null(error) &&
+        (!is.character(error) ||
+          length(error) != 1L ||
+          is.na(error))
+    ) {
+      cli::cli_abort(
+        "runner$execute() field {.field error} must be NULL or one string",
+        class = "dsprrr_code_runner_protocol_error"
+      )
+    }
+  } else if (
+    !is.character(error) ||
+      length(error) != 1L ||
+      is.na(error) ||
+      !nzchar(error)
+  ) {
+    cli::cli_abort(
+      "A failed runner result must contain one non-empty {.field error}",
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+
+  duration <- result$duration_ms
+  if (is.null(duration)) {
+    result$duration_ms <- NA_real_
+  } else if (
+    !is.numeric(duration) ||
+      length(duration) != 1L ||
+      (!is.na(duration) && (!is.finite(duration) || duration < 0))
+  ) {
+    cli::cli_abort(
+      "runner$execute() field {.field duration_ms} must be one non-negative number or NA",
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+
+  result$error <- error %||% NULL
+  result
+}
+
+
+execute_code_runner <- function(
+  runner,
+  code,
+  context = list(),
+  .control_nonce = NULL
+) {
+  execute_args <- list(code = code, context = context)
+  execute_formals <- tryCatch(
+    names(formals(runner$execute)),
+    error = function(e) character()
+  )
+  accepts_dots <- "..." %in% execute_formals
+  if (
+    !is.null(.control_nonce) &&
+      (".control_nonce" %in% execute_formals || accepts_dots)
+  ) {
+    execute_args$.control_nonce <- .control_nonce
+  }
+  result <- do.call(runner$execute, execute_args)
+  validate_code_runner_result(result)
+}
+
+
+# Validate the zero-argument factory contract used by code-executing modules.
+# The factory is deliberately not invoked during module construction: creating
+# an interpreter may start a process or open a network connection.
+validate_interpreter_factory <- function(interpreter_factory) {
+  if (!is.function(interpreter_factory)) {
+    cli::cli_abort(
+      "{.arg interpreter_factory} must be a zero-argument function",
+      class = "dsprrr_interpreter_factory_error"
+    )
+  }
+
+  if (is.primitive(interpreter_factory)) {
+    cli::cli_abort(
+      "{.arg interpreter_factory} must have an inspectable zero-argument signature",
+      class = "dsprrr_interpreter_factory_error"
+    )
+  }
+
+  factory_formals <- tryCatch(
+    formals(interpreter_factory),
+    error = function(e) NULL
+  )
+
+  required <- names(factory_formals)[vapply(
+    factory_formals,
+    identical,
+    logical(1),
+    quote(expr = )
+  )]
+  required <- setdiff(required, "...")
+  if (length(required) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg interpreter_factory} must be callable without arguments",
+        "x" = "Required argument{?s}: {.arg {required}}"
+      ),
+      class = "dsprrr_interpreter_factory_error"
+    )
+  }
+
+  invisible(interpreter_factory)
+}
+
+
+validate_interpreter_close <- function(close) {
+  if (!is.function(close)) {
+    cli::cli_abort(
+      c(
+        "{.arg interpreter_factory} returned a runner without {.code close()}",
+        "i" = "Invocation-owned runners must implement {.code execute()}, {.code policy()}, and {.code close()}."
+      ),
+      class = "dsprrr_interpreter_factory_error"
+    )
+  }
+  if (is.primitive(close)) {
+    cli::cli_abort(
+      "A factory-created runner's {.code close()} must have an inspectable zero-argument signature",
+      class = "dsprrr_interpreter_factory_error"
+    )
+  }
+
+  close_formals <- tryCatch(formals(close), error = function(e) NULL)
+  required <- names(close_formals)[vapply(
+    close_formals,
+    identical,
+    logical(1),
+    quote(expr = )
+  )]
+  required <- setdiff(required, "...")
+  if (length(required) > 0L) {
+    cli::cli_abort(
+      c(
+        "A factory-created runner's {.code close()} must be callable without arguments",
+        "x" = "Required argument{?s}: {.arg {required}}",
+        "i" = "The module will not execute with a runner whose cleanup contract is invalid."
+      ),
+      class = "dsprrr_interpreter_factory_error"
+    )
+  }
+
+  invisible(close)
+}
+
+
+# Normalize a constructor's mutually exclusive runtime choices without opening
+# a factory-created interpreter.
+normalize_code_runner_binding <- function(
+  runner = NULL,
+  interpreter_factory = NULL,
+  module_name = "Code execution"
+) {
+  if (is.null(runner) && is.null(interpreter_factory)) {
+    cli::cli_abort(
+      c(
+        "{module_name} requires an explicit runner or interpreter_factory",
+        "i" = "Use {.code runner = r_code_runner()} for a caller-owned runner.",
+        "i" = "Use {.code interpreter_factory = r_code_runner} for a fresh runner per invocation."
+      ),
+      class = "dsprrr_interpreter_binding_error"
+    )
+  }
+  if (!is.null(runner) && !is.null(interpreter_factory)) {
+    cli::cli_abort(
+      "Supply only one of {.arg runner} and {.arg interpreter_factory}",
+      class = "dsprrr_interpreter_binding_error"
+    )
+  }
+
+  if (!is.null(runner)) {
+    validate_code_runner(runner)
+    return(list(
+      runner = runner,
+      interpreter_factory = NULL,
+      lifecycle = "caller-owned"
     ))
   }
 
-  invisible(runner)
+  validate_interpreter_factory(interpreter_factory)
+  list(
+    runner = NULL,
+    interpreter_factory = interpreter_factory,
+    lifecycle = "invocation-owned"
+  )
+}
+
+
+# Acquire one runtime interpreter. Factory-created runners must expose close()
+# because the module, rather than the caller, owns their lifecycle.
+acquire_code_runner <- function(runner, interpreter_factory, module_name) {
+  if (is.null(runner) == is.null(interpreter_factory)) {
+    cli::cli_abort(
+      "{module_name} must have exactly one of {.arg runner} and {.arg interpreter_factory}",
+      class = "dsprrr_interpreter_binding_error"
+    )
+  }
+  if (!is.null(runner)) {
+    runner_policy <- validate_code_runner(runner)
+    return(list(
+      runner = runner,
+      owned = FALSE,
+      policy = runner_policy,
+      policy_summary = summarize_code_runner_policy(runner_policy),
+      module_name = module_name
+    ))
+  }
+
+  validate_interpreter_factory(interpreter_factory)
+  created <- tryCatch(
+    interpreter_factory(),
+    error = function(e) {
+      cli::cli_abort(
+        "{module_name} could not create an interpreter",
+        parent = e,
+        class = "dsprrr_interpreter_factory_error"
+      )
+    }
+  )
+  validation <- tryCatch(
+    validate_code_runner(created),
+    interrupt = function(e) e,
+    error = function(e) e
+  )
+  if (inherits(validation, "condition")) {
+    close <- tryCatch(created[["close"]], error = function(e) NULL)
+    close_error <- if (is.function(close)) {
+      tryCatch(
+        {
+          close()
+          NULL
+        },
+        interrupt = function(e) e,
+        error = function(e) e
+      )
+    } else {
+      NULL
+    }
+    if (inherits(close_error, "condition")) {
+      attr(validation, "dsprrr_interpreter_close_error") <- close_error
+    }
+    if (inherits(validation, "interrupt")) {
+      stop(validation)
+    }
+    cli::cli_abort(
+      "{.arg interpreter_factory} returned an invalid runner",
+      parent = validation,
+      class = "dsprrr_interpreter_factory_error"
+    )
+  }
+  runner_policy <- validation
+  close <- tryCatch(created[["close"]], error = function(e) NULL)
+  validate_interpreter_close(close)
+
+  list(
+    runner = created,
+    owned = TRUE,
+    policy = runner_policy,
+    policy_summary = summarize_code_runner_policy(runner_policy),
+    module_name = module_name
+  )
+}
+
+
+# Close one invocation-owned runner and return, rather than signal, any error.
+close_code_runner_lease <- function(lease) {
+  if (!is.list(lease) || !isTRUE(lease$owned)) {
+    return(NULL)
+  }
+  tryCatch(
+    {
+      lease$runner$close()
+      NULL
+    },
+    interrupt = function(e) e,
+    error = function(e) e
+  )
+}
+
+
+# Run a module body under one interpreter lease. Cleanup after a successful
+# body is part of success and therefore errors if it fails. When execution and
+# cleanup both fail, the execution condition remains primary and carries the
+# cleanup condition as diagnostic metadata.
+with_code_runner_lease <- function(
+  runner,
+  interpreter_factory,
+  module_name,
+  code
+) {
+  if (!is.function(code)) {
+    cli::cli_abort("Internal interpreter lease body must be a function")
+  }
+  lease <- acquire_code_runner(runner, interpreter_factory, module_name)
+  outcome <- tryCatch(
+    list(ok = TRUE, value = code(lease$runner, lease)),
+    interrupt = function(condition) list(ok = FALSE, condition = condition),
+    error = function(condition) list(ok = FALSE, condition = condition)
+  )
+  close_error <- close_code_runner_lease(lease)
+
+  if (!isTRUE(outcome$ok)) {
+    if (inherits(close_error, "condition")) {
+      attr(outcome$condition, "dsprrr_interpreter_close_error") <- close_error
+    }
+    stop(outcome$condition)
+  }
+  if (inherits(close_error, "condition")) {
+    cli::cli_abort(
+      "{module_name} could not close its invocation-owned interpreter",
+      parent = close_error,
+      class = "dsprrr_interpreter_close_error"
+    )
+  }
+
+  outcome$value
+}
+
+
+code_runner_binding_label <- function(runner, interpreter_factory) {
+  if (!is.null(interpreter_factory)) {
+    return("fresh runner per invocation")
+  }
+  policy <- tryCatch(runner$policy(), error = function(e) list())
+  paste0(policy$backend %||% class(runner)[1L], " (caller-owned)")
 }
 
 
@@ -186,6 +617,9 @@ RCodeRunner <- R6::R6Class(
     #' @field prelude Code to run before user code
     prelude = NULL,
 
+    #' @field closed Whether this runner has been closed
+    closed = FALSE,
+
     #' @description
     #' Initialize a new RCodeRunner
     #' @param timeout Numeric timeout in seconds
@@ -220,6 +654,12 @@ RCodeRunner <- R6::R6Class(
     #'   - `error`: Error message if failed (NULL on success)
     #'   - `duration_ms`: Execution time in milliseconds
     execute = function(code, context = list()) {
+      if (self$closed) {
+        cli::cli_abort(
+          "The R code runner is closed",
+          class = "dsprrr_interpreter_closed_error"
+        )
+      }
       if (!is.character(code) || length(code) != 1) {
         cli::cli_abort("code must be a single character string")
       }
@@ -348,11 +788,25 @@ RCodeRunner <- R6::R6Class(
         backend = "callr",
         trust = "trusted-input-only",
         sandboxed = FALSE,
+        persistent = FALSE,
         process_isolation = TRUE,
         filesystem_access = "host-user",
         network_access = "host-user",
         pattern_scan = "defense-in-depth"
       )
+    },
+
+    #' @description
+    #' Close the runner
+    #'
+    #' `RCodeRunner` starts one subprocess per `execute()` call, so there is no
+    #' persistent session to tear down. Closing marks the object terminal and
+    #' satisfies the managed interpreter lifecycle protocol.
+    #'
+    #' @return The runner, invisibly
+    close = function() {
+      self$closed <- TRUE
+      invisible(self)
     },
 
     #' @description

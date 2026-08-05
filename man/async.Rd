@@ -6,4 +6,7 @@
 \description{
 Functions for running modules asynchronously using promises.
 Useful for parallel execution or non-blocking operations.
+The direct provider paths support ordinary \code{PredictModule} objects only.
+Modules and composites with specialized \code{forward()} semantics are rejected
+before provider work; use \code{\link[=run]{run()}} for their complete workflows.
 }

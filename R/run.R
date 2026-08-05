@@ -161,6 +161,24 @@ batch_input_contract <- function(inputs) {
   )
 }
 
+#' Classify module inputs without confusing schema collections with batches
+#'
+#' Flex owns exact recursive validation for its scalar array and object fields.
+#' Their R lengths describe one schema value, not a collection of dataset rows,
+#' and Flex batch execution goes through [run_dataset()] instead.
+#' @noRd
+module_input_contract <- function(module, inputs) {
+  if (inherits(module, "FlexModule")) {
+    return(list(
+      kind = "scalar",
+      size = 1L,
+      lengths = vapply(inputs, batch_input_length, integer(1))
+    ))
+  }
+
+  batch_input_contract(inputs)
+}
+
 #' Treat opaque runtime values as scalar batch inputs
 #' @noRd
 batch_input_is_identity_scalar <- function(value) {
@@ -239,7 +257,7 @@ run.Module <- function(
   validate_cache_arg(.cache)
 
   inputs <- list(...)
-  input_contract <- batch_input_contract(inputs)
+  input_contract <- module_input_contract(module, inputs)
   concurrency_runtime <- NULL
   if (identical(input_contract$kind, "batch")) {
     runtime_chat <- .llm %||% module$chat %||% get_default_chat(create = FALSE)
@@ -368,13 +386,13 @@ run.PredictModule <- function(
   validate_signature_inputs(
     module$signature,
     inputs,
-    missing = "error",
-    extra = "warn",
-    type = "warn",
+    missing = if (inherits(module, "FlexModule")) "ignore" else "error",
+    extra = if (inherits(module, "FlexModule")) "error" else "warn",
+    type = if (inherits(module, "FlexModule")) "error" else "warn",
     context = "inputs"
   )
 
-  input_contract <- batch_input_contract(inputs)
+  input_contract <- module_input_contract(module, inputs)
 
   if (identical(input_contract$kind, "empty")) {
     return(empty_batch_result(.return_format))

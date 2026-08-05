@@ -369,9 +369,48 @@ print(compiled$demos)
 3. Re-evaluates and repeats
 4. Builds a demo set that covers edge cases
 
-## GEPA (Guided Evolutionary Prompt Algorithm)
+## Structural Candidates with Flex
 
-Multi-objective optimization balancing quality vs. cost (or other objectives).
+`flex()` exposes a module's bounded predictor plan through canonical
+`module_src`. GEPA-lite can propose complete version 1 JSON candidates and
+apply them through the module's transactional optimization boundary:
+
+```{r flex-candidate}
+program <- flex("question -> answer")
+optimizer <- GEPA(
+  metric = metric_exact_match(field = "answer"),
+  population_size = 6L,
+  generations = 2L,
+  seed = 42L
+)
+optimized <- compile(
+  optimizer,
+  program,
+  trainset = trainset,
+  .llm = llm
+)
+```
+
+The source may contain only allowlisted Predict and Chain-of-Thought steps,
+with typed backward references and a fixed predictor-call bound. It is never
+evaluated as R or Python. This constrained IR is intentionally narrower than
+DSPy's experimental Flex module and does not claim full Flex parity.
+
+Advertising the graph as a parameter does not make every teleprompter a
+structural optimizer. GEPA-lite explicitly searches complete instruction and
+source components, rejects invalid source candidates before selection, and
+ranks whole programs. It does not implement DSPy's independent per-component
+Pareto frontiers or inference-time search. Other teleprompters do not silently
+rewrite `module_src`. A fully frozen graph short-circuits without proposer or
+evaluation work and records that optimization was skipped. See [Structural Optimization with
+Flex](flex-optimization.html) for the full schema and audit contract.
+
+## GEPA (Reflective Prompt Evolution)
+
+Reflective instruction optimization with failure feedback and Pareto selection
+for multiple objectives. dsprrr's adapted GEPA uses a fixed
+population/generations loop; it is not general genetic programming over
+executable programs.
 
 **Best for:** Production systems where you need to balance accuracy against token usage or latency.
 
@@ -411,8 +450,14 @@ print(pareto)
 - `metrics`: Named list of metric functions (for multi-objective)
 - `population_size`: Number of candidates per generation
 - `generations`: Evolution iterations
-- `selection`: Selection strategy (`"tournament"` or `"pareto"`)
-- `mutation_rate`, `crossover_rate`: Genetic algorithm parameters
+- `selection`: Selection strategy (`"current_best"` or `"pareto"`)
+- `mutation_rate`: Probability of reflection-guided component mutation
+- `crossover_rate`: Probability of recombining complete parent component values
+
+When a program contains Flex leaves, GEPA candidates include complete
+`module_src` values as well as ordinary instructions. Invalid source proposals
+remain auditable but non-selectable. Pareto selection is whole-program, not an
+implementation of DSPy's per-component frontier.
 
 ## Omni
 

@@ -31,11 +31,18 @@ pipeline stages."
 
 DSPy 3.3.0 introduced experimental `Flex`, which can optimize a program's
 source code and structure inside a sandbox. `AutoResearch()` and
-`MetaHarness()` are **not** Flex analogues. They accept complete replacements
+`MetaHarness()` are **not** Flex optimizers. They accept complete replacements
 only for allowlisted instruction and template fields; they do not execute
 optimizer-authored R module source, add predictors, or change graph topology.
-That narrower edit language is an intentional host-validation boundary. See
-the [DSPy 3.3.0 release notes](https://github.com/stanfordnlp/dspy/releases/tag/3.3.0).
+That narrower edit language is an intentional host-validation boundary.
+
+dsprrr's separate experimental `flex()` module exposes a constrained,
+versioned JSON structural IR with allowlisted Predict and Chain-of-Thought
+steps. It does not evaluate arbitrary R/Python and does not claim full DSPy
+Flex parity. GEPA-lite, rather than these agentic harnesses, can search complete
+validated Flex source components with whole-program selection. See [Structural
+Optimization with Flex](flex-optimization.html)
+and the [DSPy 3.3.0 release notes](https://github.com/stanfordnlp/dspy/releases/tag/3.3.0).
 
 ## Choose the Search Owner
 

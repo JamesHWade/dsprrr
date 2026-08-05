@@ -6,7 +6,7 @@
 \usage{
 rlm_module(
   signature,
-  runner,
+  runner = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
   max_output_chars = 100000L,
@@ -14,15 +14,16 @@ rlm_module(
   verbose = FALSE,
   tools = list(),
   max_iters = NULL,
-  ...
+  ...,
+  interpreter_factory = NULL
 )
 }
 \arguments{
 \item{signature}{A Signature object or string notation defining inputs/outputs}
 
-\item{runner}{A code runner implementing \code{execute()} and \code{policy()}. Required.
-The module retains this object; reset persistent runners between logically
-isolated jobs and do not use one runner concurrently.}
+\item{runner}{Optional caller-owned code runner implementing \code{execute()} and
+\code{policy()}. It is retained, never automatically closed, and must not be
+shared concurrently when persistent.}
 
 \item{max_iterations}{Maximum REPL iterations before fallback (default 20)}
 
@@ -42,6 +43,10 @@ Non-function values in the list will cause an error.}
 one of these arguments.}
 
 \item{...}{Additional arguments passed to the module}
+
+\item{interpreter_factory}{Optional zero-argument function returning a fresh
+runner with \code{execute()}, \code{policy()}, and idempotent terminal \code{close()}.
+Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
 An RLMModule object
@@ -49,6 +54,10 @@ An RLMModule object
 \description{
 Factory function to create an RLMModule that enables LLMs to programmatically
 explore large contexts through a REPL interface.
+Use \code{\link[=run]{run()}} to execute it. Generic async and module \verb{$stream()} entry points
+reject RLM graphs before provider or factory work. \code{\link[=run_stream]{run_stream()}} preserves
+the synchronous \code{forward()} fallback unless a matching token-stream request
+is active; that request is rejected first.
 }
 \examples{
 \dontrun{

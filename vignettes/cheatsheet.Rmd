@@ -303,12 +303,62 @@ flowchart TB
   Predict --> PredictUse["Q&A, classification, summarization, extraction"]
   Start -->|Tool use / multi-step reasoning| React["type = react (ReactModule)"]
   React --> ReactUse["Agents, search, calculations, API calls"]
+  Start -->|Exact computation| POT["type = program_of_thought"]
+  Start -->|Tools plus R code| CodeAct["type = codeact"]
+  Start -->|Explore large context| RLM["type = rlm"]
+  Start -->|Vary predictor structure| Flex["type = flex (experimental)"]
 ```
 
 | Type | Class | Use Case |
 |------|-------|----------|
 | `"predict"` | `PredictModule` | Standard text generation |
 | `"react"` | `ReactModule` | Tool-calling agents |
+| `"chain_of_thought"` | `PredictModule` | Step-by-step reasoning |
+| `"multichain"` | `MultiChainComparisonModule` | Compare several reasoning chains |
+| `"program_of_thought"` | `ProgramOfThoughtModule` | Generate and execute R code |
+| `"codeact"` | `CodeActModule` | Combine tools and R code |
+| `"rlm"` | `RLMModule` | Explore large context through a REPL |
+| `"flex"` | `FlexModule` | Validated structural JSON IR (experimental) |
+
+### Code Runner Ownership
+
+```{r code-runner-ownership}
+#| eval: false
+# Caller-owned and reused; the backend controls state persistence
+pot <- program_of_thought("question -> answer", runner = runner)
+
+# Fresh invocation-owned runner; dsprrr closes it exactly once
+pot <- program_of_thought(
+  "question -> answer",
+  interpreter_factory = function() r_code_runner(timeout = 30)
+)
+```
+
+Supply exactly one of `runner` and `interpreter_factory`. The factory is
+zero-argument and is supported by ProgramOfThought, CodeAct, and RLM. dsprrr
+never closes a directly supplied runner; persistence and reset support are
+backend-specific.
+
+### Experimental Flex
+
+```{r flex-cheatsheet}
+#| eval: false
+program <- flex("question -> answer")
+program$module_src       # Canonical, read-only JSON
+program$bind(candidate)  # Validate and replace transactionally
+
+optimized <- compile(
+  GEPA(metric = metric_exact_match(field = "answer"), seed = 42L),
+  program,
+  trainset = question_answer_data,
+  .llm = llm
+)
+```
+
+Flex version 1 permits only Predict and Chain-of-Thought steps. It never
+evaluates arbitrary R/Python source and does not claim full DSPy Flex parity.
+GEPA-lite validates complete candidate sources and ranks whole programs; it
+does not reproduce DSPy's per-component frontiers or inference-time search.
 
 ---
 

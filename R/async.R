@@ -3,6 +3,9 @@
 #' @description
 #' Functions for running modules asynchronously using promises.
 #' Useful for parallel execution or non-blocking operations.
+#' The direct provider paths support ordinary `PredictModule` objects only.
+#' Modules and composites with specialized `forward()` semantics are rejected
+#' before provider work; use [run()] for their complete workflows.
 #'
 #' @name async
 NULL
@@ -12,6 +15,9 @@ NULL
 #' @description
 #' Executes a module and returns a promise that resolves to the result.
 #' Useful for running multiple modules in parallel.
+#' Only ordinary `PredictModule` objects are supported. Modules and composites
+#' with specialized `forward()` semantics are rejected before provider work;
+#' use [run()] for their complete workflows.
 #'
 #' @param module A dsprrr Module object
 #' @param ... Named inputs matching the module's signature
@@ -39,6 +45,7 @@ run_async <- function(module, ..., .llm = NULL) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
+  assert_direct_provider_async_supported(module, "run_async")
 
   inputs <- list(...)
   request <- build_module_request(module, inputs)
@@ -56,6 +63,9 @@ run_async <- function(module, ..., .llm = NULL) {
 #' @description
 #' Streams text output from a module asynchronously.
 #' Returns a promise that resolves to an async generator.
+#' Only ordinary `PredictModule` objects are supported. Modules and composites
+#' with specialized `forward()` semantics are rejected before provider work;
+#' use [run()] for their complete workflows.
 #'
 #' @param module A dsprrr Module object
 #' @param ... Named inputs matching the module's signature
@@ -75,6 +85,7 @@ stream_async <- function(module, ..., .llm = NULL) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
+  assert_direct_provider_async_supported(module, "stream_async")
 
   inputs <- list(...)
   request <- build_module_request(module, inputs)
@@ -150,6 +161,14 @@ stream_listener <- function(field, callback) {
 #' - Streaming execution does not record traces and bypasses the response
 #'   cache.
 #'
+#' ## Specialized modules
+#'
+#' One-shot fallback execution uses each module's own `forward()` method, so it
+#' remains available to specialized modules when no matching token listener is
+#' active or the output is not token-streamable. Actual token streaming uses a
+#' direct provider path and is limited to ordinary `PredictModule` steps.
+#' Unsupported token-stream requests are rejected before provider work.
+#'
 #' ## Status events
 #'
 #' When `on_status` is provided, it is called with a list describing each
@@ -193,12 +212,13 @@ run_stream <- function(
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
-
   listeners <- normalize_stream_listeners(listeners)
 
   if (!is.null(on_status) && !is.function(on_status)) {
     cli::cli_abort("{.arg on_status} must be a function or NULL")
   }
+
+  assert_run_stream_token_supported(module, listeners)
 
   inputs <- list(...)
 
@@ -334,6 +354,7 @@ stream_module_step <- function(
   }
 
   if (can_stream) {
+    assert_direct_provider_async_supported(module, "run_stream")
     field <- streamable$field
     emit_stream_status(
       on_status,
@@ -418,6 +439,91 @@ stream_module_step <- function(
   )
 
   output
+}
+
+#' Whether a module may use the direct provider async/stream path
+#'
+#' Exact Predict modules use the same request assembly as their forward method.
+#' Every subclass and composite fails closed because it may override forward()
+#' with retrieval, tools, code execution, repeated calls, or graph traversal.
+#' @noRd
+direct_provider_async_supported <- function(module) {
+  identical(class(module)[1L], "PredictModule")
+}
+
+#' Reject operations that would bypass a module's forward method
+#' @noRd
+assert_direct_provider_async_supported <- function(
+  module,
+  operation,
+  module_path = "$"
+) {
+  if (direct_provider_async_supported(module)) {
+    return(invisible(module))
+  }
+
+  module_class <- class(module)[1L]
+  cli::cli_abort(
+    c(
+      "{.fn {operation}} is not supported for {.cls {module_class}}",
+      "x" = "The direct provider path would bypass this module's specialized execution workflow.",
+      "i" = "The unsupported module is at graph path {.code {module_path}}.",
+      "i" = "Use {.fn run} for the complete workflow."
+    ),
+    class = c(
+      "dsprrr_specialized_async_unsupported",
+      "dsprrr_async_unsupported_module"
+    ),
+    operation = operation,
+    module_class = module_class,
+    module_path = module_path
+  )
+}
+
+#' Preflight token-streaming requests across pipeline steps
+#'
+#' One-shot run_stream() fallback is safe because it calls forward(). Only
+#' modules that would actually enter the inherited direct-provider stream path
+#' need the exact-Predict restriction. Preflighting pipelines prevents an
+#' earlier step from reaching a provider before a later unsafe step is found.
+#' @noRd
+assert_run_stream_token_supported <- function(module, listeners) {
+  if (length(listeners) == 0L || !rlang::is_installed("coro")) {
+    return(invisible(module))
+  }
+
+  modules <- if (inherits(module, "PipelineModule")) {
+    stats::setNames(
+      lapply(module$steps, function(step) step@module),
+      paste0("$/steps/", seq_along(module$steps))
+    )
+  } else {
+    stats::setNames(list(module), "$")
+  }
+
+  for (module_path in names(modules)) {
+    candidate <- modules[[module_path]]
+    streamable <- streamable_output_field(candidate$signature@output_type)
+    matching <- !is.null(streamable) &&
+      any(vapply(
+        listeners,
+        function(listener) identical(listener$field, streamable$field),
+        logical(1)
+      ))
+    if (
+      matching &&
+        is.function(candidate$stream) &&
+        !direct_provider_async_supported(candidate)
+    ) {
+      assert_direct_provider_async_supported(
+        candidate,
+        "run_stream",
+        module_path = module_path
+      )
+    }
+  }
+
+  invisible(module)
 }
 
 #' Build a simple prompt from inputs

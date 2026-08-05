@@ -7,8 +7,8 @@
 #' @include teleprompter.R optimizer-core.R optimizer-logging.R pareto.R
 #'
 #' @description
-#' Genetic/evolutionary prompt optimizer that evolves instruction variants
-#' using reflection on failed examples.
+#' Reflective optimizer for instructions and declarative Flex components, using
+#' row-level failures and metric feedback to propose improved candidates.
 #'
 #' @details
 #' ## Feedback metrics
@@ -24,13 +24,23 @@
 #'
 #' ## Differences from DSPy's GEPA
 #'
-#' This is an adapted ("GEPA-lite") implementation. It shares the core
-#' ideas — reflective mutation of instructions guided by failures and
-#' feedback, plus Pareto-frontier selection over multiple metrics — but
-#' uses a fixed population/generations evolutionary loop rather than
-#' DSPy's budget-driven candidate search, and does not yet support
-#' per-component selection in multi-step programs or inference-time
-#' search. Expect qualitatively similar behavior, not identical results.
+#' This is an adapted ("GEPA-lite") implementation. It shares reflective
+#' mutation guided by failures and feedback plus Pareto-frontier selection over
+#' multiple metrics, but uses a fixed population/generations loop rather than
+#' DSPy's budget-driven candidate search.
+#'
+#' Programs containing [flex()] leaves use complete component candidates:
+#' ordinary instructions and complete declarative `module_src` values are
+#' proposed, copied, validated, and bound transactionally. Invalid Flex sources
+#' receive an auditable failure score and are never selectable. The structured
+#' source proposer receives row-aligned inputs, expected output, prediction, and
+#' metric feedback. It never evaluates proposed source as R code.
+#'
+#' Pareto selection still ranks whole-program candidates. GEPA-lite does not
+#' implement DSPy's independent per-component Pareto frontiers or inference-time
+#' search. Compiled programs record this distinction under
+#' `config$optimizer$component_semantics`. Expect qualitatively similar
+#' behavior, not identical upstream results.
 #'
 #' @param metrics Named list of metric functions for evaluation.
 #' @param metric A single metric function (fallback when `metrics` is NULL).
@@ -161,8 +171,18 @@ GEPA <- S7::new_class(
       S7::class_any,
       default = NULL,
       validator = function(value) {
-        if (!is.null(value) && (!is.numeric(value) || length(value) != 1)) {
-          return("seed must be a single numeric value or NULL")
+        valid <- is.null(value) ||
+          (is.numeric(value) &&
+            length(value) == 1L &&
+            !is.na(value) &&
+            is.finite(value) &&
+            value == floor(value) &&
+            value >= 0 &&
+            value <= .Machine$integer.max)
+        if (!valid) {
+          return(
+            "seed must be one non-missing whole number in R's integer range, or NULL"
+          )
         }
         NULL
       }
@@ -230,8 +250,25 @@ compile_gepa <- function(
 
   dataset <- valset %||% trainset
 
-  if (!is.null(teleprompter@seed)) {
+  if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {
+    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
+      get(".Random.seed", envir = globalenv())
+    } else {
+      NULL
+    }
     set.seed(teleprompter@seed)
+    on.exit(
+      {
+        if (is.null(old_seed)) {
+          if (exists(".Random.seed", envir = globalenv())) {
+            rm(".Random.seed", envir = globalenv())
+          }
+        } else {
+          assign(".Random.seed", old_seed, envir = globalenv())
+        }
+      },
+      add = TRUE
+    )
   }
 
   control <- optimizer_control_for_teleprompter(
@@ -245,6 +282,20 @@ compile_gepa <- function(
     TrialLog$new(optimizer_name = "GEPA", log_dir = control@log_dir)
   } else {
     NULL
+  }
+
+  if (length(gepa_flex_paths(program, mutable_only = FALSE)) > 0L) {
+    return(compile_gepa_components(
+      teleprompter = teleprompter,
+      program = program,
+      dataset = dataset,
+      metrics = metrics,
+      metric_names = metric_names,
+      .llm = .llm,
+      control = control,
+      budget = budget,
+      trial_log = trial_log
+    ))
   }
 
   base_instructions <- program$signature@instructions
@@ -507,6 +558,16 @@ gepa_failed_examples <- function(
   scores <- eval_result@examples$score
   feedbacks <- eval_result@examples$feedback %||%
     rep(NA_character_, length(scores))
+  row_ids <- if ("row_id" %in% names(eval_result@examples)) {
+    eval_result@examples[["row_id"]]
+  } else {
+    seq_along(scores)
+  }
+  program_traces <- if ("program_trace" %in% names(eval_result@examples)) {
+    eval_result@examples[["program_trace"]]
+  } else {
+    rep(list(NULL), length(scores))
+  }
   failed_idx <- which(is.na(scores) | scores < threshold)
 
   if (length(failed_idx) == 0) {
@@ -524,10 +585,12 @@ gepa_failed_examples <- function(
       NA
     }
     list(
+      row_id = row_ids[[i]] %||% i,
       inputs = inputs,
       expected = expected,
       predicted = eval_result@examples$predicted[[i]] %||% NA,
-      feedback = feedbacks[[i]] %||% NA_character_
+      feedback = feedbacks[[i]] %||% NA_character_,
+      program_trace = program_traces[[i]]
     )
   })
 }
