@@ -509,10 +509,10 @@ RLMModule <- R6::R6Class(
           c(
             "RLM inputs must exactly match the signature",
             if (length(missing_inputs) > 0L) {
-              "x" = "Missing: {.field {missing_inputs}}"
+              c("x" = "Missing: {.field {missing_inputs}}")
             },
             if (length(unexpected_inputs) > 0L) {
-              "x" = "Unexpected: {.field {unexpected_inputs}}"
+              c("x" = "Unexpected: {.field {unexpected_inputs}}")
             }
           ),
           class = "dsprrr_rlm_input_error"
