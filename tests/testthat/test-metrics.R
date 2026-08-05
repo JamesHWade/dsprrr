@@ -50,6 +50,10 @@ test_that("metric_f1 calculates correct scores", {
 
   # Empty strings
   expect_equal(metric("", ""), 1.0)
+  expect_equal(metric("", "word"), 0.0)
+
+  # Repeated tokens use multiset overlap, not distinct vocabulary overlap
+  expect_equal(metric("a a a", "a a b"), 2 / 3)
 
   # Normalization
   metric_normalized <- metric_f1(normalize = TRUE)
@@ -110,11 +114,18 @@ test_that("metric_custom validates and wraps functions", {
   })
   expect_equal(score_metric("anything", "anything"), 0.75)
 
-  # Invalid return type
-  bad_metric <- metric_custom(function(pred, exp) {
-    list(score = 0.5)
+  # Feedback return protocol
+  feedback_metric <- metric_custom(function(pred, exp) {
+    list(score = 0.5, feedback = "partly correct")
   })
-  expect_error(bad_metric("test", "test"), "must return logical or numeric")
+  expect_identical(
+    feedback_metric("test", "test"),
+    list(score = 0.5, feedback = "partly correct")
+  )
+
+  # Invalid return type
+  bad_metric <- metric_custom(function(pred, exp) "high")
+  expect_error(bad_metric("test", "test"), "logical or numeric")
 
   # Error in custom function
   error_metric <- metric_custom(
@@ -149,12 +160,37 @@ test_that("metric_field_match checks multiple fields", {
   pred3 <- list(sentiment = "positive", confidence = 0.8)
   expect_true(metric_all(pred3, exp)) # both match
 
+  # Numerically equal integer/double fields should match
+  expect_true(metric_field_match("count")(
+    list(count = 1L),
+    list(count = 1)
+  ))
+  expect_false(metric_field_match("values")(
+    list(values = c(first = 1, second = 2)),
+    list(values = c(second = 1, first = 2))
+  ))
+  expect_false(metric_field_match("value")(
+    list(value = 1),
+    list(value = 1 + 1e-8)
+  ))
+
   # Multiple fields with OR
   metric_any <- metric_field_match(
     c("sentiment", "confidence"),
     require_all = FALSE
   )
   expect_true(metric_any(pred, exp)) # sentiment matches
+
+  for (metric in list(
+    metric_exact_match(field = "answer"),
+    metric_f1(field = "answer"),
+    metric_field_match("answer")
+  )) {
+    expect_error(
+      metric(list(), list()),
+      class = "dsprrr_metric_field_error"
+    )
+  }
 
   # Invalid input
   expect_error(metric_field_match(character(0)), "non-empty character vector")
@@ -184,10 +220,21 @@ test_that("metric_threshold converts numeric to logical", {
     "single numeric value"
   )
 
-  # Non-numeric base metric
+  # Logical and feedback metrics use the package-wide metric protocol
   bool_metric <- metric_exact_match()
   threshold_bool <- metric_threshold(bool_metric, 0.5)
-  expect_error(threshold_bool("test", "test"), "must return numeric")
+  expect_true(threshold_bool("test", "test"))
+
+  feedback_metric <- metric_with_feedback(
+    function(prediction, expected) {
+      list(score = 0.75, feedback = "almost")
+    }
+  )
+  threshold_feedback <- metric_threshold(feedback_metric, 0.8)
+  expect_identical(
+    threshold_feedback("prediction", "expected"),
+    list(score = FALSE, feedback = "almost")
+  )
 })
 
 test_that("helper functions work correctly", {
@@ -203,6 +250,9 @@ test_that("helper functions work correctly", {
   data <- list(a = 1, b = 2, c = list(nested = 3))
   expect_equal(extract_field(data, "a"), 1)
   expect_equal(extract_field(data, "c"), list(nested = 3))
-  expect_null(extract_field(data, "missing"))
+  expect_error(
+    extract_field(data, "missing"),
+    class = "dsprrr_metric_field_error"
+  )
   expect_error(extract_field("not a list", "field"), "Cannot extract field")
 })

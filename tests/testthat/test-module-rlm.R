@@ -109,6 +109,41 @@ test_that("rlm_module respects max_iterations", {
   expect_equal(rlm$max_iterations, 10L)
 })
 
+test_that("rlm_module accepts the DSPy 3.3 max_iters alias", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+
+  rlm <- rlm_module("question -> answer", runner = runner, max_iters = 7L)
+
+  expect_identical(rlm$max_iterations, 7L)
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      runner = runner,
+      max_iterations = 5L,
+      max_iters = 7L
+    ),
+    class = "dsprrr_rlm_argument_conflict"
+  )
+})
+
+test_that("rlm_module preserves pre-alias positional argument order", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 5)
+  rlm <- rlm_module(
+    "question -> answer",
+    runner,
+    7L,
+    9L,
+    1234L
+  )
+
+  expect_identical(rlm$max_iterations, 7L)
+  expect_identical(rlm$max_llm_calls, 9L)
+  expect_identical(rlm$max_output_chars, 1234L)
+})
+
 test_that("rlm_module respects max_llm_calls", {
   skip_if_not_installed("callr")
 
@@ -210,6 +245,72 @@ test_that("rlm_module validates tool names", {
     ),
     "conflict with built-in RLM tools"
   )
+
+  duplicate_tools <- structure(
+    list(function() 1, function() 2),
+    names = c("duplicate", "duplicate")
+  )
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      runner = runner,
+      tools = duplicate_tools
+    ),
+    "must be unique"
+  )
+
+  for (invalid_name in c(NA_character_, "...", "..1")) {
+    invalid_tools <- structure(list(function() 1), names = invalid_name)
+    expect_error(
+      rlm_module(
+        "question -> answer",
+        runner = runner,
+        tools = invalid_tools
+      ),
+      class = "dsprrr_rlm_tools_error",
+      info = paste("tool name", invalid_name)
+    )
+  }
+
+  for (reserved_name in c(
+    ".context",
+    ".rlm_output_fields",
+    "list",
+    "length",
+    "names"
+  )) {
+    reserved_tools <- stats::setNames(list(function() 1), reserved_name)
+    expect_error(
+      rlm_module(
+        "question -> answer",
+        runner = runner,
+        tools = reserved_tools
+      ),
+      class = "dsprrr_rlm_tools_error",
+      info = paste("reserved tool", reserved_name)
+    )
+  }
+})
+
+test_that("RLMModule constructor also enforces tool and signature contracts", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+
+  expect_error(
+    signature("question, question -> answer"),
+    "input field names must be unique"
+  )
+  expect_error(
+    RLMModule$new(
+      signature = signature("question -> answer"),
+      runner = runner,
+      tools = structure(
+        list(function() 1, function() 2),
+        names = c("duplicate", "duplicate")
+      )
+    ),
+    class = "dsprrr_rlm_tools_error"
+  )
 })
 
 test_that("rlm_module validates max_iterations bounds", {
@@ -226,6 +327,14 @@ test_that("rlm_module validates max_iterations bounds", {
     rlm_module("question -> answer", runner = runner, max_iterations = -5),
     "max_iterations must be at least 1"
   )
+
+  for (value in list(1.5, NA_real_, Inf, c(1, 2), .Machine$integer.max + 1)) {
+    expect_error(
+      rlm_module("question -> answer", runner = runner, max_iterations = value),
+      class = "dsprrr_rlm_bounds_error",
+      info = paste("max_iterations value", paste(value, collapse = ", "))
+    )
+  }
 })
 
 test_that("rlm_module validates max_llm_calls bounds", {
@@ -241,6 +350,29 @@ test_that("rlm_module validates max_llm_calls bounds", {
   # Zero is allowed (disables recursive calls)
   expect_no_error(
     rlm_module("question -> answer", runner = runner, max_llm_calls = 0)
+  )
+
+  expect_error(
+    rlm_module("question -> answer", runner = runner, max_llm_calls = 2.5),
+    class = "dsprrr_rlm_bounds_error"
+  )
+})
+
+test_that("rlm_module validates output bounds at both construction layers", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+
+  expect_error(
+    rlm_module("question -> answer", runner = runner, max_output_chars = 0),
+    class = "dsprrr_rlm_bounds_error"
+  )
+  expect_error(
+    RLMModule$new(
+      signature = signature("question -> answer"),
+      runner = runner,
+      max_output_chars = 1.5
+    ),
+    class = "dsprrr_rlm_bounds_error"
   )
 })
 
@@ -331,6 +463,37 @@ test_that("RLMModule terminates on SUBMIT call", {
   expect_true("output" %in% names(result))
   expect_true("metadata" %in% names(result))
   expect_equal(result$metadata[[1]]$iterations, 1)
+})
+
+test_that("RLMModule rejects unexpected invocation inputs", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+  rlm <- rlm_module("question -> answer", runner = runner)
+
+  expect_error(
+    rlm$forward(list(question = "q", ignored = "unsafe")),
+    "Unexpected: ignored",
+    class = "dsprrr_rlm_input_error"
+  )
+})
+
+test_that("RLMModule accepts an instruction-only zero-input signature", {
+  skip_if_not_installed("callr")
+  sig <- Signature(
+    inputs = list(),
+    output_type = ellmer::type_object(answer = ellmer::type_string()),
+    instructions = "Return a greeting."
+  )
+  rlm <- rlm_module(sig, runner = r_code_runner(timeout = 5))
+  result <- rlm$forward(
+    list(),
+    .llm = create_mock_rlm_llm(list(list(
+      reasoning = "Done",
+      code = "SUBMIT('hello')"
+    )))
+  )
+
+  expect_identical(result$output[[1L]]$answer, "hello")
 })
 
 test_that("RLMModule SUBMIT returns correct value", {
@@ -836,6 +999,37 @@ test_that("module() factory works with type='rlm'", {
   expect_s3_class(rlm, "RLMModule")
 })
 
+test_that("module() factory routes RLM iteration aliases without ambiguity", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 5)
+  via_alias <- module(
+    signature("question -> answer"),
+    type = "rlm",
+    runner = runner,
+    max_iters = 7L
+  )
+  via_primary <- module(
+    signature("question -> answer"),
+    type = "rlm",
+    runner = runner,
+    max_iterations = 8L
+  )
+
+  expect_identical(via_alias$max_iterations, 7L)
+  expect_identical(via_primary$max_iterations, 8L)
+  expect_error(
+    module(
+      signature("question -> answer"),
+      type = "rlm",
+      runner = runner,
+      max_iterations = 5L,
+      max_iters = 6L
+    ),
+    class = "dsprrr_rlm_argument_conflict"
+  )
+})
+
 test_that("module() factory requires runner for rlm", {
   expect_error(
     module(
@@ -903,7 +1097,7 @@ test_that("create_rlm_prelude includes SUBMIT function", {
     custom_tools = list()
   )
 
-  expect_true(grepl("SUBMIT <- function", prelude, fixed = TRUE))
+  expect_true(grepl("SUBMIT <- base::local", prelude, fixed = TRUE))
 })
 
 test_that("create_rlm_prelude includes peek function", {
@@ -940,7 +1134,7 @@ test_that("create_rlm_prelude includes rlm_query when sub_lm enabled", {
   )
 
   # With sub_lm: should have working rlm_query
-  expect_true(grepl("rlm_query_request", prelude_with, fixed = TRUE))
+  expect_true(grepl("llm_query <- base::local", prelude_with, fixed = TRUE))
 
   # Without sub_lm: should have disabled rlm_query
   expect_true(grepl(
@@ -970,11 +1164,13 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
+  control_nonce <- "submit-shape-test"
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
     has_sub_lm = FALSE,
     custom_tools = list(),
-    output_fields = c("answer", "confidence")
+    output_fields = c("answer", "confidence"),
+    control_nonce = control_nonce
   )
 
   ok <- runner$execute(
@@ -982,9 +1178,10 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
     context = list()
   )
   expect_true(ok$success)
-  expect_true(dsprrr:::is_rlm_final(ok$result))
+  decoded <- dsprrr:::decode_rlm_control(ok$result, control_nonce)
+  expect_true(dsprrr:::is_rlm_final(decoded))
   expect_equal(
-    names(dsprrr:::extract_rlm_final(ok$result)),
+    names(dsprrr:::extract_rlm_final(decoded)),
     c("answer", "confidence")
   )
 
@@ -994,6 +1191,83 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
   )
   expect_false(bad$success)
   expect_true(grepl("missing outputs", bad$error, fixed = TRUE))
+
+  duplicate <- runner$execute(
+    paste0(
+      prelude,
+      "\nSUBMIT(answer = 'first', answer = 'second', confidence = 0.9)"
+    ),
+    context = list()
+  )
+  expect_false(duplicate$success)
+  expect_true(grepl("names must be unique", duplicate$error, fixed = TRUE))
+})
+
+test_that("RLM control frames preserve long multiline unicode payloads", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 10)
+  control_nonce <- "long-payload-test"
+  prelude <- dsprrr:::create_rlm_prelude(
+    has_sub_lm = FALSE,
+    output_fields = "answer",
+    control_nonce = control_nonce
+  )
+  answer <- paste(
+    rep("A long line with unicode snow 雪\nand a newline", 12L),
+    collapse = " | "
+  )
+  result <- runner$execute(
+    paste0(prelude, "\nSUBMIT(", encodeString(answer, quote = "\""), ")"),
+    context = list()
+  )
+  decoded <- dsprrr:::decode_rlm_control(result$result, control_nonce)
+
+  expect_true(result$success)
+  expect_true(dsprrr:::is_rlm_final(decoded))
+  expect_identical(dsprrr:::extract_rlm_final(decoded)$answer, answer)
+})
+
+test_that("RLM control frames authenticate and fail closed", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 10)
+  prelude <- dsprrr:::create_rlm_prelude(
+    control_nonce = "one-invocation"
+  )
+  encoded <- runner$execute(
+    paste0(prelude, "\nSUBMIT('ok')"),
+    context = list()
+  )$result
+
+  expect_null(dsprrr:::decode_rlm_control(encoded, "another-invocation"))
+
+  old_prelude <- dsprrr:::create_rlm_prelude(
+    control_nonce = "earlier-invocation"
+  )
+  old_encoded <- runner$execute(
+    paste0(old_prelude, "\nSUBMIT('stale')"),
+    context = list()
+  )$result
+  selected <- dsprrr:::decode_rlm_control(
+    paste(old_encoded, encoded, sep = "\n"),
+    "one-invocation"
+  )
+  expect_true(dsprrr:::is_rlm_final(selected))
+  expect_identical(dsprrr:::extract_rlm_final(selected)$answer, "ok")
+
+  expect_error(
+    dsprrr:::decode_rlm_control(
+      paste(encoded, encoded, sep = "\n"),
+      "one-invocation"
+    ),
+    class = "dsprrr_rlm_control_error"
+  )
+  expect_error(
+    dsprrr:::decode_rlm_control(
+      paste0(dsprrr:::rlm_control_prefix(), "!"),
+      "one-invocation"
+    ),
+    class = "dsprrr_rlm_control_error"
+  )
 })
 
 test_that("strip_rlm_code_fences removes markdown fences", {
@@ -1156,12 +1430,14 @@ test_that("rlm_query_batch generates batch request marker", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
+  control_nonce <- "query-batch-test"
 
   # Execute prelude in subprocess to test rlm_query_batch
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
     has_sub_lm = TRUE,
-    custom_tools = list()
+    custom_tools = list(),
+    control_nonce = control_nonce
   )
 
   result <- runner$execute(
@@ -1170,19 +1446,74 @@ test_that("rlm_query_batch generates batch request marker", {
   )
 
   expect_true(result$success)
-  expect_s3_class(result$result, "rlm_query_request")
-  expect_true(result$result$batch)
-  expect_equal(result$result$queries, c("q1", "q2"))
+  request <- dsprrr:::decode_rlm_control(result$result, control_nonce)
+  expect_s3_class(request, "rlm_query_request")
+  expect_true(request$batch)
+  expect_equal(request$queries, c("q1", "q2"))
+})
+
+test_that("rlm_query_batch preserves empty batches and rejects missing queries", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 10)
+  control_nonce <- "query-cardinality-test"
+  prelude <- dsprrr:::create_rlm_prelude(
+    has_sub_lm = TRUE,
+    control_nonce = control_nonce
+  )
+
+  empty <- runner$execute(
+    paste0(prelude, "\nllm_query_batched(character())"),
+    context = list()
+  )
+  request <- dsprrr:::decode_rlm_control(empty$result, control_nonce)
+  expect_s3_class(request, "rlm_query_request")
+  expect_identical(request$queries, character())
+
+  missing <- runner$execute(
+    paste0(prelude, "\nllm_query_batched(c('a', NA_character_))"),
+    context = list()
+  )
+  expect_false(missing$success)
+  expect_match(missing$error, "non-missing character vector", fixed = TRUE)
+
+  malformed_json <- jsonlite::toJSON(
+    list(
+      version = 1L,
+      nonce = control_nonce,
+      kind = "query",
+      payload = list(
+        queries = list("a", NULL),
+        slices = NULL,
+        batch = TRUE
+      )
+    ),
+    auto_unbox = TRUE,
+    null = "null"
+  )
+  malformed <- paste0(
+    dsprrr:::rlm_control_prefix(),
+    gsub(
+      "[\r\n]",
+      "",
+      jsonlite::base64_enc(charToRaw(as.character(malformed_json)))
+    )
+  )
+  expect_error(
+    dsprrr:::decode_rlm_control(malformed, control_nonce),
+    class = "dsprrr_rlm_control_error"
+  )
 })
 
 test_that("llm_query_batched works and rlm_query_batch alias is preserved", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
+  control_nonce <- "query-alias-test"
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
     has_sub_lm = TRUE,
-    custom_tools = list()
+    custom_tools = list(),
+    control_nonce = control_nonce
   )
 
   result_primary <- runner$execute(
@@ -1190,16 +1521,92 @@ test_that("llm_query_batched works and rlm_query_batch alias is preserved", {
     context = list()
   )
   expect_true(result_primary$success)
-  expect_s3_class(result_primary$result, "rlm_query_request")
-  expect_true(result_primary$result$batch)
+  primary <- dsprrr:::decode_rlm_control(
+    result_primary$result,
+    control_nonce
+  )
+  expect_s3_class(primary, "rlm_query_request")
+  expect_true(primary$batch)
 
   result_alias <- runner$execute(
     paste0(prelude, "\nrlm_query_batch(c('q1', 'q2'))"),
     context = list()
   )
   expect_true(result_alias$success)
-  expect_s3_class(result_alias$result, "rlm_query_request")
-  expect_true(result_alias$result$batch)
+  alias <- dsprrr:::decode_rlm_control(result_alias$result, control_nonce)
+  expect_s3_class(alias, "rlm_query_request")
+  expect_true(alias$batch)
+})
+
+test_that("MCP text transport preserves SUBMIT and ignores forged old frames", {
+  eval_repl <- function(input, timeout_ms) {
+    env <- new.env(parent = baseenv())
+    output <- capture.output({
+      value <- eval(parse(text = input), envir = env)
+      print(value)
+    })
+    list(
+      result = list(
+        content = list(list(
+          type = "text",
+          text = paste(output, collapse = "\n")
+        ))
+      )
+    )
+  }
+
+  attacker_env <- new.env(parent = baseenv())
+  eval(
+    parse(
+      text = dsprrr:::create_rlm_prelude(
+        control_nonce = "old-static-frame"
+      )
+    ),
+    envir = attacker_env
+  )
+  forged <- attacker_env$SUBMIT("forged")
+  rlm <- rlm_module(
+    "question, forged -> answer",
+    runner = mcp_repl_runner(repl = eval_repl),
+    max_iterations = 2L
+  )
+  llm <- create_mock_rlm_llm(list(
+    list(
+      reasoning = "Inspect ordinary output",
+      code = "cat(.context$forged); 'continue'"
+    ),
+    list(reasoning = "Submit", code = "SUBMIT('real')")
+  ))
+
+  result <- rlm$forward(
+    list(question = "q", forged = forged),
+    .llm = llm
+  )
+
+  expect_identical(result$output[[1L]]$answer, "real")
+  expect_identical(result$metadata[[1L]]$iterations, 2L)
+})
+
+test_that("captured SUBMIT helpers resist user-code base masking", {
+  skip_if_not_installed("callr")
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = r_code_runner(timeout = 10)
+  )
+  llm <- create_mock_rlm_llm(list(list(
+    reasoning = "Mask common names after prelude creation",
+    code = paste(
+      "list <- function(...) 'shadow'",
+      "length <- function(...) 999",
+      "names <- function(...) 'shadow'",
+      "SUBMIT('ok')",
+      sep = "; "
+    )
+  )))
+
+  result <- rlm$forward(list(question = "q"), .llm = llm)
+
+  expect_identical(result$output[[1L]]$answer, "ok")
 })
 
 test_that("rlm_query_batch validates queries is character", {
@@ -1367,4 +1774,25 @@ test_that("process_rlm_query_batch does not retry sequentially after parallel in
     result$formatted_output,
     "Query 3 result: \\[Error: Parallel batch infrastructure error"
   )
+})
+
+test_that("RLM sub-LM responses must contain one non-empty text value", {
+  expect_identical(dsprrr:::normalize_rlm_sub_lm_text("answer"), "answer")
+  expect_identical(
+    dsprrr:::normalize_rlm_sub_lm_text(list(text = "answer")),
+    "answer"
+  )
+
+  invalid <- list(
+    list(answer = "silently stringified before"),
+    "",
+    character(),
+    c("first", "second")
+  )
+  for (response in invalid) {
+    expect_error(
+      dsprrr:::normalize_rlm_sub_lm_text(response),
+      class = "dsprrr_rlm_sub_lm_response_error"
+    )
+  }
 })

@@ -1,3 +1,40 @@
+valid_signature_field_name <- function(name) {
+  is.character(name) &&
+    length(name) == 1L &&
+    !is.na(name) &&
+    nzchar(name) &&
+    identical(make.names(name), name) &&
+    !identical(name, "...") &&
+    !grepl("^\\.\\.[0-9]+$", name)
+}
+
+signature_output_field_names <- function(output_type) {
+  if (
+    methods::.hasSlot(output_type, "properties") &&
+      length(output_type@properties) > 0L
+  ) {
+    return(names(output_type@properties))
+  }
+  # Scalar ellmer types and empty object schemas use dsprrr's established
+  # single-output fallback name. Include it in namespace invariants so an
+  # input named `answer` cannot collide only after a later transform.
+  "answer"
+}
+
+validate_signature_instructions <- function(instructions) {
+  if (
+    !is.character(instructions) ||
+      length(instructions) != 1L ||
+      is.na(instructions)
+  ) {
+    cli::cli_abort(
+      "{.arg instructions} must be one non-missing character string",
+      class = "dsprrr_signature_instruction_error"
+    )
+  }
+  instructions
+}
+
 #' @rdname signature
 #' @export
 Signature <- S7::new_class(
@@ -16,6 +53,16 @@ Signature <- S7::new_class(
           if (!is_dsprrr_input(inp)) {
             return(sprintf("Input %d must be created with input() function", i))
           }
+          if (!valid_signature_field_name(inp$name)) {
+            return(sprintf(
+              "Input %d must have a valid, non-missing R field name",
+              i
+            ))
+          }
+        }
+        input_names <- vapply(value, `[[`, character(1), "name")
+        if (anyDuplicated(input_names)) {
+          return("Signature input field names must be unique")
         }
         NULL
       }
@@ -33,6 +80,19 @@ Signature <- S7::new_class(
             "output_type must be an ellmer type object (e.g., ellmer::type_string())"
           )
         }
+        output_names <- signature_output_field_names(value)
+        if (length(output_names) > 0L) {
+          if (
+            !all(vapply(output_names, valid_signature_field_name, logical(1)))
+          ) {
+            return(
+              "Signature outputs must have valid, non-missing R field names"
+            )
+          }
+          if (anyDuplicated(output_names)) {
+            return("Signature output field names must be unique")
+          }
+        }
         NULL
       }
     ),
@@ -40,8 +100,12 @@ Signature <- S7::new_class(
       S7::class_character,
       default = "",
       validator = function(value) {
-        if (!is.character(value) || length(value) != 1) {
-          return("instructions must be a single character string")
+        if (
+          !is.character(value) ||
+            length(value) != 1L ||
+            is.na(value)
+        ) {
+          return("instructions must be a single non-missing character string")
         }
         NULL
       }
@@ -51,6 +115,12 @@ Signature <- S7::new_class(
     # Additional cross-property validation if needed
     if (length(self@inputs) == 0 && nchar(self@instructions) == 0) {
       return("Signature must have either inputs or instructions defined")
+    }
+    input_names <- vapply(self@inputs, `[[`, character(1), "name")
+    output_names <- signature_output_field_names(self@output_type)
+    collisions <- intersect(input_names, output_names)
+    if (length(collisions) > 0L) {
+      return("Signature input and output field names must be disjoint")
     }
     NULL
   }
@@ -166,7 +236,8 @@ format_ellmer_type <- function(type, verbose = FALSE) {
 #'
 #' @description
 #' The primary function for creating signatures. Accepts either DSPy-style
-#' string notation or explicit arguments.
+#' string notation or explicit arguments. Input and output names must be valid,
+#' unique R field names, and the two namespaces must not overlap.
 #'
 #' @param x Either a string in DSPy format ("inputs -> output") or NULL
 #' @param inputs List of input specifications (when using explicit notation)
@@ -200,6 +271,8 @@ signature <- function(
   instructions = "",
   ...
 ) {
+  instructions <- validate_signature_instructions(instructions)
+
   # If first argument is a string, parse it as DSPy-style notation
   if (is.character(x) && !is.null(x)) {
     return(parse_signature(x, instructions))

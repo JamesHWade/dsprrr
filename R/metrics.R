@@ -101,17 +101,30 @@ metric_f1 <- function(field = NULL, normalize = TRUE) {
     }
 
     # Tokenize
-    pred_tokens <- unlist(strsplit(pred_str, "\\s+"))
-    exp_tokens <- unlist(strsplit(exp_str, "\\s+"))
-
-    # Calculate overlap
-    common <- intersect(pred_tokens, exp_tokens)
-    num_common <- length(common)
+    pred_tokens <- unlist(strsplit(pred_str, "\\s+"), use.names = FALSE)
+    exp_tokens <- unlist(strsplit(exp_str, "\\s+"), use.names = FALSE)
+    pred_tokens <- pred_tokens[nzchar(pred_tokens)]
+    exp_tokens <- exp_tokens[nzchar(exp_tokens)]
 
     # Handle edge cases
     if (length(pred_tokens) == 0 && length(exp_tokens) == 0) {
       return(1.0)
     }
+    if (length(pred_tokens) == 0 || length(exp_tokens) == 0) {
+      return(0.0)
+    }
+
+    # Count token occurrences rather than distinct vocabulary items. This is
+    # the standard bag-of-words F1 contract and prevents repeated tokens from
+    # being over- or under-counted.
+    pred_counts <- table(pred_tokens)
+    exp_counts <- table(exp_tokens)
+    common_tokens <- intersect(names(pred_counts), names(exp_counts))
+    num_common <- sum(pmin(
+      pred_counts[common_tokens],
+      exp_counts[common_tokens]
+    ))
+
     if (num_common == 0) {
       return(0.0)
     }
@@ -188,9 +201,11 @@ metric_contains <- function(
 #'
 #' @description
 #' Wrapper for creating custom metric functions with consistent interface
-#' and error handling.
+#' and error handling. The function may return one logical or numeric score, or
+#' `list(score = , feedback = )` for feedback-aware optimization.
 #'
-#' @param fn A function with signature function(prediction, expected) -> numeric/logical
+#' @param fn A two-argument metric function returning one logical/numeric score
+#'   or `list(score = , feedback = )`.
 #' @param name Optional name for the metric (for debugging)
 #'
 #' @return A metric function with enhanced error handling
@@ -218,26 +233,25 @@ metric_custom <- function(fn, name = NULL) {
       {
         result <- fn(prediction, expected)
 
-        # Validate result
-        if (!is.logical(result) && !is.numeric(result)) {
-          cli::cli_abort(c(
-            "Metric {.fn {metric_name}} must return logical or numeric value",
-            "x" = "Got {.cls {class(result)}}"
-          ))
-        }
+        normalized <- normalize_metric_result(result)
+        score <- normalized$score
 
         # Ensure numeric metrics are in [0, 1]
-        if (is.numeric(result)) {
-          if (result < 0 || result > 1) {
-            cli::cli_warn(c(
-              "Metric {.fn {metric_name}} returned value outside [0, 1]",
-              "i" = "Value: {result}"
-            ))
-            result <- max(0, min(1, result))
-          }
+        if (!is.na(score) && (score < 0 || score > 1)) {
+          cli::cli_warn(c(
+            "Metric {.fn {metric_name}} returned value outside [0, 1]",
+            "i" = "Value: {score}"
+          ))
+          score <- max(0, min(1, score))
         }
 
-        result
+        if (is.list(result)) {
+          return(list(score = score, feedback = normalized$feedback))
+        }
+        if (is.logical(result)) {
+          return(as.logical(score))
+        }
+        score
       },
       error = function(e) {
         cli::cli_abort(
@@ -281,7 +295,10 @@ metric_field_match <- function(fields, require_all = TRUE) {
       function(field) {
         pred_val <- extract_field(prediction, field)
         exp_val <- extract_field(expected, field)
-        identical(pred_val, exp_val)
+        # Ignore integer-vs-double storage mode, but keep names, dimensions,
+        # and values exact. Optimizer metrics must not silently accept nearby
+        # numerics or differently labelled structures.
+        isTRUE(all.equal(pred_val, exp_val, tolerance = 0))
       },
       logical(1)
     )
@@ -304,12 +321,26 @@ extract_field <- function(x, field) {
   }
 
   if (is.list(x) || is.environment(x)) {
+    present <- if (is.environment(x)) {
+      exists(field, envir = x, inherits = FALSE)
+    } else {
+      field %in% names(x)
+    }
+    if (!present) {
+      cli::cli_abort(
+        "Requested metric field {.field {field}} is missing",
+        class = "dsprrr_metric_field_error"
+      )
+    }
     x[[field]]
   } else {
-    cli::cli_abort(c(
-      "Cannot extract field from non-list object",
-      "i" = "Object class: {.cls {class(x)}}"
-    ))
+    cli::cli_abort(
+      c(
+        "Cannot extract field from non-list object",
+        "i" = "Object class: {.cls {class(x)}}"
+      ),
+      class = "dsprrr_metric_field_error"
+    )
   }
 }
 
@@ -417,6 +448,176 @@ is_feedback_metric <- function(metric) {
   inherits(metric, "dsprrr_feedback_metric")
 }
 
+#' Create a Trace-Aware Metric
+#'
+#' @description
+#' Wraps a metric so it can score both what a program returned and how the
+#' result was produced. Trace-aware metrics receive a third `program_trace`
+#' argument containing the row and epoch identifiers, the module's ordered
+#' execution events, and per-row metadata. They work with [evaluate()] and
+#' every optimizer that delegates to it, including [GEPA].
+#'
+#' This makes quality-efficiency objectives explicit. For example, a metric can
+#' penalize excessive token use, latency, iterations, or tool calls while still
+#' returning textual feedback for reflective optimizers.
+#'
+#' @param fn A function with signature
+#'   `function(prediction, expected, program_trace)`. It must return a numeric
+#'   or logical score, or `list(score = , feedback = )`. An explicit
+#'   `program_trace` formal (including after `...`) is matched by name;
+#'   otherwise the trace is supplied as the third positional argument. Any
+#'   additional formals must have defaults.
+#' @param field Optional expected-output column name, stored like the `field`
+#'   attribute on built-in metrics.
+#'
+#' @return A metric function classed as `dsprrr_trace_metric`.
+#' @export
+#' @examples
+#' metric <- metric_with_trace(function(prediction, expected, program_trace) {
+#'   correct <- identical(prediction$answer, expected$answer)
+#'   tokens <- program_trace$metadata$total_tokens
+#'   if (is.null(tokens)) tokens <- 0
+#'   as.numeric(correct) - min(tokens / 10000, 0.1)
+#' }, field = "answer")
+#'
+#' # evaluate(module, data, metric, .llm = llm)
+metric_with_trace <- function(fn, field = NULL) {
+  if (!is.function(fn)) {
+    cli::cli_abort("{.arg fn} must be a function")
+  }
+  if (
+    !is.null(field) &&
+      (!is.character(field) || length(field) != 1L || is.na(field))
+  ) {
+    cli::cli_abort("{.arg field} must be a single character string or NULL")
+  }
+
+  metric_formals <- formals(fn)
+  accepts_trace <- !is.null(metric_formals) &&
+    ("..." %in% names(metric_formals) || length(metric_formals) >= 3L)
+  if (!accepts_trace) {
+    cli::cli_abort(
+      c(
+        "{.arg fn} must accept a third {.arg program_trace} argument",
+        "i" = "Use {.code function(prediction, expected, program_trace) ...}."
+      ),
+      class = "dsprrr_trace_metric_signature_error"
+    )
+  }
+
+  formal_names <- names(metric_formals)
+  named_trace <- "program_trace" %in% formal_names
+  ellipsis_position <- match(
+    "...",
+    formal_names,
+    nomatch = length(formal_names) + 1L
+  )
+  positional_formals <- seq_len(ellipsis_position - 1L)
+  if (named_trace) {
+    positional_formals <- positional_formals[
+      formal_names[positional_formals] != "program_trace"
+    ]
+  }
+  supplied <- rep(FALSE, length(metric_formals))
+  if (named_trace) {
+    supplied[formal_names == "program_trace"] <- TRUE
+  }
+  positional_count <- if (named_trace) 2L else 3L
+  supplied[utils::head(positional_formals, positional_count)] <- TRUE
+  required <- vapply(metric_formals, rlang::is_missing, logical(1))
+  unsupplied <- formal_names[required & !supplied & formal_names != "..."]
+  if (length(unsupplied) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg fn} has required arguments the trace metric cannot supply",
+        "x" = "Unsupplied argument{?s}: {.arg {unsupplied}}",
+        "i" = "The callback receives prediction, expected, and program_trace."
+      ),
+      class = "dsprrr_trace_metric_signature_error"
+    )
+  }
+
+  metric <- function(prediction, expected, program_trace) {
+    if (!inherits(program_trace, "dsprrr_program_trace")) {
+      cli::cli_abort(
+        "{.arg program_trace} must be supplied by {.fn evaluate}",
+        class = "dsprrr_program_trace_error"
+      )
+    }
+    if ("program_trace" %in% names(metric_formals)) {
+      do.call(
+        fn,
+        c(
+          list(prediction, expected),
+          list(
+            program_trace = program_trace
+          )
+        )
+      )
+    } else {
+      do.call(fn, list(prediction, expected, program_trace))
+    }
+  }
+  attr(metric, "field") <- field
+  class(metric) <- c("dsprrr_trace_metric", class(metric))
+  metric
+}
+
+#' Check whether a metric requests a program trace
+#' @noRd
+is_trace_metric <- function(metric) {
+  inherits(metric, "dsprrr_trace_metric")
+}
+
+#' Build the stable trace envelope passed to trace-aware metrics
+#' @noRd
+new_program_trace <- function(events = list(), metadata, row_id, epoch) {
+  if (is.null(events)) {
+    events <- list()
+  } else if (!is.list(events)) {
+    cli::cli_abort(
+      "Internal program trace events must be a list",
+      class = "dsprrr_program_trace_contract_error"
+    )
+  }
+  if (is.null(metadata)) {
+    metadata <- list()
+  } else if (!is.list(metadata)) {
+    metadata <- list(value = metadata)
+  }
+
+  error <- metadata$error %||% NA_character_
+  failed <- length(error) > 0L && !is.na(error[[1L]]) && nzchar(error[[1L]])
+  status <- if (failed) {
+    "error"
+  } else if (length(events) == 0L) {
+    "untraced"
+  } else {
+    "ok"
+  }
+
+  structure(
+    list(
+      row_id = as.integer(row_id),
+      epoch = as.integer(epoch),
+      status = status,
+      events = events,
+      metadata = metadata
+    ),
+    class = c("dsprrr_program_trace", "list")
+  )
+}
+
+#' Invoke a metric without changing the ordinary two-argument protocol
+#' @noRd
+invoke_metric <- function(metric, prediction, expected, program_trace) {
+  if (is_trace_metric(metric)) {
+    metric(prediction, expected, program_trace)
+  } else {
+    metric(prediction, expected)
+  }
+}
+
 #' Normalize a raw metric return value to score + feedback
 #'
 #' Accepts numeric, logical, or `list(score = , feedback = )` returns and
@@ -464,13 +665,17 @@ normalize_metric_result <- function(raw) {
 #' Create a Threshold Metric
 #'
 #' @description
-#' Wraps a numeric metric to return TRUE/FALSE based on a threshold.
+#' Wraps a metric to return TRUE/FALSE based on a threshold. Logical, numeric,
+#' feedback, and trace-aware metrics all use the package-wide metric protocol;
+#' feedback and trace dispatch are preserved by the wrapper.
 #'
-#' @param metric A metric function that returns numeric values
+#' @param metric A metric function returning a logical/numeric score or
+#'   `list(score = , feedback = )`.
 #' @param threshold The threshold value for success
 #' @param comparison One of ">=", ">", "==", "<", "<="
 #'
-#' @return A function with signature function(prediction, expected) -> logical
+#' @return A metric function returning logical scores. Trace-aware and feedback
+#'   protocols are preserved when present on `metric`.
 #' @export
 #' @examples
 #' # F1 score with threshold
@@ -480,20 +685,25 @@ metric_threshold <- function(metric, threshold = 0.5, comparison = ">=") {
   if (!is.function(metric)) {
     cli::cli_abort("metric must be a function")
   }
-  if (!is.numeric(threshold) || length(threshold) != 1) {
-    cli::cli_abort("threshold must be a single numeric value")
+  if (
+    !is.numeric(threshold) ||
+      length(threshold) != 1L ||
+      is.na(threshold) ||
+      !is.finite(threshold)
+  ) {
+    cli::cli_abort(c(
+      "threshold must be a single numeric value",
+      "x" = "Missing and infinite values are not supported"
+    ))
   }
 
   comparison <- match.arg(comparison, c(">=", ">", "==", "<", "<="))
 
-  function(prediction, expected) {
-    score <- metric(prediction, expected)
-
-    if (!is.numeric(score)) {
-      cli::cli_abort(
-        "Base metric must return numeric value for threshold comparison"
-      )
-    }
+  threshold_metric <- function(prediction, expected, program_trace = NULL) {
+    normalized <- normalize_metric_result(
+      invoke_metric(metric, prediction, expected, program_trace)
+    )
+    score <- normalized$score
 
     result <- switch(
       comparison,
@@ -504,6 +714,24 @@ metric_threshold <- function(metric, threshold = 0.5, comparison = ">=") {
       "<=" = score <= threshold
     )
 
+    if (!is.na(normalized$feedback)) {
+      return(list(score = result, feedback = normalized$feedback))
+    }
     result
   }
+
+  attr(threshold_metric, "field") <- get_metric_field(metric)
+  if (is_trace_metric(metric)) {
+    class(threshold_metric) <- c(
+      "dsprrr_trace_metric",
+      class(threshold_metric)
+    )
+  }
+  if (is_feedback_metric(metric)) {
+    class(threshold_metric) <- c(
+      "dsprrr_feedback_metric",
+      class(threshold_metric)
+    )
+  }
+  threshold_metric
 }

@@ -4,6 +4,12 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## New features
 
+* DSPy 3.3 alignment adds immutable `with_instructions()` and
+  `append_instructions()` transforms, plus `metric_with_trace()` for objectives
+  that score both outputs and row-owned execution traces. Structured
+  evaluations now return final-epoch `traces` and, for repeated evaluations,
+  `epoch_traces`; optimizer examples carry the corresponding `program_trace`.
+
 * `AutoResearch()` runs a persistent, provider-neutral research agent over
   validated multi-module instruction and template snapshots. The agent can
   request OS-sandboxed R experiments, branch from prior candidates, and choose
@@ -12,7 +18,14 @@ First development changelog. dsprrr is experimental; the API may change.
 
 * `mcp_repl_runner()` connects code-executing modules and agentic optimizers to
   Posit's persistent `mcp-repl` R runtime with OS-enforced workspace-write
-  sandboxing and network access disabled by default.
+  sandboxing and network access disabled by default. Injected `repl` functions
+  are now marked unverified and fail closed when an agentic harness requires an
+  OS sandbox; only connections launched and configured by dsprrr advertise the
+  managed sandbox policy. Arbitrary mcp-repl `extra_args` are rejected so
+  callers cannot override the enforced filesystem or network policy. For RLM
+  control traffic, encoded frames are capped below mcp-repl's inline-output
+  threshold and file-preview or pager compaction fails closed rather than
+  treating a partial frame as a submission.
 
 * `MetaHarness()` uses fresh proposer sessions to generate bounded candidate
   batches from a persisted scored frontier. Its trusted R outer loop validates,
@@ -24,6 +37,48 @@ First development changelog. dsprrr is experimental; the API may change.
   optimizer without allowing a regressing stage to replace a better candidate.
 
 ## Bug fixes
+
+* DSPy 3.3 execution contracts are enforced in the R runtime: `rlm_module()`
+  accepts the `max_iters` alias, rejects duplicate, reserved, missing, and
+  ellipsis-style tool names, rejects unexpected invocation inputs, and no
+  longer stringifies arbitrary sub-LM responses. RLM submit/query control frames
+  now survive text-only runners through versioned, per-invocation authenticated
+  envelopes; malformed and duplicate frames fail closed. `code_act()` now
+  limits tool calls executed inside ellmer's internal tool loop and protects
+  its built-in runner-tool namespace. Authenticated decoding ignores valid
+  stale frames while requiring exactly one frame for the current invocation,
+  and `SUBMIT()` rejects duplicate output names. The generic `module()` factory
+  now routes RLM's `max_iters` alias instead of silently using its
+  `max_iterations` default, and rejects supplying both spellings. CodeAct list
+  aliases are validated against ellmer's provider-neutral tool-name grammar
+  before registration. The RLM alias is appended after the pre-existing
+  positional arguments so older positional calls retain their meaning.
+
+* DSPy's 3.3 fresh-interpreter factory is not yet mirrored.
+  `ProgramOfThoughtModule`, `RLMModule`, and `CodeActModule` retain their
+  configured runner; persistent backends keep state across calls and must be
+  reset between logically isolated jobs. One persistent runner must not be
+  shared by concurrent invocations. ProgramOfThought now validates its runner
+  and iteration bound at both public and direct-constructor boundaries.
+
+* Metric correctness and composition are stricter: token F1 uses multiset
+  overlap, numeric field equality no longer fails solely because one value is
+  integer and the other double, `metric_custom()` accepts score-plus-feedback
+  results, requested-but-missing fields fail instead of earning accidental
+  perfect credit, and `metric_threshold()` preserves feedback and trace
+  dispatch. Trace metrics keep row identity through optimizer budgets, receive
+  Bootstrap execution metadata, and use the primary GEPA metric's output field.
+  Trace dispatch supports both an explicitly named `program_trace` formal
+  around `...` and a positional third trace argument before `...`.
+
+* Signatures reject invalid, duplicate, and input/output-colliding field names.
+  Multi-output types correctly preserve colons inside quoted enum values.
+  Optimizer instruction updates now replace signatures copy-on-write instead
+  of mutating a shared signature object.
+
+* Agentic harness seeds are constrained to R's integer range and compile calls
+  restore the caller's RNG state. MCP REPL reset now treats protocol-level
+  errors as failures instead of silently succeeding.
 
 * `configure_cache()` now keeps persistent response envelopes in the
   platform-specific per-user cache directory by default. Unix cache directories

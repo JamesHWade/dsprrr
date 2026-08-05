@@ -20,13 +20,16 @@
 #'   - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef objects.
 #'   - for `type = "rlm"`: named list of R functions injected into the REPL.
 #'   If provided with `type = "predict"`, automatically upgrades to react.
-#' @param max_iterations Maximum ReAct iterations (default: 10, only for react)
+#' @param max_iterations Maximum iterations for ReAct, CodeAct, or RLM modules
+#'   created through this generic factory (default: 10). For CodeAct it also
+#'   caps tool calls within one invocation; exceeding that inner budget errors.
 #' @param M Number of reasoning chains for multichain (default: 3)
 #' @param temperature Temperature for multichain diversity (default: 0.7)
 #' @param runner Code runner implementing `execute()` and `policy()` for code
 #'   execution types. Create the built-in backend with `r_code_runner()`.
 #' @param max_iters Maximum code repair iterations for program_of_thought
-#'   (default: 3)
+#'   (default: 3), or the DSPy 3.3-compatible alias for RLM's
+#'   `max_iterations`. For RLM, supply only one spelling.
 #' @param extract_answer Logical. For program_of_thought, whether to use LLM
 #'   to extract final answer from execution result (default: TRUE)
 #' @param template Optional glue template for prompt generation
@@ -207,15 +210,27 @@ module <- function(
           "i" = "Then pass it: {.code module(..., runner = runner)}"
         ))
       }
-      rlm_module(
+      rlm_args <- list(
         signature = signature,
         runner = runner,
-        max_iterations = max_iterations,
         tools = tools %||% list(),
         config = config,
-        chat = chat,
-        ...
+        chat = chat
       )
+      if (!missing(max_iters)) {
+        if (!missing(max_iterations)) {
+          cli::cli_abort(
+            "Supply only one of {.arg max_iterations} and {.arg max_iters}",
+            class = "dsprrr_rlm_argument_conflict"
+          )
+        }
+        rlm_args$max_iters <- max_iters
+      } else {
+        # Preserve the generic factory's historical RLM default of 10 while
+        # allowing an explicitly supplied DSPy 3.3 spelling to take effect.
+        rlm_args$max_iterations <- max_iterations
+      }
+      do.call(rlm_module, c(rlm_args, list(...)))
     },
     cli::cli_abort("Unknown module type: {type}")
   )

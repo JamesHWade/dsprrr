@@ -640,6 +640,11 @@ eval_program <- function(
       eval_result$feedbacks
     } else {
       rep(NA_character_, n)
+    },
+    program_trace = if (length(eval_result$traces %||% list()) == n) {
+      eval_result$traces
+    } else {
+      rep(list(NULL), n)
     }
   )
 
@@ -2734,6 +2739,11 @@ optimizer_eval_row_record <- function(eval_result, row_index) {
       NA
     },
     feedback = as.character(example$feedback[[1L]] %||% NA_character_),
+    program_trace = if ("program_trace" %in% names(example)) {
+      example$program_trace[[1L]]
+    } else {
+      NULL
+    },
     input_tokens = eval_result@input_tokens,
     output_tokens = eval_result@output_tokens,
     total_tokens = eval_result@total_tokens,
@@ -2749,6 +2759,9 @@ optimizer_eval_row_record <- function(eval_result, row_index) {
 optimizer_eval_checkpoint_records <- function(records) {
   lapply(records, function(record) {
     record$predicted <- NULL
+    # Raw trace events can contain prompts and model responses. They are useful
+    # during live optimization, but never belong in resumable checkpoints.
+    record$program_trace <- NULL
     record
   })
 }
@@ -2771,6 +2784,7 @@ optimizer_eval_restore_records <- function(records) {
       )
     }
     record$predicted <- record$predicted %||% NA
+    record$program_trace <- record$program_trace %||% NULL
     record
   })
 }
@@ -2818,12 +2832,14 @@ optimizer_combine_eval_records <- function(records, dataset) {
     character(1)
   )
   predictions <- lapply(records, `[[`, "predicted")
+  traces <- lapply(records, `[[`, "program_trace")
   examples <- tibble::tibble(
     row_id = row_indices,
     score = scores,
     error = errors,
     predicted = predictions,
-    feedback = feedback
+    feedback = feedback,
+    program_trace = traces
   )
   input_names <- intersect(names(dataset), names(dataset))
   for (name in input_names) {
@@ -3054,6 +3070,7 @@ optimizer_eval_program <- function(
         progress = FALSE,
         log_dir = control@log_dir
       ),
+      .trace_row_ids = row_index,
       ...
     )
     record_optimizer_usage(

@@ -8,6 +8,85 @@
 #' @name signature-transforms
 NULL
 
+#' Derive a Signature with New Instructions
+#'
+#' @description
+#' `with_instructions()` replaces a signature's instructions while preserving
+#' its input and output fields. `append_instructions()` layers additional
+#' instructions after the existing text, separated by a blank line. Both
+#' functions return a new [Signature] and never mutate the original.
+#'
+#' @param x A [Signature] object or string notation such as
+#'   `"question -> answer"`.
+#' @param instructions A single, non-missing character string. Empty text is
+#'   allowed when the resulting signature remains valid; for
+#'   `append_instructions()` it is a no-op.
+#'
+#' @return A new [Signature] object.
+#' @export
+#' @rdname signature-transforms
+#' @examples
+#' base <- signature(
+#'   "text -> summary",
+#'   instructions = "Summarize the text."
+#' )
+#'
+#' concise <- append_instructions(base, "Use at most 30 words.")
+#' base@instructions
+#' concise@instructions
+#'
+#' replaced <- with_instructions(base, "Return one sentence.")
+with_instructions <- function(x, instructions) {
+  sig <- signature_transform_input(x)
+  instructions <- validate_signature_instructions(instructions)
+
+  Signature(
+    inputs = sig@inputs,
+    output_type = sig@output_type,
+    instructions = instructions
+  )
+}
+
+#' @export
+#' @rdname signature-transforms
+append_instructions <- function(x, instructions) {
+  sig <- signature_transform_input(x)
+  instructions <- validate_signature_instructions(instructions)
+
+  combined <- if (!nzchar(instructions)) {
+    sig@instructions
+  } else if (!nzchar(sig@instructions)) {
+    instructions
+  } else {
+    paste(sig@instructions, instructions, sep = "\n\n")
+  }
+
+  Signature(
+    inputs = sig@inputs,
+    output_type = sig@output_type,
+    instructions = combined
+  )
+}
+
+#' Coerce a signature-transform input
+#' @noRd
+signature_transform_input <- function(x) {
+  if (S7::S7_inherits(x, Signature)) {
+    return(x)
+  }
+  if (is.character(x) && length(x) == 1L && !is.na(x)) {
+    return(signature(x))
+  }
+
+  cli::cli_abort(
+    c(
+      "{.arg x} must be a Signature or one signature string",
+      "x" = "Received {.cls {class(x)[1]}}."
+    ),
+    class = "dsprrr_signature_transform_error"
+  )
+}
+
 #' Add Chain-of-Thought Reasoning to a Signature
 #'
 #' @description

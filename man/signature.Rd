@@ -25,7 +25,8 @@ A Signature object
 }
 \description{
 The primary function for creating signatures. Accepts either DSPy-style
-string notation or explicit arguments.
+string notation or explicit arguments. Input and output names must be valid,
+unique R field names, and the two namespaces must not overlap.
 }
 \examples{
 # String notation (recommended for simple cases)

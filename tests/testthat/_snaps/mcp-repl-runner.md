@@ -6,3 +6,12 @@
       Error in `mcp_repl_runner()`:
       ! `sandbox` must be "workspace-write" or "inherit-codex"
       i Use `r_code_runner()` explicitly for trusted, unsandboxed code.
+
+# mcp_repl_runner refuses an unverifiable inherited sandbox
+
+    Code
+      mcp_repl_runner(repl = function(input, timeout_ms) input, sandbox = "inherit-codex")
+    Condition
+      Error in `mcp_repl_runner()`:
+      ! "inherit-codex" cannot be verified by this MCP client
+      i Use `sandbox = "workspace-write"`.

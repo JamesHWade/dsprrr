@@ -13,13 +13,18 @@
 parse_signature <- function(signature_str, instructions = "") {
   # Validate input is a non-empty string
 
-  if (!is.character(signature_str) || length(signature_str) != 1) {
+  if (
+    !is.character(signature_str) ||
+      length(signature_str) != 1L ||
+      is.na(signature_str)
+  ) {
     cli::cli_abort(c(
       "Signature must be a single character string",
       "x" = "You provided: {.cls {class(signature_str)[1]}}",
       "i" = "Example: {.code signature('question -> answer')}"
     ))
   }
+  instructions <- validate_signature_instructions(instructions)
 
   signature_str <- trimws(signature_str)
   if (nchar(signature_str) == 0) {
@@ -187,42 +192,11 @@ parse_inputs <- function(inputs_str) {
 #' Parse output specification from string
 #' @noRd
 parse_output <- function(output_str) {
-  # First, check if there are commas at depth 0 BEFORE any colons
-  # This indicates multiple outputs like "sentiment, issues: array(string)"
-  chars <- strsplit(output_str, "")[[1]]
-  depth <- 0
-  first_comma_pos <- -1
-  first_colon_pos <- -1
-
-  for (i in seq_along(chars)) {
-    if (chars[i] %in% c("[", "(")) {
-      depth <- depth + 1
-    }
-    if (chars[i] %in% c("]", ")")) {
-      depth <- depth - 1
-    }
-    if (chars[i] == "," && depth == 0 && first_comma_pos == -1) {
-      first_comma_pos <- i
-    }
-    if (chars[i] == ":" && depth == 0 && first_colon_pos == -1) {
-      first_colon_pos <- i
-    }
-  }
-
-  # If we have a comma before a colon (or no colon), it's likely multiple outputs
-  if (
-    first_comma_pos > 0 &&
-      (first_colon_pos == -1 || first_comma_pos < first_colon_pos)
-  ) {
-    # Check if the comma is part of a type specification or truly separates fields
-    # Look at the string before the first comma
-    before_comma <- substr(output_str, 1, first_comma_pos - 1)
-
-    # If before_comma contains a colon, it might be a single complex output
-    # Otherwise, it's multiple outputs
-    if (!grepl(":", before_comma, fixed = TRUE)) {
-      return(parse_multiple_outputs(output_str))
-    }
+  # A top-level comma always separates output fields. Commas inside enum,
+  # array, or bound syntax stay nested and are ignored by this splitter.
+  output_fields <- split_respecting_nesting(output_str, ",")
+  if (length(output_fields) > 1L) {
+    return(parse_multiple_outputs(output_str))
   }
 
   # Original logic for single output with type specification
@@ -245,36 +219,9 @@ parse_output <- function(output_str) {
     }
 
     if (colon_pos > 0) {
-      # Check if there are multiple outputs by looking for commas outside of type specs
-      # after the first field
-      remainder <- substr(output_str, colon_pos + 1, nchar(output_str))
-      # Look for commas at depth 0 in the remainder
-      has_multiple <- FALSE
-      depth <- 0
-      chars_remainder <- strsplit(remainder, "")[[1]]
-      for (i in seq_along(chars_remainder)) {
-        if (chars_remainder[i] %in% c("[", "(")) {
-          depth <- depth + 1
-        }
-        if (chars_remainder[i] %in% c("]", ")")) {
-          depth <- depth - 1
-        }
-        if (chars_remainder[i] == "," && depth == 0) {
-          # Check if this comma is followed by another field (name:)
-          rest <- substr(remainder, i + 1, nchar(remainder))
-          if (grepl("^\\s*\\w+\\s*:", rest) || grepl("^\\s*\\w+\\s*$", rest)) {
-            has_multiple <- TRUE
-            break
-          }
-        }
-      }
-
-      if (has_multiple) {
-        return(parse_multiple_outputs(output_str))
-      }
-
       # Single output with type
       output_name <- trimws(substr(output_str, 1, colon_pos - 1))
+      validate_parsed_field_names(output_name, "output")
       type_str <- trimws(substr(output_str, colon_pos + 1, nchar(output_str)))
 
       # Wrap single outputs in an object type for proper field access
@@ -284,16 +231,9 @@ parse_output <- function(output_str) {
     }
   }
 
-  # Check for multiple outputs without types (e.g., "answer, confidence")
-  if (grepl(",", output_str, fixed = TRUE)) {
-    # Simple check: if no colons or brackets, treat as multiple outputs
-    if (!grepl("[\\[\\(]", output_str)) {
-      return(parse_multiple_outputs(output_str))
-    }
-  }
-
   # Single output case without type annotation
   output_name <- trimws(output_str)
+  validate_parsed_field_names(output_name, "output")
   type_str <- "string" # Default type
 
   # For single outputs, wrap in an object type to get proper field access
@@ -309,27 +249,96 @@ parse_multiple_outputs <- function(output_str) {
   # Split by comma, but be careful with nested structures
   outputs <- split_respecting_nesting(output_str, ",")
 
+  field_names <- vapply(
+    outputs,
+    function(output) split_output_field(output)$name,
+    character(1)
+  )
+  validate_parsed_field_names(field_names, "output")
+
   # Parse each output field
   fields <- list()
   for (output in outputs) {
-    output <- trimws(output)
-
-    # Parse field name and type
-    if (grepl(":", output, fixed = TRUE)) {
-      parts <- strsplit(output, "\\s*:\\s*")[[1]]
-      field_name <- trimws(parts[1])
-      type_str <- trimws(parts[2])
-    } else {
-      field_name <- trimws(output)
-      type_str <- "string"
-    }
+    field <- split_output_field(output)
 
     # Parse the type and add to fields
-    fields[[field_name]] <- parse_type_string(type_str, field_name)
+    fields[[field$name]] <- parse_type_string(field$type, field$name)
   }
 
   # Return as an ellmer object type
   do.call(ellmer::type_object, fields)
+}
+
+# Split only the first top-level field separator. Colons inside quoted enum
+# values (for example, URLs and times) are part of the type expression.
+split_output_field <- function(output) {
+  output <- trimws(output)
+  colon_pos <- find_top_level_colon(output)
+  if (colon_pos == 0L) {
+    return(list(name = output, type = "string"))
+  }
+  list(
+    name = trimws(substr(output, 1L, colon_pos - 1L)),
+    type = trimws(substr(output, colon_pos + 1L, nchar(output)))
+  )
+}
+
+# Return the position of the first colon outside nested delimiters and quoted
+# literals. Zero means no top-level separator was found.
+find_top_level_colon <- function(str) {
+  chars <- strsplit(str, "", fixed = TRUE)[[1L]]
+  depth <- 0L
+  in_quotes <- FALSE
+  quote_char <- ""
+  for (i in seq_along(chars)) {
+    char <- chars[[i]]
+    escaped <- i > 1L && identical(chars[[i - 1L]], "\\")
+    if (char %in% c("'", '"') && !escaped) {
+      if (!in_quotes) {
+        in_quotes <- TRUE
+        quote_char <- char
+      } else if (identical(char, quote_char)) {
+        in_quotes <- FALSE
+        quote_char <- ""
+      }
+      next
+    }
+    if (in_quotes) {
+      next
+    }
+    if (char %in% c("[", "(", "{")) {
+      depth <- depth + 1L
+    } else if (char %in% c("]", ")", "}")) {
+      depth <- depth - 1L
+    } else if (identical(char, ":") && depth == 0L) {
+      return(i)
+    }
+  }
+  0L
+}
+
+validate_parsed_field_names <- function(names, role) {
+  invalid <- names[!vapply(names, valid_signature_field_name, logical(1))]
+  if (length(invalid) > 0L) {
+    cli::cli_abort(
+      c(
+        "Signature {role} fields must be valid R names",
+        "x" = "Invalid name{?s}: {.val {invalid}}"
+      ),
+      class = "dsprrr_signature_field_error"
+    )
+  }
+  if (anyDuplicated(names)) {
+    duplicates <- unique(names[duplicated(names)])
+    cli::cli_abort(
+      c(
+        "Signature {role} field names must be unique",
+        "x" = "Duplicate name{?s}: {.val {duplicates}}"
+      ),
+      class = "dsprrr_signature_field_error"
+    )
+  }
+  invisible(names)
 }
 
 #' Split string respecting nested structures

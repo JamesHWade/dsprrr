@@ -2,9 +2,44 @@
 % Please edit documentation in R/signature-transforms.R
 \name{signature-transforms}
 \alias{signature-transforms}
+\alias{with_instructions}
+\alias{append_instructions}
 \title{Signature Transforms for Advanced Reasoning Modules}
+\usage{
+with_instructions(x, instructions)
+
+append_instructions(x, instructions)
+}
+\arguments{
+\item{x}{A \link{Signature} object or string notation such as
+\code{"question -> answer"}.}
+
+\item{instructions}{A single, non-missing character string. Empty text is
+allowed when the resulting signature remains valid; for
+\code{append_instructions()} it is a no-op.}
+}
+\value{
+A new \link{Signature} object.
+}
 \description{
 Functions for transforming signatures to enable different reasoning patterns.
 These are composable transforms that modify the output type of a signature
 to include additional fields like chain-of-thought reasoning.
+
+\code{with_instructions()} replaces a signature's instructions while preserving
+its input and output fields. \code{append_instructions()} layers additional
+instructions after the existing text, separated by a blank line. Both
+functions return a new \link{Signature} and never mutate the original.
+}
+\examples{
+base <- signature(
+  "text -> summary",
+  instructions = "Summarize the text."
+)
+
+concise <- append_instructions(base, "Use at most 30 words.")
+base@instructions
+concise@instructions
+
+replaced <- with_instructions(base, "Return one sentence.")
 }

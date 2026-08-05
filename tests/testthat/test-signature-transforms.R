@@ -1,5 +1,74 @@
 # Tests for signature-transforms.R
 
+test_that("instruction transforms are immutable and composable", {
+  original <- signature(
+    "text -> summary",
+    instructions = "Summarize the text."
+  )
+
+  appended <- append_instructions(original, "Use at most 30 words.")
+  chained <- append_instructions(appended, "Preserve named entities.")
+  replaced <- with_instructions(original, "Return one sentence.")
+
+  expect_identical(original@instructions, "Summarize the text.")
+  expect_identical(
+    appended@instructions,
+    "Summarize the text.\n\nUse at most 30 words."
+  )
+  expect_identical(
+    chained@instructions,
+    paste(
+      "Summarize the text.",
+      "Use at most 30 words.",
+      "Preserve named entities.",
+      sep = "\n\n"
+    )
+  )
+  expect_identical(replaced@instructions, "Return one sentence.")
+  expect_identical(appended@inputs, original@inputs)
+  expect_identical(appended@output_type, original@output_type)
+  expect_false(identical(appended, original))
+})
+
+test_that("module optimization replaces its signature copy-on-write", {
+  original <- signature("question -> answer", instructions = "Original")
+  mod <- module(original, type = "predict")
+
+  mod$apply_optimization_params(list(instructions = "Optimized"))
+
+  expect_identical(original@instructions, "Original")
+  expect_identical(mod$signature@instructions, "Optimized")
+  expect_false(identical(mod$signature, original))
+})
+
+test_that("instruction transforms accept strings and handle empty text", {
+  appended <- append_instructions("question -> answer", "Cite the evidence.")
+  unchanged <- append_instructions(appended, "")
+  cleared <- with_instructions(appended, "")
+
+  expect_match(appended@instructions, "Cite the evidence\\.$")
+  expect_identical(unchanged@instructions, appended@instructions)
+  expect_identical(cleared@instructions, "")
+
+  instruction_only <- Signature(
+    inputs = list(),
+    output_type = ellmer::type_object(answer = ellmer::type_string()),
+    instructions = "Return an answer."
+  )
+  expect_error(
+    with_instructions(instruction_only, ""),
+    "Signature must have either inputs or instructions"
+  )
+})
+
+test_that("instruction transforms reject ambiguous inputs", {
+  sig <- signature("question -> answer")
+
+  expect_snapshot(append_instructions(sig, NA_character_), error = TRUE)
+  expect_snapshot(with_instructions(sig, c("one", "two")), error = TRUE)
+  expect_snapshot(append_instructions(list(sig), "More detail."), error = TRUE)
+})
+
 test_that("with_reasoning transforms string signature", {
   sig <- with_reasoning("question -> answer")
 

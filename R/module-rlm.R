@@ -27,7 +27,19 @@
 #' Security: Code execution requires explicit opt-in via a runner parameter.
 #' The built-in runner uses a separate process but is NOT a security sandbox.
 #' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
-#' runner backed by OS-level sandboxing (such as a container or AppArmor).
+#' runner backed by OS-level sandboxing, such as [mcp_repl_runner()].
+#' Authenticated RLM control frames sent through mcp-repl are limited to 3,000
+#' encoded bytes. If aggregate output is compacted into a file preview or pager,
+#' the iteration fails closed because mcp-repl does not expose structured
+#' compaction metadata; dsprrr does not read a sandbox-disclosed path from the
+#' host process.
+#'
+#' Runner lifecycle: an `RLMModule` reuses the runner object supplied at
+#' construction. A persistent backend therefore retains its REPL state between
+#' separate `forward()` calls until `runner$reset()` is called. Do not share one
+#' persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr does
+#' not yet expose an interpreter factory that creates and tears down a fresh
+#' backend per invocation.
 #'
 #' @examples
 #' \dontrun{
@@ -65,7 +77,11 @@ NULL
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
 #' @param runner A code runner implementing `execute()` and `policy()`. Required.
+#'   The module retains this object; reset persistent runners between logically
+#'   isolated jobs and do not use one runner concurrently.
 #' @param max_iterations Maximum REPL iterations before fallback (default 20)
+#' @param max_iters DSPy 3.3-compatible alias for `max_iterations`. Supply only
+#'   one of these arguments.
 #' @param max_llm_calls Maximum recursive LLM calls allowed (default 50)
 #' @param max_output_chars Maximum characters per execution output (default 100000)
 #' @param sub_lm Optional ellmer Chat for recursive queries. NULL = disabled.
@@ -93,6 +109,7 @@ rlm_module <- function(
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
+  max_iters = NULL,
   ...
 ) {
   # Validate runner
@@ -118,100 +135,221 @@ rlm_module <- function(
     ))
   }
 
-  # Validate bounds for iterations and calls
-  max_iterations <- as.integer(max_iterations)
-  max_llm_calls <- as.integer(max_llm_calls)
-
-  if (max_iterations < 1L) {
-    cli::cli_abort(c(
-      "max_iterations must be at least 1",
-      "x" = "You provided: {.val {max_iterations}}"
-    ))
-  }
-
-  if (max_llm_calls < 0L) {
-    cli::cli_abort(c(
-      "max_llm_calls must be non-negative",
-      "x" = "You provided: {.val {max_llm_calls}}"
-    ))
-  }
-
-  # Validate tools
-  if (!is.list(tools)) {
-    cli::cli_abort(c(
-      "tools must be a named list of functions",
-      "x" = "You provided: {.cls {class(tools)[1]}}"
-    ))
-  }
-
-  if (length(tools) > 0 && is.null(names(tools))) {
-    cli::cli_abort(c(
-      "tools must be a named list",
-      "i" = "Example: {.code tools = list(my_func = function(...) ...)}"
-    ))
-  }
-
-  # Validate all tools are functions
-  if (length(tools) > 0) {
-    # Names must be present and non-empty
-    tool_names <- names(tools)
-    if (is.null(tool_names) || !all(nzchar(tool_names))) {
-      cli::cli_abort(c(
-        "tools must have non-empty names",
-        "i" = "Example: {.code tools = list(my_tool = function(...) ...)}"
-      ))
+  if (!is.null(max_iters)) {
+    if (!missing(max_iterations)) {
+      cli::cli_abort(
+        "Supply only one of {.arg max_iterations} and {.arg max_iters}",
+        class = "dsprrr_rlm_argument_conflict"
+      )
     }
-
-    # Names must be valid identifiers for assignment in prelude code
-    invalid_names <- tool_names[make.names(tool_names) != tool_names]
-    if (length(invalid_names) > 0) {
-      cli::cli_abort(c(
-        "Tool names must be valid R identifiers",
-        "x" = "Invalid name{?s}: {.val {invalid_names}}",
-        "i" = "Use letters, numbers, '.' and '_' only; start with a letter or '.'"
-      ))
-    }
-
-    # Prevent collision with built-in RLM helpers
-    reserved_names <- c(
-      "SUBMIT",
-      "print",
-      "peek",
-      "search",
-      "llm_query",
-      "llm_query_batched",
-      "rlm_query",
-      "rlm_query_batch"
-    )
-    collisions <- intersect(tool_names, reserved_names)
-    if (length(collisions) > 0) {
-      cli::cli_abort(c(
-        "Tool names conflict with built-in RLM tools",
-        "x" = "Reserved name{?s}: {.val {collisions}}"
-      ))
-    }
-
-    non_functions <- vapply(tools, Negate(is.function), logical(1))
-    if (any(non_functions)) {
-      bad_names <- names(tools)[non_functions]
-      cli::cli_abort(c(
-        "All tools must be functions",
-        "x" = "Non-function tool{?s}: {.val {bad_names}}"
-      ))
-    }
+    max_iterations <- max_iters
   }
+
+  # Validate before coercion so fractional, vector, infinite, and out-of-range
+  # values cannot be silently truncated or converted to NA.
+  max_iterations <- normalize_rlm_bound(
+    max_iterations,
+    "max_iterations",
+    minimum = 1L
+  )
+  max_llm_calls <- normalize_rlm_bound(
+    max_llm_calls,
+    "max_llm_calls",
+    minimum = 0L
+  )
+  max_output_chars <- normalize_rlm_bound(
+    max_output_chars,
+    "max_output_chars",
+    minimum = 1L
+  )
+
+  validate_rlm_tools(tools)
 
   RLMModule$new(
     signature = signature,
     runner = runner,
     max_iterations = max_iterations,
     max_llm_calls = max_llm_calls,
-    max_output_chars = as.integer(max_output_chars),
+    max_output_chars = max_output_chars,
     sub_lm = sub_lm,
     verbose = verbose,
     tools = tools,
     ...
   )
+}
+
+rlm_reserved_tool_names <- function() {
+  c(
+    ".context",
+    "SUBMIT",
+    "print",
+    "peek",
+    "search",
+    "llm_query",
+    "llm_query_batched",
+    "rlm_query",
+    "rlm_query_batch"
+  )
+}
+
+normalize_rlm_bound <- function(value, name, minimum) {
+  valid <- is.numeric(value) &&
+    length(value) == 1L &&
+    !is.na(value) &&
+    is.finite(value) &&
+    value == floor(value) &&
+    value >= minimum &&
+    value <= .Machine$integer.max
+  if (!valid) {
+    message <- switch(
+      name,
+      max_iterations = "max_iterations must be at least 1",
+      max_llm_calls = "max_llm_calls must be non-negative",
+      max_output_chars = "max_output_chars must be a positive integer",
+      paste0(name, " is outside its supported integer range")
+    )
+    cli::cli_abort(message, class = "dsprrr_rlm_bounds_error")
+  }
+  as.integer(value)
+}
+
+validate_rlm_tools <- function(tools) {
+  if (!is.list(tools)) {
+    cli::cli_abort(
+      c(
+        "tools must be a named list of functions",
+        "x" = "You provided: {.cls {class(tools)[1]}}"
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+  if (length(tools) == 0L) {
+    return(invisible(tools))
+  }
+
+  tool_names <- names(tools)
+  if (is.null(tool_names)) {
+    cli::cli_abort(
+      c(
+        "tools must be a named list",
+        "i" = "Example: {.code tools = list(my_tool = function(...) ...)}"
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+  if (
+    anyNA(tool_names) ||
+      any(!nzchar(tool_names))
+  ) {
+    cli::cli_abort(
+      c(
+        "tools must have non-empty, non-missing names",
+        "i" = "Example: {.code tools = list(my_tool = function(...) ...)}"
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+  if (anyDuplicated(tool_names)) {
+    duplicates <- unique(tool_names[duplicated(tool_names)])
+    cli::cli_abort(
+      c(
+        "Tool names must be unique",
+        "x" = "Duplicate name{?s}: {.val {duplicates}}"
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+
+  non_functions <- vapply(tools, Negate(is.function), logical(1))
+  if (any(non_functions)) {
+    bad_names <- tool_names[non_functions]
+    cli::cli_abort(
+      c(
+        "All tools must be functions",
+        "x" = "Non-function tool{?s}: {.val {bad_names}}"
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+
+  invalid_names <- tool_names[
+    make.names(tool_names) != tool_names |
+      tool_names == "..." |
+      grepl("^\\.\\.[0-9]+$", tool_names)
+  ]
+  if (length(invalid_names) > 0L) {
+    cli::cli_abort(
+      c(
+        "Tool names must be valid R identifiers",
+        "x" = "Invalid name{?s}: {.val {invalid_names}}",
+        "i" = "Names cannot use ellipsis pronouns such as ... or ..1."
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+
+  collisions <- intersect(tool_names, rlm_reserved_tool_names())
+  if (length(collisions) > 0L) {
+    cli::cli_abort(
+      c(
+        "Tool names conflict with built-in RLM tools",
+        "x" = "Reserved name{?s}: {.val {collisions}}"
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+
+  internal_collisions <- tool_names[grepl("^\\.rlm_", tool_names)]
+  if (length(internal_collisions) > 0L) {
+    cli::cli_abort(
+      c(
+        "Tool names conflict with internal RLM bindings",
+        "x" = "Internal name{?s}: {.val {internal_collisions}}"
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+
+  base_collisions <- intersect(tool_names, ls(baseenv(), all.names = TRUE))
+  if (length(base_collisions) > 0L) {
+    cli::cli_abort(
+      c(
+        "Tool names must not mask base R functions",
+        "x" = "Base name{?s}: {.val {base_collisions}}",
+        "i" = "Use a domain-specific tool name instead."
+      ),
+      class = "dsprrr_rlm_tools_error"
+    )
+  }
+
+  invisible(tools)
+}
+
+normalize_rlm_sub_lm_text <- function(response) {
+  text <- if (is.character(response)) {
+    response
+  } else if (inherits(response, "S7_object")) {
+    tryCatch(response@text, error = function(e) NULL)
+  } else if (is.list(response) && !is.null(response$text)) {
+    response$text
+  } else {
+    NULL
+  }
+  if (
+    !is.character(text) ||
+      length(text) != 1L ||
+      is.na(text) ||
+      !nzchar(text)
+  ) {
+    cli::cli_abort(
+      c(
+        "Recursive sub-LM returned an invalid response",
+        "i" = "Expected one non-empty text response, got {.cls {class(response)[1]}}."
+      ),
+      class = "dsprrr_rlm_sub_lm_response_error"
+    )
+  }
+  text
 }
 
 
@@ -273,6 +411,44 @@ RLMModule <- R6::R6Class(
       config = list(),
       chat = NULL
     ) {
+      validate_code_runner(runner)
+      if (!S7::S7_inherits(signature, Signature)) {
+        cli::cli_abort(
+          "{.arg signature} must be a Signature object",
+          class = "dsprrr_rlm_signature_error"
+        )
+      }
+      signature_inputs <- vapply(
+        signature@inputs,
+        function(input) input$name,
+        character(1)
+      )
+      if (anyDuplicated(signature_inputs)) {
+        duplicates <- unique(signature_inputs[duplicated(signature_inputs)])
+        cli::cli_abort(
+          c(
+            "RLM signature input names must be unique",
+            "x" = "Duplicate name{?s}: {.field {duplicates}}"
+          ),
+          class = "dsprrr_rlm_signature_error"
+        )
+      }
+      validate_rlm_tools(tools)
+      max_iterations <- normalize_rlm_bound(
+        max_iterations,
+        "max_iterations",
+        minimum = 1L
+      )
+      max_llm_calls <- normalize_rlm_bound(
+        max_llm_calls,
+        "max_llm_calls",
+        minimum = 0L
+      )
+      max_output_chars <- normalize_rlm_bound(
+        max_output_chars,
+        "max_output_chars",
+        minimum = 1L
+      )
       super$initialize(
         signature = signature,
         config = config,
@@ -280,9 +456,9 @@ RLMModule <- R6::R6Class(
       )
 
       self$runner <- runner
-      self$max_iterations <- as.integer(max_iterations)
-      self$max_llm_calls <- as.integer(max_llm_calls)
-      self$max_output_chars <- as.integer(max_output_chars)
+      self$max_iterations <- max_iterations
+      self$max_llm_calls <- max_llm_calls
+      self$max_output_chars <- max_output_chars
       self$sub_lm <- sub_lm
       self$verbose <- verbose
       self$tools <- tools
@@ -305,6 +481,42 @@ RLMModule <- R6::R6Class(
         inputs <- as.list(batch[1, , drop = FALSE])
       } else {
         inputs <- batch
+      }
+      expected_inputs <- vapply(
+        self$signature@inputs,
+        function(input) input$name,
+        character(1)
+      )
+      valid_empty_inputs <- is.list(inputs) &&
+        length(inputs) == 0L &&
+        length(expected_inputs) == 0L
+      if (
+        !is.list(inputs) ||
+          (!valid_empty_inputs && is.null(names(inputs))) ||
+          anyNA(names(inputs)) ||
+          any(!nzchar(names(inputs))) ||
+          anyDuplicated(names(inputs))
+      ) {
+        cli::cli_abort(
+          "RLM inputs must be supplied as a named list or data frame",
+          class = "dsprrr_rlm_input_error"
+        )
+      }
+      missing_inputs <- setdiff(expected_inputs, names(inputs))
+      unexpected_inputs <- setdiff(names(inputs), expected_inputs)
+      if (length(missing_inputs) > 0L || length(unexpected_inputs) > 0L) {
+        cli::cli_abort(
+          c(
+            "RLM inputs must exactly match the signature",
+            if (length(missing_inputs) > 0L) {
+              "x" = "Missing: {.field {missing_inputs}}"
+            },
+            if (length(unexpected_inputs) > 0L) {
+              "x" = "Unexpected: {.field {unexpected_inputs}}"
+            }
+          ),
+          class = "dsprrr_rlm_input_error"
+        )
       }
 
       # Get LLM - clone for fresh conversation
@@ -725,13 +937,20 @@ Code:
     #' Execute code with RLM tools injected
     execute_with_rlm_tools = function(code, inputs, call_counter) {
       code <- strip_rlm_code_fences(code)
+      control_nonce <- rlm_control_nonce()
 
       # Build RLM prelude that defines tools
       rlm_prelude <- create_rlm_prelude(
         max_llm_calls = self$max_llm_calls,
         has_sub_lm = !is.null(self$sub_lm),
         custom_tools = self$tools,
-        output_fields = private$get_output_field_names()
+        output_fields = private$get_output_field_names(),
+        control_nonce = control_nonce,
+        control_frame_limit = if (inherits(self$runner, "McpReplRunner")) {
+          self$runner$control_frame_limit
+        } else {
+          Inf
+        }
       )
 
       # Build combined code: prelude + user code
@@ -743,7 +962,12 @@ Code:
       )
 
       # Execute with inputs as context
-      result <- self$runner$execute(combined_code, context = inputs)
+      execute_formals <- names(formals(self$runner$execute))
+      execute_args <- list(combined_code, context = inputs)
+      if (".control_nonce" %in% execute_formals || "..." %in% execute_formals) {
+        execute_args$.control_nonce <- control_nonce
+      }
+      result <- do.call(self$runner$execute, execute_args)
 
       # Validate runner result structure
       if (!is.list(result)) {
@@ -762,19 +986,25 @@ Code:
         ))
       }
 
-      # Detect SUBMIT termination using helper function
-      is_final <- is_rlm_final(result$result)
+      control_value <- normalize_rlm_control_value(
+        result$result,
+        result$stdout %||% NULL,
+        control_nonce = control_nonce
+      )
+
+      # Detect SUBMIT termination using the versioned runner-neutral envelope.
+      is_final <- is_rlm_final(control_value)
       final_value <- if (is_final) {
-        extract_rlm_final(result$result)
+        extract_rlm_final(control_value)
       } else {
         NULL
       }
 
       # Handle rlm_query requests (if sub_lm is available)
-      if (is_rlm_query_request(result$result) && !is.null(self$sub_lm)) {
+      if (is_rlm_query_request(control_value) && !is.null(self$sub_lm)) {
         # Process the recursive query (single or batch)
         query_result <- private$process_rlm_query(
-          result$result,
+          control_value,
           call_counter
         )
 
@@ -853,13 +1083,17 @@ Code:
       result <- tryCatch(
         {
           response <- self$sub_lm$chat(prompt)
+          text <- normalize_rlm_sub_lm_text(response)
           list(
             success = TRUE,
-            formatted_output = paste0("Query result: ", response),
+            formatted_output = paste0("Query result: ", text),
             error = NULL
           )
         },
         error = function(e) {
+          if (inherits(e, "dsprrr_rlm_sub_lm_response_error")) {
+            stop(e)
+          }
           cli::cli_warn(c(
             "Recursive LLM query failed",
             "x" = "Error: {e$message}",
@@ -1059,9 +1293,12 @@ Code:
       for (i in seq_len(n_queries)) {
         results[[i]] <- tryCatch(
           {
-            self$sub_lm$chat(prompts[[i]])
+            normalize_rlm_sub_lm_text(self$sub_lm$chat(prompts[[i]]))
           },
           error = function(e) {
+            if (inherits(e, "dsprrr_rlm_sub_lm_response_error")) {
+              stop(e)
+            }
             errors <<- c(errors, paste0("Query ", i, ": ", e$message))
             paste0("[Error: ", e$message, "]")
           }
@@ -1107,20 +1344,7 @@ Code:
         }
       )
 
-      if (
-        is.null(text) ||
-          !is.character(text) ||
-          length(text) < 1 ||
-          is.na(text[[1]])
-      ) {
-        msg <- "Failed to extract response text"
-        return(list(
-          result = paste0("[Error: ", msg, "]"),
-          error = paste0("Query ", index, ": ", msg)
-        ))
-      }
-
-      list(result = text[[1]], error = NULL)
+      list(result = normalize_rlm_sub_lm_text(text), error = NULL)
     },
 
     #' Determine bounded parallelism for RLM batch calls

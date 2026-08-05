@@ -178,6 +178,8 @@ reference:
     desc: Add reasoning, chain-of-thought, and other prompt-level behaviors
     contents:
     - signature-transforms
+    - with_instructions
+    - append_instructions
     - with_reasoning
     - without_reasoning
     - has_reasoning

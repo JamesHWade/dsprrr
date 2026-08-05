@@ -196,6 +196,56 @@ test_that("KNNFewShot selects demos dynamically at runtime", {
   expect_equal(length(result1$metadata[[1]]$knn_scores), 2)
 })
 
+test_that("KNNFewShot exposes one fresh trace event per evaluation", {
+  local_reset_cache()
+  mod <- module(signature("question -> answer"), type = "predict")
+  llm <- structure(
+    list(chat_structured = function(...) list(answer = "yes")),
+    class = "Chat"
+  )
+  trainset <- data.frame(
+    question = c("q1", "q2"),
+    answer = c("yes", "yes")
+  )
+  compiled <- compile(
+    KNNFewShot(k = 1L, vectorizer = fake_vectorizer),
+    mod,
+    trainset
+  )
+  observed <- list()
+  metric <- metric_with_trace(function(prediction, expected, program_trace) {
+    observed[[length(observed) + 1L]] <<- program_trace
+    as.numeric(identical(prediction$answer, expected$answer))
+  })
+  data <- data.frame(question = "q1", answer = "yes")
+
+  first <- evaluate(
+    compiled,
+    data,
+    metric,
+    .llm = llm,
+    .progress = FALSE,
+    .cache = FALSE
+  )
+  second <- evaluate(
+    compiled,
+    data,
+    metric,
+    .llm = llm,
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_equal(first$mean_score, 1)
+  expect_equal(second$mean_score, 1)
+  expect_length(observed, 2L)
+  expect_identical(
+    vapply(observed, function(x) length(x$events), integer(1)),
+    c(1L, 1L)
+  )
+  expect_length(compiled$state$traces, 2L)
+})
+
 test_that("KNNFewShot works with batch inputs", {
   sig <- Signature(
     inputs = list(input(name = "question", class = S7::class_character)),

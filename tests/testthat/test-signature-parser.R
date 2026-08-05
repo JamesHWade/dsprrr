@@ -188,6 +188,22 @@ test_that("multiple output fields parse correctly", {
   expect_true("sentiment" %in% names(sig2@output_type@properties))
   expect_true("confidence" %in% names(sig2@output_type@properties))
 
+  dotted <- parse_signature(
+    "question -> first: string, second.field: number"
+  )
+  expect_identical(
+    names(dotted@output_type@properties),
+    c("first", "second.field")
+  )
+
+  colon_values <- parse_signature(
+    "question -> link: enum('http://a', '12:30'), note: string"
+  )
+  expect_identical(
+    colon_values@output_type@properties$link@values,
+    c("http://a", "12:30")
+  )
+
   # Multiple outputs with complex types
   sig3 <- parse_signature(
     "question, choices: list[string] -> reasoning: string, selection: int"
@@ -258,6 +274,19 @@ test_that("parse_signature errors on non-string input", {
     parse_signature(c("a -> b", "c -> d")),
     "must be a single character string"
   )
+  expect_error(
+    parse_signature(NA_character_),
+    "must be a single character string"
+  )
+})
+
+test_that("parse_signature validates instructions before generating defaults", {
+  for (instructions in list(NA_character_, character(), c("one", "two"))) {
+    expect_error(
+      parse_signature("question -> answer", instructions = instructions),
+      class = "dsprrr_signature_instruction_error"
+    )
+  }
 })
 
 test_that("parse_signature errors on empty string", {

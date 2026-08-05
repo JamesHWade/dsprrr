@@ -89,6 +89,116 @@ test_that("code_act respects max_iterations", {
   expect_equal(agent$max_iterations, 20L)
 })
 
+test_that("CodeAct validates iteration limits at both construction layers", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+  invalid <- list(0, 1.5, NA_real_, Inf, c(1, 2), .Machine$integer.max + 1)
+
+  for (value in invalid) {
+    expect_error(
+      code_act(
+        "question -> answer",
+        runner = runner,
+        max_iterations = value
+      ),
+      class = "dsprrr_codeact_bounds_error",
+      info = paste(value, collapse = ", ")
+    )
+  }
+  expect_error(
+    CodeActModule$new(
+      signature = signature("question -> answer"),
+      runner = runner,
+      max_iterations = 0
+    ),
+    class = "dsprrr_codeact_bounds_error"
+  )
+})
+
+test_that("CodeAct detects tool requests in assistant turns", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+  agent <- code_act("question -> answer", runner = runner)
+  tool_request <- structure(list(), class = "ellmer::ContentToolRequest")
+
+  expect_true(agent$.__enclos_env__$private$has_pending_tools(list(
+    role = "assistant",
+    contents = list(tool_request)
+  )))
+  expect_false(agent$.__enclos_env__$private$has_pending_tools(list(
+    role = "assistant",
+    contents = list("finished")
+  )))
+})
+
+test_that("CodeAct enforces tool calls inside one ellmer chat", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+  agent <- code_act(
+    "question -> answer",
+    runner = runner,
+    max_iterations = 2L
+  )
+  callback <- NULL
+  mock_llm <- NULL
+  mock_llm <- list(
+    clone = function() mock_llm,
+    register_tool = function(tool) invisible(NULL),
+    on_tool_request = function(fn) {
+      callback <<- fn
+      function() callback <<- NULL
+    },
+    chat = function(prompt, ...) {
+      callback(list(name = "execute_r_code"))
+      callback(list(name = "execute_r_code"))
+      callback(list(name = "execute_r_code"))
+      "unreachable"
+    },
+    get_turns = function() list()
+  )
+
+  expect_error(
+    agent$forward(list(question = "compute"), .llm = mock_llm),
+    class = "dsprrr_codeact_iteration_limit"
+  )
+})
+
+test_that("CodeAct ignores inherited tool turns from a cloned chat", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+  agent <- code_act(
+    "question -> answer",
+    runner = runner,
+    max_iterations = 1L
+  )
+  old_request <- structure(list(), class = "ellmer::ContentToolRequest")
+  turns <- list(list(
+    role = "assistant",
+    contents = list(old_request)
+  ))
+  mock_llm <- NULL
+  mock_llm <- list(
+    clone = function() mock_llm,
+    register_tool = function(tool) invisible(NULL),
+    chat = function(prompt, ...) {
+      turns <<- c(
+        turns,
+        list(list(
+          role = "assistant",
+          contents = list("done")
+        ))
+      )
+      "done"
+    },
+    get_turns = function() turns
+  )
+
+  result <- agent$forward(list(question = "compute"), .llm = mock_llm)
+
+  expect_identical(result$metadata[[1L]]$tool_calls, 0L)
+  expect_identical(result$output[[1L]]$answer, "done")
+})
+
 test_that("code_act accepts tools list", {
   skip_if_not_installed("callr")
 
@@ -125,6 +235,81 @@ test_that("CodeActModule has correct fields", {
   expect_true(!is.null(agent$runner))
   expect_true(!is.null(agent$max_iterations))
   expect_true(!is.null(agent$signature))
+})
+
+test_that("CodeAct protects its runner tool namespace", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+  tool <- ellmer::tool(
+    function(code) code,
+    description = "shadow",
+    arguments = list(code = ellmer::type_string()),
+    name = "execute_r_code"
+  )
+
+  expect_error(
+    code_act(
+      "question -> answer",
+      runner = runner,
+      tools = list(execute_r_code = tool)
+    ),
+    class = "dsprrr_codeact_tools_error"
+  )
+  keyed_reserved <- ellmer::tool(
+    function(x) x,
+    description = "ordinary intrinsic name",
+    arguments = list(x = ellmer::type_string()),
+    name = "ordinary"
+  )
+  expect_error(
+    code_act(
+      "question -> answer",
+      runner = runner,
+      tools = list(execute_r_code = keyed_reserved)
+    ),
+    class = "dsprrr_codeact_tools_error"
+  )
+  duplicate_tool <- ellmer::tool(
+    function(x) x,
+    description = "duplicate",
+    arguments = list(x = ellmer::type_string()),
+    name = "duplicate"
+  )
+  duplicate_tools <- list(duplicate_tool, duplicate_tool)
+  expect_error(
+    CodeActModule$new(
+      signature = signature("question -> answer"),
+      runner = runner,
+      tools = duplicate_tools
+    ),
+    class = "dsprrr_codeact_tools_error"
+  )
+  expect_error(
+    CodeActModule$new(
+      signature = signature("question -> answer"),
+      runner = runner,
+      tools = list(function() 1)
+    ),
+    class = "dsprrr_codeact_tools_error"
+  )
+
+  invalid_alias <- ellmer::tool(
+    function(x) x,
+    description = "valid intrinsic name",
+    arguments = list(x = ellmer::type_string()),
+    name = "valid_name"
+  )
+  for (alias in c("bad name", "bad.name", "bad/name")) {
+    expect_error(
+      code_act(
+        "question -> answer",
+        runner = runner,
+        tools = stats::setNames(list(invalid_alias), alias)
+      ),
+      class = "dsprrr_codeact_tools_error",
+      info = alias
+    )
+  }
 })
 
 test_that("CodeActModule get_trajectories returns list", {

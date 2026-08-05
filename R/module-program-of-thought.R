@@ -20,6 +20,13 @@
 #' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
 #' runner backed by OS-level sandboxing (such as a container or AppArmor).
 #'
+#' Runner lifecycle: a `ProgramOfThoughtModule` reuses the runner object supplied
+#' at construction. A persistent backend therefore retains state between
+#' separate `forward()` calls until `runner$reset()` is called. Do not share one
+#' persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr does
+#' not yet expose an interpreter factory that creates and tears down a fresh
+#' backend per invocation.
+#'
 #' @examples
 #' \dontrun{
 #' # Create a runner (required for code execution)
@@ -47,6 +54,8 @@ NULL
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
 #' @param runner A code runner implementing `execute()` and `policy()`. Required.
+#'   The module retains this object; reset persistent runners between logically
+#'   isolated jobs and do not use one runner concurrently.
 #' @param max_iters Maximum code generation/repair iterations (default 3)
 #' @param extract_answer Logical. If TRUE (default), use LLM to extract final
 #'   answer from execution result. If FALSE, return execution result directly.
@@ -91,14 +100,32 @@ program_of_thought <- function(
       "x" = "You provided: {.cls {class(signature)[1]}}"
     ))
   }
+  max_iters <- normalize_pot_max_iters(max_iters)
 
   ProgramOfThoughtModule$new(
     signature = signature,
     runner = runner,
-    max_iters = as.integer(max_iters),
+    max_iters = max_iters,
     extract_answer = extract_answer,
     ...
   )
+}
+
+normalize_pot_max_iters <- function(value) {
+  valid <- is.numeric(value) &&
+    length(value) == 1L &&
+    !is.na(value) &&
+    is.finite(value) &&
+    value == floor(value) &&
+    value >= 1L &&
+    value <= .Machine$integer.max
+  if (!valid) {
+    cli::cli_abort(
+      "{.arg max_iters} must be one positive integer",
+      class = "dsprrr_pot_bounds_error"
+    )
+  }
+  as.integer(value)
 }
 
 
@@ -140,6 +167,8 @@ ProgramOfThoughtModule <- R6::R6Class(
       config = list(),
       chat = NULL
     ) {
+      validate_code_runner(runner)
+      max_iters <- normalize_pot_max_iters(max_iters)
       super$initialize(
         signature = signature,
         config = config,
@@ -147,7 +176,7 @@ ProgramOfThoughtModule <- R6::R6Class(
       )
 
       self$runner <- runner
-      self$max_iters <- as.integer(max_iters)
+      self$max_iters <- max_iters
       self$extract_answer <- extract_answer
 
       # Store execution history

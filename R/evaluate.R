@@ -10,7 +10,8 @@
 #'   - `data`: A data frame or tibble containing columns that match the
 #'     module's signature inputs plus any expected fields used by metric.
 #'   - `metric`: A function applied per example with signature
-#'     `metric(prediction, expected_row)`.
+#'     `metric(prediction, expected_row)`, or a trace-aware metric created with
+#'     [metric_with_trace()].
 #'
 #'   Additional arguments passed to [run_dataset()]:
 #'   - `.llm`: Optional ellmer chat object
@@ -25,7 +26,9 @@
 #'     times to quantify variation.
 #'
 #' @return A list with elements. When `.return_format = "structured"` (default):
-#'   - `mean_score`: numeric mean over all successful metric evaluations.
+#'   - `mean_score`: numeric mean over all attempted rows, with run or metric
+#'     failures contributing zero. With repeated epochs, the mean covers every
+#'     attempted row-epoch.
 #'   - `scores`: per-example numeric scores (coerced from logical metrics).
 #'   - `predictions`: list of model outputs.
 #'   - `metadata`: list of metadata captured from [run()].
@@ -38,10 +41,15 @@
 #'   - `feedbacks`: per-example textual feedback when the metric returns
 #'     `list(score = , feedback = )` (see [metric_with_feedback()]);
 #'     `NA` otherwise.
+#'   - `traces`: per-example trace envelopes supplied to trace-aware metrics.
+#'     Each contains `row_id`, `epoch`, `status`, ordered module `events`, and
+#'     per-row `metadata`. Trace events can contain prompts, inputs, and model
+#'     responses, so treat them as potentially sensitive.
 #'   - `data`: input data augmented with prediction metadata.
 #'
 #'   When `epochs > 1`, additional fields are included:
 #'   - `epoch_scores`: list of numeric vectors, one per epoch
+#'   - `epoch_traces`: list of row-aligned trace lists, one per epoch
 #'   - `score_std`: standard deviation of mean scores across epochs
 #'   - `ci_95`: 95% confidence interval for the mean score (numeric vector of length 2)
 #'
@@ -80,6 +88,112 @@
 #' @export
 evaluate <- function(module, ...) {
   UseMethod("evaluate")
+}
+
+# Return only traces recorded during one evaluation epoch. The boundary is
+# important for reused modules and cache hits: no earlier trace can leak into a
+# later metric invocation.
+new_evaluation_trace_events <- function(module, trace_count_before) {
+  traces <- module$state$traces %||% list()
+  if (length(traces) <= trace_count_before) {
+    return(list())
+  }
+  traces[seq.int(trace_count_before + 1L, length(traces))]
+}
+
+# Project the most recent module event onto the row-level metadata surface used
+# by trace-aware metrics. Some internal callers execute `run()` in simple mode,
+# where structured result metadata is unavailable even though the trace event
+# contains the same observability fields.
+program_trace_event_metadata <- function(events) {
+  if (!is.list(events) || length(events) == 0L) {
+    return(list())
+  }
+  event <- events[[length(events)]]
+  if (!is.list(event)) {
+    return(list())
+  }
+
+  metadata <- event$metadata %||% list()
+  if (!is.list(metadata)) {
+    metadata <- list()
+  }
+  fields <- c(
+    "prompt_length",
+    "input_tokens",
+    "output_tokens",
+    "cached_input_tokens",
+    "total_tokens",
+    "cost",
+    "duration_s",
+    "latency_ms",
+    "model"
+  )
+  token_fields <- c(
+    "input_tokens",
+    "output_tokens",
+    "cached_input_tokens",
+    "total_tokens"
+  )
+  for (field in fields) {
+    value <- event[[field]]
+    if (is.null(value) && field %in% token_fields && is.list(event$tokens)) {
+      value <- event$tokens[[field]]
+    }
+    if (is.null(metadata[[field]]) && !is.null(value)) {
+      metadata[[field]] <- value
+    }
+  }
+  if (is.null(metadata$prompt_length) && is.character(event$prompt)) {
+    metadata$prompt_length <- nchar(paste(event$prompt, collapse = "\n"))
+  }
+  metadata
+}
+
+# Extract the row index added by run_dataset() to each top-level trace. Pipeline
+# and iterative modules keep their component calls inside that row event.
+evaluation_trace_row <- function(event) {
+  if (!is.list(event)) {
+    return(NA_integer_)
+  }
+  candidate <- event$metadata$batch_index %||%
+    event$aggregated$batch_index %||%
+    NA_integer_
+  if (length(candidate) != 1L || is.na(candidate)) {
+    return(NA_integer_)
+  }
+  suppressWarnings(as.integer(candidate))
+}
+
+# Group ordered top-level trace events by dataset row. All normal execution
+# paths provide batch_index. The positional fallback covers older/custom
+# modules that emit exactly one unindexed event per still-unmatched row.
+align_evaluation_trace_events <- function(events, n_rows) {
+  aligned <- vector("list", n_rows)
+  if (n_rows == 0L || length(events) == 0L) {
+    return(aligned)
+  }
+
+  event_rows <- vapply(events, evaluation_trace_row, integer(1))
+  indexed <- which(!is.na(event_rows) & event_rows >= 1L & event_rows <= n_rows)
+  for (event_index in indexed) {
+    row_index <- event_rows[[event_index]]
+    aligned[[row_index]] <- append(
+      aligned[[row_index]],
+      list(events[[event_index]])
+    )
+  }
+
+  unindexed <- which(is.na(event_rows) | event_rows < 1L | event_rows > n_rows)
+  if (length(indexed) == 0L && length(unindexed) == n_rows) {
+    for (offset in seq_len(n_rows)) {
+      aligned[[offset]] <- list(events[[unindexed[[offset]]]])
+    }
+  } else if (n_rows == 1L && length(unindexed) > 0L) {
+    aligned[[1L]] <- append(aligned[[1L]], events[unindexed])
+  }
+
+  aligned
 }
 
 # Aggregate attempted scores without rewarding failures. Raw score vectors keep
@@ -169,6 +283,7 @@ evaluate.Module <- function(
   .progress = TRUE,
   .return_format = c("structured", "simple"),
   epochs = 1L,
+  .trace_row_ids = NULL,
   ...
 ) {
   parallel_missing <- missing(.parallel)
@@ -205,6 +320,24 @@ evaluate.Module <- function(
       "i" = "Use {.code data.frame()} or {.code tibble::tibble()} to create one"
     ))
   }
+  if (is.null(.trace_row_ids)) {
+    .trace_row_ids <- seq_len(nrow(data))
+  }
+  valid_trace_row_ids <- is.numeric(.trace_row_ids) &&
+    length(.trace_row_ids) == nrow(data) &&
+    !anyNA(.trace_row_ids) &&
+    all(is.finite(.trace_row_ids)) &&
+    all(.trace_row_ids == floor(.trace_row_ids)) &&
+    all(.trace_row_ids >= 1) &&
+    all(.trace_row_ids <= .Machine$integer.max) &&
+    !anyDuplicated(.trace_row_ids)
+  if (!valid_trace_row_ids) {
+    cli::cli_abort(
+      "Internal trace row IDs must be unique positive integers aligned with {.arg data}",
+      class = "dsprrr_evaluation_trace_row_error"
+    )
+  }
+  .trace_row_ids <- as.integer(.trace_row_ids)
   if (!is.function(metric)) {
     cli::cli_abort(c(
       "{.arg metric} must be a function",
@@ -229,6 +362,8 @@ evaluate.Module <- function(
       n_metric_errors = 0L,
       metric_errors = character(),
       total_cost = 0,
+      feedbacks = character(),
+      traces = list(),
       data = data
     ))
   }
@@ -257,6 +392,7 @@ evaluate.Module <- function(
     } else {
       list(.parallel = parallel_allowed)
     }
+    trace_count_before <- length(module$state$traces %||% list())
     evaluated <- tryCatch(
       {
         do.call(
@@ -290,6 +426,10 @@ evaluate.Module <- function(
     } else {
       replicate(nrow(evaluated), list(), simplify = FALSE)
     }
+    row_trace_events <- align_evaluation_trace_events(
+      new_evaluation_trace_events(module, trace_count_before),
+      nrow(evaluated)
+    )
 
     scores <- numeric(nrow(evaluated))
     run_errors <- vapply(
@@ -307,6 +447,7 @@ evaluate.Module <- function(
     metric_errors <- character(nrow(evaluated))
     errors <- run_errors
     feedbacks <- rep(NA_character_, nrow(evaluated))
+    traces <- vector("list", nrow(evaluated))
     total_cost <- sum_cost_values(vapply(
       metadata,
       function(item) item$cost %||% NA_real_,
@@ -316,6 +457,13 @@ evaluate.Module <- function(
     for (i in seq_len(nrow(evaluated))) {
       expected_row <- data[i, , drop = FALSE]
       prediction <- predictions[[i]]
+      program_trace <- new_program_trace(
+        events = row_trace_events[[i]],
+        metadata = metadata[[i]],
+        row_id = .trace_row_ids[[i]],
+        epoch = epoch
+      )
+      traces[[i]] <- program_trace
 
       # Preserve the primary module/provider failure. Calling the metric with an
       # NA prediction would replace the useful run error with a secondary one.
@@ -327,7 +475,12 @@ evaluate.Module <- function(
       scores[i] <- tryCatch(
         {
           normalized <- normalize_metric_result(
-            metric(prediction, expected_row)
+            invoke_metric(
+              metric,
+              prediction,
+              expected_row,
+              program_trace
+            )
           )
           feedbacks[i] <- normalized$feedback
           normalized$score
@@ -365,6 +518,7 @@ evaluate.Module <- function(
       metric_errors = metric_errors,
       total_cost = total_cost,
       feedbacks = feedbacks,
+      traces = traces,
       evaluated = evaluated
     )
   }
@@ -380,6 +534,7 @@ evaluate.Module <- function(
     run_errors <- epoch_results[[1]]$run_errors
     metric_errors <- epoch_results[[1]]$metric_errors
     feedbacks <- epoch_results[[1]]$feedbacks
+    traces <- epoch_results[[1]]$traces
     evaluated <- epoch_results[[1]]$evaluated
   } else {
     # Extract scores from all epochs (computed once, reused later)
@@ -441,6 +596,7 @@ evaluate.Module <- function(
     predictions <- epoch_results[[epochs]]$predictions
     metadata <- epoch_results[[epochs]]$metadata
     feedbacks <- epoch_results[[epochs]]$feedbacks
+    traces <- epoch_results[[epochs]]$traces
     evaluated <- epoch_results[[epochs]]$evaluated
   }
 
@@ -505,6 +661,10 @@ evaluate.Module <- function(
   # Add metadata and data for structured format
   if (.return_format == "structured") {
     result$metadata <- metadata
+    result$traces <- traces
+    if (epochs > 1) {
+      result$epoch_traces <- lapply(epoch_results, `[[`, "traces")
+    }
     result$data <- evaluated
   }
 

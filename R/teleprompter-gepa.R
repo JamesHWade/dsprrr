@@ -332,7 +332,8 @@ compile_gepa <- function(
             eval_result,
             dataset,
             program$signature,
-            threshold = teleprompter@metric_threshold
+            threshold = teleprompter@metric_threshold,
+            output_col = get_metric_field(metrics[[1L]])
           )
         }
       }
@@ -494,11 +495,14 @@ gepa_failed_examples <- function(
   eval_result,
   dataset,
   signature,
-  threshold = NULL
+  threshold = NULL,
+  output_col = NULL
 ) {
   threshold <- threshold %||% 1
   input_names <- get_input_names(signature)
-  output_col <- find_output_column(dataset, input_names)
+  if (is.null(output_col)) {
+    output_col <- find_output_column(dataset, input_names)
+  }
 
   scores <- eval_result@examples$score
   feedbacks <- eval_result@examples$feedback %||%

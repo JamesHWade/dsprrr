@@ -54,6 +54,48 @@ test_that("Signature validates instructions must be character", {
   )
 })
 
+test_that("Signature rejects missing instructions", {
+  expect_snapshot(
+    Signature(
+      inputs = list(input(name = "text", class = S7::class_character)),
+      output_type = ellmer::type_string(),
+      instructions = NA_character_
+    ),
+    error = TRUE
+  )
+})
+
+test_that("Signature rejects ambiguous field namespaces", {
+  expect_error(signature("q, q -> answer"), "input field names must be unique")
+  expect_error(
+    signature("q -> answer, answer"),
+    "output field names must be unique"
+  )
+  expect_error(signature("value -> value"), "must be disjoint")
+  expect_error(
+    signature(
+      inputs = list(input("answer")),
+      output_type = ellmer::type_string(),
+      instructions = "Return an answer"
+    ),
+    "must be disjoint"
+  )
+  expect_error(
+    signature("bad-name -> answer"),
+    "valid, non-missing R field name"
+  )
+  expect_error(signature("q -> ..."), class = "dsprrr_signature_field_error")
+})
+
+test_that("signature validates instruction shape consistently", {
+  for (instructions in list(NA_character_, character(), c("one", "two"))) {
+    expect_error(
+      signature("question -> answer", instructions = instructions),
+      class = "dsprrr_signature_instruction_error"
+    )
+  }
+})
+
 test_that("Signature requires either inputs or instructions", {
   expect_error(
     Signature(

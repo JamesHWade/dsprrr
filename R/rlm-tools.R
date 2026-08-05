@@ -32,6 +32,8 @@ NULL
 #' @param has_sub_lm Logical indicating if recursive queries are enabled
 #' @param custom_tools Named list of user-defined R functions
 #' @param output_fields Character vector of required output field names for SUBMIT()
+#' @param control_nonce Per-invocation nonce used to authenticate control frames
+#' @param control_frame_limit Maximum encoded control-frame size in bytes
 #'
 #' @return Character string of R code defining RLM tools
 #'
@@ -41,7 +43,9 @@ create_rlm_prelude <- function(
   max_llm_calls = 50L,
   has_sub_lm = FALSE,
   custom_tools = list(),
-  output_fields = "answer"
+  output_fields = "answer",
+  control_nonce = rlm_control_nonce(),
+  control_frame_limit = Inf
 ) {
   if (!is.character(output_fields) || length(output_fields) < 1) {
     output_fields <- "answer"
@@ -55,58 +59,136 @@ create_rlm_prelude <- function(
 
   quoted_fields <- paste(sprintf("\"%s\"", output_fields), collapse = ", ")
 
+  if (
+    !is.character(control_nonce) ||
+      length(control_nonce) != 1L ||
+      is.na(control_nonce) ||
+      !nzchar(control_nonce)
+  ) {
+    cli::cli_abort(
+      "Internal RLM control nonce must be one non-empty string",
+      class = "dsprrr_rlm_control_error"
+    )
+  }
+  if (
+    !is.numeric(control_frame_limit) ||
+      length(control_frame_limit) != 1L ||
+      is.na(control_frame_limit) ||
+      control_frame_limit <= 0
+  ) {
+    cli::cli_abort(
+      "Internal RLM control-frame limit must be one positive number",
+      class = "dsprrr_rlm_control_error"
+    )
+  }
+
+  control_nonce_literal <- encodeString(control_nonce, quote = "\"")
+  control_frame_limit_literal <- if (is.infinite(control_frame_limit)) {
+    "Inf"
+  } else {
+    format(control_frame_limit, scientific = FALSE, trim = TRUE)
+  }
+
+  control_prelude <- sprintf(
+    '
+# Versioned text envelope survives both in-process and MCP runner boundaries.
+.rlm_control_encode <- function(kind, payload) {
+  envelope <- base::list(
+    version = 1L,
+    nonce = %s,
+    kind = kind,
+    payload = payload
+  )
+  json <- jsonlite::toJSON(
+    envelope,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    dataframe = "rows",
+    digits = NA
+  )
+  frame <- base::paste0(
+    "%s",
+    base::gsub(
+      "[\\r\\n]",
+      "",
+      jsonlite::base64_enc(base::charToRaw(base::as.character(json)))
+    )
+  )
+  if (base::nchar(frame, type = "bytes") > %s) {
+    base::stop(
+      "Authenticated RLM control frame exceeds the runner transport limit"
+    )
+  }
+  frame
+}
+',
+    control_nonce_literal,
+    rlm_control_prefix(),
+    control_frame_limit_literal
+  )
+
   submit_prelude <- sprintf(
     '
-# Required output fields for this signature
-.rlm_output_fields <- c(%s)
-
 # SUBMIT: Terminate and return final answer
 # Supports positional args (SUBMIT(v1, v2)) or named args
 # (SUBMIT(field1 = v1, field2 = v2)).
-SUBMIT <- function(...) {
-  args <- list(...)
-  if (length(args) == 0) {
-    stop("SUBMIT() requires at least one output value")
+SUBMIT <- base::local({
+  .encode <- .rlm_control_encode
+  .output_fields <- base::c(%s)
+
+  function(...) {
+    args <- base::list(...)
+    if (base::length(args) == 0) {
+      base::stop("SUBMIT() requires at least one output value")
+    }
+
+    arg_names <- base::names(args)
+    if (base::is.null(arg_names)) {
+      arg_names <- base::rep("", base::length(args))
+    }
+    has_any_names <- base::any(base::nzchar(arg_names))
+
+    if (!has_any_names) {
+      if (base::length(args) != base::length(.output_fields)) {
+        base::stop(
+          "SUBMIT() expected ",
+          base::length(.output_fields),
+          " output(s): ",
+          base::paste(.output_fields, collapse = ", ")
+        )
+      }
+      args <- stats::setNames(args, .output_fields)
+    } else {
+      if (base::any(!base::nzchar(arg_names))) {
+        base::stop("SUBMIT() cannot mix named and unnamed outputs")
+      }
+      if (base::anyDuplicated(arg_names)) {
+        base::stop("SUBMIT() output names must be unique")
+      }
+
+      missing <- base::setdiff(.output_fields, arg_names)
+      extra <- base::setdiff(arg_names, .output_fields)
+
+      if (base::length(missing) > 0) {
+        base::stop(
+          "SUBMIT() missing outputs: ",
+          base::paste(missing, collapse = ", ")
+        )
+      }
+      if (base::length(extra) > 0) {
+        base::stop(
+          "SUBMIT() unknown outputs: ",
+          base::paste(extra, collapse = ", ")
+        )
+      }
+
+      args <- args[.output_fields]
+    }
+
+    .encode("final", args)
   }
-
-  arg_names <- names(args)
-  if (is.null(arg_names)) {
-    arg_names <- rep("", length(args))
-  }
-  has_any_names <- any(nzchar(arg_names))
-
-  if (!has_any_names) {
-    if (length(args) != length(.rlm_output_fields)) {
-      stop(
-        "SUBMIT() expected ",
-        length(.rlm_output_fields),
-        " output(s): ",
-        paste(.rlm_output_fields, collapse = ", ")
-      )
-    }
-    names(args) <- .rlm_output_fields
-  } else {
-    if (any(!nzchar(arg_names))) {
-      stop("SUBMIT() cannot mix named and unnamed outputs")
-    }
-
-    missing <- setdiff(.rlm_output_fields, arg_names)
-    extra <- setdiff(arg_names, .rlm_output_fields)
-
-    if (length(missing) > 0) {
-      stop("SUBMIT() missing outputs: ", paste(missing, collapse = ", "))
-    }
-    if (length(extra) > 0) {
-      stop("SUBMIT() unknown outputs: ", paste(extra, collapse = ", "))
-    }
-
-    args <- args[.rlm_output_fields]
-  }
-
-  class(args) <- c("rlm_final", class(args))
-  attr(args, "rlm_final") <- TRUE
-  args
-}
+})
 ',
     quoted_fields
   )
@@ -120,49 +202,49 @@ SUBMIT <- function(...) {
 # peek: View a slice of a character variable
 # Useful for exploring large text contexts
 peek <- function(var, start = 1L, end = 1000L) {
-  if (!is.character(var)) {
-    var <- as.character(var)
+  if (!base::is.character(var)) {
+    var <- base::as.character(var)
   }
 
-  if (length(var) > 1) {
+  if (base::length(var) > 1) {
     # For character vectors, show elements in range
-    n <- length(var)
-    start <- max(1L, as.integer(start))
-    end <- min(n, as.integer(end))
+    n <- base::length(var)
+    start <- base::max(1L, base::as.integer(start))
+    end <- base::min(n, base::as.integer(end))
     return(var[start:end])
   }
 
   # For single strings, show character range
-  total_chars <- nchar(var)
-  start <- max(1L, as.integer(start))
-  end <- min(total_chars, as.integer(end))
+  total_chars <- base::nchar(var)
+  start <- base::max(1L, base::as.integer(start))
+  end <- base::min(total_chars, base::as.integer(end))
 
   if (start > total_chars) {
     return("")
   }
 
-  substr(var, start, end)
+  base::substr(var, start, end)
 }
 
 # search: Regex search in a variable
 # Returns all matches as a character vector
 search <- function(var, pattern, ignore_case = FALSE) {
-  if (!is.character(var)) {
-    var <- as.character(var)
+  if (!base::is.character(var)) {
+    var <- base::as.character(var)
   }
 
   # Collapse to single string if vector
-  if (length(var) > 1) {
-    var <- paste(var, collapse = "\\n")
+  if (base::length(var) > 1) {
+    var <- base::paste(var, collapse = "\\n")
   }
 
   # Find all matches
-  matches <- regmatches(
+  matches <- base::regmatches(
     var,
-    gregexpr(pattern, var, ignore.case = ignore_case, perl = TRUE)
+    base::gregexpr(pattern, var, ignore.case = ignore_case, perl = TRUE)
   )
 
-  unlist(matches)
+  base::unlist(matches)
 }
 '
 
@@ -172,32 +254,37 @@ search <- function(var, pattern, ignore_case = FALSE) {
       '
 # llm_query: Recursive LLM query
 # Returns a request marker - main process will intercept and handle
-llm_query <- function(query, context_slice = NULL) {
-  # Note: This function returns a marker that the main process intercepts
-
-  # The actual LLM call happens in the parent R process
-  structure(
-    list(query = query, context = context_slice, batch = FALSE),
-    class = "rlm_query_request"
-  )
-}
+llm_query <- base::local({
+  .encode <- .rlm_control_encode
+  function(query, context_slice = NULL) {
+    # The actual LLM call happens in the parent R process.
+    .encode(
+      "query",
+      base::list(query = query, context = context_slice, batch = FALSE)
+    )
+  }
+})
 
 # llm_query_batched: Batched recursive queries
 # Returns a request marker for batch processing
-llm_query_batched <- function(queries, slices = NULL) {
-  if (!is.character(queries)) {
-    stop("queries must be a character vector")
-  }
+llm_query_batched <- base::local({
+  .encode <- .rlm_control_encode
+  function(queries, slices = NULL) {
+    if (!base::is.character(queries) || base::anyNA(queries)) {
+      base::stop("queries must be a non-missing character vector")
+    }
 
-  if (!is.null(slices) && length(slices) != length(queries)) {
-    stop("slices must have same length as queries")
-  }
+    if (!base::is.null(slices) &&
+        base::length(slices) != base::length(queries)) {
+      base::stop("slices must have same length as queries")
+    }
 
-  structure(
-    list(queries = queries, slices = slices, batch = TRUE),
-    class = "rlm_query_request"
-  )
-}
+    .encode(
+      "query",
+      base::list(queries = queries, slices = slices, batch = TRUE)
+    )
+  }
+})
 
 # Backward-compatible aliases
 rlm_query <- llm_query
@@ -212,11 +299,11 @@ rlm_query_batch <- llm_query_batched
     recursive_prelude <- '
 # llm_query: Disabled (no sub_lm provided)
 llm_query <- function(query, context_slice = NULL) {
-  stop("Recursive LLM queries are disabled. Provide sub_lm to enable.")
+  base::stop("Recursive LLM queries are disabled. Provide sub_lm to enable.")
 }
 
 llm_query_batched <- function(queries, slices = NULL) {
-  stop("Recursive LLM queries are disabled. Provide sub_lm to enable.")
+  base::stop("Recursive LLM queries are disabled. Provide sub_lm to enable.")
 }
 
 # Backward-compatible aliases
@@ -258,13 +345,193 @@ rlm_query_batch <- llm_query_batched
 
   # Combine all parts
   paste0(
+    control_prelude,
+    "\n",
     submit_prelude,
     "\n",
     base_prelude,
     recursive_prelude,
     custom_prelude,
+    "\nbase::rm(.rlm_control_encode)\n",
     "\n# ============================================\n"
   )
+}
+
+
+rlm_control_prefix <- function() {
+  "__DSPR_RLM_CONTROL_V1__:"
+}
+
+
+rlm_control_nonce <- function() {
+  entropy <- tryCatch(
+    {
+      connection <- file("/dev/urandom", open = "rb", raw = TRUE)
+      on.exit(close(connection), add = TRUE)
+      readBin(connection, what = "raw", n = 32L)
+    },
+    error = function(e) raw()
+  )
+  if (length(entropy) < 16L) {
+    fallback <- withr::with_preserve_seed(stats::runif(8L))
+    entropy <- serialize(
+      list(Sys.time(), Sys.getpid(), tempfile("dsprrr-rlm-"), fallback),
+      connection = NULL
+    )
+  }
+  digest::digest(entropy, algo = "sha256", serialize = FALSE)
+}
+
+
+abort_rlm_control <- function(message) {
+  cli::cli_abort(message, class = "dsprrr_rlm_control_error")
+}
+
+
+decode_rlm_control <- function(x, control_nonce = NULL) {
+  if (inherits(x, "rlm_final") || inherits(x, "rlm_query_request")) {
+    return(x)
+  }
+  if (
+    !is.character(x) ||
+      length(x) == 0L ||
+      all(is.na(x)) ||
+      !is.character(control_nonce) ||
+      length(control_nonce) != 1L ||
+      is.na(control_nonce) ||
+      !nzchar(control_nonce)
+  ) {
+    return(NULL)
+  }
+
+  text <- paste(x[!is.na(x)], collapse = "\n")
+  prefix <- rlm_control_prefix()
+  prefix_locations <- gregexpr(prefix, text, fixed = TRUE)[[1L]]
+  prefix_count <- if (identical(prefix_locations[[1L]], -1L)) {
+    0L
+  } else {
+    length(prefix_locations)
+  }
+  if (prefix_count == 0L) {
+    return(NULL)
+  }
+
+  pattern <- paste0(prefix, "[A-Za-z0-9+/=]+")
+  matches <- regmatches(text, gregexpr(pattern, text, perl = TRUE))[[1L]]
+  if (
+    length(matches) != prefix_count ||
+      any(!nzchar(matches))
+  ) {
+    abort_rlm_control("Malformed RLM control frame")
+  }
+  envelopes <- lapply(matches, function(match) {
+    token <- sub(prefix, "", match, fixed = TRUE)
+    envelope <- tryCatch(
+      {
+        json <- rawToChar(jsonlite::base64_dec(token))
+        jsonlite::fromJSON(json, simplifyVector = FALSE)
+      },
+      error = function(e) NULL
+    )
+    valid_version <- is.list(envelope) &&
+      is.numeric(envelope$version) &&
+      length(envelope$version) == 1L &&
+      !is.na(envelope$version) &&
+      envelope$version == 1
+    if (
+      !is.list(envelope) ||
+        !valid_version ||
+        !is.character(envelope$nonce) ||
+        length(envelope$nonce) != 1L ||
+        is.na(envelope$nonce) ||
+        !is.character(envelope$kind) ||
+        length(envelope$kind) != 1L ||
+        is.na(envelope$kind) ||
+        !is.list(envelope$payload)
+    ) {
+      abort_rlm_control("Malformed RLM control frame")
+    }
+    envelope
+  })
+
+  # A syntactically valid frame from model-visible data or an earlier
+  # invocation is ordinary output, never a command for this invocation.
+  current <- vapply(
+    envelopes,
+    function(envelope) identical(envelope$nonce, control_nonce),
+    logical(1)
+  )
+  if (!any(current)) {
+    return(NULL)
+  }
+  if (sum(current) != 1L) {
+    abort_rlm_control("Multiple RLM control frames were returned")
+  }
+  envelope <- envelopes[[which(current)]]
+
+  if (identical(envelope$kind, "final")) {
+    return(structure(
+      envelope$payload,
+      class = c("rlm_final", class(envelope$payload)),
+      rlm_final = TRUE
+    ))
+  }
+  if (identical(envelope$kind, "query")) {
+    batch <- envelope$payload$batch
+    if (!is.logical(batch) || length(batch) != 1L || is.na(batch)) {
+      abort_rlm_control("Malformed RLM query control frame")
+    }
+    if (isTRUE(batch)) {
+      raw_queries <- envelope$payload$queries
+      if (
+        !"queries" %in% names(envelope$payload) ||
+          !is.list(raw_queries)
+      ) {
+        abort_rlm_control("Malformed RLM batch query control frame")
+      }
+      queries <- vapply(
+        raw_queries,
+        function(query) {
+          if (
+            !is.character(query) ||
+              length(query) != 1L ||
+              is.na(query)
+          ) {
+            abort_rlm_control("Malformed RLM batch query control frame")
+          }
+          query
+        },
+        character(1)
+      )
+      envelope$payload$queries <- queries
+      slices <- envelope$payload$slices
+      if (!is.null(slices) && length(slices) != length(queries)) {
+        abort_rlm_control("Malformed RLM batch query control frame")
+      }
+    } else if (
+      !is.character(envelope$payload$query) ||
+        length(envelope$payload$query) != 1L ||
+        is.na(envelope$payload$query)
+    ) {
+      abort_rlm_control("Malformed RLM query control frame")
+    }
+    return(structure(
+      envelope$payload,
+      class = c("rlm_query_request", class(envelope$payload))
+    ))
+  }
+  abort_rlm_control("Unknown RLM control frame kind")
+}
+
+
+normalize_rlm_control_value <- function(
+  result,
+  stdout = NULL,
+  control_nonce = NULL
+) {
+  decode_rlm_control(result, control_nonce) %||%
+    decode_rlm_control(stdout, control_nonce) %||%
+    result
 }
 
 
@@ -275,7 +542,8 @@ rlm_query_batch <- llm_query_batched
 #'
 #' @keywords internal
 #' @noRd
-is_rlm_final <- function(x) {
+is_rlm_final <- function(x, control_nonce = NULL) {
+  x <- decode_rlm_control(x, control_nonce) %||% x
   inherits(x, "rlm_final") || isTRUE(attr(x, "rlm_final"))
 }
 
@@ -287,7 +555,8 @@ is_rlm_final <- function(x) {
 #'
 #' @keywords internal
 #' @noRd
-is_rlm_query_request <- function(x) {
+is_rlm_query_request <- function(x, control_nonce = NULL) {
+  x <- decode_rlm_control(x, control_nonce) %||% x
   inherits(x, "rlm_query_request")
 }
 
@@ -299,7 +568,8 @@ is_rlm_query_request <- function(x) {
 #'
 #' @keywords internal
 #' @noRd
-extract_rlm_final <- function(x) {
+extract_rlm_final <- function(x, control_nonce = NULL) {
+  x <- decode_rlm_control(x, control_nonce) %||% x
   if (!is_rlm_final(x)) {
     return(x)
   }

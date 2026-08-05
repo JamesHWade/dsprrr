@@ -7,7 +7,8 @@
 metric_custom(fn, name = NULL)
 }
 \arguments{
-\item{fn}{A function with signature function(prediction, expected) -> numeric/logical}
+\item{fn}{A two-argument metric function returning one logical/numeric score
+or \code{list(score = , feedback = )}.}
 
 \item{name}{Optional name for the metric (for debugging)}
 }
@@ -16,7 +17,8 @@ A metric function with enhanced error handling
 }
 \description{
 Wrapper for creating custom metric functions with consistent interface
-and error handling.
+and error handling. The function may return one logical or numeric score, or
+\code{list(score = , feedback = )} for feedback-aware optimization.
 }
 \examples{
 # Custom length comparison

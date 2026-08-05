@@ -38,6 +38,7 @@ renv.lock
 
 # Knitr cache
 vignettes/*_cache/
+vignettes/**/*_cache/
 
 # Kata machine-local overrides and retired Beads runtime state
 .kata.local.toml

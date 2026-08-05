@@ -315,11 +315,32 @@ dsprrr's RLM implementation is functional but young. The items below are split i
 
 ### Design Constraints
 
-**Process-level isolation is not a security boundary.** The package allowlist and pattern scanner are defense-in-depth, not a sandbox. A determined adversary could escape them. For untrusted inputs in production, OS-level containers (Docker, AppArmor, etc.) are the right layer. dsprrr should make it easy to plug those in.
+**Choose the runner as a security boundary.** `r_code_runner()` provides a fresh
+callr subprocess and package allowlist, but it retains the host user's
+permissions and is only for trusted code. For model-generated or otherwise
+untrusted code, `mcp_repl_runner()` launches Posit's mcp-repl with an
+OS-enforced workspace-write sandbox and network access disabled. A user-supplied
+`repl` function is reported as unverified and is not accepted where dsprrr
+requires sandboxed execution.
 
-**No persistent REPL state across iterations.** Each subprocess starts fresh. Variables created in iteration 3 are not available in iteration 4; the model has to re-derive them or read them from the printed output history. A persistent session (see below) would allow working state to accumulate across iterations, closer to how a human uses an interactive R session.
+**Persistent state is explicit.** The callr runner starts a fresh subprocess for
+each iteration. mcp-repl instead retains an R session, so variables and loaded
+packages survive iterations and separate `forward()` calls. Call
+`runner$reset()` between logically isolated jobs and never share one persistent
+runner across concurrent invocations. dsprrr does not yet mirror DSPy 3.3's
+per-invocation interpreter factory.
 
-**Subprocess cold-start overhead.** Each REPL iteration spawns a fresh `callr::r()` process, costing 200--400ms per iteration. Over a 15-iteration run, that is 3--6 seconds of pure subprocess overhead. Switching to a persistent `callr::r_session` worker would eliminate cold starts and enable persistent state, at the cost of weaker iteration-to-iteration isolation.
+**mcp-repl control results are intentionally bounded.** RLM submit and recursive
+query frames are capped at 3,000 encoded bytes to stay inline. If incidental
+output triggers an mcp-repl file preview or pager, the iteration fails closed
+rather than trusting a partial control frame. Keep `SUBMIT()` values compact;
+use a transport with structured out-of-band results when larger payloads are a
+requirement.
+
+**Fresh subprocesses have cold-start overhead.** `r_code_runner()` pays process
+startup cost on each iteration in exchange for clean process state. A
+persistent mcp-repl runner avoids that repeated startup, but requires the reset
+and concurrency discipline above.
 
 ### API Improvements
 

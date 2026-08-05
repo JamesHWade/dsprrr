@@ -34,7 +34,19 @@ Available REPL tools:
 Security: Code execution requires explicit opt-in via a runner parameter.
 The built-in runner uses a separate process but is NOT a security sandbox.
 Inspect \code{runner$policy()} before execution. For untrusted inputs, provide a
-runner backed by OS-level sandboxing (such as a container or AppArmor).
+runner backed by OS-level sandboxing, such as \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}.
+Authenticated RLM control frames sent through mcp-repl are limited to 3,000
+encoded bytes. If aggregate output is compacted into a file preview or pager,
+the iteration fails closed because mcp-repl does not expose structured
+compaction metadata; dsprrr does not read a sandbox-disclosed path from the
+host process.
+
+Runner lifecycle: an \code{RLMModule} reuses the runner object supplied at
+construction. A persistent backend therefore retains its REPL state between
+separate \code{forward()} calls until \code{runner$reset()} is called. Do not share one
+persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr does
+not yet expose an interpreter factory that creates and tears down a fresh
+backend per invocation.
 }
 \examples{
 \dontrun{
