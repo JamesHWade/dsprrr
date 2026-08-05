@@ -770,6 +770,17 @@ test_that("RLMModule respects max_iterations", {
   expect_equal(result$metadata[[1]]$max_iterations, 2)
 })
 
+test_that("RLM control nonces are cross-platform and preserve R RNG state", {
+  set.seed(20260804)
+  original_seed <- .Random.seed
+
+  nonces <- replicate(3L, dsprrr:::rlm_control_nonce())
+
+  expect_identical(nchar(nonces), rep.int(64L, 3L))
+  expect_length(unique(nonces), 3L)
+  expect_identical(.Random.seed, original_seed)
+})
+
 test_that("RLMModule uses fallback when no SUBMIT", {
   skip_if_not_installed("callr")
 

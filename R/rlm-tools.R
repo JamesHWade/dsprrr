@@ -365,20 +365,15 @@ rlm_control_prefix <- function() {
 
 rlm_control_nonce <- function() {
   entropy <- tryCatch(
-    {
-      connection <- file("/dev/urandom", open = "rb", raw = TRUE)
-      on.exit(close(connection), add = TRUE)
-      readBin(connection, what = "raw", n = 32L)
-    },
-    error = function(e) raw()
+    openssl::rand_bytes(32L),
+    error = function(error) {
+      cli::cli_abort(
+        "Could not create a secure RLM control nonce",
+        class = "dsprrr_rlm_nonce_error",
+        parent = error
+      )
+    }
   )
-  if (length(entropy) < 16L) {
-    fallback <- withr::with_preserve_seed(stats::runif(8L))
-    entropy <- serialize(
-      list(Sys.time(), Sys.getpid(), tempfile("dsprrr-rlm-"), fallback),
-      connection = NULL
-    )
-  }
   digest::digest(entropy, algo = "sha256", serialize = FALSE)
 }
 
