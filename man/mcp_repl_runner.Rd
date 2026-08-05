@@ -24,7 +24,7 @@ mcp_repl_runner(
 supported by this runner.}
 
 \item{sandbox}{mcp-repl sandbox policy. Defaults to \code{"workspace-write"}.
-\code{"inherit-codex"} is rejected because \code{\link[mcptools:client]{mcptools::mcp_tools()}} does not
+\code{"inherit-codex"} is rejected because \code{\link[mcptools:mcp_tools]{mcptools::mcp_tools()}} does not
 currently propagate the required Codex sandbox metadata.}
 
 \item{timeout}{Maximum execution time in seconds.}
@@ -60,7 +60,7 @@ sandbox file path from the host process.
 }
 \details{
 By default, \code{mcp_repl_runner()} starts \code{mcp-repl} through
-\code{\link[mcptools:client]{mcptools::mcp_tools()}} with:
+\code{\link[mcptools:mcp_tools]{mcptools::mcp_tools()}} with:
 \itemize{
 \item the R interpreter;
 \item the \code{workspace-write} sandbox;

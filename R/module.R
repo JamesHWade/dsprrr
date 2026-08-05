@@ -5,7 +5,8 @@
 #' "predict" for standard structured prediction, "react" for ReAct-style
 #' tool-using modules, "chain_of_thought" for step-by-step reasoning,
 #' "multichain" for multi-chain comparison, "program_of_thought" for code
-#' execution modules, and experimental "flex" for declarative predictor graphs.
+#' execution modules, and experimental "flex" for declarative or
+#' interpreter-backed programs.
 #'
 #' @param signature A Signature object defining the module's interface
 #' @param type Character string specifying the module type:
@@ -17,10 +18,11 @@
 #'   - `"codeact"`: Hybrid agent with tools + code execution (requires a runtime source)
 #'   - `"rlm"`: Recursive Language Model for REPL-based context exploration
 #'     (requires a runtime source)
-#'   - `"flex"`: Experimental declarative predictor graph
+#'   - `"flex"`: Experimental declarative or executable Flex program
 #' @param tools Optional tools configuration:
 #'   - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef objects.
-#'   - for `type = "rlm"`: named list of R functions injected into the REPL.
+#'   - for `type = "rlm"`: named list of R functions exposed to the REPL.
+#'   - for executable `type = "flex"`: named host functions or ToolDef objects.
 #'   If provided with `type = "predict"`, automatically upgrades to react.
 #' @param max_iterations Maximum iterations for ReAct, CodeAct, or RLM modules
 #'   created through this generic factory (default: 10). For CodeAct it also
@@ -40,13 +42,18 @@
 #' @param chat Optional ellmer Chat object for LLM operations. If provided, the
 #'   module will use this Chat for all predictions unless overridden with `.llm`.
 #' @param interpreter_factory Optional zero-argument factory for
-#'   program-of-thought, CodeAct, and RLM modules. It creates one fresh runner
-#'   per invocation. It must implement terminal `close()`, which dsprrr calls
-#'   exactly once on success, error, or interrupt. Supply exactly one of
-#'   `runner` and `interpreter_factory` for code-executing types.
-#' @param module_src Optional version 1 declarative JSON source for
-#'   `type = "flex"`.
-#' @param max_predictor_calls Maximum predictor steps allowed by a Flex source.
+#'   program-of-thought, CodeAct, RLM, and executable Flex modules. It creates
+#'   one fresh runner per invocation. Supply exactly one of `runner` and
+#'   `interpreter_factory` for ordinary code-executing types; Flex accepts only
+#'   the factory so every invocation is isolated.
+#' @param module_src Optional complete source for `type = "flex"`.
+#' @param source_format Flex source language: `"auto"`, `"json"`, or `"r"`.
+#' @param max_predictor_calls Maximum bridged predictor calls allowed by Flex,
+#'   or `NULL` for no limit.
+#' @param max_tool_calls Maximum direct host-tool calls allowed by executable
+#'   Flex, or `NULL` for no limit.
+#' @param require_sandbox Whether executable Flex requires a runner that
+#'   advertises an enforced sandbox.
 #' @param ... Additional arguments forwarded to [rlm_module()] when
 #'   `type = "rlm"`. Reserved and required to be empty for `type = "flex"`.
 #'
@@ -109,7 +116,10 @@ module <- function(
   ...,
   interpreter_factory = NULL,
   module_src = NULL,
-  max_predictor_calls = 100L
+  max_predictor_calls = 100L,
+  max_tool_calls = 100L,
+  source_format = c("auto", "json", "r"),
+  require_sandbox = TRUE
 ) {
   # Validate signature
   if (!inherits(signature, "dsprrr::Signature")) {
@@ -151,7 +161,8 @@ module <- function(
   )
 
   code_execution_types <- c("program_of_thought", "codeact", "rlm")
-  if (!type %in% code_execution_types && !is.null(interpreter_factory)) {
+  factory_types <- c(code_execution_types, "flex")
+  if (!type %in% factory_types && !is.null(interpreter_factory)) {
     cli::cli_abort(
       "{.arg interpreter_factory} is only supported for code-executing module types.",
       class = "dsprrr_module_type_argument_error"
@@ -167,6 +178,33 @@ module <- function(
     cli::cli_abort(
       "{.arg max_predictor_calls} is only supported when {.code type = \"flex\"}.",
       class = "dsprrr_module_type_argument_error"
+    )
+  }
+  if (!identical(type, "flex") && !missing(max_tool_calls)) {
+    cli::cli_abort(
+      "{.arg max_tool_calls} is only supported when {.code type = \"flex\"}.",
+      class = "dsprrr_module_type_argument_error"
+    )
+  }
+  if (!identical(type, "flex") && !missing(source_format)) {
+    cli::cli_abort(
+      "{.arg source_format} is only supported when {.code type = \"flex\"}.",
+      class = "dsprrr_module_type_argument_error"
+    )
+  }
+  if (!identical(type, "flex") && !missing(require_sandbox)) {
+    cli::cli_abort(
+      "{.arg require_sandbox} is only supported when {.code type = \"flex\"}.",
+      class = "dsprrr_module_type_argument_error"
+    )
+  }
+  if (identical(type, "flex") && !is.null(runner)) {
+    cli::cli_abort(
+      c(
+        "Flex accepts {.arg interpreter_factory}, not a caller-owned {.arg runner}",
+        "i" = "A fresh invocation-owned interpreter isolates every Flex call."
+      ),
+      class = "dsprrr_interpreter_binding_error"
     )
   }
 
@@ -270,7 +308,12 @@ module <- function(
       flex(
         signature = signature,
         module_src = module_src,
+        tools = tools %||% list(),
+        interpreter_factory = interpreter_factory,
+        source_format = source_format,
         max_predictor_calls = max_predictor_calls,
+        max_tool_calls = max_tool_calls,
+        require_sandbox = require_sandbox,
         config = config,
         chat = chat
       )

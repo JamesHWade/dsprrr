@@ -101,8 +101,9 @@ stable IDs and pass the same registry to `restore_module_config()`. Arbitrary
 embedded runtime values require `trusted = TRUE` both when writing and
 restoring. Version 4 records exactly one of `runner` or `interpreter_factory`
 for each code-executing module, without invoking a factory while writing or
-restoring the artifact. It also preserves a Flex module's canonical source and
-predictor-call limit.
+restoring the artifact. It also preserves a Flex module's source language,
+complete source, predictor- and host-tool-call limits, sandbox requirement, and
+registry-backed factory and tools when executable mode is used.
 
 Restoration accepts the current closed schema and validated version 3
 runner-only artifacts. A version 3 manifest is checked against its original

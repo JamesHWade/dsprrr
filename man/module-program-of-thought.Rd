@@ -31,13 +31,15 @@ caller-owned, reused across calls, and never closed by dsprrr. The backend deter
 whether execution state persists and whether \code{reset()} is available;
 serialize access to stateful backends. \code{interpreter_factory} is a
 zero-argument function that returns a fresh runner implementing \code{execute()},
-\code{policy()}, and \code{close()}. The module owns that runner for one invocation and
-calls \code{close()} exactly once on success, error, or interrupt.
+\code{policy()}, optional \code{start()}, and terminal \code{shutdown()} or \code{close()}. The
+module owns that runner for one invocation and shuts it down exactly once on
+success, error, or interrupt.
 
-\code{\link[=run_async]{run_async()}}, \code{\link[=stream_async]{stream_async()}}, and a module's \verb{$stream()} method reject
-ProgramOfThought because their direct provider path would bypass execution.
-\code{\link[=run_stream]{run_stream()}} may use its one-shot \code{forward()} fallback, but rejects an
-actual token-stream request before provider or factory work.
+\code{\link[=run_async]{run_async()}} supports factory-backed ProgramOfThought in an isolated mirai
+process. It rejects caller-owned runners. \code{\link[=stream_async]{stream_async()}} and a module's
+\verb{$stream()} method remain unavailable because streaming would bypass code
+execution. \code{\link[=run_stream]{run_stream()}} may use its one-shot \code{forward()} fallback, but
+rejects an actual token-stream request before provider or factory work.
 }
 \examples{
 \dontrun{

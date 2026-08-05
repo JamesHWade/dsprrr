@@ -51,7 +51,7 @@ provider communication.
 | `dspy.Refine` | `refine()` | Retries with LLM-generated feedback |
 | `dspy.MultiChainComparison` | `multi_chain_comparison()` | |
 | `dspy.RLM` | `rlm_module()` | Recursive language models over an R REPL; accepts the 3.3 `max_iters` spelling and either runner lifecycle. Tool names, inputs, sub-LM responses, and authenticated control frames are validated strictly; compacted mcp-repl control responses fail closed |
-| Experimental `dspy.Flex` | `flex()` | Constrained analogue: a versioned JSON structural IR with allowlisted Predict and Chain-of-Thought steps. It does not evaluate arbitrary R/Python source and does not claim full DSPy Flex parity |
+| Experimental `dspy.Flex` | `flex()` | Dual-mode analogue: a safe versioned JSON graph by default, plus opt-in complete R source in a fresh interpreter with a versioned host bridge and separate predictor/tool budgets. R source defines `forward()` rather than a Python module class, and no default sandbox is silently selected |
 | `dspy.Parallel` / `Module.batch` | `run_dataset()`, `run(..., .parallel = TRUE)` | Batch over a data frame; heterogeneous (module, example) fan-out is not yet a dedicated module |
 | `dspy.majority` | `ensemble()` with `reduce_majority()` | Plus `reduce_weighted_vote()`, `reduce_best_by_metric()` |
 | `dspy.KNN` | `KNNFewShot` teleprompter / KNN module | Bring-your-own vectorizer (e.g., `ragnar::embed_openai()`) |
@@ -66,6 +66,11 @@ function called once per invocation; its fresh runner is owned by dsprrr and
 closed exactly once when that invocation ends, including on failure. This
 mirrors DSPy 3.3's lifecycle while retaining an explicit caller-owned option
 for R workflows.
+
+Executable Flex accepts only `interpreter_factory`, never a caller-owned
+runner, so each call has isolated bridge state. Its default
+`require_sandbox = TRUE` rejects trusted-input-only runners. The declarative
+JSON mode remains the resource-free default and needs no interpreter.
 
 One notable difference: DSPy 3.0 *removed* `dspy.Assert`/`dspy.Suggest`
 in favor of `BestOfN`/`Refine`. dsprrr keeps both styles: declarative
@@ -84,7 +89,7 @@ feedback injection.
 | `BootstrapFewShotWithRandomSearch` | `BootstrapFewShotWithRandomSearch` | Equivalent |
 | `MIPROv2` | `MIPROv2` | Discrete Bayesian optimization with UCB over instruction + demo candidates |
 | `SIMBA` | `SIMBA` | Adapted: hard-example mining + LLM-generated rules; simplified vs. the full introspective algorithm |
-| `GEPA` | `GEPA` | Adapted ("GEPA-lite"): reflective mutation + whole-program Pareto selection; supports feedback metrics and complete validated Flex instruction/source components; no independent per-component frontier or inference-time search yet |
+| `GEPA` | `GEPA` | Adapted: reflective mutation and validated complete-program candidates for ordinary and Flex programs. dsprrr separates trainset discovery from valset selection, combines validation-example winners with the multi-metric Pareto front, supports round-robin/budget-atomic-all/custom component selection, and records immediate lineage, attempted merges, per-example scores/winners, and optional retained outputs. Cached subsample merge acceptance, fine-grained resume, and built-in experiment trackers remain different |
 | `COPRO` | `COPRO` | Equivalent (coordinate ascent over instructions) |
 | `KNNFewShot` | `KNNFewShot` | Equivalent |
 | `Ensemble` | `Ensemble` | Equivalent |
@@ -195,10 +200,10 @@ optimizers operate on single modules).
 | LM client | `dspy.LM`; experimental typed `LMRequest -> LMResponse` migration boundary in 3.3 | Provider-neutral ellmer `Chat`; `build_module_request()` normalizes prompt/content input, but a complete package-wide invocation record is still planned |
 | Configuration | `dspy.configure()` / `dspy.context()` | `dsp_configure()`, `with_lm()`, `local_lm()` |
 | Caching | Two-tier memory + disk | Two-tier memory + disk (`configure_cache()`) |
-| Async | `acall`/`aforward`, `asyncify` | `run_async()` with promises for ordinary Predict modules; modules and composites with specialized `forward()` semantics are rejected rather than bypassed |
+| Async | `acall`/`aforward`, `asyncify` | `run_async()` with promises for ordinary Predict modules and isolated background workflows for factory-backed ProgramOfThought, CodeAct, and RLM. Caller-owned interpreters and specialized streaming remain rejected rather than shared or bypassed |
 | Streaming | `streamify()` + `StreamListener` | `run_stream()` + `stream_listener()`; one-shot fallback preserves specialized `forward()` semantics, while direct token streaming is limited to ordinary Predict steps and emits status events per pipeline step |
 | Usage tracking | `track_usage` | `get_tokens()`, `get_cost()`, `session_cost()` |
-| Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.parallel = TRUE)` via mirai or ellmer's native parallelism |
+| Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.parallel = TRUE)` via mirai or ellmer's native parallelism. Declarative zero/one-step Flex is supported; executable and multi-step Flex currently require sequential rows |
 | Saving programs | `save`/`load`; sanitized LM state and explicit unsafe-class opt-in in 3.3 | Versioned whole-program artifacts via `save_program()` / `load_program()` or pins, with registry-backed runtime IDs and explicit trusted opt-in |
 | Observability | MLflow autolog, OpenTelemetry callbacks | Traces tibble, `inspect_history()`, `export_traces()`; package-level OpenTelemetry spans are planned on top of ellmer |
 | Adapters (Chat/JSON/XML/TwoStep/BAML) | Yes | No adapter layer; ellmer's `chat_structured()` handles structured output |
@@ -221,20 +226,24 @@ optimizers operate on single modules).
 
 In rough priority order, based on the stable DSPy 3.3 runtime:
 
-1. **Full Flex parity**: dsprrr's experimental `flex()` intentionally accepts
-   only a validated JSON IR with Predict and Chain-of-Thought steps. It does
-   not execute optimizer-authored R/Python or expose DSPy's arbitrary module
-   source surface. GEPA-lite can search complete validated `module_src`
-   components, but ranks whole-program candidates and has no inference-time
-   search.
+1. **Remaining Flex parity**: dsprrr now supports complete interpreter-backed
+   R source, deterministic computation, control flow, explicit host tools, the
+   DSPy Flex primitive family, separate runtime predictor/tool-call limits, and
+   GEPA source search. It intentionally requires an explicit interpreter
+   factory rather than selecting a default sandbox, uses a top-level R
+   `forward()` function rather than a Python module class, and cannot port
+   source between the two.
+   Concurrent executable evaluation, fine-grained checkpoint resume, and
+   GEPA's cached subsample merge-acceptance gate remain unimplemented.
 2. **One package-wide invocation/result contract** carrying native turns,
    usage, cost, cache state, timing, and normalized errors across every module.
 3. **Package-level OpenTelemetry spans** for module, optimizer, evaluation,
    cache, and tool activity, composed with ellmer's provider telemetry.
 4. **Native reasoning-trace capture** as a typed output (analogous to
    `dspy.Reasoning`).
-5. **Joint multi-step optimization for instruction optimizers** (MIPROv2,
-   GEPA per-component selection); demo bootstrapping is already joint.
+5. **Joint multi-step optimization for other instruction optimizers**
+   (including MIPROv2); demo bootstrapping is already joint and GEPA now
+   selects complete-program components explicitly.
 6. **Adapter-style fallbacks** for models with weak structured-output
    support (analogous to `TwoStepAdapter`).
 7. **Weight and RL optimization**, after provider-neutral training data,

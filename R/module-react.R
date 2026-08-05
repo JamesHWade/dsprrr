@@ -217,6 +217,7 @@ ReactModule <- R6::R6Class(
           }
           cli::cli_abort(
             "LLM call failed in ReAct loop: {e$message}",
+            class = "dsprrr_provider_error",
             parent = e
           )
         }

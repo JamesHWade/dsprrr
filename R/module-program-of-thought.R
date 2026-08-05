@@ -26,13 +26,15 @@
 #' whether execution state persists and whether `reset()` is available;
 #' serialize access to stateful backends. `interpreter_factory` is a
 #' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, and `close()`. The module owns that runner for one invocation and
-#' calls `close()` exactly once on success, error, or interrupt.
+#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
+#' module owns that runner for one invocation and shuts it down exactly once on
+#' success, error, or interrupt.
 #'
-#' [run_async()], [stream_async()], and a module's `$stream()` method reject
-#' ProgramOfThought because their direct provider path would bypass execution.
-#' [run_stream()] may use its one-shot `forward()` fallback, but rejects an
-#' actual token-stream request before provider or factory work.
+#' [run_async()] supports factory-backed ProgramOfThought in an isolated mirai
+#' process. It rejects caller-owned runners. [stream_async()] and a module's
+#' `$stream()` method remain unavailable because streaming would bypass code
+#' execution. [run_stream()] may use its one-shot `forward()` fallback, but
+#' rejects an actual token-stream request before provider or factory work.
 #'
 #' @examples
 #' \dontrun{
@@ -58,8 +60,8 @@ NULL
 #' @description
 #' Factory function to create a ProgramOfThoughtModule that generates and
 #' executes R code to solve problems.
-#' Use [run()] to execute it. Generic async and module `$stream()` entry points
-#' reject ProgramOfThought graphs before provider or factory work.
+#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
+#' async streaming and module `$stream()` entry points reject ProgramOfThought.
 #' [run_stream()] preserves the synchronous `forward()` fallback unless a
 #' matching token-stream request is active; that request is rejected first.
 #'
@@ -71,7 +73,8 @@ NULL
 #' @param extract_answer Logical. If TRUE (default), use LLM to extract final
 #'   answer from execution result. If FALSE, return execution result directly.
 #' @param interpreter_factory Optional zero-argument function returning a fresh
-#'   runner with `execute()`, `policy()`, and idempotent terminal `close()`.
+#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
+#'   terminal `shutdown()` or `close()`.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param ... Additional arguments passed to the module
 #'

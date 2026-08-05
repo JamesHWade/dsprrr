@@ -35,9 +35,10 @@ shared concurrently when persistent.}
 
 \item{verbose}{Logical. Print execution progress (default FALSE)}
 
-\item{tools}{Named list of user-defined R functions to inject into REPL.
-Each tool becomes available as a function in the code execution environment.
-Non-function values in the list will cause an error.}
+\item{tools}{Named list of user-defined host functions. Guest code emits an
+authenticated request, dsprrr invokes the original function in the host,
+and the guest is replayed with the response. Closures are never deparsed or
+serialized into generated code.}
 
 \item{max_iters}{DSPy 3.3-compatible alias for \code{max_iterations}. Supply only
 one of these arguments.}
@@ -45,7 +46,8 @@ one of these arguments.}
 \item{...}{Additional arguments passed to the module}
 
 \item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, and idempotent terminal \code{close()}.
+runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
+terminal \code{shutdown()} or \code{close()}.
 Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
@@ -54,8 +56,8 @@ An RLMModule object
 \description{
 Factory function to create an RLMModule that enables LLMs to programmatically
 explore large contexts through a REPL interface.
-Use \code{\link[=run]{run()}} to execute it. Generic async and module \verb{$stream()} entry points
-reject RLM graphs before provider or factory work. \code{\link[=run_stream]{run_stream()}} preserves
+Use \code{\link[=run]{run()}} to execute it. \code{\link[=run_async]{run_async()}} supports factory-backed modules;
+async streaming and module \verb{$stream()} reject RLM. \code{\link[=run_stream]{run_stream()}} preserves
 the synchronous \code{forward()} fallback unless a matching token-stream request
 is active; that request is rejected first.
 }

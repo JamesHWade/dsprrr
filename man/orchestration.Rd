@@ -9,12 +9,12 @@ using the pins package. These helpers enable reproducible LLM workflows by
 saving and loading module state across sessions.
 }
 \seealso{
-Other orchestration: 
-\code{\link{pin_module_config}()},
-\code{\link{pin_trace}()},
-\code{\link{pin_vitals_log}()},
-\code{\link{restore_module_config}()},
-\code{\link{use_dsprrr_template}()},
-\code{\link{validate_workflow}()}
+Other orchestration:
+\code{\link[=pin_module_config]{pin_module_config()}},
+\code{\link[=pin_trace]{pin_trace()}},
+\code{\link[=pin_vitals_log]{pin_vitals_log()}},
+\code{\link[=restore_module_config]{restore_module_config()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}}
 }
 \concept{orchestration}

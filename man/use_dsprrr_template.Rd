@@ -34,12 +34,12 @@ use_dsprrr_template("all", path = "workflows/")
 }
 }
 \seealso{
-Other orchestration: 
+Other orchestration:
 \code{\link{orchestration}},
-\code{\link{pin_module_config}()},
-\code{\link{pin_trace}()},
-\code{\link{pin_vitals_log}()},
-\code{\link{restore_module_config}()},
-\code{\link{validate_workflow}()}
+\code{\link[=pin_module_config]{pin_module_config()}},
+\code{\link[=pin_trace]{pin_trace()}},
+\code{\link[=pin_vitals_log]{pin_vitals_log()}},
+\code{\link[=restore_module_config]{restore_module_config()}},
+\code{\link[=validate_workflow]{validate_workflow()}}
 }
 \concept{orchestration}

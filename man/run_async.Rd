@@ -19,9 +19,10 @@ A promise that resolves to the structured output
 \description{
 Executes a module and returns a promise that resolves to the result.
 Useful for running multiple modules in parallel.
-Only ordinary \code{PredictModule} objects are supported. Modules and composites
-with specialized \code{forward()} semantics are rejected before provider work;
-use \code{\link[=run]{run()}} for their complete workflows.
+Ordinary \code{PredictModule} objects use the provider's native async path.
+ProgramOfThought, CodeAct, and RLM modules use an isolated background process
+when configured with \code{interpreter_factory}. Caller-owned runners are rejected
+because they cannot be safely shared across concurrent invocations.
 }
 \examples{
 \dontrun{

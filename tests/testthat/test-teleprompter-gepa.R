@@ -9,8 +9,12 @@ test_that("GEPA can be created with defaults", {
   expect_equal(tp@mutation_rate, 0.1)
   expect_equal(tp@crossover_rate, 0.7)
   expect_equal(tp@selection, "pareto")
+  expect_identical(tp@component_selector, "round_robin")
+  expect_identical(tp@use_merge, TRUE)
+  expect_identical(tp@max_merge_invocations, 5L)
   expect_true(tp@verbose)
   expect_true(tp@track_stats)
+  expect_identical(tp@track_best_outputs, FALSE)
   expect_null(tp@metrics)
 })
 
@@ -25,6 +29,14 @@ test_that("GEPA validates properties", {
   for (seed in list(NA_real_, Inf, 1.5, -1, .Machine$integer.max + 1)) {
     expect_error(GEPA(seed = seed), "whole number")
   }
+  expect_snapshot(
+    error = TRUE,
+    GEPA(component_selector = "random")
+  )
+  expect_snapshot(
+    error = TRUE,
+    GEPA(max_merge_invocations = -1L)
+  )
 })
 
 test_that("Pareto utilities identify frontier", {

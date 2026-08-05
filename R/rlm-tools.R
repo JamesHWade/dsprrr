@@ -23,6 +23,11 @@
 NULL
 
 
+rlm_host_tool_replay_field <- function() {
+  ".dsprrr_rlm_host_tool_replay"
+}
+
+
 #' Create RLM Prelude Code
 #'
 #' @description
@@ -110,7 +115,7 @@ create_rlm_prelude <- function(
   frame <- base::paste0(
     "%s",
     base::gsub(
-      "[\\r\\n]",
+      "[[:space:]]",
       "",
       jsonlite::base64_enc(base::charToRaw(base::as.character(json)))
     )
@@ -312,34 +317,86 @@ rlm_query_batch <- llm_query_batched
 '
   }
 
-  # Custom tools
+  # Custom tools remain in the host process. The guest emits one authenticated
+  # request, then the host replays the program with an immutable response. This
+  # preserves closure identity and works across both local and remote runners
+  # without serializing or deparsing privileged functions into generated code.
   custom_prelude <- ""
   if (length(custom_tools) > 0) {
-    # Serialize each custom function
-    tool_defs <- vapply(
+    tool_wrappers <- vapply(
       names(custom_tools),
       function(name) {
-        fn <- custom_tools[[name]]
-        if (!is.function(fn)) {
-          # This should not happen if rlm_module() validation is working
-          # but provide a clear error in the prelude as defense in depth
-          return(sprintf(
-            "%s <- function(...) stop('Tool %s is not a function')\n",
-            name,
-            name
-          ))
-        }
-
-        # Deparse the function and assign it
-        fn_body <- paste(deparse(fn), collapse = "\n")
-        sprintf("%s <- %s\n", name, fn_body)
+        encoded_name <- encodeString(name, quote = "\"")
+        sprintf(
+          paste0(
+            "%1$s <- base::local({\n",
+            "  .name <- %2$s\n",
+            "  function(...) .rlm_host_tool_call(.name, base::list(...))\n",
+            "})\n"
+          ),
+          name,
+          encoded_name
+        )
       },
       character(1)
     )
 
-    custom_prelude <- paste0(
-      "\n# Custom Tools\n",
-      paste(tool_defs, collapse = "\n")
+    custom_prelude <- sprintf(
+      '
+# Authenticated host-tool replay bridge
+.rlm_host_tool_replay <- .context[[%s]]
+if (base::is.null(.rlm_host_tool_replay)) {
+  .rlm_host_tool_replay <- base::list()
+}
+if (!base::is.list(.rlm_host_tool_replay)) {
+  base::stop("Malformed RLM host-tool replay state")
+}
+.rlm_host_tool_call <- base::local({
+  .replay <- .rlm_host_tool_replay
+  .index <- 0L
+  .encode <- .rlm_control_encode
+  .canonical <- function(value) {
+    base::as.character(jsonlite::toJSON(
+      value,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      digits = NA
+    ))
+  }
+
+  function(name, arguments) {
+    .index <<- .index + 1L
+    request <- base::list(
+      index = .index,
+      name = name,
+      arguments = arguments
+    )
+    if (.index <= base::length(.replay)) {
+      response <- .replay[[.index]]
+      valid <- base::is.list(response) &&
+        base::is.list(response$request) &&
+        base::identical(.canonical(response$request), .canonical(request)) &&
+        base::is.logical(response$success) &&
+        base::length(response$success) == 1L &&
+        !base::is.na(response$success)
+      if (!valid) {
+        base::stop("RLM host-tool replay diverged from its authenticated request")
+      }
+      if (base::isTRUE(response$success)) {
+        return(response$value)
+      }
+      base::stop(base::as.character(response$error)[[1L]], call. = FALSE)
+    }
+    base::stop(.encode("host_tool", request), call. = FALSE)
+  }
+})
+
+%s
+',
+      encodeString(rlm_host_tool_replay_field(), quote = "\""),
+      paste(tool_wrappers, collapse = "\n")
     )
   }
 
@@ -515,6 +572,29 @@ decode_rlm_control <- function(x, control_nonce = NULL) {
       class = c("rlm_query_request", class(envelope$payload))
     ))
   }
+  if (identical(envelope$kind, "host_tool")) {
+    index <- envelope$payload$index
+    name <- envelope$payload$name
+    arguments <- envelope$payload$arguments
+    valid_index <- is.numeric(index) &&
+      length(index) == 1L &&
+      !is.na(index) &&
+      is.finite(index) &&
+      index == floor(index) &&
+      index >= 1L
+    valid_name <- is.character(name) &&
+      length(name) == 1L &&
+      !is.na(name) &&
+      nzchar(name)
+    if (!valid_index || !valid_name || !is.list(arguments)) {
+      abort_rlm_control("Malformed RLM host-tool control frame")
+    }
+    envelope$payload$index <- as.integer(index)
+    return(structure(
+      envelope$payload,
+      class = c("rlm_host_tool_request", class(envelope$payload))
+    ))
+  }
   abort_rlm_control("Unknown RLM control frame kind")
 }
 
@@ -553,6 +633,12 @@ is_rlm_final <- function(x, control_nonce = NULL) {
 is_rlm_query_request <- function(x, control_nonce = NULL) {
   x <- decode_rlm_control(x, control_nonce) %||% x
   inherits(x, "rlm_query_request")
+}
+
+
+is_rlm_host_tool_request <- function(x, control_nonce = NULL) {
+  x <- decode_rlm_control(x, control_nonce) %||% x
+  inherits(x, "rlm_host_tool_request")
 }
 
 

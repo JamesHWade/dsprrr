@@ -318,7 +318,7 @@ flowchart TB
 | `"program_of_thought"` | `ProgramOfThoughtModule` | Generate and execute R code |
 | `"codeact"` | `CodeActModule` | Combine tools and R code |
 | `"rlm"` | `RLMModule` | Explore large context through a REPL |
-| `"flex"` | `FlexModule` | Validated structural JSON IR (experimental) |
+| `"flex"` | `FlexModule` | Validated JSON graph or interpreter-backed R source (experimental) |
 
 ### Code Runner Ownership
 
@@ -347,6 +347,13 @@ program <- flex("question -> answer")
 program$module_src       # Canonical, read-only JSON
 program$bind(candidate)  # Validate and replace transactionally
 
+code_program <- flex(
+  "question -> answer",
+  module_src = "forward <- function(question) Prediction(answer = question)",
+  interpreter_factory = my_sandboxed_runner,
+  source_format = "r"
+)
+
 optimized <- compile(
   GEPA(metric = metric_exact_match(field = "answer"), seed = 42L),
   program,
@@ -355,10 +362,13 @@ optimized <- compile(
 )
 ```
 
-Flex version 1 permits only Predict and Chain-of-Thought steps. It never
-evaluates arbitrary R/Python source and does not claim full DSPy Flex parity.
-GEPA-lite validates complete candidate sources and ranks whole programs; it
-does not reproduce DSPy's per-component frontiers or inference-time search.
+JSON Flex version 1 permits Predict and Chain-of-Thought graphs. Executable
+Flex adds complete R `forward()` source, deterministic control flow, the DSPy
+Flex primitive family, and named host tools behind a fresh interpreter and a
+versioned bridge. `max_tool_calls` separately bounds privileged host calls.
+GEPA validates complete candidate sources and selects
+parents from validation-example winners with component selection and lineage
+metadata kept separately.
 
 ---
 

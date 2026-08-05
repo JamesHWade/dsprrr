@@ -146,6 +146,51 @@ Module <- R6::R6Class(
       input_contract <- module_input_contract(self, inputs)
 
       if (identical(input_contract$kind, "batch")) {
+        if (interpreter_workflow_module(self)) {
+          assert_factory_interpreter_async_supported(self, "run")
+          runtime_chat <- .llm %||%
+            self$chat %||%
+            get_default_chat(create = FALSE)
+          runtime <- .concurrency_runtime %||%
+            normalize_concurrency_runtime(
+              concurrency,
+              .llm = .llm,
+              .chat = runtime_chat
+            )
+          runtime <- normalize_factory_interpreter_batch_runtime(
+            runtime,
+            explicit_llm = !is.null(.llm)
+          )
+          if (
+            isTRUE(.predict_compat) &&
+              !identical(runtime$effective_backend, "sequential")
+          ) {
+            cli::cli_abort(
+              c(
+                "Stateful predict batches require sequential execution",
+                "i" = "Use {.fn run} for isolated concurrent batch execution."
+              ),
+              class = c(
+                "dsprrr_predict_concurrency_unsupported",
+                "dsprrr_concurrency_unsupported_error"
+              )
+            )
+          }
+          inputs <- lapply(
+            inputs,
+            batch_recycle_input,
+            size = input_contract$size
+          )
+          return(run_factory_interpreter_batch(
+            module = self,
+            inputs = inputs,
+            n = input_contract$size,
+            .llm = .llm,
+            .progress = .progress,
+            .return_format = .return_format,
+            .concurrency = runtime
+          ))
+        }
         if (
           inherits(self, "PredictModule") &&
             !identical(class(self)[1], "PredictModule")
@@ -900,8 +945,9 @@ Module <- R6::R6Class(
     #'
     #' Returns a promise that resolves to the structured output.
     #' Useful for running multiple modules in parallel.
-    #' This direct provider path supports ordinary Predict modules only;
-    #' use [run()] for modules with specialized execution workflows.
+    #' Ordinary Predict modules use the provider's native async path.
+    #' ProgramOfThought, CodeAct, and RLM use an isolated mirai process when
+    #' configured with `interpreter_factory`.
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
@@ -1087,6 +1133,312 @@ Module$set("public", "apply_optimization_params", function(params) {
 
   invisible(self)
 })
+
+
+normalize_factory_interpreter_batch_runtime <- function(
+  runtime,
+  explicit_llm = FALSE
+) {
+  if (!inherits(runtime, "dsprrr_concurrency_runtime")) {
+    cli::cli_abort(
+      "Internal interpreter concurrency runtime is invalid",
+      class = "dsprrr_concurrency_config_error"
+    )
+  }
+
+  if (is.finite(runtime$max_errors) || !isTRUE(runtime$cancel)) {
+    cli::cli_abort(
+      c(
+        "Interpreter batches cannot enforce this concurrency control",
+        "x" = "Finite error budgets and non-default cancellation are unsupported.",
+        "i" = "Use {.code max_errors = Inf} and {.code cancel = TRUE}."
+      ),
+      class = "dsprrr_interpreter_concurrency_control_error"
+    )
+  }
+
+  if (identical(runtime$effective_backend, "ellmer")) {
+    if (identical(runtime$requested_backend, "ellmer")) {
+      cli::cli_abort(
+        c(
+          "The ellmer backend cannot execute interpreter workflows",
+          "i" = "Use {.code backend = \"mirai\"} so each row owns a fresh interpreter process."
+        ),
+        class = "dsprrr_interpreter_concurrency_backend_error"
+      )
+    }
+    if (
+      !isTRUE(explicit_llm) &&
+        concurrency_backend_available("mirai")
+    ) {
+      runtime$effective_backend <- "mirai"
+      runtime$effective_workers <- runtime$requested_workers
+      runtime$fallback_reason <- paste(
+        "mirai selected because ellmer cannot execute interpreter workflows"
+      )
+    } else {
+      runtime$effective_backend <- "sequential"
+      runtime$effective_workers <- 1L
+      runtime$fallback_reason <- paste(
+        "sequential execution selected because a supplied Chat cannot be",
+        "sent to mirai safely"
+      )
+    }
+  }
+
+  if (
+    identical(runtime$effective_backend, "mirai") &&
+      (is.finite(runtime$task_timeout) ||
+        is.finite(runtime$total_timeout) ||
+        is.finite(runtime$max_errors))
+  ) {
+    cli::cli_abort(
+      c(
+        "Interpreter batch controls cannot be enforced by this mirai adapter",
+        "x" = "Finite task/total timeouts and error budgets are not yet supported.",
+        "i" = "Use unlimited controls or sequential execution."
+      ),
+      class = "dsprrr_interpreter_concurrency_control_error"
+    )
+  }
+
+  runtime
+}
+
+
+factory_interpreter_history_field <- function(module) {
+  if (inherits(module, "ProgramOfThoughtModule")) {
+    return("executions")
+  }
+  if (inherits(module, "CodeActModule")) {
+    return("trajectories")
+  }
+  if (inherits(module, "RLMModule")) {
+    return("repl_history")
+  }
+  NULL
+}
+
+
+format_factory_interpreter_batch_row <- function(
+  result,
+  index,
+  .return_format,
+  runtime,
+  chat = NULL
+) {
+  if (inherits(result, "condition")) {
+    row <- create_error_result(
+      error = result,
+      index = index,
+      prompt = "",
+      instructions = "",
+      llm = chat,
+      .return_format = .return_format,
+      metadata = if (identical(.return_format, "structured")) {
+        list(
+          error = conditionMessage(result),
+          error_class = class(result)[1L],
+          error_stage = "interpreter-workflow",
+          batch_index = index
+        )
+      } else {
+        NULL
+      }
+    )
+  } else if (identical(.return_format, "simple")) {
+    row <- result$output
+  } else {
+    metadata <- result$metadata %||% list()
+    metadata$batch_index <- index
+    row <- list(
+      output = result$output,
+      chat = result$chat %||% chat,
+      metadata = metadata
+    )
+  }
+  annotate_concurrency_result(row, runtime, .return_format)
+}
+
+
+run_factory_interpreter_batch <- function(
+  module,
+  inputs,
+  n,
+  .llm,
+  .progress,
+  .return_format,
+  .concurrency
+) {
+  input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
+  history_field <- factory_interpreter_history_field(module)
+  llm <- .llm %||% module$chat %||% get_default_chat()
+  if (is.null(llm)) {
+    cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
+  }
+
+  if (identical(.concurrency$effective_backend, "sequential")) {
+    rows <- lapply(seq_len(n), function(index) {
+      result <- tryCatch(
+        {
+          forwarded <- module$forward(
+            input_sets[[index]],
+            .llm = llm,
+            trace = TRUE,
+            .cache = FALSE
+          )
+          list(
+            output = forwarded$output[[1L]],
+            chat = forwarded$chat[[1L]],
+            metadata = forwarded$metadata[[1L]]
+          )
+        },
+        interrupt = function(condition) stop(condition),
+        error = function(condition) condition
+      )
+      format_factory_interpreter_batch_row(
+        result,
+        index,
+        .return_format,
+        .concurrency,
+        chat = llm
+      )
+    })
+  } else {
+    profile <- new_dsprrr_mirai_profile()
+    mapped <- NULL
+    profile_owned <- FALSE
+    on.exit(
+      {
+        if (profile_owned) {
+          shutdown_dsprrr_mirai_profile(
+            profile,
+            tasks = if (is.null(mapped)) list() else unclass(mapped),
+            strict = FALSE
+          )
+        }
+      },
+      add = TRUE
+    )
+    mirai::daemons(
+      n = .concurrency$effective_workers,
+      dispatcher = TRUE,
+      .compute = profile
+    )
+    profile_owned <- TRUE
+
+    namespace_path <- getNamespaceInfo(asNamespace("dsprrr"), "path")
+    worker <- function(
+      input_set,
+      module,
+      llm,
+      history_field,
+      namespace_path
+    ) {
+      if (
+        file.exists(file.path(namespace_path, "R", "module-base.R")) &&
+          requireNamespace("pkgload", quietly = TRUE)
+      ) {
+        pkgload::load_all(namespace_path, quiet = TRUE)
+      } else {
+        loadNamespace("dsprrr")
+      }
+      tryCatch(
+        {
+          forwarded <- module$forward(
+            input_set,
+            .llm = llm,
+            trace = TRUE,
+            .cache = FALSE
+          )
+          history <- if (is.null(history_field)) {
+            list()
+          } else {
+            module$state[[history_field]]
+          }
+          list(
+            ok = TRUE,
+            output = forwarded$output[[1L]],
+            metadata = forwarded$metadata[[1L]],
+            history = if (length(history) > 0L) {
+              history[[length(history)]]
+            } else {
+              NULL
+            }
+          )
+        },
+        interrupt = function(condition) stop(condition),
+        error = function(condition) {
+          list(
+            ok = FALSE,
+            error = conditionMessage(condition),
+            error_class = class(condition)[1L]
+          )
+        }
+      )
+    }
+    mapped <- mirai::mirai_map(
+      input_sets,
+      worker,
+      .args = list(
+        module = module,
+        llm = llm,
+        history_field = history_field,
+        namespace_path = namespace_path
+      ),
+      .compute = profile
+    )
+    records <- mapped[]
+    stopped <- shutdown_dsprrr_mirai_profile(
+      profile,
+      tasks = unclass(mapped),
+      strict = TRUE
+    )
+    if (isTRUE(stopped)) {
+      profile_owned <- FALSE
+    }
+
+    rows <- lapply(seq_len(n), function(index) {
+      record <- records[[index]]
+      if (mirai::is_mirai_error(record)) {
+        condition <- simpleError(record$message %||% as.character(record))
+        class(condition) <- unique(c("dsprrr_mirai_error", class(condition)))
+        result <- condition
+      } else if (!is.list(record) || !isTRUE(record$ok)) {
+        condition <- simpleError(record$error %||% "Interpreter worker failed")
+        class(condition) <- unique(c(
+          record$error_class %||% "dsprrr_interpreter_worker_error",
+          class(condition)
+        ))
+        result <- condition
+      } else {
+        result <- list(
+          output = record$output,
+          chat = NULL,
+          metadata = record$metadata
+        )
+        if (!is.null(history_field) && !is.null(record$history)) {
+          module$state[[history_field]] <- append(
+            module$state[[history_field]],
+            list(record$history)
+          )
+        }
+      }
+      format_factory_interpreter_batch_row(
+        result,
+        index,
+        .return_format,
+        .concurrency
+      )
+    })
+  }
+
+  if (identical(.return_format, "structured")) {
+    structure(rows, class = c("dsprrr_batch_result", "list"))
+  } else {
+    rows
+  }
+}
 
 #' Null-coalescing operator
 #' @keywords internal

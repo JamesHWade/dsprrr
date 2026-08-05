@@ -108,7 +108,7 @@ optimizers inspired by DSPy:
 
 - **LabeledFewShot**: Add examples from your training set as demonstrations
 - **MIPROv2**: Joint optimization of instructions and examples using Bayesian search
-- **GEPA**: Reflection-based instruction and constrained Flex-structure optimization with whole-program Pareto selection
+- **GEPA**: Reflection-based complete-program optimization with validation-example and multi-objective Pareto selection
 - **AutoResearch and MetaHarness**: Agentic, sandboxed search over multi-module instructions and templates
 
 `flex()` is an experimental module, not an optimizer. It exposes a validated
@@ -174,7 +174,7 @@ result <- run(
 | `program_of_thought` | Generate and execute R code |
 | `codeact` | Combine tools with R code execution |
 | `rlm` | Explore large context through an R REPL |
-| `flex` | Execute a validated, structurally optimizable predictor plan (experimental) |
+| `flex` | Execute a structurally optimizable JSON graph or interpreter-backed R program (experimental) |
 
 ```{r module-types, eval=FALSE}
 # ReAct agent with tools
@@ -190,10 +190,13 @@ mod <- module(signature("question -> answer"), type = "chain_of_thought")
 
 ### Experimental structural programs
 
-`flex()` represents a predictor graph as a canonical, versioned JSON
-intermediate representation. Version 1 permits only allowlisted `predict` and
-`chain_of_thought` steps with typed references between them. The source is
-parsed as data—it is never evaluated as R or Python—and `module_src` is
+`flex()` makes a complete implementation an optimization parameter. Its safe
+default is a canonical, versioned JSON graph with allowlisted `predict` and
+`chain_of_thought` steps and typed references. Opt-in
+`source_format = "r"` runs complete R source only in a fresh interpreter from
+an explicit factory, with a versioned host bridge for dynamic predictors and
+named tools. Guest bindings are lexically isolated from bridge state, and
+`max_tool_calls` bounds privileged host-tool requests. `module_src` is
 read-only; use `bind()` to validate and replace it transactionally.
 
 ```{r flex, eval=FALSE}
@@ -208,13 +211,17 @@ optimized <- compile(
 )
 ```
 
-This constrained design is intentionally narrower than DSPy's experimental
-Flex module; dsprrr does not claim arbitrary-source or full Flex parity.
-GEPA-lite proposes complete source values, validates them transactionally, and
-ranks whole-program candidates. It does not reproduce DSPy's independent
-per-component frontiers or inference-time search. See
+Executable dsprrr Flex uses a top-level R `forward()` function and requires an
+explicit interpreter factory; DSPy uses a Python module class and provides a
+default Deno/Pyodide interpreter, so sources are not portable between them.
+GEPA searches complete instruction and `module_src` components for ordinary
+and Flex programs. When a `valset` is supplied, training rows drive discovery
+and reflection while validation rows drive selection. Its parent pool unites
+validation-example winners with the multi-metric objective Pareto front;
+metadata records component selection, immediate lineage and ancestry,
+attempted merge counts, and optional retained best outputs. See
 [Structural Optimization with Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html)
-for the JSON schema and safety boundary.
+for both source languages and the safety boundary.
 
 ### Code-runner lifecycles
 
@@ -229,11 +236,15 @@ two execution bindings:
   invocation, uses the fresh runner only for that invocation, and closes it
   exactly once, including when execution fails.
 
-Use synchronous `run()` for these specialized modules. `run_async()`,
-`stream_async()`, and `$stream()` reject their direct provider path before
-creating a factory runner or making a provider call. `run_stream()` preserves
-its one-shot `forward()` fallback, but preflights and rejects an actual token
-stream request that would bypass a specialized step.
+Executable Flex accepts only `interpreter_factory`, keeping every bridge
+invocation isolated, and requires an advertised sandbox by default.
+
+Factory-backed ProgramOfThought, CodeAct, and RLM support isolated async and
+mirai batch execution; caller-owned runners remain sequential. `stream_async()`
+and `$stream()` reject their direct provider path before creating a factory
+runner or making a provider call. `run_stream()`
+preserves its one-shot `forward()` fallback, but preflights and rejects an
+actual token stream request that would bypass a specialized step.
 
 ```{r interpreter-factory, eval=FALSE}
 pot <- program_of_thought(

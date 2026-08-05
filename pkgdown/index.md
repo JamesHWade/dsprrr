@@ -107,11 +107,14 @@ pin_module_config(board, "ticket-router-v2", optimized)
 
 ## Experimental structural optimization
 
-`flex()` makes a predictor plan an optimization parameter without evaluating
-optimizer-authored R or Python. Its canonical, versioned JSON source permits
-only allowlisted Predict and Chain-of-Thought steps, typed input references,
-and explicit output wiring. Invalid candidates are rejected before they can
-replace the active plan.
+`flex()` makes a complete implementation an optimization parameter. Its safe
+default is a canonical, versioned JSON graph with allowlisted Predict and
+Chain-of-Thought steps, typed references, and explicit output wiring. Opt-in
+executable mode runs a complete R `forward()` program only in a fresh runner
+from an explicit factory, with a versioned bridge for dynamic predictors and
+named host tools. Guest bindings are isolated from bridge state, and
+`max_tool_calls` bounds privileged host-tool requests. Invalid candidates are
+rejected before they can replace the active source.
 
 ```r
 program <- flex("question -> answer")
@@ -125,23 +128,28 @@ optimized <- compile(
 )
 ```
 
-This is a deliberately constrained dsprrr design, not a claim of full DSPy
-Flex parity. GEPA-lite searches complete instruction and `module_src`
-components, rejects invalid sources before selection, and ranks whole-program
-candidates. It does not implement DSPy's per-component frontiers or
-inference-time search. [Read the Flex design and schema &rarr;](articles/flex-optimization.html)
+DSPy uses Python module classes and a default Deno/Pyodide interpreter; dsprrr
+uses R `forward()` source and requires an explicit factory, so source is not
+portable between them. GEPA searches complete instruction and `module_src`
+components for ordinary and Flex programs. When a `valset` is supplied,
+training rows drive discovery and reflection while validation rows drive
+selection. Its parent pool unites validation-example winners with the
+multi-metric objective Pareto front; metadata records component selection,
+immediate lineage and ancestry, attempted merge counts, and optional best
+outputs.
+[Read the Flex languages and safety contract &rarr;](articles/flex-optimization.html)
 
 Code-executing modules now make ownership explicit. Pass `runner` for a
 caller-owned backend object that dsprrr reuses and never closes. State
 persistence and reset support are backend-specific. Alternatively, pass a
 mutually exclusive zero-argument `interpreter_factory` for a fresh
 invocation-owned runner that dsprrr closes exactly once. The factory contract
-applies to ProgramOfThought, CodeAct, and RLM. Use synchronous `run()` for
-these modules. `run_async()`, `stream_async()`, and module `$stream()` reject
-their program graphs before creating a factory runner or making a provider
-call. `run_stream()` without a matching token listener preserves the ordinary
-synchronous `forward()` path; a matching token-stream request is rejected
-before provider or factory work.
+applies to ProgramOfThought, CodeAct, RLM, and executable Flex; Flex accepts
+only the fresh-factory form. Factory-backed ProgramOfThought, CodeAct, and RLM
+also support isolated async and mirai batch workflows. Caller-owned runners,
+specialized streaming, and executable Flex concurrency remain rejected before
+unsafe sharing or provider work. `run_stream()` without a matching token
+listener preserves the ordinary synchronous `forward()` path.
 
 ## Getting Started: Configure Your LLM
 

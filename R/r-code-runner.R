@@ -26,14 +26,19 @@
 #' `execute()` returns one uniquely named list. `success` and `result` are
 #' required. Missing `stdout`, `stderr`, `messages`, and `warnings` fields are
 #' normalized to empty strings, and missing `duration_ms` is normalized to
-#' `NA`. A failed result must include a non-empty `error`; a successful result
-#' may omit it.
+#' `NA`. A failed result must include a non-empty `error`. Its `error_type` is
+#' either `"execution"` for code the model may repair or `"interpreter"` for a
+#' terminal process/protocol failure. Legacy runners that omit `error_type` are
+#' treated as reporting a repairable execution failure. A successful result
+#' may omit `error` and `error_type`.
 #'
 #' Code-executing modules accept exactly one runtime source. Passing `runner`
 #' retains that caller-owned object and never closes it. Passing a zero-argument
-#' `interpreter_factory` creates one fresh invocation-owned runner; factory
-#' results must also implement idempotent terminal `close()`, which dsprrr calls
-#' exactly once on success, error, or interrupt.
+#' `interpreter_factory` creates one fresh invocation-owned runner. Factory
+#' results may implement idempotent `start()` and must implement idempotent
+#' terminal `shutdown()` or its compatibility alias `close()`. dsprrr starts a
+#' factory runner before use and shuts it down exactly once on success, error,
+#' or interrupt.
 #'
 #' @examples
 #' \dontrun{
@@ -276,6 +281,29 @@ validate_code_runner_result <- function(result) {
     )
   }
 
+  error_type <- result$error_type
+  if (isTRUE(result$success)) {
+    if (!is.null(error_type)) {
+      cli::cli_abort(
+        "A successful runner result must not contain {.field error_type}",
+        class = "dsprrr_code_runner_protocol_error"
+      )
+    }
+  } else {
+    error_type <- error_type %||% "execution"
+    if (
+      !is.character(error_type) ||
+        length(error_type) != 1L ||
+        is.na(error_type) ||
+        !error_type %in% c("execution", "interpreter")
+    ) {
+      cli::cli_abort(
+        "A failed runner result field {.field error_type} must be {.val execution} or {.val interpreter}",
+        class = "dsprrr_code_runner_protocol_error"
+      )
+    }
+  }
+
   duration <- result$duration_ms
   if (is.null(duration)) {
     result$duration_ms <- NA_real_
@@ -291,7 +319,52 @@ validate_code_runner_result <- function(result) {
   }
 
   result$error <- error %||% NULL
+  result$error_type <- error_type %||% NULL
+  retryable <- !isTRUE(result$success) &&
+    identical(error_type, "execution")
+  if (
+    !is.null(result$retryable) &&
+      (!is.logical(result$retryable) ||
+        length(result$retryable) != 1L ||
+        is.na(result$retryable) ||
+        !identical(result$retryable, retryable))
+  ) {
+    cli::cli_abort(
+      "runner$execute() field {.field retryable} is inconsistent with {.field success} and {.field error_type}",
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+  result$retryable <- retryable
   result
+}
+
+
+abort_terminal_code_runner_result <- function(result) {
+  cli::cli_abort(
+    c(
+      "The code interpreter session failed and cannot be reused",
+      "x" = result$error,
+      "i" = "Create a fresh interpreter before retrying the module."
+    ),
+    class = c(
+      "dsprrr_code_interpreter_error",
+      "dsprrr_interpreter_terminal_error"
+    ),
+    runner_result = result
+  )
+}
+
+
+is_terminal_interpreter_condition <- function(condition) {
+  inherits(
+    condition,
+    c(
+      "dsprrr_code_interpreter_error",
+      "dsprrr_interpreter_terminal_error",
+      "dsprrr_interpreter_closed_error",
+      "dsprrr_code_runner_protocol_error"
+    )
+  )
 }
 
 
@@ -313,8 +386,35 @@ execute_code_runner <- function(
   ) {
     execute_args$.control_nonce <- .control_nonce
   }
-  result <- do.call(runner$execute, execute_args)
-  validate_code_runner_result(result)
+  result <- tryCatch(
+    do.call(runner$execute, execute_args),
+    interrupt = function(condition) stop(condition),
+    error = function(condition) {
+      if (is_terminal_interpreter_condition(condition)) {
+        stop(condition)
+      }
+      cli::cli_abort(
+        c(
+          "The code interpreter failed outside submitted-code execution",
+          "x" = conditionMessage(condition),
+          "i" = "A runner must return repairable code failures as a typed result instead of signalling them."
+        ),
+        class = c(
+          "dsprrr_code_interpreter_error",
+          "dsprrr_interpreter_terminal_error"
+        ),
+        parent = condition
+      )
+    }
+  )
+  result <- validate_code_runner_result(result)
+  if (
+    !isTRUE(result$success) &&
+      identical(result$error_type, "interpreter")
+  ) {
+    abort_terminal_code_runner_result(result)
+  }
+  result
 }
 
 
@@ -362,26 +462,26 @@ validate_interpreter_factory <- function(interpreter_factory) {
 }
 
 
-validate_interpreter_close <- function(close) {
-  if (!is.function(close)) {
+validate_interpreter_lifecycle_method <- function(method, name) {
+  if (!is.function(method)) {
     cli::cli_abort(
       c(
-        "{.arg interpreter_factory} returned a runner without {.code close()}",
-        "i" = "Invocation-owned runners must implement {.code execute()}, {.code policy()}, and {.code close()}."
+        "{.arg interpreter_factory} returned a runner without a callable {.code {name}()}",
+        "i" = "Invocation-owned runners must expose an idempotent terminal {.code shutdown()} or {.code close()} method."
       ),
       class = "dsprrr_interpreter_factory_error"
     )
   }
-  if (is.primitive(close)) {
+  if (is.primitive(method)) {
     cli::cli_abort(
-      "A factory-created runner's {.code close()} must have an inspectable zero-argument signature",
+      "A factory-created runner's {.code {name}()} must have an inspectable zero-argument signature",
       class = "dsprrr_interpreter_factory_error"
     )
   }
 
-  close_formals <- tryCatch(formals(close), error = function(e) NULL)
-  required <- names(close_formals)[vapply(
-    close_formals,
+  method_formals <- tryCatch(formals(method), error = function(e) NULL)
+  required <- names(method_formals)[vapply(
+    method_formals,
     identical,
     logical(1),
     quote(expr = )
@@ -390,7 +490,7 @@ validate_interpreter_close <- function(close) {
   if (length(required) > 0L) {
     cli::cli_abort(
       c(
-        "A factory-created runner's {.code close()} must be callable without arguments",
+        "A factory-created runner's {.code {name}()} must be callable without arguments",
         "x" = "Required argument{?s}: {.arg {required}}",
         "i" = "The module will not execute with a runner whose cleanup contract is invalid."
       ),
@@ -398,7 +498,93 @@ validate_interpreter_close <- function(close) {
     )
   }
 
-  invisible(close)
+  invisible(method)
+}
+
+
+validate_interpreter_close <- function(close) {
+  validate_interpreter_lifecycle_method(close, "close")
+}
+
+
+interpreter_cleanup_method <- function(runner, required = TRUE) {
+  shutdown <- tryCatch(runner[["shutdown"]], error = function(e) NULL)
+  close <- tryCatch(runner[["close"]], error = function(e) NULL)
+  candidates <- list(shutdown = shutdown, close = close)
+  validation_errors <- list()
+  for (name in names(candidates)) {
+    method <- candidates[[name]]
+    if (!is.function(method)) {
+      next
+    }
+    validation <- tryCatch(
+      {
+        validate_interpreter_lifecycle_method(method, name)
+        NULL
+      },
+      interrupt = function(condition) stop(condition),
+      error = function(condition) condition
+    )
+    if (is.null(validation)) {
+      return(list(fun = method, name = name))
+    }
+    validation_errors[[name]] <- validation
+  }
+  if (length(validation_errors) > 0L && isTRUE(required)) {
+    stop(validation_errors[[1L]])
+  }
+  if (isTRUE(required)) {
+    cli::cli_abort(
+      c(
+        "{.arg interpreter_factory} returned a runner without terminal cleanup",
+        "i" = "Implement idempotent {.code shutdown()} or {.code close()}."
+      ),
+      class = "dsprrr_interpreter_factory_error"
+    )
+  }
+  NULL
+}
+
+
+best_effort_interpreter_cleanup <- function(runner) {
+  method <- tryCatch(
+    interpreter_cleanup_method(runner, required = FALSE),
+    error = function(e) NULL
+  )
+  if (is.null(method)) {
+    return(NULL)
+  }
+  tryCatch(
+    {
+      method$fun()
+      NULL
+    },
+    interrupt = function(e) e,
+    error = function(e) e
+  )
+}
+
+
+start_factory_interpreter <- function(runner, module_name) {
+  start <- tryCatch(runner[["start"]], error = function(e) NULL)
+  if (!is.function(start)) {
+    return(invisible(runner))
+  }
+  validate_interpreter_lifecycle_method(start, "start")
+  tryCatch(
+    {
+      start()
+      invisible(runner)
+    },
+    interrupt = function(e) stop(e),
+    error = function(e) {
+      cli::cli_abort(
+        "{module_name} could not start its invocation-owned interpreter",
+        parent = e,
+        class = "dsprrr_interpreter_start_error"
+      )
+    }
+  )
 }
 
 
@@ -481,19 +667,7 @@ acquire_code_runner <- function(runner, interpreter_factory, module_name) {
     error = function(e) e
   )
   if (inherits(validation, "condition")) {
-    close <- tryCatch(created[["close"]], error = function(e) NULL)
-    close_error <- if (is.function(close)) {
-      tryCatch(
-        {
-          close()
-          NULL
-        },
-        interrupt = function(e) e,
-        error = function(e) e
-      )
-    } else {
-      NULL
-    }
+    close_error <- best_effort_interpreter_cleanup(created)
     if (inherits(close_error, "condition")) {
       attr(validation, "dsprrr_interpreter_close_error") <- close_error
     }
@@ -507,12 +681,50 @@ acquire_code_runner <- function(runner, interpreter_factory, module_name) {
     )
   }
   runner_policy <- validation
-  close <- tryCatch(created[["close"]], error = function(e) NULL)
-  validate_interpreter_close(close)
+  cleanup <- tryCatch(
+    interpreter_cleanup_method(created),
+    interrupt = function(e) e,
+    error = function(e) e
+  )
+  if (inherits(cleanup, "condition")) {
+    cleanup_error <- best_effort_interpreter_cleanup(created)
+    if (inherits(cleanup_error, "condition")) {
+      attr(cleanup, "dsprrr_interpreter_close_error") <- cleanup_error
+    }
+    if (inherits(cleanup, "interrupt")) {
+      stop(cleanup)
+    }
+    stop(cleanup)
+  }
+
+  start_error <- tryCatch(
+    {
+      start_factory_interpreter(created, module_name)
+      NULL
+    },
+    interrupt = function(e) e,
+    error = function(e) e
+  )
+  if (inherits(start_error, "condition")) {
+    cleanup_error <- tryCatch(
+      {
+        cleanup$fun()
+        NULL
+      },
+      interrupt = function(e) e,
+      error = function(e) e
+    )
+    if (inherits(cleanup_error, "condition")) {
+      attr(start_error, "dsprrr_interpreter_close_error") <- cleanup_error
+    }
+    stop(start_error)
+  }
 
   list(
     runner = created,
     owned = TRUE,
+    cleanup = cleanup$fun,
+    cleanup_method = cleanup$name,
     policy = runner_policy,
     policy_summary = summarize_code_runner_policy(runner_policy),
     module_name = module_name
@@ -527,7 +739,9 @@ close_code_runner_lease <- function(lease) {
   }
   tryCatch(
     {
-      lease$runner$close()
+      cleanup <- lease$cleanup %||%
+        interpreter_cleanup_method(lease$runner)$fun
+      cleanup()
       NULL
     },
     interrupt = function(e) e,
@@ -620,6 +834,15 @@ RCodeRunner <- R6::R6Class(
     #' @field closed Whether this runner has been closed
     closed = FALSE,
 
+    #' @field started Whether lifecycle startup has completed
+    started = FALSE,
+
+    #' @field terminal Whether a process or protocol failure made this runner unusable
+    terminal = FALSE,
+
+    #' @field terminal_reason Explanation for the terminal state
+    terminal_reason = NULL,
+
     #' @description
     #' Initialize a new RCodeRunner
     #' @param timeout Numeric timeout in seconds
@@ -660,8 +883,21 @@ RCodeRunner <- R6::R6Class(
           class = "dsprrr_interpreter_closed_error"
         )
       }
+      if (self$terminal) {
+        cli::cli_abort(
+          c(
+            "The R code runner is terminal",
+            "x" = self$terminal_reason %||%
+              "A subprocess or protocol failure occurred."
+          ),
+          class = "dsprrr_interpreter_terminal_error"
+        )
+      }
       if (!is.character(code) || length(code) != 1) {
         cli::cli_abort("code must be a single character string")
+      }
+      if (!self$started) {
+        self$start()
       }
 
       start_time <- Sys.time()
@@ -693,11 +929,17 @@ RCodeRunner <- R6::R6Class(
               code = code,
               context = context,
               prelude = self$prelude,
-              allowed_packages = self$allowed_packages
+              allowed_packages = self$allowed_packages,
+              stdout_path = stdout_file,
+              stderr_path = stderr_file
             ),
             timeout = self$timeout,
-            stdout = stdout_file,
-            stderr = stderr_file,
+            stdout = "|",
+            stderr = "|",
+            # callr only drains configured output streams when a callback is
+            # active. The no-op callback keeps stdout/stderr capture complete
+            # without echoing model-generated output in the host process.
+            callback = function(output) invisible(NULL),
             user_profile = FALSE,
             env = c(
               callr::rcmd_safe_env(),
@@ -758,25 +1000,87 @@ RCodeRunner <- R6::R6Class(
       }
 
       if (inherits(exec_result, "exec_error")) {
+        private$mark_terminal(exec_result$error)
         return(private$error_result(
           error = exec_result$error,
           stdout = stdout_content,
           stderr = stderr_content,
-          duration_ms = duration_ms
+          duration_ms = duration_ms,
+          error_type = "interpreter"
+        ))
+      }
+
+      if (
+        !is.list(exec_result) ||
+          !is.logical(exec_result$success) ||
+          length(exec_result$success) != 1L ||
+          is.na(exec_result$success)
+      ) {
+        reason <- paste(
+          "The R subprocess returned no valid structured execution result"
+        )
+        private$mark_terminal(reason)
+        return(private$error_result(
+          error = reason,
+          stdout = stdout_content,
+          stderr = stderr_content,
+          duration_ms = duration_ms,
+          error_type = "interpreter"
         ))
       }
 
       # Successful execution - exec_result is the wrapper's return value
+      combine_output <- function(primary, fallback) {
+        values <- c(primary %||% "", fallback %||% "")
+        values <- values[nzchar(values)]
+        if (length(values) == 0L) "" else paste(values, collapse = "\n")
+      }
       list(
         success = exec_result$success,
         result = exec_result$result,
-        stdout = private$truncate_output(stdout_content),
-        stderr = private$truncate_output(stderr_content),
+        stdout = private$truncate_output(combine_output(
+          exec_result$stdout,
+          stdout_content
+        )),
+        stderr = private$truncate_output(combine_output(
+          exec_result$stderr,
+          stderr_content
+        )),
         messages = private$truncate_output(exec_result$messages %||% ""),
         warnings = private$truncate_output(exec_result$warnings %||% ""),
         error = exec_result$error,
+        error_type = if (isTRUE(exec_result$success)) NULL else "execution",
+        retryable = !isTRUE(exec_result$success),
         duration_ms = round(duration_ms, 2)
       )
+    },
+
+    #' @description
+    #' Start the interpreter lifecycle
+    #'
+    #' This backend creates a fresh subprocess for every execution, so startup
+    #' is an idempotent lifecycle marker rather than process allocation.
+    #'
+    #' @return The runner, invisibly
+    start = function() {
+      if (self$closed) {
+        cli::cli_abort(
+          "The R code runner is closed",
+          class = "dsprrr_interpreter_closed_error"
+        )
+      }
+      if (self$terminal) {
+        cli::cli_abort(
+          c(
+            "The R code runner is terminal",
+            "x" = self$terminal_reason %||%
+              "A subprocess or protocol failure occurred."
+          ),
+          class = "dsprrr_interpreter_terminal_error"
+        )
+      }
+      self$started <- TRUE
+      invisible(self)
     },
 
     #' @description
@@ -792,7 +1096,9 @@ RCodeRunner <- R6::R6Class(
         process_isolation = TRUE,
         filesystem_access = "host-user",
         network_access = "host-user",
-        pattern_scan = "defense-in-depth"
+        pattern_scan = "defense-in-depth",
+        host_tools = "unsupported",
+        lifecycle = "start-execute-shutdown"
       )
     },
 
@@ -807,6 +1113,17 @@ RCodeRunner <- R6::R6Class(
     close = function() {
       self$closed <- TRUE
       invisible(self)
+    },
+
+    #' @description
+    #' Shut down the interpreter lifecycle
+    #'
+    #' Alias for `RCodeRunner$close()` matching the common interpreter
+    #' protocol.
+    #'
+    #' @return The runner, invisibly
+    shutdown = function() {
+      self$close()
     },
 
     #' @description
@@ -828,10 +1145,35 @@ RCodeRunner <- R6::R6Class(
     #' Wrapper function that runs inside the subprocess
     #' NOTE: Intentionally uses eval() - this is the core purpose of
     #' ProgramOfThought/CodeAct modules (execute LLM-generated code)
-    execution_wrapper = function(code, context, prelude, allowed_packages) {
+    execution_wrapper = function(
+      code,
+      context,
+      prelude,
+      allowed_packages,
+      stdout_path,
+      stderr_path
+    ) {
       # Capture messages and warnings
       messages <- character()
       warnings <- character()
+      stdout_connection <- file(stdout_path, open = "wt")
+      stderr_connection <- file(stderr_path, open = "wt")
+      output_sinks <- sink.number(type = "output")
+      message_sink <- sink.number(type = "message")
+      sink(stdout_connection, type = "output")
+      sink(stderr_connection, type = "message")
+      restore_sinks <- function() {
+        while (sink.number(type = "message") != message_sink) {
+          sink(type = "message")
+        }
+        while (sink.number(type = "output") > output_sinks) {
+          sink(type = "output")
+        }
+        close(stdout_connection)
+        close(stderr_connection)
+        invisible(NULL)
+      }
+      on.exit(restore_sinks(), add = TRUE)
 
       result <- tryCatch(
         {
@@ -915,11 +1257,15 @@ RCodeRunner <- R6::R6Class(
           )
         }
       )
+      restore_sinks()
+      on.exit(NULL, add = FALSE)
 
       if (inherits(result, "code_error")) {
         list(
           success = FALSE,
           result = NULL,
+          stdout = "",
+          stderr = "",
           messages = paste(messages, collapse = "\n"),
           warnings = paste(warnings, collapse = "\n"),
           error = result$msg
@@ -928,6 +1274,8 @@ RCodeRunner <- R6::R6Class(
         list(
           success = TRUE,
           result = result,
+          stdout = "",
+          stderr = "",
           messages = paste(messages, collapse = "\n"),
           warnings = paste(warnings, collapse = "\n"),
           error = NULL
@@ -979,7 +1327,23 @@ RCodeRunner <- R6::R6Class(
     read_output_file = function(filepath) {
       if (file.exists(filepath)) {
         tryCatch(
-          paste(readLines(filepath, warn = FALSE), collapse = "\n"),
+          {
+            connection <- file(filepath, open = "rb")
+            on.exit(close(connection), add = TRUE)
+            read_limit <- min(
+              as.double(self$max_output_chars) + 1,
+              .Machine$integer.max
+            )
+            output <- readChar(
+              connection,
+              nchars = read_limit,
+              useBytes = FALSE
+            )
+            if (length(output) == 0L) {
+              return("")
+            }
+            sub("\\r?\\n$", "", output, perl = TRUE)
+          },
           error = function(e) {
             cli::cli_warn(c(
               "Failed to read subprocess output",
@@ -1014,7 +1378,8 @@ RCodeRunner <- R6::R6Class(
       stderr = "",
       messages = "",
       warnings = "",
-      duration_ms = 0
+      duration_ms = 0,
+      error_type = "execution"
     ) {
       list(
         success = FALSE,
@@ -1024,8 +1389,16 @@ RCodeRunner <- R6::R6Class(
         messages = messages,
         warnings = warnings,
         error = error,
+        error_type = error_type,
+        retryable = identical(error_type, "execution"),
         duration_ms = round(duration_ms, 2)
       )
+    },
+
+    mark_terminal = function(reason) {
+      self$terminal <- TRUE
+      self$terminal_reason <- as.character(reason)[[1L]]
+      invisible(NULL)
     }
   )
 )

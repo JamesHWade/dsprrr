@@ -7,7 +7,7 @@
 read_trials_jsonl(path)
 }
 \arguments{
-\item{path}{File path to the JSONL file.}
+\item{path}{File path for the JSONL file.}
 }
 \value{
 A list of Trial objects.

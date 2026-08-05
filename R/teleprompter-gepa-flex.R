@@ -1,8 +1,10 @@
-# GEPA support for declarative Flex components.
+# GEPA support for declarative and interpreter-backed Flex components.
 #
 # This file deliberately stays separate from the GEPA-lite generation loop. It
 # supplies a typed candidate protocol that compile_gepa() can opt into when a
-# program contains Flex leaves, without making arbitrary source executable.
+# program contains Flex leaves. Source binding stays transactional; executable
+# source is evaluated only by the Flex interpreter bridge during candidate
+# evaluation.
 
 gepa_flex_paths <- function(program, mutable_only = TRUE) {
   module_graph_check_program(program)
@@ -41,15 +43,6 @@ gepa_program_component_specs <- function(program) {
 
   for (path in names(parameters)) {
     parameter <- parameters[[path]]
-    if (inherits(parameter, "PredictModule")) {
-      id <- gepa_component_id("instructions", path)
-      components[[id]] <- list(
-        id = id,
-        kind = "instructions",
-        path = path,
-        value = parameter$signature@instructions
-      )
-    }
     if (inherits(parameter, "FlexModule")) {
       id <- gepa_component_id("module_src", path)
       components[[id]] <- list(
@@ -57,6 +50,17 @@ gepa_program_component_specs <- function(program) {
         kind = "module_src",
         path = path,
         value = parameter$module_src
+      )
+    } else if (inherits(parameter, "PredictModule")) {
+      # A Flex source is one complete GEPA component. Its outer instructions
+      # remain task context for reflection, but are not evolved independently
+      # from the source that implements the module.
+      id <- gepa_component_id("instructions", path)
+      components[[id]] <- list(
+        id = id,
+        kind = "instructions",
+        path = path,
+        value = parameter$signature@instructions
       )
     }
   }
@@ -81,6 +85,126 @@ gepa_component_candidate <- function(program) {
 gepa_component_candidate_ids <- function(candidate) {
   gepa_validate_component_candidate(candidate)
   names(candidate$components)
+}
+
+gepa_component_candidate_id <- function(candidate) {
+  gepa_validate_component_candidate(candidate)
+  values <- lapply(candidate$components, function(component) {
+    component[c("kind", "path", "value")]
+  })
+  paste0(
+    "candidate:",
+    substr(
+      digest::digest(values, algo = "sha256", serialize = TRUE),
+      1L,
+      16L
+    )
+  )
+}
+
+gepa_component_candidate_lineage <- function(candidate) {
+  gepa_validate_component_candidate(candidate)
+  attr(candidate, "gepa_lineage", exact = TRUE) %||%
+    list(
+      parents = character(),
+      ancestors = character(),
+      ancestor = NULL,
+      tag = "seed"
+    )
+}
+
+gepa_set_component_candidate_lineage <- function(
+  candidate,
+  parents = character(),
+  ancestors = character(),
+  ancestor = NULL,
+  tag
+) {
+  gepa_validate_component_candidate(candidate)
+  parents <- unique(as.character(parents))
+  ancestors <- unique(as.character(ancestors))
+  if (
+    anyNA(c(parents, ancestors)) ||
+      any(!nzchar(c(parents, ancestors)))
+  ) {
+    cli::cli_abort(
+      "GEPA candidate lineage IDs must be non-empty strings",
+      class = "dsprrr_optimizer_invariant_error"
+    )
+  }
+  attr(candidate, "gepa_lineage") <- list(
+    parents = parents,
+    ancestors = setdiff(ancestors, parents),
+    ancestor = ancestor,
+    tag = tag
+  )
+  candidate
+}
+
+gepa_component_selector_ids <- function(
+  selector,
+  candidate,
+  failed_examples = list(),
+  context = list()
+) {
+  gepa_validate_component_candidate(candidate)
+  ids <- names(candidate$components)
+  if (length(ids) == 0L) {
+    return(character())
+  }
+
+  selected <- if (is.function(selector)) {
+    selector(
+      component_ids = ids,
+      candidate = candidate,
+      failed_examples = failed_examples,
+      context = context
+    )
+  } else {
+    if (
+      !is.character(selector) ||
+        length(selector) != 1L ||
+        is.na(selector) ||
+        !selector %in% c("round_robin", "all")
+    ) {
+      cli::cli_abort(
+        c(
+          "Invalid GEPA component selector",
+          "i" = "Use {.val round_robin}, {.val all}, or a selector function."
+        ),
+        class = "dsprrr_gepa_component_selector_error"
+      )
+    }
+    if (identical(selector, "all")) {
+      ids
+    } else {
+      prior <- sum(vapply(
+        candidate$history,
+        function(entry) {
+          is.list(entry) &&
+            !is.null(entry$component_id) &&
+            entry$component_id %in% ids
+        },
+        logical(1)
+      ))
+      ids[[(prior %% length(ids)) + 1L]]
+    }
+  }
+
+  if (
+    !is.character(selected) ||
+      length(selected) == 0L ||
+      anyNA(selected) ||
+      any(!nzchar(selected)) ||
+      anyDuplicated(selected) ||
+      !all(selected %in% ids)
+  ) {
+    cli::cli_abort(
+      "GEPA component selector must return one or more unique component IDs",
+      class = "dsprrr_gepa_component_selector_error"
+    )
+  }
+  selected
 }
 
 gepa_validate_component_candidate <- function(candidate, program = NULL) {
@@ -571,6 +695,7 @@ gepa_evaluate_component_candidate <- function(
   stage,
   unit_id,
   failure_score = 0,
+  .propagate_provider_errors = TRUE,
   ...
 ) {
   materialization <- gepa_materialize_component_candidate(
@@ -616,6 +741,7 @@ gepa_evaluate_component_candidate <- function(
     budget = budget,
     stage = stage,
     unit_id = unit_id,
+    .propagate_provider_errors = .propagate_provider_errors,
     ...
   )
   completed <- if (is.null(budget)) {
@@ -636,18 +762,96 @@ gepa_evaluate_component_candidate <- function(
   )
 }
 
-gepa_flex_contract <- function(module) {
-  inputs <- lapply(module$signature@inputs, function(input) {
-    list(name = input$name, schema = ellmer_type_to_json_schema(input$type))
+gepa_signature_contract <- function(signature) {
+  inputs <- lapply(signature@inputs, function(input) {
+    list(
+      name = input$name,
+      description = input$description %||% "",
+      schema = ellmer_type_to_json_schema(input$type)
+    )
   })
   outputs <- lapply(
-    flex_signature_output_types(module$signature),
-    ellmer_type_to_json_schema
+    names(flex_signature_output_types(signature)),
+    function(name) {
+      schema <- ellmer_type_to_json_schema(
+        flex_signature_output_types(signature)[[name]]
+      )
+      list(
+        name = name,
+        description = schema$description %||% "",
+        schema = schema
+      )
+    }
   )
   list(
+    instructions = signature@instructions,
     inputs = inputs,
-    outputs = outputs,
-    max_predictor_calls = module$max_predictor_calls
+    outputs = outputs
+  )
+}
+
+gepa_flex_tool_contract <- function(tool, name) {
+  if (is.function(tool)) {
+    tool_formals <- as.list(formals(tool))
+    formal_names <- names(tool_formals)
+    defaults <- lapply(tool_formals, function(value) {
+      text <- paste(deparse(value, width.cutoff = 120L), collapse = " ")
+      if (nzchar(text)) text else NULL
+    })
+    names(defaults) <- formal_names
+    return(list(
+      name = name,
+      kind = "function",
+      arguments = formal_names,
+      required = formal_names[
+        vapply(
+          defaults,
+          is.null,
+          logical(1)
+        ) &
+          formal_names != "..."
+      ],
+      defaults = Filter(Negate(is.null), defaults)
+    ))
+  }
+
+  props <- tryCatch(S7::props(tool), error = function(error) list())
+  arguments <- props$arguments %||% NULL
+  list(
+    name = name,
+    kind = "tool_def",
+    description = props$description %||% "",
+    arguments_schema = if (is.null(arguments)) {
+      NULL
+    } else {
+      ellmer_type_to_json_schema(arguments)
+    }
+  )
+}
+
+gepa_flex_contract <- function(module, program = module) {
+  list(
+    task_objective = program$signature@instructions,
+    root_signature = gepa_signature_contract(program$signature),
+    component_signature = gepa_signature_contract(module$signature),
+    source_format = module$source_format,
+    max_predictor_calls = module$max_predictor_calls,
+    max_tool_calls = module$max_tool_calls,
+    require_sandbox = module$require_sandbox,
+    available_tools = lapply(names(module$tools), function(name) {
+      gepa_flex_tool_contract(module$tools[[name]], name)
+    }),
+    available_primitives = c(
+      "Predict",
+      "ChainOfThought",
+      "ReAct",
+      "ReActV2",
+      "RLM",
+      "CodeAct",
+      "ProgramOfThought",
+      "Prediction",
+      "Tool"
+    )
   )
 }
 
@@ -776,30 +980,52 @@ gepa_flex_reflection_prompt <- function(
   program = module,
   component_path = "$"
 ) {
-  contract <- gepa_flex_json(gepa_flex_contract(module))
+  contract <- gepa_flex_json(gepa_flex_contract(module, program = program))
   failures <- gepa_flex_json(gepa_flex_failure_bundles(
     failed_examples,
     program = program,
     component_path = component_path
   ))
-  paste(
-    "You are proposing one complete declarative Flex module source.",
-    "Return a JSON object field named module_src containing the complete JSON source string.",
-    "Do not return a patch, Markdown fence, R expression, function, or executable code.",
-    "The source is data only and must use exactly this version 1 schema:",
-    '{"schema_version":1,"steps":[{"name":"safe_name","primitive":"predict or chain_of_thought","signature":"$outer or DSPy input -> output","instructions":"optional string","inputs":{"target":"$input.name or $step.earlier.field"}}],"outputs":{"every_outer_output":"$step.name.field"}}',
-    "Top-level fields and step fields not shown above are forbidden.",
-    "Step names must be unique safe identifiers. Steps are ordered, acyclic, and may reference only outer inputs or earlier step outputs.",
-    "Every step input and every outer output must appear exactly once and have a compatible type.",
-    paste0("Outer contract and call limit: ", contract),
+  common <- c(
+    "Return a JSON object field named module_src containing one complete source string.",
+    "Return the complete source, not a patch or Markdown fence.",
+    "The task objective, signature instructions, field descriptions, types, runtime policy, tools, and call limits are authoritative:",
+    contract,
     paste0("Target component graph path: ", component_path),
-    "Current complete canonical source:",
+    "Current complete source:",
     module$module_src,
     "Row-aligned failure bundles keep component observations, root-program truth and prediction, and metric feedback together.",
     "For a nested component, pipeline_step evidence is the observed input/output at its containing pipeline step; root_program evidence is explicitly labeled context, not a claimed leaf-level target.",
-    failures,
-    "Propose a complete source that addresses the failures while staying within the exact schema and call limit.",
-    sep = "\n"
+    failures
+  )
+  if (identical(module$source_format, "r")) {
+    return(paste(
+      c(
+        "You are proposing one complete executable R Flex module source.",
+        common,
+        "The source must define a top-level forward <- function(...) whose named arguments match the outer inputs and whose result supplies every outer output field.",
+        "Optimizer-authored source runs only in a fresh configured interpreter. Keep all loops and recursion explicitly bounded and do not rely on files, packages, network access, environment variables, global state, or the host dsprrr namespace.",
+        "The guest DSL constructors Predict, ChainOfThought, ReAct, ReActV2, RLM, CodeAct, and ProgramOfThought return callable predictor functions. Use string-form signatures or \"$outer\". Prediction(...) constructs a named result.",
+        "Explicit host tools may be called by their listed names or through Tool(\"name\") across the versioned bridge. No other host functions are available.",
+        "Predictor calls count against max_predictor_calls; host-tool calls count against max_tool_calls; direct deterministic R consumes neither budget. Values crossing the bridge must be JSON-compatible.",
+        "Propose complete R source that addresses the failures and remains within this restricted DSL and runtime policy."
+      ),
+      collapse = "\n"
+    ))
+  }
+  paste(
+    c(
+      "You are proposing one complete declarative Flex module source.",
+      common,
+      "The module_src value itself must be canonicalizable JSON data, not an R expression, function, or executable code.",
+      "The source is data only and must use exactly this version 1 schema:",
+      '{"schema_version":1,"steps":[{"name":"safe_name","primitive":"predict or chain_of_thought","signature":"$outer or DSPy input -> output","instructions":"optional string","inputs":{"target":"$input.name or $step.earlier.field"}}],"outputs":{"every_outer_output":"$step.name.field"}}',
+      "Top-level fields and step fields not shown above are forbidden.",
+      "Step names must be unique safe identifiers. Steps are ordered, acyclic, and may reference only outer inputs or earlier step outputs.",
+      "Every step input and every outer output must appear exactly once and have a compatible type.",
+      "Propose a complete source that addresses the failures while staying within the exact schema and call limit."
+    ),
+    collapse = "\n"
   )
 }
 
@@ -817,7 +1043,6 @@ gepa_flex_proposal <- function(
         c(
           "proposed",
           "unchanged_no_proposer",
-          "unchanged_provider_error",
           "unchanged_budget_stop"
         ),
       condition = condition,
@@ -883,7 +1108,11 @@ gepa_propose_flex_source <- function(
   )
   type <- ellmer::type_object(
     module_src = ellmer::type_string(
-      description = "Complete canonicalizable Flex schema version 1 JSON"
+      description = if (identical(module$source_format, "r")) {
+        "Complete executable R Flex source defining forward()"
+      } else {
+        "Complete canonicalizable Flex schema version 1 JSON"
+      }
     )
   )
   if (!is.null(budget)) {
@@ -910,29 +1139,14 @@ gepa_propose_flex_source <- function(
     provider_condition <- request$condition
   } else {
     provider_condition <- NULL
-    result <- tryCatch(
-      .llm$chat_structured(prompt, type = type, echo = "none"),
-      error = function(error) {
-        provider_condition <<- error
-        NULL
-      }
-    )
+    result <- .llm$chat_structured(prompt, type = type, echo = "none")
   }
 
   if (!is.null(provider_condition)) {
-    cli::cli_warn(
-      c(
-        "GEPA Flex proposer call failed; retaining the current source",
-        "x" = conditionMessage(provider_condition)
-      ),
-      class = "dsprrr_gepa_flex_proposer_warning"
-    )
-    return(gepa_flex_proposal(
-      "unchanged_provider_error",
-      current,
-      condition = provider_condition,
-      unit_id = unit_id
-    ))
+    # The budget ledger has already recorded this provider outcome. Re-signal
+    # the original condition so infrastructure outages cannot masquerade as a
+    # valid unchanged candidate.
+    stop(provider_condition)
   }
 
   raw_source <- gepa_flex_response_source(result)
@@ -993,6 +1207,71 @@ gepa_component_history_entry <- function(component, status, proposal = NULL) {
   )
 }
 
+gepa_atomic_invalid_candidate <- function(original, staged, failure) {
+  original$valid <- FALSE
+  original$failure <- failure
+  original$history <- staged$history
+  original
+}
+
+gepa_propose_component_instructions <- function(
+  instruction,
+  failed_examples,
+  .llm = NULL,
+  verbose = FALSE,
+  budget = NULL,
+  unit_id = "gepa:component_reflection"
+) {
+  if (is.null(.llm) || !is.function(.llm$chat_structured)) {
+    return(gepa_fallback_mutation(instruction, failed_examples))
+  }
+
+  prompt <- gepa_reflection_prompt(instruction, failed_examples)
+  type <- ellmer::type_object(instructions = ellmer::type_string())
+  if (is.null(budget)) {
+    result <- .llm$chat_structured(prompt, type = type, echo = "none")
+  } else {
+    request <- optimizer_budgeted_provider_call(
+      budget = budget,
+      model = .llm,
+      stage = "gepa_reflection",
+      unit_id = unit_id,
+      call = function() {
+        .llm$chat_structured(prompt, type = type, echo = "none")
+      },
+      success = function(value, condition) {
+        is.null(condition) &&
+          is.list(value) &&
+          is.character(value$instructions) &&
+          length(value$instructions) == 1L &&
+          !is.na(value$instructions)
+      }
+    )
+    if (!request$started) {
+      return(instruction)
+    }
+    if (!is.null(request$condition)) {
+      stop(request$condition)
+    }
+    result <- request$value
+  }
+
+  value <- if (is.list(result)) result[["instructions"]] else NULL
+  if (
+    !is.character(value) ||
+      length(value) != 1L ||
+      is.na(value)
+  ) {
+    if (isTRUE(verbose)) {
+      cli::cli_warn(
+        "GEPA instruction proposer returned an invalid structured response"
+      )
+    }
+    return(NULL)
+  }
+  value
+}
+
 gepa_mutate_component_candidate <- function(
   candidate,
   program,
@@ -1002,6 +1281,8 @@ gepa_mutate_component_candidate <- function(
   budget = NULL,
   unit_id = "gepa:component_reflection",
   component_id = NULL,
+  component_selector = "round_robin",
+  selector_context = list(),
   failure_score = 0
 ) {
   gepa_validate_component_candidate(candidate, program = program)
@@ -1012,106 +1293,165 @@ gepa_mutate_component_candidate <- function(
   if (length(ids) == 0L) {
     return(candidate)
   }
-  component_id <- component_id %||% sample(ids, size = 1L)
+  component_ids <- if (is.null(component_id)) {
+    gepa_component_selector_ids(
+      component_selector,
+      candidate,
+      failed_examples = failed_examples,
+      context = selector_context
+    )
+  } else {
+    component_id
+  }
   if (
-    !is.character(component_id) ||
-      length(component_id) != 1L ||
-      !component_id %in% ids
+    !is.character(component_ids) ||
+      length(component_ids) == 0L ||
+      anyNA(component_ids) ||
+      anyDuplicated(component_ids) ||
+      !all(component_ids %in% ids)
   ) {
     cli::cli_abort(
-      "{.arg component_id} must identify one candidate component",
+      "{.arg component_id} must identify one or more unique candidate components",
       class = "dsprrr_gepa_component_error"
     )
   }
+  parent_id <- gepa_component_candidate_id(candidate)
+  parent_lineage <- gepa_component_candidate_lineage(candidate)
+  original <- candidate
 
-  materialized <- gepa_materialize_component_candidate(
-    program,
-    candidate,
-    failure_score = failure_score
-  )
-  if (!materialized$ok) {
-    candidate$valid <- FALSE
-    candidate$failure <- list(
-      error_class = materialized$error_class,
-      error_message = materialized$error_message
+  for (component_index in seq_along(component_ids)) {
+    if (!is.null(budget) && optimizer_budget_stopped(budget)) {
+      return(original)
+    }
+    component_id <- component_ids[[component_index]]
+    component_unit_id <- if (length(component_ids) == 1L) {
+      unit_id
+    } else {
+      paste0(unit_id, ":component:", component_index)
+    }
+    materialized <- gepa_materialize_component_candidate(
+      program,
+      candidate,
+      failure_score = failure_score
     )
-    return(candidate)
-  }
-  component <- candidate$components[[component_id]]
+    if (!materialized$ok) {
+      return(gepa_atomic_invalid_candidate(
+        original,
+        candidate,
+        list(
+          error_class = materialized$error_class,
+          error_message = materialized$error_message
+        )
+      ))
+    }
+    component <- candidate$components[[component_id]]
 
-  if (identical(component$kind, "instructions")) {
-    value <- gepa_mutate_instruction(
-      component$value,
-      failed_examples = failed_examples,
-      .llm = .llm,
-      verbose = verbose,
-      budget = budget,
-      unit_id = unit_id
-    )
-    if (
-      !is.character(value) ||
-        length(value) != 1L ||
-        is.na(value)
-    ) {
-      condition <- gepa_candidate_failure_condition(
-        "GEPA instruction proposer returned an invalid value"
+    if (identical(component$kind, "instructions")) {
+      value <- gepa_propose_component_instructions(
+        component$value,
+        failed_examples = failed_examples,
+        .llm = .llm,
+        verbose = verbose,
+        budget = budget,
+        unit_id = component_unit_id
       )
-      candidate$valid <- FALSE
-      candidate$failure <- list(
-        error_class = class(condition)[1L],
-        error_message = conditionMessage(condition)
-      )
+      if (
+        !is.character(value) ||
+          length(value) != 1L ||
+          is.na(value)
+      ) {
+        condition <- gepa_candidate_failure_condition(
+          "GEPA instruction proposer returned an invalid value"
+        )
+        candidate$history <- append(
+          candidate$history,
+          list(gepa_component_history_entry(
+            component,
+            "invalid_proposal",
+            gepa_flex_proposal(
+              "invalid_proposal",
+              component$value,
+              condition,
+              component_unit_id
+            )
+          ))
+        )
+        return(gepa_atomic_invalid_candidate(
+          original,
+          candidate,
+          list(
+            error_class = class(condition)[1L],
+            error_message = conditionMessage(condition)
+          )
+        ))
+      }
+      candidate$components[[component_id]]$value <- value
       candidate$history <- append(
         candidate$history,
         list(gepa_component_history_entry(
           component,
-          "invalid_proposal",
+          "proposed",
           gepa_flex_proposal(
-            "invalid_proposal",
-            component$value,
-            condition,
-            unit_id
+            "proposed",
+            value,
+            unit_id = component_unit_id
           )
         ))
       )
-      return(candidate)
+      if (
+        component_index < length(component_ids) &&
+          !is.null(budget) &&
+          optimizer_budget_stopped(budget)
+      ) {
+        return(original)
+      }
+      next
     }
-    candidate$components[[component_id]]$value <- value
+
+    target <- gepa_component_target(materialized$program, component$path)
+    proposal <- gepa_propose_flex_source(
+      target,
+      failed_examples = failed_examples,
+      .llm = .llm,
+      verbose = verbose,
+      budget = budget,
+      unit_id = component_unit_id,
+      program = materialized$program,
+      component_path = component$path
+    )
     candidate$history <- append(
       candidate$history,
-      list(gepa_component_history_entry(component, "proposed"))
+      list(gepa_component_history_entry(
+        component,
+        proposal$status,
+        proposal
+      ))
     )
-    return(candidate)
+    if (identical(proposal$status, "unchanged_budget_stop")) {
+      return(original)
+    }
+    if (!proposal$valid) {
+      return(gepa_atomic_invalid_candidate(
+        original,
+        candidate,
+        list(
+          error_class = proposal$error_class,
+          error_message = proposal$error_message
+        )
+      ))
+    }
+    candidate$components[[component_id]]$value <- proposal$module_src
   }
 
-  target <- gepa_component_target(materialized$program, component$path)
-  proposal <- gepa_propose_flex_source(
-    target,
-    failed_examples = failed_examples,
-    .llm = .llm,
-    verbose = verbose,
-    budget = budget,
-    unit_id = unit_id,
-    program = materialized$program,
-    component_path = component$path
-  )
-  candidate$history <- append(
-    candidate$history,
-    list(gepa_component_history_entry(
-      component,
-      proposal$status,
-      proposal
-    ))
-  )
-  if (!proposal$valid) {
-    candidate$valid <- FALSE
-    candidate$failure <- list(
-      error_class = proposal$error_class,
-      error_message = proposal$error_message
+  child_id <- gepa_component_candidate_id(candidate)
+  if (!identical(child_id, parent_id)) {
+    candidate <- gepa_set_component_candidate_lineage(
+      candidate,
+      parents = parent_id,
+      ancestors = c(parent_lineage$parents, parent_lineage$ancestors),
+      tag = "reflective_mutation"
     )
-    return(candidate)
   }
-  candidate$components[[component_id]]$value <- proposal$module_src
   candidate
 }
 
@@ -1147,9 +1487,179 @@ gepa_crossover_component_candidates <- function(parent1, parent2) {
   child["failure"] <- list(NULL)
   child$history <- append(
     child$history,
-    list(list(status = "component_crossover"))
+    list(list(
+      status = "component_crossover",
+      parent_ids = c(
+        gepa_component_candidate_id(parent1),
+        gepa_component_candidate_id(parent2)
+      )
+    ))
   )
-  child
+  gepa_set_component_candidate_lineage(
+    child,
+    parents = c(
+      gepa_component_candidate_id(parent1),
+      gepa_component_candidate_id(parent2)
+    ),
+    ancestors = c(
+      gepa_component_candidate_lineage(parent1)$parents,
+      gepa_component_candidate_lineage(parent1)$ancestors,
+      gepa_component_candidate_lineage(parent2)$parents,
+      gepa_component_candidate_lineage(parent2)$ancestors
+    ),
+    tag = "component_crossover"
+  )
+}
+
+gepa_component_candidate_registry <- function(records) {
+  registry <- list()
+  for (record in records) {
+    candidate <- record$candidate %||% NULL
+    if (!inherits(candidate, "dsprrr_gepa_component_candidate")) {
+      next
+    }
+    id <- gepa_component_candidate_id(candidate)
+    if (is.null(registry[[id]])) {
+      registry[[id]] <- list(
+        candidate = candidate,
+        score = as.numeric(record$scores[[1L]] %||% NA_real_),
+        generation = as.integer(record$generation %||% 0L),
+        index = as.integer(record$index %||% 0L)
+      )
+    }
+  }
+  registry
+}
+
+gepa_component_candidate_ancestors <- function(candidate, registry) {
+  lineage <- gepa_component_candidate_lineage(candidate)
+  pending <- c(lineage$parents, lineage$ancestors)
+  found <- character()
+  while (length(pending) > 0L) {
+    id <- pending[[1L]]
+    pending <- pending[-1L]
+    if (id %in% found) {
+      next
+    }
+    found <- c(found, id)
+    ancestor <- registry[[id]]$candidate %||% NULL
+    if (inherits(ancestor, "dsprrr_gepa_component_candidate")) {
+      pending <- c(
+        pending,
+        gepa_component_candidate_lineage(ancestor)$parents,
+        gepa_component_candidate_lineage(ancestor)$ancestors
+      )
+    }
+  }
+  found
+}
+
+gepa_merge_component_candidates <- function(
+  parent1,
+  parent2,
+  registry,
+  parent1_score,
+  parent2_score
+) {
+  gepa_validate_component_candidate(parent1)
+  gepa_validate_component_candidate(parent2)
+  parent1_id <- gepa_component_candidate_id(parent1)
+  parent2_id <- gepa_component_candidate_id(parent2)
+  ancestors1 <- gepa_component_candidate_ancestors(parent1, registry)
+  ancestors2 <- gepa_component_candidate_ancestors(parent2, registry)
+  if (parent1_id %in% ancestors2 || parent2_id %in% ancestors1) {
+    return(NULL)
+  }
+  common <- intersect(ancestors1, ancestors2)
+  if (length(common) == 0L) {
+    return(NULL)
+  }
+  order_key <- vapply(
+    common,
+    function(id) {
+      entry <- registry[[id]]
+      1000000 * (entry$generation %||% 0L) + (entry$index %||% 0L)
+    },
+    numeric(1)
+  )
+  ancestor_id <- common[[which.max(order_key)]]
+  ancestor_entry <- registry[[ancestor_id]]
+  ancestor <- ancestor_entry$candidate %||% NULL
+  if (!inherits(ancestor, "dsprrr_gepa_component_candidate")) {
+    return(NULL)
+  }
+  ancestor_score <- ancestor_entry$score %||% NA_real_
+  if (
+    anyNA(c(ancestor_score, parent1_score, parent2_score)) ||
+      ancestor_score > parent1_score ||
+      ancestor_score > parent2_score
+  ) {
+    return(NULL)
+  }
+  if (
+    !identical(names(parent1$components), names(parent2$components)) ||
+      !identical(names(parent1$components), names(ancestor$components))
+  ) {
+    return(NULL)
+  }
+
+  values <- function(candidate) {
+    vapply(candidate$components, `[[`, character(1), "value")
+  }
+  ancestor_values <- values(ancestor)
+  left_values <- values(parent1)
+  right_values <- values(parent2)
+  desirable <- (left_values == ancestor_values) !=
+    (right_values == ancestor_values)
+  if (!any(desirable)) {
+    return(NULL)
+  }
+
+  child <- ancestor
+  for (id in names(child$components)) {
+    ancestor_value <- ancestor_values[[id]]
+    left <- left_values[[id]]
+    right <- right_values[[id]]
+    selected <- if (identical(left, right)) {
+      left
+    } else if (identical(left, ancestor_value)) {
+      right
+    } else if (identical(right, ancestor_value)) {
+      left
+    } else if (parent1_score > parent2_score) {
+      left
+    } else if (parent2_score > parent1_score) {
+      right
+    } else if (stats::runif(1L) < 0.5) {
+      left
+    } else {
+      right
+    }
+    child$components[[id]]$value <- selected
+  }
+  child$valid <- TRUE
+  child["failure"] <- list(NULL)
+  child$history <- append(
+    child$history,
+    list(list(
+      status = "lineage_merge",
+      parent_ids = c(parent1_id, parent2_id),
+      ancestor_id = ancestor_id
+    ))
+  )
+  gepa_set_component_candidate_lineage(
+    child,
+    parents = c(parent1_id, parent2_id),
+    ancestors = c(
+      gepa_component_candidate_lineage(parent1)$parents,
+      gepa_component_candidate_lineage(parent1)$ancestors,
+      gepa_component_candidate_lineage(parent2)$parents,
+      gepa_component_candidate_lineage(parent2)$ancestors,
+      ancestor_id
+    ),
+    ancestor = ancestor_id,
+    tag = "lineage_merge"
+  )
 }
 
 gepa_initial_component_population <- function(
@@ -1158,9 +1668,23 @@ gepa_initial_component_population <- function(
   .llm = NULL,
   verbose = FALSE,
   budget = NULL,
-  failure_score = 0
+  failure_score = 0,
+  component_selector = "round_robin"
 ) {
-  population_size <- flex_positive_integer(population_size, "population_size")
+  if (
+    !is.numeric(population_size) ||
+      length(population_size) != 1L ||
+      is.na(population_size) ||
+      !is.finite(population_size) ||
+      population_size < 1 ||
+      population_size != floor(population_size)
+  ) {
+    cli::cli_abort(
+      "{.arg population_size} must be one positive integer",
+      class = "dsprrr_gepa_component_error"
+    )
+  }
+  population_size <- as.integer(population_size)
   baseline <- gepa_component_candidate(program)
   population <- vector("list", population_size)
   population[[1L]] <- baseline
@@ -1185,7 +1709,17 @@ gepa_initial_component_population <- function(
       verbose = verbose,
       budget = budget,
       unit_id = paste0("gepa:initial_component_mutation:", index),
-      component_id = component_id,
+      component_id = if (identical(component_selector, "round_robin")) {
+        component_id
+      } else {
+        NULL
+      },
+      component_selector = component_selector,
+      selector_context = list(
+        phase = "initialization",
+        generation = 0L,
+        index = index
+      ),
       failure_score = failure_score
     )
   }
@@ -1212,6 +1746,43 @@ gepa_component_select_parent <- function(records, ranks, crowding) {
   }
 }
 
+gepa_component_parent_records <- function(records, selection) {
+  records <- Filter(gepa_component_record_selectable, records)
+  if (!identical(selection, "pareto") || length(records) <= 1L) {
+    return(records)
+  }
+  frontier <- gepa_component_validation_result(
+    records,
+    track_best_outputs = FALSE
+  )$per_val_instance_best_candidates
+  candidate_ids <- unique(unlist(frontier, use.names = FALSE))
+  scores_matrix <- do.call(
+    rbind,
+    lapply(records, function(record) record$scores)
+  )
+  objective_ids <- vapply(
+    records[pareto_frontier(scores_matrix)],
+    function(record) {
+      record$candidate_id %||%
+        gepa_component_candidate_id(record$candidate)
+    },
+    character(1)
+  )
+  candidate_ids <- union(candidate_ids, objective_ids)
+  if (length(candidate_ids) == 0L) {
+    return(records)
+  }
+  selected <- Filter(
+    function(record) {
+      (record$candidate_id %||%
+        gepa_component_candidate_id(record$candidate)) %in%
+        candidate_ids
+    },
+    records
+  )
+  if (length(selected) > 0L) selected else records
+}
+
 gepa_next_component_generation <- function(
   records,
   program,
@@ -1223,9 +1794,13 @@ gepa_next_component_generation <- function(
   verbose = FALSE,
   budget = NULL,
   generation = NA_integer_,
-  failure_score = 0
+  failure_score = 0,
+  component_selector = "round_robin",
+  use_merge = TRUE,
+  max_merges = Inf,
+  all_records = records
 ) {
-  records <- Filter(gepa_component_record_selectable, records)
+  records <- gepa_component_parent_records(records, selection)
   if (length(records) == 0L) {
     return(list())
   }
@@ -1244,6 +1819,9 @@ gepa_next_component_generation <- function(
     crowding[is.infinite(crowding)] <- 0
   }
 
+  registry <- gepa_component_candidate_registry(all_records)
+  merge_invocations <- 0L
+  lineage_merges <- 0L
   population <- vector("list", population_size)
   for (index in seq_len(population_size)) {
     if (!is.null(budget) && optimizer_budget_stopped(budget)) {
@@ -1253,10 +1831,26 @@ gepa_next_component_generation <- function(
     parent2 <- gepa_component_select_parent(records, ranks, crowding)
     child <- parent1$candidate
     if (stats::runif(1L) < crossover_rate) {
-      child <- gepa_crossover_component_candidates(
-        parent1$candidate,
-        parent2$candidate
-      )
+      merged <- NULL
+      if (isTRUE(use_merge) && merge_invocations < max_merges) {
+        merge_invocations <- merge_invocations + 1L
+        merged <- gepa_merge_component_candidates(
+          parent1$candidate,
+          parent2$candidate,
+          registry = registry,
+          parent1_score = parent1$scores[[1L]],
+          parent2_score = parent2$scores[[1L]]
+        )
+      }
+      if (is.null(merged)) {
+        child <- gepa_crossover_component_candidates(
+          parent1$candidate,
+          parent2$candidate
+        )
+      } else {
+        child <- merged
+        lineage_merges <- lineage_merges + 1L
+      }
     }
     if (stats::runif(1L) < mutation_rate) {
       child <- gepa_mutate_component_candidate(
@@ -1272,18 +1866,160 @@ gepa_next_component_generation <- function(
           ":component_mutation:",
           index
         ),
+        component_selector = component_selector,
+        selector_context = list(
+          phase = "search",
+          generation = generation,
+          index = index,
+          parent_ids = c(
+            gepa_component_candidate_id(parent1$candidate),
+            gepa_component_candidate_id(parent2$candidate)
+          )
+        ),
         failure_score = failure_score
       )
     }
     population[[index]] <- child
   }
-  Filter(Negate(is.null), population)
+  population <- Filter(Negate(is.null), population)
+  attr(population, "merge_invocations") <- merge_invocations
+  attr(population, "lineage_merges") <- lineage_merges
+  population
+}
+
+gepa_teleprompter_property <- function(teleprompter, name, default) {
+  tryCatch(
+    S7::prop(teleprompter, name),
+    error = function(error) default
+  )
+}
+
+gepa_component_selector_label <- function(selector) {
+  if (is.function(selector)) "custom" else selector
+}
+
+gepa_unique_component_records <- function(records) {
+  unique <- list()
+  for (record in records) {
+    id <- record$candidate_id %||%
+      gepa_component_candidate_id(record$candidate)
+    if (is.null(unique[[id]])) {
+      record$candidate_id <- id
+      unique[[id]] <- record
+    }
+  }
+  unname(unique)
+}
+
+gepa_component_validation_result <- function(
+  records,
+  track_best_outputs = TRUE
+) {
+  records <- gepa_unique_component_records(
+    Filter(gepa_component_record_selectable, records)
+  )
+  if (length(records) == 0L) {
+    return(list(
+      candidates = list(),
+      parents = list(),
+      val_aggregate_scores = numeric(),
+      val_subscores = list(),
+      per_val_instance_best_candidates = list(),
+      validation_frontier_scores = numeric(),
+      best_outputs_valset = if (isTRUE(track_best_outputs)) list() else NULL,
+      discovery_eval_counts = integer()
+    ))
+  }
+
+  candidates <- list()
+  parents <- list()
+  aggregate_scores <- numeric()
+  val_subscores <- list()
+  outputs <- list()
+  discovery_eval_counts <- integer()
+  row_order <- character()
+
+  for (record in records) {
+    id <- record$candidate_id
+    candidates[[id]] <- gepa_component_candidate_params(record$candidate)
+    parents[[id]] <- record$parents %||% character()
+    aggregate_scores[[id]] <- as.numeric(record$scores[[1L]])
+    discovery_eval_counts[[id]] <- as.integer(
+      record$discovery_metric_calls %||% 0L
+    )
+    evaluation <- record$primary_eval
+    if (!S7::S7_inherits(evaluation, EvalResult)) {
+      val_subscores[[id]] <- numeric()
+      outputs[[id]] <- list()
+      next
+    }
+    examples <- evaluation@examples
+    row_ids <- if ("row_id" %in% names(examples)) {
+      as.character(examples$row_id)
+    } else {
+      as.character(seq_len(nrow(examples)))
+    }
+    row_order <- unique(c(row_order, row_ids))
+    scores <- as.numeric(examples$score)
+    names(scores) <- row_ids
+    val_subscores[[id]] <- scores
+    predicted <- if ("predicted" %in% names(examples)) {
+      examples$predicted
+    } else {
+      rep(list(NA), length(row_ids))
+    }
+    names(predicted) <- row_ids
+    outputs[[id]] <- predicted
+  }
+
+  winners <- list()
+  frontier_scores <- numeric()
+  best_outputs <- if (isTRUE(track_best_outputs)) list() else NULL
+  for (row_id in row_order) {
+    scores <- vapply(
+      val_subscores,
+      function(candidate_scores) {
+        candidate_scores[[row_id]] %||% NA_real_
+      },
+      numeric(1)
+    )
+    available <- which(!is.na(scores))
+    if (length(available) == 0L) {
+      winners[[row_id]] <- character()
+      frontier_scores[[row_id]] <- NA_real_
+      if (isTRUE(track_best_outputs)) {
+        best_outputs[[row_id]] <- list()
+      }
+      next
+    }
+    best <- max(scores[available])
+    winner_ids <- names(scores)[available[scores[available] == best]]
+    winners[[row_id]] <- winner_ids
+    frontier_scores[[row_id]] <- best
+    if (isTRUE(track_best_outputs)) {
+      best_outputs[[row_id]] <- lapply(winner_ids, function(id) {
+        list(candidate_id = id, output = outputs[[id]][[row_id]])
+      })
+    }
+  }
+
+  list(
+    candidates = candidates,
+    parents = parents,
+    val_aggregate_scores = aggregate_scores,
+    val_subscores = val_subscores,
+    per_val_instance_best_candidates = winners,
+    validation_frontier_scores = frontier_scores,
+    best_outputs_valset = best_outputs,
+    discovery_eval_counts = discovery_eval_counts
+  )
 }
 
 compile_gepa_components <- function(
   teleprompter,
   program,
-  dataset,
+  discovery_dataset,
+  validation_dataset,
   metrics,
   metric_names,
   .llm,
@@ -1291,6 +2027,56 @@ compile_gepa_components <- function(
   budget,
   trial_log = NULL
 ) {
+  if (!is.data.frame(discovery_dataset)) {
+    cli::cli_abort(
+      "{.arg trainset} must be a data frame",
+      class = "dsprrr_gepa_config_error"
+    )
+  }
+  if (!is.data.frame(validation_dataset)) {
+    cli::cli_abort(
+      "{.arg valset} must be a data frame or NULL",
+      class = "dsprrr_gepa_config_error"
+    )
+  }
+  component_selector <- gepa_teleprompter_property(
+    teleprompter,
+    "component_selector",
+    "round_robin"
+  )
+  use_merge <- isTRUE(gepa_teleprompter_property(
+    teleprompter,
+    "use_merge",
+    TRUE
+  ))
+  max_merge_invocations <- gepa_teleprompter_property(
+    teleprompter,
+    "max_merge_invocations",
+    5L
+  )
+  track_best_outputs <- isTRUE(gepa_teleprompter_property(
+    teleprompter,
+    "track_best_outputs",
+    TRUE
+  ))
+  if (is.null(max_merge_invocations)) {
+    max_merge_invocations <- Inf
+  } else {
+    if (
+      !is.numeric(max_merge_invocations) ||
+        length(max_merge_invocations) != 1L ||
+        is.na(max_merge_invocations) ||
+        !is.finite(max_merge_invocations) ||
+        max_merge_invocations < 0 ||
+        max_merge_invocations != floor(max_merge_invocations)
+    ) {
+      cli::cli_abort(
+        "GEPA max_merge_invocations must be one non-negative integer or NULL",
+        class = "dsprrr_gepa_component_error"
+      )
+    }
+    max_merge_invocations <- as.integer(max_merge_invocations)
+  }
   component_specs <- gepa_program_component_specs(program)
   if (length(component_specs) == 0L) {
     optimized <- gepa_clone_component_program(program)
@@ -1302,18 +2088,45 @@ compile_gepa_components <- function(
       population_size = teleprompter@population_size,
       generations = teleprompter@generations,
       optimization_mode = "component_candidates",
+      component_selector = gepa_component_selector_label(component_selector),
+      use_merge = use_merge,
+      max_merge_invocations = if (is.infinite(max_merge_invocations)) {
+        NULL
+      } else {
+        max_merge_invocations
+      },
+      merge_invocations = 0L,
+      successful_merge_count = 0L,
+      track_best_outputs = track_best_outputs,
       optimization_skipped = TRUE,
       skip_reason = "no_mutable_components",
       flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
       mutable_flex_paths = character(),
       component_ids = character(),
-      component_semantics = gepa_component_semantics(),
+      component_semantics = gepa_component_semantics(track_best_outputs),
       best_candidate = NULL,
+      best_candidate_id = NULL,
       best_scores = stats::setNames(
         rep(NA_real_, length(metrics)),
         metric_names
       ),
+      candidates = list(),
+      parents = list(),
+      val_aggregate_scores = numeric(),
+      val_subscores = list(),
+      per_val_instance_best_candidates = list(),
+      validation_frontier_scores = numeric(),
+      best_outputs_valset = if (track_best_outputs) list() else NULL,
+      discovery_eval_counts = integer(),
+      objective_pareto_front = list(),
       pareto_frontier = list(),
+      resume_supported = FALSE,
+      search_state = list(
+        schema_version = 1L,
+        generations_run = 0L,
+        candidate_ids = character(),
+        next_generation = 1L
+      ),
       all_generations = list(),
       invalid_candidate_count = 0L,
       error_count = budget_summary$total_errors,
@@ -1334,15 +2147,20 @@ compile_gepa_components <- function(
     .llm = .llm,
     verbose = teleprompter@verbose,
     budget = budget,
-    failure_score = failure_score
+    failure_score = failure_score,
+    component_selector = component_selector
   )
 
   all_generations <- list()
   all_records <- list()
   selectable_records <- list()
   best_record <- NULL
+  merge_invocations <- 0L
+  lineage_merges <- 0L
+  generations_run <- 0L
 
   for (generation in seq_len(teleprompter@generations)) {
+    generations_run <- generation
     if (teleprompter@verbose) {
       cli::cli_alert_info(
         "GEPA generation {generation}/{teleprompter@generations} (component candidates)"
@@ -1359,6 +2177,8 @@ compile_gepa_components <- function(
       scores <- rep(NA_real_, length(metrics))
       failed_examples <- list()
       primary_eval <- NULL
+      discovery_eval <- NULL
+      discovery_metric_calls <- 0L
       last_eval <- NULL
       completed_metrics <- 0L
       candidate_valid <- isTRUE(candidate$valid)
@@ -1378,14 +2198,15 @@ compile_gepa_components <- function(
         evaluated <- gepa_evaluate_component_candidate(
           program,
           candidate,
-          dataset,
+          validation_dataset,
           metric = metrics[[metric_index]],
           .llm = .llm,
           control = control,
           budget = budget,
-          stage = paste0("gepa_flex_metric_", metric_index),
+          stage = paste0("gepa_metric_", metric_index),
           unit_id = metric_unit_ids[[metric_index]],
-          failure_score = failure_score
+          failure_score = failure_score,
+          .propagate_provider_errors = TRUE
         )
         eval_result <- evaluated$eval_result
         if (!S7::S7_inherits(eval_result, EvalResult)) {
@@ -1415,23 +2236,71 @@ compile_gepa_components <- function(
         }
         if (metric_index == 1L) {
           primary_eval <- eval_result
-          failed_examples <- gepa_failed_examples(
-            eval_result,
-            dataset,
-            program$signature,
-            threshold = teleprompter@metric_threshold,
-            output_col = get_metric_field(metrics[[1L]])
-          )
+          if (identical(discovery_dataset, validation_dataset)) {
+            discovery_eval <- eval_result
+            discovery_metric_calls <- as.integer(eval_result@metric_calls)
+          }
         }
       }
 
+      if (
+        isTRUE(candidate_valid) &&
+          is.null(discovery_eval) &&
+          !optimizer_budget_stopped(budget)
+      ) {
+        discovery_unit_id <- paste0(
+          "gepa:generation:",
+          generation,
+          ":candidate:",
+          index,
+          ":discovery"
+        )
+        discovery <- gepa_evaluate_component_candidate(
+          program,
+          candidate,
+          discovery_dataset,
+          metric = metrics[[1L]],
+          .llm = .llm,
+          control = control,
+          budget = budget,
+          stage = "gepa_discovery_metric",
+          unit_id = discovery_unit_id,
+          failure_score = failure_score,
+          .propagate_provider_errors = TRUE
+        )
+        discovery_eval <- discovery$eval_result
+        if (!S7::S7_inherits(discovery_eval, EvalResult)) {
+          cli::cli_abort(
+            "GEPA discovery evaluation returned an invalid result",
+            class = "dsprrr_optimizer_invariant_error"
+          )
+        }
+        discovery_metric_calls <- as.integer(discovery_eval@metric_calls)
+      }
+
+      if (S7::S7_inherits(discovery_eval, EvalResult)) {
+        failed_examples <- gepa_failed_examples(
+          discovery_eval,
+          discovery_dataset,
+          program$signature,
+          threshold = teleprompter@metric_threshold,
+          output_col = get_metric_field(metrics[[1L]])
+        )
+      }
+
       record <- list(
+        candidate_id = gepa_component_candidate_id(candidate),
         candidate = candidate,
+        parents = gepa_component_candidate_lineage(candidate)$parents,
+        lineage = gepa_component_candidate_lineage(candidate),
         candidate_valid = candidate_valid,
         scores = stats::setNames(scores, metric_names),
+        primary_eval = primary_eval,
+        discovery_eval = discovery_eval,
         failed_examples = failed_examples,
         generation = generation,
         index = index,
+        discovery_metric_calls = discovery_metric_calls,
         completed_metrics = completed_metrics,
         complete = all(vapply(
           metric_unit_ids,
@@ -1517,7 +2386,7 @@ compile_gepa_components <- function(
       break
     }
     population <- gepa_next_component_generation(
-      generation_selectable,
+      selectable_records,
       program = program,
       population_size = teleprompter@population_size,
       mutation_rate = teleprompter@mutation_rate,
@@ -1527,8 +2396,19 @@ compile_gepa_components <- function(
       verbose = teleprompter@verbose,
       budget = budget,
       generation = generation + 1L,
-      failure_score = failure_score
+      failure_score = failure_score,
+      component_selector = component_selector,
+      use_merge = use_merge,
+      max_merges = max(
+        0,
+        max_merge_invocations - merge_invocations
+      ),
+      all_records = selectable_records
     )
+    merge_invocations <- merge_invocations +
+      (attr(population, "merge_invocations", exact = TRUE) %||% 0L)
+    lineage_merges <- lineage_merges +
+      (attr(population, "lineage_merges", exact = TRUE) %||% 0L)
   }
 
   optimized <- if (is.null(best_record)) {
@@ -1561,22 +2441,31 @@ compile_gepa_components <- function(
   } else {
     best_record$scores
   }
-  frontier <- list()
+  objective_frontier <- list()
   if (length(selectable_records) > 0L) {
+    objective_records <- gepa_unique_component_records(selectable_records)
     scores_matrix <- do.call(
       rbind,
-      lapply(selectable_records, function(record) record$scores)
+      lapply(objective_records, function(record) record$scores)
     )
     frontier_index <- pareto_frontier(scores_matrix)
-    frontier <- lapply(selectable_records[frontier_index], function(record) {
-      list(
-        candidate = gepa_component_candidate_params(record$candidate),
-        scores = record$scores
-      )
-    })
+    objective_frontier <- lapply(
+      objective_records[frontier_index],
+      function(record) {
+        list(
+          candidate_id = record$candidate_id,
+          candidate = gepa_component_candidate_params(record$candidate),
+          scores = record$scores
+        )
+      }
+    )
   }
 
-  semantics <- gepa_component_semantics()
+  validation_result <- gepa_component_validation_result(
+    selectable_records,
+    track_best_outputs = track_best_outputs
+  )
+  semantics <- gepa_component_semantics(track_best_outputs)
   budget_summary <- optimizer_budget_summary(budget)
   optimized$config$compiled <- TRUE
   optimized$config$teleprompter <- "GEPA"
@@ -1585,6 +2474,16 @@ compile_gepa_components <- function(
     population_size = teleprompter@population_size,
     generations = teleprompter@generations,
     optimization_mode = "component_candidates",
+    component_selector = gepa_component_selector_label(component_selector),
+    use_merge = use_merge,
+    max_merge_invocations = if (is.infinite(max_merge_invocations)) {
+      NULL
+    } else {
+      max_merge_invocations
+    },
+    merge_invocations = merge_invocations,
+    successful_merge_count = lineage_merges,
+    track_best_outputs = track_best_outputs,
     flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
     mutable_flex_paths = gepa_flex_paths(program),
     component_ids = names(gepa_program_component_specs(program)),
@@ -1594,8 +2493,30 @@ compile_gepa_components <- function(
     } else {
       gepa_component_candidate_params(best_record$candidate)
     },
+    best_candidate_id = best_record$candidate_id %||% NULL,
     best_scores = final_scores,
-    pareto_frontier = frontier,
+    candidates = validation_result$candidates,
+    parents = validation_result$parents,
+    val_aggregate_scores = validation_result$val_aggregate_scores,
+    val_subscores = validation_result$val_subscores,
+    per_val_instance_best_candidates = validation_result$per_val_instance_best_candidates,
+    validation_frontier_scores = validation_result$validation_frontier_scores,
+    best_outputs_valset = validation_result$best_outputs_valset,
+    discovery_eval_counts = validation_result$discovery_eval_counts,
+    objective_pareto_front = objective_frontier,
+    # Compatibility alias for releases that exposed the multi-metric front as
+    # `pareto_frontier`; the validation-instance frontier is recorded above.
+    pareto_frontier = objective_frontier,
+    resume_supported = FALSE,
+    search_state = list(
+      schema_version = 1L,
+      generations_run = generations_run,
+      candidate_ids = names(validation_result$candidates),
+      next_generation = min(
+        teleprompter@generations + 1L,
+        generations_run + 1L
+      )
+    ),
     all_generations = all_generations,
     invalid_candidate_count = sum(
       !vapply(
@@ -1645,16 +2566,24 @@ gepa_component_candidate_params <- function(candidate) {
   )
 }
 
-gepa_component_semantics <- function() {
+gepa_component_semantics <- function(track_best_outputs = FALSE) {
   list(
-    complete_component_candidates = TRUE,
+    complete_program_candidates = TRUE,
+    flex_source_is_single_component = TRUE,
     transactional_flex_binding = TRUE,
-    whole_program_pareto_selection = TRUE,
-    per_component_pareto_selection = FALSE,
-    inference_time_search = FALSE,
+    validation_instance_frontier = TRUE,
+    validation_instance_candidate_selection = TRUE,
+    objective_frontier = TRUE,
+    component_selection = c("round_robin", "all", "custom"),
+    lineage_aware_merge = TRUE,
+    supports_retained_best_outputs = TRUE,
+    retained_best_outputs = isTRUE(track_best_outputs),
+    inference_time_candidate_selection = FALSE,
+    fine_grained_resume = FALSE,
     note = paste(
-      "GEPA-lite ranks complete program candidates.",
-      "It does not implement upstream GEPA's per-component Pareto frontier or inference-time search."
+      "GEPA ranks complete program candidates and records the best candidate",
+      "set for each validation example. Inference-time candidate selection and",
+      "fine-grained checkpoint resume are not yet implemented."
     )
   )
 }

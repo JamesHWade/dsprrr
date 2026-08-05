@@ -25,14 +25,15 @@
 #' whether execution state persists and whether `reset()` is available;
 #' serialize access to stateful backends. `interpreter_factory` is a
 #' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, and `close()`. The module owns that runner for one invocation and
-#' calls `close()` exactly once on success, error, or interrupt. Any retained
-#' code tool becomes terminal after that close.
+#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
+#' module owns that runner for one invocation and shuts it down exactly once on
+#' success, error, or interrupt. Any retained code tool becomes terminal after
+#' shutdown.
 #'
-#' [run_async()], [stream_async()], and a module's `$stream()` method reject
-#' CodeAct because their direct provider path would bypass execution. The
-#' [run_stream()] one-shot `forward()` fallback remains available, but an actual
-#' token-stream request is rejected before provider or factory work.
+#' [run_async()] supports factory-backed CodeAct in an isolated mirai process.
+#' It rejects caller-owned runners. [stream_async()] and a module's `$stream()`
+#' method remain unavailable because streaming would bypass execution. The
+#' [run_stream()] one-shot `forward()` fallback remains available.
 #'
 #' @examples
 #' \dontrun{
@@ -67,8 +68,8 @@ NULL
 #' @description
 #' Factory function to create a CodeActModule that can use both tools and
 #' R code execution to solve problems.
-#' Use [run()] to execute it. Generic async and module `$stream()` entry points
-#' reject CodeAct graphs before provider or factory work. [run_stream()]
+#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
+#' async streaming and module `$stream()` reject CodeAct. [run_stream()]
 #' preserves the synchronous `forward()` fallback unless a matching
 #' token-stream request is active; that request is rejected first.
 #'
@@ -84,7 +85,8 @@ NULL
 #'   within one invocation (default 10). Exceeding the inner tool-call budget
 #'   raises a `dsprrr_codeact_iteration_limit` error.
 #' @param interpreter_factory Optional zero-argument function returning a fresh
-#'   runner with `execute()`, `policy()`, and idempotent terminal `close()`.
+#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
+#'   terminal `shutdown()` or `close()`.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param ... Additional arguments passed to the module
 #'
@@ -423,7 +425,10 @@ CodeActModule <- R6::R6Class(
                 }
               },
               error = function(e) {
-                if (inherits(e, "dsprrr_codeact_iteration_limit")) {
+                if (
+                  inherits(e, "dsprrr_codeact_iteration_limit") ||
+                    is_terminal_interpreter_condition(e)
+                ) {
                   stop(e)
                 }
                 consecutive_failures <<- consecutive_failures + 1

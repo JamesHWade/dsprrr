@@ -574,6 +574,9 @@ McpReplRunner <- R6::R6Class(
     close_connection = NULL,
     connection_owned = FALSE,
     closed = FALSE,
+    started = FALSE,
+    terminal = FALSE,
+    terminal_reason = NULL,
 
     initialize = function(
       repl,
@@ -596,7 +599,10 @@ McpReplRunner <- R6::R6Class(
     },
 
     execute = function(code, context = list(), .control_nonce = NULL) {
-      private$assert_open()
+      private$assert_usable()
+      if (!self$started) {
+        self$start()
+      }
       if (!is.character(code) || length(code) != 1L || is.na(code)) {
         cli::cli_abort("{.arg code} must be a single non-missing string")
       }
@@ -619,9 +625,11 @@ McpReplRunner <- R6::R6Class(
         1000
 
       if (inherits(response, "error")) {
+        private$mark_terminal(conditionMessage(response))
         return(mcp_repl_error_result(
           conditionMessage(response),
-          duration_ms = duration_ms
+          duration_ms = duration_ms,
+          error_type = "interpreter"
         ))
       }
 
@@ -629,10 +637,14 @@ McpReplRunner <- R6::R6Class(
       raw_text <- normalized$text
       text <- mcp_repl_truncate(raw_text, self$max_output_chars)
       if (!is.null(normalized$error)) {
+        if (identical(normalized$error_type, "interpreter")) {
+          private$mark_terminal(normalized$error)
+        }
         return(mcp_repl_error_result(
           normalized$error,
           stdout = text,
-          duration_ms = duration_ms
+          duration_ms = duration_ms,
+          error_type = normalized$error_type
         ))
       }
 
@@ -656,6 +668,11 @@ McpReplRunner <- R6::R6Class(
             transport_issue <- "pager-reset-failed"
           }
         }
+        if (identical(transport_issue, "pager-reset-failed")) {
+          private$mark_terminal(
+            "mcp-repl pager state could not be reset"
+          )
+        }
         return(mcp_repl_transport_error_result(
           transport_issue,
           stdout = text,
@@ -674,12 +691,20 @@ McpReplRunner <- R6::R6Class(
         messages = "",
         warnings = "",
         error = NULL,
+        error_type = NULL,
+        retryable = FALSE,
         duration_ms = round(duration_ms, 2)
       )
     },
 
+    start = function() {
+      private$assert_usable()
+      self$started <- TRUE
+      invisible(self)
+    },
+
     reset = function() {
-      private$assert_open()
+      private$assert_usable()
       response <- tryCatch(
         self$repl(
           input = "\u0004",
@@ -688,6 +713,7 @@ McpReplRunner <- R6::R6Class(
         error = function(e) e
       )
       if (inherits(response, "error")) {
+        private$mark_terminal(conditionMessage(response))
         cli::cli_abort(
           c(
             "Could not reset the mcp-repl session",
@@ -698,6 +724,7 @@ McpReplRunner <- R6::R6Class(
       }
       normalized <- mcp_repl_normalize_response(response)
       if (!is.null(normalized$error)) {
+        private$mark_terminal(normalized$error)
         cli::cli_abort(
           c(
             "Could not reset the mcp-repl session",
@@ -723,6 +750,10 @@ McpReplRunner <- R6::R6Class(
       invisible(self)
     },
 
+    shutdown = function() {
+      self$close()
+    },
+
     policy = function() {
       if (!self$sandbox_verified) {
         return(list(
@@ -736,7 +767,9 @@ McpReplRunner <- R6::R6Class(
           network_access = "unknown",
           sandbox_enforcement = "unverified",
           oversized_output = self$oversized_output,
-          rlm_control_frame_limit = self$control_frame_limit
+          rlm_control_frame_limit = self$control_frame_limit,
+          host_tools = "unsupported",
+          lifecycle = "start-execute-shutdown"
         ))
       }
       list(
@@ -750,7 +783,9 @@ McpReplRunner <- R6::R6Class(
         network_access = "disabled",
         sandbox_enforcement = "operating-system",
         oversized_output = self$oversized_output,
-        rlm_control_frame_limit = self$control_frame_limit
+        rlm_control_frame_limit = self$control_frame_limit,
+        host_tools = "unsupported",
+        lifecycle = "start-execute-shutdown"
       )
     },
 
@@ -776,7 +811,7 @@ McpReplRunner <- R6::R6Class(
   ),
 
   private = list(
-    assert_open = function() {
+    assert_usable = function() {
       if (self$closed) {
         cli::cli_abort(
           "The mcp-repl runner is closed",
@@ -786,6 +821,25 @@ McpReplRunner <- R6::R6Class(
           )
         )
       }
+      if (self$terminal) {
+        cli::cli_abort(
+          c(
+            "The mcp-repl interpreter session is terminal",
+            "x" = self$terminal_reason %||%
+              "A process or protocol failure occurred."
+          ),
+          class = c(
+            "dsprrr_mcp_repl_terminal_error",
+            "dsprrr_interpreter_terminal_error"
+          )
+        )
+      }
+      invisible(NULL)
+    },
+
+    mark_terminal = function(reason) {
+      self$terminal <- TRUE
+      self$terminal_reason <- as.character(reason)[[1L]]
       invisible(NULL)
     },
 
@@ -823,7 +877,11 @@ mcp_repl_input <- function(code, context) {
 
 mcp_repl_normalize_response <- function(response) {
   if (is.character(response)) {
-    return(list(text = paste(response, collapse = "\n"), error = NULL))
+    return(list(
+      text = paste(response, collapse = "\n"),
+      error = NULL,
+      error_type = NULL
+    ))
   }
   if (!is.list(response)) {
     return(list(
@@ -831,15 +889,18 @@ mcp_repl_normalize_response <- function(response) {
       error = paste0(
         "mcp-repl returned unsupported response type: ",
         paste(class(response), collapse = "/")
-      )
+      ),
+      error_type = "interpreter"
     ))
   }
 
-  error <- response$error %||% NULL
+  protocol_error <- response$error %||% NULL
+  error <- protocol_error
+  error_type <- if (is.null(protocol_error)) NULL else "interpreter"
   result <- response$result %||% response
-  if (is.list(result) && isTRUE(result$isError %||% FALSE)) {
-    error <- "mcp-repl reported an execution error"
-  }
+  execution_error <- is.null(protocol_error) &&
+    is.list(result) &&
+    isTRUE(result$isError %||% FALSE)
 
   content <- if (is.list(result)) result$content %||% NULL else NULL
   text <- if (is.character(result)) {
@@ -865,13 +926,22 @@ mcp_repl_normalize_response <- function(response) {
     ""
   }
 
+  if (execution_error) {
+    error <- if (nzchar(text)) {
+      paste("mcp-repl reported an execution error:", text)
+    } else {
+      "mcp-repl reported an execution error"
+    }
+    error_type <- "execution"
+  }
+
   if (is.list(error)) {
     error <- error$message %||% jsonlite::toJSON(error, auto_unbox = TRUE)
   }
   if (!is.null(error)) {
     error <- as.character(error)[[1L]]
   }
-  list(text = text, error = error)
+  list(text = text, error = error, error_type = error_type)
 }
 
 mcp_repl_truncate <- function(text, max_chars) {
@@ -959,7 +1029,12 @@ mcp_repl_transport_error_result <- function(
   result <- mcp_repl_error_result(
     detail,
     stdout = stdout,
-    duration_ms = duration_ms
+    duration_ms = duration_ms,
+    error_type = if (identical(issue, "pager-reset-failed")) {
+      "interpreter"
+    } else {
+      "execution"
+    }
   )
   class(result) <- c("dsprrr_mcp_repl_transport_error", class(result))
   result
@@ -968,7 +1043,8 @@ mcp_repl_transport_error_result <- function(
 mcp_repl_error_result <- function(
   error,
   stdout = "",
-  duration_ms = 0
+  duration_ms = 0,
+  error_type = "execution"
 ) {
   list(
     success = FALSE,
@@ -978,6 +1054,8 @@ mcp_repl_error_result <- function(
     messages = "",
     warnings = "",
     error = as.character(error)[[1L]],
+    error_type = error_type,
+    retryable = identical(error_type, "execution"),
     duration_ms = round(duration_ms, 2)
   )
 }

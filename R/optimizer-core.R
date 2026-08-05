@@ -580,6 +580,10 @@ eval_program <- function(
       )
     },
     error = function(e) {
+      provider_condition <- run_provider_error_condition(e)
+      if (!is.null(provider_condition)) {
+        stop(provider_condition)
+      }
       cli::cli_warn(
         "Evaluation failed: {conditionMessage(e)}",
         class = "dsprrr_eval_error"

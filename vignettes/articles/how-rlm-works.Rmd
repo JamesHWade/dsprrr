@@ -294,9 +294,13 @@ The table below summarizes the key implementations:
 | **Structured output** | ellmer types | DSPy signatures | Freeform | ADK tools |
 | **Recursive calls** | `llm_query()` | Built-in | Built-in | Child agents |
 | **Optimization** | Teleprompters, grid search | DSPy optimizers | Manual | Manual |
-| **Batched sub-calls** | `llm_query_batched()` | -- | -- | -- |
+| **Batched sub-calls** | `llm_query_batched()` | `llm_query_batched()` | -- | -- |
 
-The "batched sub-calls" row refers specifically to issuing multiple recursive sub-queries from a single REPL iteration and running them concurrently. All implementations support multiple sequential sub-calls; dsprrr additionally batches them via `ellmer::parallel_chat()`.
+The "batched sub-calls" row refers specifically to issuing multiple recursive
+sub-queries from one REPL iteration and running them concurrently. Both dsprrr
+and DSPy 3.3 expose that operation. dsprrr dispatches its batch through
+`ellmer::parallel_chat()` while preserving the R runner's lifecycle and call
+budget.
 
 dsprrr is the only implementation that uses R as the REPL language, which matters when your context *is* R data: data frames, model objects, or package source code. It also inherits dsprrr's full optimization infrastructure (teleprompters, grid search, evaluation metrics), so you can systematically improve RLM performance, not just run it.
 
@@ -355,6 +359,27 @@ rlm <- rlm_module(
 ```
 
 `runner` and `interpreter_factory` are mutually exclusive, and one is required.
+
+Factory-backed RLM invocations can also use `run_async()` and isolated mirai
+dataset batches. A caller-owned runner remains sequential-only because dsprrr
+cannot prove that shared interpreter state is safe under overlap. Async
+streaming and finite batch timeout/error-budget controls are not adapted yet
+and fail before runner work.
+
+**Execution and interpreter failures are different.** A submitted R expression
+can fail in a repairable way, allowing the RLM to inspect the error and try a
+new expression. Process, transport, protocol, startup, and shutdown failures
+are terminal: the runner is invalidated and is never retried or reused. If
+execution and teardown both fail, dsprrr preserves the primary execution
+condition and attaches teardown evidence instead of replacing it.
+
+**Custom tools execute on the host.** Guest code emits an authenticated tool
+request, dsprrr invokes the original function and its live closure in the host
+process, and the guest program is replayed with that immutable response. The
+function itself is never deparsed or serialized into generated code. This
+runner-neutral bridge works with both `r_code_runner()` and mcp-repl; arguments
+and results still need to cross the runner's value boundary. A host tool is
+called once even though deterministic guest code before it may be replayed.
 
 **mcp-repl control results are intentionally bounded.** RLM submit and recursive
 query frames are capped at 3,000 encoded bytes to stay inline. If incidental

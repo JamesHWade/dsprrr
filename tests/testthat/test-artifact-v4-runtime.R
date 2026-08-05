@@ -197,13 +197,31 @@ test_that("Flex modules have a resource-free v4 artifact codec", {
   restored <- restore_module_config(artifact)
 
   expect_identical(artifact$format_version, 4L)
-  expect_named(fields, c("module_src", "max_predictor_calls"))
+  expect_named(
+    fields,
+    c(
+      "module_src",
+      "max_predictor_calls",
+      "max_tool_calls",
+      "source_format",
+      "tools",
+      "interpreter_factory",
+      "require_sandbox"
+    )
+  )
   expect_identical(fields$module_src, program$module_src)
   expect_identical(fields$max_predictor_calls, 7L)
+  expect_identical(fields$max_tool_calls, 100L)
+  expect_identical(fields$source_format, "json")
+  expect_length(fields$tools, 0L)
+  expect_null(fields$interpreter_factory)
+  expect_true(fields$require_sandbox)
   expect_false(any(grepl("active_lease", capture.output(dput(artifact)))))
   expect_s3_class(restored, "FlexModule")
   expect_identical(restored$module_src, program$module_src)
   expect_identical(restored$max_predictor_calls, 7L)
+  expect_identical(restored$max_tool_calls, 100L)
+  expect_identical(restored$source_format, "json")
   expect_identical(restored$config$label, "persisted")
   expect_length(restored$state$traces, 0L)
 
@@ -212,4 +230,157 @@ test_that("Flex modules have a resource-free v4 artifact codec", {
   expect_no_error(eval(parse(text = exported), envir = environment))
   expect_s3_class(environment$restored_flex, "FlexModule")
   expect_identical(environment$restored_flex$module_src, program$module_src)
+})
+
+test_that("Flex artifacts preserve an unlimited runtime predictor budget", {
+  program <- suppressWarnings(
+    dsprrr:::FlexModule$new(
+      signature = signature("question -> answer"),
+      max_predictor_calls = NULL
+    )
+  )
+
+  artifact <- program_artifact(program)
+  restored <- restore_module_config(artifact)
+
+  expect_null(artifact$graph$nodes[["$"]]$fields$max_predictor_calls)
+  expect_null(restored$max_predictor_calls)
+})
+
+test_that("Flex artifacts preserve an unlimited host-tool budget", {
+  program <- suppressWarnings(
+    dsprrr:::FlexModule$new(
+      signature = signature("question -> answer"),
+      max_tool_calls = NULL
+    )
+  )
+
+  artifact <- program_artifact(program)
+  restored <- restore_module_config(artifact)
+
+  expect_null(artifact$graph$nodes[["$"]]$fields$max_tool_calls)
+  expect_null(restored$max_tool_calls)
+})
+
+test_that("Flex artifacts preserve a zero predictor budget", {
+  source <- jsonlite::toJSON(
+    list(
+      schema_version = 1L,
+      steps = list(),
+      outputs = list(result = "$input.value")
+    ),
+    auto_unbox = TRUE
+  )
+  program <- suppressWarnings(flex(
+    "value -> result",
+    module_src = source,
+    max_predictor_calls = 0L
+  ))
+
+  artifact <- program_artifact(program)
+  restored <- restore_module_config(artifact)
+
+  expect_identical(restored$max_predictor_calls, 0L)
+})
+
+test_that("executable Flex runtime dependencies round-trip through a registry", {
+  calls <- 0L
+  offset <- 3L
+  interpreter_factory <- function(.unused = NULL) {
+    calls <<- calls + 1L
+    artifact_v4_runner()
+  }
+  add_offset <- function(value) value + offset
+  registry <- list(
+    interpreter_factory = interpreter_factory,
+    add_offset = add_offset
+  )
+  program <- suppressWarnings(flex(
+    "value: integer -> result: integer",
+    module_src = paste(
+      "forward <- function(value) {",
+      "  list(result = add_offset(value = value))",
+      "}",
+      sep = "\n"
+    ),
+    tools = list(add_offset = add_offset),
+    interpreter_factory = interpreter_factory,
+    source_format = "r",
+    require_sandbox = FALSE,
+    max_tool_calls = 4L
+  ))
+
+  artifact <- program_artifact(program, registry = registry)
+  fields <- artifact$graph$nodes[["$"]]$fields
+  restored <- restore_module_config(artifact, registry = registry)
+
+  expect_identical(fields$source_format, "r")
+  expect_identical(fields$max_tool_calls, 4L)
+  expect_identical(
+    fields$interpreter_factory$.dsprrr$payload$id,
+    "interpreter_factory"
+  )
+  expect_identical(fields$tools[[1L]]$.dsprrr$payload$id, "add_offset")
+  expect_false(fields$require_sandbox)
+  expect_identical(restored$source_format, "r")
+  expect_identical(restored$max_tool_calls, 4L)
+  expect_identical(restored$interpreter_factory, interpreter_factory)
+  expect_identical(restored$tools$add_offset, add_offset)
+  expect_false(restored$require_sandbox)
+  expect_identical(calls, 0L)
+})
+
+test_that("legacy two-field v4 Flex artifacts remain readable", {
+  program <- suppressWarnings(flex("question -> answer"))
+  artifact <- program_artifact(program)
+  artifact$graph$nodes[["$"]]$fields <- artifact$graph$nodes[["$"]]$fields[
+    c("module_src", "max_predictor_calls")
+  ]
+  artifact <- artifact_v4_rehash(artifact)
+
+  expect_no_error(dsprrr:::artifact_validate_manifest(artifact))
+  restored <- restore_module_config(artifact)
+  expect_identical(restored$source_format, "json")
+  expect_identical(restored$module_src, program$module_src)
+  expect_identical(restored$max_tool_calls, 100L)
+})
+
+test_that("earlier runtime-aware v4 Flex artifacts remain readable", {
+  program <- suppressWarnings(flex("question -> answer"))
+  artifact <- program_artifact(program)
+  fields <- artifact$graph$nodes[["$"]]$fields
+  artifact$graph$nodes[["$"]]$fields <- fields[
+    setdiff(names(fields), "max_tool_calls")
+  ]
+  artifact <- artifact_v4_rehash(artifact)
+
+  expect_no_error(dsprrr:::artifact_validate_manifest(artifact))
+  restored <- restore_module_config(artifact)
+  expect_identical(restored$max_tool_calls, 100L)
+})
+
+test_that("Flex artifact validation rejects invalid host-tool maps", {
+  interpreter_factory <- function() artifact_v4_runner()
+  identity_tool <- function(value) value
+  registry <- list(
+    interpreter_factory = interpreter_factory,
+    identity_tool = identity_tool
+  )
+  program <- suppressWarnings(flex(
+    "value -> result",
+    module_src = "forward <- function(value) list(result = identity_tool(value = value))",
+    tools = list(identity_tool = identity_tool),
+    interpreter_factory = interpreter_factory,
+    source_format = "r"
+  ))
+  artifact <- program_artifact(program, registry = registry)
+  names(artifact$graph$nodes[["$"]]$fields$tools) <- "bad name"
+  artifact <- artifact_v4_rehash(artifact)
+
+  error <- tryCatch(
+    dsprrr:::artifact_validate_manifest(artifact),
+    error = identity
+  )
+
+  expect_s3_class(error, "dsprrr_artifact_malformed")
 })

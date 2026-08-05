@@ -47,13 +47,14 @@ caller-owned, reused across calls, and never closed by dsprrr. The backend deter
 whether execution state persists and whether \code{reset()} is available;
 serialize access to stateful backends. \code{interpreter_factory} is a
 zero-argument function that returns a fresh runner implementing \code{execute()},
-\code{policy()}, and \code{close()}. The module owns that runner for one invocation and
-calls \code{close()} exactly once on success, error, or interrupt.
+\code{policy()}, optional \code{start()}, and terminal \code{shutdown()} or \code{close()}. The
+module owns that runner for one invocation and shuts it down exactly once on
+success, error, or interrupt.
 
-\code{\link[=run_async]{run_async()}}, \code{\link[=stream_async]{stream_async()}}, and a module's \verb{$stream()} method reject RLM
-because their direct provider path would bypass execution. The \code{\link[=run_stream]{run_stream()}}
-one-shot \code{forward()} fallback remains available, but an actual token-stream
-request is rejected before provider or factory work.
+\code{\link[=run_async]{run_async()}} supports factory-backed RLM in an isolated mirai process and
+rejects caller-owned runners. \code{\link[=stream_async]{stream_async()}} and a module's \verb{$stream()}
+method remain unavailable because streaming would bypass execution. The
+\code{\link[=run_stream]{run_stream()}} one-shot \code{forward()} fallback remains available.
 }
 \examples{
 \dontrun{

@@ -7,7 +7,7 @@
 metric_with_feedback(fn, field = NULL)
 }
 \arguments{
-\item{fn}{A function with signature \code{function(prediction, expected)}
+\item{fn}{A function with signature \verb{function(prediction, expected)}
 returning a score or a \code{list(score = , feedback = )}.}
 
 \item{field}{Optional name of the column in training data containing the

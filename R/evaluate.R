@@ -284,6 +284,7 @@ evaluate.Module <- function(
   .return_format = c("structured", "simple"),
   epochs = 1L,
   .trace_row_ids = NULL,
+  .propagate_provider_errors = FALSE,
   ...
 ) {
   parallel_missing <- missing(.parallel)
@@ -302,6 +303,16 @@ evaluate.Module <- function(
     .concurrency <- validate_concurrency_control(.concurrency)
   }
   .return_format <- match.arg(.return_format)
+  if (
+    !is.logical(.propagate_provider_errors) ||
+      length(.propagate_provider_errors) != 1L ||
+      is.na(.propagate_provider_errors)
+  ) {
+    cli::cli_abort(
+      "{.arg .propagate_provider_errors} must be TRUE or FALSE",
+      class = "dsprrr_evaluation_argument_error"
+    )
+  }
 
   # Validate epochs
   epochs <- as.integer(epochs)
@@ -395,7 +406,7 @@ evaluate.Module <- function(
     trace_count_before <- length(module$state$traces %||% list())
     evaluated <- tryCatch(
       {
-        do.call(
+        evaluated <- do.call(
           run_dataset,
           c(
             list(
@@ -409,8 +420,27 @@ evaluate.Module <- function(
             list(...)
           )
         )
+        if (isTRUE(.propagate_provider_errors)) {
+          conditions <- attr(
+            evaluated,
+            "dsprrr_error_conditions",
+            exact = TRUE
+          ) %||%
+            list()
+          for (condition in conditions) {
+            provider_condition <- run_provider_error_condition(condition)
+            if (!is.null(provider_condition)) {
+              stop(provider_condition)
+            }
+          }
+        }
+        evaluated
       },
       error = function(e) {
+        provider_condition <- run_provider_error_condition(e)
+        if (!is.null(provider_condition)) {
+          stop(provider_condition)
+        }
         cli::cli_abort(c(
           "Epoch {epoch}/{epochs} failed during module execution",
           "x" = conditionMessage(e),

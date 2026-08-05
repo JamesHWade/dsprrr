@@ -663,9 +663,11 @@ agent <- code_act(
 
 ## Flex (experimental)
 
-`flex()` makes a bounded predictor topology part of a module's optimization
-state. Its `module_src` is canonical, versioned JSON with only Predict and
-Chain-of-Thought steps; it is data, never arbitrary R or Python source.
+`flex()` makes a complete implementation part of a module's optimization
+state. Its safe default is canonical, versioned JSON with Predict and
+Chain-of-Thought steps. Opt-in executable mode accepts complete R `forward()`
+source, dynamic predictors, deterministic control flow, and named host tools,
+evaluated only through a fresh configured interpreter.
 
 ```{r flex-basic, eval=FALSE}
 program <- flex("question -> answer")
@@ -673,10 +675,11 @@ program$module_src
 ```
 
 Use `program$bind(candidate)` to validate and replace the source
-transactionally. Direct assignment to `module_src` is rejected. This safe IR
-is intentionally narrower than DSPy's experimental Flex module and is not a
-claim of full Flex parity. See [Structural Optimization with
-Flex](flex-optimization.html) for the schema, references, and safety boundary.
+transactionally. Direct assignment to `module_src` is rejected. DSPy uses
+Python module classes and a default Deno/Pyodide interpreter; dsprrr uses R
+`forward()` source and an explicit factory, so source is not portable. See
+[Structural Optimization with Flex](flex-optimization.html) for both source
+languages, references, and the safety boundary.
 
 ## Combining Modules
 
@@ -760,7 +763,7 @@ dsprrr's advanced modules bring battle-tested patterns from DSPy to R:
 | `multi_chain_comparison()` | Complex analysis, multiple valid approaches | (M+1)× cost |
 | `program_of_thought()` | Exact computation, data analysis | Code execution overhead |
 | `code_act()` | Tasks needing both tools AND computation | Agent loop overhead |
-| `flex()` | Testing bounded predictor structures | Experimental JSON schema |
+| `flex()` | Testing bounded or executable structures | Experimental dual-source API |
 
 **Getting started:**
 - Start with **ChainOfThought** for complex reasoning tasks

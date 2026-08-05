@@ -102,17 +102,17 @@ test_that("RCodeRunner executes multi-line code", {
   expect_equal(result$result, 30)
 })
 
-test_that("RCodeRunner captures stdout", {
+test_that("RCodeRunner captures stdout and stderr without trailing newlines", {
   skip_if_not_installed("callr")
 
-  runner <- r_code_runner(timeout = 10)
-  # Use print() which flushes output more reliably than cat()
-  result <- runner$execute("print('hello world'); 42")
+  result <- r_code_runner(timeout = 10)$execute(
+    "cat('hello'); cat('problem', file = stderr()); 42"
+  )
 
   expect_true(result$success)
   expect_equal(result$result, 42)
-  # stdout capture may not work in all environments, so just check success
-  # The main test is that execution works with print statements
+  expect_identical(result$stdout, "hello")
+  expect_identical(result$stderr, "problem")
 })
 
 test_that("RCodeRunner captures messages", {
@@ -146,6 +146,8 @@ test_that("RCodeRunner handles errors gracefully", {
   expect_false(result$success)
   expect_null(result$result)
   expect_match(result$error, "intentional error")
+  expect_identical(result$error_type, "execution")
+  expect_true(result$retryable)
 })
 
 test_that("RCodeRunner handles syntax errors", {
@@ -157,6 +159,37 @@ test_that("RCodeRunner handles syntax errors", {
   expect_false(result$success)
   expect_null(result$result)
   expect_true(nchar(result$error) > 0)
+})
+
+test_that("RCodeRunner terminalizes malformed or crashed subprocesses", {
+  skip_if_not_installed("callr")
+
+  crash_code <- paste0(
+    "base::get(\"q\", baseenv())(",
+    "save = \"no\", status = 1, runLast = FALSE)"
+  )
+  runner <- r_code_runner(timeout = 10)
+  result <- runner$execute(crash_code)
+
+  expect_false(result$success)
+  expect_identical(result$error_type, "interpreter")
+  expect_false(result$retryable)
+  expect_true(runner$terminal)
+  expect_error(
+    runner$execute("1 + 1"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+
+  empty_code <- paste0(
+    "base::get(\"q\", baseenv())(",
+    "save = \"no\", status = 0, runLast = FALSE)"
+  )
+  empty_runner <- r_code_runner(timeout = 10)
+  empty_result <- empty_runner$execute(empty_code)
+  expect_false(empty_result$success)
+  expect_identical(empty_result$error_type, "interpreter")
+  expect_match(empty_result$error, "structured execution result")
+  expect_true(empty_runner$terminal)
 })
 
 test_that("RCodeRunner passes context correctly", {
@@ -297,6 +330,17 @@ test_that("RCodeRunner truncates large output in messages", {
   expect_true(result$success)
   expect_match(result$messages, "TRUNCATED")
   expect_lte(nchar(result$messages), 150) # 100 + truncation message
+})
+
+test_that("RCodeRunner bounds captured stdout before returning it", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, max_output_chars = 100)
+  result <- runner$execute("cat(base::strrep('x', 500L)); 1")
+
+  expect_true(result$success)
+  expect_match(result$stdout, "TRUNCATED", fixed = TRUE)
+  expect_lte(nchar(result$stdout), 160)
 })
 
 test_that("RCodeRunner respects custom timeout", {

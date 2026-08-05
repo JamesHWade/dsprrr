@@ -28,7 +28,8 @@ answer from execution result. If FALSE, return execution result directly.}
 \item{...}{Additional arguments passed to the module}
 
 \item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, and idempotent terminal \code{close()}.
+runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
+terminal \code{shutdown()} or \code{close()}.
 Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
@@ -37,8 +38,8 @@ A ProgramOfThoughtModule object
 \description{
 Factory function to create a ProgramOfThoughtModule that generates and
 executes R code to solve problems.
-Use \code{\link[=run]{run()}} to execute it. Generic async and module \verb{$stream()} entry points
-reject ProgramOfThought graphs before provider or factory work.
+Use \code{\link[=run]{run()}} to execute it. \code{\link[=run_async]{run_async()}} supports factory-backed modules;
+async streaming and module \verb{$stream()} entry points reject ProgramOfThought.
 \code{\link[=run_stream]{run_stream()}} preserves the synchronous \code{forward()} fallback unless a
 matching token-stream request is active; that request is rejected first.
 }

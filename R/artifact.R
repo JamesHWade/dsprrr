@@ -769,7 +769,15 @@ artifact_serialize_fields <- function(
     ),
     FlexModule = list(
       module_src = module$module_src,
-      max_predictor_calls = module$max_predictor_calls
+      max_predictor_calls = module$max_predictor_calls,
+      max_tool_calls = module$max_tool_calls,
+      source_format = module$source_format,
+      tools = runtime_list(module$tools, "tools"),
+      interpreter_factory = runtime(
+        module$interpreter_factory,
+        "interpreter_factory"
+      ),
+      require_sandbox = module$require_sandbox
     )
   )
 }
@@ -3059,11 +3067,37 @@ artifact_validate_fields <- function(node, malformed, version) {
       "tools"
     ),
     RAGModule = c("store", "retriever", "k", "context_format"),
-    FlexModule = c("module_src", "max_predictor_calls")
+    FlexModule = c(
+      "module_src",
+      "max_predictor_calls",
+      "max_tool_calls",
+      "source_format",
+      "tools",
+      "interpreter_factory",
+      "require_sandbox"
+    )
   )
+  legacy_flex_fields <- identical(node$class, "FlexModule") &&
+    version >= 4L &&
+    (artifact_names_match(
+      names(node$fields),
+      c("module_src", "max_predictor_calls")
+    ) ||
+      artifact_names_match(
+        names(node$fields),
+        c(
+          "module_src",
+          "max_predictor_calls",
+          "source_format",
+          "tools",
+          "interpreter_factory",
+          "require_sandbox"
+        )
+      ))
   if (
     !artifact_is_plain_list(node$fields) ||
-      !artifact_names_match(names(node$fields), allowed)
+      (!artifact_names_match(names(node$fields), allowed) &&
+        !legacy_flex_fields)
   ) {
     malformed(paste0("Node ", node$id, " has invalid class-specific fields."))
   }
@@ -3178,11 +3212,31 @@ artifact_validate_field_domains <- function(node, malformed, version) {
       artifact_is_logical_scalar(fields$verbose),
     RAGModule = positive_integer(fields$k) &&
       artifact_is_character_scalar(fields$context_format, nonempty = TRUE),
-    FlexModule = artifact_is_character_scalar(
-      fields$module_src,
-      nonempty = TRUE
-    ) &&
-      positive_integer(fields$max_predictor_calls),
+    FlexModule = {
+      source_format <- fields$source_format %||% "json"
+      tools <- fields$tools %||% list()
+      factory <- fields$interpreter_factory
+      max_tool_calls <- if ("max_tool_calls" %in% names(fields)) {
+        fields$max_tool_calls
+      } else {
+        100L
+      }
+      artifact_is_character_scalar(fields$module_src, nonempty = TRUE) &&
+        (is.null(fields$max_predictor_calls) ||
+          nonnegative_integer(fields$max_predictor_calls)) &&
+        (is.null(max_tool_calls) || nonnegative_integer(max_tool_calls)) &&
+        artifact_is_character_scalar(source_format, nonempty = TRUE) &&
+        source_format %in% c("json", "r") &&
+        artifact_is_plain_list(tools) &&
+        flex_host_tool_names_valid(tools) &&
+        (is.null(fields$require_sandbox) ||
+          artifact_is_logical_scalar(fields$require_sandbox)) &&
+        if (identical(source_format, "json")) {
+          length(tools) == 0L && is.null(factory)
+        } else {
+          !is.null(factory) && !is.null(fields$require_sandbox)
+        }
+    },
     FALSE
   )
   if (!isTRUE(valid)) {
@@ -3410,6 +3464,10 @@ artifact_validate_nested_fields <- function(node, malformed, version) {
       runtime_collection(node$fields$tools, "tools")
     ),
     RAGModule = list(node$fields$store, node$fields$retriever),
+    FlexModule = c(
+      list(node$fields$interpreter_factory),
+      runtime_collection(node$fields$tools %||% list(), "tools")
+    ),
     list()
   )
 }
@@ -3921,7 +3979,16 @@ artifact_construct_module <- function(node, children, registry, trusted) {
     FlexModule = FlexModule$new(
       signature = signature,
       module_src = fields$module_src,
+      tools = runtime_list(fields$tools %||% list()),
+      interpreter_factory = runtime(fields$interpreter_factory),
+      source_format = fields$source_format %||% "json",
       max_predictor_calls = fields$max_predictor_calls,
+      max_tool_calls = if ("max_tool_calls" %in% names(fields)) {
+        fields$max_tool_calls
+      } else {
+        100L
+      },
+      require_sandbox = fields$require_sandbox %||% TRUE,
       config = config,
       chat = NULL
     ),

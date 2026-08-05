@@ -1,9 +1,10 @@
-#' Experimental Declarative Flex Module
+#' Experimental Flex Module
 #'
 #' @description
-#' `flex()` creates an experimental module whose predictor topology is itself an
-#' optimization parameter. The topology is supplied as canonical JSON in
-#' `module_src`; it is parsed as data and is never evaluated as R code.
+#' `flex()` creates an experimental module whose implementation is itself an
+#' optimization parameter. Its safe default is a canonical, declarative JSON
+#' graph. An opt-in `source_format = "r"` mode accepts complete R source and
+#' evaluates it only in a fresh runner returned by `interpreter_factory`.
 #'
 #' Version 1 sources contain `schema_version`, an ordered `steps` array, and an
 #' `outputs` object. Each step has a safe, unique `name`, a `primitive` of
@@ -16,31 +17,52 @@
 #' object signature types. Opaque `TypeJsonSchema` values and empty objects are
 #' rejected because their interfaces cannot be checked safely by this compiler.
 #'
-#' When `module_src` is `NULL`, the baseline is one `predict` step over the
-#' outer signature. `$bind()` and `$apply_optimization_params()` validate a new
-#' source transactionally, so an invalid candidate cannot replace the active
-#' plan. The canonical source is available through the read-only
-#' `$module_src` active binding.
+#' Executable sources use a deliberately small guest DSL: `Predict`,
+#' `ChainOfThought`, `ReAct`, `ReActV2`, `RLM`, `CodeAct`,
+#' `ProgramOfThought`, `Prediction`, `Tool`, and explicitly supplied named
+#' tools. Predictor and tool calls cross a versioned JSON boundary and run on
+#' the host; optimizer-authored source is never evaluated by the host R session.
+#' Guest bindings have a separate lexical environment from bridge state.
+#' Executable mode requires an explicit zero-argument interpreter factory and,
+#' by default, a runner that advertises an enforced sandbox.
 #'
-#' GEPA optimizes Flex programs as complete instruction and `module_src`
-#' component snapshots. Invalid source candidates are scored for audit but are
-#' not selectable. GEPA-lite ranks whole-program candidates; it does not
-#' implement DSPy's independent per-component Pareto frontiers or inference-time
-#' search.
+#' When `module_src` is `NULL`, the baseline is one `Predict` call (or one
+#' `RLM` call when executable mode has tools). `$bind()` and
+#' `$apply_optimization_params()` validate new source transactionally, so an
+#' invalid candidate cannot replace the active implementation. The source is
+#' available through the read-only `$module_src` active binding.
 #'
-#' [run_async()], [stream_async()], and a module's `$stream()` method reject Flex
-#' because their direct provider path would bypass its graph. The [run_stream()]
-#' one-shot `forward()` fallback remains available, but an actual token-stream
-#' request is rejected before provider work.
+#' GEPA treats each Flex source as one component. Candidate programs are
+#' explored from the union of validation-example winners, while component
+#' selection and lineage-aware merges decide what to mutate. Invalid source
+#' candidates are auditable but cannot replace the active implementation.
+#'
+#' Token streaming remains unsupported because Flex creates predictors at run
+#' time. Dataset concurrency is currently available for declarative zero- and
+#' one-step sources; executable and multi-step sources fail before provider
+#' work when a concurrent backend is requested.
 #'
 #' @param signature A [Signature] object or DSPy-style signature string.
-#' @param module_src A version 1 Flex source as one JSON string, or `NULL` for
-#'   the single-predictor baseline.
-#' @param max_predictor_calls Maximum number of predictor steps allowed in one
-#'   source.
+#' @param module_src A complete Flex source string, or `NULL` for a baseline.
+#' @param max_predictor_calls Maximum number of predictor calls allowed in one
+#'   invocation, or `NULL` for no limit. Declarative sources are also checked
+#'   against this bound before they are installed.
 #' @param config Optional module configuration passed to each fresh predictor.
 #' @param chat Optional ellmer `Chat` used unless `.llm` is supplied at run
 #'   time.
+#' @param tools Named host functions or ellmer ToolDef objects exposed only to
+#'   executable Flex source.
+#' @param interpreter_factory Zero-argument factory returning a fresh code
+#'   runner for every executable Flex invocation. Required when
+#'   `source_format = "r"`; not accepted for declarative JSON.
+#' @param source_format Source language: `"json"`, `"r"`, or `"auto"`.
+#'   Auto selects R when tools or a factory are supplied, JSON for JSON-looking
+#'   source and the safe JSON baseline otherwise.
+#' @param require_sandbox Whether executable mode must reject runners that do
+#'   not advertise an enforced sandbox. Keep the default for generated or
+#'   otherwise untrusted source.
+#' @param max_tool_calls Maximum number of direct host-tool calls allowed in one
+#'   executable invocation, or `NULL` for no limit. The safe default is 100.
 #'
 #' @return An experimental `FlexModule`.
 #' @export
@@ -57,7 +79,12 @@ flex <- function(
   module_src = NULL,
   max_predictor_calls = 100L,
   config = list(),
-  chat = NULL
+  chat = NULL,
+  tools = list(),
+  interpreter_factory = NULL,
+  source_format = c("auto", "json", "r"),
+  require_sandbox = TRUE,
+  max_tool_calls = 100L
 ) {
   flex_warn_experimental()
 
@@ -83,15 +110,47 @@ flex <- function(
     )
   }
 
-  max_predictor_calls <- flex_positive_integer(
+  max_predictor_calls <- flex_predictor_limit(
     max_predictor_calls,
     "max_predictor_calls"
   )
+  max_tool_calls <- flex_predictor_limit(max_tool_calls, "max_tool_calls")
+  tools <- tools %||% list()
+  source_format <- flex_resolve_source_format(
+    source_format,
+    module_src = module_src,
+    tools = tools,
+    interpreter_factory = interpreter_factory
+  )
+  flex_validate_host_tools(tools)
+  if (
+    !is.logical(require_sandbox) ||
+      length(require_sandbox) != 1L ||
+      is.na(require_sandbox)
+  ) {
+    cli::cli_abort(
+      "{.arg require_sandbox} must be one logical value",
+      class = "dsprrr_flex_config_error"
+    )
+  }
+  if (identical(source_format, "r")) {
+    validate_interpreter_factory(interpreter_factory)
+  } else if (length(tools) > 0L || !is.null(interpreter_factory)) {
+    cli::cli_abort(
+      "{.arg tools} and {.arg interpreter_factory} require executable Flex source",
+      class = "dsprrr_flex_config_error"
+    )
+  }
 
   FlexModule$new(
     signature = sig,
     module_src = module_src,
+    tools = tools,
+    interpreter_factory = interpreter_factory,
+    source_format = source_format,
     max_predictor_calls = max_predictor_calls,
+    max_tool_calls = max_tool_calls,
+    require_sandbox = require_sandbox,
     config = config,
     chat = chat
   )
@@ -106,7 +165,7 @@ flex_warn_experimental <- function() {
     cli::cli_warn(
       c(
         "{.fn flex} is experimental and its module source schema may change",
-        "i" = "Flex source is declarative JSON and is never evaluated as R code."
+        "i" = "The default source is declarative JSON; executable R source requires an explicit interpreter factory."
       ),
       class = "dsprrr_flex_experimental_warning"
     )
@@ -123,8 +182,34 @@ flex_predictor_call_count <- function(module) {
       class = "dsprrr_flex_internal_error"
     )
   }
+  if (identical(module$source_format, "r")) {
+    # Executable Flex may contain deterministic paths, so its conservative
+    # preflight lower bound is zero. The exact runtime cap is enforced by the
+    # versioned predictor bridge.
+    return(0L)
+  }
   source <- jsonlite::fromJSON(module$module_src, simplifyVector = FALSE)
   as.integer(length(source$steps))
+}
+
+flex_execution_plan <- function(module) {
+  if (!inherits(module, "FlexModule")) {
+    cli::cli_abort(
+      "Internal Flex plan access requires a FlexModule",
+      class = "dsprrr_flex_internal_error"
+    )
+  }
+  plan <- tryCatch(
+    module$.__enclos_env__$private$.plan,
+    error = function(error) NULL
+  )
+  if (!is.list(plan) || !is.list(plan$steps) || !is.list(plan$outputs)) {
+    cli::cli_abort(
+      "The validated Flex execution plan is unavailable",
+      class = "dsprrr_flex_internal_error"
+    )
+  }
+  plan
 }
 
 #' Remove runtime Chat parameters after Flex resolves them once
@@ -153,7 +238,12 @@ FlexModule <- R6::R6Class(
       module_src = NULL,
       max_predictor_calls = 100L,
       config = list(),
-      chat = NULL
+      chat = NULL,
+      tools = list(),
+      interpreter_factory = NULL,
+      source_format = "json",
+      require_sandbox = TRUE,
+      max_tool_calls = 100L
     ) {
       super$initialize(
         signature = signature,
@@ -162,17 +252,35 @@ FlexModule <- R6::R6Class(
         config = config,
         chat = chat
       )
-      private$.max_predictor_calls <- flex_positive_integer(
+      private$.max_predictor_calls <- flex_predictor_limit(
         max_predictor_calls,
         "max_predictor_calls"
       )
-      compiled <- flex_compile_source(
-        module_src = module_src,
-        outer_signature = self$signature,
-        max_predictor_calls = private$.max_predictor_calls
+      private$.max_tool_calls <- flex_predictor_limit(
+        max_tool_calls,
+        "max_tool_calls"
       )
-      private$.plan <- compiled$plan
-      private$.module_src <- compiled$module_src
+      private$.source_format <- match.arg(source_format, c("json", "r"))
+      private$.tools <- tools
+      private$.interpreter_factory <- interpreter_factory
+      private$.require_sandbox <- isTRUE(require_sandbox)
+      if (identical(private$.source_format, "r")) {
+        flex_validate_host_tools(private$.tools)
+        validate_interpreter_factory(private$.interpreter_factory)
+        private$.module_src <- flex_validate_code_source(
+          module_src %||%
+            flex_code_baseline_source(use_rlm = length(private$.tools) > 0L)
+        )
+        private$.plan <- NULL
+      } else {
+        compiled <- flex_compile_source(
+          module_src = module_src,
+          outer_signature = self$signature,
+          max_predictor_calls = private$.max_predictor_calls
+        )
+        private$.plan <- compiled$plan
+        private$.module_src <- compiled$module_src
+      }
     },
 
     forward = function(
@@ -210,43 +318,45 @@ FlexModule <- R6::R6Class(
           class = "dsprrr_flex_runtime_error"
         )
       }
-      flex_validate_runtime_input_names(inputs, self$signature)
-      validate_signature_inputs(
-        self$signature,
-        inputs,
-        missing = "ignore",
-        extra = "ignore",
-        type = "ignore",
-        context = "Flex inputs"
-      )
-      input_types <- flex_signature_input_types(self$signature)
-      for (name in names(input_types)) {
-        flex_validate_runtime_value(
-          inputs[[name]],
-          input_types[[name]],
-          paste0("Flex input $", name),
-          class = c(
-            "dsprrr_flex_runtime_input_error",
-            "dsprrr_type_mismatch_error",
-            "dsprrr_input_validation_error"
-          ),
-          kind = "input"
-        )
+      flex_validate_invocation_inputs(inputs, self$signature)
+
+      if (identical(private$.source_format, "r")) {
+        return(flex_code_forward(
+          module = self,
+          inputs = inputs,
+          llm = .llm %||% self$chat %||% get_default_chat(create = FALSE),
+          trace = trace,
+          cache = .cache,
+          rollout_id = rollout_id,
+          ...
+        ))
       }
 
-      llm <- resolve_module_llm(self, .llm = .llm)
+      has_predictors <- length(private$.plan$steps) > 0L
+      llm <- if (has_predictors) {
+        resolve_module_llm(self, .llm = .llm)
+      } else {
+        .llm %||% self$chat %||% get_default_chat(create = FALSE)
+      }
       predictor_config <- flex_predictor_config(self$config)
       started_at <- Sys.time()
       values <- list()
       step_metadata <- vector("list", length(private$.plan$steps))
-      names(step_metadata) <- vapply(
+      step_events <- vector("list", length(private$.plan$steps))
+      step_names <- vapply(
         private$.plan$steps,
         `[[`,
         character(1),
         "name"
       )
+      names(step_metadata) <- step_names
+      names(step_events) <- step_names
 
       for (index in seq_along(private$.plan$steps)) {
+        flex_check_predictor_budget(
+          calls_started = index - 1L,
+          max_predictor_calls = private$.max_predictor_calls
+        )
         step <- private$.plan$steps[[index]]
         step_inputs <- lapply(
           step$bindings,
@@ -282,16 +392,25 @@ FlexModule <- R6::R6Class(
           }
         )
 
-        values[[step$name]] <- flex_output_record(
+        step_output <- flex_output_record(
           result$output[[1L]],
           step$output_types,
           step$name,
           output_type = step$signature@output_type
         )
+        values[[step$name]] <- step_output
         step_metadata[[step$name]] <- list(
           name = step$name,
           primitive = step$primitive,
           metadata = result$metadata[[1L]]
+        )
+        step_events[[index]] <- flex_predictor_trace_event(
+          step = step,
+          index = index,
+          inputs = step_inputs,
+          output = step_output,
+          metadata = result$metadata[[1L]],
+          module_src = private$.module_src
         )
       }
 
@@ -328,30 +447,18 @@ FlexModule <- R6::R6Class(
         total_tokens = usage$total_tokens,
         cost = usage$cost,
         steps = step_metadata,
+        program_trace_events = step_events,
         module_src = private$.module_src
       )
 
       if (isTRUE(trace)) {
-        self$state$traces <- append(
-          self$state$traces,
-          list(list(
-            timestamp = finished_at,
-            inputs = inputs,
-            output = output,
-            model = model,
-            predictor_calls = length(private$.plan$steps),
-            steps = step_metadata,
-            module_src = private$.module_src,
-            latency_ms = latency_ms,
-            tokens = usage[c(
-              "input_tokens",
-              "output_tokens",
-              "cached_input_tokens",
-              "total_tokens"
-            )],
-            cost = usage$cost
-          ))
-        )
+        # Each actual predictor call is one ordered trace event. There is no
+        # additional aggregate event, so downstream usage accounting cannot
+        # count the same provider call twice.
+        self$state$traces <- append(self$state$traces, step_events)
+        for (event in step_events) {
+          add_to_global_history(event, source = "FlexModule")
+        }
       }
 
       tibble::tibble(
@@ -362,13 +469,17 @@ FlexModule <- R6::R6Class(
     },
 
     bind = function(module_src) {
-      compiled <- flex_compile_source(
-        module_src = module_src,
-        outer_signature = self$signature,
-        max_predictor_calls = private$.max_predictor_calls
-      )
-      private$.plan <- compiled$plan
-      private$.module_src <- compiled$module_src
+      if (identical(private$.source_format, "r")) {
+        private$.module_src <- flex_validate_code_source(module_src)
+      } else {
+        compiled <- flex_compile_source(
+          module_src = module_src,
+          outer_signature = self$signature,
+          max_predictor_calls = private$.max_predictor_calls
+        )
+        private$.plan <- compiled$plan
+        private$.module_src <- compiled$module_src
+      }
       invisible(self)
     },
 
@@ -376,7 +487,12 @@ FlexModule <- R6::R6Class(
       FlexModule$new(
         signature = self$signature,
         module_src = private$.module_src,
+        tools = private$.tools,
+        interpreter_factory = private$.interpreter_factory,
+        source_format = private$.source_format,
         max_predictor_calls = private$.max_predictor_calls,
+        max_tool_calls = private$.max_tool_calls,
+        require_sandbox = private$.require_sandbox,
         config = self$config,
         chat = self$chat
       )
@@ -386,7 +502,12 @@ FlexModule <- R6::R6Class(
       new_module <- FlexModule$new(
         signature = self$signature,
         module_src = private$.module_src,
+        tools = private$.tools,
+        interpreter_factory = private$.interpreter_factory,
+        source_format = private$.source_format,
         max_predictor_calls = private$.max_predictor_calls,
+        max_tool_calls = private$.max_tool_calls,
+        require_sandbox = private$.require_sandbox,
         config = lapply(self$config, identity),
         chat = self$chat
       )
@@ -467,6 +588,13 @@ FlexModule <- R6::R6Class(
       # carry that derived signature in the validated execution plan.
       compiled <- if (is.null(candidate) && !instruction_update) {
         NULL
+      } else if (identical(private$.source_format, "r")) {
+        list(
+          module_src = flex_validate_code_source(
+            candidate %||% private$.module_src
+          ),
+          plan = NULL
+        )
       } else {
         flex_compile_source(
           module_src = candidate %||% private$.module_src,
@@ -503,30 +631,101 @@ FlexModule <- R6::R6Class(
         )
       }
       private$.max_predictor_calls
+    },
+    max_tool_calls = function(value) {
+      if (!missing(value)) {
+        cli::cli_abort(
+          "{.field max_tool_calls} is read-only",
+          class = "dsprrr_flex_read_only_error"
+        )
+      }
+      private$.max_tool_calls
+    },
+    source_format = function(value) {
+      if (!missing(value)) {
+        cli::cli_abort(
+          "{.field source_format} is read-only",
+          class = "dsprrr_flex_read_only_error"
+        )
+      }
+      private$.source_format
+    },
+    tools = function(value) {
+      if (!missing(value)) {
+        cli::cli_abort(
+          "{.field tools} is read-only",
+          class = "dsprrr_flex_read_only_error"
+        )
+      }
+      private$.tools
+    },
+    interpreter_factory = function(value) {
+      if (!missing(value)) {
+        cli::cli_abort(
+          "{.field interpreter_factory} is read-only",
+          class = "dsprrr_flex_read_only_error"
+        )
+      }
+      private$.interpreter_factory
+    },
+    require_sandbox = function(value) {
+      if (!missing(value)) {
+        cli::cli_abort(
+          "{.field require_sandbox} is read-only",
+          class = "dsprrr_flex_read_only_error"
+        )
+      }
+      private$.require_sandbox
     }
   ),
   private = list(
     .module_src = NULL,
     .plan = NULL,
-    .max_predictor_calls = NULL
+    .max_predictor_calls = NULL,
+    .max_tool_calls = 100L,
+    .source_format = "json",
+    .tools = list(),
+    .interpreter_factory = NULL,
+    .require_sandbox = TRUE
   )
 )
 
-flex_positive_integer <- function(value, arg) {
+flex_predictor_limit <- function(value, arg) {
+  if (is.null(value)) {
+    return(NULL)
+  }
   valid <- is.numeric(value) &&
     length(value) == 1L &&
     !is.na(value) &&
     is.finite(value) &&
     value == floor(value) &&
-    value >= 1L &&
+    value >= 0L &&
     value <= .Machine$integer.max
   if (!valid) {
     cli::cli_abort(
-      "{.arg {arg}} must be one positive integer",
+      "{.arg {arg}} must be one non-negative integer or {.code NULL}",
       class = "dsprrr_flex_config_error"
     )
   }
   as.integer(value)
+}
+
+flex_check_predictor_budget <- function(calls_started, max_predictor_calls) {
+  if (
+    !is.null(max_predictor_calls) &&
+      calls_started >= max_predictor_calls
+  ) {
+    cli::cli_abort(
+      c(
+        "Flex invocation exceeds {.arg max_predictor_calls}",
+        "x" = "The invocation already started {calls_started} predictor call{?s}; the limit is {max_predictor_calls}."
+      ),
+      class = c("dsprrr_flex_budget_error", "dsprrr_flex_runtime_error"),
+      predictor_calls = as.integer(calls_started),
+      max_predictor_calls = max_predictor_calls
+    )
+  }
+  invisible(NULL)
 }
 
 flex_validate_runtime_input_names <- function(inputs, signature) {
@@ -557,6 +756,33 @@ flex_validate_runtime_input_names <- function(inputs, signature) {
     )
   }
   invisible(NULL)
+}
+
+flex_validate_invocation_inputs <- function(inputs, signature) {
+  flex_validate_runtime_input_names(inputs, signature)
+  validate_signature_inputs(
+    signature,
+    inputs,
+    missing = "ignore",
+    extra = "ignore",
+    type = "ignore",
+    context = "Flex inputs"
+  )
+  input_types <- flex_signature_input_types(signature)
+  for (name in names(input_types)) {
+    flex_validate_runtime_value(
+      inputs[[name]],
+      input_types[[name]],
+      paste0("Flex input $", name),
+      class = c(
+        "dsprrr_flex_runtime_input_error",
+        "dsprrr_type_mismatch_error",
+        "dsprrr_input_validation_error"
+      ),
+      kind = "input"
+    )
+  }
+  invisible(inputs)
 }
 
 flex_data_frame_input_row <- function(batch, signature) {
@@ -655,15 +881,17 @@ flex_compile_source <- function(
   }
   if (
     !is.list(source$steps) ||
-      length(source$steps) < 1L ||
       !is.null(names(source$steps))
   ) {
     flex_source_abort(
-      "{.field steps} must be a non-empty JSON array",
+      "{.field steps} must be a JSON array",
       class = "dsprrr_flex_schema_error"
     )
   }
-  if (length(source$steps) > max_predictor_calls) {
+  if (
+    !is.null(max_predictor_calls) &&
+      length(source$steps) > max_predictor_calls
+  ) {
     flex_source_abort(
       c(
         "Flex source exceeds {.arg max_predictor_calls}",
@@ -1834,6 +2062,51 @@ flex_output_record <- function(value, output_types, step_name, output_type) {
   )
 }
 
+flex_predictor_trace_event <- function(
+  step,
+  index,
+  inputs,
+  output,
+  metadata,
+  module_src
+) {
+  tokens <- metadata[c(
+    "input_tokens",
+    "output_tokens",
+    "cached_input_tokens",
+    "total_tokens"
+  )]
+  event_metadata <- metadata
+  event_metadata$predictor_call_index <- as.integer(index)
+  event_metadata$step_name <- step$name
+  event_metadata$primitive <- step$primitive
+
+  instructions <- metadata$instructions %||% ""
+  prompt <- metadata$prompt %||% ""
+  full_prompt <- paste(
+    Filter(nzchar, c(instructions, prompt)),
+    collapse = "\n\n"
+  )
+
+  list(
+    timestamp = metadata$timestamp %||% Sys.time(),
+    kind = "predictor_call",
+    predictor_call_index = as.integer(index),
+    step_name = step$name,
+    primitive = step$primitive,
+    inputs = inputs,
+    output = output,
+    prompt = full_prompt,
+    instructions = instructions,
+    latency_ms = metadata$latency_ms %||% NA_real_,
+    tokens = tokens,
+    cost = metadata$cost %||% NA_real_,
+    model = metadata$model %||% NA_character_,
+    module_src = module_src,
+    metadata = event_metadata
+  )
+}
+
 flex_aggregate_step_usage <- function(step_metadata) {
   metadata <- lapply(step_metadata, `[[`, "metadata")
   sum_field <- function(field, integer = FALSE) {
@@ -1852,4 +2125,270 @@ flex_aggregate_step_usage <- function(step_metadata) {
     total_tokens = sum_field("total_tokens", integer = TRUE),
     cost = sum_field("cost")
   )
+}
+
+flex_dataset_input_rows <- function(module, data) {
+  input_names <- names(flex_signature_input_types(module$signature))
+  lapply(seq_len(nrow(data)), function(index) {
+    row <- flex_data_frame_input_row(
+      data[index, input_names, drop = FALSE],
+      module$signature
+    )
+    flex_validate_invocation_inputs(row, module$signature)
+    row
+  })
+}
+
+flex_dataset_step_frame <- function(step, rows) {
+  fields <- names(step$bindings)
+  columns <- lapply(fields, function(field) {
+    lapply(rows, `[[`, field)
+  })
+  names(columns) <- fields
+  tibble::as_tibble(columns)
+}
+
+flex_dataset_row_metadata <- function(
+  module,
+  step_metadata,
+  step_events,
+  fallback_timestamp = Sys.time()
+) {
+  usage <- flex_aggregate_step_usage(step_metadata)
+  inner <- if (length(step_metadata) == 0L) {
+    list()
+  } else {
+    step_metadata[[length(step_metadata)]]$metadata %||% list()
+  }
+  inner$timestamp <- inner$timestamp %||% fallback_timestamp
+  inner$model <- inner$model %||% NA_character_
+  inner$predictor_calls <- as.integer(length(step_metadata))
+  inner$latency_ms <- inner$latency_ms %||% 0
+  inner$input_tokens <- usage$input_tokens
+  inner$output_tokens <- usage$output_tokens
+  inner$cached_input_tokens <- usage$cached_input_tokens
+  inner$total_tokens <- usage$total_tokens
+  inner$cost <- usage$cost
+  inner$steps <- step_metadata
+  inner$program_trace_events <- step_events
+  inner$module_src <- module$module_src
+  inner
+}
+
+flex_dataset_validation_failure <- function(metadata, error) {
+  metadata$error <- conditionMessage(error)
+  metadata$error_class <- class(error)[1L] %||% "error"
+  metadata$error_stage <- "flex_validation"
+  metadata
+}
+
+run_flex_dataset_batch <- function(
+  program,
+  data,
+  .llm,
+  .verbose,
+  .progress,
+  .return_format,
+  .concurrency,
+  .concurrency_runtime,
+  dots
+) {
+  if (identical(program$source_format, "r")) {
+    cli::cli_abort(
+      c(
+        "Concurrent executable Flex dataset execution is not available",
+        "i" = "Use sequential rows so each invocation can own and close its interpreter."
+      ),
+      class = c(
+        "dsprrr_flex_concurrency_unsupported_error",
+        "dsprrr_concurrency_unsupported_error"
+      )
+    )
+  }
+  plan <- flex_execution_plan(program)
+  if (length(plan$steps) > 1L) {
+    cli::cli_abort(
+      c(
+        "Concurrent Flex dataset execution requires at most one predictor step",
+        "x" = "This validated source contains {length(plan$steps)} predictor steps.",
+        "i" = "Use sequential execution to preserve per-row Chat state across steps."
+      ),
+      class = c(
+        "dsprrr_flex_concurrency_unsupported_error",
+        "dsprrr_concurrency_unsupported_error"
+      ),
+      predictor_calls = as.integer(length(plan$steps))
+    )
+  }
+
+  rows <- flex_dataset_input_rows(program, data)
+  error_conditions <- NULL
+  if (length(plan$steps) == 0L) {
+    results <- lapply(seq_along(rows), function(index) {
+      output <- lapply(
+        plan$outputs,
+        flex_resolve_reference,
+        inputs = rows[[index]],
+        values = list()
+      )
+      output <- output[names(plan$outputs)]
+      output <- flex_validate_output_record(
+        output,
+        flex_signature_output_types(program$signature),
+        context = "Flex outer output",
+        class = "dsprrr_flex_output_error",
+        scalar = FALSE
+      )
+      metadata <- flex_dataset_row_metadata(
+        program,
+        step_metadata = list(),
+        step_events = list()
+      )
+      concurrency_fields <- concurrency_metadata(.concurrency_runtime)
+      metadata[names(concurrency_fields)] <- concurrency_fields
+      metadata$backend <- .concurrency_runtime$effective_backend
+      metadata$batch_index <- as.integer(index)
+      list(output = output, chat = NULL, metadata = metadata)
+    })
+  } else {
+    step <- plan$steps[[1L]]
+    step_rows <- lapply(rows, function(inputs) {
+      lapply(
+        step$bindings,
+        flex_resolve_reference,
+        inputs = inputs,
+        values = list()
+      )
+    })
+    llm <- resolve_module_llm(program, .llm = .llm)
+    predictor <- module(
+      signature = step$signature,
+      type = step$primitive,
+      config = flex_predictor_config(program$config),
+      chat = llm
+    )
+    predictor_data <- flex_dataset_step_frame(step, step_rows)
+    predictor_results <- do.call(
+      run_dataset,
+      c(
+        list(
+          module = predictor,
+          data = predictor_data,
+          .llm = NULL,
+          .verbose = .verbose,
+          .concurrency = .concurrency,
+          .progress = .progress,
+          .return_format = "structured"
+        ),
+        dots
+      )
+    )
+    error_conditions <- attr(
+      predictor_results,
+      "dsprrr_error_conditions",
+      exact = TRUE
+    )
+
+    results <- lapply(seq_along(rows), function(index) {
+      inner_metadata <- predictor_results$.metadata[[index]] %||% list()
+      raw_output <- predictor_results$result[[index]]
+      failed <- run_error_present(inner_metadata$error)
+      validated <- if (failed) {
+        NULL
+      } else {
+        tryCatch(
+          {
+            step_output <- flex_output_record(
+              raw_output,
+              step$output_types,
+              step$name,
+              output_type = step$signature@output_type
+            )
+            values <- stats::setNames(list(step_output), step$name)
+            output <- lapply(
+              plan$outputs,
+              flex_resolve_reference,
+              inputs = rows[[index]],
+              values = values
+            )
+            output <- output[names(plan$outputs)]
+            output <- flex_validate_output_record(
+              output,
+              flex_signature_output_types(program$signature),
+              context = "Flex outer output",
+              class = "dsprrr_flex_output_error",
+              scalar = FALSE
+            )
+            list(step_output = step_output, output = output)
+          },
+          error = identity
+        )
+      }
+      validation_error <- inherits(validated, "condition")
+      event_output <- if (is.list(validated) && !validation_error) {
+        validated$step_output
+      } else {
+        raw_output
+      }
+      event <- flex_predictor_trace_event(
+        step = step,
+        index = 1L,
+        inputs = step_rows[[index]],
+        output = event_output,
+        metadata = inner_metadata,
+        module_src = program$module_src
+      )
+      event$metadata$batch_index <- as.integer(index)
+      step_metadata <- stats::setNames(
+        list(list(
+          name = step$name,
+          primitive = step$primitive,
+          metadata = inner_metadata
+        )),
+        step$name
+      )
+      step_events <- stats::setNames(list(event), step$name)
+      metadata <- flex_dataset_row_metadata(
+        program,
+        step_metadata = step_metadata,
+        step_events = step_events
+      )
+      if (validation_error) {
+        metadata <- flex_dataset_validation_failure(metadata, validated)
+      }
+      output <- if (failed || validation_error) NA else validated$output
+      list(
+        output = output,
+        chat = predictor_results$.chat[[index]],
+        metadata = metadata
+      )
+    })
+  }
+
+  trace_events <- unname(unlist(
+    lapply(
+      results,
+      function(result) result$metadata$program_trace_events
+    ),
+    recursive = FALSE
+  ))
+  program$state$traces <- append(program$state$traces, trace_events)
+  if (!is.null(error_conditions)) {
+    attr(results, "dsprrr_error_conditions") <- error_conditions
+  }
+
+  if (identical(.return_format, "structured")) {
+    return(results)
+  }
+  simple <- lapply(results, function(result) {
+    if (run_error_present(result$metadata$error)) {
+      return(structure(NA, error_message = result$metadata$error))
+    }
+    extract_simple_output(result$output, program$signature@output_type)
+  })
+  simple <- if (length(simple) == 1L) simple[[1L]] else simple
+  if (!is.null(error_conditions)) {
+    attr(simple, "dsprrr_error_conditions") <- error_conditions
+  }
+  simple
 }

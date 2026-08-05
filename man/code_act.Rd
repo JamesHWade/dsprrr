@@ -32,7 +32,8 @@ raises a \code{dsprrr_codeact_iteration_limit} error.}
 \item{...}{Additional arguments passed to the module}
 
 \item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, and idempotent terminal \code{close()}.
+runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
+terminal \code{shutdown()} or \code{close()}.
 Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
@@ -41,8 +42,8 @@ A CodeActModule object
 \description{
 Factory function to create a CodeActModule that can use both tools and
 R code execution to solve problems.
-Use \code{\link[=run]{run()}} to execute it. Generic async and module \verb{$stream()} entry points
-reject CodeAct graphs before provider or factory work. \code{\link[=run_stream]{run_stream()}}
+Use \code{\link[=run]{run()}} to execute it. \code{\link[=run_async]{run_async()}} supports factory-backed modules;
+async streaming and module \verb{$stream()} reject CodeAct. \code{\link[=run_stream]{run_stream()}}
 preserves the synchronous \code{forward()} fallback unless a matching
 token-stream request is active; that request is rejected first.
 }

@@ -467,6 +467,9 @@ test_that("mcp_repl_runner normalizes MCP errors and resets the session", {
 
   expect_identical(result$success, FALSE)
   expect_match(result$error, "execution error")
+  expect_identical(result$error_type, "execution")
+  expect_true(result$retryable)
+  expect_false(runner$terminal)
   expect_identical(result$stdout, "object not found")
   expect_identical(utils::tail(inputs, 1L), "\u0004")
 })
@@ -481,6 +484,32 @@ test_that("mcp_repl_runner rejects protocol-level reset failures", {
     runner$reset(),
     class = "dsprrr_mcp_repl_reset_error"
   )
+  expect_true(runner$terminal)
+  expect_error(
+    runner$execute("1 + 1"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+})
+
+test_that("mcp transport failures terminalize the interpreter session", {
+  calls <- 0L
+  runner <- mcp_repl_runner(repl = function(input, timeout_ms) {
+    calls <<- calls + 1L
+    stop("transport disconnected")
+  })
+
+  result <- runner$execute("1 + 1")
+
+  expect_false(result$success)
+  expect_identical(result$error_type, "interpreter")
+  expect_false(result$retryable)
+  expect_true(runner$terminal)
+  expect_error(
+    runner$execute("2 + 2"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+  expect_identical(calls, 1L)
+  expect_invisible(runner$shutdown())
 })
 
 test_that("mcp_repl_runner rounds timeout milliseconds up safely", {
@@ -618,6 +647,8 @@ test_that("authenticated RLM pager failures report reset failures accurately", {
   expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
   expect_false(result$success)
   expect_match(result$error, "session could not be reset", fixed = TRUE)
+  expect_identical(result$error_type, "interpreter")
+  expect_true(runner$terminal)
   expect_false(grepl("session was reset", result$error, fixed = TRUE))
 })
 

@@ -112,13 +112,12 @@ test_that("GEPA discovers direct and nested Flex leaves by stable graph path", {
     names(candidate$components),
     c(
       "instructions::$/steps/ordinary",
-      "instructions::$/steps/flexible",
       "module_src::$/steps/flexible"
     )
   )
   expect_identical(
     unname(vapply(candidate$components, `[[`, character(1), "kind")),
-    c("instructions", "instructions", "module_src")
+    c("instructions", "module_src")
   )
 })
 
@@ -270,8 +269,6 @@ test_that("GEPA materializes complete mixed candidates on a deep copy", {
   candidate <- dsprrr:::gepa_component_candidate(program)
   candidate$components[["instructions::$/steps/ordinary"]]$value <-
     "Improved ordinary instructions."
-  candidate$components[["instructions::$/steps/flexible"]]$value <-
-    "Improved Flex instructions."
   candidate$components[["module_src::$/steps/flexible"]]$value <-
     gepa_flex_test_source("draft", "answer")
 
@@ -290,10 +287,6 @@ test_that("GEPA materializes complete mixed candidates on a deep copy", {
     copied[["$/steps/ordinary"]]$signature@instructions,
     "Improved ordinary instructions."
   )
-  expect_identical(
-    copied[["$/steps/flexible"]]$signature@instructions,
-    "Improved Flex instructions."
-  )
   expect_false(identical(
     copied[["$/steps/flexible"]]$module_src,
     original[["$/steps/flexible"]]$module_src
@@ -301,10 +294,6 @@ test_that("GEPA materializes complete mixed candidates on a deep copy", {
   expect_identical(
     original[["$/steps/ordinary"]]$signature@instructions,
     "Ordinary instructions."
-  )
-  expect_identical(
-    original[["$/steps/flexible"]]$signature@instructions,
-    "Flex instructions."
   )
 })
 
@@ -333,7 +322,19 @@ test_that("GEPA source binding failure is transactional and non-selectable", {
 })
 
 test_that("Flex proposer is structured, schema-grounded, and row-aligned", {
-  program <- suppressWarnings(flex("question -> answer"))
+  task_signature <- signature(
+    inputs = list(input(
+      "question",
+      description = "Arithmetic question supplied by the user."
+    )),
+    output_type = ellmer::type_object(
+      answer = ellmer::type_string(
+        description = "The exact arithmetic answer."
+      )
+    ),
+    instructions = "Solve the arithmetic task exactly."
+  )
+  program <- suppressWarnings(flex(task_signature))
   proposed <- gepa_flex_test_source()
   chat <- gepa_flex_test_chat(list(module_src = proposed))
   failures <- list(list(
@@ -360,12 +361,69 @@ test_that("Flex proposer is structured, schema-grounded, and row-aligned", {
   expect_match(prompt, "complete declarative Flex module source", fixed = TRUE)
   expect_match(prompt, "schema_version", fixed = TRUE)
   expect_match(prompt, program$module_src, fixed = TRUE)
+  expect_match(prompt, "Solve the arithmetic task exactly.", fixed = TRUE)
+  expect_match(
+    prompt,
+    "Arithmetic question supplied by the user.",
+    fixed = TRUE
+  )
+  expect_match(prompt, "The exact arithmetic answer.", fixed = TRUE)
   expect_match(prompt, '"row_id":17', fixed = TRUE)
   expect_match(prompt, "What is 2 + 2?", fixed = TRUE)
   expect_match(prompt, '"expected_output":"4"', fixed = TRUE)
   expect_match(prompt, '"predicted_output":"5"', fixed = TRUE)
   expect_match(prompt, "Arithmetic was incorrect.", fixed = TRUE)
   expect_false(grepl("```", prompt, fixed = TRUE))
+})
+
+test_that("Flex proposer describes the executable R DSL and host tools", {
+  source <- paste(
+    "forward <- function(question) {",
+    "  Prediction(answer = lookup(query = question))",
+    "}",
+    sep = "\n"
+  )
+  program <- suppressWarnings(flex(
+    "question -> answer",
+    module_src = source,
+    tools = list(lookup = function(query) query),
+    interpreter_factory = r_code_runner,
+    source_format = "r",
+    require_sandbox = FALSE,
+    max_tool_calls = 3L
+  ))
+  proposed <- sub("query = question", "query = toupper(question)", source)
+  chat <- gepa_flex_test_chat(list(module_src = proposed))
+
+  result <- dsprrr:::gepa_propose_flex_source(
+    program,
+    list(list(
+      row_id = 1L,
+      inputs = list(question = "q"),
+      expected = "A",
+      predicted = "B",
+      feedback = "Normalize before lookup."
+    )),
+    .llm = chat
+  )
+
+  expect_identical(result$status, "proposed")
+  expect_identical(result$module_src, proposed)
+  prompt <- chat$prompts()[[1L]]
+  expect_match(prompt, "complete executable R Flex", fixed = TRUE)
+  expect_match(prompt, '"source_format":"r"', fixed = TRUE)
+  expect_match(prompt, '"name":"lookup"', fixed = TRUE)
+  expect_match(prompt, '"arguments":"query"', fixed = TRUE)
+  expect_match(prompt, '"required":"query"', fixed = TRUE)
+  expect_match(prompt, "ProgramOfThought", fixed = TRUE)
+  expect_match(prompt, "versioned bridge", fixed = TRUE)
+  expect_match(prompt, "max_predictor_calls", fixed = TRUE)
+  expect_match(prompt, '"max_tool_calls":3', fixed = TRUE)
+  expect_match(
+    prompt,
+    "host-tool calls count against max_tool_calls",
+    fixed = TRUE
+  )
 })
 
 test_that("nested Flex proposals label component and root-program evidence", {
@@ -449,20 +507,16 @@ test_that("Flex proposer rejects incomplete or invalid source responses", {
   expect_identical(program$module_src, invalid_result$module_src)
 })
 
-test_that("Flex proposer distinguishes provider failure and safe fallback", {
+test_that("Flex proposer propagates provider failure and keeps explicit fallback", {
   program <- suppressWarnings(flex("question -> answer"))
   provider_error <- simpleError("provider unavailable")
   class(provider_error) <- c("gepa_test_provider_error", class(provider_error))
   chat <- gepa_flex_test_chat(error = provider_error)
 
-  expect_warning(
-    result <- dsprrr:::gepa_propose_flex_source(program, list(), .llm = chat),
-    class = "dsprrr_gepa_flex_proposer_warning"
+  expect_error(
+    dsprrr:::gepa_propose_flex_source(program, list(), .llm = chat),
+    class = "gepa_test_provider_error"
   )
-  expect_identical(result$status, "unchanged_provider_error")
-  expect_true(result$valid)
-  expect_identical(result$module_src, program$module_src)
-  expect_s3_class(result$condition, "gepa_test_provider_error")
 
   no_provider <- dsprrr:::gepa_propose_flex_source(
     program,
@@ -493,6 +547,64 @@ test_that("Flex proposer uses the shared provider budget ledger", {
   expect_identical(summary$attempts, 1L)
   expect_identical(summary$successes, 1L)
   expect_true("gepa:flex:budgeted" %in% summary$completed_units)
+})
+
+test_that("budgeted Flex proposer records and propagates provider failure", {
+  program <- suppressWarnings(flex("question -> answer"))
+  provider_error <- simpleError("provider unavailable")
+  class(provider_error) <- c("gepa_test_provider_error", class(provider_error))
+  chat <- gepa_flex_test_chat(error = provider_error)
+  budget <- dsprrr:::new_optimizer_budget(
+    dsprrr:::optimizer_control(max_errors = 2L)
+  )
+
+  expect_error(
+    dsprrr:::gepa_propose_flex_source(
+      program,
+      list(),
+      .llm = chat,
+      budget = budget,
+      unit_id = "gepa:flex:provider-failure"
+    ),
+    class = "gepa_test_provider_error"
+  )
+  summary <- dsprrr:::optimizer_budget_summary(budget)
+
+  expect_identical(summary$provider_calls, 1L)
+  expect_identical(summary$total_errors, 1L)
+  expect_true("gepa:flex:provider-failure" %in% summary$completed_units)
+})
+
+test_that("component instruction proposer propagates provider failure", {
+  program <- gepa_flex_test_program()
+  candidate <- dsprrr:::gepa_component_candidate(program)
+  provider_error <- simpleError("instruction provider unavailable")
+  class(provider_error) <- c("gepa_test_provider_error", class(provider_error))
+  chat <- gepa_flex_test_chat(error = provider_error)
+
+  expect_error(
+    dsprrr:::gepa_mutate_component_candidate(
+      candidate,
+      program,
+      failed_examples = list(),
+      .llm = chat,
+      component_id = "instructions::$/steps/ordinary"
+    ),
+    class = "gepa_test_provider_error"
+  )
+
+  malformed <- dsprrr:::gepa_mutate_component_candidate(
+    candidate,
+    program,
+    failed_examples = list(),
+    .llm = gepa_flex_test_chat(response = "not structured"),
+    component_id = "instructions::$/steps/ordinary"
+  )
+  expect_false(malformed$valid)
+  expect_identical(
+    malformed$failure$error_class,
+    "dsprrr_gepa_invalid_candidate"
+  )
 })
 
 test_that("Flex evaluation preflights and records exact predictor calls", {
@@ -762,10 +874,8 @@ test_that("valid candidate evaluation preserves row and error classification", {
 })
 
 test_that("component population mutates complete instruction and source values", {
-  program <- suppressWarnings(flex(
-    signature("question -> answer", instructions = "Baseline instructions.")
-  ))
-  proposed <- gepa_flex_test_source()
+  program <- gepa_flex_test_program()
+  proposed <- gepa_flex_test_source("draft", "answer")
   chat <- local({
     structure(
       list(
@@ -793,15 +903,15 @@ test_that("component population mutates complete instruction and source values",
     "dsprrr_gepa_component_candidate"
   )))
   expect_identical(
-    population[[2L]]$components[["instructions::$"]]$value,
+    population[[2L]]$components[["instructions::$/steps/ordinary"]]$value,
     "Improved instructions."
   )
   expect_false(identical(
-    population[[3L]]$components[["module_src::$"]]$value,
-    population[[1L]]$components[["module_src::$"]]$value
+    population[[3L]]$components[["module_src::$/steps/flexible"]]$value,
+    population[[1L]]$components[["module_src::$/steps/flexible"]]$value
   ))
   expect_true(jsonlite::validate(
-    population[[3L]]$components[["module_src::$"]]$value
+    population[[3L]]$components[["module_src::$/steps/flexible"]]$value
   ))
 
   singleton <- dsprrr:::gepa_initial_component_population(
@@ -816,11 +926,88 @@ test_that("component population mutates complete instruction and source values",
   )
 })
 
+test_that("component selectors support round-robin, all, and custom policies", {
+  candidate <- dsprrr:::gepa_component_candidate(gepa_flex_test_program())
+  ids <- names(candidate$components)
+
+  expect_identical(
+    dsprrr:::gepa_component_selector_ids("round_robin", candidate),
+    ids[[1L]]
+  )
+  candidate$history <- list(list(component_id = ids[[1L]]))
+  expect_identical(
+    dsprrr:::gepa_component_selector_ids("round_robin", candidate),
+    ids[[2L]]
+  )
+  expect_identical(
+    dsprrr:::gepa_component_selector_ids("all", candidate),
+    ids
+  )
+  custom <- function(component_ids, candidate, failed_examples, context) {
+    expect_identical(context$generation, 3L)
+    component_ids[[2L]]
+  }
+  expect_identical(
+    dsprrr:::gepa_component_selector_ids(
+      custom,
+      candidate,
+      context = list(generation = 3L)
+    ),
+    ids[[2L]]
+  )
+})
+
+test_that("all-component mutation is atomic, budgeted, and lineage-tracked", {
+  program <- gepa_flex_test_program()
+  baseline <- dsprrr:::gepa_component_candidate(program)
+  proposed <- gepa_flex_test_source("draft", "answer")
+  chat <- structure(
+    list(chat_structured = function(prompt, type, ...) {
+      fields <- names(type@properties)
+      if (identical(fields, "instructions")) {
+        return(list(instructions = "Improved ordinary instructions."))
+      }
+      list(module_src = proposed)
+    }),
+    class = "Chat"
+  )
+  budget <- dsprrr:::new_optimizer_budget(dsprrr:::optimizer_control())
+
+  mutated <- dsprrr:::gepa_mutate_component_candidate(
+    baseline,
+    program,
+    failed_examples = list(),
+    .llm = chat,
+    budget = budget,
+    unit_id = "gepa:all",
+    component_selector = "all"
+  )
+  summary <- dsprrr:::optimizer_budget_summary(budget)
+
+  expect_identical(
+    mutated$components[["instructions::$/steps/ordinary"]]$value,
+    "Improved ordinary instructions."
+  )
+  expect_false(identical(
+    mutated$components[["module_src::$/steps/flexible"]]$value,
+    baseline$components[["module_src::$/steps/flexible"]]$value
+  ))
+  expect_length(mutated$history, 2L)
+  expect_identical(
+    dsprrr:::gepa_component_candidate_lineage(mutated)$parents,
+    dsprrr:::gepa_component_candidate_id(baseline)
+  )
+  expect_identical(summary$provider_calls, 2L)
+  expect_setequal(
+    summary$completed_units,
+    c("gepa:all:component:1", "gepa:all:component:2")
+  )
+})
+
 test_that("component crossover selects whole values and handles one parent", {
   program <- suppressWarnings(flex("question -> answer"))
   parent1 <- dsprrr:::gepa_component_candidate(program)
   parent2 <- parent1
-  parent2$components[["instructions::$"]]$value <- "Parent two."
   parent2$components[["module_src::$"]]$value <- gepa_flex_test_source()
 
   set.seed(11)
@@ -869,6 +1056,142 @@ test_that("component crossover selects whole values and handles one parent", {
   )))
 })
 
+test_that("lineage merge combines compatible sibling improvements", {
+  program <- gepa_flex_test_program()
+  ancestor <- dsprrr:::gepa_component_candidate(program)
+  ancestor_id <- dsprrr:::gepa_component_candidate_id(ancestor)
+  left <- ancestor
+  left$components[["instructions::$/steps/ordinary"]]$value <-
+    "Left instruction improvement."
+  left <- dsprrr:::gepa_set_component_candidate_lineage(
+    left,
+    parents = ancestor_id,
+    tag = "reflective_mutation"
+  )
+  right <- ancestor
+  right$components[["module_src::$/steps/flexible"]]$value <-
+    gepa_flex_test_source("draft", "answer")
+  right <- dsprrr:::gepa_set_component_candidate_lineage(
+    right,
+    parents = ancestor_id,
+    tag = "reflective_mutation"
+  )
+  registry <- dsprrr:::gepa_component_candidate_registry(list(list(
+    candidate = ancestor,
+    scores = c(quality = 0.2),
+    generation = 1L,
+    index = 1L
+  )))
+
+  merged <- dsprrr:::gepa_merge_component_candidates(
+    left,
+    right,
+    registry,
+    parent1_score = 0.8,
+    parent2_score = 0.9
+  )
+
+  expect_identical(
+    merged$components[["instructions::$/steps/ordinary"]]$value,
+    "Left instruction improvement."
+  )
+  expect_identical(
+    merged$components[["module_src::$/steps/flexible"]]$value,
+    right$components[["module_src::$/steps/flexible"]]$value
+  )
+  expect_identical(
+    dsprrr:::gepa_component_candidate_lineage(merged)$ancestor,
+    ancestor_id
+  )
+  expect_identical(tail(merged$history, 1L)[[1L]]$status, "lineage_merge")
+  expect_true(
+    dsprrr:::gepa_materialize_component_candidate(program, merged)$ok
+  )
+})
+
+test_that("validation frontier retains per-example winners and outputs", {
+  program <- suppressWarnings(flex("question -> answer"))
+  baseline <- dsprrr:::gepa_component_candidate(program)
+  alternative <- baseline
+  alternative$components[["module_src::$"]]$value <- gepa_flex_test_source()
+  dominated <- alternative
+  dominated$components[["module_src::$"]]$value <- sub(
+    "Check the draft before answering.",
+    "Review the draft before answering.",
+    dominated$components[["module_src::$"]]$value,
+    fixed = TRUE
+  )
+  make_evaluation <- function(scores, predictions) {
+    dsprrr:::EvalResult(
+      examples = tibble::tibble(
+        row_id = c(10L, 20L),
+        score = scores,
+        error = NA_character_,
+        predicted = as.list(predictions),
+        feedback = NA_character_
+      ),
+      mean_score = mean(scores),
+      n_evaluated = 2L,
+      n_errors = 0L
+    )
+  }
+  records <- list(
+    list(
+      candidate = baseline,
+      candidate_id = dsprrr:::gepa_component_candidate_id(baseline),
+      parents = character(),
+      candidate_valid = TRUE,
+      complete = TRUE,
+      scores = c(quality = 0.5),
+      primary_eval = make_evaluation(c(0.9, 0.1), c("base-10", "base-20")),
+      discovery_metric_calls = 2L
+    ),
+    list(
+      candidate = alternative,
+      candidate_id = dsprrr:::gepa_component_candidate_id(alternative),
+      parents = dsprrr:::gepa_component_candidate_id(baseline),
+      candidate_valid = TRUE,
+      complete = TRUE,
+      scores = c(quality = 0.6),
+      primary_eval = make_evaluation(c(0.4, 0.8), c("alt-10", "alt-20")),
+      discovery_metric_calls = 2L
+    ),
+    list(
+      candidate = dominated,
+      candidate_id = dsprrr:::gepa_component_candidate_id(dominated),
+      parents = dsprrr:::gepa_component_candidate_id(baseline),
+      candidate_valid = TRUE,
+      complete = TRUE,
+      scores = c(quality = 0.2),
+      primary_eval = make_evaluation(c(0.2, 0.2), c("low-10", "low-20")),
+      discovery_metric_calls = 2L
+    )
+  )
+
+  result <- dsprrr:::gepa_component_validation_result(records)
+  baseline_id <- records[[1L]]$candidate_id
+  alternative_id <- records[[2L]]$candidate_id
+
+  expect_identical(
+    result$per_val_instance_best_candidates[["10"]],
+    baseline_id
+  )
+  expect_identical(
+    result$per_val_instance_best_candidates[["20"]],
+    alternative_id
+  )
+  expect_identical(
+    result$best_outputs_valset[["20"]][[1L]]$output,
+    "alt-20"
+  )
+  expect_identical(result$validation_frontier_scores, c(`10` = 0.9, `20` = 0.8))
+  parent_records <- dsprrr:::gepa_component_parent_records(records, "pareto")
+  expect_setequal(
+    vapply(parent_records, `[[`, character(1), "candidate_id"),
+    c(baseline_id, alternative_id)
+  )
+})
+
 test_that("GEPA Flex audit data and semantic limits are explicit", {
   program <- suppressWarnings(flex("question -> answer"))
   candidate <- dsprrr:::gepa_component_candidate(program)
@@ -877,15 +1200,16 @@ test_that("GEPA Flex audit data and semantic limits are explicit", {
 
   expect_named(
     params$component_values,
-    c("instructions::$", "module_src::$")
+    "module_src::$"
   )
   expect_true(params$candidate_valid)
-  expect_true(semantics$complete_component_candidates)
+  expect_true(semantics$complete_program_candidates)
+  expect_true(semantics$flex_source_is_single_component)
   expect_true(semantics$transactional_flex_binding)
-  expect_true(semantics$whole_program_pareto_selection)
-  expect_false(semantics$per_component_pareto_selection)
-  expect_false(semantics$inference_time_search)
-  expect_match(semantics$note, "GEPA-lite", fixed = TRUE)
+  expect_true(semantics$validation_instance_frontier)
+  expect_true(semantics$lineage_aware_merge)
+  expect_false(semantics$inference_time_candidate_selection)
+  expect_match(semantics$note, "validation example", fixed = TRUE)
 })
 
 test_that("failed example bundles preserve evaluation row identity", {
@@ -969,6 +1293,7 @@ test_that("compile GEPA selects a valid structural Flex candidate", {
     population_size = 3L,
     generations = 1L,
     selection = "current_best",
+    track_best_outputs = TRUE,
     verbose = FALSE
   )
 
@@ -980,19 +1305,23 @@ test_that("compile GEPA selects a valid structural Flex candidate", {
   )
   metadata <- optimized$config$optimizer
 
-  expect_identical(proposal_calls, 1L)
+  expect_identical(proposal_calls, 2L)
   expect_true(canonical %in% evaluated_sources)
   expect_identical(optimized$module_src, canonical)
   expect_identical(metadata$optimization_mode, "component_candidates")
   expect_identical(metadata$flex_paths, "$")
   expect_named(
     metadata$best_candidate$component_values,
-    c("instructions::$", "module_src::$")
+    "module_src::$"
   )
   expect_identical(metadata$best_scores, c(quality = 1))
   expect_length(metadata$all_generations[[1L]]$population, 3L)
-  expect_true(metadata$component_semantics$whole_program_pareto_selection)
-  expect_false(metadata$component_semantics$per_component_pareto_selection)
+  expect_true(metadata$component_semantics$validation_instance_frontier)
+  expect_identical(
+    metadata$per_val_instance_best_candidates[["7"]],
+    metadata$best_candidate_id
+  )
+  expect_length(metadata$best_outputs_valset[["7"]], 1L)
 })
 
 test_that("compile GEPA audits but never selects an invalid Flex source", {
@@ -1000,13 +1329,10 @@ test_that("compile GEPA audits but never selects an invalid Flex source", {
     signature("question -> answer", instructions = "Baseline instructions.")
   ))
   baseline_source <- program$module_src
-  evaluated_instructions <- character()
+  evaluated_sources <- character()
   chat <- structure(
     list(chat_structured = function(prompt, type, ...) {
       fields <- names(type@properties)
-      if (identical(fields, "instructions")) {
-        return(list(instructions = "Valid instruction candidate."))
-      }
       if (identical(fields, "module_src")) {
         return(list(module_src = "{}"))
       }
@@ -1016,20 +1342,8 @@ test_that("compile GEPA audits but never selects an invalid Flex source", {
   )
   testthat::local_mocked_bindings(
     eval_program = function(program, dataset, metric, ...) {
-      evaluated_instructions <<- c(
-        evaluated_instructions,
-        program$signature@instructions
-      )
-      score <- if (
-        identical(
-          program$signature@instructions,
-          "Valid instruction candidate."
-        )
-      ) {
-        -0.5
-      } else {
-        -1
-      }
+      evaluated_sources <<- c(evaluated_sources, program$module_src)
+      score <- -1
       dsprrr:::EvalResult(
         examples = tibble::tibble(
           row_id = 1L,
@@ -1068,18 +1382,18 @@ test_that("compile GEPA audits but never selects an invalid Flex source", {
     population
   )
 
-  expect_length(evaluated_instructions, 2L)
-  expect_length(invalid, 1L)
-  expect_identical(invalid[[1L]]$scores, c(quality = 0))
-  expect_false(invalid[[1L]]$selectable)
+  expect_length(evaluated_sources, 1L)
+  expect_length(invalid, 2L)
+  expect_true(all(vapply(
+    invalid,
+    function(record) identical(record$scores, c(quality = 0)),
+    logical(1)
+  )))
+  expect_true(all(!vapply(invalid, `[[`, logical(1), "selectable")))
   expect_gt(invalid[[1L]]$scores[[1L]], metadata$best_scores[[1L]])
-  expect_identical(metadata$invalid_candidate_count, 1L)
-  expect_identical(metadata$budget_summary$total_errors, 1L)
+  expect_identical(metadata$invalid_candidate_count, 2L)
+  expect_identical(metadata$budget_summary$total_errors, 2L)
   expect_identical(optimized$module_src, baseline_source)
-  expect_identical(
-    optimized$signature@instructions,
-    "Valid instruction candidate."
-  )
   expect_true(all(vapply(
     metadata$pareto_frontier,
     function(entry) isTRUE(entry$candidate$candidate_valid),
@@ -1111,5 +1425,364 @@ test_that("compile GEPA returns a safe composite clone on an early budget stop",
   expect_identical(
     optimized$config$optimizer$stop_reason$code,
     "max_provider_calls"
+  )
+})
+
+test_that("ordinary programs use complete component candidates and result metadata", {
+  program <- module(
+    signature("question -> answer", instructions = "Baseline."),
+    type = "predict"
+  )
+  selector_calls <- 0L
+  selector <- function(component_ids, candidate, failed_examples, context) {
+    selector_calls <<- selector_calls + 1L
+    component_ids[[1L]]
+  }
+  testthat::local_mocked_bindings(
+    eval_program = function(program, dataset, metric, ...) {
+      dsprrr:::EvalResult(
+        examples = tibble::tibble(
+          row_id = 1L,
+          score = 1,
+          error = NA_character_,
+          predicted = list("answer"),
+          feedback = NA_character_
+        ),
+        mean_score = 1,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  optimized <- compile(
+    GEPA(
+      metric = function(...) 1,
+      population_size = 2L,
+      generations = 1L,
+      component_selector = selector,
+      track_best_outputs = TRUE,
+      verbose = FALSE
+    ),
+    program,
+    data.frame(question = "q", answer = "a")
+  )
+  metadata <- optimized$config$optimizer
+
+  expect_gt(selector_calls, 0L)
+  expect_identical(metadata$optimization_mode, "component_candidates")
+  expect_identical(metadata$component_selector, "custom")
+  expect_named(metadata$best_candidate$component_values, "instructions::$")
+  expect_true(metadata$component_semantics$validation_instance_frontier)
+  expect_true(metadata$component_semantics$retained_best_outputs)
+  expect_length(metadata$best_outputs_valset[["1"]], 2L)
+})
+
+test_that("GEPA separates discovery trainset from validation frontier data", {
+  program <- suppressWarnings(flex("question -> answer"))
+  observed_splits <- character()
+  testthat::local_mocked_bindings(
+    eval_program = function(program, dataset, metric, ...) {
+      observed_splits <<- c(observed_splits, as.character(dataset$split[[1L]]))
+      score <- if (identical(dataset$split[[1L]], "validation")) 0.8 else 0.2
+      dsprrr:::EvalResult(
+        examples = tibble::tibble(
+          row_id = 1L,
+          score = score,
+          error = NA_character_,
+          predicted = list(dataset$split[[1L]]),
+          feedback = paste0("feedback:", dataset$split[[1L]])
+        ),
+        mean_score = score,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  optimized <- compile(
+    GEPA(
+      metric = function(...) 1,
+      population_size = 2L,
+      generations = 1L,
+      verbose = FALSE
+    ),
+    program,
+    data.frame(question = "train", answer = "t", split = "discovery"),
+    valset = data.frame(
+      question = "validation",
+      answer = "v",
+      split = "validation"
+    )
+  )
+  metadata <- optimized$config$optimizer
+
+  expect_setequal(unique(observed_splits), c("discovery", "validation"))
+  expect_true(all(metadata$validation_frontier_scores == 0.8))
+  expect_true(all(metadata$discovery_eval_counts == 1L))
+  records <- metadata$all_generations[[1L]]$population
+  expect_true(all(vapply(
+    records,
+    function(record) {
+      identical(record$discovery_eval@examples$predicted[[1L]], "discovery")
+    },
+    logical(1)
+  )))
+})
+
+test_that("GEPA propagates candidate runtime provider conditions", {
+  program <- suppressWarnings(flex("question -> answer"))
+  candidate <- dsprrr:::gepa_component_candidate(program)
+  chat <- structure(
+    list(
+      chat_structured = function(...) {
+        rlang::abort("provider offline", class = "gepa_provider_outage")
+      },
+      get_model = function() "broken-provider"
+    ),
+    class = "Chat"
+  )
+  control <- dsprrr:::optimizer_control(max_errors = 10L, num_threads = 1L)
+  budget <- dsprrr:::new_optimizer_budget(control)
+
+  expect_error(
+    suppressWarnings(dsprrr:::gepa_evaluate_component_candidate(
+      program,
+      candidate,
+      data.frame(question = "q", answer = "a"),
+      metric = function(...) 1,
+      .llm = chat,
+      control = control,
+      budget = budget,
+      stage = "gepa_provider_test",
+      unit_id = "gepa:provider:test",
+      .cache = FALSE,
+      .propagate_provider_errors = TRUE
+    )),
+    class = "gepa_provider_outage"
+  )
+})
+
+test_that("all-component mutation rolls back at a provider budget boundary", {
+  program <- gepa_flex_test_program()
+  baseline <- dsprrr:::gepa_component_candidate(program)
+  calls <- 0L
+  chat <- structure(
+    list(chat_structured = function(prompt, type, ...) {
+      calls <<- calls + 1L
+      list(instructions = "Changed instructions.")
+    }),
+    class = "Chat"
+  )
+  budget <- dsprrr:::new_optimizer_budget(
+    dsprrr:::optimizer_control(max_provider_calls = 1L)
+  )
+
+  mutated <- dsprrr:::gepa_mutate_component_candidate(
+    baseline,
+    program,
+    failed_examples = list(),
+    .llm = chat,
+    budget = budget,
+    component_selector = "all"
+  )
+
+  expect_identical(mutated, baseline)
+  expect_identical(calls, 1L)
+  expect_identical(
+    dsprrr:::optimizer_budget_summary(budget)$stop_reason$code,
+    "max_provider_calls"
+  )
+})
+
+test_that("merge invocation cap counts attempted rather than successful merges", {
+  program <- suppressWarnings(flex("question -> answer"))
+  candidate <- dsprrr:::gepa_component_candidate(program)
+  evaluation <- dsprrr:::EvalResult(
+    examples = tibble::tibble(
+      row_id = 1L,
+      score = 1,
+      error = NA_character_,
+      predicted = list("a"),
+      feedback = NA_character_
+    ),
+    mean_score = 1,
+    n_evaluated = 1L,
+    n_errors = 0L
+  )
+  record <- list(
+    candidate = candidate,
+    candidate_id = dsprrr:::gepa_component_candidate_id(candidate),
+    scores = c(quality = 1),
+    complete = TRUE,
+    candidate_valid = TRUE,
+    failed_examples = list(),
+    generation = 1L,
+    index = 1L,
+    primary_eval = evaluation
+  )
+  attempts <- 0L
+  testthat::local_mocked_bindings(
+    gepa_merge_component_candidates = function(...) {
+      attempts <<- attempts + 1L
+      NULL
+    },
+    .package = "dsprrr"
+  )
+
+  population <- dsprrr:::gepa_next_component_generation(
+    list(record),
+    program,
+    population_size = 4L,
+    mutation_rate = 0,
+    crossover_rate = 1,
+    selection = "current_best",
+    .llm = NULL,
+    use_merge = TRUE,
+    max_merges = 1L,
+    all_records = list(record)
+  )
+
+  expect_identical(attempts, 1L)
+  expect_identical(attr(population, "merge_invocations"), 1L)
+  expect_identical(attr(population, "lineage_merges"), 0L)
+})
+
+test_that("validation winners do not exclude objective Pareto parents", {
+  program <- suppressWarnings(flex("question -> answer"))
+  left <- dsprrr:::gepa_component_candidate(program)
+  right <- left
+  right$components[[1L]]$value <- paste0(
+    right$components[[1L]]$value,
+    " "
+  )
+  make_record <- function(candidate, quality, safety) {
+    list(
+      candidate = candidate,
+      candidate_id = dsprrr:::gepa_component_candidate_id(candidate),
+      scores = c(quality = quality, safety = safety),
+      complete = TRUE,
+      candidate_valid = TRUE,
+      primary_eval = dsprrr:::EvalResult(
+        examples = tibble::tibble(
+          row_id = 1L,
+          score = quality,
+          error = NA_character_,
+          predicted = list("a"),
+          feedback = NA_character_
+        ),
+        mean_score = quality,
+        n_evaluated = 1L,
+        n_errors = 0L
+      )
+    )
+  }
+  records <- list(
+    make_record(left, 1, 0),
+    make_record(right, 0.9, 1)
+  )
+
+  parents <- dsprrr:::gepa_component_parent_records(records, "pareto")
+
+  expect_setequal(
+    vapply(parents, `[[`, character(1), "candidate_id"),
+    vapply(records, `[[`, character(1), "candidate_id")
+  )
+})
+
+test_that("mutation metadata distinguishes immediate parents from ancestors", {
+  program <- gepa_flex_test_program()
+  seed <- dsprrr:::gepa_component_candidate(program)
+  seed_id <- dsprrr:::gepa_component_candidate_id(seed)
+  parent <- seed
+  parent$components[[1L]]$value <- "Parent instructions."
+  parent <- dsprrr:::gepa_set_component_candidate_lineage(
+    parent,
+    parents = seed_id,
+    tag = "test_parent"
+  )
+  parent_id <- dsprrr:::gepa_component_candidate_id(parent)
+
+  child <- dsprrr:::gepa_mutate_component_candidate(
+    parent,
+    program,
+    failed_examples = list(list(feedback = "Improve it.")),
+    component_id = names(parent$components)[[1L]]
+  )
+  lineage <- dsprrr:::gepa_component_candidate_lineage(child)
+
+  expect_identical(lineage$parents, parent_id)
+  expect_identical(lineage$ancestors, seed_id)
+})
+
+test_that("best-output semantics reflect the tracking option", {
+  expect_false(dsprrr:::gepa_component_semantics(FALSE)$retained_best_outputs)
+  expect_true(dsprrr:::gepa_component_semantics(TRUE)$retained_best_outputs)
+  expect_true(
+    dsprrr:::gepa_component_semantics(FALSE)$supports_retained_best_outputs
+  )
+})
+
+test_that("GEPA proposes, executes, and selects executable Flex source", {
+  skip_if_not_installed("callr")
+  baseline <- paste(
+    "forward <- function(question)",
+    "Prediction(answer = question)"
+  )
+  improved <- paste(
+    "forward <- function(question)",
+    "Prediction(answer = toupper(question))"
+  )
+  program <- suppressWarnings(flex(
+    "question -> answer",
+    module_src = baseline,
+    interpreter_factory = r_code_runner,
+    source_format = "r",
+    require_sandbox = FALSE
+  ))
+  chat <- structure(
+    list(
+      chat_structured = function(prompt, type, ...) {
+        list(
+          module_src = paste(
+            "forward <- function(question)",
+            "Prediction(answer = toupper(question))"
+          )
+        )
+      },
+      get_model = function() "gepa-executable-test"
+    ),
+    class = "Chat"
+  )
+
+  optimized <- compile(
+    GEPA(
+      metric = metric_exact_match(field = "answer"),
+      population_size = 2L,
+      generations = 1L,
+      selection = "current_best",
+      track_best_outputs = TRUE,
+      verbose = FALSE
+    ),
+    program,
+    data.frame(question = "hello", answer = "HELLO"),
+    .llm = chat,
+    control = dsprrr:::optimizer_control(num_threads = 1L)
+  )
+  metadata <- optimized$config$optimizer
+
+  expect_identical(optimized$module_src, improved)
+  expect_identical(metadata$best_scores, c(quality = 1))
+  expect_identical(
+    metadata$per_val_instance_best_candidates[["1"]],
+    metadata$best_candidate_id
+  )
+  expect_identical(
+    optimized$forward(list(question = "hello"))$output[[1L]],
+    list(answer = "HELLO")
   )
 })

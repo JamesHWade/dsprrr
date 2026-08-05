@@ -3,9 +3,12 @@
 #' @description
 #' Functions for running modules asynchronously using promises.
 #' Useful for parallel execution or non-blocking operations.
-#' The direct provider paths support ordinary `PredictModule` objects only.
-#' Modules and composites with specialized `forward()` semantics are rejected
-#' before provider work; use [run()] for their complete workflows.
+#' The direct provider paths support ordinary `PredictModule` objects.
+#' ProgramOfThought, CodeAct, and RLM modules may also use [run_async()] when
+#' configured with `interpreter_factory`: the complete workflow runs in an
+#' isolated mirai process with one invocation-owned interpreter. Their
+#' constructor-bound caller-owned runners and all specialized streaming paths
+#' remain rejected.
 #'
 #' @name async
 NULL
@@ -15,9 +18,10 @@ NULL
 #' @description
 #' Executes a module and returns a promise that resolves to the result.
 #' Useful for running multiple modules in parallel.
-#' Only ordinary `PredictModule` objects are supported. Modules and composites
-#' with specialized `forward()` semantics are rejected before provider work;
-#' use [run()] for their complete workflows.
+#' Ordinary `PredictModule` objects use the provider's native async path.
+#' ProgramOfThought, CodeAct, and RLM modules use an isolated background process
+#' when configured with `interpreter_factory`. Caller-owned runners are rejected
+#' because they cannot be safely shared across concurrent invocations.
 #'
 #' @param module A dsprrr Module object
 #' @param ... Named inputs matching the module's signature
@@ -45,6 +49,19 @@ run_async <- function(module, ..., .llm = NULL) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
+  if (interpreter_workflow_module(module)) {
+    assert_factory_interpreter_async_supported(module, "run_async")
+    inputs <- list(...)
+    validate_signature_inputs(
+      module$signature,
+      inputs,
+      missing = "error",
+      extra = "warn",
+      type = "warn",
+      context = "inputs"
+    )
+    return(run_factory_interpreter_async(module, inputs, .llm = .llm))
+  }
   assert_direct_provider_async_supported(module, "run_async")
 
   inputs <- list(...)
@@ -55,6 +72,159 @@ run_async <- function(module, ..., .llm = NULL) {
   llm$chat_structured_async(
     request$payload,
     type = module$signature@output_type
+  )
+}
+
+
+interpreter_workflow_module <- function(module) {
+  inherits(
+    module,
+    c("ProgramOfThoughtModule", "CodeActModule", "RLMModule")
+  )
+}
+
+
+factory_interpreter_module <- function(module) {
+  interpreter_workflow_module(module) &&
+    is.null(module$runner) &&
+    is.function(module$interpreter_factory)
+}
+
+
+assert_factory_interpreter_async_supported <- function(module, operation) {
+  if (factory_interpreter_module(module)) {
+    return(invisible(module))
+  }
+  cli::cli_abort(
+    c(
+      "{.fn {operation}} cannot reuse a caller-owned interpreter",
+      "x" = "{.cls {class(module)[1L]}} is bound to a persistent runner object.",
+      "i" = "Configure {.arg interpreter_factory} so every async invocation owns a fresh interpreter."
+    ),
+    class = c(
+      "dsprrr_interpreter_concurrency_unsafe",
+      "dsprrr_specialized_async_unsupported"
+    ),
+    operation = operation,
+    module_class = class(module)[1L],
+    module_path = "$"
+  )
+}
+
+
+run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
+  rlang::check_installed("promises", reason = "for asynchronous execution")
+  llm <- .llm %||% module$chat %||% get_default_chat()
+  if (is.null(llm)) {
+    cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
+  }
+
+  namespace_path <- getNamespaceInfo(asNamespace("dsprrr"), "path")
+  worker <- function(module, inputs, llm, namespace_path) {
+    if (
+      file.exists(file.path(namespace_path, "R", "module-base.R")) &&
+        requireNamespace("pkgload", quietly = TRUE)
+    ) {
+      pkgload::load_all(namespace_path, quiet = TRUE)
+    } else {
+      loadNamespace("dsprrr")
+    }
+    result <- module$forward(
+      inputs,
+      .llm = llm,
+      trace = FALSE,
+      .cache = FALSE
+    )
+    result$output[[1L]]
+  }
+
+  profile <- new_dsprrr_mirai_profile()
+  profile_owned <- FALSE
+  task <- NULL
+  cleanup_profile <- function(strict = TRUE) {
+    if (!profile_owned) {
+      return(invisible(TRUE))
+    }
+    stopped <- shutdown_dsprrr_mirai_profile(
+      profile = profile,
+      tasks = if (is.null(task)) list() else list(task),
+      strict = strict
+    )
+    if (isTRUE(stopped)) {
+      profile_owned <<- FALSE
+    }
+    invisible(stopped)
+  }
+  cleanup_after_failure <- function() {
+    cleaned <- tryCatch(
+      cleanup_profile(strict = FALSE),
+      error = function(error) FALSE
+    )
+    if (!isTRUE(cleaned)) {
+      warn_mirai_teardown_failure(profile)
+    }
+    invisible(cleaned)
+  }
+  abort_launch <- function(error) {
+    cleanup_after_failure()
+    cli::cli_abort(
+      c(
+        "Could not launch the isolated interpreter workflow",
+        "x" = conditionMessage(error)
+      ),
+      class = "dsprrr_interpreter_async_launch_error",
+      parent = error
+    )
+  }
+
+  tryCatch(
+    {
+      # The profile name was allocated for this invocation. Mark ownership
+      # before launch so a partially created pool is still torn down if
+      # `daemons()` signals after acquiring resources.
+      profile_owned <- TRUE
+      mirai::daemons(
+        n = 1L,
+        dispatcher = TRUE,
+        .compute = profile
+      )
+      task <- mirai::mirai(
+        worker(module, inputs, llm, namespace_path),
+        .args = list(
+          worker = worker,
+          module = module,
+          inputs = inputs,
+          llm = llm,
+          namespace_path = namespace_path
+        ),
+        .compute = profile
+      )
+    },
+    interrupt = function(condition) {
+      cleanup_after_failure()
+      stop(condition)
+    },
+    error = abort_launch
+  )
+
+  promise <- tryCatch(
+    promises::as.promise(task),
+    interrupt = function(condition) {
+      cleanup_after_failure()
+      stop(condition)
+    },
+    error = abort_launch
+  )
+  promises::then(
+    promise,
+    onFulfilled = function(value) {
+      cleanup_profile(strict = TRUE)
+      value
+    },
+    onRejected = function(error) {
+      cleanup_after_failure()
+      stop(error)
+    }
   )
 }
 

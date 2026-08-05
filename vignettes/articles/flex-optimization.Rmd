@@ -1,8 +1,8 @@
 ---
 title: "Structural Optimization with Flex"
 description: >
-  Build and validate experimental predictor graphs with dsprrr's constrained
-  JSON intermediate representation.
+  Optimize safe declarative graphs or interpreter-backed R programs with
+  dsprrr's experimental Flex module.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Structural Optimization with Flex}
@@ -19,14 +19,20 @@ knitr::opts_chunk$set(
 )
 ```
 
-`flex()` is an experimental module whose predictor structure is part of the
-program state. It gives optimizers a structural edit surface without giving
-them an arbitrary code-execution surface.
+`flex()` is an experimental module whose complete implementation is one
+optimization parameter. It has two source modes:
 
-That distinction is important. dsprrr Flex source is a bounded, versioned JSON
-intermediate representation (IR), parsed strictly as data. It is never
-evaluated as R or Python. This is intentionally narrower than DSPy's
-experimental Flex module and is not a claim of full DSPy Flex parity.
+- `source_format = "json"` is the safe default: a bounded, versioned graph
+  parsed strictly as data; and
+- `source_format = "r"` is opt-in: complete R source evaluated only inside a
+  fresh runner returned by an explicit `interpreter_factory`.
+
+The second mode brings deterministic computation, control flow, host tools,
+and dynamically selected predictors much closer to DSPy 3.3 Flex. It does not
+turn the host R session into an evaluation environment. Predictor and tool
+requests cross a versioned JSON bridge, generated source receives only a small
+guest DSL in a separate lexical environment, and typed outputs are checked
+again on the host.
 
 ## Start with the safe baseline
 
@@ -52,10 +58,10 @@ fingerprints, comparisons, and optimizer candidates.
 
 ## Describe a two-step plan
 
-Version 1 source has exactly three top-level fields:
+Version 1 JSON source has exactly three top-level fields:
 
 - `schema_version`, currently the number `1`;
-- `steps`, a non-empty ordered array; and
+- `steps`, an ordered array (which may be empty for an input-only program); and
 - `outputs`, a mapping for every output in the outer signature.
 
 Each step declares a unique `name`, an allowlisted `primitive`, a `signature`,
@@ -106,6 +112,73 @@ non-empty object field types. Opaque `TypeJsonSchema` values and empty objects
 are rejected explicitly; the IR does not guess whether an arbitrary JSON
 Schema is assignable.
 
+## Opt in to executable R source
+
+Executable Flex requires a zero-argument factory, not a shared runner. Each
+invocation gets a fresh runner and dsprrr closes it on success, failure, or
+interrupt. The default `require_sandbox = TRUE` also requires that runner's
+validated policy to advertise an enforced sandbox.
+
+```{r executable}
+source <- paste(
+  "draft <- ChainOfThought('$outer', instructions = 'Solve carefully.')",
+  "forward <- function(question) {",
+  "  result <- draft(question = question)",
+  "  Prediction(answer = result$answer)",
+  "}",
+  sep = "\n"
+)
+
+program <- flex(
+  "question -> answer",
+  module_src = source,
+  interpreter_factory = my_sandboxed_runner,
+  source_format = "r"
+)
+```
+
+The guest DSL exposes `Predict`, `ChainOfThought`, `ReAct`, `ReActV2`, `RLM`,
+`CodeAct`, `ProgramOfThought`, `Prediction`, and `Tool`. Constructors return
+callable functions. Signatures use `"$outer"` or ordinary string notation.
+No adapter, optimizer, package-loading, provider-configuration, nested Flex,
+or unrestricted host namespace is exposed.
+Plain functions are available as direct host calls and to `RLM`; `ReAct` and
+`CodeAct` receive only supplied ellmer ToolDef objects because provider-facing
+tools require an explicit description and argument schema.
+
+Named host tools retain their original closure environments and run on the
+host, outside the sandbox:
+
+```{r executable-tool}
+offset <- 5L
+
+tool_program <- flex(
+  "value: integer -> result: integer",
+  module_src = paste(
+    "forward <- function(value) {",
+    "  Prediction(result = add_offset(value = value))",
+    "}",
+    sep = "\n"
+  ),
+  tools = list(add_offset = function(value) value + offset),
+  interpreter_factory = my_sandboxed_runner,
+  source_format = "r"
+)
+```
+
+Treat host tools as privileged capabilities: the sandbox restricts generated
+source, not what an explicitly supplied host function can do. Bridge values
+must be JSON-compatible. `max_predictor_calls` limits bridged predictor calls;
+`max_tool_calls` independently bounds direct host-tool calls and defaults to
+100. Neither limits deterministic R statements. The current portable bridge
+replays guest source with immutable prior responses until it reaches a new
+request or final output; host predictor and tool side effects occur once, but
+deterministic guest statements before a request may run again. Keep those
+statements pure and loops explicitly bounded. Structured runner results carry
+large control values without stdout truncation. Text-only runners advertise a
+finite frame limit and fail with a typed size error before accepting a partial
+frame.
+
 ## Replace a plan transactionally
 
 Use `bind()` to replace the active source:
@@ -131,13 +204,13 @@ parameter, but an optimizer only changes `module_src` if that optimizer
 explicitly supports structural candidates. Ordinary prompt optimization does
 not silently rewrite the plan.
 
-## Search complete plans with GEPA-lite
+## Search complete programs with GEPA
 
-`GEPA()` explicitly supports Flex structural candidates. For a program that
-contains Flex leaves, each candidate is a complete set of ordinary instruction
-values and complete canonical `module_src` values. Source text is never spliced
-or evaluated: dsprrr copies the program, validates and binds each source
-transactionally, then evaluates the resulting program.
+`GEPA()` explicitly supports both Flex source modes. For a program that
+contains Flex leaves, each Flex source is one complete component alongside
+ordinary predictor-instruction components. Source text is never spliced:
+dsprrr copies the program, validates and binds each complete source
+transactionally, then evaluates it through the selected Flex runtime.
 
 ```{r gepa-flex}
 metric <- metric_exact_match(field = "answer")
@@ -159,12 +232,26 @@ optimized$module_src
 optimized$config$optimizer$component_semantics
 ```
 
-The structured proposer sees row-aligned inputs, expected output, prediction,
-and metric feedback. An invalid proposal receives aligned failure records for
-audit and budget accounting but is never selectable. GEPA-lite's Pareto
-selection ranks complete programs. It does not reproduce DSPy's independent
-per-component Pareto frontiers or inference-time search; those limits are
-recorded in `config$optimizer$component_semantics`.
+The dedicated source proposer sees the task objective, root and component
+signatures, field descriptions and schemas, source language, allowed
+primitives and tools, current complete source, row-aligned failures, metric
+feedback, and the predictor and host-tool call limits. Provider failures
+propagate instead of being
+disguised as unchanged candidates. Invalid source proposals receive aligned
+failure records for audit and budget accounting but are never selectable.
+
+DSPy/GEPA's validation frontier is the union of complete candidate programs
+that win on at least one validation example. dsprrr combines those winners with
+the multi-metric objective Pareto front when choosing parents. Components are
+selected for mutation with round-robin, budget-atomic all-component, or custom
+selection; they do not have separate Pareto frontiers. With a separate
+`valset`, training rows drive discovery/reflection and validation rows drive
+selection, winners, and retained outputs. dsprrr records stable candidate IDs,
+immediate parents and ancestry, aggregate and per-example scores, discovery
+evaluation counts, per-example winners, optional best outputs, attempted merge
+counts, and common-ancestor three-way merges. Fine-grained checkpoint resume
+and GEPA's cached subsample pre-acceptance gate for merges remain explicit
+differences.
 
 Freezing a module removes its components from this search. If the complete
 graph has no mutable components, GEPA returns a fresh unchanged program without
@@ -173,11 +260,8 @@ calling the proposer or evaluator and records
 
 ## Understand the safety boundary
 
-Flex controls what predictors run and how typed values flow between them. It
-does not make the LLM calls themselves trusted, and it does not provide a
-general programming environment.
-
-In particular, Flex source cannot:
+JSON Flex controls what predictors run and how typed values flow between them.
+It cannot:
 
 - evaluate R or Python expressions;
 - call arbitrary functions, tools, files, or network services;
@@ -185,24 +269,35 @@ In particular, Flex source cannot:
 - reference a later step or create a cycle; or
 - exceed its source-size and predictor-call bounds.
 
-If a task needs generated R code, use `program_of_thought()`, `code_act()`, or
-`rlm_module()` with an explicitly selected code runner. Those modules have a
-separate execution and lifecycle contract; Flex does not bypass it.
+Executable Flex deliberately can express control flow and call allowlisted
+capabilities, so its safety depends on the selected runner policy. `r_code_runner()`
+is a trusted-input subprocess runner and does not satisfy the default sandbox
+requirement. Set `require_sandbox = FALSE` only for source you trust.
 
-Flex currently runs through synchronous `run()`. `run_async()`,
-`stream_async()`, and module `$stream()` reject a program graph containing a
-Flex leaf before making a provider call. `run_stream()` without a matching
-token listener preserves the ordinary synchronous `forward()` path; a matching
-token-stream request is rejected before provider work so it cannot bypass
-Flex's validated step workflow.
+Flex runs synchronously. Native dataset concurrency is implemented for JSON
+sources with zero or one predictor step. Concurrent executable Flex and
+multi-step JSON requests fail before provider work; their per-row asynchronous
+execution engine is not implemented yet. Matching token-stream requests are
+also rejected because runtime-created predictors are not statically
+discoverable. One-shot `run_stream()` fallback still uses the ordinary
+`forward()` contract.
+
+Program artifacts persist the source language and sandbox policy. Executable
+artifacts also store tools and the factory as registry-backed runtime values,
+so restoring them requires the same registry (or explicit trusted embedding)
+and never invokes a factory during serialization or restoration.
 
 ## Choose Flex deliberately
 
-Use `flex()` when the search question is structural: for example, whether a
-task benefits from an intermediate draft or a Chain-of-Thought step. Use a
-regular module when one known topology plus optimized instructions is enough.
-Use an explicit pipeline when humans should own and review the topology.
+Use JSON Flex when the search question is a bounded topology choice, such as
+whether a task benefits from an intermediate draft. Use executable Flex when
+optimization genuinely needs coupled source edits across deterministic logic,
+control flow, tools, and predictors and you have an appropriate sandbox. Use a
+regular module when one known topology plus optimized instructions is enough;
+use an explicit pipeline when humans should own and review the topology.
 
-Because Flex and its version 1 schema are experimental, persist the canonical
-`module_src`, pin package versions, and revalidate a candidate when upgrading
-dsprrr.
+DSPy Flex executes a Python module class and ships a default Deno/Pyodide
+interpreter. dsprrr Flex executes a top-level R `forward()` function and
+requires an explicit factory; source is not portable between the two
+languages. Because both APIs are experimental, persist `module_src`, runtime
+bindings, and package versions, then revalidate a candidate after upgrades.

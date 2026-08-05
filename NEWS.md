@@ -4,18 +4,32 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## New features
 
-* `flex()` adds an experimental, structurally optimizable module. Its source is
-  a bounded versioned JSON intermediate representation with allowlisted
-  Predict and Chain-of-Thought steps, typed references, and transactional
-  validation. It is deliberately not an arbitrary R/Python source evaluator or
-  a claim of full DSPy Flex parity.
+* `flex()` adds an experimental, structurally optimizable module with two
+  source modes. The safe default is a bounded versioned JSON graph with
+  allowlisted Predict and Chain-of-Thought steps, typed references, zero-step
+  deterministic plans, and transactional validation. Opt-in executable mode
+  evaluates a complete R `forward()` program only in a fresh runner from an
+  explicit `interpreter_factory`; a versioned JSON bridge exposes the
+  DSPy Flex primitive family and named host tools, enforces runtime predictor
+  and direct host-tool limits, validates typed outputs, and requires an
+  advertised sandbox by default. Guest bindings are isolated from bridge state,
+  large values use structured runner results when available, and tools retain
+  their host closure environments while generated source never evaluates in the
+  host R session.
 
-* `GEPA()` now recognizes Flex leaves and searches complete, validated
-  component candidates spanning ordinary instructions and canonical
-  `module_src` values. Invalid structural proposals are recorded with aligned
-  failure results but cannot be selected. GEPA-lite ranks whole programs; it
-  still does not implement DSPy's per-component Pareto frontiers or
-  inference-time search.
+* `GEPA()` now searches complete, validated component candidates for ordinary
+  programs and programs containing Flex leaves, spanning ordinary instructions
+  and complete `module_src` values. Its source proposer receives the task objective,
+  signatures, field descriptions and schemas, source runtime, tools, current
+  source, and row-aligned metric feedback. Provider failures propagate;
+  malformed structural proposals are recorded but cannot be selected.
+  Candidate-program parent pools unite validation-example winners with the
+  multi-metric objective Pareto front. Component selection supports
+  round-robin, budget-atomic all-component, and custom policies; lineage-aware
+  three-way merge caps count attempted merges. When a validation set is
+  supplied, training rows remain exclusive to discovery/reflection while
+  validation rows drive selection, per-example winners, and optional retained
+  outputs.
 
 * `program_of_thought()`, `code_act()`, and `rlm_module()` now accept an
   `interpreter_factory`: a zero-argument function that creates one fresh,
@@ -24,9 +38,21 @@ First development changelog. dsprrr is experimental; the API may change.
   reused; whether state persists or can be reset is backend-specific. Supply
   exactly one of `runner` and `interpreter_factory`.
 
+* The code-runner protocol now has explicit `start()`/`shutdown()` lifecycle
+  hooks, typed repairable execution versus terminal interpreter failures, and
+  terminal-session invalidation. Code modules do not retry or reuse a runner
+  after process/protocol failure and preserve the primary failure when teardown
+  also fails. RLM host tools now cross an authenticated replay bridge, so the
+  original live closure executes once on the host without being deparsed or
+  serialized into guest code. Factory-backed Program of Thought, CodeAct, and RLM modules support
+  isolated async and mirai batch workflows; caller-owned runners remain
+  sequential-only.
+
 * Program artifacts now write format version 4, persist either a runner or an
-  interpreter factory for code-executing modules, and preserve Flex source and
-  predictor-call limits. Valid version 3 runner-only artifacts remain readable:
+  interpreter factory for code-executing modules, and preserve Flex source,
+  source language, predictor- and host-tool-call limits, sandbox requirement,
+  factory, and tools. Valid version 3 runner-only artifacts and the earlier
+  two- and six-field v4 Flex shapes remain readable:
   dsprrr verifies their closed schema and integrity before upgrading them in
   memory. Artifact construction and restoration never invoke a stored factory.
 
@@ -96,6 +122,14 @@ First development changelog. dsprrr is experimental; the API may change.
   `forward()` fallback, while matching token-stream requests are preflighted
   across pipeline steps and rejected before provider work if they would bypass
   specialized execution or runner lifecycle contracts.
+
+* Flex no longer silently accepts BootstrapFewShot demonstrations that its
+  runtime cannot consume. Predictor-call limits may be `NULL`, declarative
+  input-only plans avoid provider resolution, and each actual inner predictor
+  call produces exactly one ordered trace event. Native concurrent dataset
+  execution supports declarative zero/one-step Flex, while multi-step and
+  executable requests fail before provider work until a row-isolated async
+  engine is available.
 
 * Metric correctness and composition are stricter: token F1 uses multiset
   overlap, numeric field equality no longer fails solely because one value is

@@ -40,13 +40,14 @@
 #' whether execution state persists and whether `reset()` is available;
 #' serialize access to stateful backends. `interpreter_factory` is a
 #' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, and `close()`. The module owns that runner for one invocation and
-#' calls `close()` exactly once on success, error, or interrupt.
+#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
+#' module owns that runner for one invocation and shuts it down exactly once on
+#' success, error, or interrupt.
 #'
-#' [run_async()], [stream_async()], and a module's `$stream()` method reject RLM
-#' because their direct provider path would bypass execution. The [run_stream()]
-#' one-shot `forward()` fallback remains available, but an actual token-stream
-#' request is rejected before provider or factory work.
+#' [run_async()] supports factory-backed RLM in an isolated mirai process and
+#' rejects caller-owned runners. [stream_async()] and a module's `$stream()`
+#' method remain unavailable because streaming would bypass execution. The
+#' [run_stream()] one-shot `forward()` fallback remains available.
 #'
 #' @examples
 #' \dontrun{
@@ -81,8 +82,8 @@ NULL
 #' @description
 #' Factory function to create an RLMModule that enables LLMs to programmatically
 #' explore large contexts through a REPL interface.
-#' Use [run()] to execute it. Generic async and module `$stream()` entry points
-#' reject RLM graphs before provider or factory work. [run_stream()] preserves
+#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
+#' async streaming and module `$stream()` reject RLM. [run_stream()] preserves
 #' the synchronous `forward()` fallback unless a matching token-stream request
 #' is active; that request is rejected first.
 #'
@@ -94,15 +95,17 @@ NULL
 #' @param max_iters DSPy 3.3-compatible alias for `max_iterations`. Supply only
 #'   one of these arguments.
 #' @param interpreter_factory Optional zero-argument function returning a fresh
-#'   runner with `execute()`, `policy()`, and idempotent terminal `close()`.
+#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
+#'   terminal `shutdown()` or `close()`.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param max_llm_calls Maximum recursive LLM calls allowed (default 50)
 #' @param max_output_chars Maximum characters per execution output (default 100000)
 #' @param sub_lm Optional ellmer Chat for recursive queries. NULL = disabled.
 #' @param verbose Logical. Print execution progress (default FALSE)
-#' @param tools Named list of user-defined R functions to inject into REPL.
-#'   Each tool becomes available as a function in the code execution environment.
-#'   Non-function values in the list will cause an error.
+#' @param tools Named list of user-defined host functions. Guest code emits an
+#'   authenticated request, dsprrr invokes the original function in the host,
+#'   and the guest is replayed with the response. Closures are never deparsed or
+#'   serialized into generated code.
 #' @param ... Additional arguments passed to the module
 #'
 #' @return An RLMModule object
@@ -451,6 +454,12 @@ RLMModule <- R6::R6Class(
             "RLM signature input names must be unique",
             "x" = "Duplicate name{?s}: {.field {duplicates}}"
           ),
+          class = "dsprrr_rlm_signature_error"
+        )
+      }
+      if (rlm_host_tool_replay_field() %in% signature_inputs) {
+        cli::cli_abort(
+          "RLM signature input {.field {rlm_host_tool_replay_field()}} is reserved for the authenticated host-tool bridge",
           class = "dsprrr_rlm_signature_error"
         )
       }
@@ -1029,21 +1038,75 @@ Code:
       )
 
       # Execute with inputs as context
-      result <- execute_code_runner(
-        runner,
-        combined_code,
-        context = inputs,
-        .control_nonce = control_nonce
-      )
-
-      control_value <- if (isTRUE(result$success)) {
-        normalize_rlm_control_value(
-          result$result,
-          result$stdout %||% NULL,
-          control_nonce = control_nonce
+      tool_replay <- list()
+      repeat {
+        execution_context <- inputs
+        execution_context[[rlm_host_tool_replay_field()]] <- tool_replay
+        result <- execute_code_runner(
+          runner,
+          combined_code,
+          context = execution_context,
+          .control_nonce = control_nonce
         )
-      } else {
-        NULL
+
+        control_value <- NULL
+        for (candidate in list(
+          result$result,
+          result$stdout,
+          result$stderr,
+          result$error
+        )) {
+          decoded <- decode_rlm_control(candidate, control_nonce)
+          if (!is.null(decoded)) {
+            control_value <- decoded
+            break
+          }
+        }
+        if (!is_rlm_host_tool_request(control_value)) {
+          break
+        }
+        if (length(tool_replay) >= 1000L) {
+          cli::cli_abort(
+            "RLM exceeded the per-iteration host-tool bridge limit",
+            class = "dsprrr_rlm_host_tool_limit_error"
+          )
+        }
+        request <- control_value
+        if (!identical(request$index, length(tool_replay) + 1L)) {
+          cli::cli_abort(
+            "RLM host-tool requests were returned out of order",
+            class = "dsprrr_rlm_host_tool_protocol_error"
+          )
+        }
+        if (!request$name %in% names(self$tools)) {
+          cli::cli_abort(
+            "RLM requested unknown host tool {.val {request$name}}",
+            class = "dsprrr_rlm_host_tool_protocol_error"
+          )
+        }
+        tool_outcome <- tryCatch(
+          list(
+            success = TRUE,
+            value = do.call(self$tools[[request$name]], request$arguments),
+            error = NULL
+          ),
+          interrupt = function(condition) stop(condition),
+          error = function(condition) {
+            list(
+              success = FALSE,
+              value = NULL,
+              error = conditionMessage(condition)
+            )
+          }
+        )
+        tool_replay[[length(tool_replay) + 1L]] <- c(
+          list(request = unclass(request)),
+          tool_outcome
+        )
+      }
+
+      if (!isTRUE(result$success)) {
+        control_value <- NULL
       }
 
       # Detect SUBMIT termination using the versioned runner-neutral envelope.

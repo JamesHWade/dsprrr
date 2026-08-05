@@ -112,7 +112,15 @@ flex_test_chat <- function() {
 }
 
 test_that("flex gives one experimental lifecycle warning per session", {
-  lifecycle <- get(".flex_lifecycle", asNamespace("dsprrr"))
+  # pkgload can replace the active namespace while an already-sourced test
+  # environment still resolves `flex()` from the previous package environment.
+  # Reset the state used by the exact function under test, not whichever
+  # namespace `asNamespace()` currently reports.
+  lifecycle <- get(
+    ".flex_lifecycle",
+    envir = environment(flex),
+    inherits = FALSE
+  )
   old <- lifecycle$warned
   withr::defer(lifecycle$warned <- old)
   lifecycle$warned <- FALSE
@@ -147,6 +155,96 @@ test_that("flex baseline is canonical, bounded, and read-only", {
   expect_error(
     program$max_predictor_calls <- 2L,
     class = "dsprrr_flex_read_only_error"
+  )
+})
+
+test_that("flex supports unlimited call budgets and deterministic plans", {
+  default_creations <- 0L
+  testthat::local_mocked_bindings(
+    get_default_chat = function(create = TRUE) {
+      if (isTRUE(create)) {
+        default_creations <<- default_creations + 1L
+      }
+      NULL
+    },
+    .package = "dsprrr"
+  )
+  deterministic <- flex_test_json(
+    steps = list(),
+    outputs = list(result = "$input.value")
+  )
+  program <- flex_test_program(
+    "value: string -> result: string",
+    module_src = deterministic,
+    max_predictor_calls = NULL
+  )
+
+  result <- program$forward(list(value = "unchanged"))
+
+  expect_null(program$max_predictor_calls)
+  expect_identical(result$output[[1L]], list(result = "unchanged"))
+  expect_identical(result$metadata[[1L]]$predictor_calls, 0L)
+  expect_identical(result$metadata[[1L]]$total_tokens, 0L)
+  expect_length(result$metadata[[1L]]$program_trace_events, 0L)
+  expect_length(program$state$traces, 0L)
+  dataset_result <- run_dataset(
+    program,
+    data.frame(value = c("first", "second")),
+    .progress = FALSE
+  )
+  expect_identical(
+    unlist(dataset_result$result, use.names = FALSE),
+    c("first", "second")
+  )
+  expect_identical(default_creations, 0L)
+
+  zero_budget <- flex_test_program(
+    "value: string -> result: string",
+    module_src = deterministic,
+    max_predictor_calls = 0L
+  )
+  expect_identical(zero_budget$max_predictor_calls, 0L)
+  expect_identical(
+    zero_budget$forward(list(value = "zero"))$output[[1L]],
+    list(result = "zero")
+  )
+
+  unrestricted <- flex_test_program(
+    "question -> answer",
+    module_src = flex_two_step_source(),
+    max_predictor_calls = NULL
+  )
+  expect_null(unrestricted$max_predictor_calls)
+  expect_error(
+    flex_test_program(
+      "question -> answer",
+      module_src = flex_two_step_source(),
+      max_predictor_calls = 1L
+    ),
+    class = "dsprrr_flex_budget_error"
+  )
+})
+
+test_that("flex preserves its original positional argument order", {
+  source <- flex_test_json(
+    steps = list(),
+    outputs = list(result = "$input.value")
+  )
+
+  program <- suppressWarnings(flex(
+    "value -> result",
+    source,
+    0L,
+    list(label = "positional"),
+    NULL
+  ))
+
+  expect_identical(program$max_predictor_calls, 0L)
+  expect_identical(program$max_tool_calls, 100L)
+  expect_identical(program$config$label, "positional")
+  expect_identical(
+    program$forward(list(value = "kept"))$output[[1L]],
+    list(result = "kept")
   )
 })
 
@@ -853,7 +951,7 @@ test_that("flex consistently omits ignored output properties", {
   expect_identical(ignored_result$output[[1L]], setNames(list(), character()))
 })
 
-test_that("flex executes two fresh predictors with one aggregate trace", {
+test_that("flex records one ordered trace event per predictor call", {
   chat <- flex_test_chat()
   program <- flex_test_program(
     "question -> answer",
@@ -878,11 +976,80 @@ test_that("flex executes two fresh predictors with one aggregate trace", {
   expect_identical(metadata$total_tokens, 6L)
   expect_equal(metadata$cost, 0.002)
 
-  expect_length(program$state$traces, 1L)
-  trace <- program$state$traces[[1L]]
-  expect_identical(trace$predictor_calls, 2L)
-  expect_named(trace$steps, c("draft", "finish"))
-  expect_identical(program$get_traces()$total_tokens, 6L)
+  expect_length(metadata$program_trace_events, 2L)
+  expect_named(metadata$program_trace_events, c("draft", "finish"))
+  expect_length(program$state$traces, 2L)
+  expect_identical(
+    unname(vapply(
+      program$state$traces,
+      `[[`,
+      integer(1),
+      "predictor_call_index"
+    )),
+    1:2
+  )
+  expect_identical(
+    unname(vapply(
+      program$state$traces,
+      `[[`,
+      character(1),
+      "step_name"
+    )),
+    c("draft", "finish")
+  )
+  expect_identical(
+    program$state$traces[[1L]]$inputs,
+    list(question = "the question")
+  )
+  expect_identical(
+    program$state$traces[[2L]]$inputs,
+    list(draft = "a checked draft")
+  )
+  expect_identical(
+    program$state$traces[[2L]]$output$answer,
+    "the final answer"
+  )
+  expect_equal(sum(program$get_traces()$total_tokens), 6L)
+})
+
+test_that("trace-aware metrics receive ordered Flex predictor calls once", {
+  chat <- flex_test_chat()
+  program <- flex_test_program(
+    "question -> answer",
+    module_src = flex_two_step_source()
+  )
+  seen <- NULL
+  metric <- metric_with_trace(
+    function(prediction, expected, program_trace) {
+      seen <<- program_trace
+      1
+    }
+  )
+
+  evaluated <- evaluate(
+    program,
+    data = data.frame(question = "the question", answer = "the final answer"),
+    metric = metric,
+    .llm = chat,
+    .progress = FALSE
+  )
+
+  expect_s3_class(seen, "dsprrr_program_trace")
+  expect_identical(seen$status, "ok")
+  expect_length(seen$events, 2L)
+  expect_identical(
+    unname(vapply(seen$events, `[[`, character(1), "step_name")),
+    c("draft", "finish")
+  )
+  expect_identical(evaluated$metadata[[1L]]$predictor_calls, 2L)
+  expect_equal(
+    sum(vapply(
+      seen$events,
+      function(event) event$tokens$total_tokens,
+      integer(1)
+    )),
+    evaluated$metadata[[1L]]$total_tokens
+  )
 })
 
 test_that("flex resolves runtime Chat parameters exactly once", {
@@ -994,7 +1161,165 @@ test_that("flex uses the specialized scalar dataset adapter", {
     function(metadata) identical(metadata$predictor_calls, 2L),
     logical(1)
   )))
-  expect_length(program$state$traces, 2L)
+  expect_length(program$state$traces, 4L)
+  expect_identical(
+    unname(vapply(
+      program$state$traces,
+      function(event) event$metadata$batch_index,
+      integer(1)
+    )),
+    c(1L, 1L, 2L, 2L)
+  )
+})
+
+test_that("one-predictor Flex datasets use isolated native concurrency", {
+  calls <- 0L
+  observed_prompts <- list()
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(
+      prompts,
+      max_active,
+      ...
+    ) {
+      calls <<- calls + 1L
+      observed_prompts[[calls]] <<- prompts
+      expect_identical(max_active, 3L)
+      tibble::tibble(
+        answer = paste0("answer-", seq_along(prompts)),
+        input_tokens = rep(2L, length(prompts)),
+        output_tokens = rep(1L, length(prompts)),
+        cached_input_tokens = rep(0L, length(prompts)),
+        cost = rep(0.001, length(prompts)),
+        .error = rep(list(NULL), length(prompts))
+      )
+    },
+    .package = "ellmer"
+  )
+  program <- flex_test_program("question -> answer")
+  dataset <- data.frame(question = c("one", "two", "three"))
+
+  result <- run_dataset(
+    program,
+    dataset,
+    .llm = structure(list(), class = "Chat"),
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 3L
+    ),
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
+  )
+
+  expect_identical(calls, 1L)
+  expect_length(observed_prompts[[1L]], 3L)
+  expect_identical(
+    vapply(result$result, `[[`, character(1), "answer"),
+    paste0("answer-", 1:3)
+  )
+  expect_true(all(vapply(
+    result$.metadata,
+    function(metadata) identical(metadata$effective_backend, "ellmer"),
+    logical(1)
+  )))
+  expect_true(all(vapply(
+    result$.metadata,
+    function(metadata) identical(metadata$predictor_calls, 1L),
+    logical(1)
+  )))
+  expect_length(program$state$traces, 3L)
+  expect_identical(
+    vapply(
+      program$state$traces,
+      function(event) event$metadata$batch_index,
+      integer(1)
+    ),
+    1:3
+  )
+})
+
+test_that("concurrent Flex preserves provider error conditions", {
+  provider_cause <- rlang::error_cnd(
+    class = "flex_test_provider_offline",
+    message = "provider offline"
+  )
+  provider_error <- rlang::error_cnd(
+    class = "dsprrr_provider_error",
+    message = "LLM call failed: provider offline",
+    parent = provider_cause
+  )
+  predictor_results <- tibble::tibble(
+    question = "q",
+    result = list(NA),
+    .error = "LLM call failed: provider offline",
+    .metadata = list(list(
+      error = "LLM call failed: provider offline",
+      error_class = "dsprrr_provider_error"
+    )),
+    .chat = list(NULL)
+  )
+  attr(predictor_results, "dsprrr_error_conditions") <- list(provider_error)
+  testthat::local_mocked_bindings(
+    run_dataset = function(...) predictor_results,
+    .package = "dsprrr"
+  )
+  program <- flex_test_program("question -> answer")
+
+  result <- dsprrr:::run_flex_dataset_batch(
+    program = program,
+    data = data.frame(question = "q"),
+    .llm = structure(list(), class = "Chat"),
+    .verbose = FALSE,
+    .progress = FALSE,
+    .return_format = "structured",
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 2L
+    ),
+    .concurrency_runtime = list(effective_backend = "ellmer"),
+    dots = list()
+  )
+
+  conditions <- attr(result, "dsprrr_error_conditions", exact = TRUE)
+  expect_length(conditions, 1L)
+  expect_identical(conditions[[1L]], provider_error)
+  expect_s3_class(
+    dsprrr:::run_provider_error_condition(conditions[[1L]]),
+    "flex_test_provider_offline"
+  )
+})
+
+test_that("multi-predictor Flex concurrency remains fail-closed", {
+  calls <- 0L
+  testthat::local_mocked_bindings(
+    parallel_chat_structured = function(...) {
+      calls <<- calls + 1L
+      stop("provider should not run")
+    },
+    .package = "ellmer"
+  )
+  program <- flex_test_program(
+    "question -> answer",
+    module_src = flex_two_step_source()
+  )
+
+  error <- tryCatch(
+    run_dataset(
+      program,
+      data.frame(question = c("one", "two")),
+      .llm = structure(list(), class = "Chat"),
+      .concurrency = concurrency_control(
+        backend = "ellmer",
+        max_active = 2L
+      ),
+      .progress = FALSE
+    ),
+    error = identity
+  )
+
+  expect_s3_class(error, "dsprrr_flex_concurrency_unsupported_error")
+  expect_identical(error$predictor_calls, 2L)
+  expect_identical(calls, 0L)
 })
 
 test_that("run preserves Flex array and object inputs as scalar values", {

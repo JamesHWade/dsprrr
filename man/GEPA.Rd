@@ -14,10 +14,14 @@ GEPA(
   mutation_rate = 0.1,
   crossover_rate = 0.7,
   selection = "pareto",
+  component_selector = "round_robin",
+  use_merge = TRUE,
+  max_merge_invocations = 5L,
   seed = NULL,
   log_dir = NULL,
   verbose = TRUE,
-  track_stats = TRUE
+  track_stats = TRUE,
+  track_best_outputs = FALSE
 )
 }
 \arguments{
@@ -39,6 +43,18 @@ GEPA(
 
 \item{selection}{Selection strategy: "pareto" or "current_best".}
 
+\item{component_selector}{Component mutation strategy. Use
+\code{"round_robin"} to update one component at a time, \code{"all"} to update all
+components atomically, or a function called with \code{component_ids},
+\code{candidate}, \code{failed_examples}, and \code{context}. The function must return one
+or more unique IDs from \code{component_ids}.}
+
+\item{use_merge}{Whether to attempt lineage-aware merges of complementary
+component changes.}
+
+\item{max_merge_invocations}{Maximum merge attempts, or \code{NULL} for no
+separate merge-attempt cap.}
+
 \item{seed}{Random seed for reproducibility.}
 
 \item{log_dir}{Optional directory for trial logging.}
@@ -46,10 +62,13 @@ GEPA(
 \item{verbose}{Whether to print progress messages.}
 
 \item{track_stats}{Whether to record generation statistics.}
+
+\item{track_best_outputs}{Whether to retain each validation row's
+highest-scoring output. Requires \code{track_stats = TRUE}.}
 }
 \description{
-Reflective optimizer for instructions and declarative Flex components, using
-row-level failures and metric feedback to propose improved candidates.
+Reflective optimizer for instructions and complete Flex source components,
+using row-level failures and metric feedback to propose improved candidates.
 }
 \details{
 \subsection{Feedback metrics}{
@@ -66,23 +85,33 @@ sees only inputs, expected, and predicted values.
 
 \subsection{Differences from DSPy's GEPA}{
 
-This is an adapted ("GEPA-lite") implementation. It shares reflective
-mutation guided by failures and feedback plus Pareto-frontier selection over
-multiple metrics, but uses a fixed population/generations loop rather than
-DSPy's budget-driven candidate search.
+This is an adapted implementation. It shares reflective mutation guided by
+failures and feedback, validation-example winner frontiers, component
+selection, lineage-aware merge, and Pareto selection over multiple metrics,
+but uses a fixed population/generations loop rather than DSPy's full
+budget-driven candidate search.
 
-Programs containing \code{\link[=flex]{flex()}} leaves use complete component candidates:
-ordinary instructions and complete declarative \code{module_src} values are
-proposed, copied, validated, and bound transactionally. Invalid Flex sources
-receive an auditable failure score and are never selectable. The structured
-source proposer receives row-aligned inputs, expected output, prediction, and
-metric feedback. It never evaluates proposed source as R code.
+Every mutable program is represented as a complete component candidate:
+ordinary predictor instructions and complete Flex \code{module_src} values are
+proposed, copied, validated, and bound transactionally. A Flex source is one
+component; dynamically constructed inner predictors are not optimized as
+separate leaves. Invalid Flex sources receive an
+auditable failure score and are never selectable. The structured source
+proposer receives task and signature context, field schemas, source runtime,
+allowed tools and primitives, row-aligned inputs, expected output,
+prediction, and metric feedback. Executable source is evaluated only through
+Flex's configured interpreter bridge during candidate evaluation.
 
-Pareto selection still ranks whole-program candidates. GEPA-lite does not
-implement DSPy's independent per-component Pareto frontiers or inference-time
-search. Compiled programs record this distinction under
-\code{config$optimizer$component_semantics}. Expect qualitatively similar
-behavior, not identical upstream results.
+Parent selection uses the union of complete candidates that win on at least
+one validation row and candidates on the multi-metric objective Pareto front;
+component selection is a separate mutation policy. When \code{valset} is supplied,
+\code{trainset} remains the discovery/reflection dataset and \code{valset} is used for
+aggregate selection, validation-instance frontiers, and retained outputs.
+Candidate metadata includes lineage, aggregate and per-row scores, discovery
+counts, winners, and optional retained best outputs. Fine-grained checkpoint
+resume, cached subsample merge acceptance, and automatic inference-time
+candidate selection are not implemented. Compiled programs record these
+distinctions under \code{config$optimizer$component_semantics}.
 }
 }
 \examples{

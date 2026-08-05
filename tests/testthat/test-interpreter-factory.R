@@ -187,6 +187,22 @@ test_that("module factory rejects type-specific arguments for other types", {
     module(sig, type = "predict", max_predictor_calls = 100L),
     class = "dsprrr_module_type_argument_error"
   )
+  expect_error(
+    module(sig, type = "predict", source_format = "json"),
+    class = "dsprrr_module_type_argument_error"
+  )
+  expect_error(
+    module(sig, type = "predict", require_sandbox = FALSE),
+    class = "dsprrr_module_type_argument_error"
+  )
+  expect_error(
+    suppressWarnings(module(
+      sig,
+      type = "flex",
+      runner = factory_test_runner(1L)
+    )),
+    class = "dsprrr_interpreter_binding_error"
+  )
 
   # Preserve the pre-existing generic-factory behavior for runner.
   expect_s3_class(
@@ -307,6 +323,142 @@ test_that("factory-created runners are fresh and closed per invocation", {
     first$metadata[[1L]]$runner_lifecycle,
     "invocation-owned"
   )
+})
+
+test_that("factory runners use start and shutdown lifecycle methods", {
+  events <- character()
+  factory <- function() {
+    list(
+      start = function() events <<- c(events, "start"),
+      execute = function(code, context = list()) {
+        events <<- c(events, "execute")
+        list(success = TRUE, result = 42)
+      },
+      policy = function() {
+        list(backend = "lifecycle-test", trust = "test", sandboxed = TRUE)
+      },
+      shutdown = function() events <<- c(events, "shutdown")
+    )
+  }
+  module <- program_of_thought(
+    "question -> answer",
+    interpreter_factory = factory,
+    extract_answer = FALSE
+  )
+
+  result <- module$forward(
+    list(question = "test"),
+    .llm = factory_test_pot_chat()
+  )
+
+  expect_identical(result$output[[1L]]$answer, "42")
+  expect_identical(events, c("start", "execute", "shutdown"))
+})
+
+test_that("terminal interpreter failures are not repaired or reused", {
+  events <- character()
+  factory <- function() {
+    list(
+      start = function() events <<- c(events, "start"),
+      execute = function(code, context = list()) {
+        events <<- c(events, "execute")
+        list(
+          success = FALSE,
+          result = NULL,
+          error = "transport disconnected",
+          error_type = "interpreter"
+        )
+      },
+      policy = function() {
+        list(backend = "terminal-test", trust = "test", sandboxed = TRUE)
+      },
+      shutdown = function() events <<- c(events, "shutdown")
+    )
+  }
+  module <- program_of_thought(
+    "question -> answer",
+    interpreter_factory = factory,
+    max_iters = 3L
+  )
+
+  condition <- expect_error(
+    module$forward(
+      list(question = "test"),
+      .llm = factory_test_pot_chat()
+    ),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+
+  expect_identical(events, c("start", "execute", "shutdown"))
+  expect_identical(condition$runner_result$error_type, "interpreter")
+  expect_false(condition$runner_result$retryable)
+})
+
+test_that("CodeAct does not retry a terminal tool interpreter", {
+  executions <- 0L
+  shutdowns <- 0L
+  factory <- function() {
+    list(
+      execute = function(code, context = list()) {
+        executions <<- executions + 1L
+        list(
+          success = FALSE,
+          result = NULL,
+          error = "bridge protocol failed",
+          error_type = "interpreter"
+        )
+      },
+      policy = function() {
+        list(backend = "codeact-terminal", trust = "test", sandboxed = TRUE)
+      },
+      shutdown = function() shutdowns <<- shutdowns + 1L
+    )
+  }
+  registered <- list()
+  chat_calls <- 0L
+  chat <- NULL
+  chat <- list(
+    clone = function() chat,
+    register_tool = function(tool) {
+      registered[[as.character(tool@name)]] <<- tool
+      invisible(NULL)
+    },
+    chat = function(prompt, ...) {
+      chat_calls <<- chat_calls + 1L
+      registered$execute_r_code(code = "1 + 1")
+    },
+    get_turns = function() list()
+  )
+  module <- code_act(
+    "question -> answer",
+    interpreter_factory = factory,
+    max_iterations = 3L
+  )
+
+  expect_error(
+    module$forward(list(question = "test"), .llm = chat),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+  expect_identical(executions, 1L)
+  expect_identical(chat_calls, 1L)
+  expect_identical(shutdowns, 1L)
+})
+
+test_that("signalled runner failures are terminal and are not repairable", {
+  runner <- list(
+    execute = function(code, context = list()) stop("transport down"),
+    policy = function() {
+      list(backend = "throwing-test", trust = "test", sandboxed = TRUE)
+    }
+  )
+
+  condition <- expect_error(
+    dsprrr:::execute_code_runner(runner, "1 + 1"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+  expect_match(conditionMessage(condition), "outside submitted-code execution")
+  expect_match(conditionMessage(condition$parent), "transport down")
+  expect_true(dsprrr:::is_terminal_interpreter_condition(condition))
 })
 
 test_that("runtime mutation cannot bypass the runner/factory XOR", {
@@ -476,6 +628,35 @@ test_that("lease error precedence preserves cleanup diagnostics", {
   )
 })
 
+test_that("startup failures remain primary when shutdown also fails", {
+  factory <- function() {
+    list(
+      start = function() stop("start failed"),
+      execute = function(code, context = list()) {
+        list(success = TRUE, result = 1)
+      },
+      policy = function() {
+        list(backend = "startup-test", trust = "test", sandboxed = TRUE)
+      },
+      shutdown = function() stop("shutdown failed")
+    )
+  }
+  condition <- tryCatch(
+    dsprrr:::acquire_code_runner(
+      runner = NULL,
+      interpreter_factory = factory,
+      module_name = "test module"
+    ),
+    error = identity
+  )
+
+  expect_s3_class(condition, "dsprrr_interpreter_start_error")
+  expect_match(conditionMessage(condition), "could not start", fixed = TRUE)
+  cleanup <- attr(condition, "dsprrr_interpreter_close_error")
+  expect_s3_class(cleanup, "error")
+  expect_match(conditionMessage(cleanup), "shutdown failed", fixed = TRUE)
+})
+
 test_that("lease cleanup runs for interrupts without changing the condition", {
   log <- factory_test_log()
   interrupt <- structure(
@@ -543,6 +724,27 @@ test_that("factory runner cleanup preserves policy interrupts", {
   expect_identical(closes, 1L)
 })
 
+test_that("a valid close fallback cleans up an invalid shutdown contract", {
+  closes <- 0L
+  factory <- function() {
+    list(
+      execute = function(code, context = list()) {
+        list(success = TRUE, result = 1)
+      },
+      policy = function() {
+        list(backend = "cleanup-fallback", trust = "test", sandboxed = TRUE)
+      },
+      shutdown = function(required) invisible(required),
+      close = function() closes <<- closes + 1L
+    )
+  }
+
+  lease <- dsprrr:::acquire_code_runner(NULL, factory, "test module")
+  expect_identical(lease$cleanup_method, "close")
+  expect_null(dsprrr:::close_code_runner_lease(lease))
+  expect_identical(closes, 1L)
+})
+
 test_that("runner results are normalized and malformed results fail closed", {
   normalized <- dsprrr:::validate_code_runner_result(list(
     success = TRUE,
@@ -553,7 +755,17 @@ test_that("runner results are normalized and malformed results fail closed", {
   expect_identical(normalized$messages, "")
   expect_identical(normalized$warnings, "")
   expect_null(normalized$error)
+  expect_null(normalized$error_type)
+  expect_false(normalized$retryable)
   expect_true(is.na(normalized$duration_ms))
+
+  repairable <- dsprrr:::validate_code_runner_result(list(
+    success = FALSE,
+    result = NULL,
+    error = "bad submitted code"
+  ))
+  expect_identical(repairable$error_type, "execution")
+  expect_true(repairable$retryable)
 
   invalid <- list(
     unnamed = unname(list(success = TRUE, result = 1)),
@@ -567,6 +779,12 @@ test_that("runner results are normalized and malformed results fail closed", {
     ),
     invalid_success = list(success = NA, result = 1),
     failed_without_error = list(success = FALSE, result = NULL),
+    invalid_error_type = list(
+      success = FALSE,
+      result = NULL,
+      error = "failed",
+      error_type = "transport-ish"
+    ),
     invalid_duration = list(
       success = TRUE,
       result = 1,
@@ -653,7 +871,7 @@ test_that("CodeAct retained tools cannot outlive a factory lease", {
   )
 })
 
-test_that("specialized direct async rejects while run_stream falls back", {
+test_that("factory workflows reject streaming and caller-owned async reuse", {
   log <- factory_test_log()
   module <- program_of_thought(
     "question -> answer",
@@ -661,10 +879,6 @@ test_that("specialized direct async rejects while run_stream falls back", {
   )
   flex_module <- suppressWarnings(flex("question -> answer"))
 
-  expect_error(
-    run_async(module, question = "test"),
-    class = "dsprrr_specialized_async_unsupported"
-  )
   expect_error(
     stream_async(module, question = "test"),
     class = "dsprrr_specialized_async_unsupported"
@@ -683,8 +897,312 @@ test_that("specialized direct async rejects while run_stream falls back", {
     run_async(flex_module, question = "test"),
     class = "dsprrr_specialized_async_unsupported"
   )
+  caller_owned <- program_of_thought(
+    "question -> answer",
+    runner = factory_test_runner(99L, log)
+  )
+  expect_error(
+    run_async(caller_owned, question = "test"),
+    class = "dsprrr_interpreter_concurrency_unsafe"
+  )
+  expect_error(
+    run(
+      caller_owned,
+      question = c("first", "second"),
+      .llm = factory_test_pot_chat(),
+      .progress = FALSE
+    ),
+    class = "dsprrr_interpreter_concurrency_unsafe"
+  )
   expect_identical(log$created, 1L)
   expect_identical(log$closed, 1L)
+})
+
+test_that("factory batch dispatch validates signatures before runtime work", {
+  log <- factory_test_log()
+  module <- program_of_thought(
+    "question -> answer",
+    interpreter_factory = factory_test_factory(log),
+    extract_answer = FALSE
+  )
+
+  expect_error(
+    run(
+      module,
+      wrong = c("first", "second"),
+      .llm = factory_test_pot_chat(),
+      .progress = FALSE
+    ),
+    regexp = "question"
+  )
+  expect_length(log$created, 0L)
+})
+
+test_that("factory batches reject controls the adapter cannot enforce", {
+  log <- factory_test_log()
+  module <- program_of_thought(
+    "question -> answer",
+    interpreter_factory = factory_test_factory(log),
+    extract_answer = FALSE
+  )
+
+  controls <- list(
+    concurrency_control(backend = "sequential", max_errors = 1),
+    concurrency_control(backend = "sequential", cancel = FALSE)
+  )
+  for (control in controls) {
+    expect_error(
+      run(
+        module,
+        question = c("first", "second"),
+        .llm = factory_test_pot_chat(),
+        .concurrency = control,
+        .progress = FALSE
+      ),
+      class = "dsprrr_interpreter_concurrency_control_error"
+    )
+  }
+  expect_length(log$created, 0L)
+})
+
+test_that("run_async owns an isolated profile after default topology stops", {
+  skip_if_not_installed("mirai")
+  skip_if_not_installed("promises")
+  skip_if_not_installed("later")
+  skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
+
+  skip_if(
+    mirai::status()$connections > 0L,
+    "test must not replace a user-owned default topology"
+  )
+  mirai::daemons(1L)
+  withr::defer(mirai::daemons(0L, sync = TRUE))
+  deadline <- Sys.time() + 10
+  while (
+    mirai::status()$connections < 1L &&
+      Sys.time() < deadline
+  ) {
+    Sys.sleep(0.01)
+  }
+  expect_identical(mirai::status()$connections, 1L)
+  mirai::daemons(0L, sync = TRUE)
+  expect_identical(mirai::status()$connections, 0L)
+
+  profile <- paste0(
+    "dsprrr-test-async-",
+    Sys.getpid(),
+    "-",
+    basename(tempfile())
+  )
+  withr::defer(dsprrr:::shutdown_dsprrr_mirai_profile(
+    profile,
+    strict = FALSE
+  ))
+  testthat::local_mocked_bindings(
+    new_dsprrr_mirai_profile = function(...) profile,
+    .package = "dsprrr"
+  )
+
+  log_path <- withr::local_tempfile()
+  file.create(log_path)
+  factory <- function() {
+    list(
+      start = function() cat("start\n", file = log_path, append = TRUE),
+      execute = function(code, context = list()) {
+        list(success = TRUE, result = Sys.getpid())
+      },
+      policy = function() {
+        list(backend = "async-test", trust = "test", sandboxed = TRUE)
+      },
+      shutdown = function() cat("shutdown\n", file = log_path, append = TRUE)
+    )
+  }
+  module <- program_of_thought(
+    "question -> answer",
+    interpreter_factory = factory,
+    extract_answer = FALSE
+  )
+
+  parent_pid <- Sys.getpid()
+  namespace_before <- asNamespace("dsprrr")
+  state <- new.env(parent = emptyenv())
+  state$done <- FALSE
+  state$value <- NULL
+  state$error <- NULL
+  promise <- run_async(
+    module,
+    question = "test",
+    .llm = factory_test_pot_chat()
+  )
+  observer <- promises::then(
+    promise,
+    onFulfilled = function(value) {
+      state$value <- value
+      state$done <- TRUE
+      NULL
+    },
+    onRejected = function(error) {
+      state$error <- error
+      state$done <- TRUE
+      NULL
+    }
+  )
+  deadline <- Sys.time() + 20
+  while (!state$done && Sys.time() < deadline) {
+    later::run_now(0.1)
+  }
+  invisible(observer)
+
+  expect_true(state$done)
+  expect_null(state$error)
+  expect_false(identical(as.integer(state$value$answer), parent_pid))
+  expect_identical(asNamespace("dsprrr"), namespace_before)
+  expect_identical(readLines(log_path), c("start", "shutdown"))
+  expect_true(dsprrr:::mirai_profile_is_drained(profile))
+})
+
+test_that("run_async cleans an owned profile when task submission fails", {
+  profile <- "dsprrr-test-async-launch-failure"
+  events <- list()
+  testthat::local_mocked_bindings(
+    new_dsprrr_mirai_profile = function(...) profile,
+    shutdown_dsprrr_mirai_profile = function(
+      profile,
+      tasks,
+      strict,
+      ...
+    ) {
+      events[[length(events) + 1L]] <<- list(
+        operation = "shutdown",
+        profile = profile,
+        tasks = tasks,
+        strict = strict
+      )
+      TRUE
+    },
+    .package = "dsprrr"
+  )
+  testthat::local_mocked_bindings(
+    daemons = function(n, dispatcher, .compute, ...) {
+      events[[length(events) + 1L]] <<- list(
+        operation = "start",
+        n = n,
+        dispatcher = dispatcher,
+        profile = .compute
+      )
+      invisible(TRUE)
+    },
+    mirai = function(...) stop("forced submission failure"),
+    .package = "mirai"
+  )
+  module <- program_of_thought(
+    "question -> answer",
+    interpreter_factory = factory_test_factory(factory_test_log()),
+    extract_answer = FALSE
+  )
+
+  expect_error(
+    run_async(module, question = "test", .llm = factory_test_pot_chat()),
+    class = "dsprrr_interpreter_async_launch_error"
+  )
+  expect_identical(
+    lapply(events, `[[`, "operation"),
+    list("start", "shutdown")
+  )
+  expect_identical(events[[1L]]$n, 1L)
+  expect_true(events[[1L]]$dispatcher)
+  expect_identical(events[[1L]]$profile, profile)
+  expect_identical(events[[2L]]$profile, profile)
+  expect_length(events[[2L]]$tasks, 0L)
+  expect_false(events[[2L]]$strict)
+})
+
+test_that("run_async cleans a partially launched owned profile", {
+  profile <- "dsprrr-test-async-pool-failure"
+  cleanup <- NULL
+  testthat::local_mocked_bindings(
+    new_dsprrr_mirai_profile = function(...) profile,
+    shutdown_dsprrr_mirai_profile = function(
+      profile,
+      tasks,
+      strict,
+      ...
+    ) {
+      cleanup <<- list(profile = profile, tasks = tasks, strict = strict)
+      TRUE
+    },
+    .package = "dsprrr"
+  )
+  testthat::local_mocked_bindings(
+    daemons = function(...) stop("forced pool launch failure"),
+    .package = "mirai"
+  )
+  module <- program_of_thought(
+    "question -> answer",
+    interpreter_factory = factory_test_factory(factory_test_log()),
+    extract_answer = FALSE
+  )
+
+  expect_error(
+    run_async(module, question = "test", .llm = factory_test_pot_chat()),
+    class = "dsprrr_interpreter_async_launch_error"
+  )
+  expect_identical(cleanup$profile, profile)
+  expect_length(cleanup$tasks, 0L)
+  expect_false(cleanup$strict)
+})
+
+test_that("factory-backed batches support isolated mirai concurrency", {
+  skip_if_not_installed("mirai")
+  skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
+
+  log_path <- withr::local_tempfile()
+  file.create(log_path)
+  factory <- function() {
+    list(
+      start = function() cat("start\n", file = log_path, append = TRUE),
+      execute = function(code, context = list()) {
+        list(success = TRUE, result = context$question)
+      },
+      policy = function() {
+        list(backend = "batch-test", trust = "test", sandboxed = TRUE)
+      },
+      shutdown = function() cat("shutdown\n", file = log_path, append = TRUE)
+    )
+  }
+  chat <- NULL
+  chat <- structure(
+    list(
+      clone = function() chat,
+      chat_structured = function(...) {
+        list(code = "ignored", explanation = "test")
+      },
+      chat = function(...) "unused"
+    ),
+    class = "Chat"
+  )
+  module <- program_of_thought(
+    "question -> answer",
+    interpreter_factory = factory,
+    extract_answer = FALSE,
+    chat = chat
+  )
+
+  result <- run(
+    module,
+    question = c("first", "second"),
+    .concurrency = concurrency_control(backend = "mirai", max_active = 2L),
+    .progress = FALSE
+  )
+
+  expect_identical(
+    lapply(result, `[[`, "answer"),
+    list("first", "second")
+  )
+  events <- readLines(log_path)
+  expect_identical(sum(events == "start"), 2L)
+  expect_identical(sum(events == "shutdown"), 2L)
+  expect_length(module$get_executions(), 2L)
 })
 
 test_that("built-in runners become terminal after close", {
