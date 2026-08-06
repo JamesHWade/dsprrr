@@ -86,6 +86,29 @@ test_that("program_of_thought respects max_iters", {
   expect_equal(pot$max_iters, 5L)
 })
 
+test_that("ProgramOfThought validates bounds and runner at both layers", {
+  skip_if_not_installed("callr")
+  runner <- r_code_runner(timeout = 5)
+  for (value in c(0, -1, 1.5, Inf, NA_real_, .Machine$integer.max + 1)) {
+    expect_error(
+      program_of_thought(
+        "question -> answer",
+        runner = runner,
+        max_iters = value
+      ),
+      class = "dsprrr_pot_bounds_error",
+      info = paste("max_iters", value)
+    )
+  }
+  expect_error(
+    ProgramOfThoughtModule$new(
+      signature = signature("question -> answer"),
+      runner = "not a runner"
+    ),
+    "runner must implement the dsprrr code-runner protocol"
+  )
+})
+
 test_that("program_of_thought respects extract_answer", {
   skip_if_not_installed("callr")
 

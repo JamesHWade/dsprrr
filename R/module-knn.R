@@ -134,17 +134,21 @@ KNNFewShotModule <- R6::R6Class(
         execution_time <- as.numeric(
           difftime(Sys.time(), start_time, units = "secs")
         )
-        trace_entry <- tibble::tibble(
+        # Module trace stores are list-of-events everywhere else in dsprrr.
+        # Keeping that invariant matters because run_dataset() patches each
+        # newly appended event with row metadata and trace-aware metrics slice
+        # the store by event count.
+        trace_entry <- list(
           timestamp = Sys.time(),
           module = "KNNFewShotModule",
           operation = "forward",
-          execution_time = execution_time
+          execution_time = execution_time,
+          metadata = list()
         )
-        if (is.null(self$state$traces)) {
-          self$state$traces <- trace_entry
-        } else {
-          self$state$traces <- rbind(self$state$traces, trace_entry)
-        }
+        self$state$traces <- append(
+          self$state$traces %||% list(),
+          list(trace_entry)
+        )
       }
 
       result

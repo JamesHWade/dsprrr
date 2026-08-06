@@ -505,6 +505,7 @@ compile_bootstrap <- function(
 
       # Run teacher with temperature for diversity
       teacher_condition <- NULL
+      trace_count_before <- length(teacher$state$traces %||% list())
       result <- tryCatch(
         {
           # Apply teacher settings (like temperature)
@@ -554,6 +555,29 @@ compile_bootstrap <- function(
       }
 
       # Evaluate with metric (feedback metrics return list(score, feedback))
+      trace_events <- new_evaluation_trace_events(
+        teacher,
+        trace_count_before
+      )
+      result_metadata <- if (
+        is.data.frame(result) &&
+          "metadata" %in% names(result) &&
+          nrow(result) > 0L
+      ) {
+        result$metadata[[1L]]
+      } else {
+        list()
+      }
+      result_metadata <- utils::modifyList(
+        program_trace_event_metadata(trace_events),
+        result_metadata
+      )
+      program_trace <- new_program_trace(
+        events = trace_events,
+        metadata = result_metadata,
+        row_id = idx,
+        epoch = round
+      )
       prediction <- optimizer_forward_output(result)
       metric_prediction <- if (
         !is.null(metric_field) &&
@@ -569,7 +593,12 @@ compile_bootstrap <- function(
           normalize_metric_result(
             # Field-aware metrics need the structured run result for field
             # extraction; only the harvested demo stores the scalar output.
-            teleprompter@metric(metric_prediction, expected)
+            invoke_metric(
+              teleprompter@metric,
+              metric_prediction,
+              expected,
+              program_trace
+            )
           )$score
         },
         error = function(e) {
@@ -1117,15 +1146,31 @@ compile_bootstrap_pipeline <- function(
 
       # Each forward(trace = TRUE) appends a trace; keep only the one for
       # this attempt so memory does not grow with the number of attempts
-      trace_entry <- teacher$state$traces[[length(teacher$state$traces)]]
+      trace_entry <- if (length(teacher$state$traces) > 0L) {
+        teacher$state$traces[[length(teacher$state$traces)]]
+      } else {
+        NULL
+      }
       teacher$state$traces <- list()
 
       final_output <- result$output[[1]]
+      result_metadata <- result$metadata[[1L]] %||% list()
+      program_trace <- new_program_trace(
+        events = if (is.null(trace_entry)) list() else list(trace_entry),
+        metadata = result_metadata,
+        row_id = idx,
+        epoch = round
+      )
 
       metric_condition <- NULL
       score <- tryCatch(
         normalize_metric_result(
-          teleprompter@metric(final_output, expected)
+          invoke_metric(
+            teleprompter@metric,
+            final_output,
+            expected,
+            program_trace
+          )
         )$score,
         error = function(e) {
           metric_condition <<- e

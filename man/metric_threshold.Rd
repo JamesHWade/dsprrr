@@ -7,17 +7,21 @@
 metric_threshold(metric, threshold = 0.5, comparison = ">=")
 }
 \arguments{
-\item{metric}{A metric function that returns numeric values}
+\item{metric}{A metric function returning a logical/numeric score or
+\code{list(score = , feedback = )}.}
 
 \item{threshold}{The threshold value for success}
 
 \item{comparison}{One of ">=", ">", "==", "<", "<="}
 }
 \value{
-A function with signature function(prediction, expected) -> logical
+A metric function returning logical scores. Trace-aware and feedback
+protocols are preserved when present on \code{metric}.
 }
 \description{
-Wraps a numeric metric to return TRUE/FALSE based on a threshold.
+Wraps a metric to return TRUE/FALSE based on a threshold. Logical, numeric,
+feedback, and trace-aware metrics all use the package-wide metric protocol;
+feedback and trace dispatch are preserved by the wrapper.
 }
 \examples{
 # F1 score with threshold

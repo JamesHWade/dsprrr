@@ -333,7 +333,10 @@ PredictModule <- R6::R6Class(
       }
 
       if (!is.null(params$instructions) && !is.na(params$instructions)) {
-        self$signature@instructions <- params$instructions
+        self$signature <- with_instructions(
+          self$signature,
+          params$instructions
+        )
       }
 
       if (!is.null(params$template) && !is.na(params$template)) {

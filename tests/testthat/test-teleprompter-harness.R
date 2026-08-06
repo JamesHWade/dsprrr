@@ -26,14 +26,30 @@ make_harness_agent_factory <- function(responses) {
 
 make_harness_runner <- function(output = "[1] 2") {
   inputs <- character()
-  runner <- mcp_repl_runner(repl = function(input, timeout_ms) {
-    inputs <<- c(inputs, input)
-    list(
-      result = list(
-        content = list(list(type = "text", text = output))
+  runner <- list(
+    execute = function(code, context = list()) {
+      inputs <<- c(inputs, code)
+      list(
+        success = TRUE,
+        result = output,
+        stdout = output,
+        stderr = "",
+        messages = "",
+        warnings = "",
+        error = NULL,
+        duration_ms = 0
       )
-    )
-  })
+    },
+    reset = function() invisible(NULL),
+    policy = function() {
+      list(
+        backend = "verified-test-sandbox",
+        trust = "untrusted-code",
+        sandboxed = TRUE,
+        network_access = "disabled"
+      )
+    }
+  )
   list(runner = runner, inputs = function() inputs)
 }
 
@@ -356,6 +372,37 @@ test_that("agentic harnesses require an OS-sandboxed runner by default", {
       runner = r_code_runner()
     )
   )
+})
+
+test_that("agentic harness seeds are bounded and do not leak RNG state", {
+  expect_error(
+    AutoResearch(metric = harness_metric, seed = 1e20),
+    "R integer range"
+  )
+
+  set.seed(20260804)
+  rng_before <- .Random.seed
+  tp <- AutoResearch(
+    metric = harness_metric,
+    max_iterations = 1L,
+    sandbox = FALSE,
+    seed = 42L,
+    verbose = FALSE
+  )
+  agent <- make_harness_agent(list(list(
+    action = "finish",
+    rationale = "done"
+  )))
+
+  compile(
+    tp,
+    harness_program(),
+    harness_data(),
+    .llm = make_harness_task_llm(),
+    .agent_llm = agent
+  )
+
+  expect_identical(.Random.seed, rng_before)
 })
 
 test_that("sandbox false disables agent code execution", {

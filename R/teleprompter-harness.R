@@ -91,9 +91,10 @@ harness_common_properties <- function() {
               length(value) != 1L ||
               is.na(value) ||
               !is.finite(value) ||
-              value != trunc(value))
+              value != trunc(value) ||
+              abs(value) > .Machine$integer.max)
         ) {
-          return("seed must be one whole number or NULL")
+          return("seed must be one whole number in the R integer range or NULL")
         }
         NULL
       }
@@ -307,6 +308,8 @@ compile_autoresearch <- function(
   objective = NULL,
   ...
 ) {
+  outer_rng <- optimizer_checkpoint_capture_rng()
+  on.exit(optimizer_checkpoint_restore_rng(outer_rng), add = TRUE)
   setup <- harness_setup(
     teleprompter = teleprompter,
     name = "AutoResearch",
@@ -512,6 +515,8 @@ compile_meta_harness <- function(
   objective = NULL,
   ...
 ) {
+  outer_rng <- optimizer_checkpoint_capture_rng()
+  on.exit(optimizer_checkpoint_restore_rng(outer_rng), add = TRUE)
   setup <- harness_setup(
     teleprompter = teleprompter,
     name = "MetaHarness",
@@ -875,11 +880,14 @@ harness_validate_runner <- function(runner, required) {
   validate_code_runner(runner)
   policy <- runner$policy()
   if (isTRUE(required) && !isTRUE(policy$sandboxed)) {
-    cli::cli_abort(c(
-      "The agentic harness requires an OS-sandboxed runner",
-      "x" = "Runner {.val {policy$backend}} advertises {.code sandboxed = FALSE}.",
-      "i" = "Use {.fn mcp_repl_runner} or set {.code sandbox = FALSE} to disable agent code execution."
-    ))
+    cli::cli_abort(
+      c(
+        "The agentic harness requires an OS-sandboxed runner",
+        "x" = "Runner {.val {policy$backend}} advertises {.code sandboxed = FALSE}.",
+        "i" = "Use {.fn mcp_repl_runner} or set {.code sandbox = FALSE} to disable agent code execution."
+      ),
+      class = "dsprrr_runner_sandbox_required"
+    )
   }
   runner
 }

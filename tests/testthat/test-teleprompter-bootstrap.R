@@ -562,3 +562,37 @@ test_that("BootstrapFewShot harvests demos with field-aware metrics (dsprrr-s3b)
 
   expect_gt(result$config$optimizer$n_bootstrapped_demos, 0)
 })
+
+test_that("BootstrapFewShot supplies execution traces to trace metrics", {
+  local_reset_cache()
+  sig <- signature("question -> answer", instructions = "Answer")
+  mod <- module(sig, type = "predict", template = "{question}")
+  mock_llm <- structure(
+    list(chat_structured = function(prompt, type, ...) list(answer = "yes")),
+    class = "Chat"
+  )
+  trainset <- data.frame(question = "q1", answer = "yes")
+  seen <- list()
+  metric <- metric_with_trace(
+    function(prediction, expected, program_trace) {
+      seen[[length(seen) + 1L]] <<- program_trace
+      1
+    }
+  )
+  tp <- BootstrapFewShot(
+    metric = metric,
+    max_labeled_demos = 0L,
+    max_bootstrapped_demos = 1L,
+    seed = 42L
+  )
+
+  compiled <- compile(tp, mod, trainset, .llm = mock_llm)
+
+  expect_gt(compiled$config$optimizer$n_bootstrapped_demos, 0L)
+  expect_length(seen, 1L)
+  expect_s3_class(seen[[1L]], "dsprrr_program_trace")
+  expect_length(seen[[1L]]$events, 1L)
+  expect_true("prompt_length" %in% names(seen[[1L]]$metadata))
+  expect_true("total_tokens" %in% names(seen[[1L]]$metadata))
+  expect_gt(seen[[1L]]$metadata$prompt_length, 0L)
+})

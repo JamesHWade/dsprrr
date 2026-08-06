@@ -15,7 +15,9 @@ program_of_thought(
 \arguments{
 \item{signature}{A Signature object or string notation defining inputs/outputs}
 
-\item{runner}{A code runner implementing \code{execute()} and \code{policy()}. Required.}
+\item{runner}{A code runner implementing \code{execute()} and \code{policy()}. Required.
+The module retains this object; reset persistent runners between logically
+isolated jobs and do not use one runner concurrently.}
 
 \item{max_iters}{Maximum code generation/repair iterations (default 3)}
 

@@ -14,7 +14,8 @@ evaluate(module, ...)
 \item \code{data}: A data frame or tibble containing columns that match the
 module's signature inputs plus any expected fields used by metric.
 \item \code{metric}: A function applied per example with signature
-\code{metric(prediction, expected_row)}.
+\code{metric(prediction, expected_row)}, or a trace-aware metric created with
+\code{\link[=metric_with_trace]{metric_with_trace()}}.
 }
 
 Additional arguments passed to \code{\link[=run_dataset]{run_dataset()}}:
@@ -34,7 +35,9 @@ times to quantify variation.
 \value{
 A list with elements. When \code{.return_format = "structured"} (default):
 \itemize{
-\item \code{mean_score}: numeric mean over all successful metric evaluations.
+\item \code{mean_score}: numeric mean over all attempted rows, with run or metric
+failures contributing zero. With repeated epochs, the mean covers every
+attempted row-epoch.
 \item \code{scores}: per-example numeric scores (coerced from logical metrics).
 \item \code{predictions}: list of model outputs.
 \item \code{metadata}: list of metadata captured from \code{\link[=run]{run()}}.
@@ -47,12 +50,17 @@ A list with elements. When \code{.return_format = "structured"} (default):
 \item \code{feedbacks}: per-example textual feedback when the metric returns
 \code{list(score = , feedback = )} (see \code{\link[=metric_with_feedback]{metric_with_feedback()}});
 \code{NA} otherwise.
+\item \code{traces}: per-example trace envelopes supplied to trace-aware metrics.
+Each contains \code{row_id}, \code{epoch}, \code{status}, ordered module \code{events}, and
+per-row \code{metadata}. Trace events can contain prompts, inputs, and model
+responses, so treat them as potentially sensitive.
 \item \code{data}: input data augmented with prediction metadata.
 }
 
 When \code{epochs > 1}, additional fields are included:
 \itemize{
 \item \code{epoch_scores}: list of numeric vectors, one per epoch
+\item \code{epoch_traces}: list of row-aligned trace lists, one per epoch
 \item \code{score_std}: standard deviation of mean scores across epochs
 \item \code{ci_95}: 95\% confidence interval for the mean score (numeric vector of length 2)
 }

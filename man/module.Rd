@@ -42,7 +42,9 @@ module(
 If provided with \code{type = "predict"}, automatically upgrades to react.
 }}
 
-\item{max_iterations}{Maximum ReAct iterations (default: 10, only for react)}
+\item{max_iterations}{Maximum iterations for ReAct, CodeAct, or RLM modules
+created through this generic factory (default: 10). For CodeAct it also
+caps tool calls within one invocation; exceeding that inner budget errors.}
 
 \item{M}{Number of reasoning chains for multichain (default: 3)}
 
@@ -52,7 +54,8 @@ If provided with \code{type = "predict"}, automatically upgrades to react.
 execution types. Create the built-in backend with \code{r_code_runner()}.}
 
 \item{max_iters}{Maximum code repair iterations for program_of_thought
-(default: 3)}
+(default: 3), or the DSPy 3.3-compatible alias for RLM's
+\code{max_iterations}. For RLM, supply only one spelling.}
 
 \item{extract_answer}{Logical. For program_of_thought, whether to use LLM
 to extract final answer from execution result (default: TRUE)}

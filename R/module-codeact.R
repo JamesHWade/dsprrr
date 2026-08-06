@@ -19,6 +19,13 @@
 #' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
 #' runner backed by OS-level sandboxing.
 #'
+#' Runner lifecycle: a `CodeActModule` reuses the runner object supplied at
+#' construction. A persistent backend therefore retains state between separate
+#' `forward()` calls until `runner$reset()` is called. Do not share one
+#' persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr
+#' does not yet expose an interpreter factory that creates and tears down a
+#' fresh backend per invocation.
+#'
 #' @examples
 #' \dontrun{
 #' # Create a runner for code execution
@@ -54,10 +61,16 @@ NULL
 #' R code execution to solve problems.
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
-#' @param tools List of ellmer ToolDef objects for the agent to use
+#' @param tools List of ellmer ToolDef objects for the agent to use. Non-empty
+#'   list element names become the registered tool names; unnamed elements keep
+#'   their ToolDef name. Effective names may contain only letters, numbers,
+#'   hyphens, and underscores.
 #' @param runner A code runner implementing `execute()` and `policy()`. Required.
-#' @param max_iterations Maximum tool/code iterations before forcing answer
-#'   (default 10)
+#'   The module retains this object; reset persistent runners between logically
+#'   isolated jobs and do not use one runner concurrently.
+#' @param max_iterations Maximum outer agent iterations and maximum tool calls
+#'   within one invocation (default 10). Exceeding the inner tool-call budget
+#'   raises a `dsprrr_codeact_iteration_limit` error.
 #' @param ... Additional arguments passed to the module
 #'
 #' @return A CodeActModule object
@@ -90,6 +103,7 @@ code_act <- function(
   }
 
   validate_code_runner(runner)
+  tools <- validate_codeact_tools(tools)
 
   # Parse signature if string
   if (is.character(signature)) {
@@ -103,12 +117,131 @@ code_act <- function(
     ))
   }
 
+  max_iterations <- normalize_codeact_iterations(max_iterations)
+
   CodeActModule$new(
     signature = signature,
     tools = tools,
     runner = runner,
-    max_iterations = as.integer(max_iterations),
+    max_iterations = max_iterations,
     ...
+  )
+}
+
+normalize_codeact_iterations <- function(value) {
+  valid <- is.numeric(value) &&
+    length(value) == 1L &&
+    !is.na(value) &&
+    is.finite(value) &&
+    value == floor(value) &&
+    value >= 1L &&
+    value <= .Machine$integer.max
+  if (!valid) {
+    cli::cli_abort(
+      "{.arg max_iterations} must be one positive integer",
+      class = "dsprrr_codeact_bounds_error"
+    )
+  }
+  as.integer(value)
+}
+
+validate_codeact_tools <- function(tools) {
+  if (!is.list(tools)) {
+    cli::cli_abort(
+      "{.arg tools} must be a list of ellmer ToolDef objects",
+      class = "dsprrr_codeact_tools_error"
+    )
+  }
+  if (length(tools) == 0L) {
+    return(tools)
+  }
+
+  valid_tools <- vapply(
+    tools,
+    function(tool) {
+      inherits(tool, "ellmer::ToolDef") || inherits(tool, "ToolDef")
+    },
+    logical(1)
+  )
+  if (any(!valid_tools)) {
+    invalid <- which(!valid_tools)
+    cli::cli_abort(
+      c(
+        "All CodeAct tools must be ellmer ToolDef objects",
+        "x" = "Invalid position{?s}: {.val {invalid}}"
+      ),
+      class = "dsprrr_codeact_tools_error"
+    )
+  }
+
+  declared_names <- names(tools)
+  if (is.null(declared_names)) {
+    declared_names <- rep("", length(tools))
+  }
+  if (anyNA(declared_names)) {
+    cli::cli_abort(
+      "CodeAct tool list names cannot be missing",
+      class = "dsprrr_codeact_tools_error"
+    )
+  }
+  intrinsic_names <- codeact_tool_names(tools)
+  tool_names <- ifelse(nzchar(declared_names), declared_names, intrinsic_names)
+  valid_names <- grepl("^[A-Za-z0-9_-]+$", tool_names)
+  if (any(!valid_names)) {
+    cli::cli_abort(
+      c(
+        "CodeAct tool names may contain only letters, numbers, - and _",
+        "x" = "Invalid name{?s}: {.val {unique(tool_names[!valid_names])}}"
+      ),
+      class = "dsprrr_codeact_tools_error"
+    )
+  }
+  if (anyDuplicated(tool_names)) {
+    duplicates <- unique(tool_names[duplicated(tool_names)])
+    cli::cli_abort(
+      c(
+        "CodeAct tool names must be unique",
+        "x" = "Duplicate name{?s}: {.val {duplicates}}"
+      ),
+      class = "dsprrr_codeact_tools_error"
+    )
+  }
+  if ("execute_r_code" %in% tool_names) {
+    cli::cli_abort(
+      "{.val execute_r_code} is reserved for CodeAct's runner tool",
+      class = "dsprrr_codeact_tools_error"
+    )
+  }
+  normalized <- lapply(seq_along(tools), function(index) {
+    tool <- tools[[index]]
+    tool@name <- tool_names[[index]]
+    tool
+  })
+  stats::setNames(normalized, tool_names)
+}
+
+codeact_tool_names <- function(tools) {
+  if (length(tools) == 0L) {
+    return(character())
+  }
+  vapply(
+    tools,
+    function(tool) {
+      name <- tryCatch(tool@name, error = function(e) NA_character_)
+      if (
+        !is.character(name) ||
+          length(name) != 1L ||
+          is.na(name) ||
+          !nzchar(name)
+      ) {
+        cli::cli_abort(
+          "Every CodeAct ToolDef must have one non-empty name",
+          class = "dsprrr_codeact_tools_error"
+        )
+      }
+      name
+    },
+    character(1)
   )
 }
 
@@ -151,6 +284,9 @@ CodeActModule <- R6::R6Class(
       config = list(),
       chat = NULL
     ) {
+      validate_code_runner(runner)
+      tools <- validate_codeact_tools(tools)
+      max_iterations <- normalize_codeact_iterations(max_iterations)
       super$initialize(
         signature = signature,
         config = config,
@@ -159,7 +295,7 @@ CodeActModule <- R6::R6Class(
 
       self$tools <- tools
       self$runner <- runner
-      self$max_iterations <- as.integer(max_iterations)
+      self$max_iterations <- max_iterations
 
       # Store trajectory history
       self$state$trajectories <- list()
@@ -190,6 +326,19 @@ CodeActModule <- R6::R6Class(
       # Clone the chat for a fresh conversation
       llm <- base_llm$clone()
 
+      get_turns_safe <- function() {
+        tryCatch(
+          {
+            if (!is.function(llm$get_turns)) {
+              return(list())
+            }
+            llm$get_turns()
+          },
+          error = function(e) list()
+        )
+      }
+      start_turn_count <- length(get_turns_safe())
+
       start_time <- Sys.time()
       trajectory <- list()
 
@@ -203,6 +352,25 @@ CodeActModule <- R6::R6Class(
 
       # Build the initial prompt
       task_prompt <- private$build_task_prompt(inputs)
+
+      # ellmer can execute several tools inside one chat() call. Guard the
+      # callback itself so max_iterations constrains that hidden inner loop.
+      tool_calls <- 0L
+      if (is.function(llm$on_tool_request)) {
+        remove_tool_guard <- llm$on_tool_request(function(request) {
+          tool_calls <<- tool_calls + 1L
+          if (tool_calls > self$max_iterations) {
+            cli::cli_abort(
+              "CodeAct exceeded max_iterations ({self$max_iterations})",
+              class = "dsprrr_codeact_iteration_limit"
+            )
+          }
+          invisible(NULL)
+        })
+        if (is.function(remove_tool_guard)) {
+          on.exit(remove_tool_guard(), add = TRUE)
+        }
+      }
 
       # Run the agent loop - ellmer handles tool calling automatically
       # We use chat() which processes tool calls internally
@@ -227,6 +395,9 @@ CodeActModule <- R6::R6Class(
             }
           },
           error = function(e) {
+            if (inherits(e, "dsprrr_codeact_iteration_limit")) {
+              stop(e)
+            }
             consecutive_failures <<- consecutive_failures + 1
             cli::cli_warn(c(
               "Agent iteration {iterations} failed ({consecutive_failures}/{max_consecutive_failures})",
@@ -249,8 +420,29 @@ CodeActModule <- R6::R6Class(
           last_response <- response
 
           # Check if the agent seems done (no pending tool calls)
-          turns <- llm$get_turns()
-          last_turn <- turns[[length(turns)]]
+          turns <- get_turns_safe()
+          last_turn <- if (length(turns) > 0L) {
+            turns[[length(turns)]]
+          } else {
+            list()
+          }
+          current_turns <- if (length(turns) > start_turn_count) {
+            turns[seq.int(start_turn_count + 1L, length(turns))]
+          } else {
+            list()
+          }
+          observed_tool_calls <- sum(vapply(
+            current_turns,
+            private$count_tool_requests,
+            integer(1)
+          ))
+          tool_calls <- max(tool_calls, observed_tool_calls)
+          if (tool_calls > self$max_iterations) {
+            cli::cli_abort(
+              "CodeAct exceeded max_iterations ({self$max_iterations})",
+              class = "dsprrr_codeact_iteration_limit"
+            )
+          }
 
           # Record in trajectory
           trajectory[[iterations]] <- list(
@@ -303,8 +495,9 @@ CodeActModule <- R6::R6Class(
         model = "codeact",
         iterations = iterations,
         trajectory_length = length(trajectory),
+        tool_calls = tool_calls,
         duration_ms = round(duration_ms, 2),
-        tools_available = names(all_tools)
+        tools_available = codeact_tool_names(all_tools)
       )
 
       tibble::tibble(
@@ -383,7 +576,10 @@ CodeActModule <- R6::R6Class(
     #' Build all tools including code execution
     build_tools = function(inputs) {
       # Start with user-provided tools
-      all_tools <- self$tools
+      all_tools <- stats::setNames(
+        self$tools,
+        codeact_tool_names(self$tools)
+      )
 
       # Add code execution tool
       runner <- self$runner
@@ -434,7 +630,8 @@ CodeActModule <- R6::R6Class(
           code = ellmer::type_string(
             description = "R code to execute. Must be valid R syntax."
           )
-        )
+        ),
+        name = "execute_r_code"
       )
 
       all_tools$execute_r_code <- execute_r_code
@@ -479,19 +676,34 @@ Work step by step to solve this task.
 
     #' Check if turn has pending tool calls
     has_pending_tools = function(turn) {
+      private$count_tool_requests(turn) > 0L
+    },
+
+    #' Count tool requests in one assistant turn
+    count_tool_requests = function(turn) {
       if (is.null(turn)) {
-        return(FALSE)
+        return(0L)
       }
-
-      # Check if the turn contains tool requests
-      # This is a simplified check - ellmer handles the actual tool execution
-      if (inherits(turn, "list") && "role" %in% names(turn)) {
-        # If the assistant made tool calls, ellmer will have processed them
-        # We're "done" when the assistant gives a text response without tools
-        return(FALSE)
+      contents <- if (inherits(turn, "S7_object")) {
+        tryCatch(turn@contents, error = function(e) list())
+      } else if (is.list(turn)) {
+        turn$contents %||% turn$content %||% list()
+      } else {
+        list()
       }
-
-      FALSE
+      if (!is.list(contents)) {
+        contents <- list(contents)
+      }
+      as.integer(sum(vapply(
+        contents,
+        function(content) {
+          inherits(content, "ellmer::ContentToolRequest") ||
+            inherits(content, "ContentToolRequest") ||
+            (is.list(content) &&
+              identical(content$type %||% NULL, "tool_request"))
+        },
+        logical(1)
+      )))
     },
 
     #' Extract final answer

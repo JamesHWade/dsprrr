@@ -13,13 +13,16 @@ rlm_module(
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
+  max_iters = NULL,
   ...
 )
 }
 \arguments{
 \item{signature}{A Signature object or string notation defining inputs/outputs}
 
-\item{runner}{A code runner implementing \code{execute()} and \code{policy()}. Required.}
+\item{runner}{A code runner implementing \code{execute()} and \code{policy()}. Required.
+The module retains this object; reset persistent runners between logically
+isolated jobs and do not use one runner concurrently.}
 
 \item{max_iterations}{Maximum REPL iterations before fallback (default 20)}
 
@@ -34,6 +37,9 @@ rlm_module(
 \item{tools}{Named list of user-defined R functions to inject into REPL.
 Each tool becomes available as a function in the code execution environment.
 Non-function values in the list will cause an error.}
+
+\item{max_iters}{DSPy 3.3-compatible alias for \code{max_iterations}. Supply only
+one of these arguments.}
 
 \item{...}{Additional arguments passed to the module}
 }

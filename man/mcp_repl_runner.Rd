@@ -24,17 +24,20 @@ mcp_repl_runner(
 supported by this runner.}
 
 \item{sandbox}{mcp-repl sandbox policy. Defaults to \code{"workspace-write"}.
-\code{"inherit-codex"} may be used only when the MCP client propagates Codex
-sandbox metadata; \code{\link[mcptools:mcp_tools]{mcptools::mcp_tools()}} does not currently do so.}
+\code{"inherit-codex"} is rejected because \code{\link[mcptools:mcp_tools]{mcptools::mcp_tools()}} does not
+currently propagate the required Codex sandbox metadata.}
 
 \item{timeout}{Maximum execution time in seconds.}
 
 \item{max_output_chars}{Maximum number of output characters returned to the
 optimizer.}
 
-\item{oversized_output}{mcp-repl oversized-output mode.}
+\item{oversized_output}{mcp-repl oversized-output mode. During authenticated
+RLM traffic, a detected oversized-output preview fails the iteration;
+dsprrr attempts to reset active pager state before returning the failure.}
 
-\item{extra_args}{Additional command-line arguments passed to mcp-repl.}
+\item{extra_args}{Reserved for future vetted mcp-repl options. It must be
+empty because arbitrary server flags can weaken the managed sandbox policy.}
 }
 \value{
 An \code{McpReplRunner} implementing the dsprrr code-runner protocol.
@@ -45,6 +48,15 @@ Creates a dsprrr code runner backed by Posit's
 \code{mcp-repl} keeps a long-lived R session and enforces its sandbox with
 operating-system primitives. This makes it suitable for code proposed by an
 optimizer or language model.
+
+For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
+If mcp-repl nevertheless returns a file-preview or active-pager marker (for
+example because user code printed a large value first), the runner fails the
+iteration instead of accepting an unverifiable partial control frame. These
+markers are plain text in the upstream protocol, so detection is necessarily
+conservative and can only fail closed; dsprrr never follows a disclosed
+sandbox file path from the host process.
 }
 \details{
 By default, \code{mcp_repl_runner()} starts \code{mcp-repl} through
@@ -61,9 +73,11 @@ rejected because this runner advertises itself as safe for untrusted code.
 Use \code{\link[=r_code_runner]{r_code_runner()}} explicitly for trusted-input-only subprocess
 isolation.
 
-Supplying \code{repl} is useful for an already-managed MCP connection and for
+Supplying \code{repl} is useful for an externally managed MCP connection and for
 deterministic tests. It must be a function with the mcp-repl tool contract:
-\code{repl(input, timeout_ms)}.
+\code{repl(input, timeout_ms)}. Because dsprrr did not launch that function's
+server, its runner policy is deliberately marked unverified and it is
+rejected by optimizers that require an OS sandbox.
 }
 \examples{
 \dontrun{

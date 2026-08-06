@@ -36,6 +36,7 @@ Imports:
     jsonlite,
     methods,
     mirai,
+    openssl,
     purrr,
     R6,
     rlang,

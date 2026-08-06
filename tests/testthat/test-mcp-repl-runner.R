@@ -1,4 +1,4 @@
-test_that("mcp_repl_runner implements a sandboxed persistent runner", {
+test_that("injected mcp_repl_runner is persistent but unverified", {
   requests <- list()
   repl <- function(input, timeout_ms) {
     requests[[length(requests) + 1L]] <<- list(
@@ -26,11 +26,106 @@ test_that("mcp_repl_runner implements a sandboxed persistent runner", {
   expect_identical(requests[[1L]]$timeout_ms, 2000L)
 
   policy <- runner$policy()
+  expect_identical(policy$backend, "external-mcp-repl")
+  expect_identical(policy$trust, "caller-managed")
+  expect_identical(policy$sandboxed, FALSE)
+  expect_identical(policy$network_access, "unknown")
+  expect_identical(policy$sandbox_enforcement, "unverified")
+  expect_identical(policy$persistent, TRUE)
+  output <- capture.output(print(runner), type = "message")
+  expect_match(paste(output, collapse = "\n"), "sandbox unverified")
+  expect_false(grepl(
+    "OS-sandboxed for untrusted code",
+    paste(output, collapse = "\n"),
+    fixed = TRUE
+  ))
+})
+
+test_that("mcp_repl_runner overwrites persistent context even when empty", {
+  inputs <- character()
+  repl <- function(input, timeout_ms) {
+    inputs <<- c(inputs, input)
+    list(result = list(content = list(list(type = "text", text = "ok"))))
+  }
+  runner <- mcp_repl_runner(repl = repl)
+
+  runner$execute("invisible(NULL)", context = list(secret = "sensitive"))
+  runner$execute("invisible(NULL)", context = list())
+
+  expect_length(inputs, 2L)
+  expect_match(inputs[[1L]], "sensitive", fixed = TRUE)
+  expect_match(inputs[[2L]], "\\.context <-")
+  expect_match(inputs[[2L]], 'fromJSON("[]",', fixed = TRUE)
+  expect_false(grepl("sensitive", inputs[[2L]], fixed = TRUE))
+})
+
+test_that("dsprrr-managed mcp_repl_runner advertises its derived policy", {
+  repl <- function(input, timeout_ms) list(result = list(content = list()))
+  testthat::local_mocked_bindings(
+    mcp_repl_tool = function(...) repl,
+    .package = "dsprrr"
+  )
+
+  runner <- mcp_repl_runner()
+  policy <- runner$policy()
+
   expect_identical(policy$backend, "posit-mcp-repl")
   expect_identical(policy$trust, "untrusted-code")
   expect_identical(policy$sandboxed, TRUE)
+  expect_identical(policy$process_isolation, TRUE)
   expect_identical(policy$network_access, "disabled")
-  expect_identical(policy$persistent, TRUE)
+  expect_identical(policy$sandbox_enforcement, "operating-system")
+})
+
+test_that("managed mcp-repl policy flags cannot be overridden", {
+  repl <- function(input, timeout_ms) list(result = list(content = list()))
+  reserved <- c(
+    "--sandbox",
+    "--sandbox=danger-full-access",
+    "--add-writable-root=/tmp",
+    "--add-writeable-root",
+    "--add-allowed-domain=example.com",
+    "--config=sandbox_workspace_write.network_access=true",
+    "--config",
+    "--worker-spec=unsafe.json",
+    "--debug-repl"
+  )
+  for (argument in reserved) {
+    expect_error(
+      mcp_repl_runner(repl = repl, extra_args = argument),
+      class = "dsprrr_mcp_extra_args_error",
+      info = argument
+    )
+  }
+
+  args <- dsprrr:::mcp_repl_server_args(
+    extra_args = character(),
+    sandbox = "workspace-write",
+    oversized_output = "files",
+    interpreter = "r"
+  )
+  expect_identical(
+    utils::tail(args, 6L),
+    c(
+      "--sandbox",
+      "workspace-write",
+      "--oversized-output",
+      "files",
+      "--interpreter",
+      "r"
+    )
+  )
+})
+
+test_that("sandbox-required consumers reject injected repl functions", {
+  runner <- mcp_repl_runner(
+    repl = function(input, timeout_ms) list(result = list(content = list()))
+  )
+
+  expect_error(
+    dsprrr:::harness_validate_runner(runner, required = TRUE),
+    class = "dsprrr_runner_sandbox_required"
+  )
 })
 
 test_that("mcp_repl_runner normalizes MCP errors and resets the session", {
@@ -56,6 +151,18 @@ test_that("mcp_repl_runner normalizes MCP errors and resets the session", {
   expect_match(result$error, "execution error")
   expect_identical(result$stdout, "object not found")
   expect_identical(utils::tail(inputs, 1L), "\u0004")
+})
+
+test_that("mcp_repl_runner rejects protocol-level reset failures", {
+  repl <- function(input, timeout_ms) {
+    list(result = list(isError = TRUE, content = list()))
+  }
+  runner <- mcp_repl_runner(repl = repl)
+
+  expect_error(
+    runner$reset(),
+    class = "dsprrr_mcp_repl_reset_error"
+  )
 })
 
 test_that("mcp_repl_runner rounds timeout milliseconds up safely", {
@@ -95,4 +202,132 @@ test_that("mcp_repl_runner refuses an unsandboxed policy", {
       sandbox = "off"
     )
   )
+})
+
+test_that("mcp_repl_runner validates sandbox as one non-missing string", {
+  repl <- function(input, timeout_ms) input
+  for (sandbox in list(
+    NA_character_,
+    c("workspace-write", "workspace-write")
+  )) {
+    expect_error(
+      mcp_repl_runner(repl = repl, sandbox = sandbox),
+      class = "dsprrr_mcp_sandbox_error"
+    )
+  }
+})
+
+test_that("mcp_repl_runner refuses an unverifiable inherited sandbox", {
+  expect_snapshot(
+    error = TRUE,
+    mcp_repl_runner(
+      repl = function(input, timeout_ms) input,
+      sandbox = "inherit-codex"
+    )
+  )
+})
+
+test_that("authenticated RLM traffic fails closed on file previews", {
+  previews <- c(
+    paste0(
+      "head\n",
+      "...[middle truncated; shown lines 1-2 and 99-100 of 100 total; ",
+      "full output: /sandbox/output.txt]...\n",
+      "tail"
+    ),
+    "...[middle truncated; ordered output bundle index: /sandbox/index.md]...",
+    "...[middle truncated; output bundle images: /sandbox/images]..."
+  )
+  for (preview in previews) {
+    repl <- function(input, timeout_ms) {
+      list(result = list(content = list(list(type = "text", text = preview))))
+    }
+    runner <- mcp_repl_runner(repl = repl, oversized_output = "files")
+
+    result <- runner$execute("SUBMIT('ok')", .control_nonce = "current")
+    expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
+    expect_false(result$success)
+    expect_match(result$error, "file preview", fixed = TRUE)
+  }
+
+  preview <- previews[[1L]]
+  repl <- function(input, timeout_ms) {
+    list(result = list(content = list(list(type = "text", text = preview))))
+  }
+  runner <- mcp_repl_runner(repl = repl, oversized_output = "files")
+  ordinary <- runner$execute("cat('ordinary output')")
+
+  expect_identical(ordinary$success, TRUE)
+  expect_identical(ordinary$result, preview)
+})
+
+test_that("authenticated RLM traffic resets an active mcp-repl pager", {
+  inputs <- character()
+  repl <- function(input, timeout_ms) {
+    inputs <<- c(inputs, input)
+    if (identical(input, "\u0004")) {
+      return(list(result = list(content = list())))
+    }
+    text <- paste(
+      "partial output",
+      "--More-- (2p, 10.0%, @1..20/200)",
+      sep = "\n"
+    )
+    list(result = list(content = list(list(type = "text", text = text))))
+  }
+  runner <- mcp_repl_runner(repl = repl, oversized_output = "pager")
+
+  result <- runner$execute("SUBMIT('ok')", .control_nonce = "current")
+
+  expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
+  expect_false(result$success)
+  expect_match(result$error, "session was reset", fixed = TRUE)
+  expect_identical(utils::tail(inputs, 1L), "\u0004")
+})
+
+test_that("authenticated RLM pager failures report reset failures accurately", {
+  repl <- function(input, timeout_ms) {
+    if (identical(input, "\u0004")) {
+      stop("restart transport unavailable")
+    }
+    text <- paste("partial output", "--More-- (2p)", sep = "\n")
+    list(result = list(content = list(list(type = "text", text = text))))
+  }
+  runner <- mcp_repl_runner(repl = repl, oversized_output = "pager")
+
+  result <- runner$execute("SUBMIT('ok')", .control_nonce = "current")
+
+  expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
+  expect_false(result$success)
+  expect_match(result$error, "session could not be reset", fixed = TRUE)
+  expect_false(grepl("session was reset", result$error, fixed = TRUE))
+})
+
+test_that("mcp-repl rejects control frames above its safe inline limit", {
+  eval_repl <- function(input, timeout_ms) {
+    text <- tryCatch(
+      {
+        env <- new.env(parent = baseenv())
+        value <- eval(parse(text = input), envir = env)
+        paste(capture.output(print(value)), collapse = "\n")
+      },
+      error = function(e) paste("Error:", conditionMessage(e))
+    )
+    list(result = list(content = list(list(type = "text", text = text))))
+  }
+  runner <- mcp_repl_runner(repl = eval_repl)
+  nonce <- "bounded-control-frame"
+  prelude <- dsprrr:::create_rlm_prelude(
+    control_nonce = nonce,
+    control_frame_limit = runner$control_frame_limit
+  )
+
+  result <- runner$execute(
+    paste0(prelude, "\nSUBMIT(base::strrep('x', 4000L))"),
+    .control_nonce = nonce
+  )
+
+  expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
+  expect_false(result$success)
+  expect_match(result$error, "safe inline transport limit", fixed = TRUE)
 })
