@@ -15,17 +15,26 @@
 #' 4. Steps 2-3 repeat until success or max_iters is reached
 #' 5. Final answer is extracted from the execution result
 #'
-#' Security: Code execution requires explicit opt-in via a runner parameter.
+#' Security: Code execution requires explicit opt-in via `runner` or
+#' `interpreter_factory`.
 #' The built-in runner uses a separate process but is NOT a security sandbox.
 #' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
 #' runner backed by OS-level sandboxing (such as a container or AppArmor).
 #'
-#' Runner lifecycle: a `ProgramOfThoughtModule` reuses the runner object supplied
-#' at construction. A persistent backend therefore retains state between
-#' separate `forward()` calls until `runner$reset()` is called. Do not share one
-#' persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr does
-#' not yet expose an interpreter factory that creates and tears down a fresh
-#' backend per invocation.
+#' Runner lifecycle: supply exactly one runtime source. `runner` is
+#' caller-owned, reused across calls, and never closed by dsprrr. The backend determines
+#' whether execution state persists and whether `reset()` is available;
+#' serialize access to stateful backends. `interpreter_factory` is a
+#' zero-argument function that returns a fresh runner implementing `execute()`,
+#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
+#' module owns that runner for one invocation and shuts it down exactly once on
+#' success, error, or interrupt.
+#'
+#' [run_async()] supports factory-backed ProgramOfThought in an isolated mirai
+#' process. It rejects caller-owned runners. [stream_async()] and a module's
+#' `$stream()` method remain unavailable because streaming would bypass code
+#' execution. [run_stream()] may use its one-shot `forward()` fallback, but
+#' rejects an actual token-stream request before provider or factory work.
 #'
 #' @examples
 #' \dontrun{
@@ -51,14 +60,22 @@ NULL
 #' @description
 #' Factory function to create a ProgramOfThoughtModule that generates and
 #' executes R code to solve problems.
+#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
+#' async streaming and module `$stream()` entry points reject ProgramOfThought.
+#' [run_stream()] preserves the synchronous `forward()` fallback unless a
+#' matching token-stream request is active; that request is rejected first.
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
-#' @param runner A code runner implementing `execute()` and `policy()`. Required.
-#'   The module retains this object; reset persistent runners between logically
-#'   isolated jobs and do not use one runner concurrently.
+#' @param runner Optional caller-owned code runner implementing `execute()` and
+#'   `policy()`. It is retained, never automatically closed, and must not be
+#'   shared concurrently when persistent.
 #' @param max_iters Maximum code generation/repair iterations (default 3)
 #' @param extract_answer Logical. If TRUE (default), use LLM to extract final
 #'   answer from execution result. If FALSE, return execution result directly.
+#' @param interpreter_factory Optional zero-argument function returning a fresh
+#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
+#'   terminal `shutdown()` or `close()`.
+#'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param ... Additional arguments passed to the module
 #'
 #' @return A ProgramOfThoughtModule object
@@ -72,22 +89,17 @@ NULL
 #' }
 program_of_thought <- function(
   signature,
-  runner,
+  runner = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
-  ...
+  ...,
+  interpreter_factory = NULL
 ) {
-  # Validate runner
-
-  if (missing(runner) || is.null(runner)) {
-    cli::cli_abort(c(
-      "Code execution requires an explicit runner",
-      "i" = "Create one with: {.code runner <- r_code_runner()}",
-      "i" = "Then pass it: {.code program_of_thought(..., runner = runner)}"
-    ))
-  }
-
-  validate_code_runner(runner)
+  binding <- normalize_code_runner_binding(
+    runner = runner,
+    interpreter_factory = interpreter_factory,
+    module_name = "Code execution"
+  )
 
   # Parse signature if string
   if (is.character(signature)) {
@@ -104,7 +116,8 @@ program_of_thought <- function(
 
   ProgramOfThoughtModule$new(
     signature = signature,
-    runner = runner,
+    runner = binding$runner,
+    interpreter_factory = binding$interpreter_factory,
     max_iters = max_iters,
     extract_answer = extract_answer,
     ...
@@ -144,6 +157,9 @@ ProgramOfThoughtModule <- R6::R6Class(
     #' @field runner Code runner for code execution
     runner = NULL,
 
+    #' @field interpreter_factory Factory for an invocation-owned code runner
+    interpreter_factory = NULL,
+
     #' @field max_iters Maximum iterations for code repair
     max_iters = NULL,
 
@@ -159,15 +175,22 @@ ProgramOfThoughtModule <- R6::R6Class(
     #' @param extract_answer Whether to extract answer via LLM
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
+    #' @param interpreter_factory Optional zero-argument invocation-owned runner
+    #'   factory. Supply exactly one of this and `runner`.
     initialize = function(
       signature,
-      runner,
+      runner = NULL,
       max_iters = 3L,
       extract_answer = TRUE,
       config = list(),
-      chat = NULL
+      chat = NULL,
+      interpreter_factory = NULL
     ) {
-      validate_code_runner(runner)
+      binding <- normalize_code_runner_binding(
+        runner = runner,
+        interpreter_factory = interpreter_factory,
+        module_name = "ProgramOfThought"
+      )
       max_iters <- normalize_pot_max_iters(max_iters)
       super$initialize(
         signature = signature,
@@ -175,7 +198,8 @@ ProgramOfThoughtModule <- R6::R6Class(
         chat = chat
       )
 
-      self$runner <- runner
+      self$runner <- binding$runner
+      self$interpreter_factory <- binding$interpreter_factory
       self$max_iters <- max_iters
       self$extract_answer <- extract_answer
 
@@ -208,116 +232,129 @@ ProgramOfThoughtModule <- R6::R6Class(
       # Clone the chat for a fresh conversation
       llm <- base_llm$clone()
 
-      start_time <- Sys.time()
-      iterations <- list()
-      final_result <- NULL
-      final_code <- NULL
-      success <- FALSE
+      with_code_runner_lease(
+        self$runner,
+        self$interpreter_factory,
+        "ProgramOfThought",
+        function(runner, lease) {
+          start_time <- Sys.time()
+          iterations <- list()
+          final_result <- NULL
+          final_code <- NULL
+          success <- FALSE
 
-      # Build context for code generation
-      input_context <- private$format_inputs(inputs)
+          # Build context for code generation
+          input_context <- private$format_inputs(inputs)
 
-      for (iter in seq_len(self$max_iters)) {
-        # Generate or repair code
-        if (iter == 1) {
-          code_result <- private$generate_code(input_context, llm)
-        } else {
-          # Repair with error context
-          last_iter <- iterations[[iter - 1]]
-          code_result <- private$repair_code(
-            input_context,
-            last_iter$code,
-            last_iter$execution,
-            llm
+          for (iter in seq_len(self$max_iters)) {
+            # Generate or repair code
+            if (iter == 1) {
+              code_result <- private$generate_code(input_context, llm)
+            } else {
+              # Repair with error context
+              last_iter <- iterations[[iter - 1]]
+              code_result <- private$repair_code(
+                input_context,
+                last_iter$code,
+                last_iter$execution,
+                llm
+              )
+            }
+
+            code <- code_result$code
+            explanation <- code_result$explanation
+
+            # Execute the code
+            exec_result <- execute_code_runner(runner, code, context = inputs)
+
+            # Record iteration
+            iterations[[iter]] <- list(
+              iteration = iter,
+              code = code,
+              explanation = explanation,
+              execution = exec_result
+            )
+
+            if (exec_result$success) {
+              success <- TRUE
+              final_result <- exec_result$result
+              final_code <- code
+              break
+            }
+
+            # Log the error for debugging
+            if (trace) {
+              cli::cli_alert_warning(
+                "Iteration {iter}: Code execution failed - {exec_result$error}"
+              )
+            }
+          }
+
+          # Store execution history
+          if (trace) {
+            self$state$executions <- c(
+              self$state$executions,
+              list(list(
+                timestamp = start_time,
+                inputs = inputs,
+                iterations = iterations,
+                success = success
+              ))
+            )
+          }
+
+          # If all iterations failed, return error
+          if (!success) {
+            last_error <- iterations[[length(iterations)]]$execution$error
+            cli::cli_abort(c(
+              "Program of Thought failed after {self$max_iters} iterations",
+              "x" = "Last error: {last_error}",
+              "i" = "Try increasing max_iters or simplifying the task"
+            ))
+          }
+
+          # Extract or format final answer
+          if (self$extract_answer && !is.null(final_result)) {
+            answer <- private$extract_final_answer(
+              inputs,
+              final_code,
+              final_result,
+              llm
+            )
+          } else {
+            answer <- private$format_result(final_result)
+          }
+
+          # Build output matching signature
+          output <- private$build_output(answer)
+
+          duration_ms <- as.numeric(
+            difftime(Sys.time(), start_time, units = "secs")
+          ) *
+            1000
+
+          # Build metadata
+          metadata <- list(
+            model = "program_of_thought",
+            iterations = length(iterations),
+            success = success,
+            final_code = final_code,
+            duration_ms = round(duration_ms, 2),
+            execution_result = final_result,
+            runner_policy = lease$policy_summary,
+            runner_lifecycle = if (lease$owned) {
+              "invocation-owned"
+            } else {
+              "caller-owned"
+            }
+          )
+
+          tibble::tibble(
+            output = list(output),
+            chat = list(llm),
+            metadata = list(metadata)
           )
         }
-
-        code <- code_result$code
-        explanation <- code_result$explanation
-
-        # Execute the code
-        exec_result <- self$runner$execute(code, context = inputs)
-
-        # Record iteration
-        iterations[[iter]] <- list(
-          iteration = iter,
-          code = code,
-          explanation = explanation,
-          execution = exec_result
-        )
-
-        if (exec_result$success) {
-          success <- TRUE
-          final_result <- exec_result$result
-          final_code <- code
-          break
-        }
-
-        # Log the error for debugging
-        if (trace) {
-          cli::cli_alert_warning(
-            "Iteration {iter}: Code execution failed - {exec_result$error}"
-          )
-        }
-      }
-
-      # Store execution history
-      if (trace) {
-        self$state$executions <- c(
-          self$state$executions,
-          list(list(
-            timestamp = start_time,
-            inputs = inputs,
-            iterations = iterations,
-            success = success
-          ))
-        )
-      }
-
-      # If all iterations failed, return error
-      if (!success) {
-        last_error <- iterations[[length(iterations)]]$execution$error
-        cli::cli_abort(c(
-          "Program of Thought failed after {self$max_iters} iterations",
-          "x" = "Last error: {last_error}",
-          "i" = "Try increasing max_iters or simplifying the task"
-        ))
-      }
-
-      # Extract or format final answer
-      if (self$extract_answer && !is.null(final_result)) {
-        answer <- private$extract_final_answer(
-          inputs,
-          final_code,
-          final_result,
-          llm
-        )
-      } else {
-        answer <- private$format_result(final_result)
-      }
-
-      # Build output matching signature
-      output <- private$build_output(answer)
-
-      duration_ms <- as.numeric(
-        difftime(Sys.time(), start_time, units = "secs")
-      ) *
-        1000
-
-      # Build metadata
-      metadata <- list(
-        model = "program_of_thought",
-        iterations = length(iterations),
-        success = success,
-        final_code = final_code,
-        duration_ms = round(duration_ms, 2),
-        execution_result = final_result
-      )
-
-      tibble::tibble(
-        output = list(output),
-        chat = list(llm),
-        metadata = list(metadata)
       )
     },
 
@@ -335,11 +372,29 @@ ProgramOfThoughtModule <- R6::R6Class(
       ProgramOfThoughtModule$new(
         signature = self$signature,
         runner = self$runner,
+        interpreter_factory = self$interpreter_factory,
         max_iters = self$max_iters,
         extract_answer = self$extract_answer,
         config = self$config,
         chat = self$chat
       )
+    },
+
+    #' @description
+    #' Create a deep copy while preserving the configured runtime source
+    #' @return New ProgramOfThoughtModule with copied state
+    deepcopy = function() {
+      copied <- ProgramOfThoughtModule$new(
+        signature = self$signature,
+        runner = self$runner,
+        max_iters = self$max_iters,
+        extract_answer = self$extract_answer,
+        config = lapply(self$config, identity),
+        chat = self$chat,
+        interpreter_factory = self$interpreter_factory
+      )
+      copied$state <- lapply(self$state, identity)
+      copied
     },
 
     #' @description
@@ -362,7 +417,7 @@ ProgramOfThoughtModule <- R6::R6Class(
         "*" = "Signature: {sig_str}",
         "*" = "Max iterations: {.val {self$max_iters}}",
         "*" = "Extract answer: {.val {self$extract_answer}}",
-        "*" = "Runner timeout: {.val {self$runner$timeout}}s"
+        "*" = "Runner: {code_runner_binding_label(self$runner, self$interpreter_factory)}"
       ))
       invisible(self)
     }

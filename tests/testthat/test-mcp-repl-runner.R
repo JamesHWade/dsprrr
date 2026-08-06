@@ -62,7 +62,9 @@ test_that("mcp_repl_runner overwrites persistent context even when empty", {
 test_that("dsprrr-managed mcp_repl_runner advertises its derived policy", {
   repl <- function(input, timeout_ms) list(result = list(content = list()))
   testthat::local_mocked_bindings(
-    mcp_repl_tool = function(...) repl,
+    mcp_repl_tool = function(...) {
+      list(repl = repl, close = function() invisible(NULL))
+    },
     .package = "dsprrr"
   )
 
@@ -75,6 +77,322 @@ test_that("dsprrr-managed mcp_repl_runner advertises its derived policy", {
   expect_identical(policy$process_isolation, TRUE)
   expect_identical(policy$network_access, "disabled")
   expect_identical(policy$sandbox_enforcement, "operating-system")
+})
+
+test_that("managed setup closes servers with missing repl tools", {
+  skip_if_not_installed("mcptools")
+  closes <- 0L
+  testthat::local_mocked_bindings(
+    mcp_tools = function(config) list(),
+    .package = "mcptools"
+  )
+  testthat::local_mocked_bindings(
+    mcp_repl_managed_closer = function(server_name) {
+      function() {
+        closes <<- closes + 1L
+        invisible(NULL)
+      }
+    },
+    .package = "dsprrr"
+  )
+
+  expect_error(
+    dsprrr:::mcp_repl_tool(
+      command = unname(Sys.which("true")),
+      interpreter = "r",
+      sandbox = "workspace-write",
+      oversized_output = "files",
+      extra_args = character()
+    ),
+    "did not expose exactly one"
+  )
+  expect_identical(closes, 1L)
+})
+
+test_that("managed setup closes servers with duplicate repl tools", {
+  skip_if_not_installed("mcptools")
+  closes <- 0L
+  repl <- ellmer::tool(
+    function(input, timeout_ms) "ok",
+    description = "test repl",
+    arguments = list(
+      input = ellmer::type_string(),
+      timeout_ms = ellmer::type_integer()
+    ),
+    name = "repl"
+  )
+  testthat::local_mocked_bindings(
+    mcp_tools = function(config) list(repl, repl),
+    .package = "mcptools"
+  )
+  testthat::local_mocked_bindings(
+    mcp_repl_managed_closer = function(server_name) {
+      function() {
+        closes <<- closes + 1L
+        invisible(NULL)
+      }
+    },
+    .package = "dsprrr"
+  )
+
+  expect_error(
+    dsprrr:::mcp_repl_tool(
+      command = unname(Sys.which("true")),
+      interpreter = "r",
+      sandbox = "workspace-write",
+      oversized_output = "files",
+      extra_args = character()
+    ),
+    "did not expose exactly one"
+  )
+  expect_identical(closes, 1L)
+})
+
+test_that("managed setup best-effort closes after lifecycle capture failure", {
+  skip_if_not_installed("mcptools")
+  cleanup_calls <- 0L
+  repl <- ellmer::tool(
+    function(input, timeout_ms) "ok",
+    description = "test repl",
+    arguments = list(
+      input = ellmer::type_string(),
+      timeout_ms = ellmer::type_integer()
+    ),
+    name = "repl"
+  )
+  testthat::local_mocked_bindings(
+    mcp_tools = function(config) list(repl),
+    .package = "mcptools"
+  )
+  testthat::local_mocked_bindings(
+    mcp_repl_managed_closer = function(server_name) {
+      cli::cli_abort(
+        "lifecycle unavailable",
+        class = "dsprrr_mcp_repl_lifecycle_error"
+      )
+    },
+    mcp_repl_best_effort_close = function(server_name, ...) {
+      cleanup_calls <<- cleanup_calls + 1L
+      NULL
+    },
+    .package = "dsprrr"
+  )
+
+  expect_error(
+    dsprrr:::mcp_repl_tool(
+      command = unname(Sys.which("true")),
+      interpreter = "r",
+      sandbox = "workspace-write",
+      oversized_output = "files",
+      extra_args = character()
+    ),
+    class = "dsprrr_mcp_repl_lifecycle_error"
+  )
+  expect_identical(cleanup_calls, 1L)
+})
+
+test_that("managed setup cleans partial registration when startup errors", {
+  skip_if_not_installed("mcptools")
+  cleanup_calls <- 0L
+  testthat::local_mocked_bindings(
+    mcp_tools = function(config) stop("startup failed after registration"),
+    .package = "mcptools"
+  )
+  testthat::local_mocked_bindings(
+    mcp_repl_best_effort_close = function(server_name, ...) {
+      cleanup_calls <<- cleanup_calls + 1L
+      NULL
+    },
+    .package = "dsprrr"
+  )
+
+  expect_error(
+    dsprrr:::mcp_repl_tool(
+      command = unname(Sys.which("true")),
+      interpreter = "r",
+      sandbox = "workspace-write",
+      oversized_output = "files",
+      extra_args = character()
+    ),
+    "startup failed after registration",
+    fixed = TRUE
+  )
+  expect_identical(cleanup_calls, 1L)
+})
+
+test_that("managed setup kills only its process after partial startup", {
+  skip_if_not_installed("mcptools")
+  kills <- 0L
+  preexisting_kills <- 0L
+  preexisting <- new.env(parent = emptyenv())
+  preexisting$is_alive <- function() TRUE
+  preexisting$kill <- function() {
+    preexisting_kills <<- preexisting_kills + 1L
+  }
+  spawned <- new.env(parent = emptyenv())
+  spawned$is_alive <- function() TRUE
+  spawned$kill <- function() {
+    kills <<- kills + 1L
+  }
+  registry <- new.env(parent = emptyenv())
+  registry$mcp_servers <- list()
+  registry$server_processes <- list(preexisting = preexisting)
+
+  testthat::local_mocked_bindings(
+    mcp_repl_registry = function() registry,
+    .package = "dsprrr"
+  )
+  testthat::local_mocked_bindings(
+    mcp_tools = function(config) {
+      parsed <- jsonlite::read_json(config, simplifyVector = TRUE)
+      server <- parsed$mcpServers[[1L]]
+      process_key <- paste(c(server$command, server$args), collapse = " ")
+      registry$server_processes <- c(
+        registry$server_processes,
+        stats::setNames(list(spawned), process_key)
+      )
+      stop("startup failed after process creation")
+    },
+    .package = "mcptools"
+  )
+
+  expect_error(
+    dsprrr:::mcp_repl_tool(
+      command = unname(Sys.which("true")),
+      interpreter = "r",
+      sandbox = "workspace-write",
+      oversized_output = "files",
+      extra_args = character()
+    ),
+    "startup failed after process creation",
+    fixed = TRUE
+  )
+  expect_identical(kills, 1L)
+  expect_identical(preexisting_kills, 0L)
+  expect_length(registry$server_processes, 1L)
+  expect_identical(registry$server_processes[[1L]], preexisting)
+})
+
+test_that("best-effort cleanup refuses ambiguous new processes", {
+  kills <- 0L
+  process <- function() {
+    value <- new.env(parent = emptyenv())
+    value$is_alive <- function() TRUE
+    value$kill <- function() {
+      kills <<- kills + 1L
+    }
+    value
+  }
+  registry <- new.env(parent = emptyenv())
+  registry$mcp_servers <- list()
+  registry$server_processes <- stats::setNames(
+    list(process(), process()),
+    c("expected command", "expected command")
+  )
+  testthat::local_mocked_bindings(
+    mcp_repl_registry = function() registry,
+    .package = "dsprrr"
+  )
+
+  result <- dsprrr:::mcp_repl_best_effort_close(
+    "not-registered",
+    process_snapshot = list(),
+    process_key = "expected command"
+  )
+
+  expect_s3_class(result, "condition")
+  expect_match(
+    conditionMessage(result),
+    "ambiguous process state",
+    fixed = TRUE
+  )
+  expect_identical(kills, 0L)
+  expect_length(registry$server_processes, 2L)
+})
+
+test_that("managed closer kills and prunes after graceful close fails", {
+  kills <- 0L
+  process <- new.env(parent = emptyenv())
+  process$is_alive <- function() TRUE
+  process$kill <- function() {
+    kills <<- kills + 1L
+  }
+  transport <- list(process = process)
+  registry <- new.env(parent = emptyenv())
+  registry$mcp_servers <- list(
+    managed = list(transport = transport, process = process)
+  )
+  registry$server_processes <- list(managed = process)
+
+  expect_invisible(dsprrr:::mcp_repl_close_captured(
+    registry = registry,
+    server_name = "managed",
+    transport = transport,
+    process = process,
+    close_transport = function(transport) stop("graceful close failed")
+  ))
+  expect_identical(kills, 1L)
+  expect_null(registry$mcp_servers$managed)
+  expect_length(registry$server_processes, 0L)
+})
+
+test_that("managed runner closures are process-specific and idempotent", {
+  first_closes <- 0L
+  second_closes <- 0L
+  first <- dsprrr:::McpReplRunner$new(
+    repl = function(input, timeout_ms) "first",
+    timeout = 1,
+    max_output_chars = 100L,
+    sandbox = "workspace-write",
+    sandbox_verified = TRUE,
+    oversized_output = "files",
+    close_connection = function() first_closes <<- first_closes + 1L,
+    connection_owned = TRUE
+  )
+  second <- dsprrr:::McpReplRunner$new(
+    repl = function(input, timeout_ms) "second",
+    timeout = 1,
+    max_output_chars = 100L,
+    sandbox = "workspace-write",
+    sandbox_verified = TRUE,
+    oversized_output = "files",
+    close_connection = function() second_closes <<- second_closes + 1L,
+    connection_owned = TRUE
+  )
+
+  first$close()
+  first$close()
+  expect_identical(first_closes, 1L)
+  expect_identical(second_closes, 0L)
+  expect_identical(second$execute("1 + 1")$result, "second")
+  second$close()
+  expect_identical(second_closes, 1L)
+})
+
+test_that("a failed managed close still makes the runner terminal", {
+  close_calls <- 0L
+  runner <- dsprrr:::McpReplRunner$new(
+    repl = function(input, timeout_ms) "result",
+    timeout = 1,
+    max_output_chars = 100L,
+    sandbox = "workspace-write",
+    sandbox_verified = TRUE,
+    oversized_output = "files",
+    close_connection = function() {
+      close_calls <<- close_calls + 1L
+      stop("transport close failed")
+    },
+    connection_owned = TRUE
+  )
+
+  expect_error(runner$close(), "transport close failed")
+  expect_true(runner$closed)
+  expect_invisible(runner$close())
+  expect_identical(close_calls, 1L)
+  expect_error(
+    runner$execute("1 + 1"),
+    class = "dsprrr_interpreter_closed_error"
+  )
 })
 
 test_that("managed mcp-repl policy flags cannot be overridden", {
@@ -149,6 +467,9 @@ test_that("mcp_repl_runner normalizes MCP errors and resets the session", {
 
   expect_identical(result$success, FALSE)
   expect_match(result$error, "execution error")
+  expect_identical(result$error_type, "execution")
+  expect_true(result$retryable)
+  expect_false(runner$terminal)
   expect_identical(result$stdout, "object not found")
   expect_identical(utils::tail(inputs, 1L), "\u0004")
 })
@@ -163,6 +484,32 @@ test_that("mcp_repl_runner rejects protocol-level reset failures", {
     runner$reset(),
     class = "dsprrr_mcp_repl_reset_error"
   )
+  expect_true(runner$terminal)
+  expect_error(
+    runner$execute("1 + 1"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+})
+
+test_that("mcp transport failures terminalize the interpreter session", {
+  calls <- 0L
+  runner <- mcp_repl_runner(repl = function(input, timeout_ms) {
+    calls <<- calls + 1L
+    stop("transport disconnected")
+  })
+
+  result <- runner$execute("1 + 1")
+
+  expect_false(result$success)
+  expect_identical(result$error_type, "interpreter")
+  expect_false(result$retryable)
+  expect_true(runner$terminal)
+  expect_error(
+    runner$execute("2 + 2"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+  expect_identical(calls, 1L)
+  expect_invisible(runner$shutdown())
 })
 
 test_that("mcp_repl_runner rounds timeout milliseconds up safely", {
@@ -300,6 +647,8 @@ test_that("authenticated RLM pager failures report reset failures accurately", {
   expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
   expect_false(result$success)
   expect_match(result$error, "session could not be reset", fixed = TRUE)
+  expect_identical(result$error_type, "interpreter")
+  expect_true(runner$terminal)
   expect_false(grepl("session was reset", result$error, fixed = TRUE))
 })
 

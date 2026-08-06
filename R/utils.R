@@ -131,8 +131,8 @@ validate_signature_inputs <- function(
   sig,
   inputs,
   missing = c("error", "warn", "ignore"),
-  extra = c("warn", "ignore"),
-  type = c("warn", "ignore"),
+  extra = c("warn", "error", "ignore"),
+  type = c("warn", "error", "ignore"),
   context = "inputs"
 ) {
   missing <- match.arg(missing)
@@ -163,35 +163,45 @@ validate_signature_inputs <- function(
   }
 
   extra_names <- setdiff(provided_names, required_names)
-  if (length(extra_names) > 0 && extra == "warn") {
+  if (length(extra_names) > 0 && extra != "ignore") {
     for (field in extra_names) {
       suggestion <- find_closest_match(field, required_names)
-      if (!is.null(suggestion)) {
-        cli::cli_warn(
-          c(
-            "Unknown input: {.field {field}}",
-            "i" = "Did you mean: {.field {suggestion}}?",
-            "i" = "Available fields: {.field {required_names}}"
-          ),
-          class = "dsprrr_extra_input_warning"
+      message <- if (!is.null(suggestion)) {
+        c(
+          "Unknown input: {.field {field}}",
+          "i" = "Did you mean: {.field {suggestion}}?",
+          "i" = "Available fields: {.field {required_names}}"
+        )
+      } else {
+        c(
+          "Extra input not declared in the signature: {.field {field}}",
+          "i" = "The field remains available to custom templates but is not declared in the signature.",
+          "i" = "Signature fields: {.field {required_names}}"
+        )
+      }
+      if (extra == "error") {
+        cli::cli_abort(
+          message,
+          class = c(
+            "dsprrr_extra_input_error",
+            "dsprrr_input_validation_error"
+          )
         )
       } else {
         cli::cli_warn(
-          c(
-            "Extra input not declared in the signature: {.field {field}}",
-            "i" = "The field remains available to custom templates but is not declared in the signature.",
-            "i" = "Signature fields: {.field {required_names}}"
-          ),
+          message,
           class = "dsprrr_extra_input_warning"
         )
       }
     }
   }
 
-  if (
+  if (type == "error") {
+    warn_signature_type_mismatches(sig, inputs, action = "error")
+  } else if (
     type == "warn" && isTRUE(getOption("dsprrr.warn_on_type_mismatch", TRUE))
   ) {
-    warn_signature_type_mismatches(sig, inputs)
+    warn_signature_type_mismatches(sig, inputs, action = "warn")
   }
 
   invisible(NULL)
@@ -225,7 +235,12 @@ build_missing_input_message <- function(
 
 #' Warn when provided values do not match declared input types
 #' @noRd
-warn_signature_type_mismatches <- function(sig, inputs) {
+warn_signature_type_mismatches <- function(
+  sig,
+  inputs,
+  action = c("warn", "error")
+) {
+  action <- match.arg(action)
   for (input_spec in sig@inputs) {
     name <- input_spec$name
     if (!name %in% names(inputs)) {
@@ -246,14 +261,30 @@ warn_signature_type_mismatches <- function(sig, inputs) {
     if (!input_value_matches_type(value, expected_type)) {
       expected <- format_ellmer_type(expected_type, verbose = TRUE)
       actual <- paste(class(value), collapse = "/")
-      cli::cli_warn(
-        c(
-          "Type mismatch for input {.field {name}}",
-          "i" = "Expected {.val {expected}} from the signature, got {.cls {actual}}.",
-          "i" = "Disable with {.code options(dsprrr.warn_on_type_mismatch = FALSE)}."
-        ),
-        class = "dsprrr_type_mismatch_warning"
+      message <- c(
+        "Type mismatch for input {.field {name}}",
+        "i" = "Expected {.val {expected}} from the signature, got {.cls {actual}}."
       )
+      if (action == "error") {
+        cli::cli_abort(
+          c(
+            message,
+            "i" = "Provide a value compatible with the declared signature."
+          ),
+          class = c(
+            "dsprrr_type_mismatch_error",
+            "dsprrr_input_validation_error"
+          )
+        )
+      } else {
+        cli::cli_warn(
+          c(
+            message,
+            "i" = "Disable with {.code options(dsprrr.warn_on_type_mismatch = FALSE)}."
+          ),
+          class = "dsprrr_type_mismatch_warning"
+        )
+      }
     }
   }
 

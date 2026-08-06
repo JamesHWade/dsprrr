@@ -111,7 +111,11 @@ RAGModule <- R6::R6Class(
           )
         },
         error = function(e) {
-          cli::cli_abort("LLM call failed: {e$message}", parent = e)
+          cli::cli_abort(
+            "LLM call failed: {e$message}",
+            class = "dsprrr_provider_error",
+            parent = e
+          )
         }
       )
 

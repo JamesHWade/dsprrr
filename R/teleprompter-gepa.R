@@ -1,14 +1,14 @@
 # GEPA Teleprompter
 #
-# GEPA-lite reflective prompt evolution optimizer.
+# Adapted GEPA reflective evolution optimizer.
 
 #' GEPA Teleprompter
 #'
 #' @include teleprompter.R optimizer-core.R optimizer-logging.R pareto.R
 #'
 #' @description
-#' Genetic/evolutionary prompt optimizer that evolves instruction variants
-#' using reflection on failed examples.
+#' Reflective optimizer for instructions and complete Flex source components,
+#' using row-level failures and metric feedback to propose improved candidates.
 #'
 #' @details
 #' ## Feedback metrics
@@ -24,13 +24,33 @@
 #'
 #' ## Differences from DSPy's GEPA
 #'
-#' This is an adapted ("GEPA-lite") implementation. It shares the core
-#' ideas — reflective mutation of instructions guided by failures and
-#' feedback, plus Pareto-frontier selection over multiple metrics — but
-#' uses a fixed population/generations evolutionary loop rather than
-#' DSPy's budget-driven candidate search, and does not yet support
-#' per-component selection in multi-step programs or inference-time
-#' search. Expect qualitatively similar behavior, not identical results.
+#' This is an adapted implementation. It shares reflective mutation guided by
+#' failures and feedback, validation-example winner frontiers, component
+#' selection, lineage-aware merge, and Pareto selection over multiple metrics,
+#' but uses a fixed population/generations loop rather than DSPy's full
+#' budget-driven candidate search.
+#'
+#' Every mutable program is represented as a complete component candidate:
+#' ordinary predictor instructions and complete Flex `module_src` values are
+#' proposed, copied, validated, and bound transactionally. A Flex source is one
+#' component; dynamically constructed inner predictors are not optimized as
+#' separate leaves. Invalid Flex sources receive an
+#' auditable failure score and are never selectable. The structured source
+#' proposer receives task and signature context, field schemas, source runtime,
+#' allowed tools and primitives, row-aligned inputs, expected output,
+#' prediction, and metric feedback. Executable source is evaluated only through
+#' Flex's configured interpreter bridge during candidate evaluation.
+#'
+#' Parent selection uses the union of complete candidates that win on at least
+#' one validation row and candidates on the multi-metric objective Pareto front;
+#' component selection is a separate mutation policy. When `valset` is supplied,
+#' `trainset` remains the discovery/reflection dataset and `valset` is used for
+#' aggregate selection, validation-instance frontiers, and retained outputs.
+#' Candidate metadata includes lineage, aggregate and per-row scores, discovery
+#' counts, winners, and optional retained best outputs. Fine-grained checkpoint
+#' resume, cached subsample merge acceptance, and automatic inference-time
+#' candidate selection are not implemented. Compiled programs record these
+#' distinctions under `config$optimizer$component_semantics`.
 #'
 #' @param metrics Named list of metric functions for evaluation.
 #' @param metric A single metric function (fallback when `metrics` is NULL).
@@ -41,10 +61,21 @@
 #' @param mutation_rate Probability of mutation. Default is 0.1.
 #' @param crossover_rate Probability of crossover. Default is 0.7.
 #' @param selection Selection strategy: "pareto" or "current_best".
+#' @param component_selector Component mutation strategy. Use
+#'   `"round_robin"` to update one component at a time, `"all"` to update all
+#'   components atomically, or a function called with `component_ids`,
+#'   `candidate`, `failed_examples`, and `context`. The function must return one
+#'   or more unique IDs from `component_ids`.
+#' @param use_merge Whether to attempt lineage-aware merges of complementary
+#'   component changes.
+#' @param max_merge_invocations Maximum merge attempts, or `NULL` for no
+#'   separate merge-attempt cap.
 #' @param seed Random seed for reproducibility.
 #' @param log_dir Optional directory for trial logging.
 #' @param verbose Whether to print progress messages.
 #' @param track_stats Whether to record generation statistics.
+#' @param track_best_outputs Whether to retain each validation row's
+#'   highest-scoring output. Requires `track_stats = TRUE`.
 #'
 #' @examples
 #' # A small GEPA run: 6 candidates evolved over 2 generations
@@ -157,12 +188,69 @@ GEPA <- S7::new_class(
         NULL
       }
     ),
+    component_selector = S7::new_property(
+      S7::class_any,
+      default = "round_robin",
+      validator = function(value) {
+        valid <- is.function(value) ||
+          (is.character(value) &&
+            length(value) == 1L &&
+            !is.na(value) &&
+            value %in% c("round_robin", "all"))
+        if (!valid) {
+          return(
+            "component_selector must be 'round_robin', 'all', or a function"
+          )
+        }
+        NULL
+      }
+    ),
+    use_merge = S7::new_property(
+      S7::class_logical,
+      default = TRUE,
+      validator = function(value) {
+        if (length(value) != 1L || is.na(value)) {
+          return("use_merge must be TRUE or FALSE")
+        }
+        NULL
+      }
+    ),
+    max_merge_invocations = S7::new_property(
+      S7::class_any,
+      default = 5L,
+      validator = function(value) {
+        valid <- is.null(value) ||
+          (is.numeric(value) &&
+            length(value) == 1L &&
+            !is.na(value) &&
+            is.finite(value) &&
+            value == floor(value) &&
+            value >= 0L &&
+            value <= .Machine$integer.max)
+        if (!valid) {
+          return(
+            "max_merge_invocations must be a non-negative integer or NULL"
+          )
+        }
+        NULL
+      }
+    ),
     seed = S7::new_property(
       S7::class_any,
       default = NULL,
       validator = function(value) {
-        if (!is.null(value) && (!is.numeric(value) || length(value) != 1)) {
-          return("seed must be a single numeric value or NULL")
+        valid <- is.null(value) ||
+          (is.numeric(value) &&
+            length(value) == 1L &&
+            !is.na(value) &&
+            is.finite(value) &&
+            value == floor(value) &&
+            value >= 0 &&
+            value <= .Machine$integer.max)
+        if (!valid) {
+          return(
+            "seed must be one non-missing whole number in R's integer range, or NULL"
+          )
         }
         NULL
       }
@@ -186,6 +274,16 @@ GEPA <- S7::new_class(
     track_stats = S7::new_property(
       S7::class_logical,
       default = TRUE
+    ),
+    track_best_outputs = S7::new_property(
+      S7::class_logical,
+      default = FALSE,
+      validator = function(value) {
+        if (length(value) != 1L || is.na(value)) {
+          return("track_best_outputs must be TRUE or FALSE")
+        }
+        NULL
+      }
     )
   )
 )
@@ -214,6 +312,16 @@ compile_gepa <- function(
     return(program)
   }
 
+  if (
+    isTRUE(teleprompter@track_best_outputs) &&
+      !isTRUE(teleprompter@track_stats)
+  ) {
+    cli::cli_abort(
+      "{.arg track_best_outputs = TRUE} requires {.arg track_stats = TRUE}",
+      class = "dsprrr_gepa_config_error"
+    )
+  }
+
   metrics <- teleprompter@metrics
   if (is.null(metrics)) {
     if (!is.null(teleprompter@metric)) {
@@ -228,10 +336,25 @@ compile_gepa <- function(
     metric_names <- paste0("metric_", seq_along(metrics))
   }
 
-  dataset <- valset %||% trainset
-
-  if (!is.null(teleprompter@seed)) {
+  if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {
+    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
+      get(".Random.seed", envir = globalenv())
+    } else {
+      NULL
+    }
     set.seed(teleprompter@seed)
+    on.exit(
+      {
+        if (is.null(old_seed)) {
+          if (exists(".Random.seed", envir = globalenv())) {
+            rm(".Random.seed", envir = globalenv())
+          }
+        } else {
+          assign(".Random.seed", old_seed, envir = globalenv())
+        }
+      },
+      add = TRUE
+    )
   }
 
   control <- optimizer_control_for_teleprompter(
@@ -247,248 +370,18 @@ compile_gepa <- function(
     NULL
   }
 
-  base_instructions <- program$signature@instructions
-  population <- vector("list", teleprompter@population_size)
-  population[[1]] <- base_instructions
-  for (i in 2:teleprompter@population_size) {
-    if (optimizer_budget_stopped(budget)) {
-      break
-    }
-    population[[i]] <- gepa_mutate_instruction(
-      base_instructions,
-      failed_examples = list(),
-      .llm = .llm,
-      verbose = teleprompter@verbose,
-      budget = budget,
-      unit_id = paste0("gepa:initial_mutation:", i)
-    )
-  }
-  population <- Filter(Negate(is.null), population)
-
-  all_generations <- list()
-  selectable_records <- list()
-  best_record <- NULL
-
-  for (generation in seq_len(teleprompter@generations)) {
-    if (teleprompter@verbose) {
-      cli::cli_alert_info(
-        "GEPA generation {generation}/{teleprompter@generations}"
-      )
-    }
-
-    records <- list()
-
-    for (i in seq_along(population)) {
-      if (optimizer_budget_stopped(budget)) {
-        break
-      }
-
-      instructions <- population[[i]]
-      scores <- rep(NA_real_, length(metrics))
-      failed_examples <- list()
-      primary_eval <- NULL
-      last_eval <- NULL
-      completed_metrics <- 0L
-      metric_unit_ids <- paste0(
-        "gepa:generation:",
-        generation,
-        ":candidate:",
-        i,
-        ":metric:",
-        seq_along(metrics)
-      )
-
-      for (m in seq_along(metrics)) {
-        if (optimizer_budget_stopped(budget)) {
-          break
-        }
-
-        candidate <- copy_module(program)
-        candidate$apply_optimization_params(list(instructions = instructions))
-        eval_result <- optimizer_eval_candidate(
-          candidate,
-          dataset,
-          metric = metrics[[m]],
-          .llm = .llm,
-          control = control,
-          budget = budget,
-          stage = paste0("gepa_metric_", m),
-          unit_id = metric_unit_ids[[m]]
-        )
-
-        if (!S7::S7_inherits(eval_result, EvalResult)) {
-          cli::cli_abort(c(
-            "eval_program returned invalid result",
-            "i" = "Expected EvalResult, got {.cls {class(eval_result)}}"
-          ))
-        }
-
-        last_eval <- eval_result
-        scores[m] <- eval_result@mean_score
-        completed_metrics <- m
-        if (m == 1) {
-          primary_eval <- eval_result
-          failed_examples <- gepa_failed_examples(
-            eval_result,
-            dataset,
-            program$signature,
-            threshold = teleprompter@metric_threshold,
-            output_col = get_metric_field(metrics[[1L]])
-          )
-        }
-      }
-
-      record <- list(
-        instructions = instructions,
-        scores = stats::setNames(scores, metric_names),
-        failed_examples = failed_examples,
-        generation = generation,
-        completed_metrics = completed_metrics,
-        complete = all(vapply(
-          metric_unit_ids,
-          function(unit_id) {
-            optimizer_budget_unit_completed(budget, unit_id)
-          },
-          logical(1)
-        )) &&
-          !anyNA(scores)
-      )
-
-      records[[length(records) + 1L]] <- record
-
-      if (
-        !is.null(trial_log) &&
-          isTRUE(record$complete) &&
-          !is.null(last_eval)
-      ) {
-        trial <- create_trial(
-          optimizer_name = "GEPA",
-          params = list(
-            generation = generation,
-            index = i,
-            instructions = instructions
-          )
-        )
-        trial <- start_trial(trial)
-        trial <- complete_trial(trial, primary_eval %||% last_eval)
-        trial_log$add_trial(trial)
-      }
-
-      if (optimizer_budget_stopped(budget)) {
-        break
-      }
-    }
-
-    complete_records <- Filter(
-      function(record) isTRUE(record$complete),
-      records
-    )
-    if (length(complete_records) > 0L) {
-      selectable_records <- c(selectable_records, complete_records)
-
-      scores_matrix <- do.call(
-        rbind,
-        lapply(selectable_records, function(rec) rec$scores)
-      )
-
-      if (teleprompter@selection == "pareto" && length(metrics) > 1) {
-        ranks <- pareto_ranks(scores_matrix)
-        crowding <- pareto_crowding_distance(scores_matrix, ranks)
-        best_idx <- select_pareto_best(scores_matrix, ranks, crowding)
-      } else {
-        best_idx <- which.max(scores_matrix[, 1])
-      }
-
-      best_record <- selectable_records[[best_idx]]
-    }
-
-    if (isTRUE(teleprompter@track_stats)) {
-      all_generations[[generation]] <- list(
-        generation = generation,
-        population = complete_records
-      )
-    }
-
-    if (optimizer_budget_stopped(budget)) {
-      break
-    }
-
-    if (generation == teleprompter@generations) {
-      break
-    }
-
-    if (length(complete_records) == 0L) {
-      break
-    }
-
-    population <- gepa_next_generation(
-      complete_records,
-      teleprompter@population_size,
-      teleprompter@mutation_rate,
-      teleprompter@crossover_rate,
-      teleprompter@selection,
-      .llm,
-      verbose = teleprompter@verbose,
-      budget = budget,
-      generation = generation + 1L
-    )
-  }
-
-  optimized <- copy_module(program)
-  if (!is.null(best_record)) {
-    optimized$apply_optimization_params(list(
-      instructions = best_record$instructions
-    ))
-  } else if (!optimizer_budget_stopped(budget)) {
-    cli::cli_warn(c(
-      "GEPA optimization failed to produce any valid candidates",
-      "!" = "Returning unmodified program",
-      "i" = "All evaluations may have failed or max_errors was exceeded immediately"
-    ))
-  }
-
-  final_scores <- if (!is.null(best_record)) {
-    best_record$scores
-  } else {
-    stats::setNames(rep(NA_real_, length(metrics)), metric_names)
-  }
-
-  frontier <- list()
-  if (length(selectable_records) > 0L) {
-    scores_matrix <- do.call(
-      rbind,
-      lapply(selectable_records, function(rec) rec$scores)
-    )
-    frontier_idx <- pareto_frontier(scores_matrix)
-    frontier <- lapply(selectable_records[frontier_idx], function(rec) {
-      list(
-        instructions = rec$instructions,
-        scores = rec$scores
-      )
-    })
-  }
-
-  optimized$config$compiled <- TRUE
-  optimized$config$teleprompter <- "GEPA"
-  budget_summary <- optimizer_budget_summary(budget)
-  optimized$config$optimizer <- list(
-    selection = teleprompter@selection,
-    population_size = teleprompter@population_size,
-    generations = teleprompter@generations,
-    best_scores = final_scores,
-    pareto_frontier = frontier,
-    all_generations = all_generations,
-    error_count = budget_summary$total_errors,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(budget)
-  )
-
-  if (!is.null(trial_log)) {
-    trial_log$save()
-  }
-
-  optimized
+  return(compile_gepa_components(
+    teleprompter = teleprompter,
+    program = program,
+    discovery_dataset = trainset,
+    validation_dataset = valset %||% trainset,
+    metrics = metrics,
+    metric_names = metric_names,
+    .llm = .llm,
+    control = control,
+    budget = budget,
+    trial_log = trial_log
+  ))
 }
 
 gepa_failed_examples <- function(
@@ -507,6 +400,16 @@ gepa_failed_examples <- function(
   scores <- eval_result@examples$score
   feedbacks <- eval_result@examples$feedback %||%
     rep(NA_character_, length(scores))
+  row_ids <- if ("row_id" %in% names(eval_result@examples)) {
+    eval_result@examples[["row_id"]]
+  } else {
+    seq_along(scores)
+  }
+  program_traces <- if ("program_trace" %in% names(eval_result@examples)) {
+    eval_result@examples[["program_trace"]]
+  } else {
+    rep(list(NULL), length(scores))
+  }
   failed_idx <- which(is.na(scores) | scores < threshold)
 
   if (length(failed_idx) == 0) {
@@ -524,10 +427,12 @@ gepa_failed_examples <- function(
       NA
     }
     list(
+      row_id = row_ids[[i]] %||% i,
       inputs = inputs,
       expected = expected,
       predicted = eval_result@examples$predicted[[i]] %||% NA,
-      feedback = feedbacks[[i]] %||% NA_character_
+      feedback = feedbacks[[i]] %||% NA_character_,
+      program_trace = program_traces[[i]]
     )
   })
 }

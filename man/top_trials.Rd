@@ -32,12 +32,12 @@ top_trials(log, k = 10, objective = "minimize")
 }
 }
 \seealso{
-Other optimizer accessors: 
-\code{\link{apply_best_config}()},
-\code{\link{best_demos}()},
-\code{\link{best_params}()},
-\code{\link{config_diff}()},
-\code{\link{export_module_code}()},
-\code{\link{optimization_summary}()}
+Other optimizer accessors:
+\code{\link[=apply_best_config]{apply_best_config()}},
+\code{\link[=best_demos]{best_demos()}},
+\code{\link[=best_params]{best_params()}},
+\code{\link[=config_diff]{config_diff()}},
+\code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=optimization_summary]{optimization_summary()}}
 }
 \concept{optimizer accessors}

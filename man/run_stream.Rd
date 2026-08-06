@@ -45,6 +45,15 @@ cache.
 }
 }
 
+\subsection{Specialized modules}{
+
+One-shot fallback execution uses each module's own \code{forward()} method, so it
+remains available to specialized modules when no matching token listener is
+active or the output is not token-streamable. Actual token streaming uses a
+direct provider path and is limited to ordinary \code{PredictModule} steps.
+Unsupported token-stream requests are rejected before provider work.
+}
+
 \subsection{Status events}{
 
 When \code{on_status} is provided, it is called with a list describing each

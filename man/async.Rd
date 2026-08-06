@@ -6,4 +6,10 @@
 \description{
 Functions for running modules asynchronously using promises.
 Useful for parallel execution or non-blocking operations.
+The direct provider paths support ordinary \code{PredictModule} objects.
+ProgramOfThought, CodeAct, and RLM modules may also use \code{\link[=run_async]{run_async()}} when
+configured with \code{interpreter_factory}: the complete workflow runs in an
+isolated mirai process with one invocation-owned interpreter. Their
+constructor-bound caller-owned runners and all specialized streaming paths
+remain rejected.
 }

@@ -220,6 +220,7 @@ compile_bootstrap <- function(
   if (!inherits(program, "Module")) {
     cli::cli_abort("BootstrapFewShot currently only supports Module objects")
   }
+  bootstrap_assert_demo_eligible(program)
 
   if (!is.data.frame(trainset)) {
     cli::cli_abort("{.arg trainset} must be a data frame")
@@ -781,6 +782,46 @@ compile_bootstrap <- function(
   )
 
   student
+}
+
+bootstrap_flex_paths <- function(program, path = "$") {
+  if (inherits(program, "FlexModule")) {
+    return(path)
+  }
+  if (!inherits(program, "PipelineModule")) {
+    return(character())
+  }
+
+  unlist(
+    lapply(seq_along(program$steps), function(index) {
+      bootstrap_flex_paths(
+        program$steps[[index]]@module,
+        paste0(path, "/steps/", index)
+      )
+    }),
+    use.names = FALSE
+  )
+}
+
+bootstrap_assert_demo_eligible <- function(program) {
+  paths <- bootstrap_flex_paths(program)
+  if (length(paths) == 0L) {
+    return(invisible(program))
+  }
+
+  cli::cli_abort(
+    c(
+      "BootstrapFewShot cannot optimize Flex demonstrations",
+      "x" = "Flex constructs fresh inner predictors for every invocation, so assigning demos to the outer module has no effect.",
+      "i" = "Unsupported Flex path{?s}: {.path {paths}}.",
+      "i" = "Use GEPA for Flex structure and instruction optimization."
+    ),
+    class = c(
+      "dsprrr_flex_demo_unsupported_error",
+      "dsprrr_optimizer_ineligible_error"
+    ),
+    paths = paths
+  )
 }
 
 #' Joint compile method for BootstrapFewShot on pipelines

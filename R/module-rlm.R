@@ -24,7 +24,8 @@
 #' - `llm_query(query, context_slice)`: Recursive LLM call (requires sub_lm)
 #' - `llm_query_batched(queries, slices)`: Batched recursive calls
 #'
-#' Security: Code execution requires explicit opt-in via a runner parameter.
+#' Security: Code execution requires explicit opt-in via `runner` or
+#' `interpreter_factory`.
 #' The built-in runner uses a separate process but is NOT a security sandbox.
 #' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
 #' runner backed by OS-level sandboxing, such as [mcp_repl_runner()].
@@ -34,12 +35,19 @@
 #' compaction metadata; dsprrr does not read a sandbox-disclosed path from the
 #' host process.
 #'
-#' Runner lifecycle: an `RLMModule` reuses the runner object supplied at
-#' construction. A persistent backend therefore retains its REPL state between
-#' separate `forward()` calls until `runner$reset()` is called. Do not share one
-#' persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr does
-#' not yet expose an interpreter factory that creates and tears down a fresh
-#' backend per invocation.
+#' Runner lifecycle: supply exactly one runtime source. `runner` is
+#' caller-owned, reused across calls, and never closed by dsprrr. The backend determines
+#' whether execution state persists and whether `reset()` is available;
+#' serialize access to stateful backends. `interpreter_factory` is a
+#' zero-argument function that returns a fresh runner implementing `execute()`,
+#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
+#' module owns that runner for one invocation and shuts it down exactly once on
+#' success, error, or interrupt.
+#'
+#' [run_async()] supports factory-backed RLM in an isolated mirai process and
+#' rejects caller-owned runners. [stream_async()] and a module's `$stream()`
+#' method remain unavailable because streaming would bypass execution. The
+#' [run_stream()] one-shot `forward()` fallback remains available.
 #'
 #' @examples
 #' \dontrun{
@@ -74,21 +82,30 @@ NULL
 #' @description
 #' Factory function to create an RLMModule that enables LLMs to programmatically
 #' explore large contexts through a REPL interface.
+#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
+#' async streaming and module `$stream()` reject RLM. [run_stream()] preserves
+#' the synchronous `forward()` fallback unless a matching token-stream request
+#' is active; that request is rejected first.
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
-#' @param runner A code runner implementing `execute()` and `policy()`. Required.
-#'   The module retains this object; reset persistent runners between logically
-#'   isolated jobs and do not use one runner concurrently.
+#' @param runner Optional caller-owned code runner implementing `execute()` and
+#'   `policy()`. It is retained, never automatically closed, and must not be
+#'   shared concurrently when persistent.
 #' @param max_iterations Maximum REPL iterations before fallback (default 20)
 #' @param max_iters DSPy 3.3-compatible alias for `max_iterations`. Supply only
 #'   one of these arguments.
+#' @param interpreter_factory Optional zero-argument function returning a fresh
+#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
+#'   terminal `shutdown()` or `close()`.
+#'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param max_llm_calls Maximum recursive LLM calls allowed (default 50)
 #' @param max_output_chars Maximum characters per execution output (default 100000)
 #' @param sub_lm Optional ellmer Chat for recursive queries. NULL = disabled.
 #' @param verbose Logical. Print execution progress (default FALSE)
-#' @param tools Named list of user-defined R functions to inject into REPL.
-#'   Each tool becomes available as a function in the code execution environment.
-#'   Non-function values in the list will cause an error.
+#' @param tools Named list of user-defined host functions. Guest code emits an
+#'   authenticated request, dsprrr invokes the original function in the host,
+#'   and the guest is replayed with the response. Closures are never deparsed or
+#'   serialized into generated code.
 #' @param ... Additional arguments passed to the module
 #'
 #' @return An RLMModule object
@@ -102,7 +119,7 @@ NULL
 #' }
 rlm_module <- function(
   signature,
-  runner,
+  runner = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
   max_output_chars = 100000L,
@@ -110,18 +127,14 @@ rlm_module <- function(
   verbose = FALSE,
   tools = list(),
   max_iters = NULL,
-  ...
+  ...,
+  interpreter_factory = NULL
 ) {
-  # Validate runner
-  if (missing(runner) || is.null(runner)) {
-    cli::cli_abort(c(
-      "RLM requires an explicit runner for code execution",
-      "i" = "Create one with: {.code runner <- r_code_runner()}",
-      "i" = "Then pass it: {.code rlm_module(..., runner = runner)}"
-    ))
-  }
-
-  validate_code_runner(runner)
+  binding <- normalize_code_runner_binding(
+    runner = runner,
+    interpreter_factory = interpreter_factory,
+    module_name = "RLM"
+  )
 
   # Parse signature if string
   if (is.character(signature)) {
@@ -167,7 +180,8 @@ rlm_module <- function(
 
   RLMModule$new(
     signature = signature,
-    runner = runner,
+    runner = binding$runner,
+    interpreter_factory = binding$interpreter_factory,
     max_iterations = max_iterations,
     max_llm_calls = max_llm_calls,
     max_output_chars = max_output_chars,
@@ -368,6 +382,9 @@ RLMModule <- R6::R6Class(
     #' @field runner Code runner for code execution
     runner = NULL,
 
+    #' @field interpreter_factory Factory for an invocation-owned code runner
+    interpreter_factory = NULL,
+
     #' @field max_iterations Maximum REPL iterations before fallback
     max_iterations = NULL,
 
@@ -399,9 +416,11 @@ RLMModule <- R6::R6Class(
     #' @param tools User-defined tools
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
+    #' @param interpreter_factory Optional zero-argument invocation-owned runner
+    #'   factory. Supply exactly one of this and `runner`.
     initialize = function(
       signature,
-      runner,
+      runner = NULL,
       max_iterations = 20L,
       max_llm_calls = 50L,
       max_output_chars = 100000L,
@@ -409,9 +428,14 @@ RLMModule <- R6::R6Class(
       verbose = FALSE,
       tools = list(),
       config = list(),
-      chat = NULL
+      chat = NULL,
+      interpreter_factory = NULL
     ) {
-      validate_code_runner(runner)
+      binding <- normalize_code_runner_binding(
+        runner = runner,
+        interpreter_factory = interpreter_factory,
+        module_name = "RLM"
+      )
       if (!S7::S7_inherits(signature, Signature)) {
         cli::cli_abort(
           "{.arg signature} must be a Signature object",
@@ -430,6 +454,12 @@ RLMModule <- R6::R6Class(
             "RLM signature input names must be unique",
             "x" = "Duplicate name{?s}: {.field {duplicates}}"
           ),
+          class = "dsprrr_rlm_signature_error"
+        )
+      }
+      if (rlm_host_tool_replay_field() %in% signature_inputs) {
+        cli::cli_abort(
+          "RLM signature input {.field {rlm_host_tool_replay_field()}} is reserved for the authenticated host-tool bridge",
           class = "dsprrr_rlm_signature_error"
         )
       }
@@ -455,7 +485,8 @@ RLMModule <- R6::R6Class(
         chat = chat
       )
 
-      self$runner <- runner
+      self$runner <- binding$runner
+      self$interpreter_factory <- binding$interpreter_factory
       self$max_iterations <- max_iterations
       self$max_llm_calls <- max_llm_calls
       self$max_output_chars <- max_output_chars
@@ -527,137 +558,158 @@ RLMModule <- R6::R6Class(
 
       llm <- base_llm$clone()
 
-      start_time <- Sys.time()
+      with_code_runner_lease(
+        self$runner,
+        self$interpreter_factory,
+        "RLM",
+        function(runner, lease) {
+          start_time <- Sys.time()
 
-      # Initialize call counter (shared across recursions)
-      call_counter <- new.env()
-      call_counter$count <- 0L
+          # Initialize call counter (shared across recursions)
+          call_counter <- new.env()
+          call_counter$count <- 0L
 
-      # Build context description for system prompt
-      context_desc <- private$describe_context(inputs)
+          # Build context description for system prompt
+          context_desc <- private$describe_context(inputs)
 
-      # Build system prompt
-      system_prompt <- private$build_system_prompt(context_desc)
+          # Build system prompt
+          system_prompt <- private$build_system_prompt(context_desc)
 
-      # REPL iteration loop
-      history <- list()
-      final_answer <- NULL
+          # REPL iteration loop
+          history <- list()
+          final_answer <- NULL
 
-      for (iter in seq_len(self$max_iterations)) {
-        if (self$verbose) {
-          cli::cli_alert_info("RLM Iteration {iter}/{self$max_iterations}")
-        }
+          for (iter in seq_len(self$max_iterations)) {
+            if (self$verbose) {
+              cli::cli_alert_info("RLM Iteration {iter}/{self$max_iterations}")
+            }
 
-        # Build prompt for this iteration
-        prompt <- private$build_iteration_prompt(system_prompt, history, iter)
+            # Build prompt for this iteration
+            prompt <- private$build_iteration_prompt(
+              system_prompt,
+              history,
+              iter
+            )
 
-        # Get LLM response (code generation)
-        response <- private$get_code_response(llm, prompt)
+            # Get LLM response (code generation)
+            response <- private$get_code_response(llm, prompt)
 
-        if (self$verbose) {
-          cli::cli_alert("Code generated: {substr(response$code, 1, 100)}...")
-        }
+            if (self$verbose) {
+              cli::cli_alert(
+                "Code generated: {substr(response$code, 1, 100)}..."
+              )
+            }
 
-        # Execute code with RLM tools injected
-        exec_result <- private$execute_with_rlm_tools(
-          response$code,
-          inputs,
-          call_counter
-        )
+            # Execute code with RLM tools injected
+            exec_result <- private$execute_with_rlm_tools(
+              response$code,
+              inputs,
+              call_counter,
+              runner,
+              lease$policy
+            )
 
-        # Record in history
-        history[[iter]] <- list(
-          iteration = iter,
-          reasoning = response$reasoning,
-          code = response$code,
-          output = exec_result$formatted_output,
-          success = exec_result$success,
-          is_final = exec_result$is_final
-        )
+            # Record in history
+            history[[iter]] <- list(
+              iteration = iter,
+              reasoning = response$reasoning,
+              code = response$code,
+              output = exec_result$formatted_output,
+              success = exec_result$success,
+              is_final = exec_result$is_final
+            )
 
-        # Check for SUBMIT() termination
-        if (exec_result$is_final) {
-          final_answer <- exec_result$final_value
-          if (self$verbose) {
-            cli::cli_alert_success("SUBMIT called with answer")
+            # Check for SUBMIT() termination
+            if (isTRUE(exec_result$success) && isTRUE(exec_result$is_final)) {
+              final_answer <- exec_result$final_value
+              if (self$verbose) {
+                cli::cli_alert_success("SUBMIT called with answer")
+              }
+              break
+            }
+
+            # Check for errors - feed back to LLM for retry
+            if (!exec_result$success) {
+              if (self$verbose) {
+                cli::cli_alert_warning(
+                  "Iteration {iter}: Code execution failed - {exec_result$error}"
+                )
+              }
+              # Error will be in history, LLM can see and fix
+              next
+            }
+
+            if (self$verbose) {
+              cli::cli_alert(
+                "Output: {substr(exec_result$formatted_output, 1, 200)}..."
+              )
+            }
           }
-          break
-        }
 
-        # Check for errors - feed back to LLM for retry
-        if (!exec_result$success) {
-          if (self$verbose) {
-            cli::cli_alert_warning(
-              "Iteration {iter}: Code execution failed - {exec_result$error}"
+          final_source <- "submit"
+
+          # Fallback extract if no SUBMIT()
+          if (is.null(final_answer)) {
+            final_source <- "fallback"
+            cli::cli_warn(c(
+              "RLM reached max_iterations ({self$max_iterations}) without SUBMIT()",
+              "i" = "Using fallback extraction from trajectory",
+              "i" = "Consider increasing max_iterations or simplifying the query"
+            ))
+            final_answer <- private$extract_fallback(inputs, history, llm)
+          }
+
+          # Store REPL history
+          if (trace) {
+            self$state$repl_history <- c(
+              self$state$repl_history,
+              list(list(
+                timestamp = start_time,
+                inputs = inputs,
+                history = history,
+                final_answer = private$build_output(
+                  final_answer,
+                  source = final_source
+                ),
+                iterations_used = length(history),
+                llm_calls_used = call_counter$count
+              ))
             )
           }
-          # Error will be in history, LLM can see and fix
-          next
-        }
 
-        if (self$verbose) {
-          cli::cli_alert(
-            "Output: {substr(exec_result$formatted_output, 1, 200)}..."
+          # Build output matching signature
+          output <- private$build_output(final_answer, source = final_source)
+
+          duration_secs <- as.numeric(difftime(
+            Sys.time(),
+            start_time,
+            units = "secs"
+          ))
+          duration_ms <- duration_secs * 1000
+
+          # Build metadata
+          metadata <- list(
+            model = "rlm",
+            iterations = length(history),
+            max_iterations = self$max_iterations,
+            llm_calls = call_counter$count,
+            max_llm_calls = self$max_llm_calls,
+            duration_ms = round(duration_ms, 2),
+            repl_history = history,
+            runner_policy = lease$policy_summary,
+            runner_lifecycle = if (lease$owned) {
+              "invocation-owned"
+            } else {
+              "caller-owned"
+            }
+          )
+
+          tibble::tibble(
+            output = list(output),
+            chat = list(llm),
+            metadata = list(metadata)
           )
         }
-      }
-
-      final_source <- "submit"
-
-      # Fallback extract if no SUBMIT()
-      if (is.null(final_answer)) {
-        final_source <- "fallback"
-        cli::cli_warn(c(
-          "RLM reached max_iterations ({self$max_iterations}) without SUBMIT()",
-          "i" = "Using fallback extraction from trajectory",
-          "i" = "Consider increasing max_iterations or simplifying the query"
-        ))
-        final_answer <- private$extract_fallback(inputs, history, llm)
-      }
-
-      # Store REPL history
-      if (trace) {
-        self$state$repl_history <- c(
-          self$state$repl_history,
-          list(list(
-            timestamp = start_time,
-            inputs = inputs,
-            history = history,
-            final_answer = private$build_output(
-              final_answer,
-              source = final_source
-            ),
-            iterations_used = length(history),
-            llm_calls_used = call_counter$count
-          ))
-        )
-      }
-
-      # Build output matching signature
-      output <- private$build_output(final_answer, source = final_source)
-
-      duration_secs <- as.numeric(difftime(
-        Sys.time(),
-        start_time,
-        units = "secs"
-      ))
-      duration_ms <- duration_secs * 1000
-
-      # Build metadata
-      metadata <- list(
-        model = "rlm",
-        iterations = length(history),
-        max_iterations = self$max_iterations,
-        llm_calls = call_counter$count,
-        max_llm_calls = self$max_llm_calls,
-        duration_ms = round(duration_ms, 2),
-        repl_history = history
-      )
-
-      tibble::tibble(
-        output = list(output),
-        chat = list(llm),
-        metadata = list(metadata)
       )
     },
 
@@ -675,6 +727,7 @@ RLMModule <- R6::R6Class(
       RLMModule$new(
         signature = self$signature,
         runner = self$runner,
+        interpreter_factory = self$interpreter_factory,
         max_iterations = self$max_iterations,
         max_llm_calls = self$max_llm_calls,
         max_output_chars = self$max_output_chars,
@@ -684,6 +737,27 @@ RLMModule <- R6::R6Class(
         config = self$config,
         chat = self$chat
       )
+    },
+
+    #' @description
+    #' Create a deep copy while preserving the configured runtime source
+    #' @return New RLMModule with copied state
+    deepcopy = function() {
+      copied <- RLMModule$new(
+        signature = self$signature,
+        runner = self$runner,
+        max_iterations = self$max_iterations,
+        max_llm_calls = self$max_llm_calls,
+        max_output_chars = self$max_output_chars,
+        sub_lm = self$sub_lm,
+        verbose = self$verbose,
+        tools = self$tools,
+        config = lapply(self$config, identity),
+        chat = self$chat,
+        interpreter_factory = self$interpreter_factory
+      )
+      copied$state <- lapply(self$state, identity)
+      copied
     },
 
     #' @description
@@ -706,7 +780,7 @@ RLMModule <- R6::R6Class(
         "*" = "Signature: {sig_str}",
         "*" = "Max iterations: {.val {self$max_iterations}}",
         "*" = "Max LLM calls: {.val {self$max_llm_calls}}",
-        "*" = "Runner timeout: {.val {self$runner$timeout}}s",
+        "*" = "Runner: {code_runner_binding_label(self$runner, self$interpreter_factory)}",
         "*" = "Recursive queries: {.val {if (is.null(self$sub_lm)) 'disabled' else 'enabled'}}",
         "*" = "Custom tools: {.val {length(self$tools)}}"
       ))
@@ -935,7 +1009,13 @@ Code:
     },
 
     #' Execute code with RLM tools injected
-    execute_with_rlm_tools = function(code, inputs, call_counter) {
+    execute_with_rlm_tools = function(
+      code,
+      inputs,
+      call_counter,
+      runner,
+      runner_policy
+    ) {
       code <- strip_rlm_code_fences(code)
       control_nonce <- rlm_control_nonce()
 
@@ -946,11 +1026,7 @@ Code:
         custom_tools = self$tools,
         output_fields = private$get_output_field_names(),
         control_nonce = control_nonce,
-        control_frame_limit = if (inherits(self$runner, "McpReplRunner")) {
-          self$runner$control_frame_limit
-        } else {
-          Inf
-        }
+        control_frame_limit = runner_policy$rlm_control_frame_limit %||% Inf
       )
 
       # Build combined code: prelude + user code
@@ -962,35 +1038,76 @@ Code:
       )
 
       # Execute with inputs as context
-      execute_formals <- names(formals(self$runner$execute))
-      execute_args <- list(combined_code, context = inputs)
-      if (".control_nonce" %in% execute_formals || "..." %in% execute_formals) {
-        execute_args$.control_nonce <- control_nonce
-      }
-      result <- do.call(self$runner$execute, execute_args)
+      tool_replay <- list()
+      repeat {
+        execution_context <- inputs
+        execution_context[[rlm_host_tool_replay_field()]] <- tool_replay
+        result <- execute_code_runner(
+          runner,
+          combined_code,
+          context = execution_context,
+          .control_nonce = control_nonce
+        )
 
-      # Validate runner result structure
-      if (!is.list(result)) {
-        cli::cli_abort(c(
-          "Runner returned invalid result",
-          "x" = "Expected list, got {.cls {class(result)[1]}}"
-        ))
+        control_value <- NULL
+        for (candidate in list(
+          result$result,
+          result$stdout,
+          result$stderr,
+          result$error
+        )) {
+          decoded <- decode_rlm_control(candidate, control_nonce)
+          if (!is.null(decoded)) {
+            control_value <- decoded
+            break
+          }
+        }
+        if (!is_rlm_host_tool_request(control_value)) {
+          break
+        }
+        if (length(tool_replay) >= 1000L) {
+          cli::cli_abort(
+            "RLM exceeded the per-iteration host-tool bridge limit",
+            class = "dsprrr_rlm_host_tool_limit_error"
+          )
+        }
+        request <- control_value
+        if (!identical(request$index, length(tool_replay) + 1L)) {
+          cli::cli_abort(
+            "RLM host-tool requests were returned out of order",
+            class = "dsprrr_rlm_host_tool_protocol_error"
+          )
+        }
+        if (!request$name %in% names(self$tools)) {
+          cli::cli_abort(
+            "RLM requested unknown host tool {.val {request$name}}",
+            class = "dsprrr_rlm_host_tool_protocol_error"
+          )
+        }
+        tool_outcome <- tryCatch(
+          list(
+            success = TRUE,
+            value = do.call(self$tools[[request$name]], request$arguments),
+            error = NULL
+          ),
+          interrupt = function(condition) stop(condition),
+          error = function(condition) {
+            list(
+              success = FALSE,
+              value = NULL,
+              error = conditionMessage(condition)
+            )
+          }
+        )
+        tool_replay[[length(tool_replay) + 1L]] <- c(
+          list(request = unclass(request)),
+          tool_outcome
+        )
       }
 
-      required_fields <- c("success", "result")
-      missing_fields <- setdiff(required_fields, names(result))
-      if (length(missing_fields) > 0) {
-        cli::cli_abort(c(
-          "Runner result missing required fields",
-          "x" = "Missing: {.val {missing_fields}}"
-        ))
+      if (!isTRUE(result$success)) {
+        control_value <- NULL
       }
-
-      control_value <- normalize_rlm_control_value(
-        result$result,
-        result$stdout %||% NULL,
-        control_nonce = control_nonce
-      )
 
       # Detect SUBMIT termination using the versioned runner-neutral envelope.
       is_final <- is_rlm_final(control_value)
@@ -1702,8 +1819,16 @@ answer possible with what was discovered.
 #' in a single call. Equivalent to:
 #'
 #' ```r
-#' runner <- r_code_runner(timeout = timeout)
-#' mod <- rlm_module(signature, runner = runner, ...)
+#' runner <- r_code_runner(timeout = .timeout)
+#' mod <- rlm_module(
+#'   signature,
+#'   runner = runner,
+#'   max_iterations = .max_iterations,
+#'   max_llm_calls = .max_llm_calls,
+#'   sub_lm = .sub_lm,
+#'   verbose = .verbose,
+#'   tools = .tools
+#' )
 #' run(mod, ..., .llm = .llm)
 #' ```
 #'

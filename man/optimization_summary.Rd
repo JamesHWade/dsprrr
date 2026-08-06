@@ -33,12 +33,12 @@ print(summary)
 }
 }
 \seealso{
-Other optimizer accessors: 
-\code{\link{apply_best_config}()},
-\code{\link{best_demos}()},
-\code{\link{best_params}()},
-\code{\link{config_diff}()},
-\code{\link{export_module_code}()},
-\code{\link{top_trials}()}
+Other optimizer accessors:
+\code{\link[=apply_best_config]{apply_best_config()}},
+\code{\link[=best_demos]{best_demos()}},
+\code{\link[=best_params]{best_params()}},
+\code{\link[=config_diff]{config_diff()}},
+\code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=top_trials]{top_trials()}}
 }
 \concept{optimizer accessors}

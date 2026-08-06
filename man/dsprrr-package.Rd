@@ -6,7 +6,7 @@
 \alias{dsprrr-package}
 \title{dsprrr: Declarative Self-Improving Language Programs for R}
 \description{
-\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+\if{html}{\figure{logo.svg}{options: style='float: right' alt='logo' width='120'}}
 
 Build principled, test-driven, and optimizable applications using Large Language Models (LLMs) in R. Based on the DSPy framework from Stanford NLP, 'dsprrr' moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. Features include declarative signatures, composable modules, automatic prompt optimization, and deep integration with the tidyverse ecosystem.
 }
@@ -24,6 +24,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item James Wade \email{github@jameshwade.com} (\href{https://orcid.org/0000-0002-9740-1905}{ORCID})
   \item Anatoliy Sokolov \email{ansokolov@dow.com}
 }
 

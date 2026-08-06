@@ -19,6 +19,9 @@ A promise that resolves to an async generator
 \description{
 Streams text output from a module asynchronously.
 Returns a promise that resolves to an async generator.
+Only ordinary \code{PredictModule} objects are supported. Modules and composites
+with specialized \code{forward()} semantics are rejected before provider work;
+use \code{\link[=run]{run()}} for their complete workflows.
 }
 \examples{
 \dontrun{

@@ -89,6 +89,32 @@ test_that("BootstrapFewShot requires metric for compilation", {
   )
 })
 
+test_that("BootstrapFewShot rejects Flex instead of assigning unused demos", {
+  flex_program <- suppressWarnings(flex("question -> draft"))
+  pipeline_program <- flex_program %>>%
+    module(signature("draft -> answer"), type = "predict")
+  trainset <- data.frame(question = "q", answer = "a")
+  optimizer <- BootstrapFewShot(
+    metric = function(prediction, expected) 1,
+    max_labeled_demos = 1L,
+    max_bootstrapped_demos = 1L
+  )
+
+  direct_error <- tryCatch(
+    compile(optimizer, flex_program, trainset),
+    error = identity
+  )
+  nested_error <- tryCatch(
+    compile(optimizer, pipeline_program, trainset),
+    error = identity
+  )
+
+  expect_s3_class(direct_error, "dsprrr_flex_demo_unsupported_error")
+  expect_identical(direct_error$paths, "$")
+  expect_s3_class(nested_error, "dsprrr_flex_demo_unsupported_error")
+  expect_identical(nested_error$paths, "$/steps/1")
+})
+
 test_that("BootstrapFewShot compile returns unmodified program for empty trainset", {
   sig <- Signature(
     inputs = list(input(name = "question", class = S7::class_character)),

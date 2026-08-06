@@ -161,6 +161,24 @@ batch_input_contract <- function(inputs) {
   )
 }
 
+#' Classify module inputs without confusing schema collections with batches
+#'
+#' Flex owns exact recursive validation for its scalar array and object fields.
+#' Their R lengths describe one schema value, not a collection of dataset rows,
+#' and Flex batch execution goes through [run_dataset()] instead.
+#' @noRd
+module_input_contract <- function(module, inputs) {
+  if (inherits(module, "FlexModule")) {
+    return(list(
+      kind = "scalar",
+      size = 1L,
+      lengths = vapply(inputs, batch_input_length, integer(1))
+    ))
+  }
+
+  batch_input_contract(inputs)
+}
+
 #' Treat opaque runtime values as scalar batch inputs
 #' @noRd
 batch_input_is_identity_scalar <- function(value) {
@@ -239,16 +257,38 @@ run.Module <- function(
   validate_cache_arg(.cache)
 
   inputs <- list(...)
-  input_contract <- batch_input_contract(inputs)
+  input_contract <- module_input_contract(module, inputs)
   concurrency_runtime <- NULL
   if (identical(input_contract$kind, "batch")) {
+    # This branch dispatches interpreter workflows directly to the isolated
+    # row scheduler instead of delegating through `Module$run()`. Preserve the
+    # same signature boundary that the R6 entry point enforces before any
+    # factory, provider, or worker work begins.
+    if (interpreter_workflow_module(module)) {
+      validate_signature_inputs(
+        module$signature,
+        inputs,
+        missing = "error",
+        extra = "warn",
+        type = "warn",
+        context = "inputs"
+      )
+    }
     runtime_chat <- .llm %||% module$chat %||% get_default_chat(create = FALSE)
     concurrency_runtime <- normalize_concurrency_runtime(
       concurrency,
       .llm = .llm,
       .chat = runtime_chat
     )
-    if (!identical(concurrency_runtime$effective_backend, "sequential")) {
+    if (interpreter_workflow_module(module)) {
+      assert_factory_interpreter_async_supported(module, "run")
+      concurrency_runtime <- normalize_factory_interpreter_batch_runtime(
+        concurrency_runtime,
+        explicit_llm = !is.null(.llm)
+      )
+    } else if (
+      !identical(concurrency_runtime$effective_backend, "sequential")
+    ) {
       cli::cli_abort(
         c(
           "Concurrent batch execution is not supported for this module",
@@ -270,6 +310,22 @@ run.Module <- function(
   }
 
   if (identical(input_contract$kind, "batch")) {
+    if (interpreter_workflow_module(module)) {
+      inputs <- lapply(
+        inputs,
+        batch_recycle_input,
+        size = input_contract$size
+      )
+      return(run_factory_interpreter_batch(
+        module = module,
+        inputs = inputs,
+        n = input_contract$size,
+        .llm = .llm,
+        .progress = .progress,
+        .return_format = .return_format,
+        .concurrency = concurrency_runtime
+      ))
+    }
     unsupported_control <- is.finite(concurrency$max_errors) ||
       !isTRUE(concurrency$cancel)
     if (unsupported_control) {
@@ -368,13 +424,13 @@ run.PredictModule <- function(
   validate_signature_inputs(
     module$signature,
     inputs,
-    missing = "error",
-    extra = "warn",
-    type = "warn",
+    missing = if (inherits(module, "FlexModule")) "ignore" else "error",
+    extra = if (inherits(module, "FlexModule")) "error" else "warn",
+    type = if (inherits(module, "FlexModule")) "error" else "warn",
     context = "inputs"
   )
 
-  input_contract <- batch_input_contract(inputs)
+  input_contract <- module_input_contract(module, inputs)
 
   if (identical(input_contract$kind, "empty")) {
     return(empty_batch_result(.return_format))
@@ -816,6 +872,30 @@ run_error_class <- function(error) {
     return(NA_character_)
   }
   class(error)[1] %||% typeof(error)
+}
+
+#' Recover the original provider condition from a wrapped execution failure
+#' @noRd
+run_provider_error_condition <- function(error) {
+  current <- error
+  seen <- character()
+  while (inherits(current, "condition")) {
+    address <- rlang::obj_address(current)
+    if (address %in% seen) {
+      return(NULL)
+    }
+    seen <- c(seen, address)
+    if (inherits(current, "dsprrr_provider_error")) {
+      original <- current$parent %||% current
+      class(original) <- unique(c(class(original), "dsprrr_provider_error"))
+      return(original)
+    }
+    current <- current$parent %||% NULL
+    if (is.null(current)) {
+      return(NULL)
+    }
+  }
+  NULL
 }
 
 #' Normalize backend missing-error sentinels to NULL
@@ -1383,6 +1463,9 @@ create_error_result <- function(
         isTRUE(module$config$store_chat_in_traces)
     )
     result <- attach_run_trace(result, trace, error = error)
+  }
+  if (!is.null(error)) {
+    attr(result, "dsprrr_error_condition") <- error
   }
   result
 }
@@ -4342,6 +4425,7 @@ call_llm <- function(
     error = function(e) {
       cli::cli_abort(
         "LLM call failed: {e$message}",
+        class = "dsprrr_provider_error",
         parent = e
       )
     }
@@ -4501,75 +4585,103 @@ run_dataset.Module <- function(
   scalar_row_adapter <- specialized_predict || length(required_names) == 0L
 
   results <- if (scalar_row_adapter) {
-    unsupported_control <- is.finite(concurrency$max_errors) ||
-      is.finite(concurrency$task_timeout) ||
-      is.finite(concurrency$total_timeout) ||
-      !isTRUE(concurrency$cancel)
-    if (unsupported_control) {
-      cli::cli_abort(
-        c(
-          "Scalar dataset row execution cannot enforce this concurrency control",
-          "x" = "Finite error budgets, timeouts, and non-default cancellation are unsupported.",
-          "i" = "Use the default sequential control with unlimited errors and timeouts."
-        ),
-        class = c(
-          "dsprrr_batch_unsupported_module",
-          "dsprrr_concurrency_unsupported_error"
-        ),
-        module_class = class(module)[1]
-      )
-    }
     concurrent_request <- concurrency$backend %in%
       c("ellmer", "mirai") ||
       (identical(concurrency$backend, "auto") && concurrency$max_active > 1L)
-    if (concurrent_request) {
-      cli::cli_abort(
-        c(
-          "Concurrent dataset execution is not supported for scalar row adapters",
-          "x" = "{.cls {class(module)[1]}} requires the scalar row execution contract.",
-          "i" = "Use sequential execution so every dataset row is isolated and observable."
-        ),
-        class = c(
-          "dsprrr_batch_unsupported_module",
-          "dsprrr_concurrency_unsupported_error"
-        ),
-        module_class = class(module)[1]
-      )
-    }
-
     runtime_chat <- resolve_dataset_row_chat(module, .llm)
-    concurrency_runtime <- normalize_concurrency_runtime(
-      concurrency,
-      .llm = .llm,
-      .chat = runtime_chat
-    )
-    if (!identical(concurrency_runtime$effective_backend, "sequential")) {
-      cli::cli_abort(
-        c(
-          "Concurrent dataset execution is not supported for scalar row adapters",
-          "x" = "{.cls {class(module)[1]}} requires the scalar row execution contract.",
-          "i" = "Use sequential execution so every dataset row is isolated and observable."
-        ),
-        class = c(
-          "dsprrr_batch_unsupported_module",
-          "dsprrr_concurrency_unsupported_error"
-        ),
-        module_class = class(module)[1]
+    concurrency_runtime <- NULL
+    flex_concurrent <- concurrent_request && inherits(module, "FlexModule")
+    if (flex_concurrent) {
+      concurrency_runtime <- normalize_concurrency_runtime(
+        concurrency,
+        .llm = .llm,
+        .chat = runtime_chat
       )
     }
 
-    run_scalar_dataset_rows(
-      module = module,
-      input_args = input_args,
-      n = nrow(data),
-      .runtime_chat = runtime_chat,
-      .verbose = .verbose,
-      .progress = .progress,
-      .return_format = .return_format,
-      .concurrency = concurrency,
-      .concurrency_runtime = concurrency_runtime,
-      dots = dots
-    )
+    if (
+      flex_concurrent &&
+        !identical(concurrency_runtime$effective_backend, "sequential")
+    ) {
+      run_flex_dataset_batch(
+        program = module,
+        data = data,
+        .llm = .llm,
+        .verbose = .verbose,
+        .progress = .progress,
+        .return_format = .return_format,
+        .concurrency = concurrency,
+        .concurrency_runtime = concurrency_runtime,
+        dots = dots
+      )
+    } else {
+      unsupported_control <- is.finite(concurrency$max_errors) ||
+        is.finite(concurrency$task_timeout) ||
+        is.finite(concurrency$total_timeout) ||
+        !isTRUE(concurrency$cancel)
+      if (unsupported_control) {
+        cli::cli_abort(
+          c(
+            "Scalar dataset row execution cannot enforce this concurrency control",
+            "x" = "Finite error budgets, timeouts, and non-default cancellation are unsupported.",
+            "i" = "Use the default sequential control with unlimited errors and timeouts."
+          ),
+          class = c(
+            "dsprrr_batch_unsupported_module",
+            "dsprrr_concurrency_unsupported_error"
+          ),
+          module_class = class(module)[1]
+        )
+      }
+      if (concurrent_request) {
+        cli::cli_abort(
+          c(
+            "Concurrent dataset execution is not supported for scalar row adapters",
+            "x" = "{.cls {class(module)[1]}} requires the scalar row execution contract.",
+            "i" = "Use sequential execution so every dataset row is isolated and observable."
+          ),
+          class = c(
+            "dsprrr_batch_unsupported_module",
+            "dsprrr_concurrency_unsupported_error"
+          ),
+          module_class = class(module)[1]
+        )
+      }
+
+      concurrency_runtime <- concurrency_runtime %||%
+        normalize_concurrency_runtime(
+          concurrency,
+          .llm = .llm,
+          .chat = runtime_chat
+        )
+      if (!identical(concurrency_runtime$effective_backend, "sequential")) {
+        cli::cli_abort(
+          c(
+            "Concurrent dataset execution is not supported for scalar row adapters",
+            "x" = "{.cls {class(module)[1]}} requires the scalar row execution contract.",
+            "i" = "Use sequential execution so every dataset row is isolated and observable."
+          ),
+          class = c(
+            "dsprrr_batch_unsupported_module",
+            "dsprrr_concurrency_unsupported_error"
+          ),
+          module_class = class(module)[1]
+        )
+      }
+
+      run_scalar_dataset_rows(
+        module = module,
+        input_args = input_args,
+        n = nrow(data),
+        .runtime_chat = runtime_chat,
+        .verbose = .verbose,
+        .progress = .progress,
+        .return_format = .return_format,
+        .concurrency = concurrency,
+        .concurrency_runtime = concurrency_runtime,
+        dots = dots
+      )
+    }
   } else {
     do.call(
       run,
@@ -4592,6 +4704,20 @@ run_dataset.Module <- function(
 
   if (.return_format == "structured" && inherits(results, "dsprrr_result")) {
     results <- list(results)
+  }
+
+  error_conditions <- attr(
+    results,
+    "dsprrr_error_conditions",
+    exact = TRUE
+  )
+  if (is.null(error_conditions)) {
+    error_conditions <- lapply(
+      results,
+      attr,
+      which = "dsprrr_error_condition",
+      exact = TRUE
+    )
   }
 
   # Add results to data
@@ -4619,7 +4745,9 @@ run_dataset.Module <- function(
     data$.chat <- lapply(results, `[[`, "chat")
   }
 
-  tibble::as_tibble(data)
+  output <- tibble::as_tibble(data)
+  attr(output, "dsprrr_error_conditions") <- error_conditions
+  output
 }
 
 #' Resolve one optional Chat for isolated scalar dataset rows
@@ -4628,6 +4756,12 @@ resolve_dataset_row_chat <- function(module, .llm) {
   runtime_chat <- .llm %||% module$chat
   if (!is.null(runtime_chat)) {
     return(runtime_chat)
+  }
+  if (
+    inherits(module, "FlexModule") &&
+      identical(flex_predictor_call_count(module), 0L)
+  ) {
+    return(NULL)
   }
 
   provider_env_available <- any(nzchar(Sys.getenv(c(

@@ -427,4 +427,4 @@ But it pays off:
 
 - **[Tutorial: Optimize Your Module](tutorial-optimize-your-module.html)** - Metrics in action
 - **[How Optimization Works](concepts-optimization-theory.html)** - Why metrics enable optimization
-- **[API Reference: Metrics](reference/metric_exact_match.html)** - Built-in metrics
+- **[API Reference: Metrics](../reference/metric_exact_match.html)** - Built-in metrics

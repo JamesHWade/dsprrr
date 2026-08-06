@@ -49,8 +49,16 @@ The module output according to the signature.
 Convenience wrapper that creates a runner, module, and executes an RLM
 in a single call. Equivalent to:
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{runner <- r_code_runner(timeout = timeout)
-mod <- rlm_module(signature, runner = runner, ...)
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{runner <- r_code_runner(timeout = .timeout)
+mod <- rlm_module(
+  signature,
+  runner = runner,
+  max_iterations = .max_iterations,
+  max_llm_calls = .max_llm_calls,
+  sub_lm = .sub_lm,
+  verbose = .verbose,
+  tools = .tools
+)
 run(mod, ..., .llm = .llm)
 }\if{html}{\out{</div>}}
 

@@ -18,7 +18,13 @@ module(
   demos = list(),
   config = list(),
   chat = NULL,
-  ...
+  ...,
+  interpreter_factory = NULL,
+  module_src = NULL,
+  max_predictor_calls = 100L,
+  max_tool_calls = 100L,
+  source_format = c("auto", "json", "r"),
+  require_sandbox = TRUE
 )
 }
 \arguments{
@@ -30,15 +36,18 @@ module(
 \item \code{"react"}: ReAct-style module with tool support
 \item \code{"chain_of_thought"}: Adds step-by-step reasoning to the signature
 \item \code{"multichain"}: MultiChainComparison module for ensemble reasoning
-\item \code{"program_of_thought"}: Code execution module (requires runner)
-\item \code{"codeact"}: Hybrid agent with tools + code execution (requires runner)
-\item \code{"rlm"}: Recursive Language Model for REPL-based context exploration (requires runner)
+\item \code{"program_of_thought"}: Code execution module (requires a runtime source)
+\item \code{"codeact"}: Hybrid agent with tools + code execution (requires a runtime source)
+\item \code{"rlm"}: Recursive Language Model for REPL-based context exploration
+(requires a runtime source)
+\item \code{"flex"}: Experimental declarative or executable Flex program
 }}
 
 \item{tools}{Optional tools configuration:
 \itemize{
 \item for \code{type = "react"} or \code{type = "codeact"}: list of ellmer ToolDef objects.
-\item for \code{type = "rlm"}: named list of R functions injected into the REPL.
+\item for \code{type = "rlm"}: named list of R functions exposed to the REPL.
+\item for executable \code{type = "flex"}: named host functions or ToolDef objects.
 If provided with \code{type = "predict"}, automatically upgrades to react.
 }}
 
@@ -50,8 +59,8 @@ caps tool calls within one invocation; exceeding that inner budget errors.}
 
 \item{temperature}{Temperature for multichain diversity (default: 0.7)}
 
-\item{runner}{Code runner implementing \code{execute()} and \code{policy()} for code
-execution types. Create the built-in backend with \code{r_code_runner()}.}
+\item{runner}{Optional caller-owned code runner implementing \code{execute()} and
+\code{policy()} for code execution types. It is never automatically closed.}
 
 \item{max_iters}{Maximum code repair iterations for program_of_thought
 (default: 3), or the DSPy 3.3-compatible alias for RLM's
@@ -69,7 +78,27 @@ to extract final answer from execution result (default: TRUE)}
 \item{chat}{Optional ellmer Chat object for LLM operations. If provided, the
 module will use this Chat for all predictions unless overridden with \code{.llm}.}
 
-\item{...}{Additional arguments for future module types}
+\item{...}{Additional arguments forwarded to \code{\link[=rlm_module]{rlm_module()}} when
+\code{type = "rlm"}. Reserved and required to be empty for \code{type = "flex"}.}
+
+\item{interpreter_factory}{Optional zero-argument factory for
+program-of-thought, CodeAct, RLM, and executable Flex modules. It creates
+one fresh runner per invocation. Supply exactly one of \code{runner} and
+\code{interpreter_factory} for ordinary code-executing types; Flex accepts only
+the factory so every invocation is isolated.}
+
+\item{module_src}{Optional complete source for \code{type = "flex"}.}
+
+\item{max_predictor_calls}{Maximum bridged predictor calls allowed by Flex,
+or \code{NULL} for no limit.}
+
+\item{max_tool_calls}{Maximum direct host-tool calls allowed by executable
+Flex, or \code{NULL} for no limit.}
+
+\item{source_format}{Flex source language: \code{"auto"}, \code{"json"}, or \code{"r"}.}
+
+\item{require_sandbox}{Whether executable Flex requires a runner that
+advertises an enforced sandbox.}
 }
 \value{
 A module object (R6) that can be executed with \code{run()}
@@ -78,8 +107,9 @@ A module object (R6) that can be executed with \code{run()}
 The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
 tool-using modules, "chain_of_thought" for step-by-step reasoning,
-"multichain" for multi-chain comparison, and "program_of_thought" for
-code execution modules.
+"multichain" for multi-chain comparison, "program_of_thought" for code
+execution modules, and experimental "flex" for declarative or
+interpreter-backed programs.
 }
 \examples{
 # Create a simple prediction module

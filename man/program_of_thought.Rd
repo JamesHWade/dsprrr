@@ -6,18 +6,19 @@
 \usage{
 program_of_thought(
   signature,
-  runner,
+  runner = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
-  ...
+  ...,
+  interpreter_factory = NULL
 )
 }
 \arguments{
 \item{signature}{A Signature object or string notation defining inputs/outputs}
 
-\item{runner}{A code runner implementing \code{execute()} and \code{policy()}. Required.
-The module retains this object; reset persistent runners between logically
-isolated jobs and do not use one runner concurrently.}
+\item{runner}{Optional caller-owned code runner implementing \code{execute()} and
+\code{policy()}. It is retained, never automatically closed, and must not be
+shared concurrently when persistent.}
 
 \item{max_iters}{Maximum code generation/repair iterations (default 3)}
 
@@ -25,6 +26,11 @@ isolated jobs and do not use one runner concurrently.}
 answer from execution result. If FALSE, return execution result directly.}
 
 \item{...}{Additional arguments passed to the module}
+
+\item{interpreter_factory}{Optional zero-argument function returning a fresh
+runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
+terminal \code{shutdown()} or \code{close()}.
+Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
 A ProgramOfThoughtModule object
@@ -32,6 +38,10 @@ A ProgramOfThoughtModule object
 \description{
 Factory function to create a ProgramOfThoughtModule that generates and
 executes R code to solve problems.
+Use \code{\link[=run]{run()}} to execute it. \code{\link[=run_async]{run_async()}} supports factory-backed modules;
+async streaming and module \verb{$stream()} entry points reject ProgramOfThought.
+\code{\link[=run_stream]{run_stream()}} preserves the synchronous \code{forward()} fallback unless a
+matching token-stream request is active; that request is rejected first.
 }
 \examples{
 \dontrun{

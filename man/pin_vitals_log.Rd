@@ -47,12 +47,12 @@ pin_vitals_log(board, "sentiment-eval-v1", eval_result,
 }
 }
 \seealso{
-Other orchestration: 
+Other orchestration:
 \code{\link{orchestration}},
-\code{\link{pin_module_config}()},
-\code{\link{pin_trace}()},
-\code{\link{restore_module_config}()},
-\code{\link{use_dsprrr_template}()},
-\code{\link{validate_workflow}()}
+\code{\link[=pin_module_config]{pin_module_config()}},
+\code{\link[=pin_trace]{pin_trace()}},
+\code{\link[=restore_module_config]{restore_module_config()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}}
 }
 \concept{orchestration}

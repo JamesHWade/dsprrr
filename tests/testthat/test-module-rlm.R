@@ -880,9 +880,9 @@ test_that("RLMModule supports custom tools", {
 
   runner <- r_code_runner(timeout = 10)
 
-  # Define a custom tool
+  offset <- 2
   custom_tools <- list(
-    double_it = function(x) x * 2
+    double_it = function(x) x * offset
   )
 
   rlm <- rlm_module(
@@ -904,6 +904,66 @@ test_that("RLMModule supports custom tools", {
   )
 
   expect_equal(result$output[[1]]$answer, 42)
+})
+
+test_that("RLM custom tools execute once on the host with live closures", {
+  skip_if_not_installed("callr")
+  state <- new.env(parent = emptyenv())
+  state$calls <- 0L
+  increment <- function(value) {
+    state$calls <- state$calls + 1L
+    value + state$calls
+  }
+  module <- rlm_module(
+    "question -> answer",
+    runner = r_code_runner(timeout = 10),
+    tools = list(increment = increment)
+  )
+
+  result <- module$forward(
+    list(question = "test"),
+    .llm = create_mock_rlm_llm(list(list(
+      reasoning = "use host state",
+      code = paste(
+        "first <- increment(20)",
+        "second <- increment(20)",
+        "SUBMIT(first + second)",
+        sep = "\n"
+      )
+    )))
+  )
+
+  expect_identical(result$output[[1L]]$answer, 43L)
+  expect_identical(state$calls, 2L)
+})
+
+test_that("RLM replays host-tool errors without repeating side effects", {
+  skip_if_not_installed("callr")
+  state <- new.env(parent = emptyenv())
+  state$calls <- 0L
+  fail_tool <- function() {
+    state$calls <- state$calls + 1L
+    stop("host tool failed")
+  }
+  module <- rlm_module(
+    "question -> answer",
+    runner = r_code_runner(timeout = 10),
+    tools = list(fail_tool = fail_tool),
+    max_iterations = 2L
+  )
+
+  result <- module$forward(
+    list(question = "test"),
+    .llm = create_mock_rlm_llm(list(
+      list(reasoning = "try the host", code = "fail_tool()"),
+      list(reasoning = "recover", code = "SUBMIT('recovered')")
+    ))
+  )
+
+  expect_identical(result$output[[1L]]$answer, "recovered")
+  expect_identical(state$calls, 1L)
+  history <- module$get_repl_history()[[1L]]$history
+  expect_match(history[[1L]]$output, "host tool failed", fixed = TRUE)
 })
 
 # ============================================================================
@@ -1155,7 +1215,7 @@ test_that("create_rlm_prelude includes rlm_query when sub_lm enabled", {
   ))
 })
 
-test_that("create_rlm_prelude includes custom tools", {
+test_that("create_rlm_prelude requests host tools without deparsing them", {
   custom_tools <- list(
     my_tool = function(x) x * 2,
     another_tool = function(a, b) a + b
@@ -1167,8 +1227,10 @@ test_that("create_rlm_prelude includes custom tools", {
     custom_tools = custom_tools
   )
 
-  expect_true(grepl("my_tool <-", prelude, fixed = TRUE))
-  expect_true(grepl("another_tool <-", prelude, fixed = TRUE))
+  expect_match(prelude, "Authenticated host-tool replay bridge", fixed = TRUE)
+  expect_match(prelude, ".name <- \"my_tool\"", fixed = TRUE)
+  expect_match(prelude, ".name <- \"another_tool\"", fixed = TRUE)
+  expect_false(grepl("function(x) x * 2", prelude, fixed = TRUE))
 })
 
 test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
@@ -1212,6 +1274,31 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
   )
   expect_false(duplicate$success)
   expect_true(grepl("names must be unique", duplicate$error, fixed = TRUE))
+})
+
+test_that("long authenticated control frames round-trip without whitespace", {
+  skip_if_not_installed("callr")
+
+  nonce <- "long-control-frame"
+  prelude <- dsprrr:::create_rlm_prelude(
+    control_nonce = nonce,
+    control_frame_limit = 20000
+  )
+  result <- r_code_runner(timeout = 10)$execute(
+    paste0(prelude, "\nSUBMIT(base::strrep('x', 5000L))")
+  )
+  control <- dsprrr:::normalize_rlm_control_value(
+    result$result,
+    result$stdout,
+    control_nonce = nonce
+  )
+
+  expect_true(result$success)
+  expect_true(dsprrr:::is_rlm_final(control))
+  expect_identical(
+    dsprrr:::extract_rlm_final(control)$answer,
+    strrep("x", 5000L)
+  )
 })
 
 test_that("RLM control frames preserve long multiline unicode payloads", {
@@ -1279,6 +1366,64 @@ test_that("RLM control frames authenticate and fail closed", {
     ),
     class = "dsprrr_rlm_control_error"
   )
+})
+
+test_that("RLM never accepts control values from failed execution", {
+  failed_runner <- function(control_value) {
+    list(
+      execute = function(code, context = list(), ...) {
+        list(
+          success = FALSE,
+          result = control_value,
+          error = "execution failed"
+        )
+      },
+      policy = function() {
+        list(
+          backend = "failed-control-test",
+          trust = "test-only",
+          sandboxed = TRUE
+        )
+      }
+    )
+  }
+  failed_values <- list(
+    final = structure(
+      list(answer = "must not be accepted"),
+      class = c("rlm_final", "list"),
+      rlm_final = TRUE
+    ),
+    query = structure(
+      list(query = "must not run", context = NULL, batch = FALSE),
+      class = c("rlm_query_request", "list")
+    )
+  )
+
+  for (kind in names(failed_values)) {
+    runner <- failed_runner(failed_values[[kind]])
+    program <- rlm_module(
+      "question -> answer",
+      runner = runner,
+      sub_lm = list()
+    )
+    call_counter <- new.env(parent = emptyenv())
+    call_counter$count <- 0L
+
+    result <- program$.__enclos_env__$private$execute_with_rlm_tools(
+      code = "ignored",
+      inputs = list(question = "test"),
+      call_counter = call_counter,
+      runner = runner,
+      runner_policy = runner$policy()
+    )
+
+    expect_false(result$success, info = kind)
+    expect_false(result$is_final, info = kind)
+    expect_null(result$final_value, info = kind)
+    expect_identical(result$error, "execution failed", info = kind)
+    expect_match(result$formatted_output, "execution failed", info = kind)
+    expect_identical(call_counter$count, 0L, info = kind)
+  }
 })
 
 test_that("strip_rlm_code_fences removes markdown fences", {
@@ -1698,6 +1843,56 @@ test_that("MCP text transport preserves SUBMIT and ignores forged old frames", {
 
   expect_identical(result$output[[1L]]$answer, "real")
   expect_identical(result$metadata[[1L]]$iterations, 2L)
+})
+
+test_that("MCP-backed RLM tools execute on the host through replay", {
+  eval_repl <- function(input, timeout_ms) {
+    env <- new.env(parent = baseenv())
+    output <- capture.output({
+      value <- tryCatch(
+        eval(parse(text = input), envir = env),
+        error = function(condition) {
+          paste("Error:", conditionMessage(condition))
+        }
+      )
+      print(value)
+    })
+    list(
+      result = list(
+        content = list(list(
+          type = "text",
+          text = paste(output, collapse = "\n")
+        ))
+      )
+    )
+  }
+  state <- new.env(parent = emptyenv())
+  state$calls <- 0L
+  add_live_offset <- function(value) {
+    state$calls <- state$calls + 1L
+    value + state$calls
+  }
+  module <- rlm_module(
+    "question -> answer",
+    runner = mcp_repl_runner(repl = eval_repl),
+    tools = list(add_live_offset = add_live_offset)
+  )
+
+  result <- module$forward(
+    list(question = "test"),
+    .llm = create_mock_rlm_llm(list(list(
+      reasoning = "call a host-owned closure",
+      code = paste(
+        "first <- add_live_offset(20)",
+        "second <- add_live_offset(20)",
+        "SUBMIT(first + second)",
+        sep = "\n"
+      )
+    )))
+  )
+
+  expect_identical(result$output[[1L]]$answer, 43L)
+  expect_identical(state$calls, 2L)
 })
 
 test_that("captured SUBMIT helpers resist user-code base masking", {

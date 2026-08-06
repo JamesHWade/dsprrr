@@ -453,11 +453,12 @@ test_that("mock returns different values", {
 
 ### Completed
 
-**Module Types (14):**
+**Module Types (15):**
 - PredictModule, ReactModule, ProgramOfThoughtModule, CodeActModule
 - RAGModule, RLMModule, MultiChainComparisonModule, EnsembleModule
 - BestOfNModule, RefineModule, KNNFewShotModule, FnModule, AssertModule
 - PipelineModule (composition via `pipeline()` and `%>>%`)
+- FlexModule (bounded declarative Predict/ChainOfThought graphs via `flex()`)
 - ChainOfThought via signature transforms (`with_reasoning()`, `chain_of_thought()`)
 
 **Teleprompters (11):**
@@ -467,6 +468,9 @@ test_that("mock returns different values", {
   harvested from passing end-to-end traces (DSPy-style whole-program compilation)
 - GEPA supports feedback metrics via `metric_with_feedback()`: metrics may
   return `list(score = , feedback = )` and the feedback drives reflection
+- GEPA can optimize a Flex program's complete canonical `module_src` as a
+  whole-program component; this is intentionally narrower than DSPy's
+  per-component frontier and inference-time search
 - Fidelity notes: SIMBA and GEPA are intentionally simplified vs. their
   papers (documented in roxygen and `vignettes/dspy-comparison.Rmd`)
 
@@ -489,7 +493,7 @@ test_that("mock returns different values", {
 **F - Ecosystem Integration:**
 - shinychat integration, MLflow observability
 
-**G - DSPy 3.0+ Parity (dsprrr-9df, dsprrr-7r4, dsprrr-a3z, dsprrr-deh):**
+**G - Further DSPy Alignment (dsprrr-9df, dsprrr-7r4, dsprrr-a3z, dsprrr-deh):**
 - Native reasoning-trace capture (analogous to `dspy.Reasoning`)
 - `tune_bayes()` integration, ParallelModule, Embedder abstraction
 - Joint multi-step support for instruction optimizers (MIPROv2/GEPA

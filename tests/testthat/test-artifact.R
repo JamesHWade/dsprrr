@@ -1198,10 +1198,6 @@ test_that("rehashed malformed manifests fail closed before construction", {
       x$graph$nodes[["$"]]$fields$max_iterations <- 0L
       x
     }),
-    rlm_zero_calls = list("rlm", function(x) {
-      x$graph$nodes[["$"]]$fields$max_llm_calls <- 0L
-      x
-    }),
     rlm_na_verbose = list("rlm", function(x) {
       x$graph$nodes[["$"]]$fields$verbose <- NA
       x
@@ -1976,7 +1972,7 @@ test_that("pins transports the exact graph manifest", {
   restored <- restore_module_config(artifact)
 
   expect_identical(artifact$format, "dsprrr-program")
-  expect_identical(artifact$format_version, 3L)
+  expect_identical(artifact$format_version, 4L)
   expect_identical(
     artifact$integrity,
     dsprrr:::artifact_integrity(artifact)

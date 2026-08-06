@@ -20,17 +20,26 @@ The execution flow is:
 \item Final answer is extracted from the execution result
 }
 
-Security: Code execution requires explicit opt-in via a runner parameter.
+Security: Code execution requires explicit opt-in via \code{runner} or
+\code{interpreter_factory}.
 The built-in runner uses a separate process but is NOT a security sandbox.
 Inspect \code{runner$policy()} before execution. For untrusted inputs, provide a
 runner backed by OS-level sandboxing (such as a container or AppArmor).
 
-Runner lifecycle: a \code{ProgramOfThoughtModule} reuses the runner object supplied
-at construction. A persistent backend therefore retains state between
-separate \code{forward()} calls until \code{runner$reset()} is called. Do not share one
-persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr does
-not yet expose an interpreter factory that creates and tears down a fresh
-backend per invocation.
+Runner lifecycle: supply exactly one runtime source. \code{runner} is
+caller-owned, reused across calls, and never closed by dsprrr. The backend determines
+whether execution state persists and whether \code{reset()} is available;
+serialize access to stateful backends. \code{interpreter_factory} is a
+zero-argument function that returns a fresh runner implementing \code{execute()},
+\code{policy()}, optional \code{start()}, and terminal \code{shutdown()} or \code{close()}. The
+module owns that runner for one invocation and shuts it down exactly once on
+success, error, or interrupt.
+
+\code{\link[=run_async]{run_async()}} supports factory-backed ProgramOfThought in an isolated mirai
+process. It rejects caller-owned runners. \code{\link[=stream_async]{stream_async()}} and a module's
+\verb{$stream()} method remain unavailable because streaming would bypass code
+execution. \code{\link[=run_stream]{run_stream()}} may use its one-shot \code{forward()} fallback, but
+rejects an actual token-stream request before provider or factory work.
 }
 \examples{
 \dontrun{
