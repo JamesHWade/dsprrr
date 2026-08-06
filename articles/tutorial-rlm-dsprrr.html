@@ -198,6 +198,12 @@ well beyond what fits in a single prompt.</p>
 generates:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span></code></pre></div>
+<p>This tutorial evaluates code against trusted local package sources,
+so the fresh callr subprocess is appropriate. It is isolation, not a
+security sandbox. For untrusted or adversarial inputs, use
+<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> and its OS-enforced sandbox; reset that
+persistent runner between logically isolated jobs and do not share it
+across concurrent invocations.</p>
 <p>Pull the source code for all three packages. The
 <code>read_package_source()</code> helper below clones a repo,
 concatenates its R and SCSS files into a single string (preserving file

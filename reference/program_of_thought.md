@@ -23,7 +23,9 @@ program_of_thought(
 
 - runner:
 
-  A code runner implementing `execute()` and `policy()`. Required.
+  A code runner implementing `execute()` and `policy()`. Required. The
+  module retains this object; reset persistent runners between logically
+  isolated jobs and do not use one runner concurrently.
 
 - max_iters:
 

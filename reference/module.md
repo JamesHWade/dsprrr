@@ -66,7 +66,9 @@ module(
 
 - max_iterations:
 
-  Maximum ReAct iterations (default: 10, only for react)
+  Maximum iterations for ReAct, CodeAct, or RLM modules created through
+  this generic factory (default: 10). For CodeAct it also caps tool
+  calls within one invocation; exceeding that inner budget errors.
 
 - M:
 
@@ -84,7 +86,9 @@ module(
 
 - max_iters:
 
-  Maximum code repair iterations for program_of_thought (default: 3)
+  Maximum code repair iterations for program_of_thought (default: 3), or
+  the DSPy 3.3-compatible alias for RLM's `max_iterations`. For RLM,
+  supply only one spelling.
 
 - extract_answer:
 

@@ -105,6 +105,7 @@ explore large contexts through a REPL interface.</p>
 <span>  sub_lm <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  max_iters <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -118,7 +119,9 @@ explore large contexts through a REPL interface.</p>
 
 
 <dt id="arg-runner">runner<a class="anchor" aria-label="anchor" href="#arg-runner"></a></dt>
-<dd><p>A code runner implementing <code>execute()</code> and <code>policy()</code>. Required.</p></dd>
+<dd><p>A code runner implementing <code>execute()</code> and <code>policy()</code>. Required.
+The module retains this object; reset persistent runners between logically
+isolated jobs and do not use one runner concurrently.</p></dd>
 
 
 <dt id="arg-max-iterations">max_iterations<a class="anchor" aria-label="anchor" href="#arg-max-iterations"></a></dt>
@@ -145,6 +148,11 @@ explore large contexts through a REPL interface.</p>
 <dd><p>Named list of user-defined R functions to inject into REPL.
 Each tool becomes available as a function in the code execution environment.
 Non-function values in the list will cause an error.</p></dd>
+
+
+<dt id="arg-max-iters">max_iters<a class="anchor" aria-label="anchor" href="#arg-max-iters"></a></dt>
+<dd><p>DSPy 3.3-compatible alias for <code>max_iterations</code>. Supply only
+one of these arguments.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

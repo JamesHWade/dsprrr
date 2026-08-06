@@ -26,7 +26,9 @@ evaluate(module, ...)
     module's signature inputs plus any expected fields used by metric.
 
   - `metric`: A function applied per example with signature
-    `metric(prediction, expected_row)`.
+    `metric(prediction, expected_row)`, or a trace-aware metric created
+    with
+    [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md).
 
   Additional arguments passed to
   [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md):
@@ -53,7 +55,9 @@ evaluate(module, ...)
 
 A list with elements. When `.return_format = "structured"` (default):
 
-- `mean_score`: numeric mean over all successful metric evaluations.
+- `mean_score`: numeric mean over all attempted rows, with run or metric
+  failures contributing zero. With repeated epochs, the mean covers
+  every attempted row-epoch.
 
 - `scores`: per-example numeric scores (coerced from logical metrics).
 
@@ -82,11 +86,18 @@ A list with elements. When `.return_format = "structured"` (default):
   [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md));
   `NA` otherwise.
 
+- `traces`: per-example trace envelopes supplied to trace-aware metrics.
+  Each contains `row_id`, `epoch`, `status`, ordered module `events`,
+  and per-row `metadata`. Trace events can contain prompts, inputs, and
+  model responses, so treat them as potentially sensitive.
+
 - `data`: input data augmented with prediction metadata.
 
 When `epochs > 1`, additional fields are included:
 
 - `epoch_scores`: list of numeric vectors, one per epoch
+
+- `epoch_traces`: list of row-aligned trace lists, one per epoch
 
 - `score_std`: standard deviation of mean scores across epochs
 

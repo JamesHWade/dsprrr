@@ -3,11 +3,27 @@
 mcp-repl MCP server.
 mcp-repl keeps a long-lived R session and enforces its sandbox with
 operating-system primitives. This makes it suitable for code proposed by an
-optimizer or language model."><meta property="og:description" content="Creates a dsprrr code runner backed by Posit's
+optimizer or language model.
+For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
+If mcp-repl nevertheless returns a file-preview or active-pager marker (for
+example because user code printed a large value first), the runner fails the
+iteration instead of accepting an unverifiable partial control frame. These
+markers are plain text in the upstream protocol, so detection is necessarily
+conservative and can only fail closed; dsprrr never follows a disclosed
+sandbox file path from the host process."><meta property="og:description" content="Creates a dsprrr code runner backed by Posit's
 mcp-repl MCP server.
 mcp-repl keeps a long-lived R session and enforces its sandbox with
 operating-system primitives. This makes it suitable for code proposed by an
-optimizer or language model."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
+optimizer or language model.
+For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
+If mcp-repl nevertheless returns a file-preview or active-pager marker (for
+example because user code printed a large value first), the runner fails the
+iteration instead of accepting an unverifiable partial control frame. These
+markers are plain text in the upstream protocol, so detection is necessarily
+conservative and can only fail closed; dsprrr never follows a disclosed
+sandbox file path from the host process."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -101,6 +117,14 @@ optimizer or language model."><meta property="og:image" content="https://jameshw
 <code>mcp-repl</code> keeps a long-lived R session and enforces its sandbox with
 operating-system primitives. This makes it suitable for code proposed by an
 optimizer or language model.</p>
+<p>For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
+If mcp-repl nevertheless returns a file-preview or active-pager marker (for
+example because user code printed a large value first), the runner fails the
+iteration instead of accepting an unverifiable partial control frame. These
+markers are plain text in the upstream protocol, so detection is necessarily
+conservative and can only fail closed; dsprrr never follows a disclosed
+sandbox file path from the host process.</p>
     </div>
 
     <div class="section level2">
@@ -136,8 +160,8 @@ supported by this runner.</p></dd>
 
 <dt id="arg-sandbox">sandbox<a class="anchor" aria-label="anchor" href="#arg-sandbox"></a></dt>
 <dd><p>mcp-repl sandbox policy. Defaults to <code>"workspace-write"</code>.
-<code>"inherit-codex"</code> may be used only when the MCP client propagates Codex
-sandbox metadata; <code><a href="https://posit-dev.github.io/mcptools/reference/client.html" class="external-link">mcptools::mcp_tools()</a></code> does not currently do so.</p></dd>
+<code>"inherit-codex"</code> is rejected because <code><a href="https://posit-dev.github.io/mcptools/reference/client.html" class="external-link">mcptools::mcp_tools()</a></code> does not
+currently propagate the required Codex sandbox metadata.</p></dd>
 
 
 <dt id="arg-timeout">timeout<a class="anchor" aria-label="anchor" href="#arg-timeout"></a></dt>
@@ -150,11 +174,14 @@ optimizer.</p></dd>
 
 
 <dt id="arg-oversized-output">oversized_output<a class="anchor" aria-label="anchor" href="#arg-oversized-output"></a></dt>
-<dd><p>mcp-repl oversized-output mode.</p></dd>
+<dd><p>mcp-repl oversized-output mode. During authenticated
+RLM traffic, a detected oversized-output preview fails the iteration;
+dsprrr attempts to reset active pager state before returning the failure.</p></dd>
 
 
 <dt id="arg-extra-args">extra_args<a class="anchor" aria-label="anchor" href="#arg-extra-args"></a></dt>
-<dd><p>Additional command-line arguments passed to mcp-repl.</p></dd>
+<dd><p>Reserved for future vetted mcp-repl options. It must be
+empty because arbitrary server flags can weaken the managed sandbox policy.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -172,9 +199,11 @@ optimizer.</p></dd>
 rejected because this runner advertises itself as safe for untrusted code.
 Use <code><a href="r_code_runner.html">r_code_runner()</a></code> explicitly for trusted-input-only subprocess
 isolation.</p>
-<p>Supplying <code>repl</code> is useful for an already-managed MCP connection and for
+<p>Supplying <code>repl</code> is useful for an externally managed MCP connection and for
 deterministic tests. It must be a function with the mcp-repl tool contract:
-<code>repl(input, timeout_ms)</code>.</p>
+<code>repl(input, timeout_ms)</code>. Because dsprrr did not launch that function's
+server, its runner policy is deliberately marked unverified and it is
+rejected by optimizers that require an OS sandbox.</p>
     </div>
 
     <div class="section level2">

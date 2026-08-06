@@ -592,9 +592,12 @@ subprocess - If execution fails, feeding the error back for code repair
 <span>  timeout <span class="op">=</span> <span class="fl">30</span>,                    <span class="co"># Max execution time</span></span>
 <span>  allowed_packages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"base"</span>, <span class="st">"stats"</span>, <span class="st">"utils"</span><span class="op">)</span>  <span class="co"># Allowed packages</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><strong>Security note</strong>: The runner provides subprocess
-isolation but is NOT a security sandbox. For production with untrusted
-inputs, use OS-level sandboxing (containers, AppArmor).</p>
+<p><strong>Security note</strong>: <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> provides
+subprocess isolation but is not a security sandbox. For untrusted
+inputs, supply <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> or another runner with
+verified OS-level sandboxing. mcp-repl is persistent: reset it between
+logically isolated jobs and do not share one runner across concurrent
+invocations.</p>
 </div>
 <div class="section level3">
 <h3 id="basic-usage-4">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-4"></a>
@@ -715,7 +718,8 @@ that the LLM can call:</p>
 <code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">10</span>  <span class="co"># Maximum tool/code calls before forcing answer</span></span>
+<span>  <span class="co"># Caps outer agent iterations and inner tool calls; excess tool calls error.</span></span>
+<span>  max_iterations <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">

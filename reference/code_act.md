@@ -17,15 +17,22 @@ code_act(signature, tools = list(), runner, max_iterations = 10L, ...)
 
 - tools:
 
-  List of ellmer ToolDef objects for the agent to use
+  List of ellmer ToolDef objects for the agent to use. Non-empty list
+  element names become the registered tool names; unnamed elements keep
+  their ToolDef name. Effective names may contain only letters, numbers,
+  hyphens, and underscores.
 
 - runner:
 
-  A code runner implementing `execute()` and `policy()`. Required.
+  A code runner implementing `execute()` and `policy()`. Required. The
+  module retains this object; reset persistent runners between logically
+  isolated jobs and do not use one runner concurrently.
 
 - max_iterations:
 
-  Maximum tool/code iterations before forcing answer (default 10)
+  Maximum outer agent iterations and maximum tool calls within one
+  invocation (default 10). Exceeding the inner tool-call budget raises a
+  `dsprrr_codeact_iteration_limit` error.
 
 - ...:
 

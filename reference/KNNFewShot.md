@@ -88,8 +88,7 @@ The `vectorizer` parameter should be a function that takes a character
 vector and returns a numeric matrix where each row is an embedding.
 Common options:
 
-- [`ragnar::embed_openai()`](https://ragnar.tidyverse.org/reference/embed_ollama.html)
-  for OpenAI embeddings
+- `ragnar::embed_openai()` for OpenAI embeddings
 
 - Custom embedding functions using other providers
 

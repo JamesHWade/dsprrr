@@ -150,7 +150,9 @@ If provided with <code>type = "predict"</code>, automatically upgrades to react.
 
 
 <dt id="arg-max-iterations">max_iterations<a class="anchor" aria-label="anchor" href="#arg-max-iterations"></a></dt>
-<dd><p>Maximum ReAct iterations (default: 10, only for react)</p></dd>
+<dd><p>Maximum iterations for ReAct, CodeAct, or RLM modules
+created through this generic factory (default: 10). For CodeAct it also
+caps tool calls within one invocation; exceeding that inner budget errors.</p></dd>
 
 
 <dt id="arg-m">M<a class="anchor" aria-label="anchor" href="#arg-m"></a></dt>
@@ -168,7 +170,8 @@ execution types. Create the built-in backend with <code><a href="r_code_runner.h
 
 <dt id="arg-max-iters">max_iters<a class="anchor" aria-label="anchor" href="#arg-max-iters"></a></dt>
 <dd><p>Maximum code repair iterations for program_of_thought
-(default: 3)</p></dd>
+(default: 3), or the DSPy 3.3-compatible alias for RLM's
+<code>max_iterations</code>. For RLM, supply only one spelling.</p></dd>
 
 
 <dt id="arg-extract-answer">extract_answer<a class="anchor" aria-label="anchor" href="#arg-extract-answer"></a></dt>

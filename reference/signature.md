@@ -1,7 +1,8 @@
 # Create a Signature for LLM Operations
 
 The primary function for creating signatures. Accepts either DSPy-style
-string notation or explicit arguments.
+string notation or explicit arguments. Input and output names must be
+valid, unique R field names, and the two namespaces must not overlap.
 
 ## Usage
 

@@ -13,6 +13,18 @@ optimizable leaf in a module graph. This makes them useful when the
 search problem is not “find one better prompt,” but “repair the contract
 among several pipeline stages.”
 
+DSPy 3.3.0 introduced experimental `Flex`, which can optimize a
+program’s source code and structure inside a sandbox.
+[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+and
+[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+are **not** Flex analogues. They accept complete replacements only for
+allowlisted instruction and template fields; they do not execute
+optimizer-authored R module source, add predictors, or change graph
+topology. That narrower edit language is an intentional host-validation
+boundary. See the [DSPy 3.3.0 release
+notes](https://github.com/stanfordnlp/dspy/releases/tag/3.3.0).
+
 ## Choose the Search Owner
 
 | Harness | Who owns the loop? | Agent memory | Candidate shape |
@@ -42,8 +54,9 @@ In both cases, dsprrr:
 ## Keep Code Execution Sandboxed
 
 The harnesses require an operating-system-sandboxed runner by default.
+With no injected `repl` function,
 [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
-connects to Posit’s open-source
+launches Posit’s open-source
 [`mcp-repl`](https://github.com/posit-dev/mcp-repl), which provides a
 persistent R session behind one MCP `repl(input, timeout_ms)` tool.
 
@@ -69,11 +82,31 @@ runner <- mcp_repl_runner(
 )
 ```
 
-The default mcp-repl policy uses OS primitives, disables network access,
-and limits writes to the workspace and runtime temp paths. The REPL
-remains alive across calls, so an agent can load a package or construct
-an analysis once and iterate on it. `runner$reset()` starts a clean
-session.
+The package-managed mcp-repl policy uses OS primitives, disables network
+access, and limits writes to the workspace and runtime temp paths. The
+REPL remains alive across calls, so an agent can load a package or
+construct an analysis once and iterate on it. `runner$reset()` starts a
+clean session.
+
+An externally supplied `repl = function(input, timeout_ms) ...` is
+different: dsprrr did not launch its server and cannot attest its
+isolation policy. Such a runner reports `sandboxed = FALSE` with
+unverified enforcement, and a sandbox-required harness rejects it. This
+fail-closed rule prevents a custom or test connection from silently
+inheriting the trust assigned to a dsprrr-managed mcp-repl process.
+
+For RLM submit and recursive-query messages, dsprrr uses a versioned,
+per-invocation authenticated text frame capped at 3,000 encoded bytes.
+That cap keeps ordinary control messages below mcp-repl’s inline-output
+threshold. If user code produces enough additional output to trigger a
+file preview or interactive pager, dsprrr fails the iteration (and
+attempts to reset the pager) instead of accepting a possibly partial
+frame. The upstream MCP response currently exposes compaction only as a
+plain-text marker, so this detection is conservative; dsprrr
+deliberately does not read the disclosed sandbox file from the host
+process. Use smaller submissions, suppress large incidental prints, or
+use a runner transport with a structured out-of-band result for larger
+payloads.
 
 [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
 is intentionally rejected while sandboxing is enabled. Its callr
@@ -137,6 +170,12 @@ compiled <- compile(
   .cache = FALSE
 )
 ```
+
+The harnesses also accept
+[`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md)
+metrics. A trace-aware metric can derive its score and feedback from the
+row’s `status`, ordered `events`, and module `metadata`; candidate
+selection remains in the trusted R evaluator.
 
 On each turn the agent must choose one typed action:
 

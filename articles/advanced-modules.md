@@ -488,9 +488,14 @@ runner <- r_code_runner(
 )
 ```
 
-**Security note**: The runner provides subprocess isolation but is NOT a
-security sandbox. For production with untrusted inputs, use OS-level
-sandboxing (containers, AppArmor).
+**Security note**:
+[`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
+provides subprocess isolation but is not a security sandbox. For
+untrusted inputs, supply
+[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+or another runner with verified OS-level sandboxing. mcp-repl is
+persistent: reset it between logically isolated jobs and do not share
+one runner across concurrent invocations.
 
 ### Basic Usage
 
@@ -620,7 +625,8 @@ agent <- code_act("question -> answer", runner = runner)
 agent <- code_act(
   "question -> answer",
   runner = runner,
-  max_iterations = 10  # Maximum tool/code calls before forcing answer
+  # Caps outer agent iterations and inner tool calls; excess tool calls error.
+  max_iterations = 10
 )
 ```
 

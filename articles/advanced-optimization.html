@@ -446,7 +446,7 @@ significantly by query.</p>
 <span>  k <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  vectorizer <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">texts</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="co"># Use any embedding function</span></span>
-<span>    <span class="fu">ragnar</span><span class="fu">::</span><span class="fu"><a href="https://ragnar.tidyverse.org/reference/embed_ollama.html" class="external-link">embed_openai</a></span><span class="op">(</span><span class="va">texts</span><span class="op">)</span></span>
+<span>    <span class="fu">ragnar</span><span class="fu">::</span><span class="fu">embed_openai</span><span class="op">(</span><span class="va">texts</span><span class="op">)</span></span>
 <span>  <span class="op">}</span>,</span>
 <span>  cache_embeddings <span class="op">=</span> <span class="cn">TRUE</span>  <span class="co"># Cache embeddings for efficiency</span></span>
 <span><span class="op">)</span></span>
@@ -1115,7 +1115,7 @@ and credential-like fields are rejected.</p>
 <code class="sourceCode R"><span><span class="co"># Enable embedding caching in KNNFewShot</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span></span>
 <span>  k <span class="op">=</span> <span class="fl">3L</span>,</span>
-<span>  vectorizer <span class="op">=</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="va"><a href="https://ragnar.tidyverse.org/reference/embed_ollama.html" class="external-link">embed_openai</a></span>,</span>
+<span>  vectorizer <span class="op">=</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="va">embed_openai</span>,</span>
 <span>  cache_embeddings <span class="op">=</span> <span class="cn">TRUE</span>  <span class="co"># Cache computed embeddings</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -1125,7 +1125,7 @@ and credential-like fields are rejected.</p>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">texts</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">key</span> <span class="op">&lt;-</span> <span class="fu">digest</span><span class="fu">::</span><span class="fu"><a href="https://eddelbuettel.github.io/digest/man/digest.html" class="external-link">digest</a></span><span class="op">(</span><span class="va">texts</span><span class="op">)</span></span>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="va">key</span>, envir <span class="op">=</span> <span class="va">cache</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="va">cache</span><span class="op">[[</span><span class="va">key</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="fu"><a href="https://ragnar.tidyverse.org/reference/embed_ollama.html" class="external-link">embed_openai</a></span><span class="op">(</span><span class="va">texts</span><span class="op">)</span></span>
+<span>      <span class="va">cache</span><span class="op">[[</span><span class="va">key</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="fu">embed_openai</span><span class="op">(</span><span class="va">texts</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
 <span>    <span class="va">cache</span><span class="op">[[</span><span class="va">key</span><span class="op">]</span><span class="op">]</span></span>
 <span>  <span class="op">}</span></span>

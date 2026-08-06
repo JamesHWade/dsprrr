@@ -494,7 +494,8 @@ Declare typed schemas for LLM operations
 
 Add reasoning, chain-of-thought, and other prompt-level behaviors
 
-- [`signature-transforms`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
+- [`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
+  [`append_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
   : Signature Transforms for Advanced Reasoning Modules
 - [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md)
   : Add Chain-of-Thought Reasoning to a Signature
@@ -669,6 +670,8 @@ Score module outputs and measure performance
   : Create a Threshold Metric
 - [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md)
   : Create a Metric with Textual Feedback
+- [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md)
+  : Create a Trace-Aware Metric
 - [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
   [`metric_model_graded_fact()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
   [`metric_detect_match()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)

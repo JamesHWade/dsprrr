@@ -153,7 +153,7 @@ and return a character vector of documents.</p></dd>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># With ragnar store</span></span></span>
-<span class="r-in"><span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="fu"><a href="https://ragnar.tidyverse.org/reference/ragnar_store_create.html" class="external-link">ragnar_store_create</a></span><span class="op">(</span><span class="va">documents</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="fu">ragnar_store_create</span><span class="op">(</span><span class="va">documents</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu">rag_module</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="st">"question, relevant_context -&gt; answer"</span>,</span></span>
 <span class="r-in"><span>  store <span class="op">=</span> <span class="va">store</span>,</span></span>

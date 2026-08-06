@@ -77,6 +77,14 @@ Create an `RCodeRunner` for executing the code the RLM generates:
 runner <- r_code_runner(timeout = 30)
 ```
 
+This tutorial evaluates code against trusted local package sources, so
+the fresh callr subprocess is appropriate. It is isolation, not a
+security sandbox. For untrusted or adversarial inputs, use
+[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+and its OS-enforced sandbox; reset that persistent runner between
+logically isolated jobs and do not share it across concurrent
+invocations.
+
 Pull the source code for all three packages. The `read_package_source()`
 helper below clones a repo, concatenates its R and SCSS files into a
 single string (preserving file paths), and returns the result. Expand

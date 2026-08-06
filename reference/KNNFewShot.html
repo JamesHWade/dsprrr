@@ -172,7 +172,7 @@ on the module. Default is FALSE (replace).</p></dd>
 
 
 <p>The <code>vectorizer</code> parameter should be a function that takes a character vector
-and returns a numeric matrix where each row is an embedding. Common options:</p><ul><li><p><code><a href="https://ragnar.tidyverse.org/reference/embed_ollama.html" class="external-link">ragnar::embed_openai()</a></code> for OpenAI embeddings</p></li>
+and returns a numeric matrix where each row is an embedding. Common options:</p><ul><li><p><code>ragnar::embed_openai()</code> for OpenAI embeddings</p></li>
 <li><p>Custom embedding functions using other providers</p></li>
 </ul><p>For testing, you can provide a deterministic vectorizer that returns
 consistent embeddings for the same inputs.</p>

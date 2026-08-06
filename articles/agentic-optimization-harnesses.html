@@ -144,6 +144,15 @@ enforces budgets, and preserves the best result.</p>
 every optimizable leaf in a module graph. This makes them useful when
 the search problem is not “find one better prompt,” but “repair the
 contract among several pipeline stages.”</p>
+<p>DSPy 3.3.0 introduced experimental <code>Flex</code>, which can
+optimize a program’s source code and structure inside a sandbox.
+<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> are
+<strong>not</strong> Flex analogues. They accept complete replacements
+only for allowlisted instruction and template fields; they do not
+execute optimizer-authored R module source, add predictors, or change
+graph topology. That narrower edit language is an intentional
+host-validation boundary. See the <a href="https://github.com/stanfordnlp/dspy/releases/tag/3.3.0" class="external-link">DSPy 3.3.0
+release notes</a>.</p>
 <div class="section level2">
 <h2 id="choose-the-search-owner">Choose the Search Owner<a class="anchor" aria-label="anchor" href="#choose-the-search-owner"></a>
 </h2>
@@ -196,8 +205,8 @@ run.</li>
 <h2 id="keep-code-execution-sandboxed">Keep Code Execution Sandboxed<a class="anchor" aria-label="anchor" href="#keep-code-execution-sandboxed"></a>
 </h2>
 <p>The harnesses require an operating-system-sandboxed runner by
-default. <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> connects to Posit’s open-source
-<a href="https://github.com/posit-dev/mcp-repl" class="external-link"><code>mcp-repl</code></a>,
+default. With no injected <code>repl</code> function,
+<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> launches Posit’s open-source <a href="https://github.com/posit-dev/mcp-repl" class="external-link"><code>mcp-repl</code></a>,
 which provides a persistent R session behind one MCP
 <code>repl(input, timeout_ms)</code> tool.</p>
 <p>Install the executable and the R MCP client:</p>
@@ -211,11 +220,30 @@ which provides a persistent R session behind one MCP
 <span>  sandbox <span class="op">=</span> <span class="st">"workspace-write"</span>,</span>
 <span>  timeout <span class="op">=</span> <span class="fl">30</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The default mcp-repl policy uses OS primitives, disables network
-access, and limits writes to the workspace and runtime temp paths. The
-REPL remains alive across calls, so an agent can load a package or
-construct an analysis once and iterate on it.
+<p>The package-managed mcp-repl policy uses OS primitives, disables
+network access, and limits writes to the workspace and runtime temp
+paths. The REPL remains alive across calls, so an agent can load a
+package or construct an analysis once and iterate on it.
 <code>runner$reset()</code> starts a clean session.</p>
+<p>An externally supplied
+<code>repl = function(input, timeout_ms) ...</code> is different: dsprrr
+did not launch its server and cannot attest its isolation policy. Such a
+runner reports <code>sandboxed = FALSE</code> with unverified
+enforcement, and a sandbox-required harness rejects it. This fail-closed
+rule prevents a custom or test connection from silently inheriting the
+trust assigned to a dsprrr-managed mcp-repl process.</p>
+<p>For RLM submit and recursive-query messages, dsprrr uses a versioned,
+per-invocation authenticated text frame capped at 3,000 encoded bytes.
+That cap keeps ordinary control messages below mcp-repl’s inline-output
+threshold. If user code produces enough additional output to trigger a
+file preview or interactive pager, dsprrr fails the iteration (and
+attempts to reset the pager) instead of accepting a possibly partial
+frame. The upstream MCP response currently exposes compaction only as a
+plain-text marker, so this detection is conservative; dsprrr
+deliberately does not read the disclosed sandbox file from the host
+process. Use smaller submissions, suppress large incidental prints, or
+use a runner transport with a structured out-of-band result for larger
+payloads.</p>
 <p><code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> is intentionally rejected while
 sandboxing is enabled. Its callr subprocess is useful for trusted code,
 but it retains the host user’s permissions and is not a security
@@ -275,6 +303,11 @@ That separates task traces, model choice, and cost attribution.</p>
 <span>  <span class="op">)</span>,</span>
 <span>  .cache <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p>The harnesses also accept <code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code> metrics. A
+trace-aware metric can derive its score and feedback from the row’s
+<code>status</code>, ordered <code>events</code>, and module
+<code>metadata</code>; candidate selection remains in the trusted R
+evaluator.</p>
 <p>On each turn the agent must choose one typed action:</p>
 <ul>
 <li>

@@ -25,8 +25,7 @@ create_search_tool(
 
 - embedding_fn:
 
-  Embedding function from ragnar (e.g.,
-  [`ragnar::embed_openai()`](https://ragnar.tidyverse.org/reference/embed_ollama.html)).
+  Embedding function from ragnar (e.g., `ragnar::embed_openai()`).
 
 - k:
 
@@ -42,8 +41,7 @@ create_search_tool(
 
 - ...:
 
-  Additional arguments passed to
-  [`ragnar::ragnar_store_create()`](https://ragnar.tidyverse.org/reference/ragnar_store_create.html).
+  Additional arguments passed to `ragnar::ragnar_store_create()`.
 
 ## Value
 

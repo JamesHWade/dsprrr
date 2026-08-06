@@ -26,6 +26,13 @@ security sandbox. Inspect `runner$policy()` before execution. For
 untrusted inputs, provide a runner backed by OS-level sandboxing (such
 as a container or AppArmor).
 
+Runner lifecycle: a `ProgramOfThoughtModule` reuses the runner object
+supplied at construction. A persistent backend therefore retains state
+between separate `forward()` calls until `runner$reset()` is called. Do
+not share one persistent runner across concurrent invocations. Unlike
+DSPy 3.3, dsprrr does not yet expose an interpreter factory that creates
+and tears down a fresh backend per invocation.
+
 ## Examples
 
 ``` r

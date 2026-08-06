@@ -6,6 +6,16 @@ Creates a dsprrr code runner backed by Posit's
 operating-system primitives. This makes it suitable for code proposed by
 an optimizer or language model.
 
+For authenticated RLM submit/query traffic, dsprrr caps each encoded
+control frame at 3,000 bytes so it stays below mcp-repl's inline-output
+threshold. If mcp-repl nevertheless returns a file-preview or
+active-pager marker (for example because user code printed a large value
+first), the runner fails the iteration instead of accepting an
+unverifiable partial control frame. These markers are plain text in the
+upstream protocol, so detection is necessarily conservative and can only
+fail closed; dsprrr never follows a disclosed sandbox file path from the
+host process.
+
 ## Usage
 
 ``` r
@@ -39,10 +49,9 @@ mcp_repl_runner(
 - sandbox:
 
   mcp-repl sandbox policy. Defaults to `"workspace-write"`.
-  `"inherit-codex"` may be used only when the MCP client propagates
-  Codex sandbox metadata;
+  `"inherit-codex"` is rejected because
   [`mcptools::mcp_tools()`](https://posit-dev.github.io/mcptools/reference/client.html)
-  does not currently do so.
+  does not currently propagate the required Codex sandbox metadata.
 
 - timeout:
 
@@ -54,11 +63,14 @@ mcp_repl_runner(
 
 - oversized_output:
 
-  mcp-repl oversized-output mode.
+  mcp-repl oversized-output mode. During authenticated RLM traffic, a
+  detected oversized-output preview fails the iteration; dsprrr attempts
+  to reset active pager state before returning the failure.
 
 - extra_args:
 
-  Additional command-line arguments passed to mcp-repl.
+  Reserved for future vetted mcp-repl options. It must be empty because
+  arbitrary server flags can weaken the managed sandbox policy.
 
 ## Value
 
@@ -84,9 +96,11 @@ code. Use
 [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
 explicitly for trusted-input-only subprocess isolation.
 
-Supplying `repl` is useful for an already-managed MCP connection and for
-deterministic tests. It must be a function with the mcp-repl tool
-contract: `repl(input, timeout_ms)`.
+Supplying `repl` is useful for an externally managed MCP connection and
+for deterministic tests. It must be a function with the mcp-repl tool
+contract: `repl(input, timeout_ms)`. Because dsprrr did not launch that
+function's server, its runner policy is deliberately marked unverified
+and it is rejected by optimizers that require an OS sandbox.
 
 ## Examples
 

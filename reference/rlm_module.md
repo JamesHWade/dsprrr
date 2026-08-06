@@ -15,6 +15,7 @@ rlm_module(
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
+  max_iters = NULL,
   ...
 )
 ```
@@ -27,7 +28,9 @@ rlm_module(
 
 - runner:
 
-  A code runner implementing `execute()` and `policy()`. Required.
+  A code runner implementing `execute()` and `policy()`. Required. The
+  module retains this object; reset persistent runners between logically
+  isolated jobs and do not use one runner concurrently.
 
 - max_iterations:
 
@@ -54,6 +57,11 @@ rlm_module(
   Named list of user-defined R functions to inject into REPL. Each tool
   becomes available as a function in the code execution environment.
   Non-function values in the list will cause an error.
+
+- max_iters:
+
+  DSPy 3.3-compatible alias for `max_iterations`. Supply only one of
+  these arguments.
 
 - ...:
 

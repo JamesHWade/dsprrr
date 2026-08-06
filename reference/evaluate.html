@@ -114,7 +114,8 @@ together with the predictions and metadata required for downstream analysis.</p>
 <dd><p>Arguments passed to methods:</p><ul><li><p><code>data</code>: A data frame or tibble containing columns that match the
 module's signature inputs plus any expected fields used by metric.</p></li>
 <li><p><code>metric</code>: A function applied per example with signature
-<code>metric(prediction, expected_row)</code>.</p></li>
+<code>metric(prediction, expected_row)</code>, or a trace-aware metric created with
+<code><a href="metric_with_trace.html">metric_with_trace()</a></code>.</p></li>
 </ul><p>Additional arguments passed to <code><a href="run_dataset.html">run_dataset()</a></code>:</p><ul><li><p><code>.llm</code>: Optional ellmer chat object</p></li>
 <li><p><code>.parallel</code>: Logical; whether to allow parallel execution</p></li>
 <li><p><code>.concurrency</code>: A policy created by <code><a href="concurrency_control.html">concurrency_control()</a></code>. Do not also
@@ -130,7 +131,9 @@ times to quantify variation.</p></li>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list with elements. When <code>.return_format = "structured"</code> (default):</p><ul><li><p><code>mean_score</code>: numeric mean over all successful metric evaluations.</p></li>
+    <p>A list with elements. When <code>.return_format = "structured"</code> (default):</p><ul><li><p><code>mean_score</code>: numeric mean over all attempted rows, with run or metric
+failures contributing zero. With repeated epochs, the mean covers every
+attempted row-epoch.</p></li>
 <li><p><code>scores</code>: per-example numeric scores (coerced from logical metrics).</p></li>
 <li><p><code>predictions</code>: list of model outputs.</p></li>
 <li><p><code>metadata</code>: list of metadata captured from <code><a href="run.html">run()</a></code>.</p></li>
@@ -143,8 +146,13 @@ times to quantify variation.</p></li>
 <li><p><code>feedbacks</code>: per-example textual feedback when the metric returns
 <code>list(score = , feedback = )</code> (see <code><a href="metric_with_feedback.html">metric_with_feedback()</a></code>);
 <code>NA</code> otherwise.</p></li>
+<li><p><code>traces</code>: per-example trace envelopes supplied to trace-aware metrics.
+Each contains <code>row_id</code>, <code>epoch</code>, <code>status</code>, ordered module <code>events</code>, and
+per-row <code>metadata</code>. Trace events can contain prompts, inputs, and model
+responses, so treat them as potentially sensitive.</p></li>
 <li><p><code>data</code>: input data augmented with prediction metadata.</p></li>
 </ul><p>When <code>epochs &gt; 1</code>, additional fields are included:</p><ul><li><p><code>epoch_scores</code>: list of numeric vectors, one per epoch</p></li>
+<li><p><code>epoch_traces</code>: list of row-aligned trace lists, one per epoch</p></li>
 <li><p><code>score_std</code>: standard deviation of mean scores across epochs</p></li>
 <li><p><code>ci_95</code>: 95% confidence interval for the mean score (numeric vector of length 2)</p></li>
 </ul><p>When <code>.return_format = "simple"</code>:</p><ul><li><p><code>mean_score</code>, <code>scores</code>, <code>predictions</code>, <code>n_evaluated</code>, <code>n_errors</code>, <code>errors</code>

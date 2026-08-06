@@ -1,6 +1,9 @@
 # Create a Threshold Metric
 
-Wraps a numeric metric to return TRUE/FALSE based on a threshold.
+Wraps a metric to return TRUE/FALSE based on a threshold. Logical,
+numeric, feedback, and trace-aware metrics all use the package-wide
+metric protocol; feedback and trace dispatch are preserved by the
+wrapper.
 
 ## Usage
 
@@ -12,7 +15,8 @@ metric_threshold(metric, threshold = 0.5, comparison = ">=")
 
 - metric:
 
-  A metric function that returns numeric values
+  A metric function returning a logical/numeric score or
+  `list(score = , feedback = )`.
 
 - threshold:
 
@@ -24,7 +28,8 @@ metric_threshold(metric, threshold = 0.5, comparison = ">=")
 
 ## Value
 
-A function with signature function(prediction, expected) -\> logical
+A metric function returning logical scores. Trace-aware and feedback
+protocols are preserved when present on `metric`.
 
 ## Examples
 

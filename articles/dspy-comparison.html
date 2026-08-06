@@ -137,14 +137,16 @@ what is different, and what is not (yet) available.</p>
 <div class="section level2">
 <h2 id="version-baseline">Version baseline<a class="anchor" aria-label="anchor" href="#version-baseline"></a>
 </h2>
-<p>This comparison was checked against DSPy <strong>3.2.1</strong> (the
-latest stable release on 2026-07-09) and <strong>3.3.0b1</strong>
-(beta). The beta is especially useful as a design signal: it introduces
-<code>ReActV2</code>, a typed provider-neutral LM boundary, normalized
-LM error classes, and sanitized state serialization. Those beta APIs may
-still change, so dsprrr follows the durable contracts rather than
-copying unstable Python interfaces. See the <a href="https://github.com/stanfordnlp/dspy/releases" class="external-link">official DSPy
-releases</a>.</p>
+<p>This comparison was checked against DSPy <strong>3.3.0</strong>,
+released on 2026-08-03. That release introduces experimental
+<code>Flex</code> and <code>ReActV2</code> modules, advances an
+experimental typed provider-neutral
+<code>LMRequest -&gt; LMResponse</code> migration path, and hardens
+errors, execution limits, and serialization. See the <a href="https://github.com/stanfordnlp/dspy/releases/tag/3.3.0" class="external-link">DSPy 3.3.0
+release notes</a>.</p>
+<p>dsprrr adopts the durable contracts that fit R and ellmer. It does
+not present an existing prompt optimizer as equivalent to a new DSPy
+feature when the execution or safety model differs.</p>
 <p>dsprrr is not a line-by-line port. It follows DSPy’s concepts —
 signatures, modules, metrics, and optimizers (“teleprompters”) — while
 embracing R idioms: tibbles in and out, S7/R6 objects, and ellmer for
@@ -183,20 +185,22 @@ all provider communication.</p>
 </td>
 <td><code>module(sig, type = "react")</code></td>
 <td>Native ellmer turn history, tool-call IDs, parallel calls per
-assistant turn, enforced iteration limit, then structured
-finalization</td>
+assistant turn, enforced iteration limit, then structured finalization;
+behaviorally aligned, not a port of the Python class</td>
 </tr>
 <tr class="even">
 <td><code>dspy.ProgramOfThought</code></td>
 <td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
-<td>Generates and executes <strong>R</strong> code (not Python)</td>
+<td>Generates and executes <strong>R</strong> code (not Python); the
+configured runner is retained, not created fresh per invocation</td>
 </tr>
 <tr class="odd">
 <td><code>dspy.CodeAct</code></td>
 <td><code><a href="../reference/code_act.html">code_act()</a></code></td>
-<td>Hybrid tools + R code execution; the built-in runner is
-trusted-input-only, and sandboxed backends can implement the runner
-protocol</td>
+<td>Hybrid tools + R code execution with an enforced inner tool-call
+limit; the built-in runner is trusted-input-only, and sandboxed backends
+can implement the runner protocol. The configured runner is retained,
+not created fresh per invocation</td>
 </tr>
 <tr class="even">
 <td><code>dspy.BestOfN</code></td>
@@ -216,7 +220,12 @@ protocol</td>
 <tr class="odd">
 <td><code>dspy.RLM</code></td>
 <td><code><a href="../reference/rlm_module.html">rlm_module()</a></code></td>
-<td>Recursive language models over an R REPL</td>
+<td>Recursive language models over an R REPL; accepts the 3.3
+<code>max_iters</code> spelling, validates tool names, inputs, and
+sub-LM text responses strictly, and authenticates submit/query frames
+per invocation. mcp-repl control frames are bounded for inline transport
+and compacted responses fail closed. The configured runner is retained,
+not created fresh per invocation</td>
 </tr>
 <tr class="even">
 <td>
@@ -243,7 +252,7 @@ not yet a dedicated module</td>
 <td>
 <code>KNNFewShot</code> teleprompter / KNN module</td>
 <td>Bring-your-own vectorizer (e.g.,
-<code><a href="https://ragnar.tidyverse.org/reference/embed_ollama.html" class="external-link">ragnar::embed_openai()</a></code>)</td>
+<code>ragnar::embed_openai()</code>)</td>
 </tr>
 <tr class="odd">
 <td>Retrieval (custom functions)</td>
@@ -336,18 +345,26 @@ per-component selection or inference-time search yet</td>
 backend)</td>
 </tr>
 <tr class="odd">
+<td>Experimental <code>Flex</code>
+</td>
+<td>—</td>
+<td>No analogue. dsprrr’s agentic harnesses may edit validated
+instruction and template fields, but they do not optimize arbitrary R
+source, module structure, or graph topology</td>
+</tr>
+<tr class="even">
 <td><code>BootstrapFinetune</code></td>
 <td>—</td>
 <td>Not implemented (planned); dsprrr currently optimizes prompts, not
 weights</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>
 <code>GRPO</code> (RL via Arbor)</td>
 <td>—</td>
 <td>Not implemented</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>
 <code>BootstrapFewShotWithOptuna</code>,
 <code>AvatarOptimizer</code>, <code>InferRules</code>
@@ -355,7 +372,7 @@ weights</td>
 <td>—</td>
 <td>Niche/legacy in DSPy; not planned</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>—</td>
 <td>
 <code>GridSearchTeleprompter</code>,
@@ -364,20 +381,20 @@ weights</td>
 <td>dsprrr addition: tidymodels-style grid search over module
 parameters</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>—</td>
 <td><code>Omni</code></td>
 <td>dsprrr addition: independent best-of exploration plus a fresh
 continuation optimizer, with common validation scoring and optional
 mirai concurrency</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>—</td>
 <td><code>AutoResearch</code></td>
 <td>dsprrr addition: persistent research-agent loop over validated,
 jointly editable module snapshots with sandboxed R analysis</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>—</td>
 <td><code>MetaHarness</code></td>
 <td>dsprrr addition: fresh batch proposers plus host-owned frontier
@@ -411,6 +428,39 @@ feedback</em>. dsprrr supports the same protocol:</p>
 prompt, so the reflection LLM learns <em>why</em> outputs failed, not
 just that they did.</p>
 </div>
+<div class="section level3">
+<h3 id="trace-aware-metrics">Trace-aware metrics<a class="anchor" aria-label="anchor" href="#trace-aware-metrics"></a>
+</h3>
+<p>DSPy 3.3 makes execution traces available to metrics used by
+reflective optimization. dsprrr provides the same durable capability
+through <code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code>. The wrapped function receives
+the prediction, expected row, and a stable trace envelope:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_trace.html">metric_with_trace</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span>, <span class="va">program_trace</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">correct</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">answer</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">correct</span><span class="op">)</span>,</span>
+<span>      feedback <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>        <span class="va">program_trace</span><span class="op">$</span><span class="va">status</span>,</span>
+<span>        <span class="st">"with"</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">program_trace</span><span class="op">$</span><span class="va">events</span><span class="op">)</span>,</span>
+<span>        <span class="st">"trace events"</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">}</span>,</span>
+<span>  field <span class="op">=</span> <span class="st">"answer"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">testset</span>, <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">traces</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"row_id"</span>, <span class="st">"epoch"</span>, <span class="st">"status"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
+<p>Each trace contains <code>row_id</code>, <code>epoch</code>,
+<code>status</code>, ordered <code>events</code>, and module
+<code>metadata</code>. With repeated evaluation,
+<code>result$epoch_traces</code> preserves the row-aligned traces for
+every epoch. Trace events may contain prompts, inputs, and model
+responses, so handle them as potentially sensitive data.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="signatures-and-types">Signatures and types<a class="anchor" aria-label="anchor" href="#signatures-and-types"></a>
@@ -437,12 +487,22 @@ just that they did.</p>
 <td><code>signature(inputs = list(input(...)), output_type = ...)</code></td>
 </tr>
 <tr class="odd">
+<td>
+<code>Signature.with_instructions()</code> /
+<code>Signature.append_instructions()</code>
+</td>
+<td>
+<code><a href="../reference/signature-transforms.html">with_instructions()</a></code> /
+<code><a href="../reference/signature-transforms.html">append_instructions()</a></code>; both return a new signature without
+mutating the original</td>
+</tr>
+<tr class="even">
 <td>Pydantic-typed outputs</td>
 <td>ellmer type objects (<code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string()</a></code>,
 <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code>, <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code>,
 <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array()</a></code>)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>
 <code>dspy.Image</code>, <code>dspy.Audio</code>,
 <code>dspy.File</code>
@@ -450,12 +510,12 @@ just that they did.</p>
 <td>ellmer <code>Content</code> objects (images, PDFs) passed as
 inputs</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>dspy.History</code></td>
 <td>Native ellmer turns preserved in ReAct metadata and traces; not a
 signature type</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>
 <code>dspy.Tool</code>, <code>dspy.ToolCalls</code>,
 <code>ToolCallResults</code>
@@ -463,7 +523,7 @@ signature type</td>
 <td>ellmer <code>ToolDef</code>, <code>ContentToolRequest</code>, and
 <code>ContentToolResult</code>; IDs remain attached to native turns</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>
 <code>dspy.Reasoning</code> (native reasoning traces)</td>
 <td>Not yet first-class; <code><a href="../reference/with_reasoning.html">with_reasoning()</a></code> adds a prompted
@@ -477,7 +537,7 @@ reasoning field</td>
 </h2>
 <p>DSPy composes programs as Python classes with multiple predictors.
 dsprrr composes pipelines:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="va">mod_retrieve</span> <span class="op"><a href="../reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span></span>
 <span>  <span class="fu"><a href="../reference/map_inputs.html">map_inputs</a></span><span class="op">(</span><span class="va">mod_answer</span>, documents <span class="op">=</span> <span class="st">"context"</span><span class="op">)</span> <span class="op"><a href="../reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span></span>
 <span>  <span class="va">mod_format</span></span></code></pre></div>
@@ -507,10 +567,10 @@ operate on single modules).</p>
 <td>LM client</td>
 <td>
 <code>dspy.LM</code>; experimental typed
-<code>LMRequest -&gt; LMResponse</code> boundary in 3.3</td>
-<td>ellmer <code>Chat</code>; <code>build_module_request()</code>
-normalizes prompt/content input, but a complete package-wide invocation
-record is still planned</td>
+<code>LMRequest -&gt; LMResponse</code> migration boundary in 3.3</td>
+<td>Provider-neutral ellmer <code>Chat</code>;
+<code>build_module_request()</code> normalizes prompt/content input, but
+a complete package-wide invocation record is still planned</td>
 </tr>
 <tr class="even">
 <td>Configuration</td>
@@ -563,7 +623,7 @@ parallelism</td>
 <td>Saving programs</td>
 <td>
 <code>save</code>/<code>load</code>; sanitized LM state and explicit
-unsafe-class opt-in in 3.3 beta</td>
+unsafe-class opt-in in 3.3</td>
 <td>Versioned whole-program artifacts via <code><a href="../reference/program-artifact.html">save_program()</a></code> /
 <code><a href="../reference/program-artifact.html">load_program()</a></code> or pins, with registry-backed runtime IDs
 and explicit trusted opt-in</td>
@@ -583,10 +643,12 @@ structured output</td>
 </tr>
 <tr class="odd">
 <td>Evaluation framework</td>
-<td><code>dspy.Evaluate</code></td>
 <td>
-<code><a href="../reference/evaluate.html">evaluate()</a></code>, <code><a href="../reference/eval_program.html">eval_program()</a></code>, plus
-<strong>vitals</strong> integration</td>
+<code>dspy.Evaluate</code>, including trace-aware metrics</td>
+<td>
+<code><a href="../reference/evaluate.html">evaluate()</a></code>, <code><a href="../reference/eval_program.html">eval_program()</a></code>,
+<code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code>, plus <strong>vitals</strong>
+integration</td>
 </tr>
 </tbody>
 </table>
@@ -618,24 +680,29 @@ sweeps.</li>
 <div class="section level2">
 <h2 id="known-gaps-roadmap">Known gaps (roadmap)<a class="anchor" aria-label="anchor" href="#known-gaps-roadmap"></a>
 </h2>
-<p>In rough priority order, based on the stable DSPy 3.2 runtime and the
-3.3 beta direction:</p>
+<p>In rough priority order, based on the stable DSPy 3.3 runtime:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Versioned, safe whole-program state</strong>: nested
-pipelines without secrets, with explicit opt-in before restoring trusted
-custom code or classes.</li>
+<strong>Fresh interpreter factories for code-executing
+modules</strong>: DSPy 3.3 creates and tears down an interpreter per
+invocation. dsprrr’s ProgramOfThought, CodeAct, and RLM modules
+currently retain the configured runner, so persistent backends must be
+reset between logically isolated jobs and must not be shared by
+concurrent calls. A factory API must also define teardown and
+whole-program artifact semantics before it can be a safe default.</li>
 <li>
-<strong>One provider-neutral invocation/result contract</strong>
+<strong>Flex-style structural optimization</strong>: there is no
+safe analogue for optimizer-authored R source or arbitrary
+graph-topology changes. Existing harnesses deliberately accept only
+allowlisted instruction and template edits.</li>
+<li>
+<strong>One package-wide invocation/result contract</strong>
 carrying native turns, usage, cost, cache state, timing, and normalized
 errors across every module.</li>
 <li>
 <strong>Package-level OpenTelemetry spans</strong> for module,
 optimizer, evaluation, cache, and tool activity, composed with ellmer’s
 provider telemetry.</li>
-<li>
-<strong>MCP tools through ellmer’s tool abstraction</strong>,
-without a second transport or competing tool schema.</li>
 <li>
 <strong>Native reasoning-trace capture</strong> as a typed output
 (analogous to <code>dspy.Reasoning</code>).</li>

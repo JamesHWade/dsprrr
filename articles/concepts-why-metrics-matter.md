@@ -130,6 +130,44 @@ metric_confident_match <- function(prediction, expected) {
 }
 ```
 
+### Trace-Aware Metrics
+
+Sometimes output correctness is not enough. You may also need to score
+whether the program used tools, stayed within an execution policy, or
+produced a useful trajectory for a reflective optimizer.
+[`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md)
+marks a three-argument metric that receives a stable program-trace
+envelope:
+
+``` r
+
+metric <- metric_with_trace(
+  function(prediction, expected, program_trace) {
+    correct <- identical(prediction$sentiment, expected$sentiment)
+    list(
+      score = as.numeric(correct),
+      feedback = paste(
+        "Evaluation status:",
+        program_trace$status,
+        "- events:",
+        length(program_trace$events)
+      )
+    )
+  },
+  field = "sentiment"
+)
+```
+
+The envelope contains `row_id`, `epoch`, `status`, ordered module
+`events`, and per-row `metadata`. The metric may return a scalar score
+or a `list(score = ..., feedback = ...)`, so the same function can guide
+reflective optimizers. Ordinary two-argument metrics continue to work
+unchanged.
+
+Trace events can contain prompts, inputs, and model responses. Treat
+them as potentially sensitive when storing or exporting evaluation
+results.
+
 ## The Evaluation Workflow
 
 dsprrr’s
@@ -153,10 +191,11 @@ result <- evaluate(
 )
 
 result$mean_score    # 0.67 (2 out of 3 correct)
-result$scores        # c(TRUE, TRUE, FALSE)
+result$scores        # c(1, 1, 0)
 result$predictions   # What the model actually said
 result$n_evaluated   # 3
 result$n_errors      # 0
+result$traces        # Row-aligned program-trace envelopes
 ```
 
 This single function call:
@@ -195,6 +234,12 @@ Run evaluation with your initial prompt:
 
 ``` r
 
+base_sig <- signature(
+  "question -> answer",
+  instructions = "Answer the question directly."
+)
+mod_v1 <- module(base_sig, type = "predict")
+
 baseline <- evaluate(mod_v1, eval_data, metric_exact_match())
 baseline$mean_score  # 0.65
 ```
@@ -207,11 +252,10 @@ Every change gets measured:
 
 ``` r
 
-# Try different instructions
-mod_v2 <- module(
-  signature("question -> answer", instructions = "Be concise."),
-  type = "predict"
-)
+# Try layered instructions without mutating the baseline signature
+concise_sig <- append_instructions(base_sig, "Use at most five words.")
+
+mod_v2 <- module(concise_sig, type = "predict")
 v2_result <- evaluate(mod_v2, eval_data, metric_exact_match())
 v2_result$mean_score  # 0.70 - better!
 
@@ -225,6 +269,29 @@ v3_result$mean_score  # 0.75 - even better!
 ```
 
 No guessing. No “it feels better”. Just numbers.
+
+[`append_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
+and
+[`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
+always return a new signature. This makes the baseline and candidate
+contracts independently reproducible during optimization.
+
+For repeated evaluation, set `epochs` above one.
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+returns the last epoch’s row-aligned traces in `$traces` and all epochs
+in `$epoch_traces`, alongside the epoch-level score summaries:
+
+``` r
+
+repeated <- evaluate(
+  mod_v2,
+  eval_data,
+  metric_exact_match(),
+  epochs = 3L
+)
+
+length(repeated$epoch_traces) # 3
+```
 
 ### 4. Automate Optimization
 

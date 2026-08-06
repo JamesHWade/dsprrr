@@ -14,8 +14,7 @@ ragnar_tool(store, k = 5L, name = "search_knowledge", description = NULL)
 
 - store:
 
-  A ragnar store created with
-  [`ragnar::ragnar_store_create()`](https://ragnar.tidyverse.org/reference/ragnar_store_create.html).
+  A ragnar store created with `ragnar::ragnar_store_create()`.
 
 - k:
 
