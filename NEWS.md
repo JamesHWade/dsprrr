@@ -97,16 +97,17 @@ First development changelog. dsprrr is experimental; the API may change.
   ellipsis-style tool names, rejects unexpected invocation inputs, and no
   longer stringifies arbitrary sub-LM responses. RLM submit/query control frames
   now survive text-only runners through versioned, per-invocation authenticated
-  envelopes; malformed and duplicate frames fail closed. `code_act()` now
-  limits tool calls executed inside ellmer's internal tool loop and protects
-  its built-in runner-tool namespace. Authenticated decoding ignores valid
-  stale frames while requiring exactly one frame for the current invocation,
-  and `SUBMIT()` rejects duplicate output names. The generic `module()` factory
-  now routes RLM's `max_iters` alias instead of silently using its
-  `max_iterations` default, and rejects supplying both spellings. CodeAct list
-  aliases are validated against ellmer's provider-neutral tool-name grammar
-  before registration. The RLM alias is appended after the pre-existing
-  positional arguments so older positional calls retain their meaning.
+  envelopes; malformed and duplicate frames fail closed, and one-query batches
+  retain their array shape. `code_act()` now limits tool calls executed inside
+  ellmer's internal tool loop and protects its built-in runner-tool namespace.
+  Authenticated decoding ignores valid stale frames while requiring exactly one
+  frame for the current invocation, and `SUBMIT()` rejects duplicate output
+  names. The generic `module()` factory now routes RLM's `max_iters` alias
+  instead of silently using its `max_iterations` default, and rejects supplying
+  both spellings. CodeAct list aliases are validated against ellmer's
+  provider-neutral tool-name grammar before registration. The RLM alias is
+  appended after the pre-existing positional arguments so older positional
+  calls retain their meaning.
 
 * Code-executing modules validate runner results consistently and preserve the
   primary execution error if teardown also fails. ProgramOfThought validates

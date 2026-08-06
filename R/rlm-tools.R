@@ -279,14 +279,33 @@ llm_query_batched <- base::local({
       base::stop("queries must be a non-missing character vector")
     }
 
-    if (!base::is.null(slices) &&
-        base::length(slices) != base::length(queries)) {
-      base::stop("slices must have same length as queries")
+    if (!base::is.null(slices)) {
+      if (base::length(slices) != base::length(queries)) {
+        base::stop("slices must have same length as queries")
+      }
+      valid_slices <- base::vapply(
+        slices,
+        function(slice) {
+          base::is.character(slice) &&
+            base::length(slice) == 1L &&
+            !base::is.na(slice)
+        },
+        base::logical(1)
+      )
+      if (!base::all(valid_slices)) {
+        base::stop(
+          "slices must contain one non-missing character string per query"
+        )
+      }
     }
 
     .encode(
       "query",
-      base::list(queries = queries, slices = slices, batch = TRUE)
+      base::list(
+        queries = base::I(queries),
+        slices = if (base::is.null(slices)) NULL else base::I(slices),
+        batch = TRUE
+      )
     )
   }
 })
@@ -557,8 +576,25 @@ decode_rlm_control <- function(x, control_nonce = NULL) {
       )
       envelope$payload$queries <- queries
       slices <- envelope$payload$slices
-      if (!is.null(slices) && length(slices) != length(queries)) {
-        abort_rlm_control("Malformed RLM batch query control frame")
+      if (!is.null(slices)) {
+        if (!is.list(slices) || length(slices) != length(queries)) {
+          abort_rlm_control("Malformed RLM batch query control frame")
+        }
+        slices <- vapply(
+          slices,
+          function(slice) {
+            if (
+              !is.character(slice) ||
+                length(slice) != 1L ||
+                is.na(slice)
+            ) {
+              abort_rlm_control("Malformed RLM batch query control frame")
+            }
+            slice
+          },
+          character(1)
+        )
+        envelope$payload$slices <- slices
       }
     } else if (
       !is.character(envelope$payload$query) ||
