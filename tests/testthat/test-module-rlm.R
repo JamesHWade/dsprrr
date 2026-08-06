@@ -1463,6 +1463,108 @@ test_that("rlm_query_batch generates batch request marker", {
   expect_equal(request$queries, c("q1", "q2"))
 })
 
+test_that("rlm_query_batch preserves one-query arrays", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  control_nonce <- "query-singleton-test"
+  prelude <- dsprrr:::create_rlm_prelude(
+    max_llm_calls = 50,
+    has_sub_lm = TRUE,
+    custom_tools = list(),
+    control_nonce = control_nonce
+  )
+
+  result <- runner$execute(
+    paste0(
+      prelude,
+      "\nllm_query_batched('q1', slices = 'context')"
+    ),
+    context = list()
+  )
+
+  expect_identical(result$success, TRUE)
+  request <- dsprrr:::decode_rlm_control(result$result, control_nonce)
+  expect_s3_class(request, "rlm_query_request")
+  expect_identical(request$queries, "q1")
+  expect_identical(request$slices, "context")
+
+  captured <- new.env(parent = emptyenv())
+  sub_lm <- list(chat = function(prompt) {
+    captured$prompt <- prompt
+    "answer"
+  })
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    sub_lm = sub_lm
+  )
+  call_counter <- new.env(parent = emptyenv())
+  call_counter$count <- 0L
+  processed <- rlm$.__enclos_env__$private$process_rlm_query_batch(
+    request,
+    call_counter
+  )
+
+  expect_identical(
+    captured$prompt,
+    "Context:\ncontext\n\nQuestion: q1"
+  )
+  expect_identical(processed$success, TRUE)
+})
+
+test_that("rlm_query_batch rejects non-scalar context slices", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  control_nonce <- "query-slice-shape-test"
+  prelude <- dsprrr:::create_rlm_prelude(
+    has_sub_lm = TRUE,
+    control_nonce = control_nonce
+  )
+  result <- runner$execute(
+    paste0(
+      prelude,
+      "\nllm_query_batched('q1', slices = list(c('a', 'b')))"
+    ),
+    context = list()
+  )
+
+  expect_identical(result$success, FALSE)
+  expect_match(
+    result$error,
+    "slices must contain one non-missing character string per query",
+    fixed = TRUE
+  )
+
+  malformed_json <- jsonlite::toJSON(
+    list(
+      version = 1L,
+      nonce = control_nonce,
+      kind = "query",
+      payload = list(
+        queries = base::I("q1"),
+        slices = list(c("a", "b")),
+        batch = TRUE
+      )
+    ),
+    auto_unbox = TRUE,
+    null = "null"
+  )
+  malformed <- paste0(
+    dsprrr:::rlm_control_prefix(),
+    gsub(
+      "[\r\n]",
+      "",
+      jsonlite::base64_enc(charToRaw(as.character(malformed_json)))
+    )
+  )
+  expect_error(
+    dsprrr:::decode_rlm_control(malformed, control_nonce),
+    class = "dsprrr_rlm_control_error"
+  )
+})
+
 test_that("rlm_query_batch preserves empty batches and rejects missing queries", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10)
