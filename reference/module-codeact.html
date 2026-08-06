@@ -61,6 +61,7 @@ both external tools and computational capabilities."><meta property="og:image" c
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -107,16 +108,24 @@ both external tools and computational capabilities.</p>
 allows the agent to write and run R code. The execution flow is:</p><ol><li><p>Agent receives the task and available tools (including code execution)</p></li>
 <li><p>Agent iteratively calls tools or executes code until it has enough info</p></li>
 <li><p>Agent produces final structured answer</p></li>
-</ol><p>Security: Code execution requires explicit opt-in via a runner parameter.
+</ol><p>Security: Code execution requires explicit opt-in via <code>runner</code> or
+<code>interpreter_factory</code>.
 The built-in runner uses a separate process but is NOT a security sandbox.
 Inspect <code>runner$policy()</code> before execution. For untrusted inputs, provide a
 runner backed by OS-level sandboxing.</p>
-<p>Runner lifecycle: a <code>CodeActModule</code> reuses the runner object supplied at
-construction. A persistent backend therefore retains state between separate
-<code>forward()</code> calls until <code>runner$reset()</code> is called. Do not share one
-persistent runner across concurrent invocations. Unlike DSPy 3.3, dsprrr
-does not yet expose an interpreter factory that creates and tears down a
-fresh backend per invocation.</p>
+<p>Runner lifecycle: supply exactly one runtime source. <code>runner</code> is
+caller-owned, reused across calls, and never closed by dsprrr. The backend determines
+whether execution state persists and whether <code>reset()</code> is available;
+serialize access to stateful backends. <code>interpreter_factory</code> is a
+zero-argument function that returns a fresh runner implementing <code>execute()</code>,
+<code>policy()</code>, optional <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code>, and terminal <code>shutdown()</code> or <code><a href="https://rdrr.io/r/base/connections.html" class="external-link">close()</a></code>. The
+module owns that runner for one invocation and shuts it down exactly once on
+success, error, or interrupt. Any retained code tool becomes terminal after
+shutdown.</p>
+<p><code><a href="run_async.html">run_async()</a></code> supports factory-backed CodeAct in an isolated mirai process.
+It rejects caller-owned runners. <code><a href="stream_async.html">stream_async()</a></code> and a module's <code>$stream()</code>
+method remain unavailable because streaming would bypass execution. The
+<code><a href="run_stream.html">run_stream()</a></code> one-shot <code>forward()</code> fallback remains available.</p>
     </div>
 
     <div class="section level2">

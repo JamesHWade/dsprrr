@@ -263,12 +263,72 @@ flowchart TB
   Predict --> PredictUse["Q&A, classification, summarization, extraction"]
   Start -->|Tool use / multi-step reasoning| React["type = react (ReactModule)"]
   React --> ReactUse["Agents, search, calculations, API calls"]
+  Start -->|Exact computation| POT["type = program_of_thought"]
+  Start -->|Tools plus R code| CodeAct["type = codeact"]
+  Start -->|Explore large context| RLM["type = rlm"]
+  Start -->|Vary predictor structure| Flex["type = flex (experimental)"]
 ```
 
-| Type        | Class           | Use Case                 |
-|-------------|-----------------|--------------------------|
+| Type | Class | Use Case |
+|----|----|----|
 | `"predict"` | `PredictModule` | Standard text generation |
-| `"react"`   | `ReactModule`   | Tool-calling agents      |
+| `"react"` | `ReactModule` | Tool-calling agents |
+| `"chain_of_thought"` | `PredictModule` | Step-by-step reasoning |
+| `"multichain"` | `MultiChainComparisonModule` | Compare several reasoning chains |
+| `"program_of_thought"` | `ProgramOfThoughtModule` | Generate and execute R code |
+| `"codeact"` | `CodeActModule` | Combine tools and R code |
+| `"rlm"` | `RLMModule` | Explore large context through a REPL |
+| `"flex"` | `FlexModule` | Validated JSON graph or interpreter-backed R source (experimental) |
+
+### Code Runner Ownership
+
+``` r
+
+# Caller-owned and reused; the backend controls state persistence
+pot <- program_of_thought("question -> answer", runner = runner)
+
+# Fresh invocation-owned runner; dsprrr closes it exactly once
+pot <- program_of_thought(
+  "question -> answer",
+  interpreter_factory = function() r_code_runner(timeout = 30)
+)
+```
+
+Supply exactly one of `runner` and `interpreter_factory`. The factory is
+zero-argument and is supported by ProgramOfThought, CodeAct, and RLM.
+dsprrr never closes a directly supplied runner; persistence and reset
+support are backend-specific.
+
+### Experimental Flex
+
+``` r
+
+program <- flex("question -> answer")
+program$module_src       # Canonical, read-only JSON
+program$bind(candidate)  # Validate and replace transactionally
+
+code_program <- flex(
+  "question -> answer",
+  module_src = "forward <- function(question) Prediction(answer = question)",
+  interpreter_factory = my_sandboxed_runner,
+  source_format = "r"
+)
+
+optimized <- compile(
+  GEPA(metric = metric_exact_match(field = "answer"), seed = 42L),
+  program,
+  trainset = question_answer_data,
+  .llm = llm
+)
+```
+
+JSON Flex version 1 permits Predict and Chain-of-Thought graphs.
+Executable Flex adds complete R `forward()` source, deterministic
+control flow, the DSPy Flex primitive family, and named host tools
+behind a fresh interpreter and a versioned bridge. `max_tool_calls`
+separately bounds privileged host calls. GEPA validates complete
+candidate sources and selects parents from validation-example winners
+with component selection and lineage metadata kept separately.
 
 ------------------------------------------------------------------------
 

@@ -14,6 +14,7 @@ articles:
   concepts-signatures-modules: concepts-signatures-modules.html
   concepts-why-metrics-matter: concepts-why-metrics-matter.html
   dspy-comparison: dspy-comparison.html
+  articles/flex-optimization: flex-optimization.html
   getting-started: getting-started.html
   articles/how-rlm-works: how-rlm-works.html
   llms-txt: llms-txt.html
@@ -33,7 +34,7 @@ articles:
   tutorial-structured-outputs: tutorial-structured-outputs.html
   vitals-integration: vitals-integration.html
   vitals-recipes: vitals-recipes.html
-last_built: 2026-08-06T02:49Z
+last_built: 2026-08-06T03:01Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles

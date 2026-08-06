@@ -44,6 +44,8 @@ Create, run, and inspect LLM modules
 
 - [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
   : Create an LLM Module
+- [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) :
+  Experimental Flex Module
 - [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) :
   Execute an LLM Module
 - [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)

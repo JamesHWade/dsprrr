@@ -1,14 +1,22 @@
 # Create a Recursive Language Model (RLM) Module
 
 Factory function to create an RLMModule that enables LLMs to
-programmatically explore large contexts through a REPL interface.
+programmatically explore large contexts through a REPL interface. Use
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) to
+execute it.
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+supports factory-backed modules; async streaming and module `$stream()`
+reject RLM.
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
+preserves the synchronous `forward()` fallback unless a matching
+token-stream request is active; that request is rejected first.
 
 ## Usage
 
 ``` r
 rlm_module(
   signature,
-  runner,
+  runner = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
   max_output_chars = 100000L,
@@ -16,7 +24,8 @@ rlm_module(
   verbose = FALSE,
   tools = list(),
   max_iters = NULL,
-  ...
+  ...,
+  interpreter_factory = NULL
 )
 ```
 
@@ -28,9 +37,9 @@ rlm_module(
 
 - runner:
 
-  A code runner implementing `execute()` and `policy()`. Required. The
-  module retains this object; reset persistent runners between logically
-  isolated jobs and do not use one runner concurrently.
+  Optional caller-owned code runner implementing `execute()` and
+  `policy()`. It is retained, never automatically closed, and must not
+  be shared concurrently when persistent.
 
 - max_iterations:
 
@@ -54,9 +63,10 @@ rlm_module(
 
 - tools:
 
-  Named list of user-defined R functions to inject into REPL. Each tool
-  becomes available as a function in the code execution environment.
-  Non-function values in the list will cause an error.
+  Named list of user-defined host functions. Guest code emits an
+  authenticated request, dsprrr invokes the original function in the
+  host, and the guest is replayed with the response. Closures are never
+  deparsed or serialized into generated code.
 
 - max_iters:
 
@@ -66,6 +76,15 @@ rlm_module(
 - ...:
 
   Additional arguments passed to the module
+
+- interpreter_factory:
+
+  Optional zero-argument function returning a fresh runner with
+  `execute()`, `policy()`, optional
+  [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
+  terminal `shutdown()` or
+  [`close()`](https://rdrr.io/r/base/connections.html). Supply exactly
+  one of `runner` and `interpreter_factory`.
 
 ## Value
 

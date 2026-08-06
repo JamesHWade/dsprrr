@@ -81,6 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -585,7 +586,8 @@ subprocess - If execution fails, feeding the error back for code repair
 <div class="section level3">
 <h3 id="setting-up-code-execution">Setting Up Code Execution<a class="anchor" aria-label="anchor" href="#setting-up-code-execution"></a>
 </h3>
-<p>Code execution requires explicit opt-in via a runner:</p>
+<p>Code execution requires explicit opt-in via a runner or interpreter
+factory. Here is the caller-owned form:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a runner - this enables code execution</span></span>
 <span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span></span>
@@ -598,11 +600,36 @@ inputs, supply <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner
 verified OS-level sandboxing. mcp-repl is persistent: reset it between
 logically isolated jobs and do not share one runner across concurrent
 invocations.</p>
+<p>ProgramOfThought, CodeAct, and RLM accept exactly one execution
+binding. Pass <code>runner</code> to retain a caller-owned runner object
+that dsprrr reuses and never closes. Whether execution state persists
+depends on the backend. Serialize a stateful runner, and reset it
+between unrelated jobs when that backend supports <code>reset()</code>.
+Alternatively, pass a zero-argument <code>interpreter_factory</code>;
+dsprrr calls it once per invocation, owns the fresh runner, and closes
+it exactly once when the invocation ends, including after an error:</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The factory form is the safer default when state must not cross
+invocation boundaries. The direct-runner form is useful for object reuse
+or intentional REPL persistence; never share a stateful runner across
+concurrent calls. Supplying both forms is an error. Use synchronous
+<code><a href="../reference/run.html">run()</a></code> for these code-executing modules. The generic async
+and module <code>$stream()</code> entry points reject a program graph
+containing ProgramOfThought, CodeAct, or RLM before any provider call
+because those paths cannot preserve the specialized runner lifecycle
+yet. <code><a href="../reference/run_stream.html">run_stream()</a></code> without a matching token listener
+preserves the ordinary synchronous <code>forward()</code> path; a
+matching token-stream request is rejected before provider or factory
+work.</p>
 </div>
 <div class="section level3">
 <h3 id="basic-usage-4">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-4"></a>
 </h3>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a ProgramOfThought module</span></span>
 <span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
 <span></span>
@@ -622,7 +649,7 @@ invocations.</p>
 </h3>
 <p>If the generated code fails, ProgramOfThought automatically feeds the
 error back to the LLM for repair:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
@@ -636,7 +663,7 @@ error back to the LLM for repair:</p>
 <h3 id="accessing-execution-history">Accessing Execution History<a class="anchor" aria-label="anchor" href="#accessing-execution-history"></a>
 </h3>
 <p>Track the code generation and execution process:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># After running, inspect execution history</span></span>
 <span><span class="va">executions</span> <span class="op">&lt;-</span> <span class="va">pot</span><span class="op">$</span><span class="fu">get_executions</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">executions</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">iterations</span>  <span class="co"># List of code attempts</span></span>
@@ -646,7 +673,7 @@ error back to the LLM for repair:</p>
 <h3 id="using-context-data">Using Context Data<a class="anchor" aria-label="anchor" href="#using-context-data"></a>
 </h3>
 <p>Pass data to your code via the <code>.context</code> list:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"data, question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
@@ -675,7 +702,7 @@ execution) - Iterate until the answer is found (agent loop)</p>
 <div class="section level3">
 <h3 id="basic-usage-5">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-5"></a>
 </h3>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create tools</span></span>
 <span><span class="va">search_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu">search_api</span><span class="op">(</span><span class="va">query</span><span class="op">)</span>,</span>
@@ -704,7 +731,7 @@ execution) - Iterate until the answer is found (agent loop)</p>
 </h3>
 <p>CodeAct automatically includes an <code>execute_r_code</code> tool
 that the LLM can call:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># The LLM sees this tool:</span></span>
@@ -714,7 +741,7 @@ that the LLM can call:</p>
 <div class="section level3">
 <h3 id="controlling-iterations">Controlling Iterations<a class="anchor" aria-label="anchor" href="#controlling-iterations"></a>
 </h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
@@ -726,7 +753,7 @@ that the LLM can call:</p>
 <h3 id="inspecting-agent-trajectory">Inspecting Agent Trajectory<a class="anchor" aria-label="anchor" href="#inspecting-agent-trajectory"></a>
 </h3>
 <p>Track the agent’s decision-making process:</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">agent</span>, question <span class="op">=</span> <span class="st">"Complex question..."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Get the trajectory</span></span>
@@ -737,7 +764,7 @@ that the LLM can call:</p>
 <div class="section level3">
 <h3 id="combining-with-custom-tools">Combining with Custom Tools<a class="anchor" aria-label="anchor" href="#combining-with-custom-tools"></a>
 </h3>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create multiple tools</span></span>
 <span><span class="va">weather_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">city</span><span class="op">)</span> <span class="fu">get_weather</span><span class="op">(</span><span class="va">city</span><span class="op">)</span>,</span>
@@ -760,10 +787,29 @@ that the LLM can call:</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="flex-experimental">Flex (experimental)<a class="anchor" aria-label="anchor" href="#flex-experimental"></a>
+</h2>
+<p><code><a href="../reference/flex.html">flex()</a></code> makes a complete implementation part of a
+module’s optimization state. Its safe default is canonical, versioned
+JSON with Predict and Chain-of-Thought steps. Opt-in executable mode
+accepts complete R <code>forward()</code> source, dynamic predictors,
+deterministic control flow, and named host tools, evaluated only through
+a fresh configured interpreter.</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
+<span><span class="va">program</span><span class="op">$</span><span class="va">module_src</span></span></code></pre></div>
+<p>Use <code>program$bind(candidate)</code> to validate and replace the
+source transactionally. Direct assignment to <code>module_src</code> is
+rejected. DSPy uses Python module classes and a default Deno/Pyodide
+interpreter; dsprrr uses R <code>forward()</code> source and an explicit
+factory, so source is not portable. See <a href="flex-optimization.html">Structural Optimization with Flex</a> for
+both source languages, references, and the safety boundary.</p>
+</div>
+<div class="section level2">
 <h2 id="combining-modules">Combining Modules<a class="anchor" aria-label="anchor" href="#combining-modules"></a>
 </h2>
 <p>These modules can be composed for sophisticated pipelines:</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># ChainOfThought inside BestOfN</span></span>
 <span><span class="va">cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"math_problem -&gt; solution"</span><span class="op">)</span></span>
 <span><span class="va">reliable_cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">cot</span>, N <span class="op">=</span> <span class="fl">3</span>, reward_fn <span class="op">=</span> <span class="va">math_checker</span><span class="op">)</span></span>
@@ -780,7 +826,7 @@ that the LLM can call:</p>
 <h2 id="optimization-support">Optimization Support<a class="anchor" aria-label="anchor" href="#optimization-support"></a>
 </h2>
 <p>All advanced modules integrate with dsprrr’s optimization:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Grid search over wrapper parameters</span></span>
 <span><span class="va">wrapper</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">qa</span>, N <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="va">wrapper</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
@@ -821,7 +867,7 @@ overhead</li>
 <h3 id="cost-tracking">Cost Tracking<a class="anchor" aria-label="anchor" href="#cost-tracking"></a>
 </h3>
 <p>All modules track costs in metadata:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mcc</span>, question <span class="op">=</span> <span class="st">"Test"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">.metadata</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">total_cost</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">.metadata</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">total_tokens</span></span>
@@ -913,6 +959,11 @@ R:</p>
 <td>Tasks needing both tools AND computation</td>
 <td>Agent loop overhead</td>
 </tr>
+<tr class="odd">
+<td><code><a href="../reference/flex.html">flex()</a></code></td>
+<td>Testing bounded or executable structures</td>
+<td>Experimental dual-source API</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Getting started:</strong> - Start with
@@ -920,7 +971,8 @@ R:</p>
 <strong>BestOfN</strong> when you need reliability - Use
 <strong>ProgramOfThought</strong> for exact computation (math,
 statistics) - Use <strong>CodeAct</strong> when you need tools AND code
-execution together</p>
+execution together - Use <strong>Flex</strong> when predictor structure
+itself is the experiment</p>
 </div>
 <div class="section level2">
 <h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>

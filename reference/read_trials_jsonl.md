@@ -12,7 +12,7 @@ read_trials_jsonl(path)
 
 - path:
 
-  File path to the JSONL file.
+  File path for the JSONL file.
 
 ## Value
 

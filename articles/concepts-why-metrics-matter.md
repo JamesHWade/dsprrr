@@ -455,5 +455,5 @@ But it pays off:
   Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)** -
   Why metrics enable optimization
 - **[API Reference:
-  Metrics](https://jameshwade.github.io/dsprrr/articles/reference/metric_exact_match.md)** -
+  Metrics](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md)** -
   Built-in metrics

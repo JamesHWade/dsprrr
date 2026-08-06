@@ -1,8 +1,8 @@
 # How Prompt Optimization Works
 
-This article explains how dsprrr optimizes prompts automatically.
-Understanding the theory helps you choose the right optimizer and
-configure it effectively.
+This article explains how dsprrr optimizes prompts and bounded program
+structure automatically. Understanding the theory helps you choose the
+right optimizer and configure it effectively.
 
 ## The Optimization Problem
 
@@ -12,10 +12,12 @@ optimization problem:
 **Given**: - A task specification (signature) - Training examples with
 expected outputs - An evaluation metric
 
-**Find**: - The prompt configuration that maximizes metric performance
+**Find**: - The program configuration that maximizes metric performance
 
 Traditional prompt engineering solves this by hand: you write prompts,
-test them, tweak them. dsprrr automates this search.
+test them, and tweak them. Most dsprrr optimizers automate that prompt
+search; experimental Flex also exposes a constrained predictor structure
+to GEPA.
 
 ## What Gets Optimized
 
@@ -337,9 +339,10 @@ Uses Bayesian optimization to jointly search instruction and demo
 combinations. The most general-purpose optimizer when you have compute
 budget for state-of-the-art results.
 
-### GEPA: Genetic Programming
+### GEPA: Reflective Prompt Evolution
 
-Evolves prompts through mutation and crossover:
+Uses metric feedback to propose instruction mutations and Pareto
+selection to retain candidates that are useful across objectives:
 
 ``` r
 
@@ -351,9 +354,14 @@ tp <- GEPA(
 compiled <- compile(tp, mod, trainset)
 ```
 
-Uses evolutionary algorithms (selection, mutation, crossover) to explore
-the prompt space. Good when you have compute budget and want creative
-exploration.
+GEPA reflects on failed examples, proposes revised instructions,
+evaluates them, and keeps a Pareto frontier across metrics. This is
+reflective prompt evolution, not general genetic programming over
+executable programs. For ordinary modules, optional crossover combines
+instruction text. When a program contains Flex leaves, crossover instead
+selects complete parent component values atomically, including full
+`module_src` strings; it never splices JSON source text. GEPA is useful
+when feedback is informative and you can afford repeated evaluation.
 
 ### AutoResearch and Meta-Harness: Agentic Program Search
 

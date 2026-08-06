@@ -18,6 +18,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/dspy-comparison.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/flex-optimization.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/getting-started.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/index.html</loc></url>
@@ -117,6 +118,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/export_module_code.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/export_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/fit_llm_predict.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/flex.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/generate_grid_from_parameters.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/get_cost.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/get_default_chat.html</loc></url>

@@ -86,6 +86,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -215,9 +216,12 @@ implementation</a>, and <a href="https://www.primeintellect.ai/blog/rlm" class="
 program</a> round out the ecosystem. The <a href="#how-dsprrrs-rlm-compares">comparison table below</a> summarizes
 the key differences.</p>
 <p>dsprrr’s <code><a href="../reference/rlm_module.html">rlm_module()</a></code> brings the same approach to R,
-using R as the REPL language instead of Python, with subprocess
-isolation via <a href="https://callr.r-lib.org/" class="external-link">callr</a> and
-structured outputs via <a href="https://ellmer.tidyverse.org/" class="external-link">ellmer</a>.</p>
+using R as the REPL language instead of Python and structured outputs
+via <a href="https://ellmer.tidyverse.org/" class="external-link">ellmer</a>. Execution is
+delegated to the selected runner backend: the built-in
+<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> uses <a href="https://callr.r-lib.org/" class="external-link">callr</a>, while the default managed
+<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> uses an OS-sandboxed persistent
+session.</p>
 </div>
 <div class="section level2">
 <h2 id="how-dsprrr-implements-rlm">How dsprrr Implements RLM<a class="anchor" aria-label="anchor" href="#how-dsprrr-implements-rlm"></a>
@@ -230,8 +234,9 @@ shiny, and brand.yml codebases.</p>
 <div class="section level3">
 <h3 id="the-user-facing-api">The User-Facing API<a class="anchor" aria-label="anchor" href="#the-user-facing-api"></a>
 </h3>
-<p>Creating an RLM module requires two things: a signature declaring
-inputs and outputs, and a code runner for subprocess isolation:</p>
+<p>Creating an RLM module requires a signature plus exactly one
+execution binding. To reuse a caller-owned runner object, pass
+<code>runner</code>:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
@@ -386,11 +391,12 @@ process sees it in the subprocess result, it exits the loop and extracts
 the answer.</p>
 </div>
 <div class="section level3">
-<h3 id="subprocess-isolation">Subprocess Isolation<a class="anchor" aria-label="anchor" href="#subprocess-isolation"></a>
+<h3 id="runner-selected-isolation">Runner-Selected Isolation<a class="anchor" aria-label="anchor" href="#runner-selected-isolation"></a>
 </h3>
-<p>All model-generated code runs in an isolated R subprocess via
+<p>The example in this article uses <code>RCodeRunner</code>, so each
+generated code fragment runs in an isolated R subprocess via
 <code><a href="https://callr.r-lib.org/reference/r.html" class="external-link">callr::r()</a></code>. The <code>RCodeRunner</code> class in
-<code>R/r-code-runner.R</code> handles this:</p>
+<code>R/r-code-runner.R</code> handles that backend:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># From R/r-code-runner.R -- subprocess execution (simplified)</span></span>
 <span><span class="va">exec_result</span> <span class="op">&lt;-</span> <span class="fu">callr</span><span class="fu">::</span><span class="fu"><a href="https://callr.r-lib.org/reference/r.html" class="external-link">r</a></span><span class="op">(</span></span>
@@ -535,17 +541,17 @@ recovered.</p>
 <tr class="odd">
 <td><strong>Batched sub-calls</strong></td>
 <td><code>llm_query_batched()</code></td>
-<td>–</td>
+<td><code>llm_query_batched()</code></td>
 <td>–</td>
 <td>–</td>
 </tr>
 </tbody>
 </table>
 <p>The “batched sub-calls” row refers specifically to issuing multiple
-recursive sub-queries from a single REPL iteration and running them
-concurrently. All implementations support multiple sequential sub-calls;
-dsprrr additionally batches them via
-<code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat()</a></code>.</p>
+recursive sub-queries from one REPL iteration and running them
+concurrently. Both dsprrr and DSPy 3.3 expose that operation. dsprrr
+dispatches its batch through <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat()</a></code> while
+preserving the R runner’s lifecycle and call budget.</p>
 <p>dsprrr is the only implementation that uses R as the REPL language,
 which matters when your context <em>is</em> R data: data frames, model
 objects, or package source code. It also inherits dsprrr’s full
@@ -643,13 +649,46 @@ only for trusted code. For model-generated or otherwise untrusted code,
 OS-enforced workspace-write sandbox and network access disabled. A
 user-supplied <code>repl</code> function is reported as unverified and
 is not accepted where dsprrr requires sandboxed execution.</p>
-<p><strong>Persistent state is explicit.</strong> The callr runner
-starts a fresh subprocess for each iteration. mcp-repl instead retains
-an R session, so variables and loaded packages survive iterations and
-separate <code>forward()</code> calls. Call <code>runner$reset()</code>
-between logically isolated jobs and never share one persistent runner
-across concurrent invocations. dsprrr does not yet mirror DSPy 3.3’s
-per-invocation interpreter factory.</p>
+<p><strong>Runner ownership is explicit.</strong> A directly supplied
+<code>runner</code> is caller-owned and reused across separate
+<code>forward()</code> calls; dsprrr never closes it. The backend
+determines whether execution state persists and whether
+<code>reset()</code> is available. mcp-repl retains variables and loaded
+packages until you call <code>runner$reset()</code>. Reset that
+persistent backend between logically isolated jobs and never share it
+across concurrent invocations.</p>
+<p>For isolated invocations, pass <code>interpreter_factory</code>
+instead. It must be a zero-argument function returning a valid runner.
+dsprrr calls it once per invocation, owns that fresh runner, and closes
+it exactly once when the invocation ends, including after a failure:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rlm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<span>  <span class="st">"document, question -&gt; answer"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><code>runner</code> and <code>interpreter_factory</code> are mutually
+exclusive, and one is required.</p>
+<p>Factory-backed RLM invocations can also use <code><a href="../reference/run_async.html">run_async()</a></code>
+and isolated mirai dataset batches. A caller-owned runner remains
+sequential-only because dsprrr cannot prove that shared interpreter
+state is safe under overlap. Async streaming and finite batch
+timeout/error-budget controls are not adapted yet and fail before runner
+work.</p>
+<p><strong>Execution and interpreter failures are different.</strong> A
+submitted R expression can fail in a repairable way, allowing the RLM to
+inspect the error and try a new expression. Process, transport,
+protocol, startup, and shutdown failures are terminal: the runner is
+invalidated and is never retried or reused. If execution and teardown
+both fail, dsprrr preserves the primary execution condition and attaches
+teardown evidence instead of replacing it.</p>
+<p><strong>Custom tools execute on the host.</strong> Guest code emits
+an authenticated tool request, dsprrr invokes the original function and
+its live closure in the host process, and the guest program is replayed
+with that immutable response. The function itself is never deparsed or
+serialized into generated code. This runner-neutral bridge works with
+both <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> and mcp-repl; arguments and results
+still need to cross the runner’s value boundary. A host tool is called
+once even though deterministic guest code before it may be replayed.</p>
 <p><strong>mcp-repl control results are intentionally bounded.</strong>
 RLM submit and recursive query frames are capped at 3,000 encoded bytes
 to stay inline. If incidental output triggers an mcp-repl file preview

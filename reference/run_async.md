@@ -1,7 +1,12 @@
 # Run a module asynchronously
 
 Executes a module and returns a promise that resolves to the result.
-Useful for running multiple modules in parallel.
+Useful for running multiple modules in parallel. Ordinary
+`PredictModule` objects use the provider's native async path.
+ProgramOfThought, CodeAct, and RLM modules use an isolated background
+process when configured with `interpreter_factory`. Caller-owned runners
+are rejected because they cannot be safely shared across concurrent
+invocations.
 
 ## Usage
 

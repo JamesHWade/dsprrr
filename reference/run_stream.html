@@ -67,6 +67,7 @@ one."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/log
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -158,6 +159,17 @@ matching listeners fire once with the completed value.</p></li>
 <li><p>Streaming execution does not record traces and bypasses the response
 cache.</p></li>
 </ul></div>
+
+<div class="section">
+<h3 id="specialized-modules">Specialized modules<a class="anchor" aria-label="anchor" href="#specialized-modules"></a></h3>
+
+
+<p>One-shot fallback execution uses each module's own <code>forward()</code> method, so it
+remains available to specialized modules when no matching token listener is
+active or the output is not token-streamable. Actual token streaming uses a
+direct provider path and is limited to ordinary <code>PredictModule</code> steps.
+Unsupported token-stream requests are rejected before provider work.</p>
+</div>
 
 <div class="section">
 <h3 id="status-events">Status events<a class="anchor" aria-label="anchor" href="#status-events"></a></h3>

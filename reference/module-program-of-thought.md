@@ -20,18 +20,32 @@ The execution flow is:
 
 5.  Final answer is extracted from the execution result
 
-Security: Code execution requires explicit opt-in via a runner
-parameter. The built-in runner uses a separate process but is NOT a
-security sandbox. Inspect `runner$policy()` before execution. For
-untrusted inputs, provide a runner backed by OS-level sandboxing (such
-as a container or AppArmor).
+Security: Code execution requires explicit opt-in via `runner` or
+`interpreter_factory`. The built-in runner uses a separate process but
+is NOT a security sandbox. Inspect `runner$policy()` before execution.
+For untrusted inputs, provide a runner backed by OS-level sandboxing
+(such as a container or AppArmor).
 
-Runner lifecycle: a `ProgramOfThoughtModule` reuses the runner object
-supplied at construction. A persistent backend therefore retains state
-between separate `forward()` calls until `runner$reset()` is called. Do
-not share one persistent runner across concurrent invocations. Unlike
-DSPy 3.3, dsprrr does not yet expose an interpreter factory that creates
-and tears down a fresh backend per invocation.
+Runner lifecycle: supply exactly one runtime source. `runner` is
+caller-owned, reused across calls, and never closed by dsprrr. The
+backend determines whether execution state persists and whether
+`reset()` is available; serialize access to stateful backends.
+`interpreter_factory` is a zero-argument function that returns a fresh
+runner implementing `execute()`, `policy()`, optional
+[`start()`](https://rdrr.io/r/stats/start.html), and terminal
+`shutdown()` or [`close()`](https://rdrr.io/r/base/connections.html).
+The module owns that runner for one invocation and shuts it down exactly
+once on success, error, or interrupt.
+
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+supports factory-backed ProgramOfThought in an isolated mirai process.
+It rejects caller-owned runners.
+[`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
+and a module's `$stream()` method remain unavailable because streaming
+would bypass code execution.
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
+may use its one-shot `forward()` fallback, but rejects an actual
+token-stream request before provider or factory work.
 
 ## Examples
 

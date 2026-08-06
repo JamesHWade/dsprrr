@@ -95,6 +95,59 @@ board <- pins::board_temp()
 pin_module_config(board, "ticket-router-v2", optimized)
 ```
 
+## Experimental structural optimization
+
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) makes
+a complete implementation an optimization parameter. Its safe default is
+a canonical, versioned JSON graph with allowlisted Predict and
+Chain-of-Thought steps, typed references, and explicit output wiring.
+Opt-in executable mode runs a complete R `forward()` program only in a
+fresh runner from an explicit factory, with a versioned bridge for
+dynamic predictors and named host tools. Guest bindings are isolated
+from bridge state, and `max_tool_calls` bounds privileged host-tool
+requests. Invalid candidates are rejected before they can replace the
+active source.
+
+``` r
+
+program <- flex("question -> answer")
+program$module_src
+
+optimized <- compile(
+  GEPA(metric = metric_exact_match(field = "answer"), seed = 42L),
+  program,
+  trainset = question_answer_data,
+  .llm = llm
+)
+```
+
+DSPy uses Python module classes and a default Deno/Pyodide interpreter;
+dsprrr uses R `forward()` source and requires an explicit factory, so
+source is not portable between them. GEPA searches complete instruction
+and `module_src` components for ordinary and Flex programs. When a
+`valset` is supplied, training rows drive discovery and reflection while
+validation rows drive selection. Its parent pool unites
+validation-example winners with the multi-metric objective Pareto front;
+metadata records component selection, immediate lineage and ancestry,
+attempted merge counts, and optional best outputs. [Read the Flex
+languages and safety contract
+→](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
+
+Code-executing modules now make ownership explicit. Pass `runner` for a
+caller-owned backend object that dsprrr reuses and never closes. State
+persistence and reset support are backend-specific. Alternatively, pass
+a mutually exclusive zero-argument `interpreter_factory` for a fresh
+invocation-owned runner that dsprrr closes exactly once. The factory
+contract applies to ProgramOfThought, CodeAct, RLM, and executable Flex;
+Flex accepts only the fresh-factory form. Factory-backed
+ProgramOfThought, CodeAct, and RLM also support isolated async and mirai
+batch workflows. Caller-owned runners, specialized streaming, and
+executable Flex concurrency remain rejected before unsafe sharing or
+provider work.
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
+without a matching token listener preserves the ordinary synchronous
+`forward()` path.
+
 ## Getting Started: Configure Your LLM
 
 - OpenAI

@@ -85,6 +85,25 @@ and its OS-enforced sandbox; reset that persistent runner between
 logically isolated jobs and do not share it across concurrent
 invocations.
 
+This tutorial reuses the caller-owned `runner` deliberately. For one
+fresh runner per
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md), omit
+`runner` from
+[`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+and pass the mutually exclusive zero-argument factory instead:
+
+``` r
+
+runner_factory <- function() r_code_runner(timeout = 30)
+investigator <- rlm_module(
+  "document, question -> answer",
+  interpreter_factory = runner_factory
+)
+```
+
+dsprrr owns a factory-created runner and closes it exactly once at the
+end of the invocation, including when evaluation fails.
+
 Pull the source code for all three packages. The `read_package_source()`
 helper below clones a repo, concatenates its R and SCSS files into a
 single string (preserving file paths), and returns the result. Expand

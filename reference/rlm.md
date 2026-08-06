@@ -3,8 +3,16 @@
 Convenience wrapper that creates a runner, module, and executes an RLM
 in a single call. Equivalent to:
 
-    runner <- r_code_runner(timeout = timeout)
-    mod <- rlm_module(signature, runner = runner, ...)
+    runner <- r_code_runner(timeout = .timeout)
+    mod <- rlm_module(
+      signature,
+      runner = runner,
+      max_iterations = .max_iterations,
+      max_llm_calls = .max_llm_calls,
+      sub_lm = .sub_lm,
+      verbose = .verbose,
+      tools = .tools
+    )
     run(mod, ..., .llm = .llm)
 
 For repeated use or optimization, prefer creating a module with

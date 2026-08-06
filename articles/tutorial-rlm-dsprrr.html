@@ -81,6 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -204,6 +205,18 @@ security sandbox. For untrusted or adversarial inputs, use
 <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> and its OS-enforced sandbox; reset that
 persistent runner between logically isolated jobs and do not share it
 across concurrent invocations.</p>
+<p>This tutorial reuses the caller-owned <code>runner</code>
+deliberately. For one fresh runner per <code><a href="../reference/run.html">run()</a></code>, omit
+<code>runner</code> from <code><a href="../reference/rlm_module.html">rlm_module()</a></code> and pass the mutually
+exclusive zero-argument factory instead:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">runner_factory</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="va">investigator</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<span>  <span class="st">"document, question -&gt; answer"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="va">runner_factory</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>dsprrr owns a factory-created runner and closes it exactly once at
+the end of the invocation, including when evaluation fails.</p>
 <p>Pull the source code for all three packages. The
 <code>read_package_source()</code> helper below clones a repo,
 concatenates its R and SCSS files into a single string (preserving file
@@ -212,7 +225,7 @@ implementation, or skip ahead; the important thing is what the function
 returns, not how it works.</p>
 <details><summary>
 Definition of <code>read_package_source()</code>
-</summary><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+</summary><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">read_package_source</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">repo</span>, <span class="va">ref</span> <span class="op">=</span> <span class="st">"main"</span>, <span class="va">subdirs</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"R"</span>, <span class="st">"inst"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="va">status</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system2.html" class="external-link">system2</a></span><span class="op">(</span></span>
@@ -253,7 +266,7 @@ Definition of <code>read_package_source()</code>
 <span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">contents</span>, collapse <span class="op">=</span> <span class="st">"\n\n"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-</details><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+</details><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bslib_source</span> <span class="op">&lt;-</span> <span class="fu">read_package_source</span><span class="op">(</span><span class="st">"rstudio/bslib"</span><span class="op">)</span></span>
 <span><span class="va">shiny_source</span> <span class="op">&lt;-</span> <span class="fu">read_package_source</span><span class="op">(</span><span class="st">"rstudio/shiny"</span><span class="op">)</span></span>
 <span><span class="va">brandyml_source</span> <span class="op">&lt;-</span> <span class="fu">read_package_source</span><span class="op">(</span></span>
@@ -262,7 +275,7 @@ Definition of <code>read_package_source()</code>
 <span><span class="op">)</span></span></code></pre></div>
 <p>These three strings sit in programmatic space; none enter the context
 window until the model requests a specific slice:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">format_size</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">source</span>, <span class="va">label</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">n_files</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gregexpr</a></span><span class="op">(</span><span class="st">"--- FILE:"</span>, <span class="va">source</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span>  <span class="fu">cli</span><span class="fu">::</span><span class="fu"><a href="https://cli.r-lib.org/reference/cli_li.html" class="external-link">cli_li</a></span><span class="op">(</span><span class="st">"{.strong {label}}: {format(nchar(source), big.mark = ',')} characters ({n_files} files)"</span><span class="op">)</span></span>
@@ -280,7 +293,7 @@ accurately in a single pass.</p>
 </h2>
 <p>Before reaching for an RLM, a competent developer would grep for the
 relevant functions and feed the results to a model. Let’s try that:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract the context a developer would actually assemble:</span></span>
 <span><span class="co"># definitions and nearby code for both page functions, plus Sass variable usage</span></span>
 <span><span class="va">relevant_lines</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">source</span>, <span class="va">patterns</span>, <span class="va">context_chars</span> <span class="op">=</span> <span class="fl">3000</span><span class="op">)</span> <span class="op">{</span></span>
@@ -346,7 +359,7 @@ module, its traces feed into <code><a href="../reference/compile.html">compile()
 <div class="section level2">
 <h2 id="step-3-set-up-the-rlm">Step 3: Set Up the RLM<a class="anchor" aria-label="anchor" href="#step-3-set-up-the-rlm"></a>
 </h2>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">investigator</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>    <span class="st">"bslib_source, shiny_source, brandyml_source, question -&gt; analysis"</span>,</span>
@@ -411,7 +424,7 @@ step.</p>
 <div class="section level2">
 <h2 id="step-4-run-the-investigation">Step 4: Run the Investigation<a class="anchor" aria-label="anchor" href="#step-4-run-the-investigation"></a>
 </h2>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">investigator</span>,</span>
 <span>  bslib_source <span class="op">=</span> <span class="va">bslib_source</span>,</span>
@@ -438,7 +451,7 @@ runs.</p>
 </h2>
 <p>The RLM runs a loop: generate code, execute it, observe results,
 repeat. It does not read everything at once:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="va">investigator</span><span class="op">$</span><span class="fu">get_repl_history</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">latest</span> <span class="op">&lt;-</span> <span class="va">history</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">history</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span></span>
@@ -526,7 +539,7 @@ further (proposing a specific code fix, say), the root model may need
 help interpreting complex SCSS mixins or Bootstrap conventions from raw
 character slices. A secondary model handles these focused
 sub-questions:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">deep_investigator</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>    <span class="st">"bslib_source, shiny_source, brandyml_source, question -&gt; analysis, fix_proposal"</span>,</span>
@@ -563,7 +576,7 @@ sub-questions:</p>
 <p>With <code>sub_lm</code> set, the root model can delegate
 interpretive tasks to a secondary model. For example, when it encounters
 a complex SCSS mixin:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">llm_query</span><span class="op">(</span></span>
 <span>  <span class="st">"In Bootstrap 5 Sass, what is the difference between $navbar-bg and</span></span>
 <span><span class="st">   $navbar-light-bg? When would each be used?"</span>,</span>
@@ -580,7 +593,7 @@ parallel.</p>
 <h2 id="step-7-inspect-costs-and-trajectory">Step 7: Inspect Costs and Trajectory<a class="anchor" aria-label="anchor" href="#step-7-inspect-costs-and-trajectory"></a>
 </h2>
 <p>RLMs trade latency for accuracy:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="va">deep_investigator</span><span class="op">$</span><span class="fu">get_repl_history</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">latest</span> <span class="op">&lt;-</span> <span class="va">history</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">history</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span></span>
@@ -709,7 +722,7 @@ approaches win), see the decision framework in the <a href="how-rlm-works.html">
 second investigation with the same data. There are several <a href="https://github.com/rstudio/bslib/issues?q=is%3Aopen+label%3A%22theming%22" class="external-link">open
 theming issues</a> in bslib that require the same kind of cross-package
 tracing. For example:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Investigate another theming issue with the same data</span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">investigator</span>,</span>
@@ -723,7 +736,7 @@ tracing. For example:</p>
 <span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Or load your own package source:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">my_source</span> <span class="op">&lt;-</span> <span class="fu">read_package_source</span><span class="op">(</span><span class="st">"your-org/your-package"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">explorer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>

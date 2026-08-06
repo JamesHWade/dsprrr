@@ -1,7 +1,8 @@
 # GEPA Teleprompter
 
-Genetic/evolutionary prompt optimizer that evolves instruction variants
-using reflection on failed examples.
+Reflective optimizer for instructions and complete Flex source
+components, using row-level failures and metric feedback to propose
+improved candidates.
 
 ## Usage
 
@@ -16,10 +17,14 @@ GEPA(
   mutation_rate = 0.1,
   crossover_rate = 0.7,
   selection = "pareto",
+  component_selector = "round_robin",
+  use_merge = TRUE,
+  max_merge_invocations = 5L,
   seed = NULL,
   log_dir = NULL,
   verbose = TRUE,
-  track_stats = TRUE
+  track_stats = TRUE,
+  track_best_outputs = FALSE
 )
 ```
 
@@ -61,6 +66,23 @@ GEPA(
 
   Selection strategy: "pareto" or "current_best".
 
+- component_selector:
+
+  Component mutation strategy. Use `"round_robin"` to update one
+  component at a time, `"all"` to update all components atomically, or a
+  function called with `component_ids`, `candidate`, `failed_examples`,
+  and `context`. The function must return one or more unique IDs from
+  `component_ids`.
+
+- use_merge:
+
+  Whether to attempt lineage-aware merges of complementary component
+  changes.
+
+- max_merge_invocations:
+
+  Maximum merge attempts, or `NULL` for no separate merge-attempt cap.
+
 - seed:
 
   Random seed for reproducibility.
@@ -76,6 +98,11 @@ GEPA(
 - track_stats:
 
   Whether to record generation statistics.
+
+- track_best_outputs:
+
+  Whether to retain each validation row's highest-scoring output.
+  Requires `track_stats = TRUE`.
 
 ## Details
 
@@ -93,13 +120,35 @@ predicted values.
 
 ### Differences from DSPy's GEPA
 
-This is an adapted ("GEPA-lite") implementation. It shares the core
-ideas — reflective mutation of instructions guided by failures and
-feedback, plus Pareto-frontier selection over multiple metrics — but
-uses a fixed population/generations evolutionary loop rather than DSPy's
-budget-driven candidate search, and does not yet support per-component
-selection in multi-step programs or inference-time search. Expect
-qualitatively similar behavior, not identical results.
+This is an adapted implementation. It shares reflective mutation guided
+by failures and feedback, validation-example winner frontiers, component
+selection, lineage-aware merge, and Pareto selection over multiple
+metrics, but uses a fixed population/generations loop rather than DSPy's
+full budget-driven candidate search.
+
+Every mutable program is represented as a complete component candidate:
+ordinary predictor instructions and complete Flex `module_src` values
+are proposed, copied, validated, and bound transactionally. A Flex
+source is one component; dynamically constructed inner predictors are
+not optimized as separate leaves. Invalid Flex sources receive an
+auditable failure score and are never selectable. The structured source
+proposer receives task and signature context, field schemas, source
+runtime, allowed tools and primitives, row-aligned inputs, expected
+output, prediction, and metric feedback. Executable source is evaluated
+only through Flex's configured interpreter bridge during candidate
+evaluation.
+
+Parent selection uses the union of complete candidates that win on at
+least one validation row and candidates on the multi-metric objective
+Pareto front; component selection is a separate mutation policy. When
+`valset` is supplied, `trainset` remains the discovery/reflection
+dataset and `valset` is used for aggregate selection,
+validation-instance frontiers, and retained outputs. Candidate metadata
+includes lineage, aggregate and per-row scores, discovery counts,
+winners, and optional retained best outputs. Fine-grained checkpoint
+resume, cached subsample merge acceptance, and automatic inference-time
+candidate selection are not implemented. Compiled programs record these
+distinctions under `config$optimizer$component_semantics`.
 
 ## Examples
 

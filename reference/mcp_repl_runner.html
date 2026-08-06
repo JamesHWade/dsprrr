@@ -79,6 +79,7 @@ sandbox file path from the host process."><meta property="og:image" content="htt
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -203,7 +204,12 @@ isolation.</p>
 deterministic tests. It must be a function with the mcp-repl tool contract:
 <code>repl(input, timeout_ms)</code>. Because dsprrr did not launch that function's
 server, its runner policy is deliberately marked unverified and it is
-rejected by optimizers that require an OS sandbox.</p>
+rejected by optimizers that require an OS sandbox. Calling <code>$close()</code> makes
+the wrapper terminal but does not close that caller-managed connection.</p>
+<p>A managed runner captures and closes only the mcp-repl transport it starts.
+Some supported mcptools versions do not expose public per-server teardown,
+so dsprrr uses a guarded compatibility shim and fails setup if deterministic
+ownership cannot be captured. This path is tested against mcptools 1.0.1.</p>
     </div>
 
     <div class="section level2">

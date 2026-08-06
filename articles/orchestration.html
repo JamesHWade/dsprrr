@@ -81,6 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -245,14 +246,23 @@ history)</li>
 <strong>Metadata and integrity</strong>: Package/R requirements,
 format version, and payload digest</li>
 </ul>
-<p>Functions, tools, retrievers, runners, and other runtime objects are
-not captured implicitly. Supply a named <code>registry</code> to persist
-stable IDs and pass the same registry to
-<code><a href="../reference/restore_module_config.html">restore_module_config()</a></code>. Arbitrary embedded runtime values
-require <code>trusted = TRUE</code> both when writing and restoring.
-Restoration is forward-only: only the current closed artifact schema is
-accepted, and its stored signature is authoritative. To change a
-signature, update the source program and write a new artifact.</p>
+<p>Functions, tools, retrievers, runners, interpreter factories, and
+other runtime objects are not captured implicitly. Supply a named
+<code>registry</code> to persist stable IDs and pass the same registry
+to <code><a href="../reference/restore_module_config.html">restore_module_config()</a></code>. Arbitrary embedded runtime
+values require <code>trusted = TRUE</code> both when writing and
+restoring. Version 4 records exactly one of <code>runner</code> or
+<code>interpreter_factory</code> for each code-executing module, without
+invoking a factory while writing or restoring the artifact. It also
+preserves a Flex module’s source language, complete source, predictor-
+and host-tool-call limits, sandbox requirement, and registry-backed
+factory and tools when executable mode is used.</p>
+<p>Restoration accepts the current closed schema and validated version 3
+runner-only artifacts. A version 3 manifest is checked against its
+original schema and integrity digest before dsprrr upgrades it in
+memory; other versions are rejected. The stored signature remains
+authoritative. To change a signature, update the source program and
+write a new artifact.</p>
 </div>
 <div class="section level3">
 <h3 id="restoring-a-module">Restoring a Module<a class="anchor" aria-label="anchor" href="#restoring-a-module"></a>

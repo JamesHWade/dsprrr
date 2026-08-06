@@ -59,6 +59,15 @@ string outputs), invisibly.
 - Streaming execution does not record traces and bypasses the response
   cache.
 
+### Specialized modules
+
+One-shot fallback execution uses each module's own `forward()` method,
+so it remains available to specialized modules when no matching token
+listener is active or the output is not token-streamable. Actual token
+streaming uses a direct provider path and is limited to ordinary
+`PredictModule` steps. Unsupported token-stream requests are rejected
+before provider work.
+
 ### Status events
 
 When `on_status` is provided, it is called with a list describing each

@@ -72,6 +72,12 @@ Understand the philosophy, design, and theory behind dsprrr
   From the research origins to dsprrr’s R implementation: what Recursive
   Language Models are, why they matter, and how the internals work.
 
+- [Structural Optimization with
+  Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md):
+
+  Optimize safe declarative graphs or interpreter-backed R programs with
+  dsprrr’s experimental Flex module.
+
 - [Advanced Reasoning
   Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
 

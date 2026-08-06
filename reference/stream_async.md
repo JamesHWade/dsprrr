@@ -1,7 +1,11 @@
 # Stream module output asynchronously
 
 Streams text output from a module asynchronously. Returns a promise that
-resolves to an async generator.
+resolves to an async generator. Only ordinary `PredictModule` objects
+are supported. Modules and composites with specialized `forward()`
+semantics are rejected before provider work; use
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
+their complete workflows.
 
 ## Usage
 

@@ -1,17 +1,26 @@
 # Create a Program of Thought Module
 
 Factory function to create a ProgramOfThoughtModule that generates and
-executes R code to solve problems.
+executes R code to solve problems. Use
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) to
+execute it.
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+supports factory-backed modules; async streaming and module `$stream()`
+entry points reject ProgramOfThought.
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
+preserves the synchronous `forward()` fallback unless a matching
+token-stream request is active; that request is rejected first.
 
 ## Usage
 
 ``` r
 program_of_thought(
   signature,
-  runner,
+  runner = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
-  ...
+  ...,
+  interpreter_factory = NULL
 )
 ```
 
@@ -23,9 +32,9 @@ program_of_thought(
 
 - runner:
 
-  A code runner implementing `execute()` and `policy()`. Required. The
-  module retains this object; reset persistent runners between logically
-  isolated jobs and do not use one runner concurrently.
+  Optional caller-owned code runner implementing `execute()` and
+  `policy()`. It is retained, never automatically closed, and must not
+  be shared concurrently when persistent.
 
 - max_iters:
 
@@ -39,6 +48,15 @@ program_of_thought(
 - ...:
 
   Additional arguments passed to the module
+
+- interpreter_factory:
+
+  Optional zero-argument function returning a fresh runner with
+  `execute()`, `policy()`, optional
+  [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
+  terminal `shutdown()` or
+  [`close()`](https://rdrr.io/r/base/connections.html). Supply exactly
+  one of `runner` and `interpreter_factory`.
 
 ## Value
 

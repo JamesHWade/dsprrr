@@ -3,8 +3,9 @@
 The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
 tool-using modules, "chain_of_thought" for step-by-step reasoning,
-"multichain" for multi-chain comparison, and "program_of_thought" for
-code execution modules.
+"multichain" for multi-chain comparison, "program_of_thought" for code
+execution modules, and experimental "flex" for declarative or
+interpreter-backed programs.
 
 ## Usage
 
@@ -23,7 +24,13 @@ module(
   demos = list(),
   config = list(),
   chat = NULL,
-  ...
+  ...,
+  interpreter_factory = NULL,
+  module_src = NULL,
+  max_predictor_calls = 100L,
+  max_tool_calls = 100L,
+  source_format = c("auto", "json", "r"),
+  require_sandbox = TRUE
 )
 ```
 
@@ -45,13 +52,16 @@ module(
 
   - `"multichain"`: MultiChainComparison module for ensemble reasoning
 
-  - `"program_of_thought"`: Code execution module (requires runner)
+  - `"program_of_thought"`: Code execution module (requires a runtime
+    source)
 
-  - `"codeact"`: Hybrid agent with tools + code execution (requires
-    runner)
+  - `"codeact"`: Hybrid agent with tools + code execution (requires a
+    runtime source)
 
   - `"rlm"`: Recursive Language Model for REPL-based context exploration
-    (requires runner)
+    (requires a runtime source)
+
+  - `"flex"`: Experimental declarative or executable Flex program
 
 - tools:
 
@@ -60,9 +70,11 @@ module(
   - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef
     objects.
 
-  - for `type = "rlm"`: named list of R functions injected into the
-    REPL. If provided with `type = "predict"`, automatically upgrades to
-    react.
+  - for `type = "rlm"`: named list of R functions exposed to the REPL.
+
+  - for executable `type = "flex"`: named host functions or ToolDef
+    objects. If provided with `type = "predict"`, automatically upgrades
+    to react.
 
 - max_iterations:
 
@@ -80,9 +92,8 @@ module(
 
 - runner:
 
-  Code runner implementing `execute()` and `policy()` for code execution
-  types. Create the built-in backend with
-  [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md).
+  Optional caller-owned code runner implementing `execute()` and
+  `policy()` for code execution types. It is never automatically closed.
 
 - max_iters:
 
@@ -115,7 +126,41 @@ module(
 
 - ...:
 
-  Additional arguments for future module types
+  Additional arguments forwarded to
+  [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+  when `type = "rlm"`. Reserved and required to be empty for
+  `type = "flex"`.
+
+- interpreter_factory:
+
+  Optional zero-argument factory for program-of-thought, CodeAct, RLM,
+  and executable Flex modules. It creates one fresh runner per
+  invocation. Supply exactly one of `runner` and `interpreter_factory`
+  for ordinary code-executing types; Flex accepts only the factory so
+  every invocation is isolated.
+
+- module_src:
+
+  Optional complete source for `type = "flex"`.
+
+- max_predictor_calls:
+
+  Maximum bridged predictor calls allowed by Flex, or `NULL` for no
+  limit.
+
+- max_tool_calls:
+
+  Maximum direct host-tool calls allowed by executable Flex, or `NULL`
+  for no limit.
+
+- source_format:
+
+  Flex source language: `"auto"`, `"json"`, or `"r"`.
+
+- require_sandbox:
+
+  Whether executable Flex requires a runner that advertises an enforced
+  sandbox.
 
 ## Value
 

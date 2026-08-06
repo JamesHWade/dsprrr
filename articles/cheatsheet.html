@@ -81,6 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -531,8 +532,17 @@ removed or reviewed before reuse.</p>
   Start --&gt;|Simple text in/out| Predict["type = predict (PredictModule)"]
   Predict --&gt; PredictUse["Q&amp;A, classification, summarization, extraction"]
   Start --&gt;|Tool use / multi-step reasoning| React["type = react (ReactModule)"]
-  React --&gt; ReactUse["Agents, search, calculations, API calls"]</code></pre>
+  React --&gt; ReactUse["Agents, search, calculations, API calls"]
+  Start --&gt;|Exact computation| POT["type = program_of_thought"]
+  Start --&gt;|Tools plus R code| CodeAct["type = codeact"]
+  Start --&gt;|Explore large context| RLM["type = rlm"]
+  Start --&gt;|Vary predictor structure| Flex["type = flex (experimental)"]</code></pre>
 <table class="table">
+<colgroup>
+<col width="26%">
+<col width="30%">
+<col width="43%">
+</colgroup>
 <thead><tr class="header">
 <th>Type</th>
 <th>Class</th>
@@ -549,9 +559,88 @@ removed or reviewed before reuse.</p>
 <td><code>ReactModule</code></td>
 <td>Tool-calling agents</td>
 </tr>
+<tr class="odd">
+<td><code>"chain_of_thought"</code></td>
+<td><code>PredictModule</code></td>
+<td>Step-by-step reasoning</td>
+</tr>
+<tr class="even">
+<td><code>"multichain"</code></td>
+<td><code>MultiChainComparisonModule</code></td>
+<td>Compare several reasoning chains</td>
+</tr>
+<tr class="odd">
+<td><code>"program_of_thought"</code></td>
+<td><code>ProgramOfThoughtModule</code></td>
+<td>Generate and execute R code</td>
+</tr>
+<tr class="even">
+<td><code>"codeact"</code></td>
+<td><code>CodeActModule</code></td>
+<td>Combine tools and R code</td>
+</tr>
+<tr class="odd">
+<td><code>"rlm"</code></td>
+<td><code>RLMModule</code></td>
+<td>Explore large context through a REPL</td>
+</tr>
+<tr class="even">
+<td><code>"flex"</code></td>
+<td><code>FlexModule</code></td>
+<td>Validated JSON graph or interpreter-backed R source
+(experimental)</td>
+</tr>
 </tbody>
 </table>
+<div class="section level3">
+<h3 id="code-runner-ownership">Code Runner Ownership<a class="anchor" aria-label="anchor" href="#code-runner-ownership"></a>
+</h3>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Caller-owned and reused; the backend controls state persistence</span></span>
+<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Fresh invocation-owned runner; dsprrr closes it exactly once</span></span>
+<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Supply exactly one of <code>runner</code> and
+<code>interpreter_factory</code>. The factory is zero-argument and is
+supported by ProgramOfThought, CodeAct, and RLM. dsprrr never closes a
+directly supplied runner; persistence and reset support are
+backend-specific.</p>
+</div>
+<div class="section level3">
+<h3 id="experimental-flex">Experimental Flex<a class="anchor" aria-label="anchor" href="#experimental-flex"></a>
+</h3>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
+<span><span class="va">program</span><span class="op">$</span><span class="va">module_src</span>       <span class="co"># Canonical, read-only JSON</span></span>
+<span><span class="va">program</span><span class="op">$</span><span class="fu">bind</span><span class="op">(</span><span class="va">candidate</span><span class="op">)</span>  <span class="co"># Validate and replace transactionally</span></span>
+<span></span>
+<span><span class="va">code_program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  module_src <span class="op">=</span> <span class="st">"forward &lt;- function(question) Prediction(answer = question)"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="va">my_sandboxed_runner</span>,</span>
+<span>  source_format <span class="op">=</span> <span class="st">"r"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span>,</span>
+<span>  <span class="va">program</span>,</span>
+<span>  trainset <span class="op">=</span> <span class="va">question_answer_data</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>JSON Flex version 1 permits Predict and Chain-of-Thought graphs.
+Executable Flex adds complete R <code>forward()</code> source,
+deterministic control flow, the DSPy Flex primitive family, and named
+host tools behind a fresh interpreter and a versioned bridge.
+<code>max_tool_calls</code> separately bounds privileged host calls.
+GEPA validates complete candidate sources and selects parents from
+validation-example winners with component selection and lineage metadata
+kept separately.</p>
 <hr>
+</div>
 </div>
 <div class="section level2">
 <h2 id="running-modules">Running Modules<a class="anchor" aria-label="anchor" href="#running-modules"></a>
@@ -559,7 +648,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="single-execution">Single Execution<a class="anchor" aria-label="anchor" href="#single-execution"></a>
 </h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Using run()</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"What is R?"</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -569,7 +658,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="batch-processing">Batch Processing<a class="anchor" aria-label="anchor" href="#batch-processing"></a>
 </h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Vector inputs</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="va">mod</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great!"</span>, <span class="st">"Awful!"</span>, <span class="st">"Meh"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -583,7 +672,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="show-prompt">Show Prompt<a class="anchor" aria-label="anchor" href="#show-prompt"></a>
 </h3>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># See the prompt being sent</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"Test"</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .show_prompt <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <hr>
@@ -695,7 +784,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="running-evaluation">Running Evaluation<a class="anchor" aria-label="anchor" href="#running-evaluation"></a>
 </h3>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Basic evaluation</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">testset</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">mean_score</span></span>
@@ -716,7 +805,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="grid-search">Grid Search<a class="anchor" aria-label="anchor" href="#grid-search"></a>
 </h3>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Search over parameters</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
 <span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
@@ -735,7 +824,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="teleprompters">Teleprompters<a class="anchor" aria-label="anchor" href="#teleprompters"></a>
 </h3>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Few-shot learning</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
@@ -755,7 +844,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="inspect-last-call">Inspect Last Call<a class="anchor" aria-label="anchor" href="#inspect-last-call"></a>
 </h3>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Get the last prompt sent</span></span>
 <span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── Last Prompt ──</span></span>
@@ -767,7 +856,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="prompt-history">Prompt History<a class="anchor" aria-label="anchor" href="#prompt-history"></a>
 </h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># View recent prompts</span></span>
 <span><span class="fu"><a href="../reference/inspect_history.html">inspect_history</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span></span>
@@ -777,7 +866,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="module-inspection">Module Inspection<a class="anchor" aria-label="anchor" href="#module-inspection"></a>
 </h3>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Detailed module state</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">inspect</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -787,7 +876,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="traces">Traces<a class="anchor" aria-label="anchor" href="#traces"></a>
 </h3>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Get all traces from a module</span></span>
 <span><span class="va">traces</span> <span class="op">&lt;-</span> <span class="va">mod</span><span class="op">$</span><span class="fu">get_traces</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -808,7 +897,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="saverestore-configuration">Save/Restore Configuration<a class="anchor" aria-label="anchor" href="#saverestore-configuration"></a>
 </h3>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Save optimized config to pins board</span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">board</span>, <span class="st">"my-classifier-v1"</span><span class="op">)</span></span>
 <span></span>
@@ -818,7 +907,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="vitals-integration">Vitals Integration<a class="anchor" aria-label="anchor" href="#vitals-integration"></a>
 </h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Convert module to vitals solver</span></span>
 <span><span class="va">solver</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_vitals_solver.html">as_vitals_solver</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span>
 <span></span>
@@ -832,7 +921,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="project-template">Project Template<a class="anchor" aria-label="anchor" href="#project-template"></a>
 </h3>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create production-ready project structure</span></span>
 <span><span class="fu"><a href="../reference/use_dsprrr_template.html">use_dsprrr_template</a></span><span class="op">(</span><span class="st">"my_project"</span><span class="op">)</span></span>
 <span></span>
@@ -847,7 +936,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="rag-retrieval-augmented-generation">RAG (Retrieval-Augmented Generation)<a class="anchor" aria-label="anchor" href="#rag-retrieval-augmented-generation"></a>
 </h3>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"context, question -&gt; answer"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Answer based only on the provided context."</span></span>
@@ -864,7 +953,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="classification">Classification<a class="anchor" aria-label="anchor" href="#classification"></a>
 </h3>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; label: enum('spam', 'not_spam')"</span><span class="op">)</span></span>
 <span></span>
@@ -873,7 +962,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="extraction">Extraction<a class="anchor" aria-label="anchor" href="#extraction"></a>
 </h3>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">extractor</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; entities: list[string], summary: string"</span><span class="op">)</span></span>
 <span></span>
@@ -884,7 +973,7 @@ removed or reviewed before reuse.</p>
 <div class="section level3">
 <h3 id="chain-of-thought-via-instructions">Chain of Thought (via instructions)<a class="anchor" aria-label="anchor" href="#chain-of-thought-via-instructions"></a>
 </h3>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"problem -&gt; answer"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Think step by step. Show your reasoning before the final answer."</span></span>

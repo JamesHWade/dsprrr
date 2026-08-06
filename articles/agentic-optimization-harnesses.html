@@ -86,6 +86,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -147,11 +148,19 @@ contract among several pipeline stages.”</p>
 <p>DSPy 3.3.0 introduced experimental <code>Flex</code>, which can
 optimize a program’s source code and structure inside a sandbox.
 <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> are
-<strong>not</strong> Flex analogues. They accept complete replacements
+<strong>not</strong> Flex optimizers. They accept complete replacements
 only for allowlisted instruction and template fields; they do not
 execute optimizer-authored R module source, add predictors, or change
 graph topology. That narrower edit language is an intentional
-host-validation boundary. See the <a href="https://github.com/stanfordnlp/dspy/releases/tag/3.3.0" class="external-link">DSPy 3.3.0
+host-validation boundary.</p>
+<p>dsprrr’s separate experimental <code><a href="../reference/flex.html">flex()</a></code> module exposes
+both a constrained, versioned JSON graph and opt-in complete R source
+behind a fresh interpreter, isolated predictor/tool bridge, separate
+predictor/tool budgets, and default sandbox requirement. GEPA, rather
+than these agentic harnesses, searches complete validated Flex source
+components using validation-example winner frontiers and explicit
+component selection. See <a href="flex-optimization.html">Structural
+Optimization with Flex</a> and the <a href="https://github.com/stanfordnlp/dspy/releases/tag/3.3.0" class="external-link">DSPy 3.3.0
 release notes</a>.</p>
 <div class="section level2">
 <h2 id="choose-the-search-owner">Choose the Search Owner<a class="anchor" aria-label="anchor" href="#choose-the-search-owner"></a>

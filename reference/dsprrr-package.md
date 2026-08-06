@@ -25,4 +25,7 @@ Useful links:
 
 Authors:
 
+- James Wade <github@jameshwade.com>
+  ([ORCID](https://orcid.org/0000-0002-9740-1905))
+
 - Anatoliy Sokolov <ansokolov@dow.com>

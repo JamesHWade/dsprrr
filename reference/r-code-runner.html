@@ -59,6 +59,7 @@ structured result handling."><meta property="og:image" content="https://jameshwa
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -112,10 +113,23 @@ only defense in depth and can be bypassed. For untrusted inputs, provide a
 runner backed by a container or OS-level sandbox.</p>
 <p>Code-executing modules accept any runner that implements the dsprrr runner
 protocol. A runner must expose <code>execute(code, context = list())</code> and
-<code>policy()</code> methods. <code>policy()</code> returns a named list containing at least
-<code>backend</code> (character), <code>trust</code> (character), and <code>sandboxed</code> (logical).
-<code>execute()</code> returns a list with <code>success</code>, <code>result</code>, <code>stdout</code>, <code>stderr</code>,
-<code>messages</code>, <code>warnings</code>, <code>error</code>, and <code>duration_ms</code> fields.</p>
+<code>policy()</code> methods. <code>policy()</code> returns a uniquely named list containing at
+least <code>backend</code> (character), <code>trust</code> (character), and <code>sandboxed</code> (logical).
+<code>execute()</code> returns one uniquely named list. <code>success</code> and <code>result</code> are
+required. Missing <code>stdout</code>, <code>stderr</code>, <code>messages</code>, and <code>warnings</code> fields are
+normalized to empty strings, and missing <code>duration_ms</code> is normalized to
+<code>NA</code>. A failed result must include a non-empty <code>error</code>. Its <code>error_type</code> is
+either <code>"execution"</code> for code the model may repair or <code>"interpreter"</code> for a
+terminal process/protocol failure. Legacy runners that omit <code>error_type</code> are
+treated as reporting a repairable execution failure. A successful result
+may omit <code>error</code> and <code>error_type</code>.</p>
+<p>Code-executing modules accept exactly one runtime source. Passing <code>runner</code>
+retains that caller-owned object and never closes it. Passing a zero-argument
+<code>interpreter_factory</code> creates one fresh invocation-owned runner. Factory
+results may implement idempotent <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code> and must implement idempotent
+terminal <code>shutdown()</code> or its compatibility alias <code><a href="https://rdrr.io/r/base/connections.html" class="external-link">close()</a></code>. dsprrr starts a
+factory runner before use and shuts it down exactly once on success, error,
+or interrupt.</p>
     </div>
 
     <div class="section level2">

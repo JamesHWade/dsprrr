@@ -87,8 +87,13 @@ below](#how-dsprrrs-rlm-compares) summarizes the key differences.
 dsprrr’s
 [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
 brings the same approach to R, using R as the REPL language instead of
-Python, with subprocess isolation via [callr](https://callr.r-lib.org/)
-and structured outputs via [ellmer](https://ellmer.tidyverse.org/).
+Python and structured outputs via
+[ellmer](https://ellmer.tidyverse.org/). Execution is delegated to the
+selected runner backend: the built-in
+[`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
+uses [callr](https://callr.r-lib.org/), while the default managed
+[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+uses an OS-sandboxed persistent session.
 
 ## How dsprrr Implements RLM
 
@@ -100,8 +105,8 @@ to trace a theming bug across the bslib, shiny, and brand.yml codebases.
 
 ### The User-Facing API
 
-Creating an RLM module requires two things: a signature declaring inputs
-and outputs, and a code runner for subprocess isolation:
+Creating an RLM module requires a signature plus exactly one execution
+binding. To reuse a caller-owned runner object, pass `runner`:
 
 ``` r
 
@@ -277,11 +282,12 @@ a character vector at the top of the execution script.
 The `rlm_final` class is a sentinel: when the parent process sees it in
 the subprocess result, it exits the loop and extracts the answer.
 
-### Subprocess Isolation
+### Runner-Selected Isolation
 
-All model-generated code runs in an isolated R subprocess via
+The example in this article uses `RCodeRunner`, so each generated code
+fragment runs in an isolated R subprocess via
 [`callr::r()`](https://callr.r-lib.org/reference/r.html). The
-`RCodeRunner` class in `R/r-code-runner.R` handles this:
+`RCodeRunner` class in `R/r-code-runner.R` handles that backend:
 
 ``` r
 
@@ -385,13 +391,14 @@ The table below summarizes the key implementations:
 | **Structured output** | ellmer types | DSPy signatures | Freeform | ADK tools |
 | **Recursive calls** | `llm_query()` | Built-in | Built-in | Child agents |
 | **Optimization** | Teleprompters, grid search | DSPy optimizers | Manual | Manual |
-| **Batched sub-calls** | `llm_query_batched()` | – | – | – |
+| **Batched sub-calls** | `llm_query_batched()` | `llm_query_batched()` | – | – |
 
 The “batched sub-calls” row refers specifically to issuing multiple
-recursive sub-queries from a single REPL iteration and running them
-concurrently. All implementations support multiple sequential sub-calls;
-dsprrr additionally batches them via
-[`ellmer::parallel_chat()`](https://ellmer.tidyverse.org/reference/parallel_chat.html).
+recursive sub-queries from one REPL iteration and running them
+concurrently. Both dsprrr and DSPy 3.3 expose that operation. dsprrr
+dispatches its batch through
+[`ellmer::parallel_chat()`](https://ellmer.tidyverse.org/reference/parallel_chat.html)
+while preserving the R runner’s lifecycle and call budget.
 
 dsprrr is the only implementation that uses R as the REPL language,
 which matters when your context *is* R data: data frames, model objects,
@@ -462,13 +469,55 @@ and network access disabled. A user-supplied `repl` function is reported
 as unverified and is not accepted where dsprrr requires sandboxed
 execution.
 
-**Persistent state is explicit.** The callr runner starts a fresh
-subprocess for each iteration. mcp-repl instead retains an R session, so
-variables and loaded packages survive iterations and separate
-`forward()` calls. Call `runner$reset()` between logically isolated jobs
-and never share one persistent runner across concurrent invocations.
-dsprrr does not yet mirror DSPy 3.3’s per-invocation interpreter
-factory.
+**Runner ownership is explicit.** A directly supplied `runner` is
+caller-owned and reused across separate `forward()` calls; dsprrr never
+closes it. The backend determines whether execution state persists and
+whether `reset()` is available. mcp-repl retains variables and loaded
+packages until you call `runner$reset()`. Reset that persistent backend
+between logically isolated jobs and never share it across concurrent
+invocations.
+
+For isolated invocations, pass `interpreter_factory` instead. It must be
+a zero-argument function returning a valid runner. dsprrr calls it once
+per invocation, owns that fresh runner, and closes it exactly once when
+the invocation ends, including after a failure:
+
+``` r
+
+rlm <- rlm_module(
+  "document, question -> answer",
+  interpreter_factory = function() r_code_runner(timeout = 30)
+)
+```
+
+`runner` and `interpreter_factory` are mutually exclusive, and one is
+required.
+
+Factory-backed RLM invocations can also use
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+and isolated mirai dataset batches. A caller-owned runner remains
+sequential-only because dsprrr cannot prove that shared interpreter
+state is safe under overlap. Async streaming and finite batch
+timeout/error-budget controls are not adapted yet and fail before runner
+work.
+
+**Execution and interpreter failures are different.** A submitted R
+expression can fail in a repairable way, allowing the RLM to inspect the
+error and try a new expression. Process, transport, protocol, startup,
+and shutdown failures are terminal: the runner is invalidated and is
+never retried or reused. If execution and teardown both fail, dsprrr
+preserves the primary execution condition and attaches teardown evidence
+instead of replacing it.
+
+**Custom tools execute on the host.** Guest code emits an authenticated
+tool request, dsprrr invokes the original function and its live closure
+in the host process, and the guest program is replayed with that
+immutable response. The function itself is never deparsed or serialized
+into generated code. This runner-neutral bridge works with both
+[`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
+and mcp-repl; arguments and results still need to cross the runner’s
+value boundary. A host tool is called once even though deterministic
+guest code before it may be replayed.
 
 **mcp-repl control results are intentionally bounded.** RLM submit and
 recursive query frames are capped at 3,000 encoded bytes to stay inline.

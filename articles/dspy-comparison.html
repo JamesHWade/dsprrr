@@ -81,6 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -191,16 +192,18 @@ behaviorally aligned, not a port of the Python class</td>
 <tr class="even">
 <td><code>dspy.ProgramOfThought</code></td>
 <td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
-<td>Generates and executes <strong>R</strong> code (not Python); the
-configured runner is retained, not created fresh per invocation</td>
+<td>Generates and executes <strong>R</strong> code (not Python); accepts
+either a caller-owned reused runner or a fresh per-invocation
+interpreter factory</td>
 </tr>
 <tr class="odd">
 <td><code>dspy.CodeAct</code></td>
 <td><code><a href="../reference/code_act.html">code_act()</a></code></td>
 <td>Hybrid tools + R code execution with an enforced inner tool-call
-limit; the built-in runner is trusted-input-only, and sandboxed backends
-can implement the runner protocol. The configured runner is retained,
-not created fresh per invocation</td>
+limit; accepts either a caller-owned reused runner or a fresh
+per-invocation interpreter factory. The built-in runner is
+trusted-input-only, and sandboxed backends can implement the runner
+protocol</td>
 </tr>
 <tr class="even">
 <td><code>dspy.BestOfN</code></td>
@@ -221,13 +224,21 @@ not created fresh per invocation</td>
 <td><code>dspy.RLM</code></td>
 <td><code><a href="../reference/rlm_module.html">rlm_module()</a></code></td>
 <td>Recursive language models over an R REPL; accepts the 3.3
-<code>max_iters</code> spelling, validates tool names, inputs, and
-sub-LM text responses strictly, and authenticates submit/query frames
-per invocation. mcp-repl control frames are bounded for inline transport
-and compacted responses fail closed. The configured runner is retained,
-not created fresh per invocation</td>
+<code>max_iters</code> spelling and either runner lifecycle. Tool names,
+inputs, sub-LM responses, and authenticated control frames are validated
+strictly; compacted mcp-repl control responses fail closed</td>
 </tr>
 <tr class="even">
+<td>Experimental <code>dspy.Flex</code>
+</td>
+<td><code><a href="../reference/flex.html">flex()</a></code></td>
+<td>Dual-mode analogue: a safe versioned JSON graph by default, plus
+opt-in complete R source in a fresh interpreter with a versioned host
+bridge and separate predictor/tool budgets. R source defines
+<code>forward()</code> rather than a Python module class, and no default
+sandbox is silently selected</td>
+</tr>
+<tr class="odd">
 <td>
 <code>dspy.Parallel</code> / <code>Module.batch</code>
 </td>
@@ -238,7 +249,7 @@ not created fresh per invocation</td>
 <td>Batch over a data frame; heterogeneous (module, example) fan-out is
 not yet a dedicated module</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>dspy.majority</code></td>
 <td>
 <code><a href="../reference/ensemble_module.html">ensemble()</a></code> with <code><a href="../reference/reduce_majority.html">reduce_majority()</a></code>
@@ -247,14 +258,14 @@ not yet a dedicated module</td>
 <code><a href="../reference/reduce_best_by_metric.html">reduce_best_by_metric()</a></code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>dspy.KNN</code></td>
 <td>
 <code>KNNFewShot</code> teleprompter / KNN module</td>
 <td>Bring-your-own vectorizer (e.g.,
 <code>ragnar::embed_openai()</code>)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Retrieval (custom functions)</td>
 <td>
 <code><a href="../reference/rag_module.html">rag_module()</a></code> + ragnar</td>
@@ -262,6 +273,21 @@ not yet a dedicated module</td>
 </tr>
 </tbody>
 </table>
+<p>For ProgramOfThought, CodeAct, and RLM, <code>runner</code> and
+<code>interpreter_factory</code> are mutually exclusive and one is
+required. A direct <code>runner</code> is caller-owned: dsprrr reuses
+the object across invocations and never closes it, while the backend
+determines whether execution state persists and whether reset is
+available. An <code>interpreter_factory</code> is a zero-argument
+function called once per invocation; its fresh runner is owned by dsprrr
+and closed exactly once when that invocation ends, including on failure.
+This mirrors DSPy 3.3’s lifecycle while retaining an explicit
+caller-owned option for R workflows.</p>
+<p>Executable Flex accepts only <code>interpreter_factory</code>, never
+a caller-owned runner, so each call has isolated bridge state. Its
+default <code>require_sandbox = TRUE</code> rejects trusted-input-only
+runners. The declarative JSON mode remains the resource-free default and
+needs no interpreter.</p>
 <p>One notable difference: DSPy 3.0 <em>removed</em>
 <code>dspy.Assert</code>/<code>dspy.Suggest</code> in favor of
 <code>BestOfN</code>/<code>Refine</code>. dsprrr keeps both styles:
@@ -318,9 +344,15 @@ vs. the full introspective algorithm</td>
 <tr class="even">
 <td><code>GEPA</code></td>
 <td><code>GEPA</code></td>
-<td>Adapted (“GEPA-lite”): reflective mutation + Pareto selection;
-supports feedback metrics via <code><a href="../reference/metric_with_feedback.html">metric_with_feedback()</a></code>; no
-per-component selection or inference-time search yet</td>
+<td>Adapted: reflective mutation and validated complete-program
+candidates for ordinary and Flex programs. dsprrr separates trainset
+discovery from valset selection, combines validation-example winners
+with the multi-metric Pareto front, supports
+round-robin/budget-atomic-all/custom component selection, and records
+immediate lineage, attempted merges, per-example scores/winners, and
+optional retained outputs. Cached subsample merge acceptance,
+fine-grained resume, and built-in experiment trackers remain
+different</td>
 </tr>
 <tr class="odd">
 <td><code>COPRO</code></td>
@@ -345,26 +377,18 @@ per-component selection or inference-time search yet</td>
 backend)</td>
 </tr>
 <tr class="odd">
-<td>Experimental <code>Flex</code>
-</td>
-<td>—</td>
-<td>No analogue. dsprrr’s agentic harnesses may edit validated
-instruction and template fields, but they do not optimize arbitrary R
-source, module structure, or graph topology</td>
-</tr>
-<tr class="even">
 <td><code>BootstrapFinetune</code></td>
 <td>—</td>
 <td>Not implemented (planned); dsprrr currently optimizes prompts, not
 weights</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>
 <code>GRPO</code> (RL via Arbor)</td>
 <td>—</td>
 <td>Not implemented</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>
 <code>BootstrapFewShotWithOptuna</code>,
 <code>AvatarOptimizer</code>, <code>InferRules</code>
@@ -372,7 +396,7 @@ weights</td>
 <td>—</td>
 <td>Niche/legacy in DSPy; not planned</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>—</td>
 <td>
 <code>GridSearchTeleprompter</code>,
@@ -381,20 +405,20 @@ weights</td>
 <td>dsprrr addition: tidymodels-style grid search over module
 parameters</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>—</td>
 <td><code>Omni</code></td>
 <td>dsprrr addition: independent best-of exploration plus a fresh
 continuation optimizer, with common validation scoring and optional
 mirai concurrency</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>—</td>
 <td><code>AutoResearch</code></td>
 <td>dsprrr addition: persistent research-agent loop over validated,
 jointly editable module snapshots with sandboxed R analysis</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>—</td>
 <td><code>MetaHarness</code></td>
 <td>dsprrr addition: fresh batch proposers plus host-owned frontier
@@ -593,7 +617,10 @@ a complete package-wide invocation record is still planned</td>
 <code>acall</code>/<code>aforward</code>, <code>asyncify</code>
 </td>
 <td>
-<code><a href="../reference/run_async.html">run_async()</a></code> with promises</td>
+<code><a href="../reference/run_async.html">run_async()</a></code> with promises for ordinary Predict modules
+and isolated background workflows for factory-backed ProgramOfThought,
+CodeAct, and RLM. Caller-owned interpreters and specialized streaming
+remain rejected rather than shared or bypassed</td>
 </tr>
 <tr class="odd">
 <td>Streaming</td>
@@ -601,8 +628,10 @@ a complete package-wide invocation record is still planned</td>
 <code>streamify()</code> + <code>StreamListener</code>
 </td>
 <td>
-<code><a href="../reference/run_stream.html">run_stream()</a></code> + <code><a href="../reference/stream_listener.html">stream_listener()</a></code>; token
-streaming for single string fields, status events per pipeline step</td>
+<code><a href="../reference/run_stream.html">run_stream()</a></code> + <code><a href="../reference/stream_listener.html">stream_listener()</a></code>; one-shot
+fallback preserves specialized <code>forward()</code> semantics, while
+direct token streaming is limited to ordinary Predict steps and emits
+status events per pipeline step</td>
 </tr>
 <tr class="even">
 <td>Usage tracking</td>
@@ -617,7 +646,8 @@ streaming for single string fields, status events per pipeline step</td>
 <td><code>Evaluate(num_threads = ...)</code></td>
 <td>
 <code>evaluate(.parallel = TRUE)</code> via mirai or ellmer’s native
-parallelism</td>
+parallelism. Declarative zero/one-step Flex is supported; executable and
+multi-step Flex currently require sequential rows</td>
 </tr>
 <tr class="even">
 <td>Saving programs</td>
@@ -683,18 +713,15 @@ sweeps.</li>
 <p>In rough priority order, based on the stable DSPy 3.3 runtime:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Fresh interpreter factories for code-executing
-modules</strong>: DSPy 3.3 creates and tears down an interpreter per
-invocation. dsprrr’s ProgramOfThought, CodeAct, and RLM modules
-currently retain the configured runner, so persistent backends must be
-reset between logically isolated jobs and must not be shared by
-concurrent calls. A factory API must also define teardown and
-whole-program artifact semantics before it can be a safe default.</li>
-<li>
-<strong>Flex-style structural optimization</strong>: there is no
-safe analogue for optimizer-authored R source or arbitrary
-graph-topology changes. Existing harnesses deliberately accept only
-allowlisted instruction and template edits.</li>
+<strong>Remaining Flex parity</strong>: dsprrr now supports complete
+interpreter-backed R source, deterministic computation, control flow,
+explicit host tools, the DSPy Flex primitive family, separate runtime
+predictor/tool-call limits, and GEPA source search. It intentionally
+requires an explicit interpreter factory rather than selecting a default
+sandbox, uses a top-level R <code>forward()</code> function rather than
+a Python module class, and cannot port source between the two.
+Concurrent executable evaluation, fine-grained checkpoint resume, and
+GEPA’s cached subsample merge-acceptance gate remain unimplemented.</li>
 <li>
 <strong>One package-wide invocation/result contract</strong>
 carrying native turns, usage, cost, cache state, timing, and normalized
@@ -707,9 +734,9 @@ provider telemetry.</li>
 <strong>Native reasoning-trace capture</strong> as a typed output
 (analogous to <code>dspy.Reasoning</code>).</li>
 <li>
-<strong>Joint multi-step optimization for instruction
-optimizers</strong> (MIPROv2, GEPA per-component selection); demo
-bootstrapping is already joint.</li>
+<strong>Joint multi-step optimization for other instruction
+optimizers</strong> (including MIPROv2); demo bootstrapping is already
+joint and GEPA now selects complete-program components explicitly.</li>
 <li>
 <strong>Adapter-style fallbacks</strong> for models with weak
 structured-output support (analogous to

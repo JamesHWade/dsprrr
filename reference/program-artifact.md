@@ -11,7 +11,12 @@ Callables and runtime objects are never captured implicitly. Supply a
 named `registry` to store stable IDs, or set `trusted = TRUE` to embed
 them. Embedded values are restored only when `trusted = TRUE` is also
 supplied while loading. Registry IDs are the recommended contract for
-tools, custom functions, retrievers, stores, and code runners.
+tools, custom functions, retrievers, stores, code runners, and
+interpreter factories. Format version 4 records exactly one runner or
+factory for each code-executing module without invoking a factory during
+write or restore. Valid version 3 runner-only manifests are checked
+against their original schema and integrity digest, then upgraded in
+memory; other historical versions are rejected.
 
 Declarative ellmer text, JSON, inline/remote image, and PDF content is
 stored through a closed codec. Remote content URLs must be stable HTTPS
@@ -80,7 +85,7 @@ artifact <- program_artifact(mod)
 restored <- restore_module_config(artifact)
 #> ✔ Restored program artifact
 #> ℹ Root module: <PredictModule>
-#> ℹ Artifact version: 3
+#> ℹ Artifact version: 4
 
 path <- tempfile(fileext = ".rds")
 save_program(mod, path)

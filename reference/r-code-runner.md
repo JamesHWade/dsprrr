@@ -29,11 +29,27 @@ container or OS-level sandbox.
 
 Code-executing modules accept any runner that implements the dsprrr
 runner protocol. A runner must expose `execute(code, context = list())`
-and `policy()` methods. `policy()` returns a named list containing at
-least `backend` (character), `trust` (character), and `sandboxed`
-(logical). `execute()` returns a list with `success`, `result`,
-`stdout`, `stderr`, `messages`, `warnings`, `error`, and `duration_ms`
-fields.
+and `policy()` methods. `policy()` returns a uniquely named list
+containing at least `backend` (character), `trust` (character), and
+`sandboxed` (logical). `execute()` returns one uniquely named list.
+`success` and `result` are required. Missing `stdout`, `stderr`,
+`messages`, and `warnings` fields are normalized to empty strings, and
+missing `duration_ms` is normalized to `NA`. A failed result must
+include a non-empty `error`. Its `error_type` is either `"execution"`
+for code the model may repair or `"interpreter"` for a terminal
+process/protocol failure. Legacy runners that omit `error_type` are
+treated as reporting a repairable execution failure. A successful result
+may omit `error` and `error_type`.
+
+Code-executing modules accept exactly one runtime source. Passing
+`runner` retains that caller-owned object and never closes it. Passing a
+zero-argument `interpreter_factory` creates one fresh invocation-owned
+runner. Factory results may implement idempotent
+[`start()`](https://rdrr.io/r/stats/start.html) and must implement
+idempotent terminal `shutdown()` or its compatibility alias
+[`close()`](https://rdrr.io/r/base/connections.html). dsprrr starts a
+factory runner before use and shuts it down exactly once on success,
+error, or interrupt.
 
 ## Examples
 
