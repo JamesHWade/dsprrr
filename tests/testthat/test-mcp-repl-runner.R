@@ -113,6 +113,32 @@ test_that("mcp_repl_input compresses large requests without changing them", {
   expect_false(exists(".context", envir = .GlobalEnv, inherits = FALSE))
 })
 
+test_that("mcp_repl_input preserves fitting high-entropy requests", {
+  withr::local_seed(125L)
+  alphabet <- strsplit(
+    paste0(
+      "!#$%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      "[]^_abcdefghijklmnopqrstuvwxyz{|}~"
+    ),
+    "",
+    fixed = TRUE
+  )[[1L]]
+  payload <- paste(sample(alphabet, 6040L, replace = TRUE), collapse = "")
+  code <- paste0("#", payload, "\n1 + 1")
+  expected <- paste0(
+    '.context <- jsonlite::fromJSON("[]", simplifyVector = FALSE)\n',
+    code,
+    "\n"
+  )
+
+  expect_gt(nchar(expected, type = "bytes"), 6000L)
+  expect_lte(
+    dsprrr:::mcp_repl_request_bytes(expected),
+    dsprrr:::.mcp_repl_request_limit_bytes
+  )
+  expect_identical(dsprrr:::mcp_repl_input(code, list()), expected)
+})
+
 test_that("mcp_repl_input rejects oversized encoded requests before transport", {
   calls <- 0L
   repl <- function(input, timeout_ms) {
@@ -690,6 +716,100 @@ test_that("authenticated RLM traffic fails closed on file previews", {
 
   expect_identical(ordinary$success, TRUE)
   expect_identical(ordinary$result, preview)
+})
+
+test_that("Flex normal inline control is decoded before display truncation", {
+  encode_frame <- function(
+    nonce,
+    kind = "final",
+    payload = list(output = list(answer = "ok"))
+  ) {
+    envelope <- list(
+      .dsprrr_flex_control = TRUE,
+      version = 1L,
+      nonce = nonce,
+      kind = kind,
+      payload = payload
+    )
+    json <- jsonlite::toJSON(
+      envelope,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      digits = NA
+    )
+    paste0(
+      dsprrr:::.flex_code_control_prefix,
+      gsub(
+        "[[:space:]]",
+        "",
+        jsonlite::base64_enc(charToRaw(as.character(json)))
+      )
+    )
+  }
+
+  nonce <- "current-step"
+  frame <- encode_frame(nonce)
+  raw_text <- paste(strrep("noise", 20L), frame, sep = "\n")
+  repl <- function(input, timeout_ms) {
+    list(result = list(content = list(list(type = "text", text = raw_text))))
+  }
+  runner <- mcp_repl_runner(repl = repl, max_output_chars = 20L)
+
+  result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "flex",
+    .control_max_bytes = runner$control_frame_limit
+  )
+
+  expect_true(result$success)
+  expect_identical(result$result$.dsprrr_flex_control, TRUE)
+  expect_identical(result$result$nonce, nonce)
+  expect_identical(result$result$payload$output$answer, "ok")
+  expect_match(result$stdout, "output truncated by dsprrr", fixed = TRUE)
+  expect_identical(
+    dsprrr:::flex_code_decode_control(list(result$result), nonce),
+    result$result
+  )
+
+  invalid <- list(
+    missing = "ordinary output",
+    stale = encode_frame("previous-step"),
+    truncated = substr(frame, 1L, nchar(frame) - 8L),
+    malformed = paste0(dsprrr:::.flex_code_control_prefix, "not-base64!"),
+    duplicate = paste(frame, frame, sep = "\n"),
+    unknown_kind = encode_frame(nonce, kind = "unknown"),
+    non_list_payload = encode_frame(nonce, payload = "invalid"),
+    oversized = encode_frame(
+      nonce,
+      payload = list(output = list(answer = strrep("x", 2000L)))
+    )
+  )
+  for (name in names(invalid)) {
+    raw_text <- invalid[[name]]
+    repl <- function(input, timeout_ms) {
+      list(result = list(content = list(list(type = "text", text = raw_text))))
+    }
+    runner <- mcp_repl_runner(repl = repl, max_output_chars = 100000L)
+    max_bytes <- if (identical(name, "oversized")) {
+      200L
+    } else {
+      runner$control_frame_limit
+    }
+
+    result <- runner$execute(
+      "invisible(NULL)",
+      .control_nonce = nonce,
+      .control_protocol = "flex",
+      .control_max_bytes = max_bytes
+    )
+
+    expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
+    expect_false(result$success, info = name)
+    expect_null(result$result, info = name)
+  }
 })
 
 test_that("Flex recovers one bounded current-step frame from file previews", {

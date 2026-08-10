@@ -134,9 +134,11 @@ First development changelog. dsprrr is experimental; the API may change.
 
 * Larger executable Flex requests now cross `mcp_repl_runner()` reliably.
   dsprrr realizes `mcptools` wrapper arguments before invocation and compacts
-  large host-generated requests before transport. A plain file preview is
-  accepted only when it contains one bounded current-step Flex frame;
-  ambiguous previews and all RLM previews still fail closed.
+  only host-generated requests that exceed the wire bound, preserving fitting
+  high-entropy requests. Flex control frames are decoded from raw inline output
+  before display truncation. A plain file preview is accepted only when it
+  contains one bounded current-step Flex frame; malformed inline frames,
+  ambiguous previews, and all RLM previews still fail closed.
 
 * Metric correctness and composition are stricter: token F1 uses multiset
   overlap, numeric field equality no longer fails solely because one value is

@@ -16,12 +16,13 @@
 #' conservative and can only fail closed; dsprrr never follows a disclosed
 #' sandbox file path from the host process.
 #'
-#' Executable Flex may recover a plain file preview only when its raw response
-#' contains exactly one bounded control frame for the current replay step. The
-#' frame remains untrusted and is still subject to Flex's host-side request,
+#' Executable Flex decodes one bounded current-step frame from raw output before
+#' display truncation. It may also recover that frame from a plain file preview.
+#' The frame remains untrusted and is still subject to Flex's host-side request,
 #' budget, and output validation. Ambiguous previews, pagers, bundles, and MCP
-#' errors fail closed. Large host-generated requests are compressed before
-#' transport and rejected before sending if they still exceed the safe bound.
+#' errors fail closed. Host-generated requests that exceed the wire bound are
+#' compressed before transport and rejected before sending if they still do not
+#' fit.
 #'
 #' @details
 #' By default, `mcp_repl_runner()` starts `mcp-repl` through
@@ -696,17 +697,27 @@ McpReplRunner <- R6::R6Class(
       } else {
         NULL
       }
-      preview_control <- NULL
-      if (
-        identical(control_protocol, "flex") &&
-          identical(transport_issue, "files")
-      ) {
-        preview_control <- mcp_repl_inline_flex_preview(
-          raw_text,
-          nonce = .control_nonce,
-          max_bytes = control_max_bytes
-        )
-        if (!is.null(preview_control)) {
+      flex_control <- NULL
+      if (identical(control_protocol, "flex")) {
+        flex_control <- if (identical(transport_issue, "files")) {
+          mcp_repl_inline_flex_preview(
+            raw_text,
+            nonce = .control_nonce,
+            max_bytes = control_max_bytes
+          )
+        } else if (is.null(transport_issue)) {
+          mcp_repl_inline_flex_control(
+            raw_text,
+            nonce = .control_nonce,
+            max_bytes = control_max_bytes
+          )
+        } else {
+          NULL
+        }
+        if (
+          !is.null(flex_control) &&
+            identical(transport_issue, "files")
+        ) {
           transport_issue <- NULL
         }
       }
@@ -737,12 +748,19 @@ McpReplRunner <- R6::R6Class(
         ))
       }
 
-      control_value <- if (!is.null(preview_control)) {
-        preview_control
+      control_value <- if (identical(control_protocol, "flex")) {
+        flex_control
       } else if (identical(control_protocol, "rlm")) {
         decode_rlm_control(raw_text, .control_nonce)
       } else {
         NULL
+      }
+      if (identical(control_protocol, "flex") && is.null(control_value)) {
+        return(mcp_repl_transport_error_result(
+          "flex-control",
+          stdout = text,
+          duration_ms = duration_ms
+        ))
       }
       list(
         success = TRUE,
@@ -922,7 +940,6 @@ mcp_repl_timeout_ms <- function(timeout) {
   ))
 }
 
-.mcp_repl_compress_input_bytes <- 6000L
 .mcp_repl_request_limit_bytes <- 7000L
 
 mcp_repl_input <- function(code, context) {
@@ -942,14 +959,11 @@ mcp_repl_input <- function(code, context) {
     code,
     "\n"
   )
-  input_bytes <- nchar(input, type = "bytes")
   request_bytes <- mcp_repl_request_bytes(input)
-  if (
-    input_bytes <= .mcp_repl_compress_input_bytes &&
-      request_bytes <= .mcp_repl_request_limit_bytes
-  ) {
+  if (request_bytes <= .mcp_repl_request_limit_bytes) {
     return(input)
   }
+  input_bytes <- nchar(input, type = "bytes")
 
   compressed <- memCompress(charToRaw(enc2utf8(input)), type = "gzip")
   token <- gsub(
@@ -1050,27 +1064,9 @@ mcp_repl_control_max_bytes <- function(max_bytes, runner_limit) {
   as.integer(min(max_bytes, runner_limit))
 }
 
-mcp_repl_inline_flex_preview <- function(text, nonce, max_bytes) {
+mcp_repl_inline_flex_control <- function(text, nonce, max_bytes) {
   text <- paste(text %||% "", collapse = "\n")
   if (!nzchar(text)) {
-    return(NULL)
-  }
-
-  # Only mcp-repl's plain transcript-file marker is recoverable. Ordered
-  # bundles, image bundles, write failures, and middle-truncated previews may
-  # omit or reorder output and therefore stay fail-closed.
-  if (
-    grepl("...[middle truncated;", text, fixed = TRUE) ||
-      grepl("bundle", tolower(text), fixed = TRUE)
-  ) {
-    return(NULL)
-  }
-  file_pattern <- "\\.\\.\\.\\[full output: [^\\r\\n\\]]+\\]\\.\\.\\."
-  file_markers <- regmatches(
-    text,
-    gregexpr(file_pattern, text, perl = TRUE)
-  )[[1L]]
-  if (length(file_markers) < 1L) {
     return(NULL)
   }
 
@@ -1127,6 +1123,30 @@ mcp_repl_inline_flex_preview <- function(text, nonce, max_bytes) {
     return(NULL)
   }
   envelope
+}
+
+mcp_repl_inline_flex_preview <- function(text, nonce, max_bytes) {
+  text <- paste(text %||% "", collapse = "\n")
+
+  # Only mcp-repl's plain transcript-file marker is recoverable. Ordered
+  # bundles, image bundles, write failures, and middle-truncated previews may
+  # omit or reorder output and therefore stay fail-closed.
+  if (
+    grepl("...[middle truncated;", text, fixed = TRUE) ||
+      grepl("bundle", tolower(text), fixed = TRUE)
+  ) {
+    return(NULL)
+  }
+  file_pattern <- "\\.\\.\\.\\[full output: [^\\r\\n\\]]+\\]\\.\\.\\."
+  file_markers <- regmatches(
+    text,
+    gregexpr(file_pattern, text, perl = TRUE)
+  )[[1L]]
+  if (length(file_markers) < 1L) {
+    return(NULL)
+  }
+
+  mcp_repl_inline_flex_control(text, nonce, max_bytes)
 }
 
 mcp_repl_normalize_response <- function(response) {
@@ -1277,6 +1297,10 @@ mcp_repl_transport_error_result <- function(
     `control-frame-limit` = paste(
       "the authenticated RLM control frame exceeded mcp-repl's safe inline",
       "transport limit"
+    ),
+    `flex-control` = paste(
+      "mcp-repl returned executable Flex output whose control frame",
+      "could not be verified"
     ),
     "authenticated RLM output could not be verified"
   )
