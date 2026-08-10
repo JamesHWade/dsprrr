@@ -32,9 +32,10 @@ currently propagate the required Codex sandbox metadata.}
 \item{max_output_chars}{Maximum number of output characters returned to the
 optimizer.}
 
-\item{oversized_output}{mcp-repl oversized-output mode. During authenticated
-RLM traffic, a detected oversized-output preview fails the iteration;
-dsprrr attempts to reset active pager state before returning the failure.}
+\item{oversized_output}{mcp-repl oversized-output mode. RLM previews fail
+closed. Executable Flex accepts only one bounded current-step frame in a
+plain file preview. dsprrr attempts to reset active pager state before
+returning a failure.}
 
 \item{extra_args}{Reserved for future vetted mcp-repl options. It must be
 empty because arbitrary server flags can weaken the managed sandbox policy.}
@@ -57,6 +58,13 @@ iteration instead of accepting an unverifiable partial control frame. These
 markers are plain text in the upstream protocol, so detection is necessarily
 conservative and can only fail closed; dsprrr never follows a disclosed
 sandbox file path from the host process.
+
+Executable Flex may recover a plain file preview only when its raw response
+contains exactly one bounded control frame for the current replay step. The
+frame remains untrusted and is still subject to Flex's host-side request,
+budget, and output validation. Ambiguous previews, pagers, bundles, and MCP
+errors fail closed. Large host-generated requests are compressed before
+transport and rejected before sending if they still exceed the safe bound.
 }
 \details{
 By default, \code{mcp_repl_runner()} starts \code{mcp-repl} through

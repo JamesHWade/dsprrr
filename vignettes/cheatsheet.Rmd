@@ -306,7 +306,7 @@ flowchart TB
   Start -->|Exact computation| POT["type = program_of_thought"]
   Start -->|Tools plus R code| CodeAct["type = codeact"]
   Start -->|Explore large context| RLM["type = rlm"]
-  Start -->|Vary predictor structure| Flex["type = flex (experimental)"]
+  Start -->|Optimize how the task executes| Flex["type = flex (experimental)"]
 ```
 
 | Type | Class | Use Case |
@@ -318,7 +318,7 @@ flowchart TB
 | `"program_of_thought"` | `ProgramOfThoughtModule` | Generate and execute R code |
 | `"codeact"` | `CodeActModule` | Combine tools and R code |
 | `"rlm"` | `RLMModule` | Explore large context through a REPL |
-| `"flex"` | `FlexModule` | Validated JSON graph or interpreter-backed R source (experimental) |
+| `"flex"` | `FlexModule` | Optimize predictor, R-logic, and tool strategy (experimental) |
 
 ### Code Runner Ownership
 
@@ -344,31 +344,21 @@ backend-specific.
 ```{r flex-cheatsheet}
 #| eval: false
 program <- flex("question -> answer")
-program$module_src       # Canonical, read-only JSON
+program$module_src       # Validated, read-only JSON
 program$bind(candidate)  # Validate and replace transactionally
 
 code_program <- flex(
   "question -> answer",
   module_src = "forward <- function(question) Prediction(answer = question)",
-  interpreter_factory = my_sandboxed_runner,
+  interpreter_factory = function() mcp_repl_runner(timeout = 30),
   source_format = "r"
-)
-
-optimized <- compile(
-  GEPA(metric = metric_exact_match(field = "answer"), seed = 42L),
-  program,
-  trainset = question_answer_data,
-  .llm = llm
 )
 ```
 
-JSON Flex version 1 permits Predict and Chain-of-Thought graphs. Executable
-Flex adds complete R `forward()` source, deterministic control flow, the DSPy
-Flex primitive family, and named host tools behind a fresh interpreter and a
-versioned bridge. `max_tool_calls` separately bounds privileged host calls.
-GEPA validates complete candidate sources and selects
-parents from validation-example winners with component selection and lineage
-metadata kept separately.
+Use JSON Flex for a bounded Predict/Chain-of-Thought graph. Use executable Flex
+when GEPA may need R control flow, dynamic predictors, or named tools; generated
+source requires a fresh sandboxed interpreter. See [Flex: Optimize the Whole
+Program](flex-optimization.html).
 
 ---
 

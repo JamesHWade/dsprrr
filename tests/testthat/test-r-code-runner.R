@@ -53,6 +53,42 @@ test_that("code runner protocol supports external sandbox backends", {
   )
 })
 
+test_that("execute_code_runner forwards supported control metadata", {
+  observed <- NULL
+  runner <- list(
+    execute = function(
+      code,
+      context = list(),
+      .control_nonce = NULL,
+      .control_protocol = NULL,
+      .control_max_bytes = NULL
+    ) {
+      observed <<- list(
+        nonce = .control_nonce,
+        protocol = .control_protocol,
+        max_bytes = .control_max_bytes
+      )
+      list(success = TRUE, result = code)
+    },
+    policy = function() {
+      list(backend = "test", trust = "test", sandboxed = TRUE)
+    }
+  )
+
+  result <- dsprrr:::execute_code_runner(
+    runner,
+    "1 + 1",
+    .control_nonce = "step-1",
+    .control_protocol = "flex",
+    .control_max_bytes = 2048L
+  )
+
+  expect_identical(result$result, "1 + 1")
+  expect_identical(observed$nonce, "step-1")
+  expect_identical(observed$protocol, "flex")
+  expect_identical(observed$max_bytes, 2048L)
+})
+
 test_that("code runner protocol validates policy metadata", {
   incomplete <- list(
     execute = function(code, context = list()) NULL,

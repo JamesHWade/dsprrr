@@ -426,6 +426,94 @@ test_that("Flex proposer describes the executable R DSL and host tools", {
   )
 })
 
+test_that("GEPA Flex tool contracts distinguish ToolDefs from functions", {
+  ordinary <- dsprrr:::gepa_flex_tool_contract(
+    function(query, limit = 5L) query,
+    "ordinary"
+  )
+  tool <- ellmer::tool(
+    function(query, limit = 5L) query,
+    name = "lookup",
+    description = "Look up records.",
+    arguments = list(
+      query = ellmer::type_string(description = "Search terms."),
+      limit = ellmer::type_integer(
+        description = "Maximum records.",
+        required = FALSE
+      )
+    )
+  )
+  contract <- dsprrr:::gepa_flex_tool_contract(tool, "lookup")
+
+  expect_identical(ordinary$kind, "function")
+  expect_identical(ordinary$arguments, c("query", "limit"))
+  expect_identical(ordinary$required, "query")
+  expect_identical(ordinary$defaults, list(limit = "5L"))
+  expect_identical(contract$name, "lookup")
+  expect_identical(contract$kind, "tool_def")
+  expect_identical(contract$description, "Look up records.")
+  expect_identical(contract$arguments_schema$type, "object")
+  expect_identical(
+    contract$arguments_schema$properties$query,
+    list(type = "string", description = "Search terms.")
+  )
+  expect_identical(
+    contract$arguments_schema$properties$limit,
+    list(type = "integer", description = "Maximum records.")
+  )
+  expect_identical(contract$arguments_schema$required, "query")
+  expect_identical(contract$arguments_schema$additionalProperties, FALSE)
+})
+
+test_that("Flex proposer includes ToolDef metadata in its prompt", {
+  source <- paste(
+    "forward <- function(question) {",
+    "  Prediction(answer = lookup(query = question))",
+    "}",
+    sep = "\n"
+  )
+  tool <- ellmer::tool(
+    function(query) query,
+    name = "lookup",
+    description = "Look up records by query.",
+    arguments = list(
+      query = ellmer::type_string(description = "Search terms to look up.")
+    )
+  )
+  program <- suppressWarnings(flex(
+    "question -> answer",
+    module_src = source,
+    tools = list(lookup = tool),
+    interpreter_factory = r_code_runner,
+    source_format = "r",
+    require_sandbox = FALSE
+  ))
+  chat <- gepa_flex_test_chat(list(module_src = source))
+
+  result <- dsprrr:::gepa_propose_flex_source(
+    program,
+    list(),
+    .llm = chat
+  )
+
+  expect_identical(result$status, "proposed")
+  prompt <- chat$prompts()[[1L]]
+  expect_match(prompt, '"kind":"tool_def"', fixed = TRUE)
+  expect_match(
+    prompt,
+    '"description":"Look up records by query."',
+    fixed = TRUE
+  )
+  expect_match(prompt, '"arguments_schema":{"type":"object"', fixed = TRUE)
+  expect_match(
+    prompt,
+    '"description":"Search terms to look up."',
+    fixed = TRUE
+  )
+  expect_match(prompt, '"required":"query"', fixed = TRUE)
+  expect_match(prompt, '"additionalProperties":false', fixed = TRUE)
+})
+
 test_that("nested Flex proposals label component and root-program evidence", {
   program <- gepa_flex_test_program()
   target <- named_modules(program)[["$/steps/flexible"]]

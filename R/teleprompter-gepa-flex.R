@@ -791,6 +791,24 @@ gepa_signature_contract <- function(signature) {
 }
 
 gepa_flex_tool_contract <- function(tool, name) {
+  if (
+    inherits(tool, "ellmer::ToolDef") ||
+      inherits(tool, "ToolDef")
+  ) {
+    props <- tryCatch(S7::props(tool), error = function(error) list())
+    arguments <- props$arguments %||% NULL
+    return(list(
+      name = name,
+      kind = "tool_def",
+      description = props$description %||% "",
+      arguments_schema = if (is.null(arguments)) {
+        NULL
+      } else {
+        ellmer_type_to_json_schema(arguments)
+      }
+    ))
+  }
+
   if (is.function(tool)) {
     tool_formals <- as.list(formals(tool))
     formal_names <- names(tool_formals)
@@ -814,19 +832,6 @@ gepa_flex_tool_contract <- function(tool, name) {
       defaults = Filter(Negate(is.null), defaults)
     ))
   }
-
-  props <- tryCatch(S7::props(tool), error = function(error) list())
-  arguments <- props$arguments %||% NULL
-  list(
-    name = name,
-    kind = "tool_def",
-    description = props$description %||% "",
-    arguments_schema = if (is.null(arguments)) {
-      NULL
-    } else {
-      ellmer_type_to_json_schema(arguments)
-    }
-  )
 }
 
 gepa_flex_contract <- function(module, program = module) {

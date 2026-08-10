@@ -372,7 +372,9 @@ execute_code_runner <- function(
   runner,
   code,
   context = list(),
-  .control_nonce = NULL
+  .control_nonce = NULL,
+  .control_protocol = NULL,
+  .control_max_bytes = NULL
 ) {
   execute_args <- list(code = code, context = context)
   execute_formals <- tryCatch(
@@ -380,11 +382,18 @@ execute_code_runner <- function(
     error = function(e) character()
   )
   accepts_dots <- "..." %in% execute_formals
-  if (
-    !is.null(.control_nonce) &&
-      (".control_nonce" %in% execute_formals || accepts_dots)
-  ) {
-    execute_args$.control_nonce <- .control_nonce
+  control_args <- list(
+    .control_nonce = .control_nonce,
+    .control_protocol = .control_protocol,
+    .control_max_bytes = .control_max_bytes
+  )
+  for (name in names(control_args)) {
+    if (
+      !is.null(control_args[[name]]) &&
+        (name %in% execute_formals || accepts_dots)
+    ) {
+      execute_args[[name]] <- control_args[[name]]
+    }
   }
   result <- tryCatch(
     do.call(runner$execute, execute_args),
