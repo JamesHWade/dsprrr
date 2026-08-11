@@ -1,11 +1,11 @@
 ---
-title: "Structural Optimization with Flex"
+title: "Flex: Optimize the Whole Program"
 description: >
-  Optimize safe declarative graphs or interpreter-backed R programs with
-  dsprrr's experimental Flex module.
+  Use Flex when optimization should decide which model calls, deterministic
+  code, or tools a task needs—not only rewrite a prompt.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Structural Optimization with Flex}
+  %\VignetteIndexEntry{Flex: Optimize the Whole Program}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,285 +19,417 @@ knitr::opts_chunk$set(
 )
 ```
 
-`flex()` is an experimental module whose complete implementation is one
-optimization parameter. It has two source modes:
+Most dsprrr optimizers improve the instructions or examples inside a program
+whose shape you chose. `flex()` makes the implementation itself optimizable.
+GEPA can change how many predictors run, add a deterministic branch, or call a
+tool you supplied.
 
-- `source_format = "json"` is the safe default: a bounded, versioned graph
-  parsed strictly as data; and
-- `source_format = "r"` is opt-in: complete R source evaluated only inside a
-  fresh runner returned by an explicit `interpreter_factory`.
+That extra freedom is useful when you can score the outcome but do not yet know
+the best decomposition. It is unnecessary when the workflow is already clear.
 
-The second mode brings deterministic computation, control flow, host tools,
-and dynamically selected predictors much closer to DSPy 3.3 Flex. It does not
-turn the host R session into an evaluation environment. Predictor and tool
-requests cross a versioned JSON bridge, generated source receives only a small
-guest DSL in a separate lexical environment, and typed outputs are checked
-again on the host.
+| What should change? | Use |
+|---|---|
+| Instructions or examples inside a known module | A regular module and teleprompter |
+| A workflow whose steps your team should own | An explicit pipeline |
+| The number or order of Predict and Chain-of-Thought steps | JSON Flex |
+| The choice among R logic, predictors, and selected tools | Executable Flex |
 
-## Start with the safe baseline
+## A router that learns when not to call a model
 
-With no `module_src`, `flex()` creates one Predict step over the outer
-signature:
+Suppose a support team routes tickets to four queues. Some tickets contain an
+incident code with a known owner. Others need language-model judgment.
 
-```{r baseline}
+A conventional predictor sends every ticket to the model. The Flex objective
+is more specific: keep routing accuracy, but avoid a predictor call when the
+incident catalog already contains the answer.
+
+### Define the task and its evidence
+
+Use separate training and validation rows during search, then reserve a holdout
+set for the final comparison:
+
+```{r router-data}
 library(dsprrr)
 
-program <- flex("question -> answer")
-program$module_src
-
-result <- run(
-  program,
-  question = "Why does ice float?",
-  .llm = ellmer::chat_openai()
+route_signature <- signature(
+  "ticket -> queue: enum('database', 'security', 'payments', 'identity')",
+  instructions = "Route each support ticket to its owning queue."
 )
-```
 
-The `module_src` active binding is read-only and canonical. Equivalent input
-JSON is normalized to one stable representation, which supports reliable
-fingerprints, comparisons, and optimizer candidates.
-
-## Describe a two-step plan
-
-Version 1 JSON source has exactly three top-level fields:
-
-- `schema_version`, currently the number `1`;
-- `steps`, an ordered array (which may be empty for an input-only program); and
-- `outputs`, a mapping for every output in the outer signature.
-
-Each step declares a unique `name`, an allowlisted `primitive`, a `signature`,
-and an `inputs` mapping. Optional `instructions` refine the step. Input and
-output references may point to an outer input (`$input.<field>`) or an output
-from an earlier step (`$step.<name>.<field>`).
-
-```{r two-step}
-source <- jsonlite::toJSON(
-  list(
-    schema_version = 1,
-    steps = list(
-      list(
-        name = "draft",
-        primitive = "chain_of_thought",
-        signature = "question -> draft",
-        instructions = "Work out the relevant causal mechanism.",
-        inputs = list(question = "$input.question")
-      ),
-      list(
-        name = "final",
-        primitive = "predict",
-        signature = "draft -> answer",
-        instructions = "Give a concise answer for a general reader.",
-        inputs = list(draft = "$step.draft.draft")
-      )
-    ),
-    outputs = list(answer = "$step.final.answer")
+train <- data.frame(
+  ticket = c(
+    "[INC-DB-17] checkout failures in us-east",
+    "Password reset links expire immediately",
+    "Duplicate charge after a plan upgrade",
+    "Queries time out after a schema migration"
   ),
-  auto_unbox = TRUE
+  queue = c(
+    "database", "identity", "payments", "database"
+  )
 )
 
-program <- flex(
-  "question -> answer",
-  module_src = source,
-  max_predictor_calls = 4
+validation <- data.frame(
+  ticket = c(
+    "[INC-SEC-9] unusual-login burst",
+    "Card charged twice for one invoice"
+  ),
+  queue = c("security", "payments")
+)
+
+holdout <- data.frame(
+  ticket = c(
+    "[INC-PAY-4] capture queue is growing",
+    "[INC-DB-17] replicas unavailable",
+    "[INC-SEC-9] login spray detected",
+    "Reset email arrives after its token expires",
+    "Renewal created two invoices",
+    "Read traffic fails after failover"
+  ),
+  queue = c(
+    "payments", "database", "security", "identity", "payments", "database"
+  )
 )
 ```
 
-Version 1 permits only `predict` and `chain_of_thought`. Step names and
-references follow a restricted grammar, references can only point backwards,
-and every step-signature input needs exactly one compatible binding while every
-outer output needs exactly one compatible mapping. A plan may reuse or ignore
-outer inputs, although runtime inputs must still match the outer signature.
-`max_predictor_calls` bounds graph size before execution.
-Version 1 supports ellmer string, number, integer, boolean, enum, array, and
-non-empty object field types. Opaque `TypeJsonSchema` values and empty objects
-are rejected explicitly; the IR does not guess whether an arbitrary JSON
-Schema is assignable.
+The catalog is an ordinary R closure wrapped in an ellmer tool definition. Its
+description tells GEPA what the tool returns; supplying it to Flex gives
+generated code one named capability rather than the rest of the host session.
 
-## Opt in to executable R source
+```{r router-tool}
+lookup_incident_fn <- local({
+  catalog <- c(
+    "INC-DB-17" = "database",
+    "INC-SEC-9" = "security",
+    "INC-PAY-4" = "payments"
+  )
 
-Executable Flex requires a zero-argument factory, not a shared runner. Each
-invocation gets a fresh runner and dsprrr closes it on success, failure, or
-interrupt. The default `require_sandbox = TRUE` also requires that runner's
-validated policy to advertise an enforced sandbox.
+  function(ticket) {
+    hit <- names(catalog)[vapply(
+      names(catalog),
+      grepl,
+      logical(1),
+      x = ticket,
+      fixed = TRUE
+    )]
+    if (!length(hit)) {
+      return(list(found = FALSE))
+    }
+    list(found = TRUE, queue = unname(catalog[[hit[[1L]]]]))
+  }
+})
 
-```{r executable}
-source <- paste(
-  "draft <- ChainOfThought('$outer', instructions = 'Solve carefully.')",
-  "forward <- function(question) {",
-  "  result <- draft(question = question)",
-  "  Prediction(answer = result$answer)",
-  "}",
+lookup_incident <- ellmer::tool(
+  lookup_incident_fn,
+  name = "lookup_incident",
+  description = paste(
+    "Find the owner of an incident code in a support ticket.",
+    "Returns list(found = FALSE) when no known code appears; otherwise",
+    "returns list(found = TRUE, queue = <owning queue>)."
+  ),
+  arguments = list(
+    ticket = ellmer::type_string(
+      description = "Complete support-ticket text."
+    )
+  )
+)
+```
+
+### Start with one predictor
+
+Executable Flex source defines a top-level `forward()` function. This baseline
+always calls one predictor, even for a ticket whose incident code is already in
+the catalog.
+
+```{r router-baseline}
+baseline_source <- paste(
+  "router <- Predict(\"$outer\", instructions = \"Choose the owning queue.\")",
+  "forward <- function(ticket) router(ticket = ticket)",
   sep = "\n"
 )
 
-program <- flex(
-  "question -> answer",
-  module_src = source,
-  interpreter_factory = my_sandboxed_runner,
-  source_format = "r"
+sandbox_factory <- function() mcp_repl_runner(timeout = 45)
+
+baseline <- flex(
+  route_signature,
+  module_src = baseline_source,
+  tools = list(lookup_incident = lookup_incident),
+  interpreter_factory = sandbox_factory,
+  source_format = "r",
+  max_predictor_calls = 1L,
+  max_tool_calls = 1L
 )
 ```
 
-The guest DSL exposes `Predict`, `ChainOfThought`, `ReAct`, `ReActV2`, `RLM`,
-`CodeAct`, `ProgramOfThought`, `Prediction`, and `Tool`. Constructors return
-callable functions. Signatures use `"$outer"` or ordinary string notation.
-No adapter, optimizer, package-loading, provider-configuration, nested Flex,
-or unrestricted host namespace is exposed.
-Plain functions are available as direct host calls and to `RLM`; `ReAct` and
-`CodeAct` receive only supplied ellmer ToolDef objects because provider-facing
-tools require an explicit description and argument schema.
+Install `mcptools` and [Posit
+mcp-repl](https://github.com/posit-dev/mcp-repl) before running this example:
 
-Named host tools retain their original closure environments and run on the
-host, outside the sandbox:
+```r
+install.packages("mcptools")
+# In a shell:
+# uv tool install posit-mcp-repl
+```
 
-```{r executable-tool}
-offset <- 5L
+mcp-repl's OS sandbox is the execution boundary for optimizer-authored R
+source.
 
-tool_program <- flex(
-  "value: integer -> result: integer",
-  module_src = paste(
-    "forward <- function(value) {",
-    "  Prediction(result = add_offset(value = value))",
-    "}",
-    sep = "\n"
-  ),
-  tools = list(add_offset = function(value) value + offset),
-  interpreter_factory = my_sandboxed_runner,
-  source_format = "r"
+### Score the answer and the work
+
+An exact-match metric alone cannot distinguish two correct programs. A
+trace-aware metric can. Here, a correct route scores `1`; a correct route that
+needed a predictor scores `0.9`; a wrong route scores `0`.
+
+```{r router-metric}
+route_metric <- metric_with_trace(
+  function(prediction, expected, program_trace) {
+    observed <- as.character(prediction$queue)
+    wanted <- as.character(expected$queue)
+    correct <- identical(observed, wanted)
+
+    calls <- program_trace$metadata$predictor_calls
+    if (is.null(calls)) {
+      calls <- 0L
+    }
+
+    list(
+      score = if (!correct) 0 else if (calls == 0L) 1 else 0.9,
+      feedback = if (!correct) {
+        sprintf("Expected '%s'; got '%s'.", wanted, observed)
+      } else if (calls > 0L) {
+        paste(
+          "Correct, but a predictor ran.",
+          "Prefer the incident catalog when it covers the ticket."
+        )
+      } else {
+        "Correct and deterministic."
+      }
+    )
+  },
+  field = "queue"
 )
 ```
 
-Treat host tools as privileged capabilities: the sandbox restricts generated
-source, not what an explicitly supplied host function can do. Bridge values
-must be JSON-compatible. `max_predictor_calls` limits bridged predictor calls;
-`max_tool_calls` independently bounds direct host-tool calls and defaults to
-100. Neither limits deterministic R statements. The current portable bridge
-replays guest source with immutable prior responses until it reaches a new
-request or final output; host predictor and tool side effects occur once, but
-deterministic guest statements before a request may run again. Keep those
-statements pure and loops explicitly bounded. Structured runner results carry
-large control values without stdout truncation. Text-only runners advertise a
-finite frame limit and fail with a typed size error before accepting a partial
-frame.
+### Optional: run a live search
 
-## Replace a plan transactionally
+The deterministic package test below is the reproducible proof. A live search
+also lets GEPA propose complete `module_src` candidates, but remote model output
+and runtime vary. Training rows generate feedback; validation rows decide which
+candidate survives. Keep the first run deliberately small and bounded:
 
-Use `bind()` to replace the active source:
-
-```{r bind}
-program$bind(source)
-program$module_src # The validated, canonical source is now active
-```
-
-dsprrr parses, validates, type-checks, and compiles the complete candidate
-before changing the module. If validation fails, the previous source and plan
-remain active. Direct assignment is rejected:
-
-```{r read-only}
-program$module_src <- source
-# Error: module_src is read-only; use bind()
-```
-
-Optimizer infrastructure can use
-`program$apply_optimization_params(list(module_src = candidate))` as the same
-transactional boundary. The module advertises its graph as an optimization
-parameter, but an optimizer only changes `module_src` if that optimizer
-explicitly supports structural candidates. Ordinary prompt optimization does
-not silently rewrite the plan.
-
-## Search complete programs with GEPA
-
-`GEPA()` explicitly supports both Flex source modes. For a program that
-contains Flex leaves, each Flex source is one complete component alongside
-ordinary predictor-instruction components. Source text is never spliced:
-dsprrr copies the program, validates and binds each complete source
-transactionally, then evaluates it through the selected Flex runtime.
-
-```{r gepa-flex}
-metric <- metric_exact_match(field = "answer")
-optimizer <- GEPA(
-  metric = metric,
-  population_size = 6L,
-  generations = 2L,
-  seed = 42L
-)
+```{r router-compile}
+llm <- ellmer::chat_openai(model = "gpt-5-mini")
 
 optimized <- compile(
-  optimizer,
-  program,
-  trainset = question_answer_data,
-  .llm = llm
+  GEPA(
+    metric = route_metric,
+    metric_threshold = 0.95,
+    population_size = 2L,
+    generations = 1L,
+    selection = "current_best",
+    seed = 20260810L,
+    track_best_outputs = TRUE,
+    verbose = FALSE
+  ),
+  baseline,
+  trainset = train,
+  valset = validation,
+  .llm = llm,
+  control = optimizer_control(
+    max_metric_calls = 30L,
+    max_provider_calls = 30L,
+    max_elapsed_seconds = 300,
+    num_threads = 1L,
+    progress = FALSE
+  )
 )
-
-optimized$module_src
-optimized$config$optimizer$component_semantics
 ```
 
-The dedicated source proposer sees the task objective, root and component
-signatures, field descriptions and schemas, source language, allowed
-primitives and tools, current complete source, row-aligned failures, metric
-feedback, and the predictor and host-tool call limits. Provider failures
-propagate instead of being
-disguised as unchanged candidates. Invalid source proposals receive aligned
-failure records for audit and budget accounting but are never selectable.
+Remote model output is stochastic, so a seed does not guarantee identical
+source. Judge the result on held-out behavior, not whether it reproduces one
+particular program string. The limits stop the search and return its best
+partial result after 30 metric calls, 30 provider calls, or five active minutes.
 
-DSPy/GEPA's validation frontier is the union of complete candidate programs
-that win on at least one validation example. dsprrr combines those winners with
-the multi-metric objective Pareto front when choosing parents. Components are
-selected for mutation with round-robin, budget-atomic all-component, or custom
-selection; they do not have separate Pareto frontiers. With a separate
-`valset`, training rows drive discovery/reflection and validation rows drive
-selection, winners, and retained outputs. dsprrr records stable candidate IDs,
-immediate parents and ancestry, aggregate and per-example scores, discovery
-evaluation counts, per-example winners, optional best outputs, attempted merge
-counts, and common-ancestor three-way merges. Fine-grained checkpoint resume
-and GEPA's cached subsample pre-acceptance gate for merges remain explicit
-differences.
+### Compare quality and calls
 
-Freezing a module removes its components from this search. If the complete
-graph has no mutable components, GEPA returns a fresh unchanged program without
-calling the proposer or evaluator and records
-`skip_reason = "no_mutable_components"` in optimizer metadata.
+Report ordinary accuracy separately from the efficiency objective:
 
-## Understand the safety boundary
+```{r router-evaluate}
+accuracy <- metric_exact_match(field = "queue")
 
-JSON Flex controls what predictors run and how typed values flow between them.
-It cannot:
+before <- evaluate(
+  baseline,
+  holdout,
+  metric = accuracy,
+  .llm = llm,
+  .parallel = FALSE,
+  .progress = FALSE
+)
+after <- evaluate(
+  optimized,
+  holdout,
+  metric = accuracy,
+  .llm = llm,
+  .parallel = FALSE,
+  .progress = FALSE
+)
 
-- evaluate R or Python expressions;
-- call arbitrary functions, tools, files, or network services;
-- construct module classes outside the allowlist;
-- reference a later step or create a cycle; or
-- exceed its source-size and predictor-call bounds.
+count_calls <- function(result, field) {
+  sum(vapply(result$metadata, function(metadata) {
+    value <- metadata[[field]]
+    if (is.null(value)) 0L else as.integer(value)
+  }, integer(1)))
+}
 
-Executable Flex deliberately can express control flow and call allowlisted
-capabilities, so its safety depends on the selected runner policy. `r_code_runner()`
-is a trusted-input subprocess runner and does not satisfy the default sandbox
-requirement. Set `require_sandbox = FALSE` only for source you trust.
+comparison <- data.frame(
+  program = c("baseline", "optimized"),
+  accuracy = c(before$mean_score, after$mean_score),
+  predictor_calls = c(
+    count_calls(before, "predictor_calls"),
+    count_calls(after, "predictor_calls")
+  ),
+  tool_calls = c(
+    count_calls(before, "tool_calls"),
+    count_calls(after, "tool_calls")
+  )
+)
+comparison
+```
 
-Flex runs synchronously. Native dataset concurrency is implemented for JSON
-sources with zero or one predictor step. Concurrent executable Flex and
-multi-step JSON requests fail before provider work; their per-row asynchronous
-execution engine is not implemented yet. Matching token-stream requests are
-also rejected because runtime-created predictors are not statically
-discoverable. One-shot `run_stream()` fallback still uses the ordinary
-`forward()` contract.
+The package's deterministic regressions fix the GEPA proposal and model
+responses. One compiles the baseline and selects the hybrid on disjoint
+training and validation rows; the other runs both reviewed programs on six
+held-out tickets:
 
-Program artifacts persist the source language and sandbox policy. Executable
-artifacts also store tools and the factory as registry-backed runtime values,
-so restoring them requires the same registry (or explicit trusted embedding)
-and never invokes a factory during serialization or restoration.
+| Reviewed program | Holdout accuracy | Predictor calls | Tool calls |
+|---|---:|---:|---:|
+| Baseline | 1.00 | 6 | 0 |
+| Hybrid | 1.00 | 3 | 3 |
 
-## Choose Flex deliberately
+That replay verifies proposal, selection, runtime, and call accounting; it is
+not a promise that every stochastic GEPA run will discover the same source. For
+a live run, accept the candidate only when held-out quality is at least as good
+and predictor calls fall:
 
-Use JSON Flex when the search question is a bounded topology choice, such as
-whether a task benefits from an intermediate draft. Use executable Flex when
-optimization genuinely needs coupled source edits across deterministic logic,
-control flow, tools, and predictors and you have an appropriate sandbox. Use a
-regular module when one known topology plus optimized instructions is enough;
-use an explicit pipeline when humans should own and review the topology.
+```{r router-acceptance}
+stopifnot(
+  after$mean_score >= before$mean_score,
+  count_calls(after, "predictor_calls") <
+    count_calls(before, "predictor_calls")
+)
+```
 
-DSPy Flex executes a Python module class and ships a default Deno/Pyodide
-interpreter. dsprrr Flex executes a top-level R `forward()` function and
-requires an explicit factory; source is not portable between the two
-languages. Because both APIs are experimental, persist `module_src`, runtime
-bindings, and package versions, then revalidate a candidate after upgrades.
+The reveal is simple: **Flex did not find a better prompt. It found that half
+the tickets did not need one.**
+
+## Read the program GEPA selected
+
+Always inspect executable source before promoting it. A useful candidate for
+this task has a deterministic catalog path and a predictor fallback:
+
+```{r router-winner}
+optimized$module_src
+```
+
+The deterministic replay selects this shape:
+
+```r
+fallback <- Predict(
+  "$outer",
+  instructions = "Route tickets without a known incident code."
+)
+forward <- function(ticket) {
+  if (grepl("INC-", ticket, fixed = TRUE)) {
+    hit <- lookup_incident(ticket = ticket)
+    if (isTRUE(hit$found)) {
+      return(Prediction(queue = hit$queue))
+    }
+  }
+  fallback(ticket = ticket)
+}
+```
+
+`module_src` is the program Flex optimized—not an explanation of what happened.
+The runtime trace supplies the evidence: predictor calls, tool calls, tokens,
+and the exact source used for each row. GEPA also records the winning candidate
+ID and validation score:
+
+```{r router-audit}
+optimized$config$optimizer$best_candidate_id
+optimized$config$optimizer$best_scores
+optimized$config$optimizer$per_val_instance_best_candidates
+```
+
+Persist callable tools and factories by registry name rather than embedding
+them in the artifact:
+
+```{r router-persist}
+board <- pins::board_folder("pins")
+router_registry <- list(
+  lookup_incident = lookup_incident,
+  sandbox_factory = sandbox_factory
+)
+
+pin_module_config(
+  board,
+  "issue-router-flex",
+  optimized,
+  registry = router_registry
+)
+
+restored <- pins::pin_read(board, "issue-router-flex") |>
+  restore_module_config(registry = router_registry)
+```
+
+Use the same registry names when restoring. Saving and restoring the artifact
+does not invoke the factory. The registry supplies executable authority, so
+version and review its definitions as code. Record the model, package versions,
+data split, metric, and seed beside the pin; pass the model again when running
+the restored fallback path.
+
+## Choose the smaller source language that fits
+
+Flex has two source modes because not every structural question needs code.
+
+| Mode | Use it when | Execution boundary |
+|---|---|---|
+| JSON (default) | GEPA may vary a bounded graph of Predict and Chain-of-Thought steps | Parsed and type-checked as data; no code interpreter |
+| R (opt-in) | Candidates need branches, deterministic computation, dynamic predictors, or named tools | Fresh runner from `interpreter_factory`; enforced sandbox required by default |
+
+JSON sources use backward references between ordered steps and map their final
+values to the outer signature. See [`flex()`](../reference/flex.html) for the
+schema and limits. Start there unless the optimization question truly needs R
+control flow or tools.
+
+Executable Flex exposes a small set of predictor constructors plus the named
+tools you supply. Those tools execute on the host and keep their closure
+environments, so treat each one as a privileged capability.
+
+`max_predictor_calls` limits predictor invocations across the bridge, and
+`max_tool_calls` limits direct host-tool requests. A single agentic predictor
+such as ReAct, CodeAct, or RLM can perform additional work internally; configure
+that primitive's own limits as well.
+
+The guest source runs again from the beginning after each bridged request while
+recorded host responses are replayed. Keep guest-side computation pure, avoid
+external side effects, and bound loops explicitly.
+
+Generated R must run in an enforced sandbox. `r_code_runner()` isolates a
+subprocess but is for source you already trust; do not disable
+`require_sandbox` for optimizer-authored code. Executable Flex is synchronous,
+so evaluate it with `.parallel = FALSE`; specialized token streaming is not
+available.
+
+## When Flex is the wrong tool
+
+Do not use Flex merely because a task contains more than one step. Prefer a
+regular module when prompt or demonstration optimization is enough. Prefer an
+explicit pipeline when people should design and review the workflow. If a
+decision is entirely deterministic and already known, write an R function.
+
+Use Flex for the unresolved middle: the outcome is measurable, several
+implementation strategies are plausible, and the choice of model calls, code,
+or tools is itself what you want to optimize.
+
+For algorithm details, see [Advanced
+Optimization](../articles/advanced-optimization.html). For intentional API
+differences and remaining gaps, see [dsprrr vs.
+DSPy](../articles/dspy-comparison.html).

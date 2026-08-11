@@ -16,6 +16,14 @@
 #' conservative and can only fail closed; dsprrr never follows a disclosed
 #' sandbox file path from the host process.
 #'
+#' Executable Flex decodes one bounded current-step frame from raw output before
+#' display truncation. It may also recover that frame from a plain file preview.
+#' The frame remains untrusted and is still subject to Flex's host-side request,
+#' budget, and output validation. Ambiguous previews, pagers, bundles, and MCP
+#' errors fail closed. Host-generated requests that exceed the wire bound are
+#' compressed before transport and rejected before sending if they still do not
+#' fit.
+#'
 #' @details
 #' By default, `mcp_repl_runner()` starts `mcp-repl` through
 #' [mcptools::mcp_tools()] with:
@@ -52,9 +60,10 @@
 #' @param timeout Maximum execution time in seconds.
 #' @param max_output_chars Maximum number of output characters returned to the
 #'   optimizer.
-#' @param oversized_output mcp-repl oversized-output mode. During authenticated
-#'   RLM traffic, a detected oversized-output preview fails the iteration;
-#'   dsprrr attempts to reset active pager state before returning the failure.
+#' @param oversized_output mcp-repl oversized-output mode. RLM previews fail
+#'   closed. Executable Flex accepts only one bounded current-step frame in a
+#'   plain file preview. dsprrr attempts to reset active pager state before
+#'   returning a failure.
 #' @param extra_args Reserved for future vetted mcp-repl options. It must be
 #'   empty because arbitrary server flags can weaken the managed sandbox policy.
 #'
@@ -598,7 +607,13 @@ McpReplRunner <- R6::R6Class(
       self$connection_owned <- isTRUE(connection_owned)
     },
 
-    execute = function(code, context = list(), .control_nonce = NULL) {
+    execute = function(
+      code,
+      context = list(),
+      .control_nonce = NULL,
+      .control_protocol = NULL,
+      .control_max_bytes = NULL
+    ) {
       private$assert_usable()
       if (!self$started) {
         self$start()
@@ -609,13 +624,42 @@ McpReplRunner <- R6::R6Class(
       if (!is.list(context)) {
         cli::cli_abort("{.arg context} must be a list")
       }
+      control_protocol <- mcp_repl_control_protocol(
+        .control_protocol,
+        .control_nonce
+      )
+      control_max_bytes <- mcp_repl_control_max_bytes(
+        .control_max_bytes,
+        self$control_frame_limit
+      )
 
-      input <- mcp_repl_input(code, context)
+      input <- tryCatch(
+        mcp_repl_input(code, context),
+        dsprrr_mcp_repl_input_size_error = identity
+      )
+      if (inherits(input, "dsprrr_mcp_repl_input_size_error")) {
+        result <- mcp_repl_error_result(
+          conditionMessage(input),
+          error_type = "execution"
+        )
+        result$input_bytes <- input$input_bytes
+        result$request_bytes <- input$request_bytes
+        result$request_limit <- input$request_limit
+        class(result) <- c(
+          "dsprrr_mcp_repl_input_size_error",
+          class(result)
+        )
+        return(result)
+      }
+      timeout_ms <- mcp_repl_timeout_ms(self$timeout)
       started_at <- Sys.time()
       response <- tryCatch(
-        self$repl(
-          input = input,
-          timeout_ms = mcp_repl_timeout_ms(self$timeout)
+        # mcptools-generated wrappers reconstruct their call from
+        # match.call(). Pass realized values so expressions that mention the
+        # R6 `self` binding are not re-evaluated outside this method frame.
+        do.call(
+          self$repl,
+          list(input = input, timeout_ms = timeout_ms)
         ),
         error = function(e) e
       )
@@ -648,10 +692,34 @@ McpReplRunner <- R6::R6Class(
         ))
       }
 
-      transport_issue <- if (!is.null(.control_nonce)) {
+      transport_issue <- if (!is.null(control_protocol)) {
         mcp_repl_rlm_transport_issue(raw_text, self$oversized_output)
       } else {
         NULL
+      }
+      flex_control <- NULL
+      if (identical(control_protocol, "flex")) {
+        flex_control <- if (identical(transport_issue, "files")) {
+          mcp_repl_inline_flex_preview(
+            raw_text,
+            nonce = .control_nonce,
+            max_bytes = control_max_bytes
+          )
+        } else if (is.null(transport_issue)) {
+          mcp_repl_inline_flex_control(
+            raw_text,
+            nonce = .control_nonce,
+            max_bytes = control_max_bytes
+          )
+        } else {
+          NULL
+        }
+        if (
+          !is.null(flex_control) &&
+            identical(transport_issue, "files")
+        ) {
+          transport_issue <- NULL
+        }
       }
       if (!is.null(transport_issue)) {
         if (identical(transport_issue, "pager")) {
@@ -680,11 +748,24 @@ McpReplRunner <- R6::R6Class(
         ))
       }
 
-      control_value <- decode_rlm_control(raw_text, .control_nonce)
+      control_value <- if (identical(control_protocol, "flex")) {
+        flex_control
+      } else if (identical(control_protocol, "rlm")) {
+        decode_rlm_control(raw_text, .control_nonce)
+      } else {
+        NULL
+      }
+      if (identical(control_protocol, "flex") && is.null(control_value)) {
+        return(mcp_repl_transport_error_result(
+          "flex-control",
+          stdout = text,
+          duration_ms = duration_ms
+        ))
+      }
       list(
         success = TRUE,
-        # Authenticated RLM frames are decoded before ordinary truncation. A
-        # caller that does not supply the internal nonce receives normal text.
+        # Control frames are decoded from raw output before display truncation.
+        # A caller without an internal control protocol receives normal text.
         result = control_value %||% text,
         stdout = text,
         stderr = "",
@@ -705,10 +786,11 @@ McpReplRunner <- R6::R6Class(
 
     reset = function() {
       private$assert_usable()
+      timeout_ms <- mcp_repl_timeout_ms(self$timeout)
       response <- tryCatch(
-        self$repl(
-          input = "\u0004",
-          timeout_ms = mcp_repl_timeout_ms(self$timeout)
+        do.call(
+          self$repl,
+          list(input = "\u0004", timeout_ms = timeout_ms)
         ),
         error = function(e) e
       )
@@ -768,6 +850,7 @@ McpReplRunner <- R6::R6Class(
           sandbox_enforcement = "unverified",
           oversized_output = self$oversized_output,
           rlm_control_frame_limit = self$control_frame_limit,
+          flex_control_frame_limit = self$control_frame_limit,
           host_tools = "unsupported",
           lifecycle = "start-execute-shutdown"
         ))
@@ -784,6 +867,7 @@ McpReplRunner <- R6::R6Class(
         sandbox_enforcement = "operating-system",
         oversized_output = self$oversized_output,
         rlm_control_frame_limit = self$control_frame_limit,
+        flex_control_frame_limit = self$control_frame_limit,
         host_tools = "unsupported",
         lifecycle = "start-execute-shutdown"
       )
@@ -856,6 +940,8 @@ mcp_repl_timeout_ms <- function(timeout) {
   ))
 }
 
+.mcp_repl_request_limit_bytes <- 7000L
+
 mcp_repl_input <- function(code, context) {
   context_json <- jsonlite::toJSON(
     context,
@@ -866,13 +952,201 @@ mcp_repl_input <- function(code, context) {
     digits = NA
   )
   context_literal <- encodeString(as.character(context_json), quote = "\"")
-  paste0(
+  input <- paste0(
     ".context <- jsonlite::fromJSON(",
     context_literal,
     ", simplifyVector = FALSE)\n",
     code,
     "\n"
   )
+  request_bytes <- mcp_repl_request_bytes(input)
+  if (request_bytes <= .mcp_repl_request_limit_bytes) {
+    return(input)
+  }
+  input_bytes <- nchar(input, type = "bytes")
+
+  compressed <- memCompress(charToRaw(enc2utf8(input)), type = "gzip")
+  token <- gsub(
+    "[[:space:]]",
+    "",
+    jsonlite::base64_enc(compressed)
+  )
+  wrapped <- paste0(
+    "base::eval(base::parse(text = base::rawToChar(",
+    "base::memDecompress(jsonlite::base64_dec(\"",
+    token,
+    "\"), type = \"gzip\"))), envir = base::globalenv())\n"
+  )
+  wrapped_request_bytes <- mcp_repl_request_bytes(wrapped)
+  if (wrapped_request_bytes > .mcp_repl_request_limit_bytes) {
+    request_limit <- .mcp_repl_request_limit_bytes
+    cli::cli_abort(
+      c(
+        "mcp-repl input exceeds the managed transport limit",
+        "x" = "The compressed request needs {wrapped_request_bytes} bytes; the limit is {request_limit} bytes.",
+        "i" = "Reduce the source or serialized execution context."
+      ),
+      class = "dsprrr_mcp_repl_input_size_error",
+      input_bytes = input_bytes,
+      request_bytes = wrapped_request_bytes,
+      request_limit = .mcp_repl_request_limit_bytes
+    )
+  }
+  wrapped
+}
+
+mcp_repl_request_bytes <- function(input) {
+  request <- list(
+    jsonrpc = "2.0",
+    id = .Machine$integer.max,
+    method = "tools/call",
+    params = list(
+      name = "repl",
+      arguments = list(
+        input = input,
+        timeout_ms = .Machine$integer.max
+      )
+    )
+  )
+  wire <- jsonlite::toJSON(request, auto_unbox = TRUE)
+  nchar(as.character(wire), type = "bytes") + 1L
+}
+
+mcp_repl_control_protocol <- function(protocol, nonce) {
+  if (is.null(protocol)) {
+    if (is.null(nonce)) {
+      return(NULL)
+    }
+    return("rlm")
+  }
+  if (
+    !is.character(protocol) ||
+      length(protocol) != 1L ||
+      is.na(protocol) ||
+      !protocol %in% c("rlm", "flex")
+  ) {
+    cli::cli_abort(
+      "Internal control protocol must be {.val rlm}, {.val flex}, or NULL",
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+  if (
+    !is.character(nonce) ||
+      length(nonce) != 1L ||
+      is.na(nonce) ||
+      !nzchar(nonce)
+  ) {
+    cli::cli_abort(
+      "Internal control nonce must be one non-empty string",
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+  protocol
+}
+
+mcp_repl_control_max_bytes <- function(max_bytes, runner_limit) {
+  if (is.null(max_bytes)) {
+    return(as.integer(runner_limit))
+  }
+  if (
+    !is.numeric(max_bytes) ||
+      length(max_bytes) != 1L ||
+      is.na(max_bytes) ||
+      !is.finite(max_bytes) ||
+      max_bytes < 1 ||
+      max_bytes != floor(max_bytes)
+  ) {
+    cli::cli_abort(
+      "Internal control byte limit must be one positive integer",
+      class = "dsprrr_code_runner_protocol_error"
+    )
+  }
+  as.integer(min(max_bytes, runner_limit))
+}
+
+mcp_repl_inline_flex_control <- function(text, nonce, max_bytes) {
+  text <- paste(text %||% "", collapse = "\n")
+  if (!nzchar(text)) {
+    return(NULL)
+  }
+
+  prefix_locations <- gregexpr(
+    .flex_code_control_prefix,
+    text,
+    fixed = TRUE
+  )[[1L]]
+  if (
+    identical(prefix_locations[[1L]], -1L) ||
+      length(prefix_locations) != 1L
+  ) {
+    return(NULL)
+  }
+  frame_pattern <- paste0(
+    .flex_code_control_prefix,
+    "[A-Za-z0-9+/=]+"
+  )
+  frames <- regmatches(text, gregexpr(frame_pattern, text, perl = TRUE))[[1L]]
+  if (
+    length(frames) != 1L ||
+      !nzchar(frames[[1L]]) ||
+      nchar(frames[[1L]], type = "bytes") > max_bytes
+  ) {
+    return(NULL)
+  }
+
+  token <- sub(
+    .flex_code_control_prefix,
+    "",
+    frames[[1L]],
+    fixed = TRUE
+  )
+  envelope <- tryCatch(
+    jsonlite::fromJSON(
+      rawToChar(jsonlite::base64_dec(token)),
+      simplifyVector = FALSE
+    ),
+    error = function(error) NULL
+  )
+
+  # The nonce is a current-step correlation value, not a secret credential.
+  # Exact framing, schema validation, and the byte bound are all required.
+  valid <- is.list(envelope) &&
+    identical(envelope$.dsprrr_flex_control, TRUE) &&
+    identical(envelope$version, 1L) &&
+    identical(envelope$nonce, nonce) &&
+    is.character(envelope$kind) &&
+    length(envelope$kind) == 1L &&
+    !is.na(envelope$kind) &&
+    envelope$kind %in% c("request", "final", "overflow") &&
+    is.list(envelope$payload)
+  if (!valid) {
+    return(NULL)
+  }
+  envelope
+}
+
+mcp_repl_inline_flex_preview <- function(text, nonce, max_bytes) {
+  text <- paste(text %||% "", collapse = "\n")
+
+  # Only mcp-repl's plain transcript-file marker is recoverable. Ordered
+  # bundles, image bundles, write failures, and middle-truncated previews may
+  # omit or reorder output and therefore stay fail-closed.
+  if (
+    grepl("...[middle truncated;", text, fixed = TRUE) ||
+      grepl("bundle", tolower(text), fixed = TRUE)
+  ) {
+    return(NULL)
+  }
+  file_pattern <- "\\.\\.\\.\\[full output: [^\\r\\n\\]]+\\]\\.\\.\\."
+  file_markers <- regmatches(
+    text,
+    gregexpr(file_pattern, text, perl = TRUE)
+  )[[1L]]
+  if (length(file_markers) < 1L) {
+    return(NULL)
+  }
+
+  mcp_repl_inline_flex_control(text, nonce, max_bytes)
 }
 
 mcp_repl_normalize_response <- function(response) {
@@ -1023,6 +1297,10 @@ mcp_repl_transport_error_result <- function(
     `control-frame-limit` = paste(
       "the authenticated RLM control frame exceeded mcp-repl's safe inline",
       "transport limit"
+    ),
+    `flex-control` = paste(
+      "mcp-repl returned executable Flex output whose control frame",
+      "could not be verified"
     ),
     "authenticated RLM output could not be verified"
   )

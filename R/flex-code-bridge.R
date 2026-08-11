@@ -249,9 +249,10 @@ flex_code_sandbox_template <- function() {
     base::invisible(envelope)
   }
 
-  # Bridge state lives outside the guest's lexical parent chain. Public DSL
-  # closures can expose replay state through R introspection, but never the
-  # invocation nonce, input context, source, or control-frame encoder.
+  # Keeping bridge state outside the guest's lexical parent chain limits
+  # accidental reachability through public DSL closures. The nonce correlates
+  # one response with the current replay step; it is not a secret or an
+  # authentication boundary for guest code.
   .flex_bridge_env <- new.env(parent = baseenv())
   .flex_bridge_env$.responses <- .flex_responses
   .flex_bridge_env$.call_index <- 0L
@@ -972,7 +973,6 @@ flex_code_execute <- function(
   llm_resolver = NULL,
   ...
 ) {
-  nonce <- rlm_control_nonce()
   wrapper <- flex_code_wrapper()
   output_fields <- names(flex_signature_output_types(outer_signature))
 
@@ -999,11 +999,12 @@ flex_code_execute <- function(
       frame_limit <- flex_code_frame_limit(lease$policy)
 
       repeat {
+        step_nonce <- rlm_control_nonce()
         result <- execute_code_runner(
           runner,
           wrapper,
           context = list(
-            nonce = nonce,
+            nonce = step_nonce,
             inputs = inputs,
             module_src = module_src,
             frame_limit = frame_limit,
@@ -1011,7 +1012,9 @@ flex_code_execute <- function(
             tool_names = as.list(names(tools)),
             responses = responses
           ),
-          .control_nonce = nonce
+          .control_nonce = step_nonce,
+          .control_protocol = "flex",
+          .control_max_bytes = frame_limit
         )
         if (!isTRUE(result$success)) {
           cli::cli_abort(
@@ -1025,7 +1028,7 @@ flex_code_execute <- function(
         }
         control <- flex_code_decode_control(
           list(result$result, result$stdout, result$stderr, result$error),
-          nonce
+          step_nonce
         )
         if (is.null(control)) {
           cli::cli_abort(

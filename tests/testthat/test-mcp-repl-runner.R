@@ -41,6 +41,34 @@ test_that("injected mcp_repl_runner is persistent but unverified", {
   ))
 })
 
+test_that("mcp_repl_runner realizes arguments for mcptools wrappers", {
+  requests <- list()
+  call_tool <- function(input, timeout_ms) {
+    requests[[length(requests) + 1L]] <<- list(
+      input = input,
+      timeout_ms = timeout_ms
+    )
+    list(result = list(content = list(list(type = "text", text = "ok"))))
+  }
+  repl <- function(input, timeout_ms) {
+    call_info <- match.call()
+    tool_args <- lapply(call_info[-1L], eval)
+    do.call(call_tool, tool_args)
+  }
+
+  runner <- mcp_repl_runner(repl = repl, timeout = 2)
+  result <- runner$execute("1 + 1")
+
+  expect_true(result$success)
+  expect_identical(result$result, "ok")
+  expect_identical(requests[[1L]]$timeout_ms, 2000L)
+
+  runner$reset()
+
+  expect_identical(requests[[2L]]$input, "\u0004")
+  expect_identical(requests[[2L]]$timeout_ms, 2000L)
+})
+
 test_that("mcp_repl_runner overwrites persistent context even when empty", {
   inputs <- character()
   repl <- function(input, timeout_ms) {
@@ -57,6 +85,88 @@ test_that("mcp_repl_runner overwrites persistent context even when empty", {
   expect_match(inputs[[2L]], "\\.context <-")
   expect_match(inputs[[2L]], 'fromJSON("[]",', fixed = TRUE)
   expect_false(grepl("sensitive", inputs[[2L]], fixed = TRUE))
+})
+
+test_that("mcp_repl_input compresses large requests without changing them", {
+  context <- list(
+    payload = strrep("replay payload ", 700L),
+    label = "na\u00efve caf\u00e9"
+  )
+  code <- paste(
+    "local({",
+    "  value <- .context",
+    "  base::rm(.context, envir = base::globalenv())",
+    "  value",
+    "})",
+    sep = "\n"
+  )
+
+  input <- dsprrr:::mcp_repl_input(code, context)
+
+  expect_match(input, "base::memDecompress", fixed = TRUE)
+  expect_lte(
+    dsprrr:::mcp_repl_request_bytes(input),
+    dsprrr:::.mcp_repl_request_limit_bytes
+  )
+  value <- eval(parse(text = input), envir = .GlobalEnv)
+  expect_identical(value, context)
+  expect_false(exists(".context", envir = .GlobalEnv, inherits = FALSE))
+})
+
+test_that("mcp_repl_input preserves fitting high-entropy requests", {
+  withr::local_seed(125L)
+  alphabet <- strsplit(
+    paste0(
+      "!#$%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      "[]^_abcdefghijklmnopqrstuvwxyz{|}~"
+    ),
+    "",
+    fixed = TRUE
+  )[[1L]]
+  payload <- paste(sample(alphabet, 6040L, replace = TRUE), collapse = "")
+  code <- paste0("#", payload, "\n1 + 1")
+  expected <- paste0(
+    '.context <- jsonlite::fromJSON("[]", simplifyVector = FALSE)\n',
+    code,
+    "\n"
+  )
+
+  expect_gt(nchar(expected, type = "bytes"), 6000L)
+  expect_lte(
+    dsprrr:::mcp_repl_request_bytes(expected),
+    dsprrr:::.mcp_repl_request_limit_bytes
+  )
+  expect_identical(dsprrr:::mcp_repl_input(code, list()), expected)
+})
+
+test_that("mcp_repl_input rejects oversized encoded requests before transport", {
+  calls <- 0L
+  repl <- function(input, timeout_ms) {
+    calls <<- calls + 1L
+    "ok"
+  }
+  runner <- mcp_repl_runner(repl = repl)
+  result <- local({
+    testthat::local_mocked_bindings(
+      mcp_repl_request_bytes = function(input) {
+        dsprrr:::.mcp_repl_request_limit_bytes + 1L
+      },
+      .package = "dsprrr"
+    )
+    dsprrr:::execute_code_runner(runner, "1 + 1")
+  })
+
+  expect_s3_class(result, "dsprrr_mcp_repl_input_size_error")
+  expect_false(result$success)
+  expect_identical(result$error_type, "execution")
+  expect_true(result$retryable)
+  expect_identical(calls, 0L)
+  expect_false(runner$terminal)
+
+  recovered <- runner$execute("1 + 1")
+  expect_true(recovered$success)
+  expect_identical(recovered$result, "ok")
+  expect_identical(calls, 1L)
 })
 
 test_that("dsprrr-managed mcp_repl_runner advertises its derived policy", {
@@ -606,6 +716,344 @@ test_that("authenticated RLM traffic fails closed on file previews", {
 
   expect_identical(ordinary$success, TRUE)
   expect_identical(ordinary$result, preview)
+})
+
+test_that("Flex normal inline control is decoded before display truncation", {
+  encode_frame <- function(
+    nonce,
+    kind = "final",
+    payload = list(output = list(answer = "ok"))
+  ) {
+    envelope <- list(
+      .dsprrr_flex_control = TRUE,
+      version = 1L,
+      nonce = nonce,
+      kind = kind,
+      payload = payload
+    )
+    json <- jsonlite::toJSON(
+      envelope,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      digits = NA
+    )
+    paste0(
+      dsprrr:::.flex_code_control_prefix,
+      gsub(
+        "[[:space:]]",
+        "",
+        jsonlite::base64_enc(charToRaw(as.character(json)))
+      )
+    )
+  }
+
+  nonce <- "current-step"
+  frame <- encode_frame(nonce)
+  raw_text <- paste(strrep("noise", 20L), frame, sep = "\n")
+  repl <- function(input, timeout_ms) {
+    list(result = list(content = list(list(type = "text", text = raw_text))))
+  }
+  runner <- mcp_repl_runner(repl = repl, max_output_chars = 20L)
+
+  result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "flex",
+    .control_max_bytes = runner$control_frame_limit
+  )
+
+  expect_true(result$success)
+  expect_identical(result$result$.dsprrr_flex_control, TRUE)
+  expect_identical(result$result$nonce, nonce)
+  expect_identical(result$result$payload$output$answer, "ok")
+  expect_match(result$stdout, "output truncated by dsprrr", fixed = TRUE)
+  expect_identical(
+    dsprrr:::flex_code_decode_control(list(result$result), nonce),
+    result$result
+  )
+
+  invalid <- list(
+    missing = "ordinary output",
+    stale = encode_frame("previous-step"),
+    truncated = substr(frame, 1L, nchar(frame) - 8L),
+    malformed = paste0(dsprrr:::.flex_code_control_prefix, "not-base64!"),
+    duplicate = paste(frame, frame, sep = "\n"),
+    unknown_kind = encode_frame(nonce, kind = "unknown"),
+    non_list_payload = encode_frame(nonce, payload = "invalid"),
+    oversized = encode_frame(
+      nonce,
+      payload = list(output = list(answer = strrep("x", 2000L)))
+    )
+  )
+  for (name in names(invalid)) {
+    raw_text <- invalid[[name]]
+    repl <- function(input, timeout_ms) {
+      list(result = list(content = list(list(type = "text", text = raw_text))))
+    }
+    runner <- mcp_repl_runner(repl = repl, max_output_chars = 100000L)
+    max_bytes <- if (identical(name, "oversized")) {
+      200L
+    } else {
+      runner$control_frame_limit
+    }
+
+    result <- runner$execute(
+      "invisible(NULL)",
+      .control_nonce = nonce,
+      .control_protocol = "flex",
+      .control_max_bytes = max_bytes
+    )
+
+    expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
+    expect_false(result$success, info = name)
+    expect_null(result$result, info = name)
+  }
+})
+
+test_that("Flex recovers one bounded current-step frame from file previews", {
+  encode_frame <- function(nonce, value = "ok", kind = "final") {
+    payload <- if (identical(kind, "overflow")) {
+      list(stage = "final output", encoded_bytes = 4001L, frame_limit = 3000L)
+    } else {
+      list(output = list(answer = value))
+    }
+    envelope <- list(
+      .dsprrr_flex_control = TRUE,
+      version = 1L,
+      nonce = nonce,
+      kind = kind,
+      payload = payload
+    )
+    json <- jsonlite::toJSON(
+      envelope,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      digits = NA
+    )
+    paste0(
+      dsprrr:::.flex_code_control_prefix,
+      gsub(
+        "[[:space:]]",
+        "",
+        jsonlite::base64_enc(charToRaw(as.character(json)))
+      )
+    )
+  }
+  preview <- function(frame) {
+    paste(
+      "stderr: compiler warning",
+      "...[full output: /sandbox/output-0001/transcript.txt]...",
+      paste0(frame, " > "),
+      "...[full output: /sandbox/output-0002/transcript.txt]...",
+      sep = "\n"
+    )
+  }
+  nonce <- "current-step"
+  raw_text <- preview(encode_frame(nonce))
+  repl <- function(input, timeout_ms) {
+    list(result = list(content = list(list(type = "text", text = raw_text))))
+  }
+  runner <- mcp_repl_runner(
+    repl = repl,
+    max_output_chars = 20L,
+    oversized_output = "files"
+  )
+
+  result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "flex",
+    .control_max_bytes = runner$control_frame_limit
+  )
+
+  expect_identical(result$success, TRUE)
+  expect_identical(result$result$.dsprrr_flex_control, TRUE)
+  expect_identical(result$result$nonce, nonce)
+  expect_identical(result$result$payload$output$answer, "ok")
+  expect_match(result$stdout, "output truncated by dsprrr", fixed = TRUE)
+
+  rlm_result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce
+  )
+  expect_s3_class(rlm_result, "dsprrr_mcp_repl_transport_error")
+  expect_identical(rlm_result$success, FALSE)
+
+  raw_text <- preview(encode_frame(nonce, kind = "overflow"))
+  overflow_result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "flex",
+    .control_max_bytes = runner$control_frame_limit
+  )
+  expect_identical(overflow_result$success, TRUE)
+  expect_identical(overflow_result$result$kind, "overflow")
+  expect_error(
+    dsprrr:::flex_code_decode_control(list(overflow_result$result), nonce),
+    class = "dsprrr_flex_bridge_frame_size_error"
+  )
+})
+
+test_that("Flex file-preview recovery rejects ambiguous control output", {
+  encode_frame <- function(nonce, value = "ok") {
+    envelope <- list(
+      .dsprrr_flex_control = TRUE,
+      version = 1L,
+      nonce = nonce,
+      kind = "final",
+      payload = list(output = list(answer = value))
+    )
+    json <- jsonlite::toJSON(
+      envelope,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      digits = NA
+    )
+    paste0(
+      dsprrr:::.flex_code_control_prefix,
+      gsub(
+        "[[:space:]]",
+        "",
+        jsonlite::base64_enc(charToRaw(as.character(json)))
+      )
+    )
+  }
+  preview <- function(body) {
+    paste(
+      "...[full output: /sandbox/output-0001/transcript.txt]...",
+      body,
+      "...[full output: /sandbox/output-0002/transcript.txt]...",
+      sep = "\n"
+    )
+  }
+  nonce <- "current-step"
+  current <- encode_frame(nonce)
+  cases <- list(
+    stale = encode_frame("previous-step"),
+    missing = "ordinary output",
+    truncated = substr(current, 1L, nchar(current) - 8L),
+    invalid = paste0(dsprrr:::.flex_code_control_prefix, "not-base64!"),
+    duplicate = paste(current, current, sep = "\n"),
+    oversized = encode_frame(nonce, strrep("x", 4000L))
+  )
+
+  for (name in names(cases)) {
+    raw_text <- preview(cases[[name]])
+    repl <- function(input, timeout_ms) {
+      list(result = list(content = list(list(type = "text", text = raw_text))))
+    }
+    runner <- mcp_repl_runner(repl = repl, oversized_output = "files")
+
+    result <- runner$execute(
+      "invisible(NULL)",
+      .control_nonce = nonce,
+      .control_protocol = "flex",
+      .control_max_bytes = runner$control_frame_limit
+    )
+
+    expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
+    expect_identical(result$success, FALSE)
+  }
+
+  bundle_markers <- c(
+    "...[middle truncated; ordered output bundle index: /sandbox/index.md]...",
+    "...[middle truncated; output bundle images: /sandbox/images]...",
+    "...[middle truncated; output bundle unavailable]..."
+  )
+  for (marker in bundle_markers) {
+    raw_text <- paste(marker, current, sep = "\n")
+    repl <- function(input, timeout_ms) {
+      list(result = list(content = list(list(type = "text", text = raw_text))))
+    }
+    runner <- mcp_repl_runner(repl = repl, oversized_output = "files")
+
+    result <- runner$execute(
+      "invisible(NULL)",
+      .control_nonce = nonce,
+      .control_protocol = "flex"
+    )
+
+    expect_s3_class(result, "dsprrr_mcp_repl_transport_error")
+    expect_identical(result$success, FALSE)
+  }
+})
+
+test_that("Flex preview recovery does not bypass MCP errors or pagers", {
+  nonce <- "current-step"
+  envelope <- list(
+    .dsprrr_flex_control = TRUE,
+    version = 1L,
+    nonce = nonce,
+    kind = "final",
+    payload = list(output = list(answer = "ok"))
+  )
+  json <- jsonlite::toJSON(envelope, auto_unbox = TRUE)
+  frame <- paste0(
+    dsprrr:::.flex_code_control_prefix,
+    gsub(
+      "[[:space:]]",
+      "",
+      jsonlite::base64_enc(charToRaw(as.character(json)))
+    )
+  )
+  file_text <- paste(
+    "...[full output: /sandbox/output.txt]...",
+    frame,
+    sep = "\n"
+  )
+  error_repl <- function(input, timeout_ms) {
+    list(
+      result = list(
+        isError = TRUE,
+        content = list(list(type = "text", text = file_text))
+      )
+    )
+  }
+  error_runner <- mcp_repl_runner(
+    repl = error_repl,
+    oversized_output = "files"
+  )
+
+  error_result <- error_runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "flex"
+  )
+
+  expect_identical(error_result$success, FALSE)
+  expect_identical(error_result$error_type, "execution")
+  expect_match(error_result$error, "execution error", fixed = TRUE)
+  expect_null(error_result$result)
+
+  inputs <- character()
+  pager_repl <- function(input, timeout_ms) {
+    inputs <<- c(inputs, input)
+    if (identical(input, "\u0004")) {
+      return(list(result = list(content = list())))
+    }
+    text <- paste(frame, "--More-- (2p)", sep = "\n")
+    list(result = list(content = list(list(type = "text", text = text))))
+  }
+  pager_runner <- mcp_repl_runner(
+    repl = pager_repl,
+    oversized_output = "pager"
+  )
+
+  pager_result <- pager_runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "flex"
+  )
+
+  expect_s3_class(pager_result, "dsprrr_mcp_repl_transport_error")
+  expect_identical(pager_result$success, FALSE)
+  expect_identical(utils::tail(inputs, 1L), "\u0004")
 })
 
 test_that("authenticated RLM traffic resets an active mcp-repl pager", {

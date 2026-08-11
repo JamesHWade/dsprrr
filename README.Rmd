@@ -111,8 +111,9 @@ optimizers inspired by DSPy:
 - **GEPA**: Reflection-based complete-program optimization with validation-example and multi-objective Pareto selection
 - **AutoResearch and MetaHarness**: Agentic, sandboxed search over multi-module instructions and templates
 
-`flex()` is an experimental module, not an optimizer. It exposes a validated
-JSON predictor plan that GEPA can search as a structural parameter.
+`flex()` gives GEPA a different search target: not only what a predictor says,
+but how the module executes. It can vary predictor choice, control flow,
+deterministic R, and selected tools.
 
 ```{r optimization, eval=FALSE}
 # Compile with few-shot examples
@@ -174,7 +175,7 @@ result <- run(
 | `program_of_thought` | Generate and execute R code |
 | `codeact` | Combine tools with R code execution |
 | `rlm` | Explore large context through an R REPL |
-| `flex` | Execute a structurally optimizable JSON graph or interpreter-backed R program (experimental) |
+| `flex` | Let GEPA optimize how a module uses predictors, R logic, and selected tools (experimental) |
 
 ```{r module-types, eval=FALSE}
 # ReAct agent with tools
@@ -188,70 +189,25 @@ agent <- module(
 mod <- module(signature("question -> answer"), type = "chain_of_thought")
 ```
 
-### Experimental structural programs
+### Optimize the program, not only the prompt
 
-`flex()` makes a complete implementation an optimization parameter. Its safe
-default is a canonical, versioned JSON graph with allowlisted `predict` and
-`chain_of_thought` steps and typed references. Opt-in
-`source_format = "r"` runs complete R source only in a fresh interpreter from
-an explicit factory, with a versioned host bridge for dynamic predictors and
-named tools. Guest bindings are lexically isolated from bridge state, and
-`max_tool_calls` bounds privileged host-tool requests. `module_src` is
-read-only; use `bind()` to validate and replace it transactionally.
+Most optimizers improve instructions inside a workflow you designed. `flex()`
+lets GEPA change the workflow itself: which predictors run, where deterministic
+R is enough, and when to call a selected tool.
 
-```{r flex, eval=FALSE}
-program <- flex("question -> answer")
-program$module_src
+The worked example begins with a support router that asks a model about every
+ticket. In a deterministic GEPA replay, Flex selects a hybrid: known incident
+codes use a catalog lookup; ambiguous prose still uses a predictor. It preserves
+holdout accuracy while cutting predictor calls in half.
 
-optimized <- compile(
-  GEPA(metric = metric_exact_match(field = "answer"), seed = 42L),
-  program,
-  trainset = question_answer_data,
-  .llm = llm
-)
-```
+> Flex did not find a better prompt. It found that half the tickets did not
+> need one.
 
-Executable dsprrr Flex uses a top-level R `forward()` function and requires an
-explicit interpreter factory; DSPy uses a Python module class and provides a
-default Deno/Pyodide interpreter, so sources are not portable between them.
-GEPA searches complete instruction and `module_src` components for ordinary
-and Flex programs. When a `valset` is supplied, training rows drive discovery
-and reflection while validation rows drive selection. Its parent pool unites
-validation-example winners with the multi-metric objective Pareto front;
-metadata records component selection, immediate lineage and ancestry,
-attempted merge counts, and optional retained best outputs. See
-[Structural Optimization with Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html)
-for both source languages and the safety boundary.
-
-### Code-runner lifecycles
-
-`program_of_thought()`, `code_act()`, and `rlm_module()` require exactly one of
-two execution bindings:
-
-- `runner` is a caller-owned object that dsprrr reuses and never closes.
-  Whether execution state persists, and whether `reset()` exists, depends on
-  the backend. Serialize stateful backends and reset them between isolated jobs
-  when the backend supports it.
-- `interpreter_factory` is a zero-argument function. dsprrr calls it once per
-  invocation, uses the fresh runner only for that invocation, and closes it
-  exactly once, including when execution fails.
-
-Executable Flex accepts only `interpreter_factory`, keeping every bridge
-invocation isolated, and requires an advertised sandbox by default.
-
-Factory-backed ProgramOfThought, CodeAct, and RLM support isolated async and
-mirai batch execution; caller-owned runners remain sequential. `stream_async()`
-and `$stream()` reject their direct provider path before creating a factory
-runner or making a provider call. `run_stream()`
-preserves its one-shot `forward()` fallback, but preflights and rejects an
-actual token stream request that would bypass a specialized step.
-
-```{r interpreter-factory, eval=FALSE}
-pot <- program_of_thought(
-  "question -> answer",
-  interpreter_factory = function() r_code_runner(timeout = 30)
-)
-```
+Executable candidates require a fresh OS-sandboxed interpreter. See
+[Flex: Optimize the Whole Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html)
+for the complete demo, and [Advanced
+Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.html) for
+code-runner ownership and async support.
 
 ## ellmer compatibility
 

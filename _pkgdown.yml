@@ -14,8 +14,8 @@ home:
   title: "dsprrr: Programming—not prompting—LLMs in R"
   description: >
     dsprrr brings the power of DSPy to R. Instead of wrestling with prompt strings,
-    declare what you want, compose modules into pipelines, and let optimization find
-    the best prompts automatically.
+    declare what you want, compose modules into pipelines, and optimize prompts,
+    examples, or even the program that executes them.
 
 navbar:
   structure:
@@ -89,7 +89,7 @@ navbar:
           href: articles/how-rlm-works.html
         - text: "---"
         - text: "Deep Dives"
-        - text: "Structural Optimization with Flex"
+        - text: "Flex: Optimize the Whole Program"
           href: articles/flex-optimization.html
         - text: "Advanced Reasoning"
           href: articles/advanced-modules.html

@@ -228,6 +228,101 @@ test_that("text-only Flex runners fail explicitly before frame truncation", {
   expect_identical(error$frame_limit, 1000L)
 })
 
+test_that("executable Flex binds control metadata to each replay step", {
+  calls <- 0L
+  observed <- list()
+  runner_factory <- function() {
+    list(
+      execute = function(
+        code,
+        context = list(),
+        .control_nonce = NULL,
+        .control_protocol = NULL,
+        .control_max_bytes = NULL
+      ) {
+        calls <<- calls + 1L
+        observed[[calls]] <<- list(
+          context_nonce = context$nonce,
+          control_nonce = .control_nonce,
+          protocol = .control_protocol,
+          max_bytes = .control_max_bytes
+        )
+        if (calls == 1L) {
+          request <- list(
+            index = 1L,
+            kind = "tool",
+            descriptor = list(name = "echo"),
+            arguments = list(value = "ok")
+          )
+          payload <- list(
+            request = request,
+            request_key = dsprrr:::flex_code_request_key(request)
+          )
+          kind <- "request"
+        } else {
+          payload <- list(
+            output = list(result = context$responses[[1L]]$value)
+          )
+          kind <- "final"
+        }
+        list(
+          success = TRUE,
+          result = list(
+            .dsprrr_flex_control = TRUE,
+            version = 1L,
+            nonce = context$nonce,
+            kind = kind,
+            payload = payload
+          )
+        )
+      },
+      policy = function() {
+        list(
+          backend = "control-test",
+          trust = "test-only",
+          sandboxed = TRUE,
+          flex_control_frame_limit = 2048L
+        )
+      },
+      close = function() invisible(NULL)
+    )
+  }
+
+  result <- dsprrr:::flex_code_execute(
+    module_src = "forward <- function(value) list(result = value)",
+    inputs = list(value = "ignored"),
+    outer_signature = signature("value -> result"),
+    tools = list(echo = function(value) value),
+    interpreter_factory = runner_factory,
+    max_predictor_calls = 0L,
+    max_tool_calls = 1L,
+    require_sandbox = TRUE,
+    config = list(),
+    llm = NULL,
+    cache = NULL,
+    rollout_id = NULL
+  )
+
+  expect_identical(result$output, list(result = "ok"))
+  expect_identical(calls, 2L)
+  expect_identical(observed[[1L]]$protocol, "flex")
+  expect_identical(observed[[2L]]$protocol, "flex")
+  expect_identical(observed[[1L]]$max_bytes, 2048L)
+  expect_identical(observed[[2L]]$max_bytes, 2048L)
+  expect_identical(
+    observed[[1L]]$context_nonce,
+    observed[[1L]]$control_nonce
+  )
+  expect_identical(
+    observed[[2L]]$context_nonce,
+    observed[[2L]]$control_nonce
+  )
+  expect_false(identical(
+    observed[[1L]]$control_nonce,
+    observed[[2L]]$control_nonce
+  ))
+})
+
 test_that("executable Flex rejects control values from failed execution", {
   runner_factory <- function() {
     list(
