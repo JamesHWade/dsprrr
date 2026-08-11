@@ -6,20 +6,20 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ### New features
 
-- [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) adds
-  an experimental, structurally optimizable module with two source
-  modes. The safe default is a bounded versioned JSON graph with
-  allowlisted Predict and Chain-of-Thought steps, typed references,
+- [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) lets
+  GEPA optimize how a module executes—not only its instructions— with
+  two source modes. The safe default is a bounded versioned JSON graph
+  with allowlisted Predict and Chain-of-Thought steps, typed references,
   zero-step deterministic plans, and transactional validation. Opt-in
   executable mode evaluates a complete R `forward()` program only in a
   fresh runner from an explicit `interpreter_factory`; a versioned JSON
   bridge exposes the DSPy Flex primitive family and named host tools,
   enforces runtime predictor and direct host-tool limits, validates
   typed outputs, and requires an advertised sandbox by default. Guest
-  bindings are isolated from bridge state, large values use structured
-  runner results when available, and tools retain their host closure
-  environments while generated source never evaluates in the host R
-  session.
+  bindings use a separate lexical environment from bridge state, large
+  values use structured runner results when available, and tools retain
+  their host closure environments while generated source never evaluates
+  in the host R session.
 
 - [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) now
   searches complete, validated component candidates for ordinary
@@ -163,6 +163,16 @@ First development changelog. dsprrr is experimental; the API may change.
   Native concurrent dataset execution supports declarative zero/one-step
   Flex, while multi-step and executable requests fail before provider
   work until a row-isolated async engine is available.
+
+- Larger executable Flex requests now cross
+  [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+  reliably. dsprrr realizes `mcptools` wrapper arguments before
+  invocation and compacts only host-generated requests that exceed the
+  wire bound, preserving fitting high-entropy requests. Flex control
+  frames are decoded from raw inline output before display truncation. A
+  plain file preview is accepted only when it contains one bounded
+  current-step Flex frame; malformed inline frames, ambiguous previews,
+  and all RLM previews still fail closed.
 
 - Metric correctness and composition are stricter: token F1 uses
   multiset overlap, numeric field equality no longer fails solely

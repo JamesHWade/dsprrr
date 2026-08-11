@@ -18,9 +18,9 @@
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="dsprrr: Programming—not prompting—LLMs in R">
-<meta name="description" content="dsprrr brings the power of DSPy to R. Instead of wrestling with prompt strings, declare what you want, compose modules into pipelines, and let optimization find the best prompts automatically.
+<meta name="description" content="dsprrr brings the power of DSPy to R. Instead of wrestling with prompt strings, declare what you want, compose modules into pipelines, and optimize prompts, examples, or even the program that executes them.
 ">
-<meta property="og:description" content="dsprrr brings the power of DSPy to R. Instead of wrestling with prompt strings, declare what you want, compose modules into pipelines, and let optimization find the best prompts automatically.
+<meta property="og:description" content="dsprrr brings the power of DSPy to R. Instead of wrestling with prompt strings, declare what you want, compose modules into pipelines, and optimize prompts, examples, or even the program that executes them.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
@@ -86,7 +86,7 @@
     <li><a class="dropdown-item" href="articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="articles/flex-optimization.html">Structural Optimization with Flex</a></li>
+    <li><a class="dropdown-item" href="articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
     <li><a class="dropdown-item" href="articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -130,7 +130,7 @@
 <div class="section level2">
 <h2 id="programmingnot-promptingllms-in-r">Programming—not prompting—LLMs in R<a class="anchor" aria-label="anchor" href="#programmingnot-promptingllms-in-r"></a>
 </h2>
-<p>dsprrr brings the power of <a href="https://dspy.ai" class="external-link">DSPy</a> to R. Instead of wrestling with prompt strings, <strong>declare</strong> what you want, <strong>compose</strong> modules into pipelines, and let <strong>optimization</strong> find the best prompts automatically.</p>
+<p>dsprrr brings the power of <a href="https://dspy.ai" class="external-link">DSPy</a> to R. Instead of wrestling with prompt strings, <strong>declare</strong> what you want, <strong>compose</strong> modules into pipelines, and use <strong>optimization</strong> to improve prompts, examples, or the program that executes them.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Install</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/dsprrr"</span><span class="op">)</span></span>
@@ -212,21 +212,14 @@
 </div>
 </div>
 <div class="section level2">
-<h2 id="experimental-structural-optimization">Experimental structural optimization<a class="anchor" aria-label="anchor" href="#experimental-structural-optimization"></a>
+<h2 id="optimize-the-program-not-only-the-prompt">Optimize the program, not only the prompt<a class="anchor" aria-label="anchor" href="#optimize-the-program-not-only-the-prompt"></a>
 </h2>
-<p><code><a href="reference/flex.html">flex()</a></code> makes a complete implementation an optimization parameter. Its safe default is a canonical, versioned JSON graph with allowlisted Predict and Chain-of-Thought steps, typed references, and explicit output wiring. Opt-in executable mode runs a complete R <code>forward()</code> program only in a fresh runner from an explicit factory, with a versioned bridge for dynamic predictors and named host tools. Guest bindings are isolated from bridge state, and <code>max_tool_calls</code> bounds privileged host-tool requests. Invalid candidates are rejected before they can replace the active source.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
-<span><span class="va">program</span><span class="op">$</span><span class="va">module_src</span></span>
-<span></span>
-<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span>,</span>
-<span>  <span class="va">program</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">question_answer_data</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>DSPy uses Python module classes and a default Deno/Pyodide interpreter; dsprrr uses R <code>forward()</code> source and requires an explicit factory, so source is not portable between them. GEPA searches complete instruction and <code>module_src</code> components for ordinary and Flex programs. When a <code>valset</code> is supplied, training rows drive discovery and reflection while validation rows drive selection. Its parent pool unites validation-example winners with the multi-metric objective Pareto front; metadata records component selection, immediate lineage and ancestry, attempted merge counts, and optional best outputs. <a href="articles/flex-optimization.html">Read the Flex languages and safety contract →</a></p>
-<p>Code-executing modules now make ownership explicit. Pass <code>runner</code> for a caller-owned backend object that dsprrr reuses and never closes. State persistence and reset support are backend-specific. Alternatively, pass a mutually exclusive zero-argument <code>interpreter_factory</code> for a fresh invocation-owned runner that dsprrr closes exactly once. The factory contract applies to ProgramOfThought, CodeAct, RLM, and executable Flex; Flex accepts only the fresh-factory form. Factory-backed ProgramOfThought, CodeAct, and RLM also support isolated async and mirai batch workflows. Caller-owned runners, specialized streaming, and executable Flex concurrency remain rejected before unsafe sharing or provider work. <code><a href="reference/run_stream.html">run_stream()</a></code> without a matching token listener preserves the ordinary synchronous <code>forward()</code> path.</p>
+<p>Most optimizers improve instructions inside a workflow you designed. <code><a href="reference/flex.html">flex()</a></code> lets GEPA change the workflow itself: which predictors run, where deterministic R is enough, and when to call a tool you supplied.</p>
+<p>The worked example starts with a support router that asks a model about every ticket. In a deterministic GEPA replay, the selected program checks known incident codes directly and reserves the model for ambiguous prose. It keeps all six held-out routes correct while cutting predictor calls from six to three.</p>
+<blockquote>
+<p>Flex did not find a better prompt. It found that half the tickets did not need one.</p>
+</blockquote>
+<p><a href="articles/flex-optimization.html">See the complete router demo and decide when Flex fits →</a></p>
 </div>
 <div class="section level2">
 <h2 id="getting-started-configure-your-llm">Getting Started: Configure Your LLM<a class="anchor" aria-label="anchor" href="#getting-started-configure-your-llm"></a>
@@ -260,7 +253,7 @@ Auto-detect
 </ul>
 <div id="providerTabsContent" class="tab-content">
 <div id="openai" class="tab-pane fade show active" role="tabpanel">
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
@@ -269,7 +262,7 @@ Auto-detect
 <span><span class="co">#&gt; "4"</span></span></code></pre></div>
 </div>
 <div id="anthropic" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
@@ -278,7 +271,7 @@ Auto-detect
 <span><span class="co">#&gt; "4"</span></span></code></pre></div>
 </div>
 <div id="gemini" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
@@ -287,7 +280,7 @@ Auto-detect
 <span><span class="co">#&gt; "4"</span></span></code></pre></div>
 </div>
 <div id="ollama" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
@@ -296,7 +289,7 @@ Auto-detect
 <span><span class="co">#&gt; "4"</span></span></code></pre></div>
 </div>
 <div id="auto" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># dsprrr auto-detects from environment variables</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
@@ -340,7 +333,7 @@ Optimize
 <div id="moduleTabsContent" class="tab-content example-gallery">
 <div id="extract" class="tab-pane fade show active" role="tabpanel">
 <p>Signatures define a task and enforce typed outputs.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract several typed fields in one call</span></span>
 <span><span class="va">extract</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"message -&gt; name: string, email: string,</span></span>
@@ -361,7 +354,7 @@ Optimize
 </div>
 <div id="agent" class="tab-pane fade" role="tabpanel">
 <p>Define tools as functions and hand them to a ReAct module.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">kb_search</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Evaluators compare module outputs with labeled examples."</span>,</span>
@@ -389,7 +382,7 @@ Optimize
 </div>
 <div id="pipeline" class="tab-pane fade" role="tabpanel">
 <p>Compose modules into a pipeline with <code>%&gt;&gt;%</code>—outputs flow to inputs.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pull a claim, then verify it against the source</span></span>
 <span><span class="va">find</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"article -&gt; claim: string, source: string"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span></span>
@@ -407,7 +400,7 @@ Optimize
 </div>
 <div id="multimodal" class="tab-pane fade" role="tabpanel">
 <p>Name an image input in the signature and pass an ellmer content object.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">analyze</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"image, question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
@@ -424,7 +417,7 @@ Optimize
 </div>
 <div id="optimize" class="tab-pane fade" role="tabpanel">
 <p>Optimizers improve a program against a metric—no prompt rewriting.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">extract</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"message -&gt; intent: enum('meeting', 'intro')"</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -476,7 +469,7 @@ Evaluation
 </ul>
 <div id="optimizeTabsContent" class="tab-content">
 <div id="fewshot" class="tab-pane fade show active" role="tabpanel">
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Add examples automatically</span></span>
 <span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great product!"</span>, <span class="st">"Awful experience"</span>, <span class="st">"It works"</span><span class="op">)</span>,</span>
@@ -495,7 +488,7 @@ Evaluation
 <p><strong>Result</strong>: Few-shot examples improve accuracy on edge cases.</p>
 </div>
 <div id="grid" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Search over configurations</span></span>
 <span><span class="va">classifier</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
 <span>  devset <span class="op">=</span> <span class="va">validation_data</span>,</span>
@@ -517,7 +510,7 @@ Evaluation
 <p><strong>Result</strong>: Find the best configuration for your task.</p>
 </div>
 <div id="agentic-opt" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Keep agent-proposed analysis inside an OS sandbox</span></span>
 <span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -540,7 +533,7 @@ Evaluation
 <p><a href="articles/agentic-optimization-harnesses.html">Run agentic optimization →</a></p>
 </div>
 <div id="eval" class="tab-pane fade" role="tabpanel">
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Rigorous evaluation with metrics</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">classifier</span>,</span>

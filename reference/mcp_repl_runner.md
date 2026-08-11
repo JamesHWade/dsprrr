@@ -16,6 +16,14 @@ upstream protocol, so detection is necessarily conservative and can only
 fail closed; dsprrr never follows a disclosed sandbox file path from the
 host process.
 
+Executable Flex decodes one bounded current-step frame from raw output
+before display truncation. It may also recover that frame from a plain
+file preview. The frame remains untrusted and is still subject to Flex's
+host-side request, budget, and output validation. Ambiguous previews,
+pagers, bundles, and MCP errors fail closed. Host-generated requests
+that exceed the wire bound are compressed before transport and rejected
+before sending if they still do not fit.
+
 ## Usage
 
 ``` r
@@ -63,9 +71,10 @@ mcp_repl_runner(
 
 - oversized_output:
 
-  mcp-repl oversized-output mode. During authenticated RLM traffic, a
-  detected oversized-output preview fails the iteration; dsprrr attempts
-  to reset active pager state before returning the failure.
+  mcp-repl oversized-output mode. RLM previews fail closed. Executable
+  Flex accepts only one bounded current-step frame in a plain file
+  preview. dsprrr attempts to reset active pager state before returning
+  a failure.
 
 - extra_args:
 

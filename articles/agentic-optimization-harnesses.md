@@ -13,28 +13,20 @@ optimizable leaf in a module graph. This makes them useful when the
 search problem is not “find one better prompt,” but “repair the contract
 among several pipeline stages.”
 
-DSPy 3.3.0 introduced experimental `Flex`, which can optimize a
-program’s source code and structure inside a sandbox.
 [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
 and
 [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
-are **not** Flex optimizers. They accept complete replacements only for
-allowlisted instruction and template fields; they do not execute
-optimizer-authored R module source, add predictors, or change graph
-topology. That narrower edit language is an intentional host-validation
-boundary.
+do **not** change module topology or run optimizer-authored module
+source. They edit allowlisted instructions and templates while the
+trusted R evaluator keeps the workflow fixed.
 
-dsprrr’s separate experimental
+Use the separate experimental
 [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) module
-exposes both a constrained, versioned JSON graph and opt-in complete R
-source behind a fresh interpreter, isolated predictor/tool bridge,
-separate predictor/tool budgets, and default sandbox requirement. GEPA,
-rather than these agentic harnesses, searches complete validated Flex
-source components using validation-example winner frontiers and explicit
-component selection. See [Structural Optimization with
-Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
-and the [DSPy 3.3.0 release
-notes](https://github.com/stanfordnlp/dspy/releases/tag/3.3.0).
+when GEPA should optimize the implementation strategy itself: predictor
+structure, deterministic R, or selected tools. See [Flex: Optimize the
+Whole
+Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
+for that workflow and its sandbox boundary.
 
 ## Choose the Search Owner
 

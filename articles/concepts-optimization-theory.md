@@ -16,8 +16,9 @@ expected outputs - An evaluation metric
 
 Traditional prompt engineering solves this by hand: you write prompts,
 test them, and tweak them. Most dsprrr optimizers automate that prompt
-search; experimental Flex also exposes a constrained predictor structure
-to GEPA.
+search; experimental Flex lets GEPA optimize how the module executes,
+including predictor structure and, in executable mode, R logic and
+selected tools.
 
 ## What Gets Optimized
 
@@ -355,13 +356,14 @@ compiled <- compile(tp, mod, trainset)
 ```
 
 GEPA reflects on failed examples, proposes revised instructions,
-evaluates them, and keeps a Pareto frontier across metrics. This is
-reflective prompt evolution, not general genetic programming over
-executable programs. For ordinary modules, optional crossover combines
-instruction text. When a program contains Flex leaves, crossover instead
-selects complete parent component values atomically, including full
-`module_src` strings; it never splices JSON source text. GEPA is useful
-when feedback is informative and you can afford repeated evaluation.
+evaluates them, and keeps a Pareto frontier across metrics. For ordinary
+modules this is reflective prompt evolution: optional crossover combines
+instruction text. When a program contains Flex leaves, GEPA can instead
+select complete `module_src` values atomically; it never splices source
+text. GEPA is useful when feedback is informative and you can afford
+repeated evaluation. See [Flex: Optimize the Whole
+Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
+when the implementation itself should be part of the search.
 
 ### AutoResearch and Meta-Harness: Agentic Program Search
 

@@ -81,7 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -536,7 +536,7 @@ removed or reviewed before reuse.</p>
   Start --&gt;|Exact computation| POT["type = program_of_thought"]
   Start --&gt;|Tools plus R code| CodeAct["type = codeact"]
   Start --&gt;|Explore large context| RLM["type = rlm"]
-  Start --&gt;|Vary predictor structure| Flex["type = flex (experimental)"]</code></pre>
+  Start --&gt;|Optimize how the task executes| Flex["type = flex (experimental)"]</code></pre>
 <table class="table">
 <colgroup>
 <col width="26%">
@@ -587,8 +587,7 @@ removed or reviewed before reuse.</p>
 <tr class="even">
 <td><code>"flex"</code></td>
 <td><code>FlexModule</code></td>
-<td>Validated JSON graph or interpreter-backed R source
-(experimental)</td>
+<td>Optimize predictor, R-logic, and tool strategy (experimental)</td>
 </tr>
 </tbody>
 </table>
@@ -615,30 +614,20 @@ backend-specific.</p>
 </h3>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
-<span><span class="va">program</span><span class="op">$</span><span class="va">module_src</span>       <span class="co"># Canonical, read-only JSON</span></span>
+<span><span class="va">program</span><span class="op">$</span><span class="va">module_src</span>       <span class="co"># Validated, read-only JSON</span></span>
 <span><span class="va">program</span><span class="op">$</span><span class="fu">bind</span><span class="op">(</span><span class="va">candidate</span><span class="op">)</span>  <span class="co"># Validate and replace transactionally</span></span>
 <span></span>
 <span><span class="va">code_program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span></span>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  module_src <span class="op">=</span> <span class="st">"forward &lt;- function(question) Prediction(answer = question)"</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="va">my_sandboxed_runner</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span>,</span>
 <span>  source_format <span class="op">=</span> <span class="st">"r"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span>,</span>
-<span>  <span class="va">program</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">question_answer_data</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>JSON Flex version 1 permits Predict and Chain-of-Thought graphs.
-Executable Flex adds complete R <code>forward()</code> source,
-deterministic control flow, the DSPy Flex primitive family, and named
-host tools behind a fresh interpreter and a versioned bridge.
-<code>max_tool_calls</code> separately bounds privileged host calls.
-GEPA validates complete candidate sources and selects parents from
-validation-example winners with component selection and lineage metadata
-kept separately.</p>
+<p>Use JSON Flex for a bounded Predict/Chain-of-Thought graph. Use
+executable Flex when GEPA may need R control flow, dynamic predictors,
+or named tools; generated source requires a fresh sandboxed interpreter.
+See <a href="flex-optimization.html">Flex: Optimize the Whole
+Program</a>.</p>
 <hr>
 </div>
 </div>

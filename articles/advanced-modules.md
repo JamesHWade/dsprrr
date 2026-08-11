@@ -518,16 +518,15 @@ pot <- program_of_thought(
 The factory form is the safer default when state must not cross
 invocation boundaries. The direct-runner form is useful for object reuse
 or intentional REPL persistence; never share a stateful runner across
-concurrent calls. Supplying both forms is an error. Use synchronous
-[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
-these code-executing modules. The generic async and module `$stream()`
-entry points reject a program graph containing ProgramOfThought,
-CodeAct, or RLM before any provider call because those paths cannot
-preserve the specialized runner lifecycle yet.
+concurrent calls. Supplying both forms is an error. Factory-backed
+ProgramOfThought, CodeAct, and RLM support
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+and isolated mirai batch execution because every invocation owns a fresh
+runner. Caller-owned runners remain sequential. Specialized token
+streaming is still rejected before provider or factory work;
 [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
 without a matching token listener preserves the ordinary synchronous
-`forward()` path; a matching token-stream request is rejected before
-provider or factory work.
+`forward()` path.
 
 ### Basic Usage
 
@@ -703,12 +702,10 @@ agent <- code_act(
 
 ## Flex (experimental)
 
-[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) makes
-a complete implementation part of a module’s optimization state. Its
-safe default is canonical, versioned JSON with Predict and
-Chain-of-Thought steps. Opt-in executable mode accepts complete R
-`forward()` source, dynamic predictors, deterministic control flow, and
-named host tools, evaluated only through a fresh configured interpreter.
+Use [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
+when the implementation strategy is the search problem. GEPA can change
+which predictors run, add deterministic R logic, or call a selected
+tool—not only rewrite instructions inside a fixed module.
 
 ``` r
 
@@ -716,13 +713,11 @@ program <- flex("question -> answer")
 program$module_src
 ```
 
-Use `program$bind(candidate)` to validate and replace the source
-transactionally. Direct assignment to `module_src` is rejected. DSPy
-uses Python module classes and a default Deno/Pyodide interpreter;
-dsprrr uses R `forward()` source and an explicit factory, so source is
-not portable. See [Structural Optimization with
-Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
-for both source languages, references, and the safety boundary.
+Use a regular module when its shape is known, or an explicit pipeline
+when people should own the workflow. See [Flex: Optimize the Whole
+Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
+for a deterministic GEPA replay that preserves router accuracy while
+removing unnecessary model calls.
 
 ## Combining Modules
 
@@ -809,13 +804,13 @@ dsprrr’s advanced modules bring battle-tested patterns from DSPy to R:
 | [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) | Complex analysis, multiple valid approaches | (M+1)× cost |
 | [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | Exact computation, data analysis | Code execution overhead |
 | [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | Tasks needing both tools AND computation | Agent loop overhead |
-| [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) | Testing bounded or executable structures | Experimental dual-source API |
+| [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) | Optimizing the choice among predictors, R logic, and tools | Experimental; executable source requires a sandbox |
 
 **Getting started:** - Start with **ChainOfThought** for complex
 reasoning tasks - Add **BestOfN** when you need reliability - Use
 **ProgramOfThought** for exact computation (math, statistics) - Use
 **CodeAct** when you need tools AND code execution together - Use
-**Flex** when predictor structure itself is the experiment
+**Flex** when the implementation strategy itself is the experiment
 
 ## Further Reading
 

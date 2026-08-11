@@ -381,51 +381,18 @@ print(compiled$demos)
 3.  Re-evaluates and repeats
 4.  Builds a demo set that covers edge cases
 
-## Structural Candidates with Flex
+## When the implementation is part of the search
 
+Most teleprompters keep module structure fixed. GEPA can also optimize a
 [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
-exposes a module’s complete implementation through `module_src`. GEPA
-can propose complete candidates and apply them through the module’s
-transactional optimization boundary:
+module’s complete `module_src`: the choice and order of predictors, or
+in executable mode, deterministic R branches and selected tool calls.
+Invalid candidates are rejected before selection.
 
-``` r
-
-program <- flex("question -> answer")
-optimizer <- GEPA(
-  metric = metric_exact_match(field = "answer"),
-  population_size = 6L,
-  generations = 2L,
-  seed = 42L
-)
-optimized <- compile(
-  optimizer,
-  program,
-  trainset = trainset,
-  .llm = llm
-)
-```
-
-The safe default is a version 1 JSON graph containing allowlisted
-Predict and Chain-of-Thought steps with typed backward references.
-Opt-in `source_format = "r"` accepts complete R source with
-deterministic logic, control flow, the DSPy Flex predictor family, and
-explicit host tools. That source runs only in a fresh configured
-interpreter, uses a versioned host bridge, and requires an advertised
-sandbox by default. Direct host-tool calls have their own
-`max_tool_calls` budget.
-
-Advertising the graph as a parameter does not make every teleprompter a
-structural optimizer. GEPA represents every mutable program as a
-complete set of instruction and, when present, Flex-source components.
-It rejects invalid source candidates before selection and ranks whole
-programs. Upstream GEPA’s frontier is indexed by validation example over
-complete candidates; component selection and lineage-aware merge are
-separate operations. Other teleprompters do not silently rewrite
-`module_src`. A fully frozen graph short-circuits without proposer or
-evaluation work and records that optimization was skipped. See
-[Structural Optimization with
-Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
-for the full schema and audit contract.
+Use this only when implementation strategy is genuinely unresolved. See
+[Flex: Optimize the Whole
+Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
+for a complete before-and-after example and the runtime boundary.
 
 ## GEPA (Reflective Prompt Evolution)
 
@@ -493,6 +460,10 @@ When a program contains Flex leaves, GEPA candidates include complete
 `module_src` values as well as ordinary instructions. Invalid source
 proposals remain auditable but non-selectable. Pareto selection is
 whole-program, not an implementation of DSPy’s per-component frontier.
+The [Flex
+guide](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
+shows how to evaluate those candidates on both answer quality and
+predictor calls.
 
 ## Omni
 

@@ -81,7 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -616,15 +616,13 @@ it exactly once when the invocation ends, including after an error:</p>
 <p>The factory form is the safer default when state must not cross
 invocation boundaries. The direct-runner form is useful for object reuse
 or intentional REPL persistence; never share a stateful runner across
-concurrent calls. Supplying both forms is an error. Use synchronous
-<code><a href="../reference/run.html">run()</a></code> for these code-executing modules. The generic async
-and module <code>$stream()</code> entry points reject a program graph
-containing ProgramOfThought, CodeAct, or RLM before any provider call
-because those paths cannot preserve the specialized runner lifecycle
-yet. <code><a href="../reference/run_stream.html">run_stream()</a></code> without a matching token listener
-preserves the ordinary synchronous <code>forward()</code> path; a
-matching token-stream request is rejected before provider or factory
-work.</p>
+concurrent calls. Supplying both forms is an error. Factory-backed
+ProgramOfThought, CodeAct, and RLM support <code><a href="../reference/run_async.html">run_async()</a></code> and
+isolated mirai batch execution because every invocation owns a fresh
+runner. Caller-owned runners remain sequential. Specialized token
+streaming is still rejected before provider or factory work;
+<code><a href="../reference/run_stream.html">run_stream()</a></code> without a matching token listener preserves
+the ordinary synchronous <code>forward()</code> path.</p>
 </div>
 <div class="section level3">
 <h3 id="basic-usage-4">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-4"></a>
@@ -789,21 +787,17 @@ that the LLM can call:</p>
 <div class="section level2">
 <h2 id="flex-experimental">Flex (experimental)<a class="anchor" aria-label="anchor" href="#flex-experimental"></a>
 </h2>
-<p><code><a href="../reference/flex.html">flex()</a></code> makes a complete implementation part of a
-module’s optimization state. Its safe default is canonical, versioned
-JSON with Predict and Chain-of-Thought steps. Opt-in executable mode
-accepts complete R <code>forward()</code> source, dynamic predictors,
-deterministic control flow, and named host tools, evaluated only through
-a fresh configured interpreter.</p>
+<p>Use <code><a href="../reference/flex.html">flex()</a></code> when the implementation strategy is the
+search problem. GEPA can change which predictors run, add deterministic
+R logic, or call a selected tool—not only rewrite instructions inside a
+fixed module.</p>
 <div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
 <span><span class="va">program</span><span class="op">$</span><span class="va">module_src</span></span></code></pre></div>
-<p>Use <code>program$bind(candidate)</code> to validate and replace the
-source transactionally. Direct assignment to <code>module_src</code> is
-rejected. DSPy uses Python module classes and a default Deno/Pyodide
-interpreter; dsprrr uses R <code>forward()</code> source and an explicit
-factory, so source is not portable. See <a href="flex-optimization.html">Structural Optimization with Flex</a> for
-both source languages, references, and the safety boundary.</p>
+<p>Use a regular module when its shape is known, or an explicit pipeline
+when people should own the workflow. See <a href="flex-optimization.html">Flex: Optimize the Whole Program</a> for a
+deterministic GEPA replay that preserves router accuracy while removing
+unnecessary model calls.</p>
 </div>
 <div class="section level2">
 <h2 id="combining-modules">Combining Modules<a class="anchor" aria-label="anchor" href="#combining-modules"></a>
@@ -961,8 +955,8 @@ R:</p>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/flex.html">flex()</a></code></td>
-<td>Testing bounded or executable structures</td>
-<td>Experimental dual-source API</td>
+<td>Optimizing the choice among predictors, R logic, and tools</td>
+<td>Experimental; executable source requires a sandbox</td>
 </tr>
 </tbody>
 </table>
@@ -971,8 +965,8 @@ R:</p>
 <strong>BestOfN</strong> when you need reliability - Use
 <strong>ProgramOfThought</strong> for exact computation (math,
 statistics) - Use <strong>CodeAct</strong> when you need tools AND code
-execution together - Use <strong>Flex</strong> when predictor structure
-itself is the experiment</p>
+execution together - Use <strong>Flex</strong> when the implementation
+strategy itself is the experiment</p>
 </div>
 <div class="section level2">
 <h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>

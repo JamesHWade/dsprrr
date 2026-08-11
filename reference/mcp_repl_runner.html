@@ -11,7 +11,14 @@ example because user code printed a large value first), the runner fails the
 iteration instead of accepting an unverifiable partial control frame. These
 markers are plain text in the upstream protocol, so detection is necessarily
 conservative and can only fail closed; dsprrr never follows a disclosed
-sandbox file path from the host process."><meta property="og:description" content="Creates a dsprrr code runner backed by Posit's
+sandbox file path from the host process.
+Executable Flex decodes one bounded current-step frame from raw output before
+display truncation. It may also recover that frame from a plain file preview.
+The frame remains untrusted and is still subject to Flex's host-side request,
+budget, and output validation. Ambiguous previews, pagers, bundles, and MCP
+errors fail closed. Host-generated requests that exceed the wire bound are
+compressed before transport and rejected before sending if they still do not
+fit."><meta property="og:description" content="Creates a dsprrr code runner backed by Posit's
 mcp-repl MCP server.
 mcp-repl keeps a long-lived R session and enforces its sandbox with
 operating-system primitives. This makes it suitable for code proposed by an
@@ -23,7 +30,14 @@ example because user code printed a large value first), the runner fails the
 iteration instead of accepting an unverifiable partial control frame. These
 markers are plain text in the upstream protocol, so detection is necessarily
 conservative and can only fail closed; dsprrr never follows a disclosed
-sandbox file path from the host process."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
+sandbox file path from the host process.
+Executable Flex decodes one bounded current-step frame from raw output before
+display truncation. It may also recover that frame from a plain file preview.
+The frame remains untrusted and is still subject to Flex's host-side request,
+budget, and output validation. Ambiguous previews, pagers, bundles, and MCP
+errors fail closed. Host-generated requests that exceed the wire bound are
+compressed before transport and rejected before sending if they still do not
+fit."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -79,7 +93,7 @@ sandbox file path from the host process."><meta property="og:image" content="htt
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -126,6 +140,13 @@ iteration instead of accepting an unverifiable partial control frame. These
 markers are plain text in the upstream protocol, so detection is necessarily
 conservative and can only fail closed; dsprrr never follows a disclosed
 sandbox file path from the host process.</p>
+<p>Executable Flex decodes one bounded current-step frame from raw output before
+display truncation. It may also recover that frame from a plain file preview.
+The frame remains untrusted and is still subject to Flex's host-side request,
+budget, and output validation. Ambiguous previews, pagers, bundles, and MCP
+errors fail closed. Host-generated requests that exceed the wire bound are
+compressed before transport and rejected before sending if they still do not
+fit.</p>
     </div>
 
     <div class="section level2">
@@ -175,9 +196,10 @@ optimizer.</p></dd>
 
 
 <dt id="arg-oversized-output">oversized_output<a class="anchor" aria-label="anchor" href="#arg-oversized-output"></a></dt>
-<dd><p>mcp-repl oversized-output mode. During authenticated
-RLM traffic, a detected oversized-output preview fails the iteration;
-dsprrr attempts to reset active pager state before returning the failure.</p></dd>
+<dd><p>mcp-repl oversized-output mode. RLM previews fail
+closed. Executable Flex accepts only one bounded current-step frame in a
+plain file preview. dsprrr attempts to reset active pager state before
+returning a failure.</p></dd>
 
 
 <dt id="arg-extra-args">extra_args<a class="anchor" aria-label="anchor" href="#arg-extra-args"></a></dt>

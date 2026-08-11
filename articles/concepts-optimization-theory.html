@@ -81,7 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -145,8 +145,9 @@ examples with expected outputs - An evaluation metric</p>
 metric performance</p>
 <p>Traditional prompt engineering solves this by hand: you write
 prompts, test them, and tweak them. Most dsprrr optimizers automate that
-prompt search; experimental Flex also exposes a constrained predictor
-structure to GEPA.</p>
+prompt search; experimental Flex lets GEPA optimize how the module
+executes, including predictor structure and, in executable mode, R logic
+and selected tools.</p>
 </div>
 <div class="section level2">
 <h2 id="what-gets-optimized">What Gets Optimized<a class="anchor" aria-label="anchor" href="#what-gets-optimized"></a>
@@ -467,14 +468,13 @@ selection to retain candidates that are useful across objectives:</p>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p>GEPA reflects on failed examples, proposes revised instructions,
-evaluates them, and keeps a Pareto frontier across metrics. This is
-reflective prompt evolution, not general genetic programming over
-executable programs. For ordinary modules, optional crossover combines
-instruction text. When a program contains Flex leaves, crossover instead
-selects complete parent component values atomically, including full
-<code>module_src</code> strings; it never splices JSON source text. GEPA
-is useful when feedback is informative and you can afford repeated
-evaluation.</p>
+evaluates them, and keeps a Pareto frontier across metrics. For ordinary
+modules this is reflective prompt evolution: optional crossover combines
+instruction text. When a program contains Flex leaves, GEPA can instead
+select complete <code>module_src</code> values atomically; it never
+splices source text. GEPA is useful when feedback is informative and you
+can afford repeated evaluation. See <a href="flex-optimization.html">Flex: Optimize the Whole Program</a> when
+the implementation itself should be part of the search.</p>
 </div>
 <div class="section level3">
 <h3 id="autoresearch-and-meta-harness-agentic-program-search">AutoResearch and Meta-Harness: Agentic Program Search<a class="anchor" aria-label="anchor" href="#autoresearch-and-meta-harness-agentic-program-search"></a>

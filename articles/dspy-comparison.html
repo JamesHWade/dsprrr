@@ -81,7 +81,7 @@
     <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Structural Optimization with Flex</a></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
     <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
@@ -232,11 +232,10 @@ strictly; compacted mcp-repl control responses fail closed</td>
 <td>Experimental <code>dspy.Flex</code>
 </td>
 <td><code><a href="../reference/flex.html">flex()</a></code></td>
-<td>Dual-mode analogue: a safe versioned JSON graph by default, plus
-opt-in complete R source in a fresh interpreter with a versioned host
-bridge and separate predictor/tool budgets. R source defines
-<code>forward()</code> rather than a Python module class, and no default
-sandbox is silently selected</td>
+<td>GEPA can optimize a bounded predictor graph or an R
+<code>forward()</code> program. dsprrr requires an explicit fresh
+interpreter for executable source rather than choosing a default
+sandbox</td>
 </tr>
 <tr class="odd">
 <td>
@@ -273,21 +272,13 @@ not yet a dedicated module</td>
 </tr>
 </tbody>
 </table>
-<p>For ProgramOfThought, CodeAct, and RLM, <code>runner</code> and
-<code>interpreter_factory</code> are mutually exclusive and one is
-required. A direct <code>runner</code> is caller-owned: dsprrr reuses
-the object across invocations and never closes it, while the backend
-determines whether execution state persists and whether reset is
-available. An <code>interpreter_factory</code> is a zero-argument
-function called once per invocation; its fresh runner is owned by dsprrr
-and closed exactly once when that invocation ends, including on failure.
-This mirrors DSPy 3.3’s lifecycle while retaining an explicit
-caller-owned option for R workflows.</p>
-<p>Executable Flex accepts only <code>interpreter_factory</code>, never
-a caller-owned runner, so each call has isolated bridge state. Its
-default <code>require_sandbox = TRUE</code> rejects trusted-input-only
-runners. The declarative JSON mode remains the resource-free default and
-needs no interpreter.</p>
+<p>For ProgramOfThought, CodeAct, and RLM, choose either a caller-owned
+<code>runner</code> or a zero-argument <code>interpreter_factory</code>
+that creates a fresh runner per invocation. Executable Flex accepts only
+the factory form and requires an enforced sandbox by default; JSON Flex
+needs no interpreter. See <a href="flex-optimization.html">Flex:
+Optimize the Whole Program</a> for the practical choice between those
+modes.</p>
 <p>One notable difference: DSPy 3.0 <em>removed</em>
 <code>dspy.Assert</code>/<code>dspy.Suggest</code> in favor of
 <code>BestOfN</code>/<code>Refine</code>. dsprrr keeps both styles:
@@ -344,15 +335,11 @@ vs. the full introspective algorithm</td>
 <tr class="even">
 <td><code>GEPA</code></td>
 <td><code>GEPA</code></td>
-<td>Adapted: reflective mutation and validated complete-program
-candidates for ordinary and Flex programs. dsprrr separates trainset
-discovery from valset selection, combines validation-example winners
-with the multi-metric Pareto front, supports
-round-robin/budget-atomic-all/custom component selection, and records
-immediate lineage, attempted merges, per-example scores/winners, and
-optional retained outputs. Cached subsample merge acceptance,
-fine-grained resume, and built-in experiment trackers remain
-different</td>
+<td>Adapted reflective optimization for instructions and complete Flex
+sources, with separate train/validation roles, multi-objective
+selection, lineage, and optional retained outputs. Cached subsample
+merge acceptance, fine-grained resume, and built-in experiment trackers
+remain different</td>
 </tr>
 <tr class="odd">
 <td><code>COPRO</code></td>
@@ -713,15 +700,12 @@ sweeps.</li>
 <p>In rough priority order, based on the stable DSPy 3.3 runtime:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Remaining Flex parity</strong>: dsprrr now supports complete
-interpreter-backed R source, deterministic computation, control flow,
-explicit host tools, the DSPy Flex primitive family, separate runtime
-predictor/tool-call limits, and GEPA source search. It intentionally
-requires an explicit interpreter factory rather than selecting a default
-sandbox, uses a top-level R <code>forward()</code> function rather than
-a Python module class, and cannot port source between the two.
-Concurrent executable evaluation, fine-grained checkpoint resume, and
-GEPA’s cached subsample merge-acceptance gate remain unimplemented.</li>
+<strong>Remaining Flex gaps</strong>: concurrent executable
+evaluation, fine-grained checkpoint resume, and GEPA’s cached subsample
+merge-acceptance gate remain unimplemented. The top-level R
+<code>forward()</code> function, explicit interpreter factory, and
+non-portable R/Python source are intentional API differences, not
+missing parity.</li>
 <li>
 <strong>One package-wide invocation/result contract</strong>
 carrying native turns, usage, cost, cache state, timing, and normalized
