@@ -88,7 +88,9 @@ test_that("rlm forwards structured one-shot results with an explicit runner", {
 
 test_that("run treats every RLM input as one rich context object", {
   skip_if_not_installed("callr")
-  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  # Instrumented coverage runs can spend more than ten seconds starting the
+  # persistent callr session before this rich context is staged.
+  runner <- r_code_runner(timeout = 60, persistent = TRUE)
   withr::defer(runner$close())
   chat <- create_mock_rlm_llm(list(list(
     reasoning = "Verify the staged R objects",
