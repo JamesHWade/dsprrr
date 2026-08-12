@@ -19,6 +19,10 @@
 #' 3. BootstrapFewShot with unshuffled examples
 #' 4. BootstrapFewShot with various random seeds
 #'
+#' Programs containing Flex or RLM modules are rejected before candidate
+#' evaluation because their predictor-local demonstration contracts are not
+#' currently available to this optimizer.
+#'
 #' @param metric A metric function for evaluating predictions (required).
 #' @param metric_threshold Minimum score for a demo to be accepted.
 #'   If NULL, accepts any successful prediction. Default is NULL.
@@ -53,6 +57,10 @@
 #' )
 #'
 #' # Compile with validation set (required)
+#' qa_module <- module(signature("question -> answer"))
+#' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
+#' valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
+#' llm <- ellmer::chat_openai()
 #' compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
 #'
 #' # Access ranked candidates
@@ -198,6 +206,10 @@ compile_bootstrap_rs <- function(
       "BootstrapFewShotWithRandomSearch currently only supports Module objects"
     )
   }
+  bootstrap_assert_demo_eligible(
+    program,
+    optimizer_name = "BootstrapFewShotWithRandomSearch"
+  )
 
   if (!is.data.frame(trainset)) {
     cli::cli_abort("{.arg trainset} must be a data frame")

@@ -234,7 +234,7 @@ result <- run(
 | `multichain` | Ensemble reasoning with multiple chains |
 | `program_of_thought` | Generate and execute R code |
 | `codeact` | Combine tools with R code execution |
-| `rlm` | Explore large context through an R REPL |
+| `rlm` | Adaptively investigate large or awkward R objects (experimental) |
 | `flex` | Let GEPA optimize how a module uses predictors, R logic, and selected tools (experimental) |
 
 ``` r
@@ -249,7 +249,75 @@ agent <- module(
 mod <- module(signature("question -> answer"), type = "chain_of_thought")
 ```
 
-### Optimize the program, not only the prompt
+## Find the cohort that regressed
+
+A release-level average tells you that checkout conversion fell. It does
+not tell you which cohort changed or which release note matters. When
+the useful grouping is not known in advance, an RLM can inspect the
+source object with R, show the model only bounded observations, and
+revise the investigation between steps.
+
+The deterministic tutorial uses 40,000 sessions and 200 change records.
+A successful run must recover this independently checkable result:
+
+``` text
+release:      2.4.0
+cohort:       platform=mobile / plan=pro
+before_rate:  0.92
+after_rate:   0.61
+drop_pp:      31
+change_id:    CHG-1842
+```
+
+For that rich data-frame input, opt into a persistent trusted callr
+runner:
+
+``` r
+investigator <- rlm_module(
+  paste(
+    "sessions, changes, question ->",
+    "release: string, cohort: string, before_rate: number,",
+    "after_rate: number, drop_pp: number, change_id: string, evidence: string"
+  ),
+  interpreter_factory = function() {
+    r_code_runner(timeout = 30, persistent = TRUE)
+  },
+  max_iters = 8,
+  max_llm_calls = 0L
+)
+```
+
+This persistent `r_code_runner()` preserves rich R objects but is
+trusted-input-only, not a security sandbox. The one-call `rlm()` helper
+instead creates a fresh managed `mcp-repl` OS sandbox by default. It
+disables network access but permits writes inside the allowed workspace.
+Install the suggested R package `mcptools` and the external `mcp-repl`
+executable first (for example, `uv tool install posit-mcp-repl`). This
+path currently suits compact, JSON-compatible context: the final
+JSON-RPC request has a 7 KB wire bound, with gzip/base64 attempted when
+the raw request is too large, and RLM control frames have a 3,000-byte
+encoded bound.
+
+[Work through the release-regression
+investigation](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.html),
+then read [the RLM execution
+contract](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html).
+
+### Choose the right kind of code generation
+
+| If the task requires… | Use… |
+|----|----|
+| A calculation whose steps are already known | `program_of_thought()` |
+| A new exploration path for this input at inference time | `rlm_module()` |
+| A reusable implementation discovered from labeled examples | `flex()` with GEPA |
+
+RLM is not an optimizer. It adapts its investigation for each
+invocation. Its action and fallback instructions can still be compiled
+with a supported optimizer, but the exploration remains inference-time
+work. Flex searches during compilation for a program to reuse on later
+invocations.
+
+## Optimize the program, not only the prompt
 
 Most optimizers improve instructions inside a workflow you designed.
 `flex()` lets GEPA change the workflow itself: which predictors run,
@@ -305,12 +373,16 @@ Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-dem
 **How-to guides:** - [Compile &
 Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html) -
 [Build RAG
-Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.html)
+Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.html) -
+[Investigate a Release Regression with an
+RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.html)
 
 **Concepts:** - [The DSPy
 Philosophy](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.html) -
 [How Optimization
-Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.html)
+Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.html) -
+[How the RLM
+Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html)
 
 **Reference:** - [Quick
 Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.html) -

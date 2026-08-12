@@ -11,11 +11,15 @@
 #' `registry` to store stable IDs, or set `trusted = TRUE` to embed them. Embedded
 #' values are restored only when `trusted = TRUE` is also supplied while loading.
 #' Registry IDs are the recommended contract for tools, custom functions,
-#' retrievers, stores, code runners, and interpreter factories. Format version 4
-#' records exactly one runner or factory for each code-executing module without
-#' invoking a factory during write or restore. Valid version 3 runner-only
-#' manifests are checked against their original schema and integrity digest,
-#' then upgraded in memory; other historical versions are rejected.
+#' retrievers, stores, code runners, and interpreter factories. Format version 5
+#' adds graph-visible RLM action and extraction predictors. Version 4 records
+#' exactly one runner or factory for each code-executing module. Valid version 3
+#' runner-only and version 4 manifests are checked against their original schema
+#' and integrity digest. Non-RLM manifests are upgraded in memory. A legacy
+#' childless RLM is restored under its original schema with fresh default child
+#' predictors and becomes a complete version 5 graph when it is next saved.
+#' Other historical versions are rejected. Factories are never invoked during
+#' write or restore.
 #'
 #' Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 #' through a closed codec. Remote content URLs must be stable HTTPS URLs without
@@ -61,10 +65,10 @@
 #' @name program-artifact
 NULL
 
-artifact_format_version <- function() 4L
+artifact_format_version <- function() 5L
 
 artifact_supported_format_versions <- function() {
-  c(3L, artifact_format_version())
+  c(3L, 4L, artifact_format_version())
 }
 
 #' @rdname program-artifact
@@ -2368,26 +2372,45 @@ artifact_validate_manifest <- function(artifact) {
 }
 
 artifact_upgrade_manifest <- function(artifact) {
-  if (!identical(as.integer(artifact$format_version), 3L)) {
+  version <- as.integer(artifact$format_version)
+  if (!version %in% c(3L, 4L)) {
+    return(artifact)
+  }
+
+  # Legacy RLM manifests are intentionally restored under their original
+  # schema so the constructor can supply fresh default child predictors. The
+  # next write serializes those children as a complete v5 graph.
+  has_childless_rlm <- any(vapply(
+    artifact$graph$nodes,
+    function(node) {
+      identical(node$class, "RLMModule") &&
+        artifact_is_plain_list(node$children) &&
+        length(node$children) == 0L
+    },
+    logical(1)
+  ))
+  if (has_childless_rlm) {
     return(artifact)
   }
 
   upgraded <- artifact
-  runtime_classes <- c(
-    "ProgramOfThoughtModule",
-    "CodeActModule",
-    "RLMModule"
-  )
-  for (id in names(upgraded$graph$nodes)) {
-    node <- upgraded$graph$nodes[[id]]
-    if (node$class %in% runtime_classes) {
-      runner_position <- match("runner", names(node$fields))
-      node$fields <- append(
-        node$fields,
-        list(interpreter_factory = NULL),
-        after = runner_position
-      )
-      upgraded$graph$nodes[[id]] <- node
+  if (identical(version, 3L)) {
+    runtime_classes <- c(
+      "ProgramOfThoughtModule",
+      "CodeActModule",
+      "RLMModule"
+    )
+    for (id in names(upgraded$graph$nodes)) {
+      node <- upgraded$graph$nodes[[id]]
+      if (node$class %in% runtime_classes) {
+        runner_position <- match("runner", names(node$fields))
+        node$fields <- append(
+          node$fields,
+          list(interpreter_factory = NULL),
+          after = runner_position
+        )
+        upgraded$graph$nodes[[id]] <- node
+      }
     }
   }
   upgraded$format_version <- artifact_format_version()
@@ -2398,6 +2421,29 @@ artifact_upgrade_manifest <- function(artifact) {
 
 artifact_validate_restored_graph <- function(program, artifact) {
   graph <- module_graph(program, boundaries = "cross", cycles = "record")
+  legacy_rlm_paths <- names(Filter(
+    function(node) {
+      identical(node$class, "RLMModule") &&
+        artifact_is_plain_list(node$children) &&
+        length(node$children) == 0L
+    },
+    artifact$graph$nodes
+  ))
+  if (length(legacy_rlm_paths) > 0L) {
+    implicit_child_paths <- unlist(
+      lapply(
+        legacy_rlm_paths,
+        function(path) {
+          paste0(path, "/", c("generate_action", "extract"))
+        }
+      ),
+      use.names = FALSE
+    )
+    # Older RLM artifacts predate graph-visible predictors. Their restored
+    # modules receive fresh default predictors, which are intentionally absent
+    # from the legacy manifest comparison.
+    graph <- graph[!graph$path %in% implicit_child_paths, , drop = FALSE]
+  }
   expected_paths <- c(
     artifact$root,
     vapply(artifact$graph$edges, `[[`, character(1), "path")
@@ -2538,7 +2584,7 @@ artifact_validate_node_payload <- function(node, malformed, version) {
   artifact_validate_state_and_optimization(node, malformed)
   artifact_validate_provider_model(node$provider_model, node$id, malformed)
   artifact_validate_fields(node, malformed, version = version)
-  artifact_validate_children_schema(node, malformed)
+  artifact_validate_children_schema(node, malformed, version = version)
   invisible(node)
 }
 
@@ -3316,7 +3362,7 @@ artifact_validate_knn_fields <- function(node, malformed) {
   TRUE
 }
 
-artifact_validate_children_schema <- function(node, malformed) {
+artifact_validate_children_schema <- function(node, malformed, version) {
   children <- node$children
   invalid <- function() {
     malformed(paste0("Node ", node$id, " has invalid class-specific children."))
@@ -3327,7 +3373,6 @@ artifact_validate_children_schema <- function(node, malformed) {
     "FnModule",
     "ProgramOfThoughtModule",
     "CodeActModule",
-    "RLMModule",
     "RAGModule",
     "FlexModule"
   )
@@ -3342,6 +3387,23 @@ artifact_validate_children_schema <- function(node, malformed) {
     artifact_is_plain_list(value) &&
       (!nonempty || length(value) > 0L) &&
       all(vapply(value, artifact_is_node_ref, logical(1)))
+  }
+  if (identical(node$class, "RLMModule")) {
+    legacy_childless <- version < 5L &&
+      artifact_is_plain_list(children) &&
+      length(children) == 0L
+    current_children <- version >= 5L &&
+      artifact_is_plain_list(children) &&
+      artifact_names_match(
+        names(children),
+        c("generate_action", "extract")
+      ) &&
+      artifact_is_node_ref(children$generate_action) &&
+      artifact_is_node_ref(children$extract)
+    if (!legacy_childless && !current_children) {
+      invalid()
+    }
+    return(invisible(children))
   }
   valid <- switch(
     node$class,
@@ -3965,7 +4027,9 @@ artifact_construct_module <- function(node, children, registry, trusted) {
       verbose = fields$verbose,
       tools = runtime_list(fields$tools),
       config = config,
-      chat = NULL
+      chat = NULL,
+      generate_action = children$generate_action,
+      extract = children$extract
     ),
     RAGModule = RAGModule$new(
       signature = signature,

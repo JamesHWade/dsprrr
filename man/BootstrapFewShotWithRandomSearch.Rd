@@ -64,6 +64,10 @@ The optimizer generates candidates including:
 \item BootstrapFewShot with unshuffled examples
 \item BootstrapFewShot with various random seeds
 }
+
+Programs containing Flex or RLM modules are rejected before candidate
+evaluation because their predictor-local demonstration contracts are not
+currently available to this optimizer.
 }
 \examples{
 \dontrun{
@@ -76,6 +80,10 @@ tp <- BootstrapFewShotWithRandomSearch(
 )
 
 # Compile with validation set (required)
+qa_module <- module(signature("question -> answer"))
+trainset <- data.frame(question = "Capital of France?", answer = "Paris")
+valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
+llm <- ellmer::chat_openai()
 compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
 
 # Access ranked candidates

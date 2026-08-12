@@ -55,7 +55,11 @@ MIPROv2(
 }
 \description{
 MIPROv2 jointly optimizes instructions and few-shot demonstrations using
-a discrete Bayesian optimization loop with minibatch evaluation.
+a discrete Bayesian optimization loop with minibatch evaluation for a root
+Predict module. For graphs with nested predictors such as RLM, it optimizes
+child instructions only and requires \code{max_bootstrapped_demos = 0L}; nested
+demo bootstrapping fails explicitly until predictor-local evidence is
+available.
 }
 \examples{
 
@@ -66,6 +70,10 @@ tp <- MIPROv2(
   max_bootstrapped_demos = 4L
 )
 
+qa_module <- module(signature("question -> answer"))
+trainset <- data.frame(question = "Capital of France?", answer = "Paris")
+valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
+llm <- ellmer::chat_openai()
 compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
 }
 }

@@ -50,7 +50,7 @@ provider communication.
 | `dspy.BestOfN` | `best_of_n()` | Reward-function-guided retries |
 | `dspy.Refine` | `refine()` | Retries with LLM-generated feedback |
 | `dspy.MultiChainComparison` | `multi_chain_comparison()` | |
-| `dspy.RLM` | `rlm_module()` | Recursive language models over an R REPL; accepts the 3.3 `max_iters` spelling and either runner lifecycle. Tool names, inputs, sub-LM responses, and authenticated control frames are validated strictly; compacted mcp-repl control responses fail closed |
+| `dspy.RLM` | `rlm_module()` (experimental) | Inference-time adaptive exploration over an R REPL, with optimizable action and extraction predictors, inherited or separate sub-LMs, replayed recursive values, typed submission repair, and trajectory metadata |
 | Experimental `dspy.Flex` | `flex()` | GEPA can optimize a bounded predictor graph or an R `forward()` program. dsprrr requires an explicit fresh interpreter for executable source rather than choosing a default sandbox |
 | `dspy.Parallel` / `Module.batch` | `run_dataset()`, `run(..., .parallel = TRUE)` | Batch over a data frame; heterogeneous (module, example) fan-out is not yet a dedicated module |
 | `dspy.majority` | `ensemble()` with `reduce_majority()` | Plus `reduce_weighted_vote()`, `reduce_best_by_metric()` |
@@ -64,6 +64,53 @@ enforced sandbox by default; JSON Flex needs no interpreter. See [Flex:
 Optimize the Whole Program](flex-optimization.html) for the practical choice
 between those modes.
 
+The one-call `rlm()` helper is the exception to the explicit-binding rule: it
+creates a fresh managed `mcp-repl` sandbox factory by default. That path is
+intended for compact JSON-compatible context. For trusted rich R objects, opt
+into `r_code_runner(persistent = TRUE)` so one callr process stages the context
+once and keeps derived values for the invocation.
+
+### RLM parity and intentional differences
+
+dsprrr now matches the DSPy 3.3 RLM execution contracts that determine how an
+investigation behaves:
+
+- one factory-owned interpreter belongs to each invocation, and persistent
+  backends retain state across its iterations;
+- `generate_action` and `extract` are child predictors visible to graph
+  optimizers;
+- `sub_lm = NULL` inherits the outer LM, while an explicit sub-LM can handle
+  focused queries;
+- `llm_query()` and `llm_query_batched()` return host-produced values to the
+  same generated R evaluation through validated replay;
+- invalid typed `SUBMIT()` calls become repairable observations rather than
+  silently becoming final output;
+- execution observations use a 10,000-character head-and-tail module bound
+  after any stricter runner transport limit;
+  and
+- structured results include the output source, bounded REPL trajectory,
+  recursive-call counts, usage, and runner policy.
+
+The remaining RLM differences are intentional and user-visible:
+
+| Boundary | DSPy | dsprrr |
+|---|---|---|
+| Generated language | Python | R, with signature inputs under `.context` |
+| Returned value | Prediction with trajectory and top-level `final_reasoning` | `run()` output plus structured metadata; per-step reasoning is in the bounded trajectory and output source is explicit |
+| Interpreter binding | Optional interpreter may be supplied to each `forward()` call | Runner or factory is bound when constructing `rlm_module()`; the one-call `rlm()` helper creates that binding for one invocation |
+| Default local execution | DSPy interpreter configuration | `rlm()` creates a fresh managed `mcp-repl` OS sandbox with network disabled and workspace writes allowed |
+| Large or rich input | `SandboxSerializable` can define interpreter-specific one-time staging | Persistent trusted callr stages serializable native R objects once; no general public custom-staging protocol yet. Managed MCP requires the final raw-or-compressed JSON-RPC request to fit 7 KB and each encoded control frame to fit 3,000 bytes |
+| Typed outputs | Signature adapters validate the configured Python/Pydantic type | RLM validates explicit ellmer string, number, integer, boolean, enum, array, and object types; opaque `TypeJsonSchema` nodes are rejected rather than accepted without validation |
+| Stored trajectory | Full interpreter trajectory | Bounded, formatted execution evidence; large raw runner output is not retained |
+| Recursive replay | Interpreter-dependent | One nonce-bound, schema-checked ordered ledger returns query/tool values in code, but cannot roll back direct external side effects before a request |
+| Batch failures | Per-provider failures become ordered error values | Per-request provider failures become ordered `[ERROR] ...` values; unexpected or batch-infrastructure failures terminate |
+| Host tools | Interpreter-defined | Declared RLM tools execute in the host process, outside the guest sandbox; the bridge caps one generated step at 1,000 tool calls |
+
+RLM remains experimental in dsprrr. The execution and result contracts are
+tested; the convenience API may still evolve. See [the deterministic release
+regression](tutorial-rlm-dsprrr.html) and [the RLM execution
+contract](how-rlm-works.html).
+
 One notable difference: DSPy 3.0 *removed* `dspy.Assert`/`dspy.Suggest`
 in favor of `BestOfN`/`Refine`. dsprrr keeps both styles: declarative
 assertions with retry/backtracking (`with_assertions()`,
@@ -76,10 +123,10 @@ feedback injection.
 
 | DSPy | dsprrr | Fidelity notes |
 |------|--------|----------------|
-| `LabeledFewShot` | `LabeledFewShot` | Equivalent |
-| `BootstrapFewShot` | `BootstrapFewShot` | Equivalent; compiles pipelines jointly (demos for every step harvested from end-to-end traces) |
-| `BootstrapFewShotWithRandomSearch` | `BootstrapFewShotWithRandomSearch` | Equivalent |
-| `MIPROv2` | `MIPROv2` | Discrete Bayesian optimization with UCB over instruction + demo candidates |
+| `LabeledFewShot` | `LabeledFewShot` | Equivalent for a root Predict module; nested-predictor graphs, including RLM and Flex wrappers, are rejected rather than receiving mismatched root-task demos |
+| `BootstrapFewShot` | `BootstrapFewShot` | Compiles ordinary pipelines jointly; programs containing Flex or RLM are rejected because their runtime predictors cannot receive root-task demos |
+| `BootstrapFewShotWithRandomSearch` | `BootstrapFewShotWithRandomSearch` | Random search over ordinary labeled/bootstrap candidates; rejects programs containing Flex or RLM rather than returning a baseline-only no-op |
+| `MIPROv2` | `MIPROv2` | Root Predict modules search instruction + demo candidates; nested graphs search child instructions with `max_bootstrapped_demos = 0L` |
 | `SIMBA` | `SIMBA` | Adapted: hard-example mining + LLM-generated rules; simplified vs. the full introspective algorithm |
 | `GEPA` | `GEPA` | Adapted reflective optimization for instructions and complete Flex sources, with separate train/validation roles, multi-objective selection, lineage, and optional retained outputs. Cached subsample merge acceptance, fine-grained resume, and built-in experiment trackers remain different |
 | `COPRO` | `COPRO` | Equivalent (coordinate ascent over instructions) |
@@ -93,6 +140,13 @@ feedback injection.
 | — | `Omni` | dsprrr addition: independent best-of exploration plus a fresh continuation optimizer, with common validation scoring and optional mirai concurrency |
 | — | `AutoResearch` | dsprrr addition: persistent research-agent loop over validated, jointly editable module snapshots with sandboxed R analysis |
 | — | `MetaHarness` | dsprrr addition: fresh batch proposers plus host-owned frontier selection, lineage, budgets, and checkpoint resume |
+
+For an RLM graph, GEPA can tune both child predictors. MIPROv2 currently tunes
+their instructions only and requires `max_bootstrapped_demos = 0L`; nested demo
+bootstrapping fails explicitly until predictor-local child evidence is
+available. `BootstrapFewShot()`, its random-search variant, and
+`LabeledFewShot()` reject programs containing an RLM because task examples do
+not match the children’s `state -> ...` signatures.
 
 ### GEPA feedback metrics
 
@@ -216,25 +270,32 @@ optimizers operate on single modules).
 
 ## Known gaps (roadmap)
 
+The RLM differences above are disclosed boundaries. Some are intentional API
+choices; others, such as a general public custom-staging protocol, remain parity
+work. Remaining package-level gaps are:
+
 In rough priority order, based on the stable DSPy 3.3 runtime:
 
-1. **Remaining Flex gaps**: concurrent executable evaluation, fine-grained
+1. **General custom input staging for interpreter-backed modules**, analogous
+   to DSPy's `SandboxSerializable`, beyond the current persistent-callr and
+   runner-specific paths.
+2. **Remaining Flex gaps**: concurrent executable evaluation, fine-grained
    checkpoint resume, and GEPA's cached subsample merge-acceptance gate remain
    unimplemented. The top-level R `forward()` function, explicit interpreter
    factory, and non-portable R/Python source are intentional API differences,
    not missing parity.
-2. **One package-wide invocation/result contract** carrying native turns,
+3. **One package-wide invocation/result contract** carrying native turns,
    usage, cost, cache state, timing, and normalized errors across every module.
-3. **Package-level OpenTelemetry spans** for module, optimizer, evaluation,
+4. **Package-level OpenTelemetry spans** for module, optimizer, evaluation,
    cache, and tool activity, composed with ellmer's provider telemetry.
-4. **Native reasoning-trace capture** as a typed output (analogous to
+5. **Native reasoning-trace capture** as a typed output (analogous to
    `dspy.Reasoning`).
-5. **Joint multi-step optimization for other instruction optimizers**
-   (including MIPROv2); demo bootstrapping is already joint and GEPA now
-   selects complete-program components explicitly.
-6. **Adapter-style fallbacks** for models with weak structured-output
+6. **Predictor-local RLM demo evidence** so MIPROv2 can bootstrap child demos;
+   its graph mode currently tunes child instructions only, while GEPA selects
+   the RLM child components explicitly.
+7. **Adapter-style fallbacks** for models with weak structured-output
    support (analogous to `TwoStepAdapter`).
-7. **Weight and RL optimization**, after provider-neutral training data,
+8. **Weight and RL optimization**, after provider-neutral training data,
    reproducibility, cost accounting, and artifact contracts are stable.
 
 If one of these blocks your use case, please

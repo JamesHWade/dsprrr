@@ -9,7 +9,7 @@ rlm_module(
   runner = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
-  max_output_chars = 100000L,
+  max_output_chars = 10000L,
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
@@ -19,26 +19,38 @@ rlm_module(
 )
 }
 \arguments{
-\item{signature}{A Signature object or string notation defining inputs/outputs}
+\item{signature}{A Signature object or string notation defining inputs/outputs
+with explicit ellmer string, number, integer, boolean, enum, array, or
+object output types. Opaque \code{TypeJsonSchema} outputs are unsupported.}
 
 \item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()}. It is retained, never automatically closed, and must not be
-shared concurrently when persistent.}
+\code{policy()}. Its policy must declare \code{persistent = TRUE}. It is retained,
+never automatically closed, and must not be shared concurrently. For the
+trusted callr backend, use \code{r_code_runner(persistent = TRUE)}.}
 
 \item{max_iterations}{Maximum REPL iterations before fallback (default 20)}
 
 \item{max_llm_calls}{Maximum recursive LLM calls allowed (default 50)}
 
-\item{max_output_chars}{Maximum characters per execution output (default 100000)}
+\item{max_output_chars}{Maximum model-visible characters per execution output.
+Longer output is shown as a head-and-tail excerpt. Default 10000.}
 
-\item{sub_lm}{Optional ellmer Chat for recursive queries. NULL = disabled.}
+\item{sub_lm}{Optional ellmer Chat for recursive queries. \code{NULL} inherits the
+invocation's outer Chat. Set \code{max_llm_calls = 0} to disable recursion.}
 
 \item{verbose}{Logical. Print execution progress (default FALSE)}
 
-\item{tools}{Named list of user-defined host functions. Guest code emits an
-authenticated request, dsprrr invokes the original function in the host,
+\item{tools}{Named list of user-defined host functions or ellmer ToolDef
+objects. Guest code emits an
+invocation-bound request, dsprrr validates it and invokes the original
+function in the host,
 and the guest is replayed with the response. Closures are never deparsed or
-serialized into generated code.}
+serialized into generated code. These tools execute in the host process,
+outside the guest runner sandbox, with the host's permissions. ToolDef
+schemas guide generation; the callable must still enforce semantic
+constraints beyond the bridge's lossless JSON-compatible value checks.
+A protocol safety ceiling permits at most 1,000 host-tool calls in one
+generated R step.}
 
 \item{max_iters}{DSPy 3.3-compatible alias for \code{max_iterations}. Supply only
 one of these arguments.}
@@ -47,24 +59,30 @@ one of these arguments.}
 
 \item{interpreter_factory}{Optional zero-argument function returning a fresh
 runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
-terminal \code{shutdown()} or \code{close()}.
+terminal \code{shutdown()} or \code{close()}. Its policy must advertise
+\code{persistent = TRUE} for RLM.
 Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
 An RLMModule object
 }
 \description{
-Factory function to create an RLMModule that enables LLMs to programmatically
-explore large contexts through a REPL interface.
-Use \code{\link[=run]{run()}} to execute it. \code{\link[=run_async]{run_async()}} supports factory-backed modules;
-async streaming and module \verb{$stream()} reject RLM. \code{\link[=run_stream]{run_stream()}} preserves
-the synchronous \code{forward()} fallback unless a matching token-stream request
-is active; that request is rejected first.
+Create an RLM whose implementation can adaptively explore R objects at
+inference time. Use RLM when the inspection path is not known in advance;
+use ordinary R when that path becomes stable, or Flex when labeled examples
+should discover a reusable implementation.
 }
 \examples{
 \dontrun{
-runner <- r_code_runner(timeout = 30)
-rlm <- rlm_module("question -> answer", runner = runner)
-result <- run(rlm, question = "What is the 10th Fibonacci number?", .llm = llm)
+analyst <- rlm_module(
+  "document, question -> answer",
+  interpreter_factory = function() mcp_repl_runner(timeout = 30)
+)
+result <- run(
+  analyst,
+  document = "Owner: team-a\nObligation: rotate keys quarterly",
+  question = "Which obligations have no owner?",
+  .llm = ellmer::chat_openai()
+)
 }
 }

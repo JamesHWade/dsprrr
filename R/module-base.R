@@ -178,8 +178,9 @@ Module <- R6::R6Class(
           }
           inputs <- lapply(
             inputs,
-            batch_recycle_input,
-            size = input_contract$size
+            function(value) {
+              module_batch_recycle_input(self, value, input_contract$size)
+            }
           )
           return(run_factory_interpreter_batch(
             module = self,
@@ -188,7 +189,8 @@ Module <- R6::R6Class(
             .llm = .llm,
             .progress = .progress,
             .return_format = .return_format,
-            .concurrency = runtime
+            .concurrency = runtime,
+            .cache = .cache
           ))
         }
         if (
@@ -1220,6 +1222,74 @@ factory_interpreter_history_field <- function(module) {
 }
 
 
+# Append one RLM observability record while preserving the module's bounded
+# retention contract when records are merged back from isolated workers.
+append_factory_interpreter_rlm_record <- function(records, record) {
+  limit <- getOption("dsprrr.rlm_trace_limit", 100L)
+  if (
+    !is.numeric(limit) ||
+      length(limit) != 1L ||
+      is.na(limit) ||
+      !is.finite(limit) ||
+      limit < 1L
+  ) {
+    limit <- 100L
+  }
+  records <- append(records %||% list(), list(record))
+  if (length(records) > floor(limit)) {
+    records <- utils::tail(records, floor(limit))
+  }
+  records
+}
+
+
+# Commit a canonical RLM trace produced by an isolated interpreter worker.
+# Worker-local state and prompt history disappear with the mirai process, so
+# both stores must be reconstructed in the parent in input-row order.
+commit_factory_interpreter_trace <- function(module, trace, index, runtime) {
+  if (!inherits(module, "RLMModule") || is.null(trace)) {
+    return(invisible(module))
+  }
+  if (!is.list(trace)) {
+    cli::cli_abort(
+      "Interpreter worker returned an invalid canonical trace",
+      class = "dsprrr_trace_contract_error"
+    )
+  }
+
+  trace_cursor <- evaluation_trace_cursor(module)
+  history_generation_before <- prompt_history_generation()
+  sequence <- module$state$trace_sequence %||% 0
+  valid_sequence <- is.numeric(sequence) &&
+    length(sequence) == 1L &&
+    !is.na(sequence) &&
+    is.finite(sequence) &&
+    sequence >= 0
+  if (!valid_sequence) {
+    cli::cli_abort(
+      "RLM trace sequence is invalid",
+      class = "dsprrr_trace_contract_error"
+    )
+  }
+
+  module$state$trace_sequence <- as.numeric(sequence) + 1
+  module$state$traces <- append_factory_interpreter_rlm_record(
+    module$state$traces,
+    trace
+  )
+
+  add_to_global_history(trace, source = "RLMModule")
+  reconcile_dataset_row_observability(
+    module = module,
+    trace_count_before = trace_cursor,
+    history_generation_before = history_generation_before,
+    row_index = index,
+    runtime = runtime
+  )
+  invisible(module)
+}
+
+
 format_factory_interpreter_batch_row <- function(
   result,
   index,
@@ -1268,24 +1338,30 @@ run_factory_interpreter_batch <- function(
   .llm,
   .progress,
   .return_format,
-  .concurrency
+  .concurrency,
+  .cache = NULL
 ) {
+  validate_cache_arg(.cache)
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
   history_field <- factory_interpreter_history_field(module)
+  row_trace_events <- vector("list", n)
   llm <- .llm %||% module$chat %||% get_default_chat()
   if (is.null(llm)) {
     cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
   }
 
   if (identical(.concurrency$effective_backend, "sequential")) {
-    rows <- lapply(seq_len(n), function(index) {
+    rows <- vector("list", n)
+    for (index in seq_len(n)) {
+      trace_count_before <- evaluation_trace_cursor(module)
+      history_generation_before <- prompt_history_generation()
       result <- tryCatch(
         {
           forwarded <- module$forward(
             input_sets[[index]],
             .llm = llm,
             trace = TRUE,
-            .cache = FALSE
+            .cache = .cache
           )
           list(
             output = forwarded$output[[1L]],
@@ -1296,14 +1372,25 @@ run_factory_interpreter_batch <- function(
         interrupt = function(condition) stop(condition),
         error = function(condition) condition
       )
-      format_factory_interpreter_batch_row(
+      reconcile_dataset_row_observability(
+        module = module,
+        trace_count_before = trace_count_before,
+        history_generation_before = history_generation_before,
+        row_index = index,
+        runtime = .concurrency
+      )
+      row_trace_events[[index]] <- new_evaluation_trace_events(
+        module,
+        trace_count_before
+      )
+      rows[[index]] <- format_factory_interpreter_batch_row(
         result,
         index,
         .return_format,
         .concurrency,
         chat = llm
       )
-    })
+    }
   } else {
     profile <- new_dsprrr_mirai_profile()
     mapped <- NULL
@@ -1333,7 +1420,8 @@ run_factory_interpreter_batch <- function(
       module,
       llm,
       history_field,
-      namespace_path
+      namespace_path,
+      cache
     ) {
       if (
         file.exists(file.path(namespace_path, "R", "module-base.R")) &&
@@ -1345,16 +1433,40 @@ run_factory_interpreter_batch <- function(
       }
       tryCatch(
         {
+          trace_cursor <- if (inherits(module, "RLMModule")) {
+            get(
+              "evaluation_trace_cursor",
+              envir = asNamespace("dsprrr")
+            )(module)
+          } else {
+            NULL
+          }
           forwarded <- module$forward(
             input_set,
             .llm = llm,
             trace = TRUE,
-            .cache = FALSE
+            .cache = cache
           )
           history <- if (is.null(history_field)) {
             list()
           } else {
             module$state[[history_field]]
+          }
+          trace <- if (is.null(trace_cursor)) {
+            NULL
+          } else {
+            trace_indices <- get(
+              "evaluation_trace_indices",
+              envir = asNamespace("dsprrr")
+            )(module, trace_cursor)
+            if (length(trace_indices) == 0L) {
+              cli::cli_abort(
+                "RLM worker completed without a canonical trace",
+                class = "dsprrr_trace_contract_error"
+              )
+            } else {
+              module$state$traces[[trace_indices[[length(trace_indices)]]]]
+            }
           }
           list(
             ok = TRUE,
@@ -1364,7 +1476,8 @@ run_factory_interpreter_batch <- function(
               history[[length(history)]]
             } else {
               NULL
-            }
+            },
+            trace = trace
           )
         },
         interrupt = function(condition) stop(condition),
@@ -1384,7 +1497,8 @@ run_factory_interpreter_batch <- function(
         module = module,
         llm = llm,
         history_field = history_field,
-        namespace_path = namespace_path
+        namespace_path = namespace_path,
+        cache = .cache
       ),
       .compute = profile
     )
@@ -1398,7 +1512,8 @@ run_factory_interpreter_batch <- function(
       profile_owned <- FALSE
     }
 
-    rows <- lapply(seq_len(n), function(index) {
+    rows <- vector("list", n)
+    for (index in seq_len(n)) {
       record <- records[[index]]
       if (mirai::is_mirai_error(record)) {
         condition <- simpleError(record$message %||% as.character(record))
@@ -1418,20 +1533,37 @@ run_factory_interpreter_batch <- function(
           metadata = record$metadata
         )
         if (!is.null(history_field) && !is.null(record$history)) {
-          module$state[[history_field]] <- append(
-            module$state[[history_field]],
-            list(record$history)
-          )
+          module$state[[history_field]] <- if (inherits(module, "RLMModule")) {
+            append_factory_interpreter_rlm_record(
+              module$state[[history_field]],
+              record$history
+            )
+          } else {
+            append(module$state[[history_field]], list(record$history))
+          }
         }
+        trace_count_before <- evaluation_trace_cursor(module)
+        commit_factory_interpreter_trace(
+          module = module,
+          trace = record$trace,
+          index = index,
+          runtime = .concurrency
+        )
+        row_trace_events[[index]] <- new_evaluation_trace_events(
+          module,
+          trace_count_before
+        )
       }
-      format_factory_interpreter_batch_row(
+      rows[[index]] <- format_factory_interpreter_batch_row(
         result,
         index,
         .return_format,
         .concurrency
       )
-    })
+    }
   }
+
+  attr(rows, "dsprrr_row_trace_events") <- row_trace_events
 
   if (identical(.return_format, "structured")) {
     structure(rows, class = c("dsprrr_batch_result", "list"))

@@ -75,10 +75,17 @@ PredictModule <- R6::R6Class(
       request <- build_module_request(self, inputs)
       prompt <- request$prompt
       llm <- resolve_module_llm(self, .llm = .llm)
+      turns_before <- batch_chat_turns(llm)
       start_turn_count <- tryCatch(
         length(llm$get_turns()),
         error = function(e) 0L
       )
+      cache_state <- new.env(parent = emptyenv())
+      cache_state$status <- "unknown"
+      cache_observer <- function(status, ...) {
+        cache_state$status <- status
+        invisible(NULL)
+      }
 
       # Record start time
       start_time <- Sys.time()
@@ -91,7 +98,8 @@ PredictModule <- R6::R6Class(
             request = request,
             output_type = self$signature@output_type,
             .cache = .cache,
-            rollout_id = rollout_id
+            rollout_id = rollout_id,
+            .observer = cache_observer
           )
         },
         error = function(e) {
@@ -132,16 +140,27 @@ PredictModule <- R6::R6Class(
         error = function(e) list(user_turn, assistant_turn)
       )
 
-      # Extract token info from ellmer's AssistantTurn (has @tokens vector)
-      token_info <- if (
-        !is.null(assistant_turn) && !is.null(assistant_turn@tokens)
-      ) {
+      verified_usage <- chat_usage_metadata(llm, turns_before)
+      token_info <- if (!is.na(verified_usage$provider_calls)) {
+        verified_usage[c(
+          "input_tokens",
+          "output_tokens",
+          "cached_input_tokens",
+          "total_tokens"
+        )]
+      } else if (!is.null(assistant_turn) && !is.null(assistant_turn@tokens)) {
         tokens <- assistant_turn@tokens
+        input_tokens <- tokens[1]
+        output_tokens <- tokens[2]
         list(
-          input_tokens = tokens[1],
-          output_tokens = tokens[2],
+          input_tokens = input_tokens,
+          output_tokens = output_tokens,
           cached_input_tokens = tokens[3],
-          total_tokens = sum(tokens[1:2], na.rm = TRUE)
+          total_tokens = if (anyNA(c(input_tokens, output_tokens))) {
+            NA_integer_
+          } else {
+            as.integer(input_tokens + output_tokens)
+          }
         )
       } else {
         list(
@@ -152,12 +171,30 @@ PredictModule <- R6::R6Class(
         )
       }
 
-      # Get cost and duration from AssistantTurn
-      cost <- if (!is.null(assistant_turn)) assistant_turn@cost else NA_real_
-      duration_s <- if (!is.null(assistant_turn)) {
+      # Get cost and duration from every verified current-call assistant turn.
+      cost <- if (!is.na(verified_usage$provider_calls)) {
+        verified_usage$cost
+      } else if (!is.null(assistant_turn)) {
+        assistant_turn@cost
+      } else {
+        NA_real_
+      }
+      duration_s <- if (!is.na(verified_usage$provider_calls)) {
+        verified_usage$duration_s
+      } else if (!is.null(assistant_turn)) {
         assistant_turn@duration
       } else {
         NA_real_
+      }
+
+      provider_calls <- if (identical(cache_state$status, "hit")) {
+        0L
+      } else if (!is.na(verified_usage$provider_calls)) {
+        verified_usage$provider_calls
+      } else if (cache_state$status %in% c("miss", "bypass")) {
+        1L
+      } else {
+        NA_integer_
       }
 
       model <- tryCatch(llm$get_model(), error = function(e) NA_character_)
@@ -175,7 +212,9 @@ PredictModule <- R6::R6Class(
         total_tokens = token_info$total_tokens,
         cost = cost,
         duration_s = duration_s,
-        latency_ms = latency_ms # Our measured latency (includes R overhead)
+        latency_ms = latency_ms, # Our measured latency (includes R overhead)
+        cache = cache_state$status,
+        provider_calls = provider_calls
       )
 
       # Record trace if requested - store ellmer turns directly
@@ -192,7 +231,9 @@ PredictModule <- R6::R6Class(
           latency_ms = latency_ms,
           tokens = token_info,
           cost = cost,
-          model = model
+          model = model,
+          cache = cache_state$status,
+          provider_calls = provider_calls
         )
 
         # Optionally include full chat object for advanced replay
@@ -466,14 +507,16 @@ PredictModule <- R6::R6Class(
       request,
       output_type,
       .cache = NULL,
-      rollout_id = NULL
+      rollout_id = NULL,
+      .observer = NULL
     ) {
       call_llm_request(
         llm = llm,
         request = request,
         output_type = output_type,
         .cache = .cache,
-        rollout_id = rollout_id
+        rollout_id = rollout_id,
+        .observer = .observer
       )
     }
   ),

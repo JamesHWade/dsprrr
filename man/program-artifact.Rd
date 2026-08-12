@@ -49,11 +49,15 @@ Callables and runtime objects are never captured implicitly. Supply a named
 \code{registry} to store stable IDs, or set \code{trusted = TRUE} to embed them. Embedded
 values are restored only when \code{trusted = TRUE} is also supplied while loading.
 Registry IDs are the recommended contract for tools, custom functions,
-retrievers, stores, code runners, and interpreter factories. Format version 4
-records exactly one runner or factory for each code-executing module without
-invoking a factory during write or restore. Valid version 3 runner-only
-manifests are checked against their original schema and integrity digest,
-then upgraded in memory; other historical versions are rejected.
+retrievers, stores, code runners, and interpreter factories. Format version 5
+adds graph-visible RLM action and extraction predictors. Version 4 records
+exactly one runner or factory for each code-executing module. Valid version 3
+runner-only and version 4 manifests are checked against their original schema
+and integrity digest. Non-RLM manifests are upgraded in memory. A legacy
+childless RLM is restored under its original schema with fresh default child
+predictors and becomes a complete version 5 graph when it is next saved.
+Other historical versions are rejected. Factories are never invoked during
+write or restore.
 
 Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 through a closed codec. Remote content URLs must be stable HTTPS URLs without

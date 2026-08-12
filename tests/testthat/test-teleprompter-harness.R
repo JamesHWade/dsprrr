@@ -235,6 +235,91 @@ test_that("MetaHarness can optimize multiple pipeline components jointly", {
   expect_equal(compiled$config$optimizer$best_score, 1)
 })
 
+test_that("agentic harnesses materialize both RLM predictor leaves", {
+  skip_if_not_installed("callr")
+  local_reset_cache()
+
+  proposal <- list(
+    name = "tune both RLM predictors",
+    rationale = "Action selection and typed extraction must improve together.",
+    edits = list(
+      list(
+        path = "$/generate_action",
+        instructions = "ACTION-HARNESS"
+      ),
+      list(
+        path = "$/extract",
+        instructions = "EXTRACT-HARNESS"
+      )
+    )
+  )
+  response <- list(
+    action = "propose",
+    rationale = "Tune both graph-visible predictors.",
+    candidates = list(proposal)
+  )
+  cases <- list(
+    AutoResearch = list(
+      teleprompter = AutoResearch(
+        metric = rlm_optimizer_accuracy,
+        max_iterations = 1L,
+        verbose = FALSE
+      ),
+      agent = make_harness_agent(list(response))
+    ),
+    MetaHarness = list(
+      teleprompter = MetaHarness(
+        metric = rlm_optimizer_accuracy,
+        max_iterations = 1L,
+        max_candidates_per_iteration = 1L,
+        verbose = FALSE
+      ),
+      agent = make_harness_agent_factory(list(response))
+    )
+  )
+
+  for (name in names(cases)) {
+    runner <- r_code_runner(timeout = 10, persistent = TRUE)
+    withr::defer(runner$close())
+    expect_identical(runner$policy()$persistent, TRUE)
+    program <- make_rlm_optimizer_program(runner)
+    chat <- make_rlm_optimizer_chat()
+    case <- cases[[name]]
+
+    run <- capture_rlm_optimizer_warnings(
+      compile(
+        case$teleprompter,
+        program,
+        data.frame(question = "inspect", answer = "yes"),
+        .llm = chat,
+        .agent_llm = case$agent,
+        runner = make_harness_runner()$runner,
+        control = optimizer_control(
+          checkpoint_registry = list(rlm_runner = runner)
+        ),
+        .cache = FALSE
+      )
+    )
+    compiled <- expect_only_rlm_fallback_warnings(run)
+
+    expect_identical(compiled$config$teleprompter, name)
+    expect_identical(
+      compiled$generate_action$signature@instructions,
+      "ACTION-HARNESS"
+    )
+    expect_identical(
+      compiled$extract$signature@instructions,
+      "EXTRACT-HARNESS"
+    )
+    expect_identical(compiled$config$optimizer$baseline_score, 0)
+    expect_identical(compiled$config$optimizer$best_score, 1)
+    expect_setequal(
+      names(named_parameters(compiled, boundaries = "cross")),
+      c("$/generate_action", "$/extract")
+    )
+  }
+})
+
 test_that("MetaHarness deduplicates candidates by canonical snapshot", {
   sandbox <- make_harness_runner()
   proposal <- candidate_proposal("perfect")

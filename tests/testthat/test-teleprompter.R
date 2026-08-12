@@ -106,6 +106,26 @@ test_that("LabeledFewShot compile works", {
   expect_equal(optimized_no_sample$demos[[2]]$inputs$text, "world")
 })
 
+test_that("LabeledFewShot rejects root labels for nested predictors", {
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      list(success = TRUE, result = NULL)
+    },
+    policy = function() {
+      list(backend = "test", trust = "test-only", sandboxed = TRUE)
+    }
+  )
+  program <- rlm_module("question -> answer", runner = runner)
+  trainset <- data.frame(question = "What is 2 + 2?", answer = "4")
+
+  expect_error(
+    compile(LabeledFewShot(k = 1L), program, trainset),
+    class = "dsprrr_labeled_graph_unsupported"
+  )
+  expect_length(program$generate_action$demos, 0L)
+  expect_length(program$extract$demos, 0L)
+})
+
 test_that("GridSearchTeleprompter can be created", {
   variants <- data.frame(
     id = c("v1", "v2"),

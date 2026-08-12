@@ -1,75 +1,69 @@
 #' Recursive Language Model (RLM) Module
 #'
 #' @description
-#' A module that transforms context from "input" to "environment", enabling LLMs
-#' to programmatically explore large contexts through a REPL interface rather
-#' than embedding them in prompts.
+#' An experimental inference-time analyst for inputs whose useful evidence is
+#' too large, irregular, or unpredictable to place in one prompt. RLM keeps the
+#' inputs in an R environment and lets the model iteratively inspect summaries,
+#' run computations, and decide what to examine next.
 #'
 #' @details
-#' Instead of `llm(prompt, context=huge_document)`, RLM stores context as R
-#' variables that the LLM can peek, slice, search, and recursively query.
+#' Each input is available under `.context`. Generated R code can use ordinary R
+#' plus `peek()`, `search()`, value-returning `llm_query()` calls, declared host
+#' tools, and `SUBMIT(...)`. RLM requires a runner whose `policy()` advertises
+#' `persistent = TRUE`; variables therefore remain available across turns within
+#' one invocation. Invalid submitted fields or types become iteration errors
+#' that the model can repair. If no valid submission is produced, the separate
+#' `extract` predictor performs one typed fallback.
+#' RLM validates explicit ellmer string, number, integer, boolean, enum, array,
+#' and object outputs. Opaque `TypeJsonSchema` nodes are rejected at
+#' construction because they cannot participate in this strict repair loop.
 #'
-#' The execution flow is:
-#' 1. Context is made available as variables in an R execution environment
-#' 2. LLM generates R code to explore and analyze the context
-#' 3. Code is executed by the configured code runner
-#' 4. Results are fed back to the LLM for the next iteration
-#' 5. Process continues until SUBMIT() is called or max_iterations reached
-#' 6. If max_iterations reached without SUBMIT(), fallback extraction is used
+#' The `generate_action` and `extract` predictors are graph-visible through
+#' [named_modules()]. GEPA can tune them; nested MIPROv2 is instruction-only
+#' with bootstrapped demos disabled. BootstrapFewShot and LabeledFewShot reject
+#' programs containing an RLM until predictor-local demonstrations are
+#' available.
+#' Model-visible execution evidence defaults to a 10,000-character head-and-tail view
+#' after any runner-level transport limit; that formatted evidence is retained
+#' in the returned trajectory. Trace state retains hashes and sizes for input
+#' objects, not their full values.
+#' Structured metadata separates logical action, recursive, and extraction
+#' counts from verified provider calls. A child-predictor cache hit contributes
+#' zero provider calls and zero current-run usage; totals remain `NA` whenever
+#' every contributing provider turn cannot be verified.
 #'
-#' Available REPL tools:
-#' - `SUBMIT(...)`: Terminate and return final output values
-#' - `peek(var, start, end)`: View a slice of a variable (default: first 1000 chars)
-#' - `search(var, pattern)`: Regex search in variable
-#' - `llm_query(query, context_slice)`: Recursive LLM call (requires sub_lm)
-#' - `llm_query_batched(queries, slices)`: Batched recursive calls
+#' For generated code, prefer a fresh sandboxed [mcp_repl_runner()] factory.
+#' Its managed transport is intentionally bounded and is best for compact,
+#' JSON-compatible context. Its default policy disables network access but
+#' allows writes within the configured workspace. Declared host tools execute
+#' in the dsprrr host process, outside that guest sandbox. This backend requires
+#' the suggested `mcptools` package and Posit's external `mcp-repl` executable.
+#' For large data frames or richer local R objects,
+#' `r_code_runner(persistent = TRUE)` can stage context once, but it is
+#' trusted-input-only: the child process retains the host user's file, network,
+#' and environment permissions.
 #'
-#' Security: Code execution requires explicit opt-in via `runner` or
-#' `interpreter_factory`.
-#' The built-in runner uses a separate process but is NOT a security sandbox.
-#' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
-#' runner backed by OS-level sandboxing, such as [mcp_repl_runner()].
-#' Authenticated RLM control frames sent through mcp-repl are limited to 3,000
-#' encoded bytes. If aggregate output is compacted into a file preview or pager,
-#' the iteration fails closed because mcp-repl does not expose structured
-#' compaction metadata; dsprrr does not read a sandbox-disclosed path from the
-#' host process.
-#'
-#' Runner lifecycle: supply exactly one runtime source. `runner` is
-#' caller-owned, reused across calls, and never closed by dsprrr. The backend determines
-#' whether execution state persists and whether `reset()` is available;
-#' serialize access to stateful backends. `interpreter_factory` is a
-#' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
-#' module owns that runner for one invocation and shuts it down exactly once on
-#' success, error, or interrupt.
-#'
-#' [run_async()] supports factory-backed RLM in an isolated mirai process and
-#' rejects caller-owned runners. [stream_async()] and a module's `$stream()`
-#' method remain unavailable because streaming would bypass execution. The
-#' [run_stream()] one-shot `forward()` fallback remains available.
+#' Supply exactly one runtime source. A caller-owned `runner` is reused and
+#' never closed by dsprrr. An `interpreter_factory` creates one invocation-owned
+#' runner which dsprrr shuts down on success, error, or interrupt. Factory-backed
+#' RLM supports [run_async()] and isolated [run_dataset()] execution; token
+#' streaming is unavailable. A direct [run()] call always stages each supplied
+#' value as one REPL variable, regardless of its R length. Use [run_dataset()]
+#' for multiple invocations, with list-columns for data frames, vectors, lists,
+#' matrices, or other rich per-row values.
 #'
 #' @examples
 #' \dontrun{
-#' # Create a runner (required for code execution)
-#' runner <- r_code_runner(timeout = 30)
-#'
-#' # Create an RLM module for exploring large documents
-#' rlm <- rlm_module(
+#' analyst <- rlm_module(
 #'   signature = "document, question -> answer",
-#'   runner = runner
+#'   interpreter_factory = function() mcp_repl_runner(timeout = 30)
 #' )
-#'
-#' # Use it for context exploration
-#' long_doc <- paste(readLines("large_file.txt"), collapse = "\n")
-#' result <- run(rlm, document = long_doc, question = "What are the main themes?", .llm = llm)
-#'
-#' # Enable recursive LLM calls for complex reasoning
-#' rlm_recursive <- rlm_module(
-#'   signature = "document -> summary",
-#'   runner = runner,
-#'   sub_lm = ellmer::chat_openai(model = "gpt-4o-mini"),
-#'   max_llm_calls = 10
+#' compact_doc <- "Section 1: ...\nSection 2: ..."
+#' result <- run(
+#'   analyst,
+#'   document = compact_doc,
+#'   question = "What evidence supports the conclusion?",
+#'   .llm = ellmer::chat_openai()
 #' )
 #' }
 #'
@@ -80,32 +74,43 @@ NULL
 #' Create a Recursive Language Model (RLM) Module
 #'
 #' @description
-#' Factory function to create an RLMModule that enables LLMs to programmatically
-#' explore large contexts through a REPL interface.
-#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
-#' async streaming and module `$stream()` reject RLM. [run_stream()] preserves
-#' the synchronous `forward()` fallback unless a matching token-stream request
-#' is active; that request is rejected first.
+#' Create an RLM whose implementation can adaptively explore R objects at
+#' inference time. Use RLM when the inspection path is not known in advance;
+#' use ordinary R when that path becomes stable, or Flex when labeled examples
+#' should discover a reusable implementation.
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
+#'   with explicit ellmer string, number, integer, boolean, enum, array, or
+#'   object output types. Opaque `TypeJsonSchema` outputs are unsupported.
 #' @param runner Optional caller-owned code runner implementing `execute()` and
-#'   `policy()`. It is retained, never automatically closed, and must not be
-#'   shared concurrently when persistent.
+#'   `policy()`. Its policy must declare `persistent = TRUE`. It is retained,
+#'   never automatically closed, and must not be shared concurrently. For the
+#'   trusted callr backend, use `r_code_runner(persistent = TRUE)`.
 #' @param max_iterations Maximum REPL iterations before fallback (default 20)
 #' @param max_iters DSPy 3.3-compatible alias for `max_iterations`. Supply only
 #'   one of these arguments.
 #' @param interpreter_factory Optional zero-argument function returning a fresh
 #'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
-#'   terminal `shutdown()` or `close()`.
+#'   terminal `shutdown()` or `close()`. Its policy must advertise
+#'   `persistent = TRUE` for RLM.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param max_llm_calls Maximum recursive LLM calls allowed (default 50)
-#' @param max_output_chars Maximum characters per execution output (default 100000)
-#' @param sub_lm Optional ellmer Chat for recursive queries. NULL = disabled.
+#' @param max_output_chars Maximum model-visible characters per execution output.
+#'   Longer output is shown as a head-and-tail excerpt. Default 10000.
+#' @param sub_lm Optional ellmer Chat for recursive queries. `NULL` inherits the
+#'   invocation's outer Chat. Set `max_llm_calls = 0` to disable recursion.
 #' @param verbose Logical. Print execution progress (default FALSE)
-#' @param tools Named list of user-defined host functions. Guest code emits an
-#'   authenticated request, dsprrr invokes the original function in the host,
+#' @param tools Named list of user-defined host functions or ellmer ToolDef
+#'   objects. Guest code emits an
+#'   invocation-bound request, dsprrr validates it and invokes the original
+#'   function in the host,
 #'   and the guest is replayed with the response. Closures are never deparsed or
-#'   serialized into generated code.
+#'   serialized into generated code. These tools execute in the host process,
+#'   outside the guest runner sandbox, with the host's permissions. ToolDef
+#'   schemas guide generation; the callable must still enforce semantic
+#'   constraints beyond the bridge's lossless JSON-compatible value checks.
+#'   A protocol safety ceiling permits at most 1,000 host-tool calls in one
+#'   generated R step.
 #' @param ... Additional arguments passed to the module
 #'
 #' @return An RLMModule object
@@ -113,16 +118,23 @@ NULL
 #' @export
 #' @examples
 #' \dontrun{
-#' runner <- r_code_runner(timeout = 30)
-#' rlm <- rlm_module("question -> answer", runner = runner)
-#' result <- run(rlm, question = "What is the 10th Fibonacci number?", .llm = llm)
+#' analyst <- rlm_module(
+#'   "document, question -> answer",
+#'   interpreter_factory = function() mcp_repl_runner(timeout = 30)
+#' )
+#' result <- run(
+#'   analyst,
+#'   document = "Owner: team-a\nObligation: rotate keys quarterly",
+#'   question = "Which obligations have no owner?",
+#'   .llm = ellmer::chat_openai()
+#' )
 #' }
 rlm_module <- function(
   signature,
   runner = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
-  max_output_chars = 100000L,
+  max_output_chars = 10000L,
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
@@ -176,6 +188,15 @@ rlm_module <- function(
     minimum = 1L
   )
 
+  if (!is.logical(verbose) || length(verbose) != 1L || is.na(verbose)) {
+    cli::cli_abort(
+      "{.arg verbose} must be TRUE or FALSE",
+      class = "dsprrr_rlm_argument_error"
+    )
+  }
+
+  validate_rlm_sub_lm(sub_lm)
+
   validate_rlm_tools(tools)
 
   RLMModule$new(
@@ -191,6 +212,306 @@ rlm_module <- function(
     ...
   )
 }
+
+
+validate_rlm_sub_lm <- function(sub_lm) {
+  if (is.null(sub_lm)) {
+    return(invisible(sub_lm))
+  }
+  chat <- tryCatch(sub_lm[["chat"]], error = function(e) NULL)
+  if (!is.function(chat)) {
+    cli::cli_abort(
+      c(
+        "{.arg sub_lm} must be an ellmer Chat or compatible object",
+        "i" = "It must provide a {.code chat(prompt)} method."
+      ),
+      class = "dsprrr_rlm_sub_lm_error"
+    )
+  }
+  invisible(sub_lm)
+}
+
+
+rlm_type_contains_json_schema <- function(type) {
+  if (inherits(type, "ellmer::TypeJsonSchema")) {
+    return(TRUE)
+  }
+  if (inherits(type, "ellmer::TypeArray")) {
+    return(rlm_type_contains_json_schema(type@items))
+  }
+  if (inherits(type, "ellmer::TypeObject")) {
+    return(any(vapply(
+      type@properties,
+      rlm_type_contains_json_schema,
+      logical(1)
+    )))
+  }
+  FALSE
+}
+
+
+validate_rlm_output_type <- function(type) {
+  if (rlm_type_contains_json_schema(type)) {
+    cli::cli_abort(
+      c(
+        "RLM cannot strictly validate opaque TypeJsonSchema outputs",
+        "i" = paste(
+          "Use ellmer type_string(), type_number(), type_integer(),",
+          "type_boolean(), type_enum(), type_array(), or type_object()."
+        )
+      ),
+      class = c(
+        "dsprrr_rlm_json_schema_unsupported",
+        "dsprrr_rlm_signature_error"
+      )
+    )
+  }
+  invisible(type)
+}
+
+
+clone_rlm_chat <- function(chat) {
+  clone <- tryCatch(chat[["clone"]], error = function(e) NULL)
+  if (is.function(clone)) {
+    cloned <- tryCatch(
+      clone(deep = TRUE),
+      error = function(e) clone()
+    )
+    set_turns <- tryCatch(cloned[["set_turns"]], error = function(e) NULL)
+    if (is.function(set_turns)) {
+      set_turns(list())
+    }
+    return(cloned)
+  }
+  chat
+}
+
+
+new_rlm_action_module <- function() {
+  PredictModule$new(
+    signature = signature(
+      inputs = list(input(
+        "state",
+        type = ellmer::type_string(),
+        description = "RLM task, available variables, and prior REPL trajectory"
+      )),
+      output_type = ellmer::type_object(
+        reasoning = ellmer::type_string(
+          description = "Brief rationale for the next operation"
+        ),
+        code = ellmer::type_string(
+          description = "One non-empty R expression or block to execute"
+        )
+      ),
+      instructions = paste(
+        "Choose the next useful R operation for an iterative investigation.",
+        "Use the supplied state as the complete source of task and trajectory context."
+      )
+    )
+  )
+}
+
+
+new_rlm_extract_module <- function(output_type) {
+  PredictModule$new(
+    signature = signature(
+      inputs = list(input(
+        "state",
+        type = ellmer::type_string(),
+        description = "Original task and bounded RLM trajectory"
+      )),
+      output_type = output_type,
+      instructions = paste(
+        "Return the best supported typed answer from the trajectory.",
+        "Do not invent evidence that the RLM did not observe."
+      )
+    )
+  )
+}
+
+
+rlm_predictor_abort <- function(predictor, message, class) {
+  cli::cli_abort(
+    c(
+      "RLM {.field {predictor}} predictor has an incompatible signature",
+      "x" = message
+    ),
+    class = c(
+      class,
+      "dsprrr_rlm_predictor_contract_error",
+      "dsprrr_rlm_predictor_error"
+    ),
+    predictor = predictor
+  )
+}
+
+
+rlm_predictor_type_contract <- function(type) {
+  required <- tryCatch(isTRUE(type@required), error = function(error) NULL)
+  if (is.null(required)) {
+    return(NULL)
+  }
+
+  if (inherits(type, "ellmer::TypeIgnore")) {
+    return(list(kind = "ignore", required = required))
+  }
+  if (inherits(type, "ellmer::TypeJsonSchema")) {
+    return(list(
+      kind = "json_schema",
+      json = type@json,
+      required = required
+    ))
+  }
+  if (inherits(type, "ellmer::TypeBasic")) {
+    return(list(
+      kind = "basic",
+      type = type@type,
+      required = required
+    ))
+  }
+  if (inherits(type, "ellmer::TypeEnum")) {
+    return(list(
+      kind = "enum",
+      values = type@values,
+      required = required
+    ))
+  }
+  if (inherits(type, "ellmer::TypeArray")) {
+    items <- rlm_predictor_type_contract(type@items)
+    if (is.null(items)) {
+      return(NULL)
+    }
+    return(list(
+      kind = "array",
+      items = items,
+      required = required
+    ))
+  }
+  if (inherits(type, "ellmer::TypeObject")) {
+    properties <- lapply(type@properties, rlm_predictor_type_contract)
+    if (any(vapply(properties, is.null, logical(1)))) {
+      return(NULL)
+    }
+    return(list(
+      kind = "object",
+      properties = properties,
+      required = required,
+      additional_properties = isTRUE(type@additional_properties)
+    ))
+  }
+  NULL
+}
+
+
+rlm_predictor_required_string <- function(type) {
+  inherits(type, "ellmer::TypeBasic") &&
+    identical(type@type, "string") &&
+    isTRUE(type@required)
+}
+
+
+validate_rlm_predictor_state_input <- function(signature, predictor, class) {
+  input_names <- vapply(signature@inputs, `[[`, character(1), "name")
+  valid <- length(signature@inputs) == 1L &&
+    identical(input_names, "state") &&
+    rlm_predictor_required_string(signature@inputs[[1L]]$type)
+  if (!valid) {
+    rlm_predictor_abort(
+      predictor,
+      "It must accept exactly one required string input named {.field state}.",
+      class
+    )
+  }
+  invisible(signature)
+}
+
+
+validate_rlm_action_predictor <- function(module) {
+  predictor <- "generate_action"
+  class <- "dsprrr_rlm_generate_action_contract_error"
+  signature <- tryCatch(module$signature, error = function(error) NULL)
+  if (!S7::S7_inherits(signature, Signature)) {
+    rlm_predictor_abort(
+      predictor,
+      "It must expose a dsprrr Signature.",
+      class
+    )
+  }
+  validate_rlm_predictor_state_input(signature, predictor, class)
+
+  output_type <- signature@output_type
+  valid <- inherits(output_type, "ellmer::TypeObject") &&
+    isTRUE(output_type@required) &&
+    !isTRUE(output_type@additional_properties) &&
+    identical(names(output_type@properties), c("reasoning", "code")) &&
+    all(vapply(
+      output_type@properties,
+      rlm_predictor_required_string,
+      logical(1)
+    ))
+  if (!valid) {
+    rlm_predictor_abort(
+      predictor,
+      paste(
+        "It must return exactly the required string fields",
+        "{.field reasoning} and {.field code}."
+      ),
+      class
+    )
+  }
+  invisible(module)
+}
+
+
+validate_rlm_extract_predictor <- function(module, output_type) {
+  predictor <- "extract"
+  class <- "dsprrr_rlm_extract_contract_error"
+  signature <- tryCatch(module$signature, error = function(error) NULL)
+  if (!S7::S7_inherits(signature, Signature)) {
+    rlm_predictor_abort(
+      predictor,
+      "It must expose a dsprrr Signature.",
+      class
+    )
+  }
+  validate_rlm_predictor_state_input(signature, predictor, class)
+
+  actual <- rlm_predictor_type_contract(signature@output_type)
+  expected <- rlm_predictor_type_contract(output_type)
+  if (is.null(actual) || is.null(expected) || !identical(actual, expected)) {
+    rlm_predictor_abort(
+      predictor,
+      paste(
+        "Its output type must equal the RLM output type, including field",
+        "structure and required flags. Descriptions may differ."
+      ),
+      class
+    )
+  }
+  invisible(module)
+}
+
+
+validate_rlm_predictor_children <- function(children, output_type) {
+  if (
+    !is.list(children) ||
+      !identical(names(children), c("generate_action", "extract")) ||
+      !inherits(children$generate_action, "Module") ||
+      !inherits(children$extract, "Module")
+  ) {
+    cli::cli_abort(
+      "RLM graph children must be named generate_action and extract modules",
+      class = c(
+        "dsprrr_rlm_predictor_structure_error",
+        "dsprrr_rlm_predictor_error"
+      )
+    )
+  }
+  validate_rlm_action_predictor(children$generate_action)
+  validate_rlm_extract_predictor(children$extract, output_type)
+  invisible(children)
+}
+
 
 rlm_reserved_tool_names <- function() {
   c(
@@ -253,7 +574,7 @@ validate_rlm_tools <- function(tools) {
   }
   if (
     anyNA(tool_names) ||
-      any(!nzchar(tool_names))
+      !all(nzchar(tool_names))
   ) {
     cli::cli_abort(
       c(
@@ -339,6 +660,64 @@ validate_rlm_tools <- function(tools) {
   invisible(tools)
 }
 
+
+format_rlm_tool_contract <- function(tool, name) {
+  description <- NULL
+  argument_text <- NULL
+
+  if (inherits(tool, "ellmer::ToolDef")) {
+    description <- tool@description
+    properties <- tool@arguments@properties
+    if (length(properties) > 0L) {
+      argument_text <- vapply(
+        names(properties),
+        function(argument) {
+          spec <- properties[[argument]]
+          required <- if (isTRUE(spec@required)) "" else " = NULL"
+          paste0(argument, ": ", format_ellmer_type(spec), required)
+        },
+        character(1)
+      )
+    }
+  }
+
+  if (is.null(argument_text)) {
+    fmls <- formals(tool)
+    if (!is.null(fmls)) {
+      missing_defaults <- vapply(fmls, rlang::is_missing, logical(1))
+      argument_text <- vapply(
+        names(fmls),
+        function(argument) {
+          if (isTRUE(missing_defaults[[argument]])) {
+            argument
+          } else {
+            paste0(argument, " = <default>")
+          }
+        },
+        character(1)
+      )
+    }
+    description <- attr(tool, "description", exact = TRUE) %||% description
+  }
+
+  signature_text <- paste0(
+    name,
+    "(",
+    paste(argument_text %||% character(), collapse = ", "),
+    ")"
+  )
+  if (
+    is.character(description) &&
+      length(description) == 1L &&
+      !is.na(description) &&
+      nzchar(description)
+  ) {
+    paste0("- `", signature_text, "`: ", description)
+  } else {
+    paste0("- `", signature_text, "`: User-defined host tool")
+  }
+}
+
 normalize_rlm_sub_lm_text <- function(response) {
   text <- if (is.character(response)) {
     response
@@ -364,6 +743,20 @@ normalize_rlm_sub_lm_text <- function(response) {
     )
   }
   text
+}
+
+
+is_rlm_provider_error <- function(error) {
+  inherits(
+    error,
+    c(
+      "httr2_error",
+      "httr2_failure",
+      "ellmer_error",
+      "ellmer::LMError",
+      "dsprrr_rlm_provider_error"
+    )
+  )
 }
 
 
@@ -403,6 +796,12 @@ RLMModule <- R6::R6Class(
     #' @field tools User-defined REPL tools
     tools = NULL,
 
+    #' @field generate_action Optimizable predictor for the next R operation
+    generate_action = NULL,
+
+    #' @field extract Optimizable predictor for typed fallback extraction
+    extract = NULL,
+
     #' @description
     #' Initialize an RLMModule
     #'
@@ -423,13 +822,15 @@ RLMModule <- R6::R6Class(
       runner = NULL,
       max_iterations = 20L,
       max_llm_calls = 50L,
-      max_output_chars = 100000L,
+      max_output_chars = 10000L,
       sub_lm = NULL,
       verbose = FALSE,
       tools = list(),
       config = list(),
       chat = NULL,
-      interpreter_factory = NULL
+      interpreter_factory = NULL,
+      generate_action = NULL,
+      extract = NULL
     ) {
       binding <- normalize_code_runner_binding(
         runner = runner,
@@ -442,6 +843,7 @@ RLMModule <- R6::R6Class(
           class = "dsprrr_rlm_signature_error"
         )
       }
+      validate_rlm_output_type(signature@output_type)
       signature_inputs <- vapply(
         signature@inputs,
         function(input) input$name,
@@ -457,9 +859,15 @@ RLMModule <- R6::R6Class(
           class = "dsprrr_rlm_signature_error"
         )
       }
-      if (rlm_host_tool_replay_field() %in% signature_inputs) {
+      reserved_replay_fields <- c(
+        rlm_control_replay_field(),
+        rlm_host_tool_replay_field(),
+        rlm_query_replay_field()
+      )
+      if (any(reserved_replay_fields %in% signature_inputs)) {
+        reserved <- intersect(reserved_replay_fields, signature_inputs)
         cli::cli_abort(
-          "RLM signature input {.field {rlm_host_tool_replay_field()}} is reserved for the authenticated host-tool bridge",
+          "RLM signature input {.field {reserved}} is reserved for bridge replay",
           class = "dsprrr_rlm_signature_error"
         )
       }
@@ -479,6 +887,19 @@ RLMModule <- R6::R6Class(
         "max_output_chars",
         minimum = 1L
       )
+      if (!is.logical(verbose) || length(verbose) != 1L || is.na(verbose)) {
+        cli::cli_abort(
+          "{.arg verbose} must be TRUE or FALSE",
+          class = "dsprrr_rlm_argument_error"
+        )
+      }
+      validate_rlm_sub_lm(sub_lm)
+      generate_action <- generate_action %||% new_rlm_action_module()
+      extract <- extract %||% new_rlm_extract_module(signature@output_type)
+      validate_rlm_predictor_children(
+        list(generate_action = generate_action, extract = extract),
+        signature@output_type
+      )
       super$initialize(
         signature = signature,
         config = config,
@@ -493,9 +914,12 @@ RLMModule <- R6::R6Class(
       self$sub_lm <- sub_lm
       self$verbose <- verbose
       self$tools <- tools
+      self$generate_action <- generate_action
+      self$extract <- extract
 
       # Store REPL history per execution
       self$state$repl_history <- list()
+      self$state$trace_sequence <- 0
     },
 
     #' @description
@@ -504,11 +928,29 @@ RLMModule <- R6::R6Class(
     #' @param batch Named list or data frame of inputs
     #' @param .llm Optional ellmer chat object
     #' @param trace Logical whether to record trace information
+    #' @param .cache Logical or `NULL`. Per-call structured-response cache control
     #' @param ... Additional arguments
     #' @return Tibble with output, chat, metadata columns
-    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+    forward = function(
+      batch,
+      .llm = NULL,
+      trace = TRUE,
+      .cache = NULL,
+      ...
+    ) {
+      validate_cache_arg(.cache)
       # Handle inputs
       if (is.data.frame(batch)) {
+        if (nrow(batch) != 1L) {
+          cli::cli_abort(
+            c(
+              "RLM forward() accepts exactly one data-frame row",
+              "x" = "Received {nrow(batch)} rows.",
+              "i" = "Use {.fn run} with an interpreter factory for isolated batch execution."
+            ),
+            class = "dsprrr_rlm_batch_error"
+          )
+        }
         inputs <- as.list(batch[1, , drop = FALSE])
       } else {
         inputs <- batch
@@ -525,7 +967,7 @@ RLMModule <- R6::R6Class(
         !is.list(inputs) ||
           (!valid_empty_inputs && is.null(names(inputs))) ||
           anyNA(names(inputs)) ||
-          any(!nzchar(names(inputs))) ||
+          !all(nzchar(names(inputs))) ||
           anyDuplicated(names(inputs))
       ) {
         cli::cli_abort(
@@ -533,12 +975,22 @@ RLMModule <- R6::R6Class(
           class = "dsprrr_rlm_input_error"
         )
       }
-      missing_inputs <- setdiff(expected_inputs, names(inputs))
+      required_inputs <- vapply(
+        self$signature@inputs,
+        function(input) {
+          tryCatch(isTRUE(input$type@required), error = function(e) TRUE)
+        },
+        logical(1)
+      )
+      missing_inputs <- setdiff(
+        expected_inputs[required_inputs],
+        names(inputs)
+      )
       unexpected_inputs <- setdiff(names(inputs), expected_inputs)
       if (length(missing_inputs) > 0L || length(unexpected_inputs) > 0L) {
         cli::cli_abort(
           c(
-            "RLM inputs must exactly match the signature",
+            "RLM inputs must match declared signature fields",
             if (length(missing_inputs) > 0L) {
               c("x" = "Missing: {.field {missing_inputs}}")
             },
@@ -556,7 +1008,8 @@ RLMModule <- R6::R6Class(
         cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
       }
 
-      llm <- base_llm$clone()
+      llm <- clone_rlm_chat(base_llm)
+      sub_lm <- self$sub_lm %||% base_llm
 
       with_code_runner_lease(
         self$runner,
@@ -565,19 +1018,55 @@ RLMModule <- R6::R6Class(
         function(runner, lease) {
           start_time <- Sys.time()
 
+          if (!isTRUE(lease$policy$persistent)) {
+            cli::cli_abort(
+              c(
+                "RLM requires a persistent interpreter",
+                "x" = "The selected runner starts a fresh execution state for each turn.",
+                "i" = "Use {.code r_code_runner(persistent = TRUE)} for trusted inputs or {.fn mcp_repl_runner} for managed execution."
+              ),
+              class = "dsprrr_rlm_persistent_runner_error"
+            )
+          }
+
           # Initialize call counter (shared across recursions)
           call_counter <- new.env()
           call_counter$count <- 0L
+          call_counter$provider_calls <- 0L
+          call_counter$provider_calls_known <- TRUE
+          call_counter$usage <- list()
+
+          prepare_context <- tryCatch(
+            runner[["prepare_context"]],
+            error = function(e) NULL
+          )
+          context_prepared <- FALSE
+          if (isTRUE(lease$policy$persistent) && is.function(prepare_context)) {
+            prepare_context(inputs)
+            context_prepared <- TRUE
+          }
+          session_state_id <- paste0(".dsprrr_rlm_state_", rlm_control_nonce())
+          if (!isTRUE(lease$owned)) {
+            on.exit(
+              private$cleanup_invocation_state(runner, session_state_id),
+              add = TRUE
+            )
+          }
 
           # Build context description for system prompt
           context_desc <- private$describe_context(inputs)
 
           # Build system prompt
-          system_prompt <- private$build_system_prompt(context_desc)
+          system_prompt <- private$build_system_prompt(
+            context_desc,
+            has_sub_lm = self$max_llm_calls > 0L
+          )
 
           # REPL iteration loop
           history <- list()
           final_answer <- NULL
+          fallback_metadata <- NULL
+          result_chat <- llm
 
           for (iter in seq_len(self$max_iterations)) {
             if (self$verbose) {
@@ -592,7 +1081,13 @@ RLMModule <- R6::R6Class(
             )
 
             # Get LLM response (code generation)
-            response <- private$get_code_response(llm, prompt)
+            response <- private$get_code_response(
+              base_llm,
+              prompt,
+              trace = trace,
+              .cache = .cache
+            )
+            result_chat <- response$chat
 
             if (self$verbose) {
               cli::cli_alert(
@@ -606,7 +1101,10 @@ RLMModule <- R6::R6Class(
               inputs,
               call_counter,
               runner,
-              lease$policy
+              lease$policy,
+              sub_lm = sub_lm,
+              context_prepared = context_prepared,
+              session_state_id = session_state_id
             )
 
             # Record in history
@@ -616,7 +1114,14 @@ RLMModule <- R6::R6Class(
               code = response$code,
               output = exec_result$formatted_output,
               success = exec_result$success,
-              is_final = exec_result$is_final
+              is_final = exec_result$is_final,
+              action_metadata = private$compact_action_metadata(
+                response$metadata
+              ),
+              execution_metadata = list(
+                duration_ms = exec_result$raw_result$duration_ms %||% NA_real_,
+                error_type = exec_result$raw_result$error_type %||% NULL
+              )
             )
 
             # Check for SUBMIT() termination
@@ -656,29 +1161,95 @@ RLMModule <- R6::R6Class(
               "i" = "Using fallback extraction from trajectory",
               "i" = "Consider increasing max_iterations or simplifying the query"
             ))
-            final_answer <- private$extract_fallback(inputs, history, llm)
+            fallback_result <- private$extract_fallback(
+              inputs,
+              history,
+              base_llm,
+              trace = trace,
+              .cache = .cache
+            )
+            final_answer <- fallback_result$value
+            fallback_metadata <- fallback_result$metadata
+            result_chat <- fallback_result$chat
           }
+
+          output <- private$build_output(final_answer, source = final_source)
+          usage <- private$summarize_action_usage(
+            history,
+            fallback_metadata = fallback_metadata,
+            recursive_metadata = call_counter$usage
+          )
+          action_calls <- length(history)
+          extraction_calls <- as.integer(identical(final_source, "fallback"))
+          action_provider_calls <- private$summarize_provider_calls(
+            lapply(history, function(entry) entry$action_metadata %||% list())
+          )
+          extraction_provider_calls <- if (extraction_calls == 1L) {
+            private$metadata_provider_calls(fallback_metadata)
+          } else {
+            0L
+          }
+          recursive_provider_calls <- if (
+            isTRUE(call_counter$provider_calls_known)
+          ) {
+            as.integer(call_counter$provider_calls)
+          } else {
+            NA_integer_
+          }
+          provider_calls <- private$sum_provider_call_counts(c(
+            action_provider_calls,
+            recursive_provider_calls,
+            extraction_provider_calls
+          ))
 
           # Store REPL history
           if (trace) {
-            self$state$repl_history <- c(
+            self$state$trace_sequence <- self$state$trace_sequence + 1
+            input_summary <- private$summarize_trace_inputs(inputs)
+            self$state$repl_history <- private$append_bounded_trace(
               self$state$repl_history,
-              list(list(
+              list(
                 timestamp = start_time,
-                inputs = inputs,
+                inputs = input_summary,
                 history = history,
-                final_answer = private$build_output(
-                  final_answer,
-                  source = final_source
-                ),
+                final_answer = output,
                 iterations_used = length(history),
                 llm_calls_used = call_counter$count
-              ))
+              )
             )
+            trace_entry <- list(
+              timestamp = start_time,
+              inputs = input_summary,
+              output = output,
+              history = history,
+              latency_ms = as.numeric(difftime(
+                Sys.time(),
+                start_time,
+                units = "secs"
+              )) *
+                1000,
+              tokens = usage,
+              input_tokens = usage$input_tokens,
+              cached_input_tokens = usage$cached_input_tokens,
+              output_tokens = usage$output_tokens,
+              total_tokens = usage$total_tokens,
+              cost = usage$cost,
+              provider_calls = provider_calls,
+              action_calls = action_calls,
+              action_provider_calls = action_provider_calls,
+              recursive_calls = call_counter$count,
+              recursive_provider_calls = recursive_provider_calls,
+              extraction_calls = extraction_calls,
+              extraction_provider_calls = extraction_provider_calls,
+              model = private$rlm_model_name(base_llm),
+              output_source = final_source
+            )
+            self$state$traces <- private$append_bounded_trace(
+              self$state$traces,
+              trace_entry
+            )
+            add_to_global_history(trace_entry, source = "RLMModule")
           }
-
-          # Build output matching signature
-          output <- private$build_output(final_answer, source = final_source)
 
           duration_secs <- as.numeric(difftime(
             Sys.time(),
@@ -694,8 +1265,21 @@ RLMModule <- R6::R6Class(
             max_iterations = self$max_iterations,
             llm_calls = call_counter$count,
             max_llm_calls = self$max_llm_calls,
+            output_source = final_source,
             duration_ms = round(duration_ms, 2),
             repl_history = history,
+            input_tokens = usage$input_tokens,
+            cached_input_tokens = usage$cached_input_tokens,
+            output_tokens = usage$output_tokens,
+            total_tokens = usage$total_tokens,
+            cost = usage$cost,
+            provider_calls = provider_calls,
+            action_calls = action_calls,
+            action_provider_calls = action_provider_calls,
+            recursive_calls = call_counter$count,
+            recursive_provider_calls = recursive_provider_calls,
+            extraction_calls = extraction_calls,
+            extraction_provider_calls = extraction_provider_calls,
             runner_policy = lease$policy_summary,
             runner_lifecycle = if (lease$owned) {
               "invocation-owned"
@@ -706,7 +1290,7 @@ RLMModule <- R6::R6Class(
 
           tibble::tibble(
             output = list(output),
-            chat = list(llm),
+            chat = list(result_chat),
             metadata = list(metadata)
           )
         }
@@ -735,7 +1319,9 @@ RLMModule <- R6::R6Class(
         verbose = self$verbose,
         tools = self$tools,
         config = self$config,
-        chat = self$chat
+        chat = self$chat,
+        generate_action = self$generate_action$reset_copy(),
+        extract = self$extract$reset_copy()
       )
     },
 
@@ -754,10 +1340,41 @@ RLMModule <- R6::R6Class(
         tools = self$tools,
         config = lapply(self$config, identity),
         chat = self$chat,
-        interpreter_factory = self$interpreter_factory
+        interpreter_factory = self$interpreter_factory,
+        generate_action = self$generate_action$deepcopy(),
+        extract = self$extract$deepcopy()
       )
       copied$state <- lapply(self$state, identity)
       copied
+    },
+
+    #' @description
+    #' Expose the action and extraction predictors to graph optimizers
+    #' @return Named list of child modules
+    graph_children = function() {
+      list(
+        generate_action = self$generate_action,
+        extract = self$extract
+      )
+    },
+
+    #' @description
+    #' Replace the action and extraction predictors
+    #' @param children Named child-module list
+    #' @return The module, invisibly
+    set_graph_children = function(children) {
+      self$validate_graph_children(children)
+      self$generate_action <- children$generate_action
+      self$extract <- children$extract
+      invisible(self)
+    },
+
+    #' @description
+    #' Validate replacement RLM predictor children
+    #' @param children Named child-module list
+    #' @return The children, invisibly
+    validate_graph_children = function(children) {
+      validate_rlm_predictor_children(children, self$signature@output_type)
     },
 
     #' @description
@@ -781,7 +1398,7 @@ RLMModule <- R6::R6Class(
         "*" = "Max iterations: {.val {self$max_iterations}}",
         "*" = "Max LLM calls: {.val {self$max_llm_calls}}",
         "*" = "Runner: {code_runner_binding_label(self$runner, self$interpreter_factory)}",
-        "*" = "Recursive queries: {.val {if (is.null(self$sub_lm)) 'disabled' else 'enabled'}}",
+        "*" = "Recursive queries: {.val {if (self$max_llm_calls == 0L) 'disabled' else if (is.null(self$sub_lm)) 'outer LM' else 'separate sub-LM'}}",
         "*" = "Custom tools: {.val {length(self$tools)}}"
       ))
       invisible(self)
@@ -789,6 +1406,54 @@ RLMModule <- R6::R6Class(
   ),
 
   private = list(
+    #' Remove invocation-private state from a reusable caller-owned runner
+    cleanup_invocation_state = function(runner, session_state_id) {
+      state_name <- encodeString(session_state_id, quote = "\"")
+      cleanup_code <- paste0(
+        "base::local({\n",
+        "  .root <- base::parent.env(base::environment())\n",
+        "  if (base::exists(",
+        state_name,
+        ", envir = .root, inherits = FALSE)) {\n",
+        "    base::rm(list = ",
+        state_name,
+        ", envir = .root)\n",
+        "  }\n",
+        "  base::invisible(TRUE)\n",
+        "})"
+      )
+
+      cleanup_error <- tryCatch(
+        {
+          result <- runner$execute(cleanup_code, context = list())
+          if (!isTRUE(result$success)) {
+            stop(result$error %||% "runner rejected invocation cleanup")
+          }
+          release_context <- tryCatch(
+            runner[["release_context"]],
+            error = function(e) NULL
+          )
+          if (is.function(release_context)) {
+            release_context()
+          }
+          NULL
+        },
+        interrupt = function(e) e,
+        error = function(e) e
+      )
+      if (inherits(cleanup_error, "condition")) {
+        cli::cli_warn(
+          c(
+            "RLM could not fully clear its caller-owned interpreter state",
+            "x" = conditionMessage(cleanup_error),
+            "i" = "Reset or close the runner before reusing it."
+          ),
+          class = "dsprrr_rlm_cleanup_warning"
+        )
+      }
+      invisible(NULL)
+    },
+
     #' Get output field names from signature for display
     get_output_names = function() {
       paste(private$get_output_field_names(), collapse = ", ")
@@ -799,16 +1464,97 @@ RLMModule <- R6::R6Class(
       output_type <- self$signature@output_type
       if (methods::.hasSlot(output_type, "properties")) {
         props <- output_type@properties
-        if (length(props) > 0) {
-          return(props)
-        }
+        props <- props[
+          !vapply(
+            props,
+            inherits,
+            logical(1),
+            what = "ellmer::TypeIgnore"
+          )
+        ]
+        return(props)
+      }
+      if (inherits(output_type, "ellmer::TypeIgnore")) {
+        return(list())
       }
       list(answer = output_type)
+    },
+
+    #' Get required output field names from signature
+    get_required_output_field_names = function() {
+      specs <- private$get_output_specs()
+      names(specs)[vapply(
+        specs,
+        function(spec) {
+          tryCatch(isTRUE(spec@required), error = function(e) TRUE)
+        },
+        logical(1)
+      )]
     },
 
     #' Get output field names from signature
     get_output_field_names = function() {
       names(private$get_output_specs())
+    },
+
+    #' Format a true-length head-and-tail excerpt
+    format_excerpt = function(text, max_chars = self$max_output_chars) {
+      if (is.null(text) || length(text) == 0L) {
+        return("")
+      }
+      text <- paste(as.character(text), collapse = "\n")
+      total <- nchar(text, type = "chars")
+      if (total <= max_chars) {
+        return(text)
+      }
+      marker <- paste0("\n... [", total, " total characters] ...\n")
+      if (nchar(marker) + 2L > max_chars) {
+        return(substr(text, 1L, max_chars))
+      }
+      omitted <- total
+      for (iteration in seq_len(10L)) {
+        marker <- paste0(
+          "\n... [",
+          omitted,
+          " characters omitted; total ",
+          total,
+          "] ...\n"
+        )
+        if (nchar(marker) + 2L > max_chars) {
+          return(substr(text, 1L, max_chars))
+        }
+        visible <- max_chars - nchar(marker)
+        head_chars <- ceiling(visible / 2)
+        tail_chars <- floor(visible / 2)
+        next_omitted <- total - head_chars - tail_chars
+        if (identical(next_omitted, omitted)) {
+          break
+        }
+        omitted <- next_omitted
+      }
+      paste0(
+        substr(text, 1L, head_chars),
+        marker,
+        substr(text, total - tail_chars + 1L, total)
+      )
+    },
+
+    #' Preview one context value without embedding the full object
+    preview_context_value = function(value) {
+      text <- if (is.character(value) && length(value) == 1L) {
+        value
+      } else if (is.data.frame(value)) {
+        paste(
+          utils::capture.output(utils::str(value, max.level = 1L)),
+          collapse = " "
+        )
+      } else {
+        paste(
+          utils::capture.output(utils::str(value, max.level = 1L)),
+          collapse = " "
+        )
+      }
+      private$format_excerpt(text, max_chars = 1000L)
     },
 
     #' Describe context variables for the system prompt
@@ -821,6 +1567,15 @@ RLMModule <- R6::R6Class(
         names(inputs),
         function(name) {
           val <- inputs[[name]]
+          input_index <- match(
+            name,
+            vapply(
+              self$signature@inputs,
+              function(spec) spec$name,
+              character(1)
+            )
+          )
+          input_spec <- self$signature@inputs[[input_index]]
           type_str <- class(val)[1]
           size_str <- if (is.character(val)) {
             total_chars <- sum(nchar(val))
@@ -835,15 +1590,9 @@ RLMModule <- R6::R6Class(
             "1 object"
           }
 
-          preview <- if (is.character(val) && length(val) == 1) {
-            if (nchar(val) > 100) {
-              paste0(substr(val, 1, 100), "...")
-            } else {
-              val
-            }
-          } else {
-            deparse(val, width.cutoff = 60)[1]
-          }
+          preview <- private$preview_context_value(val)
+          declared <- format_ellmer_type(input_spec$type, verbose = TRUE)
+          description <- input_spec$description %||% ""
 
           paste0(
             "- `.context$",
@@ -852,7 +1601,11 @@ RLMModule <- R6::R6Class(
             type_str,
             ", ",
             size_str,
-            ")\n",
+            "; declared ",
+            declared,
+            ")",
+            if (nzchar(description)) paste0(" - ", description) else "",
+            "\n",
             "  Preview: ",
             preview
           )
@@ -864,17 +1617,16 @@ RLMModule <- R6::R6Class(
     },
 
     #' Build the system prompt for RLM
-    build_system_prompt = function(context_desc) {
-      has_sub_lm <- !is.null(self$sub_lm)
+    build_system_prompt = function(context_desc, has_sub_lm = TRUE) {
       output_fields <- private$get_output_field_names()
-      submit_usage <- if (length(output_fields) == 1) {
-        paste0("SUBMIT(", output_fields[[1]], ")")
+      output_specs <- private$get_output_specs()
+      required_fields <- private$get_required_output_field_names()
+      submit_usage <- if (length(required_fields) == 0L) {
+        "SUBMIT()"
       } else {
         paste0(
           "SUBMIT(",
-          paste(output_fields, collapse = ", "),
-          ") or SUBMIT(",
-          paste0(output_fields, " = ...", collapse = ", "),
+          paste0(required_fields, " = ...", collapse = ", "),
           ")"
         )
       }
@@ -899,11 +1651,36 @@ RLMModule <- R6::R6Class(
       }
 
       if (length(self$tools) > 0) {
-        custom_tool_names <- names(self$tools)
         tool_desc <- c(
           tool_desc,
-          paste0("- `", custom_tool_names, "()`: User-defined tool")
+          vapply(
+            names(self$tools),
+            function(name) format_rlm_tool_contract(self$tools[[name]], name),
+            character(1)
+          )
         )
+      }
+
+      output_contract <- vapply(
+        names(output_specs),
+        function(name) {
+          spec <- output_specs[[name]]
+          description <- spec@description %||% ""
+          paste0(
+            "- `",
+            name,
+            "`: ",
+            format_ellmer_type(spec, verbose = TRUE),
+            if (!name %in% required_fields) " (optional)" else "",
+            if (nzchar(description)) paste0(" - ", description) else ""
+          )
+        },
+        character(1)
+      )
+
+      task_instructions <- self$signature@instructions %||% ""
+      if (!nzchar(task_instructions)) {
+        task_instructions <- "Answer the declared task using only supported evidence."
       }
 
       glue::glue(
@@ -911,8 +1688,15 @@ RLMModule <- R6::R6Class(
 You are working in an R REPL environment. Your goal is to answer the query by
 writing R code to explore and analyze the provided context.
 
+## Task
+{task_instructions}
+
 ## Available Variables
 {context_desc}
+
+## Declared Output
+{paste(output_contract, collapse = '
+')}
 
 ## Available Functions
 {paste(tool_desc, collapse = '
@@ -922,9 +1706,11 @@ writing R code to explore and analyze the provided context.
 1. Explore the context programmatically - don't ask to see all content at once
 2. Use peek() to examine slices of large text
 3. Use search() to find specific patterns
-4. Break complex queries into smaller sub-questions{if (has_sub_lm) ' using llm_query()' else ''}
+4. Break complex queries into smaller sub-questions{if (has_sub_lm) ' using llm_query(); it returns a value you can assign and combine' else ''}
 5. Call {submit_usage} when you have the final answer
 6. You have {self$max_iterations} iterations{if (has_sub_lm) paste0(' and ', self$max_llm_calls, ' LLM calls') else ''}
+7. Submitted values must satisfy the declared output types; invalid submissions are returned as repairable errors
+8. Keep work before llm_query(), host-tool calls, and SUBMIT() read-only because bridge replay can repeat direct external side effects
 
 ## Response Format
 Return JSON with:
@@ -958,7 +1744,7 @@ Code:
 ```
 
 {if (h$success) 'Output:' else 'Error:'}
-{h$output}
+{private$format_excerpt(h$output)}
 {if (h$is_final) '(SUBMIT was called)' else ''}
 "
           )
@@ -975,36 +1761,56 @@ Code:
     },
 
     #' Get code response from LLM
-    get_code_response = function(llm, prompt) {
-      output_type <- ellmer::type_object(
-        reasoning = ellmer::type_string(
-          description = "Your thought process for this step"
+    get_code_response = function(
+      llm,
+      prompt,
+      trace = TRUE,
+      .cache = NULL
+    ) {
+      action_llm <- clone_rlm_chat(llm)
+      action_result <- tryCatch(
+        self$generate_action$forward(
+          list(state = prompt),
+          .llm = action_llm,
+          trace = FALSE,
+          .cache = .cache
         ),
-        code = ellmer::type_string(
-          description = "R code to execute"
-        )
-      )
-
-      result <- tryCatch(
-        llm$chat_structured(prompt, type = output_type),
         error = function(e) {
-          cli::cli_abort(c(
-            "Failed to get code from LLM",
-            "x" = "Error: {e$message}"
-          ))
+          cli::cli_abort(
+            c(
+              "Failed to get code from LLM",
+              "x" = "Error: {e$message}"
+            ),
+            class = "dsprrr_rlm_action_error",
+            parent = e
+          )
         }
       )
+      result <- action_result$output[[1L]]
 
-      if (is.null(result$code) || !is.character(result$code)) {
-        cli::cli_abort(c(
-          "LLM returned invalid response",
-          "i" = "Missing or invalid 'code' field"
-        ))
+      valid_code <- is.character(result$code) &&
+        length(result$code) == 1L &&
+        !is.na(result$code) &&
+        nzchar(trimws(result$code))
+      if (!valid_code) {
+        cli::cli_abort(
+          c(
+            "LLM returned invalid response",
+            "i" = "{.field code} must be one non-empty R source string."
+          ),
+          class = "dsprrr_rlm_action_error"
+        )
       }
+      metadata <- private$normalize_predictor_metadata(
+        self$generate_action,
+        action_result$metadata[[1L]] %||% list()
+      )
 
       list(
         reasoning = result$reasoning %||% "",
-        code = strip_rlm_code_fences(result$code)
+        code = strip_rlm_code_fences(result$code),
+        metadata = metadata,
+        chat = action_result$chat[[1L]] %||% action_llm
       )
     },
 
@@ -1014,7 +1820,10 @@ Code:
       inputs,
       call_counter,
       runner,
-      runner_policy
+      runner_policy,
+      sub_lm,
+      context_prepared = FALSE,
+      session_state_id
     ) {
       code <- strip_rlm_code_fences(code)
       control_nonce <- rlm_control_nonce()
@@ -1022,26 +1831,71 @@ Code:
       # Build RLM prelude that defines tools
       rlm_prelude <- create_rlm_prelude(
         max_llm_calls = self$max_llm_calls,
-        has_sub_lm = !is.null(self$sub_lm),
+        has_sub_lm = self$max_llm_calls > 0L,
         custom_tools = self$tools,
         output_fields = private$get_output_field_names(),
+        required_output_fields = private$get_required_output_field_names(),
         control_nonce = control_nonce,
         control_frame_limit = runner_policy$rlm_control_frame_limit %||% Inf
       )
 
-      # Build combined code: prelude + user code
+      state_name <- encodeString(session_state_id, quote = "\"")
+      user_code <- encodeString(code, quote = "\"")
+      prelude_code <- encodeString(rlm_prelude, quote = "\"")
+
+      # Each bridge replay starts from the same RLM assignment state. Ordinary
+      # bindings are committed only after the complete block succeeds. Direct
+      # external effects are not transactional and can repeat. A non-local
+      # restart suspends query, tool, and final controls, so guest tryCatch()
+      # cannot continue past a privileged boundary.
       combined_code <- paste0(
-        "# RLM Prelude\n",
-        rlm_prelude,
-        "\n\n# User Code\n",
-        code
+        "base::local({\n",
+        "  # Replay-isolated RLM user-code bindings\n",
+        "  .rlm_root <- base::parent.env(base::environment())\n",
+        "  .rlm_state_name <- ",
+        state_name,
+        "\n",
+        "  if (!base::exists(.rlm_state_name, envir = .rlm_root, inherits = FALSE)) {\n",
+        "    base::assign(.rlm_state_name, base::new.env(parent = .rlm_root), envir = .rlm_root)\n",
+        "  }\n",
+        "  .rlm_state <- base::get(.rlm_state_name, envir = .rlm_root, inherits = FALSE)\n",
+        "  .rlm_tx <- base::new.env(parent = .rlm_state)\n",
+        "  .rlm_tx$.context <- .context\n",
+        "  base::eval(base::parse(text = ",
+        prelude_code,
+        "), envir = .rlm_tx)\n",
+        "  .rlm_injected_names <- base::ls(.rlm_tx, all.names = TRUE)\n",
+        "  .rlm_step <- base::withRestarts(\n",
+        "    {\n",
+        "      .rlm_value <- base::eval(base::parse(text = ",
+        user_code,
+        "), envir = .rlm_tx)\n",
+        "      base::list(control = FALSE, value = .rlm_value)\n",
+        "    },\n",
+        "    .dsprrr_rlm_control = function(frame) {\n",
+        "      base::list(control = TRUE, value = frame)\n",
+        "    }\n",
+        "  )\n",
+        "  if (base::isTRUE(.rlm_step$control)) {\n",
+        "    .rlm_step$value\n",
+        "  } else {\n",
+        "    .rlm_names <- base::setdiff(\n",
+        "      base::ls(.rlm_tx, all.names = TRUE),\n",
+        "      base::c('.context', .rlm_injected_names)\n",
+        "    )\n",
+        "    for (.rlm_name in .rlm_names) {\n",
+        "      base::assign(.rlm_name, base::get(.rlm_name, envir = .rlm_tx, inherits = FALSE), envir = .rlm_state)\n",
+        "    }\n",
+        "    .rlm_step$value\n",
+        "  }\n",
+        "})\n"
       )
 
       # Execute with inputs as context
-      tool_replay <- list()
+      control_replay <- list()
       repeat {
-        execution_context <- inputs
-        execution_context[[rlm_host_tool_replay_field()]] <- tool_replay
+        execution_context <- if (isTRUE(context_prepared)) list() else inputs
+        execution_context[[rlm_control_replay_field()]] <- control_replay
         result <- execute_code_runner(
           runner,
           combined_code,
@@ -1056,28 +1910,71 @@ Code:
           result$stderr,
           result$error
         )) {
+          if (!isTRUE(result$success) && !is.character(candidate)) {
+            next
+          }
           decoded <- decode_rlm_control(candidate, control_nonce)
           if (!is.null(decoded)) {
             control_value <- decoded
             break
           }
         }
-        if (!is_rlm_host_tool_request(control_value)) {
+        if (
+          !is_rlm_host_tool_request(control_value) &&
+            !is_rlm_query_request(control_value)
+        ) {
+          if (is_rlm_final(control_value)) {
+            control_index <- attr(
+              control_value,
+              "rlm_control_index",
+              exact = TRUE
+            )
+            if (!identical(control_index, length(control_replay) + 1L)) {
+              cli::cli_abort(
+                "RLM final control diverged from the recorded replay sequence",
+                class = "dsprrr_rlm_control_error"
+              )
+            }
+          }
           break
         }
-        if (length(tool_replay) >= 1000L) {
+
+        if (!identical(control_value$index, length(control_replay) + 1L)) {
+          cli::cli_abort(
+            "RLM controls were returned out of replay order",
+            class = "dsprrr_rlm_control_error"
+          )
+        }
+
+        if (is_rlm_query_request(control_value)) {
+          request <- control_value
+          query_outcome <- private$process_rlm_query(
+            request,
+            call_counter,
+            sub_lm
+          )
+          control_replay[[length(control_replay) + 1L]] <- list(
+            kind = "query",
+            request = unclass(request),
+            success = query_outcome$success,
+            value = query_outcome$value,
+            error = query_outcome$error
+          )
+          next
+        }
+
+        tool_calls <- sum(vapply(
+          control_replay,
+          function(record) identical(record$kind, "host_tool"),
+          logical(1)
+        ))
+        if (tool_calls >= 1000L) {
           cli::cli_abort(
             "RLM exceeded the per-iteration host-tool bridge limit",
             class = "dsprrr_rlm_host_tool_limit_error"
           )
         }
         request <- control_value
-        if (!identical(request$index, length(tool_replay) + 1L)) {
-          cli::cli_abort(
-            "RLM host-tool requests were returned out of order",
-            class = "dsprrr_rlm_host_tool_protocol_error"
-          )
-        }
         if (!request$name %in% names(self$tools)) {
           cli::cli_abort(
             "RLM requested unknown host tool {.val {request$name}}",
@@ -1099,17 +1996,17 @@ Code:
             )
           }
         )
-        tool_replay[[length(tool_replay) + 1L]] <- c(
-          list(request = unclass(request)),
+        control_replay[[length(control_replay) + 1L]] <- c(
+          list(kind = "host_tool", request = unclass(request)),
           tool_outcome
         )
       }
 
-      if (!isTRUE(result$success)) {
+      if (!isTRUE(result$success) && !is_rlm_final(control_value)) {
         control_value <- NULL
       }
 
-      # Detect SUBMIT termination using the versioned runner-neutral envelope.
+      # Detect and strictly validate SUBMIT before terminating the loop.
       is_final <- is_rlm_final(control_value)
       final_value <- if (is_final) {
         extract_rlm_final(control_value)
@@ -1117,46 +2014,47 @@ Code:
         NULL
       }
 
-      # Handle rlm_query requests (if sub_lm is available)
-      if (is_rlm_query_request(control_value) && !is.null(self$sub_lm)) {
-        # Process the recursive query (single or batch)
-        query_result <- private$process_rlm_query(
-          control_value,
-          call_counter
+      if (is_final) {
+        validated <- tryCatch(
+          list(
+            value = private$normalize_final_answer(
+              final_value,
+              source = "submit"
+            ),
+            error = NULL
+          ),
+          error = function(error) list(value = NULL, error = error)
         )
-
-        # Return the query result as the output
-        return(list(
-          success = query_result$success,
-          is_final = FALSE,
-          final_value = NULL,
-          formatted_output = query_result$formatted_output,
-          error = query_result$error,
-          raw_result = result
-        ))
+        if (inherits(validated$error, "condition")) {
+          message <- conditionMessage(validated$error)
+          return(list(
+            success = FALSE,
+            is_final = FALSE,
+            final_value = NULL,
+            formatted_output = paste0("Error: ", message),
+            error = message,
+            raw_result = result
+          ))
+        }
+        final_value <- validated$value
       }
 
       # Format output for history
-      formatted_output <- if (result$success) {
+      formatted_output <- if (is_final) {
+        "[SUBMIT accepted]"
+      } else if (result$success) {
         private$format_execution_output(result)
       } else {
         paste("Error:", result$error %||% "Unknown error")
       }
-
-      # Truncate if too long
-      if (nchar(formatted_output) > self$max_output_chars) {
-        formatted_output <- paste0(
-          substr(formatted_output, 1, self$max_output_chars),
-          "\n... [TRUNCATED]"
-        )
-      }
+      formatted_output <- private$format_excerpt(formatted_output)
 
       list(
-        success = result$success,
+        success = is_final || isTRUE(result$success),
         is_final = is_final,
         final_value = final_value,
         formatted_output = formatted_output,
-        error = result$error,
+        error = if (is_final) NULL else result$error,
         raw_result = result
       )
     },
@@ -1164,10 +2062,14 @@ Code:
     #' Process an rlm_query request (single or batch)
     #'
     #' @return List with success, formatted_output, error fields
-    process_rlm_query = function(request, call_counter) {
+    process_rlm_query = function(request, call_counter, sub_lm) {
+      call_counter$provider_calls <- call_counter$provider_calls %||% 0L
+      call_counter$provider_calls_known <-
+        call_counter$provider_calls_known %||% TRUE
+
       # Handle batch queries
       if (isTRUE(request$batch)) {
-        return(private$process_rlm_query_batch(request, call_counter))
+        return(private$process_rlm_query_batch(request, call_counter, sub_lm))
       }
 
       # Single query processing
@@ -1181,6 +2083,7 @@ Code:
         cli::cli_warn(error_msg)
         return(list(
           success = FALSE,
+          value = NULL,
           formatted_output = paste0("Error: ", error_msg),
           error = error_msg
         ))
@@ -1197,18 +2100,28 @@ Code:
         query
       }
 
+      query_llm <- clone_rlm_chat(sub_lm)
+      turns_before <- batch_chat_turns(query_llm)
       result <- tryCatch(
         {
-          response <- self$sub_lm$chat(prompt)
+          response <- query_llm$chat(prompt)
           text <- normalize_rlm_sub_lm_text(response)
           list(
             success = TRUE,
-            formatted_output = paste0("Query result: ", text),
-            error = NULL
+            value = text,
+            formatted_output = paste0(
+              "Query result: ",
+              private$format_excerpt(text)
+            ),
+            error = NULL,
+            metadata = chat_usage_metadata(query_llm, turns_before)
           )
         },
         error = function(e) {
           if (inherits(e, "dsprrr_rlm_sub_lm_response_error")) {
+            stop(e)
+          }
+          if (!is_rlm_provider_error(e)) {
             stop(e)
           }
           cli::cli_warn(c(
@@ -1218,10 +2131,20 @@ Code:
           ))
           list(
             success = FALSE,
+            value = NULL,
             formatted_output = paste0("Query error: ", e$message),
-            error = e$message
+            error = e$message,
+            metadata = c(
+              canonical_usage_metadata(),
+              list(provider_calls = NA_integer_)
+            )
           )
         }
+      )
+      private$record_recursive_provider_calls(call_counter, result$metadata)
+      call_counter$usage <- append(
+        call_counter$usage,
+        list(result$metadata %||% canonical_usage_metadata())
       )
 
       result
@@ -1230,7 +2153,11 @@ Code:
     #' Process batch rlm_query requests
     #'
     #' @return List with success, formatted_output, error fields
-    process_rlm_query_batch = function(request, call_counter) {
+    process_rlm_query_batch = function(request, call_counter, sub_lm) {
+      call_counter$provider_calls <- call_counter$provider_calls %||% 0L
+      call_counter$provider_calls_known <-
+        call_counter$provider_calls_known %||% TRUE
+
       queries <- request$queries
       slices <- request$slices
       n_queries <- length(queries)
@@ -1248,6 +2175,7 @@ Code:
         cli::cli_warn(error_msg)
         return(list(
           success = FALSE,
+          value = NULL,
           formatted_output = paste0("Error: ", error_msg),
           error = error_msg
         ))
@@ -1256,6 +2184,7 @@ Code:
       if (n_queries == 0L) {
         return(list(
           success = TRUE,
+          value = character(),
           formatted_output = "",
           error = NULL
         ))
@@ -1278,25 +2207,23 @@ Code:
         character(1)
       )
 
-      batch_result <- private$run_batched_sub_lm_queries(prompts)
+      batch_result <- private$run_batched_sub_lm_queries(prompts, sub_lm)
       results <- batch_result$results
       errors <- batch_result$errors
-
-      # Format output
-      formatted_parts <- vapply(
-        seq_len(n_queries),
-        function(i) {
-          result_i <- results[[i]]
-          result_text <- if (is.null(result_i)) {
-            ""
-          } else {
-            paste(as.character(result_i), collapse = "\n")
-          }
-          paste0("Query ", i, " result: ", result_text)
-        },
-        character(1)
+      if (isTRUE(batch_result$provider_calls_known)) {
+        call_counter$provider_calls <- call_counter$provider_calls +
+          batch_result$provider_calls
+      } else {
+        call_counter$provider_calls_known <- FALSE
+      }
+      call_counter$usage <- append(
+        call_counter$usage,
+        batch_result$usage %||%
+          rep(
+            list(canonical_usage_metadata()),
+            n_queries
+          )
       )
-      formatted_output <- paste(formatted_parts, collapse = "\n\n")
 
       if (length(errors) > 0) {
         cli::cli_warn(c(
@@ -1305,20 +2232,39 @@ Code:
         ))
       }
 
+      formatted_output <- paste(
+        vapply(
+          seq_len(n_queries),
+          function(index) {
+            value <- results[[index]] %||% ""
+            paste0(
+              "Query ",
+              index,
+              " result: ",
+              private$format_excerpt(value)
+            )
+          },
+          character(1)
+        ),
+        collapse = "\n\n"
+      )
+
       list(
-        success = length(errors) == 0,
-        formatted_output = formatted_output,
-        error = if (length(errors) > 0) paste(errors, collapse = "; ") else NULL
+        success = TRUE,
+        value = vapply(results, as.character, character(1)),
+        formatted_output = private$format_excerpt(formatted_output),
+        error = NULL,
+        errors = errors
       )
     },
 
     #' Run a batch of sub-LM prompts with bounded parallelism
-    run_batched_sub_lm_queries = function(prompts) {
+    run_batched_sub_lm_queries = function(prompts, sub_lm) {
       n_queries <- length(prompts)
 
       # For a single query, avoid parallel overhead
       if (n_queries <= 1L) {
-        return(private$run_batched_sub_lm_queries_sequential(prompts))
+        return(private$run_batched_sub_lm_queries_sequential(prompts, sub_lm))
       }
 
       has_parallel_chat <- exists(
@@ -1332,18 +2278,20 @@ Code:
           "i" = "Falling back to sequential batch queries.",
           "i" = "{.fn ellmer::parallel_chat} not available; upgrade ellmer for parallel execution."
         ))
-        return(private$run_batched_sub_lm_queries_sequential(prompts))
+        return(private$run_batched_sub_lm_queries_sequential(prompts, sub_lm))
       }
 
       max_active <- private$get_rlm_batch_max_active(n_queries)
+      batch_llm <- clone_rlm_chat(sub_lm)
+      turns_before <- batch_chat_turns(batch_llm)
 
       parallel_turns <- tryCatch(
         {
           ellmer::parallel_chat(
-            chat = self$sub_lm,
+            chat = batch_llm,
             prompts = as.list(prompts),
             max_active = max_active,
-            on_error = "return"
+            on_error = "continue"
           )
         },
         interrupt = function(i) stop(i),
@@ -1353,10 +2301,14 @@ Code:
       )
 
       if (inherits(parallel_turns, "error")) {
-        return(private$build_parallel_batch_failure(
-          n_queries = n_queries,
-          message = conditionMessage(parallel_turns)
-        ))
+        cli::cli_abort(
+          c(
+            "Recursive LLM batch transport failed",
+            "x" = conditionMessage(parallel_turns)
+          ),
+          class = "dsprrr_rlm_batch_transport_error",
+          parent = parallel_turns
+        )
       }
 
       if (
@@ -1364,78 +2316,117 @@ Code:
           !is.list(parallel_turns) ||
           length(parallel_turns) != n_queries
       ) {
-        return(private$build_parallel_batch_failure(
-          n_queries = n_queries,
-          message = "parallel_chat() returned an invalid response shape"
-        ))
+        cli::cli_abort(
+          "Recursive LLM batch returned an invalid response shape",
+          class = "dsprrr_rlm_batch_transport_error"
+        )
       }
 
       results <- vector("list", n_queries)
       errors <- character()
+      usage <- vector("list", n_queries)
 
       for (i in seq_len(n_queries)) {
-        parsed <- private$extract_parallel_query_result(parallel_turns[[i]], i)
+        parsed <- private$extract_parallel_query_result(
+          parallel_turns[[i]],
+          i,
+          turns_before = turns_before
+        )
         results[[i]] <- parsed$result
+        usage[[i]] <- parsed$metadata
         if (!is.null(parsed$error)) {
           errors <- c(errors, parsed$error)
         }
       }
 
-      list(results = results, errors = errors)
-    },
-
-    #' Build per-query failures for infrastructure-level parallel errors
-    build_parallel_batch_failure = function(n_queries, message) {
-      error_msg <- paste0(
-        "Parallel batch infrastructure error (queries not retried): ",
-        message
+      provider_calls <- private$summarize_provider_calls(usage)
+      list(
+        results = results,
+        errors = errors,
+        usage = usage,
+        provider_calls = provider_calls,
+        provider_calls_known = !is.na(provider_calls)
       )
-
-      results <- rep(list(paste0("[Error: ", error_msg, "]")), n_queries)
-      errors <- vapply(
-        seq_len(n_queries),
-        function(i) paste0("Query ", i, ": ", error_msg),
-        character(1)
-      )
-
-      list(results = results, errors = errors)
     },
 
     #' Sequential fallback for batched sub-LM queries
-    run_batched_sub_lm_queries_sequential = function(prompts) {
+    run_batched_sub_lm_queries_sequential = function(prompts, sub_lm) {
       n_queries <- length(prompts)
       results <- vector("list", n_queries)
       errors <- character()
+      usage <- vector("list", n_queries)
 
       for (i in seq_len(n_queries)) {
+        query_llm <- clone_rlm_chat(sub_lm)
+        turns_before <- batch_chat_turns(query_llm)
+        query_failed <- FALSE
         results[[i]] <- tryCatch(
           {
-            normalize_rlm_sub_lm_text(self$sub_lm$chat(prompts[[i]]))
+            normalize_rlm_sub_lm_text(query_llm$chat(prompts[[i]]))
           },
           error = function(e) {
             if (inherits(e, "dsprrr_rlm_sub_lm_response_error")) {
               stop(e)
             }
+            if (!is_rlm_provider_error(e)) {
+              stop(e)
+            }
+            query_failed <<- TRUE
             errors <<- c(errors, paste0("Query ", i, ": ", e$message))
-            paste0("[Error: ", e$message, "]")
+            paste0("[ERROR] ", e$message)
           }
         )
+        usage[[i]] <- if (query_failed) {
+          c(
+            canonical_usage_metadata(),
+            list(provider_calls = NA_integer_)
+          )
+        } else {
+          chat_usage_metadata(query_llm, turns_before)
+        }
       }
 
-      list(results = results, errors = errors)
+      provider_calls <- private$summarize_provider_calls(usage)
+      list(
+        results = results,
+        errors = errors,
+        usage = usage,
+        provider_calls = provider_calls,
+        provider_calls_known = !is.na(provider_calls)
+      )
     },
 
     #' Extract a text result from ellmer::parallel_chat() output
-    extract_parallel_query_result = function(turn_or_error, index) {
-      if (is.null(turn_or_error) || inherits(turn_or_error, "error")) {
-        msg <- if (inherits(turn_or_error, "error")) {
-          conditionMessage(turn_or_error)
-        } else {
-          "Unknown error"
+    extract_parallel_query_result = function(
+      turn_or_error,
+      index,
+      turns_before = NULL
+    ) {
+      if (is.null(turn_or_error)) {
+        cli::cli_abort(
+          "Recursive LLM batch returned a missing result at position {index}",
+          class = "dsprrr_rlm_batch_transport_error"
+        )
+      }
+      if (inherits(turn_or_error, "error")) {
+        if (!is_rlm_provider_error(turn_or_error)) {
+          cli::cli_abort(
+            c(
+              "Recursive LLM batch returned an unexpected error at position {index}",
+              "x" = conditionMessage(turn_or_error)
+            ),
+            class = "dsprrr_rlm_batch_transport_error",
+            parent = turn_or_error
+          )
         }
+        msg <- conditionMessage(turn_or_error)
         return(list(
-          result = paste0("[Error: ", msg, "]"),
-          error = paste0("Query ", index, ": ", msg)
+          result = paste0("[ERROR] ", msg),
+          error = paste0("Query ", index, ": ", msg),
+          metadata = c(
+            canonical_usage_metadata(),
+            list(provider_calls = NA_integer_)
+          )
         ))
       }
 
@@ -1461,7 +2452,11 @@ Code:
         }
       )
 
-      list(result = normalize_rlm_sub_lm_text(text), error = NULL)
+      list(
+        result = normalize_rlm_sub_lm_text(text),
+        error = NULL,
+        metadata = chat_usage_metadata(turn_or_error, turns_before)
+      )
     },
 
     #' Determine bounded parallelism for RLM batch calls
@@ -1516,10 +2511,31 @@ Code:
         result_str <- tryCatch(
           {
             if (is.data.frame(result$result)) {
-              paste(
-                utils::capture.output(print(result$result)),
+              rows <- nrow(result$result)
+              shown <- if (rows <= 20L) {
+                result$result
+              } else {
+                rbind(
+                  utils::head(result$result, 10L),
+                  utils::tail(result$result, 10L)
+                )
+              }
+              rendered <- paste(
+                utils::capture.output(print(shown)),
                 collapse = "\n"
               )
+              if (rows > 20L) {
+                paste0(
+                  rendered,
+                  "\n... [",
+                  rows - 20L,
+                  " data-frame rows omitted; ",
+                  rows,
+                  " total]"
+                )
+              } else {
+                rendered
+              }
             } else if (
               is.atomic(result$result) && length(result$result) <= 10
             ) {
@@ -1537,11 +2553,17 @@ Code:
         return("[No output]")
       }
 
-      paste(parts, collapse = "\n\n")
+      private$format_excerpt(paste(parts, collapse = "\n\n"))
     },
 
     #' Extract answer via fallback when max_iterations reached
-    extract_fallback = function(inputs, history, llm) {
+    extract_fallback = function(
+      inputs,
+      history,
+      llm,
+      trace = TRUE,
+      .cache = NULL
+    ) {
       # Build trajectory summary
       trajectory <- vapply(
         history,
@@ -1550,21 +2572,28 @@ Code:
             "Iteration {h$iteration}:
 Reasoning: {h$reasoning}
 Code: {h$code}
-Output: {substr(h$output, 1, 500)}"
+Output: {private$format_excerpt(h$output, max_chars = self$max_output_chars)}"
           )
         },
         character(1)
       )
 
       input_context <- private$format_inputs_for_prompt(inputs)
+      variable_info <- private$describe_context(inputs)
 
       prompt <- glue::glue(
         "
 The RLM agent ran out of iterations before calling SUBMIT().
 Based on the exploration trajectory below, extract the best possible answer.
 
+## Original Task Instructions
+{self$signature@instructions}
+
 ## Original Query
 {input_context}
+
+## Available Variables
+{variable_info}
 
 ## Exploration Trajectory
 {paste(trajectory, collapse = '
@@ -1578,32 +2607,36 @@ answer possible with what was discovered.
 "
       )
 
-      structured_result <- tryCatch(
-        llm$chat_structured(prompt, type = self$signature@output_type),
+      fallback_result <- tryCatch(
+        self$extract$forward(
+          list(state = prompt),
+          .llm = clone_rlm_chat(llm),
+          trace = FALSE,
+          .cache = .cache
+        ),
         error = function(e) {
-          cli::cli_warn(c(
-            "Structured fallback extraction failed",
-            "x" = "Error: {e$message}",
-            "i" = "Falling back to unstructured extraction"
-          ))
-          NULL
+          cli::cli_abort(
+            c(
+              "RLM fallback extraction failed",
+              "x" = "{conditionMessage(e)}"
+            ),
+            class = "dsprrr_rlm_fallback_error",
+            parent = e
+          )
         }
       )
-
-      if (!is.null(structured_result)) {
-        return(structured_result)
-      }
-
-      tryCatch(
-        llm$chat(prompt),
-        error = function(e) {
-          cli::cli_warn(c(
-            "Fallback extraction failed",
-            "x" = "Error: {e$message}",
-            "i" = "Returning error message as answer"
-          ))
-          paste0("[Fallback extraction failed: ", e$message, "]")
-        }
+      value <- private$normalize_final_answer(
+        fallback_result$output[[1L]],
+        source = "fallback"
+      )
+      metadata <- private$normalize_predictor_metadata(
+        self$extract,
+        fallback_result$metadata[[1L]] %||% list()
+      )
+      list(
+        value = value,
+        metadata = metadata,
+        chat = fallback_result$chat[[1L]] %||% llm
       )
     },
 
@@ -1627,6 +2660,207 @@ answer possible with what was discovered.
       paste(parts, collapse = "\n")
     },
 
+    #' Summarize context without retaining source values in module state
+    summarize_trace_inputs = function(inputs) {
+      lapply(inputs, function(value) {
+        list(
+          class = class(value),
+          length = length(value),
+          bytes = as.numeric(utils::object.size(value)),
+          sha256 = digest::digest(value, algo = "sha256")
+        )
+      })
+    },
+
+    #' Append one trace while keeping module state bounded
+    append_bounded_trace = function(records, record) {
+      limit <- getOption("dsprrr.rlm_trace_limit", 100L)
+      if (
+        !is.numeric(limit) ||
+          length(limit) != 1L ||
+          is.na(limit) ||
+          !is.finite(limit) ||
+          limit < 1L
+      ) {
+        limit <- 100L
+      }
+      records <- append(records, list(record))
+      if (length(records) > floor(limit)) {
+        records <- utils::tail(records, floor(limit))
+      }
+      records
+    },
+
+    #' Aggregate action and fallback usage into the standard result contract
+    summarize_action_usage = function(
+      history,
+      fallback_metadata = NULL,
+      recursive_metadata = list()
+    ) {
+      metadata <- lapply(history, function(entry) {
+        entry$action_metadata %||% list()
+      })
+      if (!is.null(fallback_metadata)) {
+        metadata <- append(metadata, list(fallback_metadata))
+      }
+      metadata <- append(metadata, recursive_metadata)
+      usage_fields <- c(
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "cost"
+      )
+      metadata <- lapply(metadata, function(entry) {
+        if (identical(entry$cache %||% NULL, "hit")) {
+          entry[usage_fields] <- list(0L, 0L, 0L, 0L, 0)
+        }
+        entry
+      })
+      sum_field <- function(field, integer = FALSE) {
+        values <- vapply(
+          metadata,
+          function(entry) {
+            value <- entry[[field]] %||% NA_real_
+            if (!is.numeric(value) || length(value) != 1L) NA_real_ else value
+          },
+          numeric(1)
+        )
+        total <- if (length(values) == 0L || anyNA(values)) {
+          NA_real_
+        } else {
+          sum(values, na.rm = TRUE)
+        }
+        if (integer && !is.na(total)) as.integer(total) else total
+      }
+      list(
+        input_tokens = sum_field("input_tokens", integer = TRUE),
+        cached_input_tokens = sum_field("cached_input_tokens", integer = TRUE),
+        output_tokens = sum_field("output_tokens", integer = TRUE),
+        total_tokens = sum_field("total_tokens", integer = TRUE),
+        cost = sum_field("cost")
+      )
+    },
+
+    #' Read a verified provider-call count from child metadata
+    metadata_provider_calls = function(metadata) {
+      if (!is.list(metadata)) {
+        return(NA_integer_)
+      }
+      explicit <- metadata$provider_calls
+      if (
+        is.numeric(explicit) &&
+          length(explicit) == 1L &&
+          !is.na(explicit) &&
+          is.finite(explicit) &&
+          explicit >= 0 &&
+          explicit == floor(explicit) &&
+          explicit <= .Machine$integer.max
+      ) {
+        return(as.integer(explicit))
+      }
+      cache <- metadata$cache
+      if (
+        !is.character(cache) ||
+          length(cache) != 1L ||
+          is.na(cache)
+      ) {
+        return(NA_integer_)
+      }
+      switch(
+        cache,
+        hit = 0L,
+        miss = 1L,
+        bypass = 1L,
+        NA_integer_
+      )
+    },
+
+    #' Attach predictor-aware provider accounting before compacting metadata
+    normalize_predictor_metadata = function(module, metadata) {
+      if (!is.list(metadata)) {
+        metadata <- list()
+      }
+      metadata$provider_calls <- optimizer_metadata_provider_calls(
+        module,
+        metadata
+      )
+      metadata
+    },
+
+    #' Sum provider-call counts while preserving unknown and overflow states
+    sum_provider_call_counts = function(counts) {
+      if (length(counts) == 0L) {
+        return(0L)
+      }
+      valid <- is.numeric(counts) &&
+        !anyNA(counts) &&
+        all(is.finite(counts)) &&
+        all(counts >= 0) &&
+        all(counts == floor(counts))
+      if (!valid) {
+        return(NA_integer_)
+      }
+      total <- sum(as.double(counts))
+      if (total > .Machine$integer.max) {
+        return(NA_integer_)
+      }
+      as.integer(total)
+    },
+
+    #' Sum provider-call evidence from a list of metadata records
+    summarize_provider_calls = function(metadata) {
+      counts <- vapply(
+        metadata,
+        private$metadata_provider_calls,
+        integer(1)
+      )
+      private$sum_provider_call_counts(counts)
+    },
+
+    #' Add recursive provider calls or mark the aggregate unknown
+    record_recursive_provider_calls = function(call_counter, metadata) {
+      count <- private$metadata_provider_calls(metadata)
+      total <- private$sum_provider_call_counts(c(
+        call_counter$provider_calls %||% 0L,
+        count
+      ))
+      if (is.na(total)) {
+        call_counter$provider_calls_known <- FALSE
+      } else {
+        call_counter$provider_calls <- total
+      }
+      invisible(call_counter)
+    },
+
+    #' Keep usage evidence without retaining repeated model-visible prompts
+    compact_action_metadata = function(metadata) {
+      fields <- c(
+        "model",
+        "prompt_length",
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "cost",
+        "duration_s",
+        "latency_ms",
+        "cache",
+        "provider_calls"
+      )
+      metadata[intersect(fields, names(metadata))]
+    },
+
+    #' Get a model name without making model metadata mandatory for test doubles
+    rlm_model_name = function(llm) {
+      get_model <- tryCatch(llm[["get_model"]], error = function(e) NULL)
+      if (!is.function(get_model)) {
+        return(NA_character_)
+      }
+      model <- tryCatch(get_model(), error = function(e) NA_character_)
+      if (!is.character(model) || length(model) != 1L) NA_character_ else model
+    },
+
     #' Coerce final answer payload into named signature fields
     normalize_final_answer = function(
       answer,
@@ -1635,101 +2869,60 @@ answer possible with what was discovered.
       source <- match.arg(source)
       output_specs <- private$get_output_specs()
       output_fields <- names(output_specs)
+      required_fields <- private$get_required_output_field_names()
 
-      # Convert arbitrary value into named list of output fields
+      label <- if (identical(source, "submit")) "SUBMIT" else "Fallback"
       normalized <- NULL
-
-      if (is.list(answer)) {
+      if (
+        is.list(answer) && length(answer) == 0L && length(required_fields) == 0L
+      ) {
+        normalized <- list()
+      } else if (
+        is.list(answer) && !is.null(names(answer)) && all(nzchar(names(answer)))
+      ) {
         answer_names <- names(answer)
-
-        # Named list: align by field names
-        if (!is.null(answer_names) && all(nzchar(answer_names))) {
-          # Special compatibility case for legacy single-field answer payloads
-          if (
-            length(output_fields) == 1 &&
-              !output_fields[[1]] %in% answer_names &&
-              "answer" %in% answer_names
-          ) {
-            normalized <- setNames(list(answer[["answer"]]), output_fields)
-          } else {
-            missing <- setdiff(output_fields, answer_names)
-            extra <- setdiff(answer_names, output_fields)
-
-            if (length(missing) == 0 && length(extra) == 0) {
-              normalized <- answer[output_fields]
-            } else if (source == "fallback") {
-              normalized <- setNames(
-                vector("list", length(output_fields)),
-                output_fields
-              )
-              for (field in output_fields) {
-                if (field %in% answer_names) {
-                  normalized[[field]] <- answer[[field]]
-                } else {
-                  normalized[[field]] <- NA
-                }
-              }
-            } else {
-              cli::cli_abort(c(
-                "SUBMIT output does not match signature fields",
+        if (
+          length(output_fields) == 1L &&
+            !output_fields[[1L]] %in% answer_names &&
+            identical(answer_names, "answer")
+        ) {
+          normalized <- stats::setNames(list(answer[["answer"]]), output_fields)
+        } else {
+          missing <- setdiff(required_fields, answer_names)
+          extra <- setdiff(answer_names, output_fields)
+          if (length(missing) > 0L || length(extra) > 0L) {
+            cli::cli_abort(
+              c(
+                "{label} output does not match the signature",
                 "x" = "Expected fields: {.val {output_fields}}",
                 "x" = "Received fields: {.val {answer_names}}"
-              ))
-            }
+              ),
+              class = "dsprrr_rlm_output_validation_error"
+            )
           }
-        } else if (length(answer) == length(output_fields)) {
-          # Positional list
-          normalized <- answer
-          names(normalized) <- output_fields
-        } else if (length(output_fields) == 1 && length(answer) >= 1) {
-          normalized <- setNames(list(answer[[1]]), output_fields)
-        } else if (source == "fallback") {
-          normalized <- setNames(
-            vector("list", length(output_fields)),
-            output_fields
-          )
-          for (i in seq_along(output_fields)) {
-            if (i <= length(answer)) {
-              normalized[[output_fields[[i]]]] <- answer[[i]]
-            } else {
-              normalized[[output_fields[[i]]]] <- NA
-            }
-          }
-        } else {
-          cli::cli_abort(c(
-            "SUBMIT output has invalid length",
-            "x" = "Expected {length(output_fields)} value(s), got {length(answer)}"
-          ))
+          normalized <- answer[intersect(output_fields, answer_names)]
         }
+      } else if (is.list(answer) && length(answer) == length(output_fields)) {
+        normalized <- stats::setNames(answer, output_fields)
       } else if (is.atomic(answer) && length(answer) == length(output_fields)) {
-        # Positional atomic vector for multi-output
-        normalized <- as.list(answer)
-        names(normalized) <- output_fields
-      } else if (length(output_fields) == 1) {
-        normalized <- setNames(list(answer), output_fields)
-      } else if (source == "fallback") {
-        normalized <- setNames(
-          vector("list", length(output_fields)),
-          output_fields
-        )
-        normalized[[output_fields[[1]]]] <- answer
-        if (length(output_fields) > 1) {
-          for (i in 2:length(output_fields)) {
-            normalized[[output_fields[[i]]]] <- NA
-          }
-        }
+        normalized <- stats::setNames(as.list(answer), output_fields)
+      } else if (length(output_fields) == 1L) {
+        normalized <- stats::setNames(list(answer), output_fields)
       } else {
-        cli::cli_abort(c(
-          "SUBMIT output could not be aligned to signature fields",
-          "x" = "Expected fields: {.val {output_fields}}"
-        ))
+        cli::cli_abort(
+          c(
+            "{label} output could not be aligned to the signature",
+            "x" = "Expected fields: {.val {output_fields}}"
+          ),
+          class = "dsprrr_rlm_output_validation_error"
+        )
       }
 
-      # Coerce to declared output types where practical
-      for (field in output_fields) {
+      for (field in names(normalized)) {
         normalized[[field]] <- private$coerce_value_to_type(
           normalized[[field]],
-          output_specs[[field]]
+          output_specs[[field]],
+          path = field
         )
       }
 
@@ -1737,55 +2930,101 @@ answer possible with what was discovered.
     },
 
     #' Coerce a value to an ellmer type when practical
-    coerce_value_to_type = function(value, type_spec) {
+    coerce_value_to_type = function(value, type_spec, path = "value") {
       if (is.null(type_spec)) {
         return(value)
+      }
+
+      required <- tryCatch(isTRUE(type_spec@required), error = function(e) TRUE)
+      if (is.null(value)) {
+        if (!required) {
+          return(NULL)
+        }
+        private$abort_output_type(path, "a non-null value", value)
       }
 
       if (inherits(type_spec, "ellmer::TypeBasic")) {
         type_name <- type_spec@type
         if (identical(type_name, "string")) {
-          return(value)
+          if (!is.atomic(value) || length(value) != 1L || is.na(value)) {
+            private$abort_output_type(path, "one string", value)
+          }
+          return(as.character(value))
         }
         if (identical(type_name, "number")) {
-          return(suppressWarnings(as.numeric(value)[1]))
+          if (!is.atomic(value) || is.logical(value) || length(value) != 1L) {
+            private$abort_output_type(path, "one finite number", value)
+          }
+          candidate <- suppressWarnings(as.numeric(value))
+          if (
+            length(candidate) != 1L || is.na(candidate) || !is.finite(candidate)
+          ) {
+            private$abort_output_type(path, "one finite number", value)
+          }
+          return(candidate)
         }
         if (identical(type_name, "integer")) {
-          return(suppressWarnings(as.integer(value)[1]))
+          if (!is.atomic(value) || is.logical(value) || length(value) != 1L) {
+            private$abort_output_type(path, "one integer", value)
+          }
+          candidate <- suppressWarnings(as.numeric(value))
+          valid <- length(candidate) == 1L &&
+            !is.na(candidate) &&
+            is.finite(candidate) &&
+            candidate == floor(candidate) &&
+            abs(candidate) <= .Machine$integer.max
+          if (!valid) {
+            private$abort_output_type(path, "one integer", value)
+          }
+          return(as.integer(candidate))
         }
         if (identical(type_name, "boolean")) {
-          return(suppressWarnings(as.logical(value)[1]))
+          if (is.logical(value) && length(value) == 1L && !is.na(value)) {
+            return(value)
+          }
+          if (is.character(value) && length(value) == 1L && !is.na(value)) {
+            candidate <- tolower(value)
+            if (candidate %in% c("true", "false")) {
+              return(identical(candidate, "true"))
+            }
+          }
+          private$abort_output_type(path, "TRUE or FALSE", value)
         }
         return(value)
       }
 
       if (inherits(type_spec, "ellmer::TypeEnum")) {
         allowed <- as.character(type_spec@values)
-        candidate <- if (length(value) == 0 || is.null(value)) {
-          ""
-        } else {
-          as.character(value)[1]
+        if (!is.atomic(value) || length(value) != 1L || is.na(value)) {
+          private$abort_output_type(path, "one allowed enum value", value)
         }
-
-        if (candidate %in% allowed || length(allowed) == 0) {
+        candidate <- as.character(value)
+        if (candidate %in% allowed) {
           return(candidate)
         }
-
-        idx <- match(tolower(candidate), tolower(allowed))
-        if (!is.na(idx)) {
-          return(allowed[idx])
+        case_match <- match(tolower(candidate), tolower(allowed))
+        if (!is.na(case_match)) {
+          return(allowed[[case_match]])
         }
-
-        candidate
+        private$abort_output_type(
+          path,
+          paste0("one of ", paste(allowed, collapse = ", ")),
+          value
+        )
       } else if (inherits(type_spec, "ellmer::TypeArray")) {
         items <- if (is.list(value)) value else as.list(value)
-        if (length(items) == 0) {
+        if (length(items) == 0L) {
           return(items)
         }
-
         coerced <- lapply(
-          items,
-          function(item) private$coerce_value_to_type(item, type_spec@items)
+          seq_along(items),
+          function(index) {
+            private$coerce_value_to_type(
+              items[[index]],
+              type_spec@items,
+              path = paste0(path, "[[", index, "]]")
+            )
+          }
         )
 
         if (
@@ -1798,9 +3037,75 @@ answer possible with what was discovered.
           return(unlist(coerced, use.names = FALSE))
         }
         coerced
+      } else if (inherits(type_spec, "ellmer::TypeObject")) {
+        if (
+          !is.list(value) ||
+            (length(value) > 0L &&
+              (is.null(names(value)) || !all(nzchar(names(value)))))
+        ) {
+          private$abort_output_type(path, "a named object", value)
+        }
+        properties <- type_spec@properties
+        properties <- properties[
+          !vapply(
+            properties,
+            inherits,
+            logical(1),
+            what = "ellmer::TypeIgnore"
+          )
+        ]
+        required_fields <- names(properties)[vapply(
+          properties,
+          function(spec) isTRUE(spec@required),
+          logical(1)
+        )]
+        missing <- setdiff(required_fields, names(value))
+        extra <- setdiff(names(value), names(properties))
+        if (length(missing) > 0L) {
+          private$abort_output_type(
+            path,
+            paste0("an object containing ", paste(missing, collapse = ", ")),
+            value
+          )
+        }
+        if (length(extra) > 0L && !isTRUE(type_spec@additional_properties)) {
+          private$abort_output_type(
+            path,
+            paste0(
+              "an object without extra fields: ",
+              paste(extra, collapse = ", ")
+            ),
+            value
+          )
+        }
+        normalized <- value
+        for (name in intersect(names(properties), names(value))) {
+          normalized[[name]] <- private$coerce_value_to_type(
+            value[[name]],
+            properties[[name]],
+            path = paste0(path, "$", name)
+          )
+        }
+        normalized
       } else {
         value
       }
+    },
+
+    #' Raise one consistent recoverable output-contract error
+    abort_output_type = function(path, expected, value) {
+      observed <- if (is.null(value)) {
+        "NULL"
+      } else {
+        paste0(class(value)[[1L]], " of length ", length(value))
+      }
+      cli::cli_abort(
+        c(
+          "RLM output field {.field {path}} has the wrong type",
+          "x" = "Expected {expected}; received {observed}."
+        ),
+        class = "dsprrr_rlm_output_validation_error"
+      )
     },
 
     #' Build output matching signature
@@ -1815,69 +3120,79 @@ answer possible with what was discovered.
 #' Run a Recursive Language Model in one call
 #'
 #' @description
-#' Convenience wrapper that creates a runner, module, and executes an RLM
-#' in a single call. Equivalent to:
-#'
-#' ```r
-#' runner <- r_code_runner(timeout = .timeout)
-#' mod <- rlm_module(
-#'   signature,
-#'   runner = runner,
-#'   max_iterations = .max_iterations,
-#'   max_llm_calls = .max_llm_calls,
-#'   sub_lm = .sub_lm,
-#'   verbose = .verbose,
-#'   tools = .tools
-#' )
-#' run(mod, ..., .llm = .llm)
-#' ```
-#'
-#' For repeated use or optimization, prefer creating a module with
-#' [rlm_module()] and calling [run()] separately.
+#' Run a one-off RLM investigation. By default this creates a fresh managed
+#' [mcp_repl_runner()] for the invocation. Its default OS sandbox disables
+#' network access but permits writes inside the allowed workspace. Pass
+#' `.runner` or `.interpreter_factory` to select another execution backend. For
+#' repeated use, optimization, or explicit lifecycle control, create an
+#' [rlm_module()] instead. The managed default requires the suggested
+#' `mcptools` package and Posit's external `mcp-repl` executable; see
+#' [mcp_repl_runner()] for setup and transport limits.
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
 #'   (e.g., `"question -> answer"`)
-#' @param ... Named arguments matching the signature's inputs. These are passed
-#'   to [run()].
+#' @param ... Named signature inputs and [run()] controls such as
+#'   `.return_format`. Every supplied input is one scalar REPL variable,
+#'   including vectors, lists, matrices, and data frames. To run multiple
+#'   investigations, create an [rlm_module()] and call [run_dataset()]; store
+#'   rich per-row values in list-columns.
 #' @param .llm An ellmer Chat object. If `NULL`, uses the default Chat from
 #'   [get_default_chat()].
 #' @param .timeout Numeric. Maximum execution time in seconds per code
-#'   evaluation. Default 30.
+#'   evaluation for the implicit managed MCP runner. Explicit runners and
+#'   factories own their timeout settings. Default 30.
 #' @param .max_iterations Integer. Maximum REPL iterations before fallback.
 #'   Default 20.
 #' @param .max_llm_calls Integer. Maximum recursive LLM calls allowed.
 #'   Default 50.
+#' @param .max_output_chars Maximum model-visible characters per execution
+#'   output. Default 10000.
 #' @param .sub_lm Optional ellmer Chat for recursive `llm_query()` calls.
-#'   `NULL` disables recursive queries.
-#' @param .tools Named list of user-defined R functions available in the REPL.
+#'   `NULL` inherits `.llm`; use `.max_llm_calls = 0` to disable recursion.
+#' @param .tools Named list of user-defined R functions or ellmer ToolDef
+#'   objects available in the REPL. They execute in the dsprrr host process,
+#'   outside the guest runner sandbox.
 #' @param .verbose Logical. Print execution progress. Default `FALSE`.
+#' @param .runner Optional caller-owned runner. Supply at most one of this and
+#'   `.interpreter_factory`. Its policy must advertise `persistent = TRUE`.
+#' @param .interpreter_factory Optional zero-argument factory for a fresh,
+#'   invocation-owned runner. When both execution arguments are `NULL`, a
+#'   managed `mcp_repl_runner()` factory is used. Custom factories must return
+#'   a runner whose policy advertises `persistent = TRUE`.
 #'
-#' @return The module output according to the signature.
+#' @return With `.return_format = "simple"` (the default), the output record
+#'   according to the signature. With `.return_format = "structured"`, a
+#'   `dsprrr_result` containing `output`, `chat`, and `metadata`.
 #'
 #' @export
 #' @examples
 #' \dontrun{
-#' # One-liner RLM call
 #' result <- rlm(
 #'   "document, question -> answer",
-#'   document = readLines("big_file.txt") |> paste(collapse = "\n"),
+#'   document = "Owner: team-a\nObligation: rotate keys quarterly",
 #'   question = "What are the main themes?",
-#'   .llm = ellmer::chat_openai()
+#'   .llm = ellmer::chat_openai(),
+#'   .max_iterations = 4L,
+#'   .max_llm_calls = 0L
 #' )
 #'
-#' # With recursive sub-queries
-#' result <- rlm(
-#'   "codebase, question -> answer",
-#'   codebase = source_code,
-#'   question = "How does auth work?",
-#'   .llm = ellmer::chat_openai(),
-#'   .sub_lm = ellmer::chat_openai(model = "gpt-4o-mini")
+#' # Large or rich local R objects require explicit trusted execution.
+#' sessions <- data.frame(
+#'   release = c("2.3.9", "2.4.0"),
+#'   converted = c(TRUE, FALSE)
 #' )
+#' local_runner <- r_code_runner(persistent = TRUE)
+#' result <- rlm("sessions, question -> answer", sessions = sessions,
+#'   question = "Where did conversion fall?",
+#'   .llm = ellmer::chat_openai(),
+#'   .runner = local_runner)
+#' local_runner$close()
 #' }
 #'
 #' @seealso
 #' * [rlm_module()] for creating reusable RLM modules
 #' * [r_code_runner()] for configuring the code execution backend
+#' * [mcp_repl_runner()] for managed sandboxed execution
 #' * [run()] for executing modules
 #' * [dsp()] for simple one-shot LLM calls (no code execution)
 rlm <- function(
@@ -1887,17 +3202,31 @@ rlm <- function(
   .timeout = 30,
   .max_iterations = 20L,
   .max_llm_calls = 50L,
+  .max_output_chars = 10000L,
   .sub_lm = NULL,
   .tools = list(),
-  .verbose = FALSE
+  .verbose = FALSE,
+  .runner = NULL,
+  .interpreter_factory = NULL
 ) {
-  runner <- r_code_runner(timeout = .timeout)
+  if (is.null(.runner) && is.null(.interpreter_factory)) {
+    timeout <- .timeout
+    max_output_chars <- .max_output_chars
+    .interpreter_factory <- function() {
+      mcp_repl_runner(
+        timeout = timeout,
+        max_output_chars = max_output_chars
+      )
+    }
+  }
 
   mod <- rlm_module(
     signature = signature,
-    runner = runner,
+    runner = .runner,
+    interpreter_factory = .interpreter_factory,
     max_iterations = .max_iterations,
     max_llm_calls = .max_llm_calls,
+    max_output_chars = .max_output_chars,
     sub_lm = .sub_lm,
     verbose = .verbose,
     tools = .tools

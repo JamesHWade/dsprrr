@@ -11,23 +11,30 @@ rlm(
   .timeout = 30,
   .max_iterations = 20L,
   .max_llm_calls = 50L,
+  .max_output_chars = 10000L,
   .sub_lm = NULL,
   .tools = list(),
-  .verbose = FALSE
+  .verbose = FALSE,
+  .runner = NULL,
+  .interpreter_factory = NULL
 )
 }
 \arguments{
 \item{signature}{A Signature object or string notation defining inputs/outputs
 (e.g., \code{"question -> answer"})}
 
-\item{...}{Named arguments matching the signature's inputs. These are passed
-to \code{\link[=run]{run()}}.}
+\item{...}{Named signature inputs and \code{\link[=run]{run()}} controls such as
+\code{.return_format}. Every supplied input is one scalar REPL variable,
+including vectors, lists, matrices, and data frames. To run multiple
+investigations, create an \code{\link[=rlm_module]{rlm_module()}} and call \code{\link[=run_dataset]{run_dataset()}}; store
+rich per-row values in list-columns.}
 
 \item{.llm}{An ellmer Chat object. If \code{NULL}, uses the default Chat from
 \code{\link[=get_default_chat]{get_default_chat()}}.}
 
 \item{.timeout}{Numeric. Maximum execution time in seconds per code
-evaluation. Default 30.}
+evaluation for the implicit managed MCP runner. Explicit runners and
+factories own their timeout settings. Default 30.}
 
 \item{.max_iterations}{Integer. Maximum REPL iterations before fallback.
 Default 20.}
@@ -35,54 +42,63 @@ Default 20.}
 \item{.max_llm_calls}{Integer. Maximum recursive LLM calls allowed.
 Default 50.}
 
-\item{.sub_lm}{Optional ellmer Chat for recursive \code{llm_query()} calls.
-\code{NULL} disables recursive queries.}
+\item{.max_output_chars}{Maximum model-visible characters per execution
+output. Default 10000.}
 
-\item{.tools}{Named list of user-defined R functions available in the REPL.}
+\item{.sub_lm}{Optional ellmer Chat for recursive \code{llm_query()} calls.
+\code{NULL} inherits \code{.llm}; use \code{.max_llm_calls = 0} to disable recursion.}
+
+\item{.tools}{Named list of user-defined R functions or ellmer ToolDef
+objects available in the REPL. They execute in the dsprrr host process,
+outside the guest runner sandbox.}
 
 \item{.verbose}{Logical. Print execution progress. Default \code{FALSE}.}
+
+\item{.runner}{Optional caller-owned runner. Supply at most one of this and
+\code{.interpreter_factory}. Its policy must advertise \code{persistent = TRUE}.}
+
+\item{.interpreter_factory}{Optional zero-argument factory for a fresh,
+invocation-owned runner. When both execution arguments are \code{NULL}, a
+managed \code{mcp_repl_runner()} factory is used. Custom factories must return
+a runner whose policy advertises \code{persistent = TRUE}.}
 }
 \value{
-The module output according to the signature.
+With \code{.return_format = "simple"} (the default), the output record
+according to the signature. With \code{.return_format = "structured"}, a
+\code{dsprrr_result} containing \code{output}, \code{chat}, and \code{metadata}.
 }
 \description{
-Convenience wrapper that creates a runner, module, and executes an RLM
-in a single call. Equivalent to:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{runner <- r_code_runner(timeout = .timeout)
-mod <- rlm_module(
-  signature,
-  runner = runner,
-  max_iterations = .max_iterations,
-  max_llm_calls = .max_llm_calls,
-  sub_lm = .sub_lm,
-  verbose = .verbose,
-  tools = .tools
-)
-run(mod, ..., .llm = .llm)
-}\if{html}{\out{</div>}}
-
-For repeated use or optimization, prefer creating a module with
-\code{\link[=rlm_module]{rlm_module()}} and calling \code{\link[=run]{run()}} separately.
+Run a one-off RLM investigation. By default this creates a fresh managed
+\code{\link[=mcp_repl_runner]{mcp_repl_runner()}} for the invocation. Its default OS sandbox disables
+network access but permits writes inside the allowed workspace. Pass
+\code{.runner} or \code{.interpreter_factory} to select another execution backend. For
+repeated use, optimization, or explicit lifecycle control, create an
+\code{\link[=rlm_module]{rlm_module()}} instead. The managed default requires the suggested
+\code{mcptools} package and Posit's external \code{mcp-repl} executable; see
+\code{\link[=mcp_repl_runner]{mcp_repl_runner()}} for setup and transport limits.
 }
 \examples{
 \dontrun{
-# One-liner RLM call
 result <- rlm(
   "document, question -> answer",
-  document = readLines("big_file.txt") |> paste(collapse = "\n"),
+  document = "Owner: team-a\nObligation: rotate keys quarterly",
   question = "What are the main themes?",
-  .llm = ellmer::chat_openai()
+  .llm = ellmer::chat_openai(),
+  .max_iterations = 4L,
+  .max_llm_calls = 0L
 )
 
-# With recursive sub-queries
-result <- rlm(
-  "codebase, question -> answer",
-  codebase = source_code,
-  question = "How does auth work?",
-  .llm = ellmer::chat_openai(),
-  .sub_lm = ellmer::chat_openai(model = "gpt-4o-mini")
+# Large or rich local R objects require explicit trusted execution.
+sessions <- data.frame(
+  release = c("2.3.9", "2.4.0"),
+  converted = c(TRUE, FALSE)
 )
+local_runner <- r_code_runner(persistent = TRUE)
+result <- rlm("sessions, question -> answer", sessions = sessions,
+  question = "Where did conversion fall?",
+  .llm = ellmer::chat_openai(),
+  .runner = local_runner)
+local_runner$close()
 }
 
 }
@@ -90,6 +106,7 @@ result <- rlm(
 \itemize{
 \item \code{\link[=rlm_module]{rlm_module()}} for creating reusable RLM modules
 \item \code{\link[=r_code_runner]{r_code_runner()}} for configuring the code execution backend
+\item \code{\link[=mcp_repl_runner]{mcp_repl_runner()}} for managed sandboxed execution
 \item \code{\link[=run]{run()}} for executing modules
 \item \code{\link[=dsp]{dsp()}} for simple one-shot LLM calls (no code execution)
 }

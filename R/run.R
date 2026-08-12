@@ -10,7 +10,9 @@
 #'
 #' @param module A DSPrrr module (e.g., created with `module()`)
 #' @param ... Named arguments corresponding to the module's signature inputs.
-#'   Can be single values or vectors for batch processing. Additional parameters:
+#'   Can be single values or vectors for batch processing. RLM is the exception:
+#'   every supplied value is one context variable regardless of its R length;
+#'   use [run_dataset()] for multiple RLM invocations. Additional parameters:
 #'   \describe{
 #'     \item{.llm}{An ellmer chat object for LLM interaction (optional)}
 #'     \item{.verbose}{Logical indicating whether to print debug information}
@@ -41,6 +43,11 @@
 #' Empty batches return immediately without resolving a Chat or touching cache,
 #' trace, or prompt-history state. Mixing zero-length and non-empty inputs is an
 #' error.
+#'
+#' RLM inputs use scalar object semantics: vectors, lists, matrices, data frames,
+#' and fitted models each remain one `.context` variable for one investigation.
+#' Use [run_dataset()] for multiple RLM invocations and list-columns for rich
+#' per-row objects.
 #'
 #' Scalar and batch Predict calls record one trace per attempted row. Structured
 #' metadata reports usage, error, cache, backend, and batch-index fields. Native
@@ -164,11 +171,12 @@ batch_input_contract <- function(inputs) {
 #' Classify module inputs without confusing schema collections with batches
 #'
 #' Flex owns exact recursive validation for its scalar array and object fields.
-#' Their R lengths describe one schema value, not a collection of dataset rows,
-#' and Flex batch execution goes through [run_dataset()] instead.
+#' RLM stages each supplied value as one REPL variable, regardless of its R
+#' length. Those lengths therefore describe scalar module inputs, not dataset
+#' rows. Explicit Flex and RLM batch execution goes through [run_dataset()].
 #' @noRd
 module_input_contract <- function(module, inputs) {
-  if (inherits(module, "FlexModule")) {
+  if (inherits(module, c("FlexModule", "RLMModule"))) {
     return(list(
       kind = "scalar",
       size = 1L,
@@ -177,6 +185,16 @@ module_input_contract <- function(module, inputs) {
   }
 
   batch_input_contract(inputs)
+}
+
+
+#' Recycle module inputs using module-specific scalar object semantics
+#' @noRd
+module_batch_recycle_input <- function(module, value, size) {
+  if (inherits(module, "RLMModule") && is.data.frame(value)) {
+    return(rep(list(value), size))
+  }
+  batch_recycle_input(value, size)
 }
 
 #' Treat opaque runtime values as scalar batch inputs
@@ -313,8 +331,9 @@ run.Module <- function(
     if (interpreter_workflow_module(module)) {
       inputs <- lapply(
         inputs,
-        batch_recycle_input,
-        size = input_contract$size
+        function(value) {
+          module_batch_recycle_input(module, value, input_contract$size)
+        }
       )
       return(run_factory_interpreter_batch(
         module = module,
@@ -323,7 +342,8 @@ run.Module <- function(
         .llm = .llm,
         .progress = .progress,
         .return_format = .return_format,
-        .concurrency = concurrency_runtime
+        .concurrency = concurrency_runtime,
+        .cache = .cache
       ))
     }
     unsupported_control <- is.finite(concurrency$max_errors) ||
@@ -342,7 +362,12 @@ run.Module <- function(
         module_class = class(module)[1]
       )
     }
-    inputs <- lapply(inputs, batch_recycle_input, size = input_contract$size)
+    inputs <- lapply(
+      inputs,
+      function(value) {
+        module_batch_recycle_input(module, value, input_contract$size)
+      }
+    )
     results <- run_scalar_dataset_rows(
       module = module,
       input_args = inputs,
@@ -777,7 +802,7 @@ verified_chat_turn_delta <- function(chat, turns_before) {
   turns_after[seq.int(before_n + 1L, length(turns_after))]
 }
 
-#' Extract usage metadata from a verified current-call assistant turn
+#' Extract usage metadata from verified current-call assistant turns
 #'
 #' @param chat An ellmer Chat or compatible object
 #' @param turns_before Verified Chat history captured immediately before the call
@@ -793,30 +818,66 @@ chat_usage_metadata <- function(chat, turns_before = NULL) {
       turn_delta
     )
   }
-  assistant_turn <- if (length(assistant_turns) > 0L) {
-    assistant_turns[[length(assistant_turns)]]
-  } else {
-    NULL
-  }
-  if (is.null(assistant_turn)) {
+  if (length(assistant_turns) == 0L) {
     return(list(
       input_tokens = NA_integer_,
       output_tokens = NA_integer_,
       cached_input_tokens = NA_integer_,
       total_tokens = NA_integer_,
       cost = NA_real_,
-      duration_s = NA_real_
+      duration_s = NA_real_,
+      provider_calls = NA_integer_
     ))
   }
 
-  tokens <- tryCatch(assistant_turn@tokens, error = function(e) NULL)
-  input_tokens <- as.integer(tokens[1] %||% NA_integer_)
-  output_tokens <- as.integer(tokens[2] %||% NA_integer_)
-  cached_input_tokens <- as.integer(tokens[3] %||% NA_integer_)
+  strict_sum <- function(values, integer = FALSE) {
+    values <- vapply(
+      values,
+      function(value) {
+        if (
+          !is.numeric(value) ||
+            length(value) != 1L ||
+            is.na(value) ||
+            !is.finite(value) ||
+            value < 0
+        ) {
+          return(NA_real_)
+        }
+        as.numeric(value)
+      },
+      numeric(1)
+    )
+    if (length(values) == 0L || anyNA(values)) {
+      return(if (integer) NA_integer_ else NA_real_)
+    }
+    total <- sum(values)
+    if (
+      integer &&
+        (total > .Machine$integer.max || total != floor(total))
+    ) {
+      return(NA_integer_)
+    }
+    if (integer) as.integer(total) else total
+  }
+  tokens <- lapply(assistant_turns, function(turn) {
+    tryCatch(turn@tokens, error = function(e) NULL)
+  })
+  token_field <- function(index) {
+    lapply(tokens, function(value) {
+      if (length(value) < index) NA_real_ else value[[index]]
+    })
+  }
+  input_tokens <- strict_sum(token_field(1L), integer = TRUE)
+  output_tokens <- strict_sum(token_field(2L), integer = TRUE)
+  cached_input_tokens <- strict_sum(token_field(3L), integer = TRUE)
   total_tokens <- if (anyNA(c(input_tokens, output_tokens))) {
     NA_integer_
+  } else if (
+    as.double(input_tokens) + as.double(output_tokens) > .Machine$integer.max
+  ) {
+    NA_integer_
   } else {
-    input_tokens + output_tokens
+    as.integer(input_tokens + output_tokens)
   }
 
   list(
@@ -824,11 +885,13 @@ chat_usage_metadata <- function(chat, turns_before = NULL) {
     output_tokens = output_tokens,
     cached_input_tokens = cached_input_tokens,
     total_tokens = total_tokens,
-    cost = tryCatch(assistant_turn@cost, error = function(e) NA_real_),
-    duration_s = tryCatch(
-      assistant_turn@duration,
-      error = function(e) NA_real_
-    )
+    cost = strict_sum(lapply(assistant_turns, function(turn) {
+      tryCatch(turn@cost, error = function(e) NA_real_)
+    })),
+    duration_s = strict_sum(lapply(assistant_turns, function(turn) {
+      tryCatch(turn@duration, error = function(e) NA_real_)
+    })),
+    provider_calls = as.integer(length(assistant_turns))
   )
 }
 
@@ -4517,10 +4580,16 @@ run_dataset.Module <- function(
     ))
   }
 
-  # Get required input names from signature
+  # Get declared and required input names from signature
   sig_inputs <- module$signature@inputs
   if (length(sig_inputs) > 0) {
-    required_names <- vapply(sig_inputs, function(x) x$name, character(1))
+    declared_names <- vapply(sig_inputs, function(x) x$name, character(1))
+    required <- vapply(
+      sig_inputs,
+      function(x) tryCatch(isTRUE(x$type@required), error = function(e) TRUE),
+      logical(1)
+    )
+    required_names <- declared_names[required]
     missing_cols <- setdiff(required_names, names(data))
 
     if (length(missing_cols) > 0) {
@@ -4548,6 +4617,7 @@ run_dataset.Module <- function(
       cli::cli_abort(msg)
     }
   } else {
+    declared_names <- character(0)
     required_names <- character(0)
   }
 
@@ -4562,8 +4632,9 @@ run_dataset.Module <- function(
   }
 
   # Extract input columns as list
-  if (length(required_names) > 0) {
-    input_args <- as.list(data[required_names])
+  provided_input_names <- intersect(declared_names, names(data))
+  if (length(provided_input_names) > 0) {
+    input_args <- as.list(data[provided_input_names])
   } else {
     # Rows still represent distinct evaluation attempts for a zero-input
     # signature. Dataset-only columns (for example metric truth) are not module
@@ -4582,9 +4653,45 @@ run_dataset.Module <- function(
   }
   specialized_predict <- inherits(module, "PredictModule") &&
     !identical(class(module)[1], "PredictModule")
-  scalar_row_adapter <- specialized_predict || length(required_names) == 0L
+  factory_interpreter_adapter <- inherits(module, "RLMModule") &&
+    factory_interpreter_module(module)
+  scalar_row_adapter <- (specialized_predict ||
+    inherits(module, "RLMModule") ||
+    length(input_args) == 0L) &&
+    !factory_interpreter_adapter
 
-  results <- if (scalar_row_adapter) {
+  results <- if (factory_interpreter_adapter) {
+    runtime_chat <- resolve_dataset_row_chat(module, .llm)
+    concurrency_runtime <- normalize_concurrency_runtime(
+      concurrency,
+      .llm = .llm,
+      .chat = runtime_chat
+    )
+    concurrency_runtime <- normalize_factory_interpreter_batch_runtime(
+      concurrency_runtime,
+      explicit_llm = !is.null(.llm)
+    )
+    factory_rows <- run_factory_interpreter_batch(
+      module = module,
+      inputs = input_args,
+      n = nrow(data),
+      .llm = .llm,
+      .progress = .progress,
+      .return_format = .return_format,
+      .concurrency = concurrency_runtime,
+      .cache = dots$.cache %||% NULL
+    )
+    if (identical(.return_format, "simple") && nrow(data) == 1L) {
+      row_trace_events <- attr(
+        factory_rows,
+        "dsprrr_row_trace_events",
+        exact = TRUE
+      )
+      factory_rows <- factory_rows[[1L]]
+      attr(factory_rows, "dsprrr_row_trace_events") <- row_trace_events
+    }
+    factory_rows
+  } else if (scalar_row_adapter) {
     concurrent_request <- concurrency$backend %in%
       c("ellmer", "mirai") ||
       (identical(concurrency$backend, "auto") && concurrency$max_active > 1L)
@@ -4706,6 +4813,16 @@ run_dataset.Module <- function(
     results <- list(results)
   }
 
+  row_trace_events <- attr(
+    results,
+    "dsprrr_row_trace_events",
+    exact = TRUE
+  )
+  # This attribute is an evaluation-internal transport channel. Remove it from
+  # the list before assigning dataset result columns so it cannot leak onto the
+  # public list-column; restore it only on the returned data frame below.
+  attr(results, "dsprrr_row_trace_events") <- NULL
+
   error_conditions <- attr(
     results,
     "dsprrr_error_conditions",
@@ -4747,6 +4864,9 @@ run_dataset.Module <- function(
 
   output <- tibble::as_tibble(data)
   attr(output, "dsprrr_error_conditions") <- error_conditions
+  if (!is.null(row_trace_events)) {
+    attr(output, "dsprrr_row_trace_events") <- row_trace_events
+  }
   output
 }
 
@@ -4787,8 +4907,15 @@ run_scalar_dataset_rows <- function(
   dots
 ) {
   results <- vector("list", n)
+  row_trace_events <- vector("list", n)
   row_llms <- if (is.null(.runtime_chat)) {
     rep(list(NULL), n)
+  } else if (inherits(module, "RLMModule")) {
+    # RLMModule creates and clears a fresh action Chat inside each forward()
+    # call. Requiring an additional opaque-Chat branch here rejects valid
+    # sequential test/provider adapters whose closure state is intentionally
+    # shared, without adding isolation at the provider boundary.
+    rep(list(.runtime_chat), n)
   } else {
     batch_chat_branches(.runtime_chat, n)
   }
@@ -4803,7 +4930,7 @@ run_scalar_dataset_rows <- function(
 
   for (i in seq_len(n)) {
     row_inputs <- lapply(input_args, `[[`, i)
-    trace_count_before <- length(module$state$traces %||% list())
+    trace_count_before <- evaluation_trace_cursor(module)
     history_generation_before <- prompt_history_generation()
     row_result <- tryCatch(
       do.call(
@@ -4843,6 +4970,10 @@ run_scalar_dataset_rows <- function(
       row_index = i,
       runtime = .concurrency_runtime
     )
+    row_trace_events[[i]] <- new_evaluation_trace_events(
+      module,
+      trace_count_before
+    )
     if (identical(.return_format, "simple")) {
       results[i] <- list(extract_simple_output(
         results[[i]],
@@ -4868,6 +4999,7 @@ run_scalar_dataset_rows <- function(
   if (!is.null(progress_id)) {
     cli::cli_progress_done(id = progress_id)
   }
+  attr(results, "dsprrr_row_trace_events") <- row_trace_events
   if (identical(.return_format, "simple") && n == 1L) {
     results[[1]]
   } else {
@@ -4889,12 +5021,7 @@ reconcile_dataset_row_observability <- function(
   fields$batch_index <- as.integer(row_index)
 
   traces <- module$state$traces %||% list()
-  trace_count_after <- length(traces)
-  trace_indices <- if (trace_count_after > trace_count_before) {
-    seq.int(trace_count_before + 1L, trace_count_after)
-  } else {
-    integer()
-  }
+  trace_indices <- evaluation_trace_indices(module, trace_count_before)
   patched_traces <- vector("list", length(trace_indices))
   for (offset in seq_along(trace_indices)) {
     index <- trace_indices[[offset]]

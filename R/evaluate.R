@@ -90,15 +90,54 @@ evaluate <- function(module, ...) {
   UseMethod("evaluate")
 }
 
+# Capture a trace boundary that also works for modules with bounded retention.
+evaluation_trace_cursor <- function(module) {
+  traces <- module$state$traces %||% list()
+  sequence <- module$state$trace_sequence %||% NULL
+  if (
+    is.numeric(sequence) &&
+      length(sequence) == 1L &&
+      !is.na(sequence) &&
+      is.finite(sequence) &&
+      sequence >= 0
+  ) {
+    return(list(length = length(traces), sequence = as.numeric(sequence)))
+  }
+  length(traces)
+}
+
+
+# Return trace indices added after a cursor, including when old retained traces
+# were evicted and list length therefore stayed constant.
+evaluation_trace_indices <- function(module, cursor) {
+  traces <- module$state$traces %||% list()
+  if (is.list(cursor) && !is.null(cursor$sequence)) {
+    sequence <- module$state$trace_sequence %||% cursor$sequence
+    added <- as.numeric(sequence) - as.numeric(cursor$sequence)
+    if (!is.finite(added) || added <= 0 || length(traces) == 0L) {
+      return(integer())
+    }
+    retained <- min(length(traces), floor(added))
+    return(seq.int(length(traces) - retained + 1L, length(traces)))
+  }
+  trace_count_before <- as.integer(cursor)
+  if (length(traces) <= trace_count_before) {
+    return(integer())
+  }
+  seq.int(trace_count_before + 1L, length(traces))
+}
+
+
 # Return only traces recorded during one evaluation epoch. The boundary is
 # important for reused modules and cache hits: no earlier trace can leak into a
 # later metric invocation.
 new_evaluation_trace_events <- function(module, trace_count_before) {
   traces <- module$state$traces %||% list()
-  if (length(traces) <= trace_count_before) {
+  indices <- evaluation_trace_indices(module, trace_count_before)
+  if (length(indices) == 0L) {
     return(list())
   }
-  traces[seq.int(trace_count_before + 1L, length(traces))]
+  traces[indices]
 }
 
 # Project the most recent module event onto the row-level metadata surface used
@@ -403,7 +442,7 @@ evaluate.Module <- function(
     } else {
       list(.parallel = parallel_allowed)
     }
-    trace_count_before <- length(module$state$traces %||% list())
+    trace_count_before <- evaluation_trace_cursor(module)
     evaluated <- tryCatch(
       {
         evaluated <- do.call(
@@ -456,10 +495,19 @@ evaluate.Module <- function(
     } else {
       replicate(nrow(evaluated), list(), simplify = FALSE)
     }
-    row_trace_events <- align_evaluation_trace_events(
-      new_evaluation_trace_events(module, trace_count_before),
-      nrow(evaluated)
+    row_trace_events <- attr(
+      evaluated,
+      "dsprrr_row_trace_events",
+      exact = TRUE
     )
+    if (
+      !is.list(row_trace_events) || length(row_trace_events) != nrow(evaluated)
+    ) {
+      row_trace_events <- align_evaluation_trace_events(
+        new_evaluation_trace_events(module, trace_count_before),
+        nrow(evaluated)
+      )
+    }
 
     scores <- numeric(nrow(evaluated))
     run_errors <- vapply(
@@ -488,7 +536,7 @@ evaluate.Module <- function(
       expected_row <- data[i, , drop = FALSE]
       prediction <- predictions[[i]]
       program_trace <- new_program_trace(
-        events = row_trace_events[[i]],
+        events = row_trace_events[[i]] %||% list(),
         metadata = metadata[[i]],
         row_id = .trace_row_ids[[i]],
         epoch = epoch

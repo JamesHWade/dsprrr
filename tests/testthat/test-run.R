@@ -768,6 +768,41 @@ test_that("process_batch_item returns correct format for structured mode", {
   expect_equal(result$metadata$cost, 0.001)
 })
 
+test_that("chat usage aggregates every verified assistant turn", {
+  prior <- ellmer::UserTurn("prior")
+  turns <- list(
+    prior,
+    ellmer::UserTurn("current"),
+    ellmer::AssistantTurn(
+      contents = list(ellmer::ContentText("tool request")),
+      tokens = c(10L, 1L, 2L),
+      cost = 0.11,
+      duration = 0.4
+    ),
+    ellmer::AssistantTurn(
+      contents = list(ellmer::ContentText("final")),
+      tokens = c(20L, 2L, 3L),
+      cost = 0.22,
+      duration = 0.6
+    )
+  )
+  chat <- list(get_turns = function() turns)
+
+  usage <- dsprrr:::chat_usage_metadata(chat, turns_before = list(prior))
+
+  expect_identical(usage$provider_calls, 2L)
+  expect_identical(usage$input_tokens, 30L)
+  expect_identical(usage$output_tokens, 3L)
+  expect_identical(usage$cached_input_tokens, 5L)
+  expect_identical(usage$total_tokens, 33L)
+  expect_equal(usage$cost, 0.33)
+  expect_equal(usage$duration_s, 1)
+
+  unknown <- dsprrr:::chat_usage_metadata(chat, turns_before = list("wrong"))
+  expect_true(is.na(unknown$provider_calls))
+  expect_true(is.na(unknown$total_tokens))
+})
+
 test_that("extract_simple_output extracts single-field objects", {
   # Create real TypeObject with single property
   single_field_type <- ellmer::type_object(answer = ellmer::type_string())
@@ -1995,4 +2030,46 @@ test_that("print.dsprrr_batch_result reports success when there are no errors", 
   )
   out <- cli::cli_fmt(print(result))
   expect_true(any(grepl("All items completed successfully", out, fixed = TRUE)))
+})
+
+
+test_that("run_dataset accepts omitted and provided optional inputs", {
+  seen <- list()
+  program <- module_fn(
+    signature(
+      inputs = list(
+        input("question"),
+        input("context_note", type = ellmer::type_string(required = FALSE))
+      ),
+      output_type = ellmer::type_object(answer = ellmer::type_string())
+    ),
+    function(question, context_note = NULL, ...) {
+      seen[[length(seen) + 1L]] <<- context_note %||% "<missing>"
+      list(answer = paste(question, context_note %||% "none", sep = ":"))
+    }
+  )
+
+  omitted <- run_dataset(
+    program,
+    data.frame(question = c("a", "b")),
+    .progress = FALSE
+  )
+  provided <- run_dataset(
+    program,
+    data.frame(
+      question = c("c", "d"),
+      context_note = c("first", "second")
+    ),
+    .progress = FALSE
+  )
+
+  expect_identical(
+    unlist(omitted$result, use.names = FALSE),
+    c("a:none", "b:none")
+  )
+  expect_identical(
+    unlist(provided$result, use.names = FALSE),
+    c("c:first", "d:second")
+  )
+  expect_identical(seen, list("<missing>", "<missing>", "first", "second"))
 })

@@ -746,6 +746,105 @@ test_that("cached_chat_structured uses cache for repeated calls", {
   expect_equal(stats$misses, 1L)
 })
 
+test_that("Predict metadata distinguishes cache hits from provider calls", {
+  local_reset_cache()
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+
+  calls <- new.env(parent = emptyenv())
+  calls$n <- 0L
+  local_cache_openai_backend(calls)
+  base <- cache_real_chat()
+  predictor <- module(signature("question -> answer"), type = "predict")
+
+  miss <- predictor$forward(
+    list(question = "same prompt"),
+    .llm = base$clone(deep = TRUE),
+    .cache = TRUE,
+    trace = FALSE
+  )
+  hit <- predictor$forward(
+    list(question = "same prompt"),
+    .llm = base$clone(deep = TRUE),
+    .cache = TRUE,
+    trace = FALSE
+  )
+
+  expect_identical(calls$n, 1L)
+  expect_identical(miss$metadata[[1L]]$cache, "miss")
+  expect_identical(miss$metadata[[1L]]$provider_calls, 1L)
+  expect_identical(miss$metadata[[1L]]$total_tokens, 10L)
+  expect_identical(hit$metadata[[1L]]$cache, "hit")
+  expect_identical(hit$metadata[[1L]]$provider_calls, 0L)
+  expect_true(is.na(hit$metadata[[1L]]$input_tokens))
+  expect_true(is.na(hit$metadata[[1L]]$output_tokens))
+  expect_true(is.na(hit$metadata[[1L]]$total_tokens))
+})
+
+test_that("RLM cache accounting counts only current provider work", {
+  skip_if_not_installed("callr")
+  local_reset_cache()
+  configure_cache(enable_memory = TRUE, enable_disk = FALSE)
+  clear_cache()
+
+  calls <- new.env(parent = emptyenv())
+  calls$n <- 0L
+  local_cache_openai_backend(
+    calls,
+    response = function(index) {
+      if (index %% 2L == 1L) {
+        list(reasoning = "Inspect once", code = "1 + 1")
+      } else {
+        list(answer = "done")
+      }
+    }
+  )
+  base <- cache_real_chat()
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$close())
+  analyst <- rlm_module(
+    "question -> answer: string",
+    runner = runner,
+    max_iterations = 1L,
+    max_llm_calls = 0L
+  )
+
+  first <- suppressWarnings(analyst$forward(
+    list(question = "same task"),
+    .llm = base,
+    .cache = TRUE
+  ))
+  second <- suppressWarnings(analyst$forward(
+    list(question = "same task"),
+    .llm = base,
+    .cache = TRUE
+  ))
+
+  expect_identical(calls$n, 2L)
+  expect_identical(first$metadata[[1L]]$action_calls, 1L)
+  expect_identical(first$metadata[[1L]]$extraction_calls, 1L)
+  expect_identical(first$metadata[[1L]]$action_provider_calls, 1L)
+  expect_identical(first$metadata[[1L]]$extraction_provider_calls, 1L)
+  expect_identical(first$metadata[[1L]]$provider_calls, 2L)
+  expect_identical(first$metadata[[1L]]$total_tokens, 20L)
+  expect_identical(second$metadata[[1L]]$action_provider_calls, 0L)
+  expect_identical(second$metadata[[1L]]$extraction_provider_calls, 0L)
+  expect_identical(second$metadata[[1L]]$provider_calls, 0L)
+  expect_identical(second$metadata[[1L]]$input_tokens, 0L)
+  expect_identical(second$metadata[[1L]]$output_tokens, 0L)
+  expect_identical(second$metadata[[1L]]$total_tokens, 0L)
+
+  bypass <- suppressWarnings(analyst$forward(
+    list(question = "same task"),
+    .llm = base,
+    .cache = FALSE
+  ))
+  expect_identical(calls$n, 4L)
+  expect_identical(bypass$metadata[[1L]]$action_provider_calls, 1L)
+  expect_identical(bypass$metadata[[1L]]$extraction_provider_calls, 1L)
+  expect_identical(bypass$metadata[[1L]]$provider_calls, 2L)
+})
+
 test_that("real structured Chat branches replay ContentJson equivalently", {
   local_reset_cache()
   configure_cache(enable_memory = TRUE, enable_disk = FALSE)

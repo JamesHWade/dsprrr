@@ -82,6 +82,10 @@ NULL
 #'   Default: c("base", "stats", "utils", "methods").
 #' @param prelude Character vector. R code to run before user code.
 #'   Useful for setting options or loading common utilities.
+#' @param persistent Logical. Whether to reuse one callr session and execution
+#'   environment across calls to `execute()`. This preserves variables and
+#'   supports staging a base context with `prepare_context()`. Default `FALSE`
+#'   preserves one fresh subprocess per execution.
 #'
 #' @return An RCodeRunner R6 object
 #'
@@ -97,7 +101,8 @@ r_code_runner <- function(
   timeout = 30,
   max_output_chars = 100000L,
   allowed_packages = c("base", "stats", "utils", "methods"),
-  prelude = character()
+  prelude = character(),
+  persistent = FALSE
 ) {
   rlang::check_installed("callr", reason = "for code execution")
 
@@ -105,7 +110,8 @@ r_code_runner <- function(
     timeout = timeout,
     max_output_chars = as.integer(max_output_chars),
     allowed_packages = allowed_packages,
-    prelude = prelude
+    prelude = prelude,
+    persistent = persistent
   )
 }
 
@@ -209,7 +215,7 @@ validate_code_runner_result <- function(result) {
     !is.list(result) ||
       is.null(result_names) ||
       anyNA(result_names) ||
-      any(!nzchar(result_names)) ||
+      !all(nzchar(result_names)) ||
       anyDuplicated(result_names)
   ) {
     cli::cli_abort(
@@ -840,6 +846,9 @@ RCodeRunner <- R6::R6Class(
     #' @field prelude Code to run before user code
     prelude = NULL,
 
+    #' @field persistent Whether one subprocess and execution environment persist
+    persistent = FALSE,
+
     #' @field closed Whether this runner has been closed
     closed = FALSE,
 
@@ -858,16 +867,24 @@ RCodeRunner <- R6::R6Class(
     #' @param max_output_chars Integer max output size
     #' @param allowed_packages Character vector of allowed packages
     #' @param prelude Character vector of prelude code
+    #' @param persistent Whether to reuse one subprocess across executions
     initialize = function(
       timeout = 30,
       max_output_chars = 100000L,
       allowed_packages = c("base", "stats", "utils", "methods"),
-      prelude = character()
+      prelude = character(),
+      persistent = FALSE
     ) {
       self$timeout <- timeout
       self$max_output_chars <- max_output_chars
       self$allowed_packages <- allowed_packages
       self$prelude <- prelude
+      if (
+        !is.logical(persistent) || length(persistent) != 1L || is.na(persistent)
+      ) {
+        cli::cli_abort("{.arg persistent} must be TRUE or FALSE")
+      }
+      self$persistent <- persistent
     },
 
     #' @description
@@ -917,6 +934,14 @@ RCodeRunner <- R6::R6Class(
         return(private$error_result(
           error = danger_check,
           duration_ms = 0
+        ))
+      }
+
+      if (self$persistent) {
+        return(private$execute_persistent(
+          code = code,
+          context = context,
+          start_time = start_time
         ))
       }
 
@@ -1067,8 +1092,8 @@ RCodeRunner <- R6::R6Class(
     #' @description
     #' Start the interpreter lifecycle
     #'
-    #' This backend creates a fresh subprocess for every execution, so startup
-    #' is an idempotent lifecycle marker rather than process allocation.
+    #' In the default non-persistent mode, startup is an idempotent lifecycle
+    #' marker. In persistent mode, it starts and initializes one callr session.
     #'
     #' @return The runner, invisibly
     start = function() {
@@ -1088,7 +1113,150 @@ RCodeRunner <- R6::R6Class(
           class = "dsprrr_interpreter_terminal_error"
         )
       }
+      if (self$started) {
+        if (self$persistent && !private$session_is_alive()) {
+          reason <- "The persistent R subprocess is no longer running"
+          private$terminalize_persistent(reason)
+          cli::cli_abort(
+            c(
+              "The R code runner is terminal",
+              "x" = reason
+            ),
+            class = "dsprrr_interpreter_terminal_error"
+          )
+        }
+        return(invisible(self))
+      }
+
+      if (self$persistent) {
+        startup <- private$start_persistent_session()
+        if (!isTRUE(startup$ok)) {
+          cli::cli_abort(
+            c(
+              "Could not start the persistent R code runner",
+              "x" = startup$error
+            ),
+            class = c(
+              "dsprrr_r_code_runner_start_error",
+              "dsprrr_interpreter_start_error"
+            )
+          )
+        }
+      }
       self$started <- TRUE
+      invisible(self)
+    },
+
+    #' @description
+    #' Stage a base context in a persistent subprocess
+    #'
+    #' Each later `execute()` call overlays its `context` fields on this base
+    #' context for that call. The base objects are serialized only while being
+    #' prepared, rather than with every execution.
+    #'
+    #' @param context Named list of base context objects
+    #'
+    #' @return `TRUE`, invisibly, after the context is staged
+    prepare_context = function(context) {
+      private$assert_usable()
+      if (!self$persistent) {
+        cli::cli_abort(
+          c(
+            "Base context staging requires a persistent R code runner",
+            "i" = "Create it with {.code r_code_runner(persistent = TRUE)}."
+          ),
+          class = "dsprrr_r_code_runner_context_error"
+        )
+      }
+      private$validate_persistent_context(context)
+      if (!self$started) {
+        self$start()
+      }
+
+      outcome <- private$session_call(
+        utils::removeSource(private$persistent_prepare_context),
+        args = list(context = context)
+      )
+      if (!isTRUE(outcome$ok)) {
+        cli::cli_abort(
+          c(
+            "Could not prepare the persistent R code runner context",
+            "x" = outcome$error
+          ),
+          class = c(
+            "dsprrr_r_code_runner_context_error",
+            "dsprrr_interpreter_terminal_error"
+          )
+        )
+      }
+      invisible(TRUE)
+    },
+
+    #' @description
+    #' Release a staged base context without resetting persistent variables
+    #'
+    #' This clears both the staged base context and the current `.context`
+    #' binding. It is an idempotent no-op in non-persistent mode.
+    #'
+    #' @return The runner, invisibly
+    release_context = function() {
+      private$assert_usable()
+      if (!self$persistent || !self$started) {
+        return(invisible(self))
+      }
+
+      outcome <- private$session_call(
+        utils::removeSource(private$persistent_prepare_context),
+        args = list(context = list())
+      )
+      if (!isTRUE(outcome$ok)) {
+        cli::cli_abort(
+          c(
+            "Could not release the persistent R code runner context",
+            "x" = outcome$error
+          ),
+          class = c(
+            "dsprrr_r_code_runner_context_error",
+            "dsprrr_interpreter_terminal_error"
+          )
+        )
+      }
+      invisible(self)
+    },
+
+    #' @description
+    #' Reset persistent execution state and staged context
+    #'
+    #' Recreates the execution environment, reruns the prelude, and clears the
+    #' staged base context. This is an idempotent no-op in non-persistent mode.
+    #'
+    #' @return The runner, invisibly
+    reset = function() {
+      private$assert_usable()
+      if (!self$persistent) {
+        return(invisible(self))
+      }
+      if (!self$started) {
+        self$start()
+        return(invisible(self))
+      }
+
+      outcome <- private$session_call(
+        utils::removeSource(private$persistent_reset),
+        args = list()
+      )
+      if (!isTRUE(outcome$ok)) {
+        cli::cli_abort(
+          c(
+            "Could not reset the persistent R code runner",
+            "x" = outcome$error
+          ),
+          class = c(
+            "dsprrr_r_code_runner_reset_error",
+            "dsprrr_interpreter_terminal_error"
+          )
+        )
+      }
       invisible(self)
     },
 
@@ -1101,7 +1269,7 @@ RCodeRunner <- R6::R6Class(
         backend = "callr",
         trust = "trusted-input-only",
         sandboxed = FALSE,
-        persistent = FALSE,
+        persistent = self$persistent,
         process_isolation = TRUE,
         filesystem_access = "host-user",
         network_access = "host-user",
@@ -1114,13 +1282,16 @@ RCodeRunner <- R6::R6Class(
     #' @description
     #' Close the runner
     #'
-    #' `RCodeRunner` starts one subprocess per `execute()` call, so there is no
-    #' persistent session to tear down. Closing marks the object terminal and
-    #' satisfies the managed interpreter lifecycle protocol.
+    #' Closing marks the object closed and tears down a persistent subprocess,
+    #' when present. It is safe to call more than once.
     #'
     #' @return The runner, invisibly
     close = function() {
+      if (self$closed) {
+        return(invisible(self))
+      }
       self$closed <- TRUE
+      private$close_persistent_session()
       invisible(self)
     },
 
@@ -1140,10 +1311,19 @@ RCodeRunner <- R6::R6Class(
     print = function() {
       trust <- self$policy()$trust
       cli::cli_h3("RCodeRunner")
-      cli::cli_bullets(c(
+      details <- c(
         "*" = "Timeout: {.val {self$timeout}} seconds",
         "*" = "Max output: {.val {self$max_output_chars}} chars",
-        "*" = "Allowed packages: {.val {self$allowed_packages}}",
+        "*" = "Allowed packages: {.val {self$allowed_packages}}"
+      )
+      if (self$persistent) {
+        details <- c(
+          details,
+          "*" = "Persistent session: {.val TRUE}"
+        )
+      }
+      cli::cli_bullets(c(
+        details,
         "!" = "Trust: {.val {trust}}; not sandboxed"
       ))
       invisible(self)
@@ -1151,6 +1331,496 @@ RCodeRunner <- R6::R6Class(
   ),
 
   private = list(
+    session = NULL,
+
+    assert_usable = function() {
+      if (self$closed) {
+        cli::cli_abort(
+          "The R code runner is closed",
+          class = "dsprrr_interpreter_closed_error"
+        )
+      }
+      if (self$terminal) {
+        cli::cli_abort(
+          c(
+            "The R code runner is terminal",
+            "x" = self$terminal_reason %||%
+              "A subprocess or protocol failure occurred."
+          ),
+          class = "dsprrr_interpreter_terminal_error"
+        )
+      }
+      invisible(NULL)
+    },
+
+    validate_persistent_context = function(context) {
+      context_names <- names(context)
+      valid_names <- length(context) == 0L ||
+        (!is.null(context_names) &&
+          !anyNA(context_names) &&
+          all(nzchar(context_names)) &&
+          !anyDuplicated(context_names))
+      if (!is.list(context) || is.data.frame(context) || !valid_names) {
+        cli::cli_abort(
+          "{.arg context} must be a uniquely named list",
+          class = "dsprrr_r_code_runner_context_error"
+        )
+      }
+      invisible(context)
+    },
+
+    timeout_ms = function() {
+      if (
+        !is.numeric(self$timeout) ||
+          length(self$timeout) != 1L ||
+          is.na(self$timeout) ||
+          !is.finite(self$timeout) ||
+          self$timeout <= 0
+      ) {
+        cli::cli_abort(
+          "{.arg timeout} must be one positive finite number"
+        )
+      }
+      as.integer(min(
+        .Machine$integer.max,
+        max(1, ceiling(self$timeout * 1000))
+      ))
+    },
+
+    session_is_alive = function() {
+      !is.null(private$session) &&
+        isTRUE(tryCatch(
+          private$session$is_alive(),
+          error = function(e) FALSE
+        ))
+    },
+
+    close_persistent_session = function(force = FALSE) {
+      session <- private$session
+      private$session <- NULL
+      if (is.null(session)) {
+        return(invisible(NULL))
+      }
+
+      close_condition <- NULL
+      if (isTRUE(force)) {
+        try(session$kill(grace = 0), silent = TRUE)
+        try(session$wait(1000), silent = TRUE)
+      } else {
+        close_condition <- tryCatch(
+          {
+            session$close()
+            NULL
+          },
+          interrupt = function(condition) condition,
+          error = function(e) {
+            e
+          }
+        )
+        if (inherits(close_condition, "condition")) {
+          try(session$kill(grace = 0), silent = TRUE)
+          try(session$wait(1000), silent = TRUE)
+        }
+      }
+      try(session$cleanup(), silent = TRUE)
+      if (inherits(close_condition, "interrupt")) {
+        stop(close_condition)
+      }
+      invisible(NULL)
+    },
+
+    terminalize_persistent = function(reason) {
+      private$mark_terminal(reason)
+      private$close_persistent_session(force = TRUE)
+      invisible(NULL)
+    },
+
+    condition_message = function(condition) {
+      if (inherits(condition, "condition")) {
+        return(conditionMessage(condition))
+      }
+      value <- paste(as.character(condition), collapse = "\n")
+      if (nzchar(value)) value else "Unknown persistent R session failure"
+    },
+
+    session_call = function(func, args = list()) {
+      private$timeout_ms()
+      started_at <- proc.time()[["elapsed"]]
+      outcome <- tryCatch(
+        {
+          if (!private$session_is_alive()) {
+            stop("The persistent R subprocess is not running", call. = FALSE)
+          }
+          private$session$call(func = func, args = args)
+
+          answer <- NULL
+          repeat {
+            elapsed <- proc.time()[["elapsed"]] - started_at
+            remaining <- self$timeout - elapsed
+            if (remaining <= 0) {
+              answer <- list(
+                ok = FALSE,
+                error = paste0(
+                  "Execution timed out after ",
+                  self$timeout,
+                  " seconds"
+                )
+              )
+              break
+            }
+
+            poll_timeout <- as.integer(min(
+              .Machine$integer.max,
+              max(1, ceiling(remaining * 1000))
+            ))
+            poll_status <- private$session$poll_process(poll_timeout)
+            if (identical(poll_status, "timeout")) {
+              answer <- list(
+                ok = FALSE,
+                error = paste0(
+                  "Execution timed out after ",
+                  self$timeout,
+                  " seconds"
+                )
+              )
+              break
+            }
+
+            response <- private$session$read()
+            if (is.null(response)) {
+              next
+            }
+            response_code <- as.integer(response$code %||% 0L)
+            if (identical(response_code, 200L)) {
+              if (!is.null(response$error)) {
+                answer <- list(
+                  ok = FALSE,
+                  error = private$condition_message(response$error)
+                )
+              } else {
+                answer <- list(ok = TRUE, result = response$result)
+              }
+              break
+            }
+            if (response_code >= 500L) {
+              answer <- list(
+                ok = FALSE,
+                error = private$condition_message(
+                  response$error %||% response$message
+                )
+              )
+              break
+            }
+          }
+          answer
+        },
+        interrupt = function(condition) {
+          private$terminalize_persistent(
+            "Persistent R execution was interrupted"
+          )
+          stop(condition)
+        },
+        error = function(condition) {
+          list(ok = FALSE, error = conditionMessage(condition))
+        }
+      )
+
+      if (!isTRUE(outcome$ok)) {
+        private$terminalize_persistent(outcome$error)
+      }
+      outcome
+    },
+
+    start_persistent_session = function() {
+      startup <- tryCatch(
+        {
+          wait_timeout <- private$timeout_ms()
+          private$session <- callr::r_session$new(
+            options = callr::r_session_options(
+              user_profile = FALSE,
+              system_profile = FALSE,
+              env = c(
+                callr::rcmd_safe_env(),
+                "R_BROWSER" = "false",
+                "R_PDFVIEWER" = "false"
+              )
+            ),
+            wait_timeout = wait_timeout
+          )
+          private$session_call(
+            utils::removeSource(private$persistent_initialize),
+            args = list(
+              prelude = self$prelude,
+              allowed_packages = self$allowed_packages
+            )
+          )
+        },
+        interrupt = function(condition) {
+          private$terminalize_persistent("Persistent R startup was interrupted")
+          stop(condition)
+        },
+        error = function(condition) {
+          list(ok = FALSE, error = conditionMessage(condition))
+        }
+      )
+      if (!isTRUE(startup$ok)) {
+        private$terminalize_persistent(startup$error)
+      }
+      startup
+    },
+
+    execute_persistent = function(code, context, start_time) {
+      private$validate_persistent_context(context)
+
+      stdout_file <- tempfile("stdout_", fileext = ".txt")
+      stderr_file <- tempfile("stderr_", fileext = ".txt")
+      on.exit(unlink(c(stdout_file, stderr_file)), add = TRUE)
+
+      outcome <- private$session_call(
+        utils::removeSource(private$persistent_execution_wrapper),
+        args = list(
+          code = code,
+          context = context,
+          stdout_path = stdout_file,
+          stderr_path = stderr_file
+        )
+      )
+      duration_ms <- as.numeric(
+        difftime(Sys.time(), start_time, units = "secs")
+      ) *
+        1000
+      stdout_content <- private$read_output_file(stdout_file)
+      stderr_content <- private$read_output_file(stderr_file)
+
+      if (!isTRUE(outcome$ok)) {
+        return(private$error_result(
+          error = outcome$error,
+          stdout = stdout_content,
+          stderr = stderr_content,
+          duration_ms = duration_ms,
+          error_type = "interpreter"
+        ))
+      }
+
+      exec_result <- outcome$result
+      if (
+        !is.list(exec_result) ||
+          !is.logical(exec_result$success) ||
+          length(exec_result$success) != 1L ||
+          is.na(exec_result$success)
+      ) {
+        reason <- paste(
+          "The persistent R subprocess returned no valid structured execution result"
+        )
+        private$terminalize_persistent(reason)
+        return(private$error_result(
+          error = reason,
+          stdout = stdout_content,
+          stderr = stderr_content,
+          duration_ms = duration_ms,
+          error_type = "interpreter"
+        ))
+      }
+
+      combine_output <- function(primary, fallback) {
+        values <- c(primary %||% "", fallback %||% "")
+        values <- values[nzchar(values)]
+        if (length(values) == 0L) "" else paste(values, collapse = "\n")
+      }
+      list(
+        success = exec_result$success,
+        result = exec_result$result,
+        stdout = private$truncate_output(combine_output(
+          exec_result$stdout,
+          stdout_content
+        )),
+        stderr = private$truncate_output(combine_output(
+          exec_result$stderr,
+          stderr_content
+        )),
+        messages = private$truncate_output(exec_result$messages %||% ""),
+        warnings = private$truncate_output(exec_result$warnings %||% ""),
+        error = exec_result$error,
+        error_type = if (isTRUE(exec_result$success)) NULL else "execution",
+        retryable = !isTRUE(exec_result$success),
+        duration_ms = round(duration_ms, 2)
+      )
+    },
+
+    persistent_initialize = function(prelude, allowed_packages) {
+      make_exec_env <- function() {
+        exec_env <- new.env(parent = globalenv())
+        exec_env$.context <- list()
+        exec_env$library <- function(package, ...) {
+          pkg_expr <- substitute(package)
+          pkg_name <- if (is.character(pkg_expr)) {
+            pkg_expr
+          } else {
+            as.character(pkg_expr)
+          }
+          if (!pkg_name %in% allowed_packages) {
+            stop(
+              "Package '",
+              pkg_name,
+              "' is not in allowed_packages. ",
+              "Allowed: ",
+              paste(allowed_packages, collapse = ", "),
+              call. = FALSE
+            )
+          }
+          base::library(pkg_name, character.only = TRUE, ...)
+        }
+        exec_env$require <- function(package, ...) {
+          pkg_expr <- substitute(package)
+          pkg_name <- if (is.character(pkg_expr)) {
+            pkg_expr
+          } else {
+            as.character(pkg_expr)
+          }
+          if (!pkg_name %in% allowed_packages) {
+            stop(
+              "Package '",
+              pkg_name,
+              "' is not in allowed_packages. ",
+              "Allowed: ",
+              paste(allowed_packages, collapse = ", "),
+              call. = FALSE
+            )
+          }
+          base::require(pkg_name, character.only = TRUE, ...)
+        }
+        if (length(prelude) > 0L) {
+          for (statement in prelude) {
+            base::eval(base::parse(text = statement), envir = exec_env)
+          }
+        }
+        exec_env
+      }
+
+      state <- new.env(parent = emptyenv())
+      state$base_context <- list()
+      state$make_exec_env <- make_exec_env
+      state$exec_env <- make_exec_env()
+      # This function runs inside an owned callr session. Keep the persistent
+      # interpreter state in that child session's global environment without
+      # exposing a package-process global assignment to static checkers.
+      session_env <- globalenv()
+      session_env$.dsprrr_r_code_runner_state <- state
+      TRUE
+    },
+
+    persistent_prepare_context = function(context) {
+      state <- get(
+        ".dsprrr_r_code_runner_state",
+        envir = globalenv(),
+        inherits = FALSE
+      )
+      state$base_context <- context
+      state$exec_env$.context <- context
+      TRUE
+    },
+
+    persistent_reset = function() {
+      state <- get(
+        ".dsprrr_r_code_runner_state",
+        envir = globalenv(),
+        inherits = FALSE
+      )
+      state$base_context <- list()
+      state$exec_env <- state$make_exec_env()
+      TRUE
+    },
+
+    persistent_execution_wrapper = function(
+      code,
+      context,
+      stdout_path,
+      stderr_path
+    ) {
+      state <- get(
+        ".dsprrr_r_code_runner_state",
+        envir = globalenv(),
+        inherits = FALSE
+      )
+      effective_context <- state$base_context
+      if (length(context) > 0L) {
+        for (name in names(context)) {
+          effective_context[name] <- context[name]
+        }
+      }
+      state$exec_env$.context <- effective_context
+
+      messages <- character()
+      warnings <- character()
+      stdout_connection <- file(stdout_path, open = "wt")
+      stderr_connection <- file(stderr_path, open = "wt")
+      output_sinks <- sink.number(type = "output")
+      message_sink <- sink.number(type = "message")
+      sink(stdout_connection, type = "output")
+      sink(stderr_connection, type = "message")
+      restore_sinks <- function() {
+        while (sink.number(type = "message") != message_sink) {
+          sink(type = "message")
+        }
+        while (sink.number(type = "output") > output_sinks) {
+          sink(type = "output")
+        }
+        close(stdout_connection)
+        close(stderr_connection)
+        invisible(NULL)
+      }
+      on.exit(restore_sinks(), add = TRUE)
+
+      result <- tryCatch(
+        {
+          withCallingHandlers(
+            base::eval(
+              base::parse(text = code),
+              envir = state$exec_env
+            ),
+            message = function(message) {
+              messages <<- c(messages, conditionMessage(message))
+              invokeRestart("muffleMessage")
+            },
+            warning = function(warning) {
+              warnings <<- c(warnings, conditionMessage(warning))
+              invokeRestart("muffleWarning")
+            }
+          )
+        },
+        error = function(error) {
+          structure(
+            list(msg = conditionMessage(error)),
+            class = "code_error"
+          )
+        }
+      )
+      restore_sinks()
+      on.exit(NULL, add = FALSE)
+
+      if (inherits(result, "code_error")) {
+        list(
+          success = FALSE,
+          result = NULL,
+          stdout = "",
+          stderr = "",
+          messages = paste(messages, collapse = "\n"),
+          warnings = paste(warnings, collapse = "\n"),
+          error = result$msg
+        )
+      } else {
+        list(
+          success = TRUE,
+          result = result,
+          stdout = "",
+          stderr = "",
+          messages = paste(messages, collapse = "\n"),
+          warnings = paste(warnings, collapse = "\n"),
+          error = NULL
+        )
+      }
+    },
+
     #' Wrapper function that runs inside the subprocess
     #' NOTE: Intentionally uses eval() - this is the core purpose of
     #' ProgramOfThought/CodeAct modules (execute LLM-generated code)
@@ -1407,6 +2077,16 @@ RCodeRunner <- R6::R6Class(
     mark_terminal = function(reason) {
       self$terminal <- TRUE
       self$terminal_reason <- as.character(reason)[[1L]]
+      invisible(NULL)
+    },
+
+    finalize = function() {
+      # Do not call processx/callr methods from an R garbage-collection
+      # finalizer. Native process setup may be active for another session, and
+      # re-entering processx teardown from GC can crash the host R process.
+      # Invocation-owned runners are closed by with_code_runner_lease(); callers
+      # that retain a runner own its explicit close(). The callr session's own
+      # processx finalizer remains responsible for abandoned resources.
       invisible(NULL)
     }
   )

@@ -11,7 +11,7 @@ that executes them.
 # Install
 pak::pak("JamesHWade/dsprrr")
 
-# That's it. Start using LLMs.
+# Configure credentials for an ellmer-supported provider, then:
 library(dsprrr)
 dsp("question -> answer", question = "What is the capital of France?")
 #> "Paris"
@@ -83,7 +83,8 @@ classify <- module(sig, type = "react", tools = list(lookup_tool))
 
 ### Optimizers
 
-**Compile your program against a metric.** Give dsprrr examples and a scoring function; it tunes prompts and demos automatically until quality converges.
+**Compile your program against a metric.** Give dsprrr examples and a scoring
+function; it selects the best candidate observed within the configured budget.
 
 [Try optimizers &rarr;](articles/compilation-optimization.html)
 
@@ -107,6 +108,65 @@ pin_module_config(board, "ticket-router-v2", optimized)
 
 </div>
 </div>
+
+## Find the release cohort that broke
+
+A release-level average can reveal a regression without explaining it. If the
+useful grouping and calculation are not known in advance, an RLM keeps the
+source object in an R environment, lets the model inspect it with R code, and
+returns only bounded observations between steps.
+
+The deterministic tutorial asks an RLM to explore 40,000 checkout sessions and
+200 change records. The answer is fixed and independently validated:
+
+```text
+release:      2.4.0
+cohort:       platform=mobile / plan=pro
+before_rate:  0.92
+after_rate:   0.61
+drop_pp:      31
+change_id:    CHG-1842
+```
+
+```r
+investigator <- rlm_module(
+  paste(
+    "sessions, changes, question ->",
+    "release: string, cohort: string, before_rate: number,",
+    "after_rate: number, drop_pp: number, change_id: string, evidence: string"
+  ),
+  interpreter_factory = function() {
+    r_code_runner(timeout = 30, persistent = TRUE)
+  },
+  max_iters = 8,
+  max_llm_calls = 0L
+)
+```
+
+This persistent callr runner stages rich R objects once, but it is explicitly
+trusted-input-only. For compact JSON-compatible context, the one-call `rlm()`
+helper creates a fresh managed `mcp-repl` OS sandbox by default. It disables
+network access but allows writes inside the workspace. Install `mcptools` and
+the external `mcp-repl` executable first. The final JSON-RPC request has a 7 KB
+wire bound, with gzip/base64 attempted when the raw request is too large, and
+RLM control frames have a 3,000-byte encoded bound.
+
+[Investigate the deterministic regression &rarr;](articles/tutorial-rlm-dsprrr.html)
+&nbsp;&middot;&nbsp;
+[Understand the RLM execution contract &rarr;](articles/how-rlm-works.html)
+
+### ProgramOfThought, RLM, or Flex?
+
+| If the task requires... | Use... |
+|---|---|
+| A calculation whose steps are already known | `program_of_thought()` |
+| A new exploration path for this input at inference time | `rlm_module()` |
+| A reusable implementation discovered from labeled examples | `flex()` with GEPA |
+
+RLM is experimental inference-time exploration; one invocation does not learn
+an exploration program. Supported optimizers can still tune its action and
+fallback instructions. Flex searches during compilation for an implementation
+to reuse.
 
 ## Optimize the program, not only the prompt
 
@@ -524,14 +584,14 @@ solver <- as_vitals_solver(classifier)
 <div class="card h-100 border-start border-primary border-4">
 <div class="card-body">
 <h5 class="card-title">Observable</h5>
-<p class="card-text">Every LLM call is traced. Inspect prompts, debug failures, track costs.</p>
+<p class="card-text">Inspect bounded module traces, debug failures, and track usage when providers report it.</p>
 </div>
 </div>
 </div>
 <div class="col">
 <div class="card h-100 border-start border-primary border-4">
 <div class="card-body">
-<h5 class="card-title">Production-Ready</h5>
+<h5 class="card-title">Deployment building blocks</h5>
 <p class="card-text">Persistence with pins, orchestration with targets, deployment with vetiver.</p>
 </div>
 </div>
@@ -544,6 +604,7 @@ solver <- as_vitals_solver(classifier)
 
 - [Getting Started](articles/getting-started.html) — Your first dsprrr module
 - [Compilation & Optimization](articles/compilation-optimization.html) — Improve with data
+- [Release Regression with an RLM](articles/tutorial-rlm-dsprrr.html) — Investigate a large R object adaptively
 - [Agentic Optimization Harnesses](articles/agentic-optimization-harnesses.html) — Run sandboxed AutoResearch and Meta-Harness loops
 - [Vitals Integration](articles/vitals-integration.html) — Advanced evaluation
 - [Production Orchestration](articles/orchestration.html) — Deploy to production
@@ -551,6 +612,7 @@ solver <- as_vitals_solver(classifier)
 ### Reference
 
 - [Function Reference](reference/index.html) — All functions documented
+- [How the RLM Works](articles/how-rlm-works.html) — Execution, replay, typed submission, and runner boundaries
 
 ## Ecosystem
 

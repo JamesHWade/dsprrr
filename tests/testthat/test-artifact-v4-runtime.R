@@ -44,7 +44,27 @@ artifact_v4_rehash <- function(artifact) {
   artifact
 }
 
-test_that("v4 interpreter factories round-trip without being invoked", {
+artifact_v4_strip_rlm_children <- function(artifact, node_id = "$") {
+  child_ids <- vapply(
+    artifact$graph$nodes[[node_id]]$children,
+    `[[`,
+    character(1),
+    ".node"
+  )
+  artifact$graph$nodes[[node_id]]$children <- list()
+  artifact$graph$nodes <- artifact$graph$nodes[
+    !names(artifact$graph$nodes) %in% child_ids
+  ]
+  artifact$graph$edges <- Filter(
+    function(edge) {
+      !edge$from %in% child_ids && !edge$to %in% child_ids
+    },
+    artifact$graph$edges
+  )
+  artifact
+}
+
+test_that("v5 interpreter factories round-trip without being invoked", {
   calls <- 0L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
@@ -54,7 +74,7 @@ test_that("v4 interpreter factories round-trip without being invoked", {
 
   for (program in artifact_v4_modules(interpreter_factory)) {
     artifact <- program_artifact(program, registry = registry)
-    expect_identical(artifact$format_version, 4L)
+    expect_identical(artifact$format_version, 5L)
     fields <- artifact$graph$nodes[["$"]]$fields
     expect_null(fields$runner)
     expect_identical(
@@ -84,7 +104,124 @@ test_that("v4 interpreter factories round-trip without being invoked", {
   }
 })
 
-test_that("v4 interpreter factories support explicit trusted embedding", {
+test_that("v5 RLM predictor children preserve tuned state", {
+  calls <- 0L
+  interpreter_factory <- function(.unused = NULL) {
+    calls <<- calls + 1L
+    artifact_v4_runner()
+  }
+  action <- dsprrr:::new_rlm_action_module()
+  extract <- dsprrr:::new_rlm_extract_module(
+    signature("question -> answer")@output_type
+  )
+  action$signature@instructions <- "Use the tuned action policy."
+  action$demos <- list(list(
+    state = "trajectory",
+    reasoning = "inspect the evidence",
+    code = "summary(.context$data)"
+  ))
+  action$state$compiled <- TRUE
+  action$state$best_score <- 0.8
+  action$state$best_trial <- 2L
+  action$state$best_params <- list(temperature = 0.2)
+  extract$signature@instructions <- "Use the tuned extraction policy."
+  extract$demos <- list(list(state = "trajectory", answer = "supported"))
+  program <- dsprrr:::RLMModule$new(
+    signature = signature("question -> answer"),
+    interpreter_factory = interpreter_factory,
+    max_llm_calls = 0L,
+    generate_action = action,
+    extract = extract
+  )
+  registry <- list(interpreter_factory = interpreter_factory)
+
+  artifact <- program_artifact(program, registry = registry)
+  restored <- restore_module_config(artifact, registry = registry)
+
+  expect_named(
+    artifact$graph$nodes[["$"]]$children,
+    c("generate_action", "extract")
+  )
+  expect_named(
+    artifact$graph$nodes,
+    c("$", "$/generate_action", "$/extract")
+  )
+  expect_identical(
+    restored$generate_action$signature@instructions,
+    "Use the tuned action policy."
+  )
+  expect_identical(restored$generate_action$demos, action$demos)
+  expect_identical(restored$generate_action$state$compiled, TRUE)
+  expect_identical(restored$generate_action$state$best_score, 0.8)
+  expect_identical(restored$generate_action$state$best_trial, 2L)
+  expect_identical(
+    restored$generate_action$state$best_params,
+    list(temperature = 0.2)
+  )
+  expect_identical(
+    restored$extract$signature@instructions,
+    "Use the tuned extraction policy."
+  )
+  expect_identical(restored$extract$demos, extract$demos)
+  expect_identical(restored$interpreter_factory, interpreter_factory)
+  expect_identical(calls, 0L)
+  expect_identical(
+    program_artifact(restored, registry = registry)$graph,
+    artifact$graph
+  )
+})
+
+test_that("childless v4 RLM artifacts restore with default predictors", {
+  calls <- 0L
+  interpreter_factory <- function(.unused = NULL) {
+    calls <<- calls + 1L
+    artifact_v4_runner()
+  }
+  registry <- list(interpreter_factory = interpreter_factory)
+  program <- dsprrr:::RLMModule$new(
+    signature = signature("question -> answer"),
+    interpreter_factory = interpreter_factory,
+    max_llm_calls = 0L
+  )
+  artifact <- program_artifact(program, registry = registry) |>
+    artifact_v4_strip_rlm_children()
+  artifact$format_version <- 4L
+  artifact <- artifact_v4_rehash(artifact)
+
+  expect_no_error(dsprrr:::artifact_validate_manifest(artifact))
+  restored <- restore_module_config(artifact, registry = registry)
+
+  expect_named(module_children(restored), c("generate_action", "extract"))
+  expect_s3_class(restored$generate_action, "PredictModule")
+  expect_s3_class(restored$extract, "PredictModule")
+  expect_identical(restored$interpreter_factory, interpreter_factory)
+  expect_identical(calls, 0L)
+  upgraded <- program_artifact(restored, registry = registry)
+  expect_named(
+    upgraded$graph$nodes[["$"]]$children,
+    c("generate_action", "extract")
+  )
+})
+
+test_that("v5 RLM artifacts reject partial predictor child schemas", {
+  interpreter_factory <- function(.unused = NULL) artifact_v4_runner()
+  registry <- list(interpreter_factory = interpreter_factory)
+  program <- dsprrr:::RLMModule$new(
+    signature = signature("question -> answer"),
+    interpreter_factory = interpreter_factory,
+    max_llm_calls = 0L
+  )
+  artifact <- program_artifact(program, registry = registry)
+  artifact$graph$nodes[["$"]]$children$extract <- NULL
+  artifact <- artifact_v4_rehash(artifact)
+
+  expect_error(
+    dsprrr:::artifact_validate_manifest(artifact),
+    class = "dsprrr_artifact_malformed"
+  )
+})
+
+test_that("v5 interpreter factories support explicit trusted embedding", {
   calls <- 0L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
@@ -106,7 +243,7 @@ test_that("v4 interpreter factories support explicit trusted embedding", {
   expect_identical(calls, 0L)
 })
 
-test_that("v4 runtime bindings enforce exact XOR", {
+test_that("v5 runtime bindings enforce exact XOR", {
   runner <- artifact_v4_runner()
   factory <- function(.unused = NULL) artifact_v4_runner()
   registry <- list(runner = runner, factory = factory)
@@ -152,6 +289,7 @@ test_that("validated v3 runner artifacts upgrade before restoration", {
     max_llm_calls = 1L
   )
   artifact <- program_artifact(program, registry = registry)
+  artifact <- artifact_v4_strip_rlm_children(artifact)
   fields <- artifact$graph$nodes[["$"]]$fields
   fields$interpreter_factory <- NULL
   fields <- fields[setdiff(names(fields), "interpreter_factory")]
@@ -182,7 +320,7 @@ test_that("validated v3 runner artifacts upgrade before restoration", {
   )
 })
 
-test_that("Flex modules have a resource-free v4 artifact codec", {
+test_that("Flex modules keep their resource-free codec in v5", {
   program <- suppressWarnings(
     dsprrr:::FlexModule$new(
       signature = signature("question -> answer"),
@@ -196,7 +334,7 @@ test_that("Flex modules have a resource-free v4 artifact codec", {
   fields <- artifact$graph$nodes[["$"]]$fields
   restored <- restore_module_config(artifact)
 
-  expect_identical(artifact$format_version, 4L)
+  expect_identical(artifact$format_version, 5L)
   expect_named(
     fields,
     c(

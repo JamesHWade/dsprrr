@@ -68,7 +68,9 @@ compile_default <- function(teleprompter, program, trainset, ...) {
 #' @description
 #' A simple teleprompter that adds labeled examples from the training set
 #' as demonstrations to the module. This is the simplest form of few-shot
-#' learning.
+#' learning. The target must be a root Predict module; programs with nested
+#' predictors (including RLM) are rejected because root examples do not define
+#' predictor-local demonstrations.
 #'
 #' @param metric A metric function for evaluating predictions. If NULL,
 #'   uses exact_match() by default.
@@ -137,7 +139,7 @@ LabeledFewShot <- S7::new_class(
 compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   # Validate inputs
   if (!inherits(program, "Module")) {
-    cli::cli_abort("LabeledFewShot currently only supports Predict modules")
+    cli::cli_abort("LabeledFewShot requires a Module object")
   }
 
   if (!is.data.frame(trainset)) {
@@ -147,6 +149,24 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   if (nrow(trainset) == 0) {
     cli::cli_warn("Empty trainset provided, returning unmodified program")
     return(program)
+  }
+
+  if (!inherits(program, "PredictModule")) {
+    cli::cli_abort(
+      c(
+        "LabeledFewShot cannot label nested predictors from root examples",
+        "x" = "The program is {.cls {class(program)[1]}}, not a Predict module.",
+        "i" = paste(
+          "Root examples can have a different signature from child predictors;",
+          "attaching them would create invalid demonstrations."
+        ),
+        "i" = paste(
+          "Use an optimizer with predictor-local evidence, or compile each",
+          "predictor with examples matching its own signature."
+        )
+      ),
+      class = "dsprrr_labeled_graph_unsupported"
+    )
   }
 
   # Create a copy of the program
