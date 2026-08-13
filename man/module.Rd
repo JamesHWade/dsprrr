@@ -46,7 +46,7 @@ module(
 \item{tools}{Optional tools configuration:
 \itemize{
 \item for \code{type = "react"} or \code{type = "codeact"}: list of ellmer ToolDef objects.
-\item for \code{type = "rlm"}: named list of R functions exposed to the REPL.
+\item for \code{type = "rlm"}: named host functions or ellmer ToolDef objects.
 \item for executable \code{type = "flex"}: named host functions or ToolDef objects.
 If provided with \code{type = "predict"}, automatically upgrades to react.
 }}
@@ -60,7 +60,9 @@ caps tool calls within one invocation; exceeding that inner budget errors.}
 \item{temperature}{Temperature for multichain diversity (default: 0.7)}
 
 \item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()} for code execution types. It is never automatically closed.}
+\code{policy()} for code execution types. It is never automatically closed.
+For \code{type = "rlm"}, the policy must advertise \code{persistent = TRUE}; use
+\code{r_code_runner(persistent = TRUE)} for the trusted callr backend.}
 
 \item{max_iters}{Maximum code repair iterations for program_of_thought
 (default: 3), or the DSPy 3.3-compatible alias for RLM's
@@ -85,7 +87,8 @@ module will use this Chat for all predictions unless overridden with \code{.llm}
 program-of-thought, CodeAct, RLM, and executable Flex modules. It creates
 one fresh runner per invocation. Supply exactly one of \code{runner} and
 \code{interpreter_factory} for ordinary code-executing types; Flex accepts only
-the factory so every invocation is isolated.}
+the factory so every invocation is isolated. For RLM, every returned
+runner must advertise \code{persistent = TRUE}.}
 
 \item{module_src}{Optional complete source for \code{type = "flex"}.}
 
@@ -108,7 +111,8 @@ The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
 tool-using modules, "chain_of_thought" for step-by-step reasoning,
 "multichain" for multi-chain comparison, "program_of_thought" for code
-execution modules, and experimental "flex" for declarative or
+execution, "codeact" for tools plus code, "rlm" for adaptive R-object
+investigation, and experimental "flex" for declarative or
 interpreter-backed programs.
 }
 \examples{
@@ -139,16 +143,21 @@ result <- classifier |> run(text = "Great package!", .llm = llm)
 
 # Or create module with Chat attached
 classifier <- signature("text -> sentiment") |>
-  module(type = "predict", chat = chat_openai())
+  module(type = "predict", chat = ellmer::chat_openai())
 result <- classifier |> run(text = "Great package!")  # No .llm needed
 
 # Create a ReAct module with tools
+search_fn <- function(query) paste("Result for", query)
 search_tool <- ellmer::tool(
   search_fn,
   description = "Search for information",
   arguments = list(query = ellmer::type_string())
 )
 agent <- signature("question -> answer") |>
-  module(type = "react", tools = list(search_tool), chat = chat_openai())
+  module(
+    type = "react",
+    tools = list(search_tool),
+    chat = ellmer::chat_openai()
+  )
 }
 }

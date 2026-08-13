@@ -36,25 +36,55 @@ First development changelog. dsprrr is experimental; the API may change.
   invocation-owned code runner, which dsprrr closes exactly once when the
   invocation ends. A directly supplied `runner` remains caller-owned and is
   reused; whether state persists or can be reset is backend-specific. Supply
-  exactly one of `runner` and `interpreter_factory`.
+  exactly one of `runner` and `interpreter_factory`. RLM now requires the
+  selected runner to advertise `persistent = TRUE`; existing
+  `rlm_module(..., runner = r_code_runner())` calls must opt into
+  `r_code_runner(persistent = TRUE)` or use a persistent factory.
+
+* `r_code_runner(persistent = TRUE)` now keeps one callr process and execution
+  environment alive across `execute()` calls. A factory-backed RLM can stage a
+  large or rich R context once, preserve derived values between iterations, and
+  shut the process down with its invocation-owned lifecycle. The backend
+  remains trusted-input-only and retains the host user's permissions.
+
+* `rlm_module()` now exposes graph-visible `generate_action` and `extract`
+  predictors. GEPA and the agentic harnesses can tune both; nested MIPROv2 can
+  tune their instructions with `max_bootstrapped_demos = 0L`, while unsupported
+  child-demo bootstrapping and BootstrapFewShot or LabeledFewShot on programs
+  containing RLM fail explicitly. BootstrapFewShotWithRandomSearch rejects the
+  same ineligible graphs instead of returning an unchanged baseline marked as
+  compiled. `sub_lm = NULL` inherits the outer LM; recursive single and batch queries return
+  host-produced values through one nonce-bound, schema-checked ordered replay
+  ledger; incompatible typed `SUBMIT()` payloads become repairable
+  observations; and the default 10,000-character module excerpt preserves both
+  head and tail after any stricter runner limit. Structured results report
+  submission versus fallback source, bounded trajectory, requested recursive
+  calls, known provider-call attempts, complete usage when every contributing call
+  reports it, and runner policy. The one-call `rlm()` helper now creates a fresh
+  managed `mcp-repl` sandbox factory by default, while still accepting an
+  explicit runner or interpreter factory.
 
 * The code-runner protocol now has explicit `start()`/`shutdown()` lifecycle
   hooks, typed repairable execution versus terminal interpreter failures, and
   terminal-session invalidation. Code modules do not retry or reuse a runner
   after process/protocol failure and preserve the primary failure when teardown
-  also fails. RLM host tools now cross an authenticated replay bridge, so the
+  also fails. RLM host tools now cross a nonce-bound, schema-checked replay bridge, so the
   original live closure executes once on the host without being deparsed or
-  serialized into guest code. Factory-backed Program of Thought, CodeAct, and RLM modules support
-  isolated async and mirai batch workflows; caller-owned runners remain
-  sequential-only.
+  serialized into guest code. Factory-backed Program of Thought, CodeAct, and
+  RLM modules support isolated async and mirai `run_dataset()` workflows;
+  caller-owned runners remain sequential-only. Direct `run()` calls stage each
+  RLM input as one REPL variable regardless of its R length; explicit batches
+  use `run_dataset()`, with list-columns for rich per-row objects.
 
-* Program artifacts now write format version 4, persist either a runner or an
-  interpreter factory for code-executing modules, and preserve Flex source,
-  source language, predictor- and host-tool-call limits, sandbox requirement,
-  factory, and tools. Valid version 3 runner-only artifacts and the earlier
-  two- and six-field v4 Flex shapes remain readable:
-  dsprrr verifies their closed schema and integrity before upgrading them in
-  memory. Artifact construction and restoration never invoke a stored factory.
+* Program artifacts now write format version 5, including graph-visible RLM
+  action and extraction predictors with their tuned instructions, demos, and
+  optimizer state. Version 4 continues to preserve runtime factories and Flex
+  configuration; valid version 3 runner-only artifacts and earlier v4 Flex/RLM
+  shapes remain readable. dsprrr verifies their original closed schema and
+  integrity before restoration. Non-RLM manifests upgrade in memory; a legacy
+  childless RLM receives fresh default predictors and is written as a complete
+  version 5 graph the next time it is saved. Artifact construction and
+  restoration never invoke a stored factory.
 
 * DSPy 3.3 alignment adds immutable `with_instructions()` and
   `append_instructions()` transforms, plus `metric_with_trace()` for objectives
@@ -95,19 +125,19 @@ First development changelog. dsprrr is experimental; the API may change.
 * DSPy 3.3 execution contracts are enforced in the R runtime: `rlm_module()`
   accepts the `max_iters` alias, rejects duplicate, reserved, missing, and
   ellipsis-style tool names, rejects unexpected invocation inputs, and no
-  longer stringifies arbitrary sub-LM responses. RLM submit/query control frames
-  now survive text-only runners through versioned, per-invocation authenticated
-  envelopes; malformed and duplicate frames fail closed, and one-query batches
-  retain their array shape. `code_act()` now limits tool calls executed inside
-  ellmer's internal tool loop and protects its built-in runner-tool namespace.
-  Authenticated decoding ignores valid stale frames while requiring exactly one
-  frame for the current invocation, and `SUBMIT()` rejects duplicate output
-  names. The generic `module()` factory now routes RLM's `max_iters` alias
-  instead of silently using its `max_iterations` default, and rejects supplying
-  both spellings. CodeAct list aliases are validated against ellmer's
-  provider-neutral tool-name grammar before registration. The RLM alias is
-  appended after the pre-existing positional arguments so older positional
-  calls retain their meaning.
+  longer stringifies arbitrary sub-LM responses. RLM submit/query control
+  frames now survive text-only runners through versioned, per-invocation
+  nonce-bound envelopes; malformed and duplicate frames fail closed, and
+  one-query batches retain their array shape. `code_act()` now limits tool
+  calls executed inside ellmer's internal tool loop and protects its built-in
+  runner-tool namespace. Invocation-bound decoding ignores valid stale frames
+  while requiring exactly one frame for the current invocation, and `SUBMIT()`
+  rejects duplicate output names. The generic `module()` factory now routes
+  RLM's `max_iters` alias instead of silently using its `max_iterations`
+  default, and rejects supplying both spellings. CodeAct list aliases are
+  validated against ellmer's provider-neutral tool-name grammar before
+  registration. The RLM alias is appended after the pre-existing positional
+  arguments so older positional calls retain their meaning.
 
 * Code-executing modules validate runner results consistently and preserve the
   primary execution error if teardown also fails. ProgramOfThought validates
@@ -261,9 +291,11 @@ First development changelog. dsprrr is experimental; the API may change.
   for every module type, instead of triggering a spurious "unknown input"
   warning and being dropped for non-`PredictModule` modules (#dsprrr-jup).
   `PredictModule` (and the wrapper/few-shot modules that delegate to it) honor
-  it for the structured-output cache; modules that drive the LLM directly
-  (e.g. `RAGModule`, `ReActModule`, `RLMModule`) accept `.cache` but do not yet
-  route their own calls through the cache (#dsprrr-aa2).
+  it for the structured-output cache. RLM forwards it to the graph-visible
+  action and fallback predictors; recursive `llm_query()` calls and runner
+  execution remain uncached. Modules that drive the LLM directly (e.g.
+  `RAGModule` and `ReActModule`) accept `.cache` but do not yet route their own
+  calls through the cache (#dsprrr-aa2).
 
 * `BootstrapFewShot` now harvests demonstrations when the metric targets a
   specific output field (e.g. `metric_exact_match(field = "answer")`).

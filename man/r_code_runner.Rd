@@ -8,7 +8,8 @@ r_code_runner(
   timeout = 30,
   max_output_chars = 100000L,
   allowed_packages = c("base", "stats", "utils", "methods"),
-  prelude = character()
+  prelude = character(),
+  persistent = FALSE
 )
 }
 \arguments{
@@ -24,6 +25,11 @@ Default: c("base", "stats", "utils", "methods").}
 
 \item{prelude}{Character vector. R code to run before user code.
 Useful for setting options or loading common utilities.}
+
+\item{persistent}{Logical. Whether to reuse one callr session and execution
+environment across calls to \code{execute()}. This preserves variables and
+supports staging a base context with \code{prepare_context()}. Default \code{FALSE}
+preserves one fresh subprocess per execution.}
 }
 \value{
 An RCodeRunner R6 object

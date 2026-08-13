@@ -83,7 +83,7 @@ test_that("mcp_repl_runner overwrites persistent context even when empty", {
   expect_length(inputs, 2L)
   expect_match(inputs[[1L]], "sensitive", fixed = TRUE)
   expect_match(inputs[[2L]], "\\.context <-")
-  expect_match(inputs[[2L]], 'fromJSON("[]",', fixed = TRUE)
+  expect_match(inputs[[2L]], "unserializeJSON", fixed = TRUE)
   expect_false(grepl("sensitive", inputs[[2L]], fixed = TRUE))
 })
 
@@ -113,6 +113,41 @@ test_that("mcp_repl_input compresses large requests without changing them", {
   expect_false(exists(".context", envir = .GlobalEnv, inherits = FALSE))
 })
 
+test_that("mcp_repl_input preserves compact structured context", {
+  context <- list(
+    sessions = data.frame(
+      release = c("2.3.9", "2.4.0"),
+      converted = c(TRUE, FALSE),
+      stringsAsFactors = FALSE
+    ),
+    values = c(2L, 4L),
+    replay = list(list(
+      request = list(index = 1L, arguments = list(value = 20L)),
+      success = TRUE,
+      value = 21L,
+      error = NULL
+    ))
+  )
+  code <- paste(
+    "local({",
+    "  value <- .context",
+    "  base::rm(.context, envir = base::globalenv())",
+    "  value",
+    "})",
+    sep = "\n"
+  )
+
+  input <- dsprrr:::mcp_repl_input(code, context)
+  value <- eval(parse(text = input), envir = .GlobalEnv)
+
+  expect_identical(value, context)
+  expect_s3_class(value$sessions, "data.frame")
+  expect_type(value$values, "integer")
+  expect_type(value$replay, "list")
+  expect_type(value$replay[[1L]]$request, "list")
+  expect_false(exists(".context", envir = .GlobalEnv, inherits = FALSE))
+})
+
 test_that("mcp_repl_input preserves fitting high-entropy requests", {
   withr::local_seed(125L)
   alphabet <- strsplit(
@@ -125,8 +160,14 @@ test_that("mcp_repl_input preserves fitting high-entropy requests", {
   )[[1L]]
   payload <- paste(sample(alphabet, 6040L, replace = TRUE), collapse = "")
   code <- paste0("#", payload, "\n1 + 1")
+  context_literal <- encodeString(
+    as.character(jsonlite::serializeJSON(list(), digits = NA)),
+    quote = "\""
+  )
   expected <- paste0(
-    '.context <- jsonlite::fromJSON("[]", simplifyVector = FALSE)\n',
+    ".context <- jsonlite::unserializeJSON(",
+    context_literal,
+    ")\n",
     code,
     "\n"
   )
@@ -684,6 +725,53 @@ test_that("mcp_repl_runner refuses an unverifiable inherited sandbox", {
   )
 })
 
+test_that("mcp-repl predecoded RLM controls carry process-local attestation", {
+  nonce <- "mcp-predecoded-control"
+  envelope <- list(
+    version = 1L,
+    nonce = nonce,
+    kind = "final",
+    payload = list(index = 1L, output = list(answer = "ok"))
+  )
+  json <- jsonlite::toJSON(
+    envelope,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    dataframe = "rows",
+    digits = NA
+  )
+  frame <- paste0(
+    dsprrr:::rlm_control_prefix(),
+    gsub(
+      "[[:space:]]",
+      "",
+      jsonlite::base64_enc(charToRaw(as.character(json)))
+    )
+  )
+  repl <- function(input, timeout_ms) {
+    list(result = list(content = list(list(type = "text", text = frame))))
+  }
+  runner <- mcp_repl_runner(repl = repl)
+
+  result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "rlm"
+  )
+  consumed <- dsprrr:::decode_rlm_control(result$result, nonce)
+
+  expect_true(result$success)
+  expect_s3_class(result$result, "rlm_final")
+  expect_s3_class(consumed, "rlm_final")
+  expect_identical(dsprrr:::extract_rlm_final(consumed)$answer, "ok")
+  expect_null(attr(
+    consumed,
+    dsprrr:::rlm_control_attestation_attribute(),
+    exact = TRUE
+  ))
+})
+
 test_that("authenticated RLM traffic fails closed on file previews", {
   previews <- c(
     paste0(
@@ -768,7 +856,7 @@ test_that("Flex normal inline control is decoded before display truncation", {
   expect_identical(result$result$.dsprrr_flex_control, TRUE)
   expect_identical(result$result$nonce, nonce)
   expect_identical(result$result$payload$output$answer, "ok")
-  expect_match(result$stdout, "output truncated by dsprrr", fixed = TRUE)
+  expect_lte(nchar(result$stdout), 20L)
   expect_identical(
     dsprrr:::flex_code_decode_control(list(result$result), nonce),
     result$result
@@ -874,7 +962,7 @@ test_that("Flex recovers one bounded current-step frame from file previews", {
   expect_identical(result$result$.dsprrr_flex_control, TRUE)
   expect_identical(result$result$nonce, nonce)
   expect_identical(result$result$payload$output$answer, "ok")
-  expect_match(result$stdout, "output truncated by dsprrr", fixed = TRUE)
+  expect_lte(nchar(result$stdout), 20L)
 
   rlm_result <- runner$execute(
     "invisible(NULL)",

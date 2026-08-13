@@ -7,7 +7,7 @@
 #' operating-system primitives. This makes it suitable for code proposed by an
 #' optimizer or language model.
 #'
-#' For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+#' For nonce-bound RLM submit/query traffic, dsprrr caps each encoded control
 #' frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
 #' If mcp-repl nevertheless returns a file-preview or active-pager marker (for
 #' example because user code printed a large value first), the runner fails the
@@ -33,10 +33,11 @@
 #' - network access disabled by the sandbox; and
 #' - oversized output written to sandbox-visible files.
 #'
-#' The sandbox is deliberately on by default. Setting `sandbox = "off"` is
-#' rejected because this runner advertises itself as safe for untrusted code.
-#' Use [r_code_runner()] explicitly for trusted-input-only subprocess
-#' isolation.
+#' The sandbox is deliberately on by default. It disables network access but
+#' the `workspace-write` policy still permits mutation inside allowed workspace
+#' paths. Setting `sandbox = "off"` is rejected because this runner advertises
+#' an enforced sandbox. Use [r_code_runner()] explicitly for trusted-input-only
+#' subprocess isolation.
 #'
 #' Supplying `repl` is useful for an externally managed MCP connection and for
 #' deterministic tests. It must be a function with the mcp-repl tool contract:
@@ -75,6 +76,7 @@
 #' runner <- mcp_repl_runner()
 #' runner$execute("mean(1:10)")
 #' runner$reset()
+#' runner$close()
 #' }
 mcp_repl_runner <- function(
   repl = NULL,
@@ -751,7 +753,10 @@ McpReplRunner <- R6::R6Class(
       control_value <- if (identical(control_protocol, "flex")) {
         flex_control
       } else if (identical(control_protocol, "rlm")) {
-        decode_rlm_control(raw_text, .control_nonce)
+        # The module decodes this value again after the runner boundary. Mark
+        # it with a process-local identity so arbitrary classed R
+        # objects returned by generated code cannot impersonate control frames.
+        decode_rlm_control(raw_text, .control_nonce, .attest = TRUE)
       } else {
         NULL
       }
@@ -943,19 +948,16 @@ mcp_repl_timeout_ms <- function(timeout) {
 .mcp_repl_request_limit_bytes <- 7000L
 
 mcp_repl_input <- function(code, context) {
-  context_json <- jsonlite::toJSON(
-    context,
-    auto_unbox = TRUE,
-    null = "null",
-    na = "null",
-    dataframe = "rows",
-    digits = NA
-  )
+  # `serializeJSON()` preserves the distinction between data frames, atomic
+  # vectors, and nested replay records. `fromJSON(..., simplifyVector = TRUE)`
+  # cannot preserve all three at once: it repairs data frames by also
+  # simplifying bridge replay ledgers into data frames.
+  context_json <- jsonlite::serializeJSON(context, digits = NA)
   context_literal <- encodeString(as.character(context_json), quote = "\"")
   input <- paste0(
-    ".context <- jsonlite::fromJSON(",
+    ".context <- jsonlite::unserializeJSON(",
     context_literal,
-    ", simplifyVector = FALSE)\n",
+    ")\n",
     code,
     "\n"
   )
@@ -1220,12 +1222,25 @@ mcp_repl_normalize_response <- function(response) {
 
 mcp_repl_truncate <- function(text, max_chars) {
   text <- paste(text %||% "", collapse = "\n")
-  if (nchar(text, type = "chars") <= max_chars) {
+  total <- nchar(text, type = "chars")
+  if (total <= max_chars) {
     return(text)
   }
+  marker <- paste0(
+    "\n... [mcp-repl output truncated by dsprrr; ",
+    total,
+    " total characters] ...\n"
+  )
+  if (nchar(marker, type = "chars") + 2L > max_chars) {
+    return(substr(text, 1L, max_chars))
+  }
+  visible <- max_chars - nchar(marker, type = "chars")
+  head_chars <- ceiling(visible / 2)
+  tail_chars <- floor(visible / 2)
   paste0(
-    substr(text, 1L, max_chars),
-    "\n... [mcp-repl output truncated by dsprrr]"
+    substr(text, 1L, head_chars),
+    marker,
+    substr(text, total - tail_chars + 1L, total)
   )
 }
 
@@ -1237,7 +1252,7 @@ mcp_repl_rlm_transport_issue <- function(text, oversized_output) {
 
   if (
     grepl(
-      "Authenticated RLM control frame exceeds the runner transport limit",
+      "RLM control frame exceeds the runner transport limit",
       text,
       fixed = TRUE
     )
@@ -1283,26 +1298,26 @@ mcp_repl_transport_error_result <- function(
   detail <- switch(
     issue,
     files = paste(
-      "mcp-repl compacted authenticated RLM output into a file preview;",
+      "mcp-repl compacted nonce-bound RLM output into a file preview;",
       "the control frame could not be verified"
     ),
     pager = paste(
-      "mcp-repl entered its pager while returning authenticated RLM output;",
+      "mcp-repl entered its pager while returning nonce-bound RLM output;",
       "the session was reset because the control frame could not be verified"
     ),
     `pager-reset-failed` = paste(
-      "mcp-repl entered its pager while returning authenticated RLM output;",
+      "mcp-repl entered its pager while returning nonce-bound RLM output;",
       "the control frame could not be verified and the session could not be reset"
     ),
     `control-frame-limit` = paste(
-      "the authenticated RLM control frame exceeded mcp-repl's safe inline",
+      "the RLM control frame exceeded mcp-repl's safe inline",
       "transport limit"
     ),
     `flex-control` = paste(
       "mcp-repl returned executable Flex output whose control frame",
       "could not be verified"
     ),
-    "authenticated RLM output could not be verified"
+    "nonce-bound RLM output could not be verified"
   )
   result <- mcp_repl_error_result(
     detail,

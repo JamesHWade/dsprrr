@@ -551,3 +551,113 @@ test_that("GEPA restores the caller RNG state", {
 
   expect_identical(get(".Random.seed", envir = globalenv()), before)
 })
+
+test_that("GEPA tunes both graph-visible RLM predictors", {
+  skip_if_not_installed("callr")
+  local_reset_cache()
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$close())
+  expect_identical(runner$policy()$persistent, TRUE)
+  program <- make_rlm_optimizer_program(runner)
+  chat <- make_rlm_optimizer_chat()
+  original_action <- program$generate_action$signature@instructions
+  original_extract <- program$extract$signature@instructions
+
+  run <- capture_rlm_optimizer_warnings(
+    compile(
+      GEPA(
+        metric = rlm_optimizer_accuracy,
+        population_size = 2L,
+        generations = 1L,
+        mutation_rate = 1,
+        crossover_rate = 0,
+        component_selector = "all",
+        use_merge = FALSE,
+        seed = 17L,
+        verbose = FALSE
+      ),
+      program,
+      data.frame(question = "inspect", answer = "yes"),
+      .llm = chat
+    )
+  )
+  compiled <- expect_only_rlm_fallback_warnings(run)
+
+  expect_identical(
+    compiled$config$optimizer$component_ids,
+    c(
+      "instructions::$/generate_action",
+      "instructions::$/extract"
+    )
+  )
+  expect_identical(
+    compiled$generate_action$signature@instructions,
+    "ACTION-TUNED"
+  )
+  expect_identical(
+    compiled$extract$signature@instructions,
+    "EXTRACT-TUNED"
+  )
+  expect_identical(
+    program$generate_action$signature@instructions,
+    original_action
+  )
+  expect_identical(program$extract$signature@instructions, original_extract)
+  expect_equal(compiled$config$optimizer$best_scores[["quality"]], 1)
+  expect_length(chat$optimizer_state$reflection_prompts, 2L)
+})
+
+test_that("GEPA reflection receives feedback from bounded RLM trajectories", {
+  skip_if_not_installed("callr")
+  local_reset_cache()
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$close())
+  expect_identical(runner$policy()$persistent, TRUE)
+  program <- make_rlm_optimizer_program(runner, max_output_chars = 96L)
+  chat <- make_rlm_optimizer_chat()
+  observed_outputs <- character()
+  trace_metric <- metric_with_trace(
+    function(prediction, expected, program_trace) {
+      event <- program_trace$events[[length(program_trace$events)]]
+      output <- event$history[[1L]]$output
+      observed_outputs <<- c(observed_outputs, output)
+      list(
+        score = 0,
+        feedback = paste0("BOUNDED-RLM-TRACE: ", output)
+      )
+    },
+    field = "answer"
+  )
+
+  run <- capture_rlm_optimizer_warnings(
+    compile(
+      GEPA(
+        metric = trace_metric,
+        population_size = 2L,
+        generations = 2L,
+        mutation_rate = 1,
+        crossover_rate = 0,
+        component_selector = "round_robin",
+        use_merge = FALSE,
+        seed = 23L,
+        verbose = FALSE
+      ),
+      program,
+      data.frame(question = "inspect", answer = "yes"),
+      .llm = chat
+    )
+  )
+  expect_only_rlm_fallback_warnings(run)
+
+  expect_gt(length(observed_outputs), 0L)
+  expect_true(all(nchar(observed_outputs) <= program$max_output_chars))
+  expect_true(all(grepl("TRACE_HEAD", observed_outputs, fixed = TRUE)))
+  expect_true(all(grepl("TRACE_TAIL", observed_outputs, fixed = TRUE)))
+  expect_true(any(grepl(
+    "BOUNDED-RLM-TRACE:",
+    chat$optimizer_state$reflection_prompts,
+    fixed = TRUE
+  )))
+})

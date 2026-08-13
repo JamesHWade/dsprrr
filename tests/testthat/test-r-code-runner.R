@@ -8,6 +8,7 @@ test_that("r_code_runner creates RCodeRunner object", {
   expect_s3_class(runner, "RCodeRunner")
   expect_equal(runner$timeout, 5)
   expect_equal(runner$max_output_chars, 100000L)
+  expect_false(runner$persistent)
 })
 
 test_that("RCodeRunner exposes its trust boundary", {
@@ -22,6 +23,7 @@ test_that("RCodeRunner exposes its trust boundary", {
   expect_identical(policy$filesystem_access, "host-user")
   expect_identical(policy$network_access, "host-user")
   expect_identical(policy$pattern_scan, "defense-in-depth")
+  expect_false(policy$persistent)
 })
 
 test_that("code runner protocol supports external sandbox backends", {
@@ -559,4 +561,209 @@ test_that("RCodeRunner isolation - variables don't persist", {
   result2 <- runner$execute("exists('test_var')")
   expect_true(result2$success)
   expect_false(result2$result)
+})
+
+test_that("persistent RCodeRunner preserves execution state", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$close())
+
+  expect_true(runner$policy()$persistent)
+  first_pid <- runner$execute("Sys.getpid()")$result
+  first <- runner$execute("counter <- 41L; counter")
+  second <- runner$execute("counter <- counter + 1L; counter")
+  second_pid <- runner$execute("Sys.getpid()")$result
+
+  expect_identical(second_pid, first_pid)
+  expect_true(first$success)
+  expect_identical(first$result, 41L)
+  expect_true(second$success)
+  expect_identical(second$result, 42L)
+
+  guest_error <- runner$execute("counter <- counter + 1L; stop('repair me')")
+  recovered <- runner$execute("counter")
+  expect_false(guest_error$success)
+  expect_identical(guest_error$error_type, "execution")
+  expect_true(guest_error$retryable)
+  expect_true(recovered$success)
+  expect_identical(recovered$result, 43L)
+})
+
+test_that("persistent RCodeRunner preserves structured output capture", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$close())
+  result <- runner$execute(
+    "cat('out'); cat('err', file = stderr()); message('note'); warning('careful'); 42L"
+  )
+
+  expect_true(result$success)
+  expect_identical(result$result, 42L)
+  expect_identical(result$stdout, "out")
+  expect_identical(result$stderr, "err")
+  expect_match(result$messages, "note")
+  expect_match(result$warnings, "careful")
+})
+
+test_that("persistent RCodeRunner stages base context and overlays dynamic fields", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$close())
+  marker <- new.env(parent = emptyenv())
+  marker$count <- 0L
+  large_data <- data.frame(
+    id = seq_len(25000L),
+    group = factor(rep(c("a", "b"), length.out = 25000L))
+  )
+
+  prepared <- withVisible(runner$prepare_context(list(
+    data = large_data,
+    label = "base",
+    marker = marker
+  )))
+  expect_true(prepared$value)
+  expect_false(prepared$visible)
+  first <- runner$execute(
+    paste(
+      ".context$marker$count <- .context$marker$count + 1L",
+      "list(",
+      "  is_data_frame = is.data.frame(.context$data),",
+      "  rows = nrow(.context$data),",
+      "  groups = levels(.context$data$group),",
+      "  label = .context$label,",
+      "  step = .context$step,",
+      "  marker_count = .context$marker$count",
+      ")",
+      sep = "\n"
+    ),
+    context = list(label = "dynamic", step = 7L)
+  )
+  second <- runner$execute(
+    "list(label = .context$label, has_step = 'step' %in% names(.context), marker_count = .context$marker$count)"
+  )
+
+  expect_true(first$success)
+  expect_true(first$result$is_data_frame)
+  expect_identical(first$result$rows, 25000L)
+  expect_identical(first$result$groups, c("a", "b"))
+  expect_identical(first$result$label, "dynamic")
+  expect_identical(first$result$step, 7L)
+  expect_identical(first$result$marker_count, 1L)
+  expect_true(second$success)
+  expect_identical(second$result$label, "base")
+  expect_false(second$result$has_step)
+  expect_identical(second$result$marker_count, 1L)
+  expect_identical(marker$count, 0L)
+})
+
+test_that("persistent RCodeRunner reset clears state and staged context", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(
+    timeout = 10,
+    prelude = "from_prelude <- 11L",
+    persistent = TRUE
+  )
+  withr::defer(runner$close())
+  runner$prepare_context(list(base_value = 7L))
+  before <- runner$execute(
+    "transient <- 9L; c(from_prelude, .context$base_value, transient)"
+  )
+
+  expect_true(before$success)
+  expect_identical(before$result, c(11L, 7L, 9L))
+  expect_invisible(runner$reset())
+
+  after <- runner$execute(
+    "list(has_transient = exists('transient', inherits = FALSE), from_prelude = from_prelude, context_length = length(.context))"
+  )
+  expect_true(after$success)
+  expect_false(after$result$has_transient)
+  expect_identical(after$result$from_prelude, 11L)
+  expect_identical(after$result$context_length, 0L)
+})
+
+test_that("persistent RCodeRunner timeout terminalizes and stops its session", {
+  skip_if_not_installed("callr")
+  skip_on_cran()
+
+  runner <- r_code_runner(timeout = 1, persistent = TRUE)
+  withr::defer(runner$close())
+  runner$start()
+  session <- runner$.__enclos_env__$private$session
+  expect_true(session$is_alive())
+
+  result <- runner$execute("Sys.sleep(10); 'done'")
+
+  expect_false(result$success)
+  expect_identical(result$error_type, "interpreter")
+  expect_false(result$retryable)
+  expect_match(result$error, "timed out", ignore.case = TRUE)
+  expect_true(runner$terminal)
+  expect_false(session$is_alive())
+  expect_error(
+    runner$execute("1 + 1"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+  expect_invisible(runner$close())
+  expect_invisible(runner$close())
+})
+
+test_that("persistent RCodeRunner terminalizes when its subprocess crashes", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$close())
+  runner$start()
+  session <- runner$.__enclos_env__$private$session
+  crash_code <- paste0(
+    "base::get(\"q\", baseenv())(",
+    "save = \"no\", status = 1, runLast = FALSE)"
+  )
+
+  result <- runner$execute(crash_code)
+
+  expect_false(result$success)
+  expect_identical(result$error_type, "interpreter")
+  expect_false(result$retryable)
+  expect_true(runner$terminal)
+  expect_false(session$is_alive())
+})
+
+test_that("persistent RCodeRunner close tears down its session", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  runner$start()
+  session <- runner$.__enclos_env__$private$session
+  expect_true(session$is_alive())
+
+  expect_invisible(runner$close())
+  expect_true(runner$closed)
+  expect_false(session$is_alive())
+  expect_invisible(runner$close())
+  expect_error(
+    runner$execute("1 + 1"),
+    class = "dsprrr_interpreter_closed_error"
+  )
+})
+
+test_that("prepare_context requires persistent mode and named fields", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10)
+  expect_error(
+    runner$prepare_context(list(value = 1)),
+    class = "dsprrr_r_code_runner_context_error"
+  )
+
+  persistent_runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(persistent_runner$close())
+  expect_error(
+    persistent_runner$prepare_context(list(1)),
+    class = "dsprrr_r_code_runner_context_error"
+  )
 })

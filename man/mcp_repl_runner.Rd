@@ -50,7 +50,7 @@ Creates a dsprrr code runner backed by Posit's
 operating-system primitives. This makes it suitable for code proposed by an
 optimizer or language model.
 
-For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+For nonce-bound RLM submit/query traffic, dsprrr caps each encoded control
 frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
 If mcp-repl nevertheless returns a file-preview or active-pager marker (for
 example because user code printed a large value first), the runner fails the
@@ -77,10 +77,11 @@ By default, \code{mcp_repl_runner()} starts \code{mcp-repl} through
 \item oversized output written to sandbox-visible files.
 }
 
-The sandbox is deliberately on by default. Setting \code{sandbox = "off"} is
-rejected because this runner advertises itself as safe for untrusted code.
-Use \code{\link[=r_code_runner]{r_code_runner()}} explicitly for trusted-input-only subprocess
-isolation.
+The sandbox is deliberately on by default. It disables network access but
+the \code{workspace-write} policy still permits mutation inside allowed workspace
+paths. Setting \code{sandbox = "off"} is rejected because this runner advertises
+an enforced sandbox. Use \code{\link[=r_code_runner]{r_code_runner()}} explicitly for trusted-input-only
+subprocess isolation.
 
 Supplying \code{repl} is useful for an externally managed MCP connection and for
 deterministic tests. It must be a function with the mcp-repl tool contract:
@@ -99,5 +100,6 @@ ownership cannot be captured. This path is tested against mcptools 1.0.1.
 runner <- mcp_repl_runner()
 runner$execute("mean(1:10)")
 runner$reset()
+runner$close()
 }
 }

@@ -32,7 +32,9 @@ Default is 5.}
 \description{
 A simple teleprompter that adds labeled examples from the training set
 as demonstrations to the module. This is the simplest form of few-shot
-learning.
+learning. The target must be a root Predict module; programs with nested
+predictors (including RLM) are rejected because root examples do not define
+predictor-local demonstrations.
 }
 \examples{
 # A teleprompter that adds 2 labeled training examples as demonstrations

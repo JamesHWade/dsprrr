@@ -109,6 +109,76 @@ test_that("BootstrapFewShotWithRandomSearch requires metric", {
   )
 })
 
+test_that("BootstrapFewShotWithRandomSearch rejects RLM before candidates", {
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      list(success = TRUE, result = NULL)
+    },
+    policy = function() {
+      list(
+        backend = "test",
+        trust = "test-only",
+        sandboxed = TRUE,
+        persistent = TRUE
+      )
+    }
+  )
+  program <- rlm_module("question -> answer", runner = runner)
+  optimizer <- BootstrapFewShotWithRandomSearch(
+    metric = function(prediction, expected) 1,
+    num_candidate_programs = 3L
+  )
+
+  error <- tryCatch(
+    compile(
+      optimizer,
+      program,
+      data.frame(question = "train", answer = "train"),
+      valset = data.frame(question = "val", answer = "val")
+    ),
+    error = identity
+  )
+
+  expect_s3_class(error, "dsprrr_bootstrap_graph_unsupported")
+  expect_match(
+    conditionMessage(error),
+    "BootstrapFewShotWithRandomSearch",
+    fixed = TRUE
+  )
+  expect_identical(error$paths, "$")
+})
+
+test_that("BootstrapFewShotWithRandomSearch rejects wrapped Flex", {
+  flex_program <- suppressWarnings(flex("question -> answer"))
+  program <- best_of_n(
+    flex_program,
+    N = 2L,
+    reward_fn = function(...) 1
+  )
+  optimizer <- BootstrapFewShotWithRandomSearch(
+    metric = function(prediction, expected) 1,
+    num_candidate_programs = 3L
+  )
+
+  error <- tryCatch(
+    compile(
+      optimizer,
+      program,
+      data.frame(question = "train", answer = "train"),
+      valset = data.frame(question = "val", answer = "val")
+    ),
+    error = identity
+  )
+
+  expect_s3_class(error, "dsprrr_flex_demo_unsupported_error")
+  expect_match(
+    conditionMessage(error),
+    "BootstrapFewShotWithRandomSearch",
+    fixed = TRUE
+  )
+  expect_identical(error$paths, "$/module")
+})
+
 test_that("BootstrapFewShotWithRandomSearch requires valset", {
   sig <- Signature(
     inputs = list(input(name = "question", class = S7::class_character)),

@@ -105,6 +105,160 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
   expect_true(file.exists(file.path(log_dir, "trials.jsonl")))
 })
 
+test_that("MIPROv2 tunes nested predictor instructions as graph components", {
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      list(success = TRUE, result = NULL)
+    },
+    policy = function() {
+      list(
+        backend = "test",
+        trust = "test-only",
+        sandboxed = TRUE,
+        persistent = TRUE
+      )
+    }
+  )
+  program <- rlm_module("question -> answer", runner = runner)
+  action_demos <- list(list(
+    inputs = list(state = "prior action state"),
+    output = list(reasoning = "inspect", code = "1 + 1")
+  ))
+  extract_demos <- list(list(
+    inputs = list(state = "prior extract state"),
+    output = "prior answer"
+  ))
+  program$generate_action$demos <- action_demos
+  program$extract$demos <- extract_demos
+  original_action <- program$generate_action$signature@instructions
+  original_extract <- program$extract$signature@instructions
+  trainset <- data.frame(question = "What is 2 + 2?", answer = "4")
+  evaluated <- list()
+
+  testthat::local_mocked_bindings(
+    resolve_mipro_settings = function(...) {
+      list(
+        trials = 4L,
+        minibatch_size = 1L,
+        full_eval_every = 1L,
+        demo_candidates = 1L,
+        instruction_candidates = 2L
+      )
+    },
+    optimizer_eval_program = function(
+      compiled,
+      budget,
+      stage,
+      unit_id,
+      ...
+    ) {
+      predictors <- dsprrr:::mipro_named_predictors(
+        compiled,
+        boundaries = "cross"
+      )
+      tuned <- vapply(
+        predictors,
+        function(predictor) {
+          grepl(
+            "Dataset summary:",
+            predictor$signature@instructions,
+            fixed = TRUE
+          )
+        },
+        logical(1)
+      )
+      evaluated[[length(evaluated) + 1L]] <<- tuned
+      dsprrr:::record_optimizer_outcome(budget, TRUE, stage)
+      dsprrr:::optimizer_budget_count_trial(budget, stage, unit_id)
+      dsprrr:::optimizer_budget_complete_unit(budget, unit_id)
+      dsprrr:::EvalResult(
+        mean_score = mean(tuned),
+        std_error = 0,
+        n_evaluated = 1L,
+        n_errors = 0L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  compiled <- compile(
+    MIPROv2(
+      metric = function(...) 1,
+      auto = NULL,
+      num_candidates = 2L,
+      max_bootstrapped_demos = 0L,
+      seed = 41L
+    ),
+    program,
+    trainset
+  )
+
+  expect_length(evaluated, 4L)
+  expect_setequal(
+    vapply(evaluated, paste, character(1), collapse = "/"),
+    c("FALSE/FALSE", "TRUE/FALSE", "FALSE/TRUE", "TRUE/TRUE")
+  )
+  expect_true(any(vapply(evaluated, all, logical(1))))
+  expect_match(
+    compiled$generate_action$signature@instructions,
+    "Dataset summary:",
+    fixed = TRUE
+  )
+  expect_match(
+    compiled$extract$signature@instructions,
+    "Dataset summary:",
+    fixed = TRUE
+  )
+  expect_identical(
+    program$generate_action$signature@instructions,
+    original_action
+  )
+  expect_identical(program$extract$signature@instructions, original_extract)
+  expect_identical(
+    compiled$signature@instructions,
+    program$signature@instructions
+  )
+  expect_identical(compiled$generate_action$demos, action_demos)
+  expect_identical(compiled$extract$demos, extract_demos)
+  expect_identical(
+    compiled$config$optimizer$candidate_scope,
+    "predictor_components"
+  )
+  expect_identical(compiled$config$optimizer$demo_mode, "preserved")
+  expect_identical(compiled$config$optimizer$effective_labeled_demos, 0L)
+  expect_identical(compiled$config$optimizer$effective_bootstrapped_demos, 0L)
+})
+
+test_that("MIPROv2 fails explicitly without nested predictor evidence", {
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      list(success = TRUE, result = NULL)
+    },
+    policy = function() {
+      list(
+        backend = "test",
+        trust = "test-only",
+        sandboxed = TRUE,
+        persistent = TRUE
+      )
+    }
+  )
+  program <- rlm_module("question -> answer", runner = runner)
+  trainset <- data.frame(question = "What is 2 + 2?", answer = "4")
+
+  expect_error(
+    compile(
+      MIPROv2(
+        metric = function(...) 1,
+        max_bootstrapped_demos = 1L
+      ),
+      program,
+      trainset
+    ),
+    class = "dsprrr_mipro_graph_bootstrap_unsupported"
+  )
+})
+
 test_that("MIPROv2 requires metric for compilation", {
   sig <- Signature(
     inputs = list(input(name = "question", class = S7::class_character)),

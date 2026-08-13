@@ -93,6 +93,11 @@ test_that("BootstrapFewShot rejects Flex instead of assigning unused demos", {
   flex_program <- suppressWarnings(flex("question -> draft"))
   pipeline_program <- flex_program %>>%
     module(signature("draft -> answer"), type = "predict")
+  wrapped_program <- best_of_n(
+    flex_program,
+    N = 2L,
+    reward_fn = function(...) 1
+  )
   trainset <- data.frame(question = "q", answer = "a")
   optimizer <- BootstrapFewShot(
     metric = function(prediction, expected) 1,
@@ -108,11 +113,51 @@ test_that("BootstrapFewShot rejects Flex instead of assigning unused demos", {
     compile(optimizer, pipeline_program, trainset),
     error = identity
   )
+  wrapped_error <- tryCatch(
+    compile(optimizer, wrapped_program, trainset),
+    error = identity
+  )
 
   expect_s3_class(direct_error, "dsprrr_flex_demo_unsupported_error")
   expect_identical(direct_error$paths, "$")
   expect_s3_class(nested_error, "dsprrr_flex_demo_unsupported_error")
   expect_identical(nested_error$paths, "$/steps/1")
+  expect_s3_class(wrapped_error, "dsprrr_flex_demo_unsupported_error")
+  expect_identical(wrapped_error$paths, "$/module")
+})
+
+test_that("BootstrapFewShot rejects RLM without predictor-local evidence", {
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      list(success = TRUE, result = NULL)
+    },
+    policy = function() {
+      list(
+        backend = "test",
+        trust = "test-only",
+        sandboxed = TRUE,
+        persistent = TRUE
+      )
+    }
+  )
+  program <- rlm_module("question -> answer", runner = runner)
+  trainset <- data.frame(question = "q", answer = "a")
+  optimizer <- BootstrapFewShot(
+    metric = function(prediction, expected) 1,
+    max_labeled_demos = 1L,
+    max_bootstrapped_demos = 0L
+  )
+
+  error <- tryCatch(
+    compile(optimizer, program, trainset),
+    error = identity
+  )
+
+  expect_s3_class(error, "dsprrr_bootstrap_graph_unsupported")
+  expect_s3_class(error, "dsprrr_optimizer_ineligible_error")
+  expect_identical(error$paths, "$")
+  expect_length(program$generate_action$demos, 0L)
+  expect_length(program$extract$demos, 0L)
 })
 
 test_that("BootstrapFewShot compile returns unmodified program for empty trainset", {

@@ -10,7 +10,11 @@
 #'
 #' @description
 #' MIPROv2 jointly optimizes instructions and few-shot demonstrations using
-#' a discrete Bayesian optimization loop with minibatch evaluation.
+#' a discrete Bayesian optimization loop with minibatch evaluation for a root
+#' Predict module. For graphs with nested predictors such as RLM, it optimizes
+#' child instructions only and requires `max_bootstrapped_demos = 0L`; nested
+#' demo bootstrapping fails explicitly until predictor-local evidence is
+#' available.
 #'
 #' @param metric A metric function for evaluating predictions (required).
 #' @param prompt_model Optional model to propose instructions.
@@ -39,6 +43,10 @@
 #'   max_bootstrapped_demos = 4L
 #' )
 #'
+#' qa_module <- module(signature("question -> answer"))
+#' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
+#' valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
+#' llm <- ellmer::chat_openai()
 #' compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
 #' }
 MIPROv2 <- S7::new_class(
@@ -155,8 +163,64 @@ MIPROv2 <- S7::new_class(
 
 #' Compile method for MIPROv2
 #' @noRd
+mipro_named_predictors <- function(program, boundaries = "respect") {
+  parameters <- named_parameters(
+    program,
+    include_root = TRUE,
+    boundaries = boundaries
+  )
+  parameters[vapply(
+    parameters,
+    inherits,
+    logical(1),
+    what = "PredictModule"
+  )]
+}
+
+mipro_uses_component_candidates <- function(program) {
+  predictors <- mipro_named_predictors(program, boundaries = "cross")
+  length(predictors) > 0L &&
+    !(length(predictors) == 1L &&
+      identical(names(predictors), "$") &&
+      identical(predictors[[1L]], program))
+}
+
 mipro_apply_candidate <- function(program, candidate) {
   compiled <- copy_module(program)
+
+  if (!is.null(candidate$components)) {
+    predictors <- mipro_named_predictors(compiled, boundaries = "respect")
+    component_paths <- names(candidate$components)
+    predictor_paths <- names(predictors)
+    if (
+      is.null(component_paths) ||
+        !setequal(component_paths, predictor_paths)
+    ) {
+      cli::cli_abort(
+        c(
+          "MIPROv2 component candidate does not match the program graph",
+          "x" = "Candidate paths: {toString(component_paths)}",
+          "x" = "Predictor paths: {toString(predictor_paths)}"
+        ),
+        class = "dsprrr_mipro_component_mismatch"
+      )
+    }
+
+    for (path in predictor_paths) {
+      component <- candidate$components[[path]]
+      predictor <- predictors[[path]]
+      if (!is.null(component$demos)) {
+        predictor$demos <- lapply(component$demos, identity)
+      }
+      if (!is.null(component$instructions)) {
+        predictor$apply_optimization_params(list(
+          instructions = component$instructions
+        ))
+      }
+    }
+    return(compiled)
+  }
+
   compiled$demos <- candidate$demos %||% list()
   compiled$signature <- Signature(
     inputs = compiled$signature@inputs,
@@ -225,6 +289,24 @@ compile_mipro <- function(
     cli::cli_abort("MIPROv2 requires a metric function")
   }
 
+  component_mode <- mipro_uses_component_candidates(program)
+  if (component_mode && teleprompter@max_bootstrapped_demos > 0L) {
+    cli::cli_abort(
+      c(
+        "MIPROv2 cannot bootstrap demonstrations for nested predictors yet",
+        "x" = paste(
+          "The root trace does not provide bounded predictor-local inputs and",
+          "outputs for each child."
+        ),
+        "i" = paste(
+          "Set {.arg max_bootstrapped_demos = 0} to optimize child",
+          "instructions without changing their demonstrations."
+        )
+      ),
+      class = "dsprrr_mipro_graph_bootstrap_unsupported"
+    )
+  }
+
   evalset <- valset %||% trainset
   control <- optimizer_control_for_teleprompter(
     teleprompter,
@@ -257,6 +339,11 @@ compile_mipro <- function(
         metric_threshold = teleprompter@metric_threshold,
         seed = teleprompter@seed,
         init_temperature = teleprompter@init_temperature,
+        candidate_scope = if (component_mode) {
+          "predictor_components"
+        } else {
+          "root"
+        },
         settings = settings,
         demo_runtime = optimizer_checkpoint_effective_runtime_identity(
           program,
@@ -328,22 +415,31 @@ compile_mipro <- function(
     invisible(NULL)
   }
 
-  demo_result <- generate_mipro_demo_candidates(
-    program = program,
-    trainset = trainset,
-    teleprompter = teleprompter,
-    .llm = .llm,
-    max_candidates = settings$demo_candidates,
-    control = control,
-    budget = budget,
-    resume_state = state$demo_generation,
-    on_progress = function(...) {
-      update <- list(...)
-      state$demo_generation <<- update$state
-      write_checkpoint("demo_candidates", update$best_program)
-    },
-    return_state = TRUE
-  )
+  demo_result <- if (component_mode) {
+    generate_mipro_component_demo_candidates(
+      program = program,
+      teleprompter = teleprompter,
+      budget = budget,
+      resume_state = state$demo_generation
+    )
+  } else {
+    generate_mipro_demo_candidates(
+      program = program,
+      trainset = trainset,
+      teleprompter = teleprompter,
+      .llm = .llm,
+      max_candidates = settings$demo_candidates,
+      control = control,
+      budget = budget,
+      resume_state = state$demo_generation,
+      on_progress = function(...) {
+        update <- list(...)
+        state$demo_generation <<- update$state
+        write_checkpoint("demo_candidates", update$best_program)
+      },
+      return_state = TRUE
+    )
+  }
   if (is.null(demo_result$candidates)) {
     # Compatibility for test doubles and third-party overrides of the private
     # helper that return the historical candidate-list shape.
@@ -373,27 +469,49 @@ compile_mipro <- function(
       partial_result,
       partial = TRUE
     )
+    if (component_mode) {
+      partial$config$optimizer$candidate_scope <- "predictor_components"
+      partial$config$optimizer$demo_mode <- "preserved"
+      partial$config$optimizer$effective_labeled_demos <- 0L
+      partial$config$optimizer$effective_bootstrapped_demos <- 0L
+    }
     write_checkpoint("demo_candidates", partial)
     return(partial)
   }
 
   instruction_candidates <- state$instruction_candidates
   if (length(instruction_candidates) == 0L) {
-    instruction_candidates <- generate_mipro_instruction_candidates(
-      program = program,
-      trainset = trainset,
-      demo_candidates = demo_candidates,
-      teleprompter = teleprompter,
-      max_candidates = settings$instruction_candidates
-    )
+    instruction_candidates <- if (component_mode) {
+      generate_mipro_component_instruction_candidates(
+        program = program,
+        trainset = trainset,
+        teleprompter = teleprompter,
+        max_candidates = settings$instruction_candidates
+      )
+    } else {
+      generate_mipro_instruction_candidates(
+        program = program,
+        trainset = trainset,
+        demo_candidates = demo_candidates,
+        teleprompter = teleprompter,
+        max_candidates = settings$instruction_candidates
+      )
+    }
     state$instruction_candidates <- instruction_candidates
     write_checkpoint("discrete_bo", best_partial)
   }
 
-  candidate_grid <- expand_mipro_candidates(
-    demo_candidates = demo_candidates,
-    instruction_candidates = instruction_candidates
-  )
+  candidate_grid <- if (component_mode) {
+    expand_mipro_component_candidates(
+      demo_candidates = demo_candidates,
+      instruction_candidates = instruction_candidates
+    )
+  } else {
+    expand_mipro_candidates(
+      demo_candidates = demo_candidates,
+      instruction_candidates = instruction_candidates
+    )
+  }
   if (length(candidate_grid) == 0L) {
     cli::cli_abort(
       c(
@@ -490,6 +608,12 @@ compile_mipro <- function(
     bo_result,
     partial = !isTRUE(bo_result$complete)
   )
+  if (component_mode) {
+    compiled$config$optimizer$candidate_scope <- "predictor_components"
+    compiled$config$optimizer$demo_mode <- "preserved"
+    compiled$config$optimizer$effective_labeled_demos <- 0L
+    compiled$config$optimizer$effective_bootstrapped_demos <- 0L
+  }
   write_checkpoint(
     if (isTRUE(bo_result$complete)) "complete" else "discrete_bo",
     compiled
@@ -531,6 +655,59 @@ resolve_mipro_settings <- function(auto, num_candidates, n_train) {
       instruction_candidates = 12L
     )
   }
+}
+
+generate_mipro_component_demo_candidates <- function(
+  program,
+  teleprompter,
+  budget,
+  resume_state = NULL
+) {
+  predictors <- mipro_named_predictors(program)
+  if (length(predictors) == 0L) {
+    cli::cli_abort(
+      "MIPROv2 found no mutable Predict children in the program graph",
+      class = "dsprrr_mipro_no_component_predictors"
+    )
+  }
+
+  state <- resume_state %||%
+    list(
+      kind = "mipro_component_demos_v1",
+      candidates = NULL
+    )
+  if (
+    !is.list(state) ||
+      !setequal(names(state), c("kind", "candidates")) ||
+      !identical(state$kind, "mipro_component_demos_v1")
+  ) {
+    cli::cli_abort(
+      "MIPRO component demo-candidate state is malformed",
+      class = "dsprrr_optimizer_checkpoint_malformed"
+    )
+  }
+
+  if (is.null(state$candidates)) {
+    demo_counts <- vapply(predictors, function(x) length(x$demos), integer(1))
+    state$candidates <- list(list(
+      id = "preserved_component_demos",
+      params = list(
+        id = "preserved_component_demos",
+        type = "component_instruction_only",
+        demo_counts = as.list(demo_counts),
+        requested_labeled_demos = teleprompter@max_labeled_demos,
+        effective_labeled_demos = 0L,
+        effective_bootstrapped_demos = 0L
+      )
+    ))
+  }
+
+  list(
+    candidates = state$candidates,
+    state = state,
+    complete = TRUE,
+    budget = budget
+  )
 }
 
 generate_mipro_demo_candidates <- function(
@@ -735,12 +912,28 @@ generate_mipro_instruction_candidates <- function(
   teleprompter,
   max_candidates
 ) {
-  base <- program$signature@instructions
+  generate_mipro_instruction_candidates_for_signature(
+    signature = program$signature,
+    summary_signature = program$signature,
+    trainset = trainset,
+    max_candidates = max_candidates,
+    seed = teleprompter@seed
+  )
+}
+
+generate_mipro_instruction_candidates_for_signature <- function(
+  signature,
+  summary_signature,
+  trainset,
+  max_candidates,
+  seed
+) {
+  base <- signature@instructions
   if (!nzchar(base)) {
     base <- "Use the inputs to produce the requested output."
   }
 
-  dataset_summary <- summarize_mipro_dataset(trainset, program$signature)
+  dataset_summary <- summarize_mipro_dataset(trainset, summary_signature)
 
   tips <- c(
     "Be concise and accurate.",
@@ -753,13 +946,13 @@ generate_mipro_instruction_candidates <- function(
   tip_count <- max(0L, max_candidates - 1L)
   sampled_tips <- if (tip_count == 0L) {
     character(0)
-  } else if (!is.null(teleprompter@seed)) {
+  } else if (!is.null(seed)) {
     old_seed <- if (exists(".Random.seed", envir = globalenv())) {
       get(".Random.seed", envir = globalenv())
     } else {
       NULL
     }
-    set.seed(teleprompter@seed)
+    set.seed(seed)
     on.exit(
       {
         if (is.null(old_seed)) {
@@ -792,6 +985,53 @@ generate_mipro_instruction_candidates <- function(
   }
 
   candidates
+}
+
+generate_mipro_component_instruction_candidates <- function(
+  program,
+  trainset,
+  teleprompter,
+  max_candidates
+) {
+  predictors <- mipro_named_predictors(program)
+  if (length(predictors) == 0L) {
+    cli::cli_abort(
+      "MIPROv2 found no mutable Predict children in the program graph",
+      class = "dsprrr_mipro_no_component_predictors"
+    )
+  }
+
+  by_path <- Map(
+    function(predictor, index) {
+      seed <- if (is.null(teleprompter@seed)) {
+        NULL
+      } else {
+        as.integer(teleprompter@seed + index - 1L)
+      }
+      generate_mipro_instruction_candidates_for_signature(
+        signature = predictor$signature,
+        summary_signature = program$signature,
+        trainset = trainset,
+        max_candidates = max_candidates,
+        seed = seed
+      )
+    },
+    predictor = unname(predictors),
+    index = seq_along(predictors)
+  )
+  names(by_path) <- names(predictors)
+
+  list(list(
+    id = "component_instruction_candidates",
+    by_path = by_path,
+    params = list(
+      id = "component_instruction_candidates",
+      type = "predictor_components",
+      paths = lapply(by_path, function(candidates) {
+        lapply(candidates, function(candidate) candidate$params)
+      })
+    )
+  ))
 }
 
 summarize_mipro_dataset <- function(trainset, signature) {
@@ -836,6 +1076,117 @@ expand_mipro_candidates <- function(demo_candidates, instruction_candidates) {
         )
       )
       idx <- idx + 1L
+    }
+  }
+
+  candidates
+}
+
+mipro_component_instruction_index_sets <- function(by_path) {
+  candidate_counts <- lengths(by_path)
+  if (length(candidate_counts) == 0L || any(candidate_counts == 0L)) {
+    return(list())
+  }
+
+  # RLM has two predictors, so its complete component product remains small.
+  # Bound generic graphs before materializing their Cartesian product.
+  if (prod(as.double(candidate_counts)) <= 512) {
+    grid <- do.call(
+      expand.grid,
+      c(
+        unname(lapply(candidate_counts, seq_len)),
+        list(KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+      )
+    )
+    names(grid) <- names(by_path)
+    return(lapply(seq_len(nrow(grid)), function(index) {
+      values <- as.integer(grid[index, , drop = TRUE])
+      stats::setNames(values, names(by_path))
+    }))
+  }
+
+  index_sets <- list(stats::setNames(
+    rep.int(1L, length(by_path)),
+    names(by_path)
+  ))
+
+  for (path in names(by_path)) {
+    if (candidate_counts[[path]] < 2L) {
+      next
+    }
+    for (index in seq.int(2L, candidate_counts[[path]])) {
+      coordinate <- index_sets[[1L]]
+      coordinate[[path]] <- index
+      index_sets[[length(index_sets) + 1L]] <- coordinate
+    }
+  }
+
+  max_count <- max(candidate_counts)
+  if (max_count >= 2L) {
+    for (index in seq.int(2L, max_count)) {
+      aligned <- vapply(
+        candidate_counts,
+        function(count) min(index, count),
+        integer(1)
+      )
+      index_sets[[length(index_sets) + 1L]] <- aligned
+    }
+  }
+
+  keys <- vapply(index_sets, paste, character(1), collapse = ",")
+  index_sets[!duplicated(keys)]
+}
+
+expand_mipro_component_candidates <- function(
+  demo_candidates,
+  instruction_candidates
+) {
+  if (
+    length(instruction_candidates) != 1L ||
+      is.null(instruction_candidates[[1L]]$by_path)
+  ) {
+    cli::cli_abort(
+      "MIPRO component instruction candidates are malformed",
+      class = "dsprrr_mipro_component_mismatch"
+    )
+  }
+
+  by_path <- instruction_candidates[[1L]]$by_path
+  index_sets <- mipro_component_instruction_index_sets(by_path)
+  candidates <- list()
+  candidate_index <- 1L
+
+  for (demo in demo_candidates) {
+    for (indices in index_sets) {
+      selected <- Map(
+        function(path, index) by_path[[path]][[index]],
+        path = names(by_path),
+        index = unname(indices)
+      )
+      names(selected) <- names(by_path)
+      components <- lapply(selected, function(candidate) {
+        list(instructions = candidate$instructions)
+      })
+      instruction_ids <- vapply(selected, `[[`, character(1), "id")
+      aggregate_instruction_id <- paste(
+        paste(names(instruction_ids), instruction_ids, sep = "="),
+        collapse = "|"
+      )
+      demo_counts <- demo$params$demo_counts %||% list()
+
+      candidates[[candidate_index]] <- list(
+        id = sprintf("components_%03d", candidate_index),
+        demo_id = demo$id,
+        instruction_id = aggregate_instruction_id,
+        components = components,
+        params = list(
+          demo_id = demo$id,
+          instruction_ids = as.list(instruction_ids),
+          instructions = lapply(selected, `[[`, "instructions"),
+          n_demos = sum(unlist(demo_counts), na.rm = TRUE)
+        )
+      )
+      candidate_index <- candidate_index + 1L
     }
   }
 

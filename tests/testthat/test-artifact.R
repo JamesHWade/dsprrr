@@ -691,6 +691,7 @@ test_that("chat configuration records only provider and model", {
     list(
       api_key = sentinel,
       turns = list(sentinel),
+      chat = function(prompt) "safe response",
       get_model = function() "safe-model"
     ),
     class = c("SafeProviderChat", "Chat")
@@ -1972,7 +1973,7 @@ test_that("pins transports the exact graph manifest", {
   restored <- restore_module_config(artifact)
 
   expect_identical(artifact$format, "dsprrr-program")
-  expect_identical(artifact$format_version, 4L)
+  expect_identical(artifact$format_version, 5L)
   expect_identical(
     artifact$integrity,
     dsprrr:::artifact_integrity(artifact)

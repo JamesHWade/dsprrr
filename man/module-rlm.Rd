@@ -4,79 +4,69 @@
 \alias{module-rlm}
 \title{Recursive Language Model (RLM) Module}
 \description{
-A module that transforms context from "input" to "environment", enabling LLMs
-to programmatically explore large contexts through a REPL interface rather
-than embedding them in prompts.
+An experimental inference-time analyst for inputs whose useful evidence is
+too large, irregular, or unpredictable to place in one prompt. RLM keeps the
+inputs in an R environment and lets the model iteratively inspect summaries,
+run computations, and decide what to examine next.
 }
 \details{
-Instead of \code{llm(prompt, context=huge_document)}, RLM stores context as R
-variables that the LLM can peek, slice, search, and recursively query.
+Each input is available under \code{.context}. Generated R code can use ordinary R
+plus \code{peek()}, \code{search()}, value-returning \code{llm_query()} calls, declared host
+tools, and \code{SUBMIT(...)}. RLM requires a runner whose \code{policy()} advertises
+\code{persistent = TRUE}; variables therefore remain available across turns within
+one invocation. Invalid submitted fields or types become iteration errors
+that the model can repair. If no valid submission is produced, the separate
+\code{extract} predictor performs one typed fallback.
+RLM validates explicit ellmer string, number, integer, boolean, enum, array,
+and object outputs. Opaque \code{TypeJsonSchema} nodes are rejected at
+construction because they cannot participate in this strict repair loop.
 
-The execution flow is:
-\enumerate{
-\item Context is made available as variables in an R execution environment
-\item LLM generates R code to explore and analyze the context
-\item Code is executed by the configured code runner
-\item Results are fed back to the LLM for the next iteration
-\item Process continues until SUBMIT() is called or max_iterations reached
-\item If max_iterations reached without SUBMIT(), fallback extraction is used
-}
+The \code{generate_action} and \code{extract} predictors are graph-visible through
+\code{\link[=named_modules]{named_modules()}}. GEPA can tune them; nested MIPROv2 is instruction-only
+with bootstrapped demos disabled. BootstrapFewShot and LabeledFewShot reject
+programs containing an RLM until predictor-local demonstrations are
+available.
+Model-visible execution evidence defaults to a 10,000-character head-and-tail view
+after any runner-level transport limit; that formatted evidence is retained
+in the returned trajectory. Trace state retains hashes and sizes for input
+objects, not their full values.
+Structured metadata separates logical action, recursive, and extraction
+counts from verified provider calls. A child-predictor cache hit contributes
+zero provider calls and zero current-run usage; totals remain \code{NA} whenever
+every contributing provider turn cannot be verified.
 
-Available REPL tools:
-\itemize{
-\item \code{SUBMIT(...)}: Terminate and return final output values
-\item \code{peek(var, start, end)}: View a slice of a variable (default: first 1000 chars)
-\item \code{search(var, pattern)}: Regex search in variable
-\item \code{llm_query(query, context_slice)}: Recursive LLM call (requires sub_lm)
-\item \code{llm_query_batched(queries, slices)}: Batched recursive calls
-}
+For generated code, prefer a fresh sandboxed \code{\link[=mcp_repl_runner]{mcp_repl_runner()}} factory.
+Its managed transport is intentionally bounded and is best for compact,
+JSON-compatible context. Its default policy disables network access but
+allows writes within the configured workspace. Declared host tools execute
+in the dsprrr host process, outside that guest sandbox. This backend requires
+the suggested \code{mcptools} package and Posit's external \code{mcp-repl} executable.
+For large data frames or richer local R objects,
+\code{r_code_runner(persistent = TRUE)} can stage context once, but it is
+trusted-input-only: the child process retains the host user's file, network,
+and environment permissions.
 
-Security: Code execution requires explicit opt-in via \code{runner} or
-\code{interpreter_factory}.
-The built-in runner uses a separate process but is NOT a security sandbox.
-Inspect \code{runner$policy()} before execution. For untrusted inputs, provide a
-runner backed by OS-level sandboxing, such as \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}.
-Authenticated RLM control frames sent through mcp-repl are limited to 3,000
-encoded bytes. If aggregate output is compacted into a file preview or pager,
-the iteration fails closed because mcp-repl does not expose structured
-compaction metadata; dsprrr does not read a sandbox-disclosed path from the
-host process.
-
-Runner lifecycle: supply exactly one runtime source. \code{runner} is
-caller-owned, reused across calls, and never closed by dsprrr. The backend determines
-whether execution state persists and whether \code{reset()} is available;
-serialize access to stateful backends. \code{interpreter_factory} is a
-zero-argument function that returns a fresh runner implementing \code{execute()},
-\code{policy()}, optional \code{start()}, and terminal \code{shutdown()} or \code{close()}. The
-module owns that runner for one invocation and shuts it down exactly once on
-success, error, or interrupt.
-
-\code{\link[=run_async]{run_async()}} supports factory-backed RLM in an isolated mirai process and
-rejects caller-owned runners. \code{\link[=stream_async]{stream_async()}} and a module's \verb{$stream()}
-method remain unavailable because streaming would bypass execution. The
-\code{\link[=run_stream]{run_stream()}} one-shot \code{forward()} fallback remains available.
+Supply exactly one runtime source. A caller-owned \code{runner} is reused and
+never closed by dsprrr. An \code{interpreter_factory} creates one invocation-owned
+runner which dsprrr shuts down on success, error, or interrupt. Factory-backed
+RLM supports \code{\link[=run_async]{run_async()}} and isolated \code{\link[=run_dataset]{run_dataset()}} execution; token
+streaming is unavailable. A direct \code{\link[=run]{run()}} call always stages each supplied
+value as one REPL variable, regardless of its R length. Use \code{\link[=run_dataset]{run_dataset()}}
+for multiple invocations, with list-columns for data frames, vectors, lists,
+matrices, or other rich per-row values.
 }
 \examples{
 \dontrun{
-# Create a runner (required for code execution)
-runner <- r_code_runner(timeout = 30)
-
-# Create an RLM module for exploring large documents
-rlm <- rlm_module(
+analyst <- rlm_module(
   signature = "document, question -> answer",
-  runner = runner
+  interpreter_factory = function() mcp_repl_runner(timeout = 30)
 )
-
-# Use it for context exploration
-long_doc <- paste(readLines("large_file.txt"), collapse = "\n")
-result <- run(rlm, document = long_doc, question = "What are the main themes?", .llm = llm)
-
-# Enable recursive LLM calls for complex reasoning
-rlm_recursive <- rlm_module(
-  signature = "document -> summary",
-  runner = runner,
-  sub_lm = ellmer::chat_openai(model = "gpt-4o-mini"),
-  max_llm_calls = 10
+compact_doc <- "Section 1: ...\nSection 2: ..."
+result <- run(
+  analyst,
+  document = compact_doc,
+  question = "What evidence supports the conclusion?",
+  .llm = ellmer::chat_openai()
 )
 }
 

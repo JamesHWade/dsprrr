@@ -32,6 +32,10 @@
 #' therefore receive demos even though the training set only labels the
 #' final output. Labeled demos (`max_labeled_demos`) are applied to the
 #' final step only, and only when its input fields exist in the trainset.
+#' Programs containing Flex or an RLM, at the root or nested, are rejected.
+#' Flex constructs its inner predictors per invocation; RLM root examples do
+#' not match its children's `state -> ...` signatures. Use GEPA for these
+#' programs, or instruction-only MIPROv2 for an RLM graph.
 #'
 #' @param metric A metric function for evaluating predictions (required).
 #' @param metric_threshold Minimum score for a demo to be accepted.
@@ -60,6 +64,9 @@
 #' )
 #'
 #' # Compile a module
+#' qa_module <- module(signature("question -> answer"))
+#' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
+#' llm <- ellmer::chat_openai()
 #' compiled <- compile(tp, qa_module, trainset, .llm = llm)
 #' }
 BootstrapFewShot <- S7::new_class(
@@ -506,7 +513,7 @@ compile_bootstrap <- function(
 
       # Run teacher with temperature for diversity
       teacher_condition <- NULL
-      trace_count_before <- length(teacher$state$traces %||% list())
+      trace_count_before <- evaluation_trace_cursor(teacher)
       result <- tryCatch(
         {
           # Apply teacher settings (like temperature)
@@ -784,44 +791,69 @@ compile_bootstrap <- function(
   student
 }
 
-bootstrap_flex_paths <- function(program, path = "$") {
-  if (inherits(program, "FlexModule")) {
-    return(path)
-  }
-  if (!inherits(program, "PipelineModule")) {
-    return(character())
-  }
-
-  unlist(
-    lapply(seq_along(program$steps), function(index) {
-      bootstrap_flex_paths(
-        program$steps[[index]]@module,
-        paste0(path, "/steps/", index)
-      )
-    }),
-    use.names = FALSE
+bootstrap_flex_paths <- function(program) {
+  modules <- named_modules(
+    program,
+    include_root = TRUE,
+    boundaries = "respect"
   )
+  names(modules)[vapply(
+    modules,
+    inherits,
+    logical(1),
+    what = "FlexModule"
+  )]
 }
 
-bootstrap_assert_demo_eligible <- function(program) {
+bootstrap_assert_demo_eligible <- function(
+  program,
+  optimizer_name = "BootstrapFewShot"
+) {
   paths <- bootstrap_flex_paths(program)
-  if (length(paths) == 0L) {
-    return(invisible(program))
+  if (length(paths) > 0L) {
+    cli::cli_abort(
+      c(
+        "{optimizer_name} cannot optimize Flex demonstrations",
+        "x" = "Flex constructs fresh inner predictors for every invocation, so assigning demos to the outer module has no effect.",
+        "i" = "Unsupported Flex path{?s}: {.path {paths}}.",
+        "i" = "Use GEPA for Flex structure and instruction optimization."
+      ),
+      class = c(
+        "dsprrr_flex_demo_unsupported_error",
+        "dsprrr_optimizer_ineligible_error"
+      ),
+      paths = paths
+    )
   }
 
-  cli::cli_abort(
-    c(
-      "BootstrapFewShot cannot optimize Flex demonstrations",
-      "x" = "Flex constructs fresh inner predictors for every invocation, so assigning demos to the outer module has no effect.",
-      "i" = "Unsupported Flex path{?s}: {.path {paths}}.",
-      "i" = "Use GEPA for Flex structure and instruction optimization."
-    ),
-    class = c(
-      "dsprrr_flex_demo_unsupported_error",
-      "dsprrr_optimizer_ineligible_error"
-    ),
-    paths = paths
+  modules <- named_modules(
+    program,
+    include_root = TRUE,
+    boundaries = "respect"
   )
+  rlm_paths <- names(modules)[vapply(
+    modules,
+    inherits,
+    logical(1),
+    what = "RLMModule"
+  )]
+  if (length(rlm_paths) > 0L) {
+    cli::cli_abort(
+      c(
+        "{optimizer_name} cannot derive demos for RLM predictors",
+        "x" = "Root training examples do not match the child predictor signatures.",
+        "i" = "Unsupported RLM path{?s}: {.path {rlm_paths}}.",
+        "i" = "Use GEPA for RLM child instructions, or MIPROv2 with {.code max_bootstrapped_demos = 0L}."
+      ),
+      class = c(
+        "dsprrr_bootstrap_graph_unsupported",
+        "dsprrr_optimizer_ineligible_error"
+      ),
+      paths = rlm_paths
+    )
+  }
+
+  invisible(program)
 }
 
 #' Joint compile method for BootstrapFewShot on pipelines

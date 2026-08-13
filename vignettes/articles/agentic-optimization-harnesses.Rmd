@@ -100,7 +100,7 @@ test connection from silently inheriting the trust assigned to a
 dsprrr-managed mcp-repl process.
 
 For RLM submit and recursive-query messages, dsprrr uses a versioned,
-per-invocation authenticated text frame capped at 3,000 encoded bytes. That cap
+per-invocation nonce-bound, schema-checked text frame capped at 3,000 encoded bytes. That cap
 keeps ordinary control messages below mcp-repl's inline-output threshold. If
 user code produces enough additional output to trigger a file preview or
 interactive pager, dsprrr fails the iteration (and attempts to reset the pager)

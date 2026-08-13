@@ -10,13 +10,16 @@
 #' - `SUBMIT(...)`: Terminate and return final output values
 #' - `peek(var, start, end)`: View a slice of a variable
 #' - `search(var, pattern)`: Regex search in variable
-#' - `llm_query(query, context_slice)`: Request a recursive LLM call (returns marker for interception)
-#' - `llm_query_batched(queries, slices)`: Request batched LLM calls (returns marker for interception)
+#' - `llm_query(query, context_slice)`: Request a recursive LLM call
+#' - `llm_query_batched(queries, slices)`: Request batched LLM calls
 #' - `rlm_query()` / `rlm_query_batch()`: Backward-compatible aliases
 #'
-#' The recursive-query helper functions return special marker objects
-#' that the main RLM process intercepts and handles. The actual LLM calls happen
-#' in the parent R process, not in the sandboxed code execution environment.
+#' Recursive-query helpers suspend execution with a nonce-bound, schema-checked
+#' request. The main RLM process handles the request and replays the code with
+#' an immutable response, so the helpers behave like ordinary value-returning R
+#' functions.
+#' The actual LLM calls happen in the parent R process, not in the sandboxed code
+#' execution environment.
 #'
 #' @keywords internal
 #' @name rlm-tools
@@ -28,6 +31,16 @@ rlm_host_tool_replay_field <- function() {
 }
 
 
+rlm_query_replay_field <- function() {
+  ".dsprrr_rlm_query_replay"
+}
+
+
+rlm_control_replay_field <- function() {
+  ".dsprrr_rlm_control_replay"
+}
+
+
 #' Create RLM Prelude Code
 #'
 #' @description
@@ -35,9 +48,13 @@ rlm_host_tool_replay_field <- function() {
 #'
 #' @param max_llm_calls Maximum allowed recursive LLM calls
 #' @param has_sub_lm Logical indicating if recursive queries are enabled
-#' @param custom_tools Named list of user-defined R functions
-#' @param output_fields Character vector of required output field names for SUBMIT()
-#' @param control_nonce Per-invocation nonce used to authenticate control frames
+#' @param custom_tools Named list of user-defined R functions or ellmer ToolDef
+#'   objects. Bridge arguments use a lossless JSON-compatible domain: unclassed
+#'   logical, integer, double, character, NULL, and recursively nested lists;
+#'   missing and non-finite values are rejected.
+#' @param output_fields Character vector of output field names for SUBMIT()
+#' @param required_output_fields Character vector of required output fields
+#' @param control_nonce Per-invocation nonce used to correlate control frames
 #' @param control_frame_limit Maximum encoded control-frame size in bytes
 #'
 #' @return Character string of R code defining RLM tools
@@ -49,20 +66,34 @@ create_rlm_prelude <- function(
   has_sub_lm = FALSE,
   custom_tools = list(),
   output_fields = "answer",
+  required_output_fields = output_fields,
   control_nonce = rlm_control_nonce(),
   control_frame_limit = Inf
 ) {
-  if (!is.character(output_fields) || length(output_fields) < 1) {
+  if (!is.character(output_fields)) {
     output_fields <- "answer"
   }
 
   output_fields <- trimws(output_fields)
   output_fields <- output_fields[nzchar(output_fields)]
-  if (length(output_fields) < 1) {
-    output_fields <- "answer"
+  if (
+    !is.character(required_output_fields) ||
+      anyNA(required_output_fields) ||
+      !all(nzchar(required_output_fields)) ||
+      anyDuplicated(required_output_fields) ||
+      !all(required_output_fields %in% output_fields)
+  ) {
+    cli::cli_abort(
+      "Internal required RLM output fields must be a unique subset of output fields",
+      class = "dsprrr_rlm_control_error"
+    )
   }
 
   quoted_fields <- paste(sprintf("\"%s\"", output_fields), collapse = ", ")
+  quoted_required_fields <- paste(
+    sprintf("\"%s\"", required_output_fields),
+    collapse = ", "
+  )
 
   if (
     !is.character(control_nonce) ||
@@ -122,15 +153,163 @@ create_rlm_prelude <- function(
   )
   if (base::nchar(frame, type = "bytes") > %s) {
     base::stop(
-      "Authenticated RLM control frame exceeds the runner transport limit"
+      "RLM control frame exceeds the runner transport limit"
     )
   }
   frame
 }
+
+# One ordered ledger covers recursive queries and host tools. A shared sequence
+# prevents a replay from changing the next privileged operation kind.
+.rlm_control_replay <- .context[[%s]]
+if (base::is.null(.rlm_control_replay)) {
+  .rlm_control_replay <- base::list()
+}
+if (!base::is.list(.rlm_control_replay)) {
+  base::stop("Malformed RLM control replay state")
+}
+.rlm_control_call <- base::local({
+  .replay <- .rlm_control_replay
+  .index <- 0L
+  .encode <- .rlm_control_encode
+  .validate <- function(value, path = "request") {
+    if (base::is.null(value)) {
+      return(base::invisible(TRUE))
+    }
+    if (base::inherits(value, "AsIs")) {
+      value <- base::unclass(value)
+    }
+    if (base::is.object(value)) {
+      base::stop(
+        path,
+        " must use unclassed JSON-compatible values",
+        call. = FALSE
+      )
+    }
+    if (base::is.list(value)) {
+      value_names <- base::names(value)
+      if (
+        !base::is.null(value_names) &&
+          (
+            base::anyNA(value_names) ||
+              base::any(!base::nzchar(value_names)) ||
+              base::anyDuplicated(value_names)
+          )
+      ) {
+        base::stop(
+          path,
+          " must have unique non-empty names or no names",
+          call. = FALSE
+        )
+      }
+      for (i in base::seq_along(value)) {
+        child <- if (base::is.null(value_names)) {
+          base::paste0(path, "[[", i, "]]" )
+        } else {
+          base::paste0(path, "$", value_names[[i]])
+        }
+        .validate(value[[i]], child)
+      }
+      return(base::invisible(TRUE))
+    }
+    supported <- base::is.atomic(value) &&
+      base::typeof(value) %%in%% base::c(
+        "logical",
+        "integer",
+        "double",
+        "character"
+      ) &&
+      base::is.null(base::attributes(value))
+    if (!supported) {
+      base::stop(
+        path,
+        " must use unclassed JSON-compatible values",
+        call. = FALSE
+      )
+    }
+    if (base::anyNA(value)) {
+      base::stop(path, " cannot contain missing values", call. = FALSE)
+    }
+    if (base::is.numeric(value) && base::any(!base::is.finite(value))) {
+      base::stop(path, " cannot contain NaN or infinite values", call. = FALSE)
+    }
+    base::invisible(TRUE)
+  }
+  .canonicalize <- function(value) {
+    if (base::is.object(value)) {
+      value <- base::unclass(value)
+    }
+    if (base::is.list(value)) {
+      value <- base::lapply(value, .canonicalize)
+      value_names <- base::names(value)
+      if (!base::is.null(value_names) && base::length(value_names) > 0L) {
+        value <- value[base::order(value_names)]
+      }
+    }
+    value
+  }
+  .canonical <- function(value) {
+    base::as.character(jsonlite::toJSON(
+      .canonicalize(value),
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      digits = NA
+    ))
+  }
+  .suspend <- function(frame) {
+    if (!base::is.null(base::findRestart(".dsprrr_rlm_control"))) {
+      base::invokeRestart(".dsprrr_rlm_control", frame)
+    }
+    base::stop(frame, call. = FALSE)
+  }
+
+  function(kind, request) {
+    .index <<- .index + 1L
+    request <- base::c(base::list(index = .index), request)
+    .validate(request)
+    if (.index <= base::length(.replay)) {
+      response <- .replay[[.index]]
+      valid <- base::is.list(response) &&
+        base::identical(response$kind, kind) &&
+        base::is.list(response$request) &&
+        base::is.logical(response$success) &&
+        base::length(response$success) == 1L &&
+        !base::is.na(response$success)
+      if (!valid) {
+        base::stop("Malformed RLM control replay state", call. = FALSE)
+      }
+      if (!base::identical(.canonical(response$request), .canonical(request))) {
+        base::stop(
+          "RLM control replay diverged from its recorded request",
+          call. = FALSE
+        )
+      }
+      if (base::isTRUE(response$success)) {
+        if (!"value" %%in%% base::names(response)) {
+          base::stop("Malformed RLM control replay state", call. = FALSE)
+        }
+        return(response$value)
+      }
+      if (
+        !base::is.character(response$error) ||
+          base::length(response$error) != 1L ||
+          base::is.na(response$error) ||
+          !base::nzchar(response$error)
+      ) {
+        base::stop("Malformed RLM control replay state", call. = FALSE)
+      }
+      base::stop(response$error, call. = FALSE)
+    }
+    .suspend(.encode(kind, request))
+  }
+})
 ',
     control_nonce_literal,
     rlm_control_prefix(),
-    control_frame_limit_literal
+    control_frame_limit_literal,
+    encodeString(rlm_control_replay_field(), quote = "\"")
   )
 
   submit_prelude <- sprintf(
@@ -139,12 +318,16 @@ create_rlm_prelude <- function(
 # Supports positional args (SUBMIT(v1, v2)) or named args
 # (SUBMIT(field1 = v1, field2 = v2)).
 SUBMIT <- base::local({
-  .encode <- .rlm_control_encode
+  .call <- .rlm_control_call
   .output_fields <- base::c(%s)
+  .required_output_fields <- base::c(%s)
 
   function(...) {
     args <- base::list(...)
-    if (base::length(args) == 0) {
+    if (
+      base::length(args) == 0 &&
+        base::length(.required_output_fields) > 0
+    ) {
       base::stop("SUBMIT() requires at least one output value")
     }
 
@@ -154,7 +337,9 @@ SUBMIT <- base::local({
     }
     has_any_names <- base::any(base::nzchar(arg_names))
 
-    if (!has_any_names) {
+    if (base::length(args) == 0) {
+      args <- base::list()
+    } else if (!has_any_names) {
       if (base::length(args) != base::length(.output_fields)) {
         base::stop(
           "SUBMIT() expected ",
@@ -172,7 +357,7 @@ SUBMIT <- base::local({
         base::stop("SUBMIT() output names must be unique")
       }
 
-      missing <- base::setdiff(.output_fields, arg_names)
+      missing <- base::setdiff(.required_output_fields, arg_names)
       extra <- base::setdiff(arg_names, .output_fields)
 
       if (base::length(missing) > 0) {
@@ -188,14 +373,15 @@ SUBMIT <- base::local({
         )
       }
 
-      args <- args[.output_fields]
+      args <- args[base::intersect(.output_fields, arg_names)]
     }
 
-    .encode("final", args)
+    .call("final", base::list(output = args))
   }
 })
 ',
-    quoted_fields
+    quoted_fields,
+    quoted_required_fields
   )
 
   # Base tools (always available)
@@ -206,30 +392,55 @@ SUBMIT <- base::local({
 
 # peek: View a slice of a character variable
 # Useful for exploring large text contexts
-peek <- function(var, start = 1L, end = 1000L) {
-  if (!base::is.character(var)) {
-    var <- base::as.character(var)
+peek <- base::local({
+  .index <- function(value, name) {
+    valid <- base::is.numeric(value) &&
+      base::length(value) == 1L &&
+      !base::is.na(value) &&
+      base::is.finite(value) &&
+      value == base::floor(value)
+    if (!valid) {
+      base::stop(name, " must be one finite whole number", call. = FALSE)
+    }
+    value
   }
 
-  if (base::length(var) > 1) {
-    # For character vectors, show elements in range
-    n <- base::length(var)
-    start <- base::max(1L, base::as.integer(start))
-    end <- base::min(n, base::as.integer(end))
-    return(var[start:end])
+  function(var, start = 1L, end = 1000L) {
+    if (!base::is.character(var)) {
+      var <- base::as.character(var)
+    }
+    start <- .index(start, "start")
+    end <- .index(end, "end")
+
+    if (base::length(var) == 0L) {
+      return(base::character())
+    }
+
+    if (base::length(var) > 1L) {
+      # For character vectors, show elements in range.
+      n <- base::length(var)
+      start <- base::max(1, start)
+      end <- base::min(n, end)
+      if (start > n || end < start) {
+        return(base::character())
+      }
+      return(var[base::seq.int(start, end)])
+    }
+
+    # For single strings, show character range.
+    if (base::is.na(var)) {
+      return(NA_character_)
+    }
+    total_chars <- base::nchar(var)
+    start <- base::max(1, start)
+    end <- base::min(total_chars, end)
+    if (start > total_chars || end < start) {
+      return("")
+    }
+
+    base::substr(var, start, end)
   }
-
-  # For single strings, show character range
-  total_chars <- base::nchar(var)
-  start <- base::max(1L, base::as.integer(start))
-  end <- base::min(total_chars, base::as.integer(end))
-
-  if (start > total_chars) {
-    return("")
-  }
-
-  base::substr(var, start, end)
-}
+})
 
 # search: Regex search in a variable
 # Returns all matches as a character vector
@@ -257,13 +468,33 @@ search <- function(var, pattern, ignore_case = FALSE) {
   if (has_sub_lm) {
     recursive_prelude <- sprintf(
       '
+# Non-local recursive-query replay bridge
+
 # llm_query: Recursive LLM query
-# Returns a request marker - main process will intercept and handle
 llm_query <- base::local({
-  .encode <- .rlm_control_encode
+  .call <- .rlm_control_call
   function(query, context_slice = NULL) {
-    # The actual LLM call happens in the parent R process.
-    .encode(
+    if (
+      !base::is.character(query) ||
+        base::length(query) != 1L ||
+        base::is.na(query) ||
+        !base::nzchar(query)
+    ) {
+      base::stop("query must be one non-empty character string")
+    }
+    if (
+      !base::is.null(context_slice) &&
+        (
+          !base::is.character(context_slice) ||
+            base::length(context_slice) != 1L ||
+            base::is.na(context_slice)
+        )
+    ) {
+      base::stop(
+        "context_slice must be NULL or one non-missing character string"
+      )
+    }
+    .call(
       "query",
       base::list(query = query, context = context_slice, batch = FALSE)
     )
@@ -271,12 +502,15 @@ llm_query <- base::local({
 })
 
 # llm_query_batched: Batched recursive queries
-# Returns a request marker for batch processing
 llm_query_batched <- base::local({
-  .encode <- .rlm_control_encode
+  .call <- .rlm_control_call
   function(queries, slices = NULL) {
-    if (!base::is.character(queries) || base::anyNA(queries)) {
-      base::stop("queries must be a non-missing character vector")
+    if (
+      !base::is.character(queries) ||
+        base::anyNA(queries) ||
+        base::any(!base::nzchar(queries))
+    ) {
+      base::stop("queries must be a non-empty character vector")
     }
 
     if (!base::is.null(slices)) {
@@ -299,7 +533,7 @@ llm_query_batched <- base::local({
       }
     }
 
-    .encode(
+    .call(
       "query",
       base::list(
         queries = base::I(queries),
@@ -336,8 +570,8 @@ rlm_query_batch <- llm_query_batched
 '
   }
 
-  # Custom tools remain in the host process. The guest emits one authenticated
-  # request, then the host replays the program with an immutable response. This
+  # Custom tools remain in the host process. The guest emits one nonce-bound,
+  # schema-checked request, then the host replays the program with an immutable response. This
   # preserves closure identity and works across both local and remote runners
   # without serializing or deparsing privileged functions into generated code.
   custom_prelude <- ""
@@ -362,59 +596,19 @@ rlm_query_batch <- llm_query_batched
 
     custom_prelude <- sprintf(
       '
-# Authenticated host-tool replay bridge
-.rlm_host_tool_replay <- .context[[%s]]
-if (base::is.null(.rlm_host_tool_replay)) {
-  .rlm_host_tool_replay <- base::list()
-}
-if (!base::is.list(.rlm_host_tool_replay)) {
-  base::stop("Malformed RLM host-tool replay state")
-}
+# Non-local host-tool replay bridge
 .rlm_host_tool_call <- base::local({
-  .replay <- .rlm_host_tool_replay
-  .index <- 0L
-  .encode <- .rlm_control_encode
-  .canonical <- function(value) {
-    base::as.character(jsonlite::toJSON(
-      value,
-      auto_unbox = TRUE,
-      null = "null",
-      na = "null",
-      dataframe = "rows",
-      digits = NA
-    ))
-  }
-
+  .call <- .rlm_control_call
   function(name, arguments) {
-    .index <<- .index + 1L
-    request <- base::list(
-      index = .index,
-      name = name,
-      arguments = arguments
+    .call(
+      "host_tool",
+      base::list(name = name, arguments = arguments)
     )
-    if (.index <= base::length(.replay)) {
-      response <- .replay[[.index]]
-      valid <- base::is.list(response) &&
-        base::is.list(response$request) &&
-        base::identical(.canonical(response$request), .canonical(request)) &&
-        base::is.logical(response$success) &&
-        base::length(response$success) == 1L &&
-        !base::is.na(response$success)
-      if (!valid) {
-        base::stop("RLM host-tool replay diverged from its authenticated request")
-      }
-      if (base::isTRUE(response$success)) {
-        return(response$value)
-      }
-      base::stop(base::as.character(response$error)[[1L]], call. = FALSE)
-    }
-    base::stop(.encode("host_tool", request), call. = FALSE)
   }
 })
 
 %s
 ',
-      encodeString(rlm_host_tool_replay_field(), quote = "\""),
       paste(tool_wrappers, collapse = "\n")
     )
   }
@@ -428,7 +622,7 @@ if (!base::is.list(.rlm_host_tool_replay)) {
     base_prelude,
     recursive_prelude,
     custom_prelude,
-    "\nbase::rm(.rlm_control_encode)\n",
+    "\nbase::rm(.rlm_control_encode, .rlm_control_call, .rlm_control_replay)\n",
     "\n# ============================================\n"
   )
 }
@@ -459,9 +653,51 @@ abort_rlm_control <- function(message) {
 }
 
 
-decode_rlm_control <- function(x, control_nonce = NULL) {
-  if (inherits(x, "rlm_final") || inherits(x, "rlm_query_request")) {
-    return(x)
+rlm_control_attestation_attribute <- function() {
+  ".dsprrr_rlm_control_attestation"
+}
+
+
+rlm_control_attestation_token <- local({
+  token <- new.env(parent = emptyenv())
+  function() token
+})
+
+
+attest_rlm_control <- function(x) {
+  attr(
+    x,
+    rlm_control_attestation_attribute()
+  ) <- rlm_control_attestation_token()
+  x
+}
+
+
+consume_attested_rlm_control <- function(x) {
+  attestation <- attr(
+    x,
+    rlm_control_attestation_attribute(),
+    exact = TRUE
+  )
+  if (!identical(attestation, rlm_control_attestation_token())) {
+    return(NULL)
+  }
+  attr(x, rlm_control_attestation_attribute()) <- NULL
+  x
+}
+
+
+decode_rlm_control <- function(
+  x,
+  control_nonce = NULL,
+  .attest = FALSE
+) {
+  if (
+    inherits(x, "rlm_final") ||
+      inherits(x, "rlm_query_request") ||
+      inherits(x, "rlm_host_tool_request")
+  ) {
+    return(consume_attested_rlm_control(x))
   }
   if (
     !is.character(x) ||
@@ -491,7 +727,7 @@ decode_rlm_control <- function(x, control_nonce = NULL) {
   matches <- regmatches(text, gregexpr(pattern, text, perl = TRUE))[[1L]]
   if (
     length(matches) != prefix_count ||
-      any(!nzchar(matches))
+      !all(nzchar(matches))
   ) {
     abort_rlm_control("Malformed RLM control frame")
   }
@@ -541,13 +777,43 @@ decode_rlm_control <- function(x, control_nonce = NULL) {
   envelope <- envelopes[[which(current)]]
 
   if (identical(envelope$kind, "final")) {
-    return(structure(
-      envelope$payload,
-      class = c("rlm_final", class(envelope$payload)),
-      rlm_final = TRUE
-    ))
+    index <- envelope$payload$index
+    output <- envelope$payload$output
+    valid_index <- is.numeric(index) &&
+      length(index) == 1L &&
+      !is.na(index) &&
+      is.finite(index) &&
+      index == floor(index) &&
+      index >= 1L &&
+      index <= .Machine$integer.max
+    if (
+      !valid_index ||
+        !is.list(output) ||
+        !identical(names(envelope$payload), c("index", "output"))
+    ) {
+      abort_rlm_control("Malformed RLM final control frame")
+    }
+    control <- structure(
+      output,
+      class = c("rlm_final", class(output)),
+      rlm_final = TRUE,
+      rlm_control_index = as.integer(index)
+    )
+    return(if (isTRUE(.attest)) attest_rlm_control(control) else control)
   }
   if (identical(envelope$kind, "query")) {
+    index <- envelope$payload$index
+    valid_index <- is.numeric(index) &&
+      length(index) == 1L &&
+      !is.na(index) &&
+      is.finite(index) &&
+      index == floor(index) &&
+      index >= 1L &&
+      index <= .Machine$integer.max
+    if (!valid_index) {
+      abort_rlm_control("Malformed RLM query control frame")
+    }
+    envelope$payload$index <- as.integer(index)
     batch <- envelope$payload$batch
     if (!is.logical(batch) || length(batch) != 1L || is.na(batch)) {
       abort_rlm_control("Malformed RLM query control frame")
@@ -596,17 +862,25 @@ decode_rlm_control <- function(x, control_nonce = NULL) {
         )
         envelope$payload$slices <- slices
       }
-    } else if (
-      !is.character(envelope$payload$query) ||
-        length(envelope$payload$query) != 1L ||
-        is.na(envelope$payload$query)
-    ) {
-      abort_rlm_control("Malformed RLM query control frame")
+    } else {
+      query <- envelope$payload$query
+      context <- envelope$payload$context
+      valid_query <- is.character(query) &&
+        length(query) == 1L &&
+        !is.na(query)
+      valid_context <- is.null(context) ||
+        (is.character(context) &&
+          length(context) == 1L &&
+          !is.na(context))
+      if (!valid_query || !valid_context) {
+        abort_rlm_control("Malformed RLM query control frame")
+      }
     }
-    return(structure(
+    control <- structure(
       envelope$payload,
       class = c("rlm_query_request", class(envelope$payload))
-    ))
+    )
+    return(if (isTRUE(.attest)) attest_rlm_control(control) else control)
   }
   if (identical(envelope$kind, "host_tool")) {
     index <- envelope$payload$index
@@ -626,10 +900,11 @@ decode_rlm_control <- function(x, control_nonce = NULL) {
       abort_rlm_control("Malformed RLM host-tool control frame")
     }
     envelope$payload$index <- as.integer(index)
-    return(structure(
+    control <- structure(
       envelope$payload,
       class = c("rlm_host_tool_request", class(envelope$payload))
-    ))
+    )
+    return(if (isTRUE(.attest)) attest_rlm_control(control) else control)
   }
   abort_rlm_control("Unknown RLM control frame kind")
 }
@@ -693,6 +968,7 @@ extract_rlm_final <- function(x, control_nonce = NULL) {
 
   class(x) <- setdiff(class(x), "rlm_final")
   attr(x, "rlm_final") <- NULL
+  attr(x, "rlm_control_index") <- NULL
   x
 }
 

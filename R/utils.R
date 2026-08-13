@@ -143,7 +143,13 @@ validate_signature_inputs <- function(
     return(invisible(NULL))
   }
 
-  required_names <- vapply(sig@inputs, function(x) x$name, character(1))
+  declared_names <- vapply(sig@inputs, function(x) x$name, character(1))
+  required <- vapply(
+    sig@inputs,
+    function(x) tryCatch(isTRUE(x$type@required), error = function(e) TRUE),
+    logical(1)
+  )
+  required_names <- declared_names[required]
   provided_names <- names(inputs) %||% character()
 
   missing_names <- setdiff(required_names, provided_names)
@@ -162,21 +168,21 @@ validate_signature_inputs <- function(
     }
   }
 
-  extra_names <- setdiff(provided_names, required_names)
+  extra_names <- setdiff(provided_names, declared_names)
   if (length(extra_names) > 0 && extra != "ignore") {
     for (field in extra_names) {
-      suggestion <- find_closest_match(field, required_names)
+      suggestion <- find_closest_match(field, declared_names)
       message <- if (!is.null(suggestion)) {
         c(
           "Unknown input: {.field {field}}",
           "i" = "Did you mean: {.field {suggestion}}?",
-          "i" = "Available fields: {.field {required_names}}"
+          "i" = "Available fields: {.field {declared_names}}"
         )
       } else {
         c(
           "Extra input not declared in the signature: {.field {field}}",
           "i" = "The field remains available to custom templates but is not declared in the signature.",
-          "i" = "Signature fields: {.field {required_names}}"
+          "i" = "Signature fields: {.field {declared_names}}"
         )
       }
       if (extra == "error") {
