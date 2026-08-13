@@ -51,7 +51,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
@@ -137,8 +137,7 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>dsprrr provides advanced module types inspired by <a href="https://dspy.ai/" class="external-link">DSPy</a> that implement sophisticated reasoning
-patterns. These modules go beyond simple prompt-response to enable:</p>
+<p>Choose a module by the work it needs to do:</p>
 <ul>
 <li>
 <strong>Step-by-step reasoning</strong> with ChainOfThought</li>
@@ -154,23 +153,27 @@ generation)</li>
 <li>
 <strong>Hybrid agents</strong> with CodeAct (tools + code
 execution)</li>
+<li>
+<strong>Adaptive investigation</strong> of large or awkward R
+objects with RLM</li>
+<li>
+<strong>Implementation search</strong> across predictors, R logic,
+and tools with Flex</li>
 </ul>
-<p>Each pattern addresses different challenges in LLM reliability and
-output quality.</p>
+<p>The sections below show each execution pattern and its tradeoffs.</p>
 </div>
 <div class="section level2">
 <h2 id="chainofthought">ChainOfThought<a class="anchor" aria-label="anchor" href="#chainofthought"></a>
 </h2>
-<p>ChainOfThought (CoT) is the foundational advanced reasoning pattern.
-It prompts the model to “show its work” by generating step-by-step
-reasoning before the final answer.</p>
+<p>ChainOfThought (CoT) asks the model for a reasoning field before the
+final answer.</p>
 <div class="section level3">
 <h3 id="why-use-chainofthought">Why Use ChainOfThought?<a class="anchor" aria-label="anchor" href="#why-use-chainofthought"></a>
 </h3>
-<p>Research shows that asking models to reason step-by-step improves
-accuracy on complex tasks like math, logic, and multi-step reasoning.
-The model’s intermediate reasoning also provides transparency into how
-it arrived at an answer.</p>
+<p>Use it when intermediate reasoning is useful to the task or
+evaluator. It adds tokens and does not make the reasoning inherently
+faithful, so evaluate the final output against a task-specific
+metric.</p>
 </div>
 <div class="section level3">
 <h3 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
@@ -463,18 +466,14 @@ Any input field names from your signature</p>
 <div class="section level2">
 <h2 id="multichaincomparison">MultiChainComparison<a class="anchor" aria-label="anchor" href="#multichaincomparison"></a>
 </h2>
-<p>MultiChainComparison (MCC) implements ensemble reasoning by running
-multiple independent reasoning chains and synthesizing the best
-answer.</p>
+<p>MultiChainComparison (MCC) runs several independent reasoning chains
+and asks a final model call to synthesize one answer.</p>
 <div class="section level3">
 <h3 id="why-use-multichaincomparison">Why Use MultiChainComparison?<a class="anchor" aria-label="anchor" href="#why-use-multichaincomparison"></a>
 </h3>
-<p>Different reasoning paths can lead to different insights. MCC: -
-Generates M diverse reasoning attempts (using temperature for variation)
-- Compares all attempts in a synthesis step - Produces a final answer
-that leverages the best reasoning</p>
-<p>This is particularly effective for complex reasoning tasks where
-there’s no single “right” approach.</p>
+<p>MCC: - Generates M diverse reasoning attempts (using temperature for
+variation) - Compares all attempts in a synthesis step - Produces one
+answer from the compared attempts</p>
 </div>
 <div class="section level3">
 <h3 id="basic-usage-3">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-3"></a>
@@ -596,10 +595,9 @@ factory. Here is the caller-owned form:</p>
 <span><span class="op">)</span></span></code></pre></div>
 <p><strong>Security note</strong>: <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> provides
 subprocess isolation but is not a security sandbox. For untrusted
-inputs, supply <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> or another runner with
-verified OS-level sandboxing. mcp-repl is persistent: reset it between
-logically isolated jobs and do not share one runner across concurrent
-invocations.</p>
+generated code, use a fresh managed <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> from
+an interpreter factory or another runner with verified OS-level
+sandboxing.</p>
 <p>ProgramOfThought, CodeAct, and RLM accept exactly one execution
 binding. Pass <code>runner</code> to retain a caller-owned runner object
 that dsprrr reuses and never closes. Whether execution state persists
@@ -613,16 +611,16 @@ it exactly once when the invocation ends, including after an error:</p>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The factory form is the safer default when state must not cross
-invocation boundaries. The direct-runner form is useful for object reuse
-or intentional REPL persistence; never share a stateful runner across
-concurrent calls. Supplying both forms is an error. Factory-backed
-ProgramOfThought, CodeAct, and RLM support <code><a href="../reference/run_async.html">run_async()</a></code> and
-isolated mirai batch execution because every invocation owns a fresh
-runner. Caller-owned runners remain sequential. Specialized token
-streaming is still rejected before provider or factory work;
-<code><a href="../reference/run_stream.html">run_stream()</a></code> without a matching token listener preserves
-the ordinary synchronous <code>forward()</code> path.</p>
+<p>The factory form prevents state from crossing invocation boundaries.
+A direct runner is caller-owned and sequential; never share a stateful
+runner across concurrent calls. Supplying both forms is an error.
+Factory-backed ProgramOfThought, CodeAct, and RLM support
+<code><a href="../reference/run_async.html">run_async()</a></code> and isolated mirai batch execution because
+every invocation owns a fresh runner. Caller-owned runners remain
+sequential. Specialized token streaming is still rejected before
+provider or factory work; <code><a href="../reference/run_stream.html">run_stream()</a></code> without a matching
+token listener preserves the ordinary synchronous <code>forward()</code>
+path.</p>
 </div>
 <div class="section level3">
 <h3 id="basic-usage-4">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-4"></a>
@@ -686,9 +684,9 @@ error back to the LLM for repair:</p>
 <div class="section level2">
 <h2 id="codeact">CodeAct<a class="anchor" aria-label="anchor" href="#codeact"></a>
 </h2>
-<p>CodeAct combines the best of both worlds: it can use external tools
-AND execute R code. This makes it ideal for complex agentic tasks that
-require both information retrieval and computation.</p>
+<p>CodeAct combines declared host tools with generated R execution. Use
+it when a task needs both an external action and computation inside one
+bounded agent loop.</p>
 <div class="section level3">
 <h3 id="why-use-codeact">Why Use CodeAct?<a class="anchor" aria-label="anchor" href="#why-use-codeact"></a>
 </h3>
@@ -785,13 +783,153 @@ that the LLM can call:</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="recursive-language-model-experimental">Recursive Language Model (experimental)<a class="anchor" aria-label="anchor" href="#recursive-language-model-experimental"></a>
+</h2>
+<p>Use an RLM when the answer is inside an R object but the useful slice
+and calculation are not known in advance. The model proposes one R
+operation, observes bounded output, and chooses the next operation. The
+full object does not enter every model prompt.</p>
+<p>That is a different job from the other code-oriented modules:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Need</th>
+<th>Module</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Execute a calculation whose steps are already known</td>
+<td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
+</tr>
+<tr class="even">
+<td>Discover an exploration path for this invocation</td>
+<td><code><a href="../reference/rlm_module.html">rlm_module()</a></code></td>
+</tr>
+<tr class="odd">
+<td>Learn a reusable implementation from labeled examples</td>
+<td>
+<code><a href="../reference/flex.html">flex()</a></code> with GEPA</td>
+</tr>
+</tbody>
+</table>
+<div class="section level3">
+<h3 id="investigate-a-large-r-object">Investigate a large R object<a class="anchor" aria-label="anchor" href="#investigate-a-large-r-object"></a>
+</h3>
+<p>The release-regression tutorial uses 40,000 session rows and 200
+change records. A persistent callr runner stages those rich R objects
+once and keeps derived values between iterations:</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">incident</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>    <span class="st">"sessions, changes, question -&gt;"</span>,</span>
+<span>    <span class="st">"release: string, cohort: string, before_rate: number,"</span>,</span>
+<span>    <span class="st">"after_rate: number, drop_pp: number, change_id: string, evidence: string"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="op">}</span>,</span>
+<span>  max_iters <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  max_llm_calls <span class="op">=</span> <span class="fl">0L</span>,</span>
+<span>  max_output_chars <span class="op">=</span> <span class="fl">10000</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">incident</span>,</span>
+<span>  sessions <span class="op">=</span> <span class="va">sessions</span>,</span>
+<span>  changes <span class="op">=</span> <span class="va">changes</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"Which cohort regressed, and which change best explains it?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>This configuration is appropriate only when the fixture and generated
+code are trusted. <code>persistent = TRUE</code> preserves one callr
+process, but that process has the host user’s file, network, and
+environment permissions.</p>
+<p>The default <code>max_output_chars = 10000</code> keeps a
+head-and-tail excerpt from each execution in the next prompt. It bounds
+model-visible evidence; it does not increase a runner’s transport
+limit.</p>
+</div>
+<div class="section level3">
+<h3 id="recursive-queries-return-values">Recursive queries return values<a class="anchor" aria-label="anchor" href="#recursive-queries-return-values"></a>
+</h3>
+<p><code>sub_lm = NULL</code> inherits the outer model passed to
+<code><a href="../reference/run.html">run()</a></code>. Generated code can therefore assign and use the
+result of a focused query:</p>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">candidate</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">changes</span>, <span class="va">component</span> <span class="op">==</span> <span class="st">"checkout-auth"</span><span class="op">)</span></span>
+<span><span class="va">interpretation</span> <span class="op">&lt;-</span> <span class="fu">llm_query</span><span class="op">(</span></span>
+<span>  <span class="st">"Which change could reduce successful token refreshes?"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">candidate</span><span class="op">$</span><span class="va">note</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">SUBMIT</span><span class="op">(</span>answer <span class="op">=</span> <span class="va">interpretation</span><span class="op">)</span></span></code></pre></div>
+<p>The guest emits a nonce-bound, schema-checked request, dsprrr calls
+the model in the host, then replays the same code evaluation with the
+returned value. One ordered ledger prevents query/tool replay from
+changing operation kind. It cannot roll back an external side effect
+performed directly by generated code before the query, so RLM code
+should keep pre-query work read-only.</p>
+<p><code>SUBMIT()</code> is checked against the signature. Missing
+required, extra, or incompatible fields become a repairable observation
+so the next iteration can correct the submission; optional fields may be
+omitted. If the iteration budget ends first, the extraction predictor
+attempts to produce the best typed answer supported by the trajectory;
+provider or type-validation failure remains terminal.</p>
+<p>The action and fallback extraction steps are graph-visible child
+predictors:</p>
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">incident</span><span class="op">$</span><span class="fu">graph_children</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "generate_action" "extract"</span></span></code></pre></div>
+<p>Structured results report whether the answer came from
+<code>SUBMIT()</code> or fallback, and retain the bounded
+trajectory:</p>
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span><span class="op">$</span><span class="va">output</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">output_source</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">repl_history</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">runner_policy</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="choose-the-execution-boundary">Choose the execution boundary<a class="anchor" aria-label="anchor" href="#choose-the-execution-boundary"></a>
+</h3>
+<p>The one-call helper creates a fresh managed MCP sandbox by
+default:</p>
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm.html">rlm</a></span><span class="op">(</span></span>
+<span>  <span class="st">"document, question -&gt; answer"</span>,</span>
+<span>  document <span class="op">=</span> <span class="st">"Owner: team-a\nCommitment: rotate signing keys quarterly"</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"Which commitments have no owner?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .max_iterations <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>  .max_llm_calls <span class="op">=</span> <span class="fl">0L</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Managed <code>mcp-repl</code> requires the suggested R package
+<code>mcptools</code> plus the external <code>mcp-repl</code>
+executable. It disables network access and applies an OS sandbox, but
+workspace writes remain allowed. Requests have a 7 KB wire bound and RLM
+control frames have a 3,000-byte encoded bound. When a raw request is
+too large, dsprrr first tries a gzip/base64 wrapper; the final JSON-RPC
+request must still fit the wire bound. Oversized output may be rejected
+by the runner before the module’s 10,000-character head-and-tail
+formatter. Host tools run outside that sandbox with host permissions.
+Use explicit persistent <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> for trusted large
+data frames and fitted models; it is not a sandbox.</p>
+<p>See <a href="tutorial-rlm-dsprrr.html">Investigate a Release
+Regression with an RLM</a> for the deterministic demo and <a href="how-rlm-works.html">How the RLM Works</a> for the complete
+execution contract.</p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="flex-experimental">Flex (experimental)<a class="anchor" aria-label="anchor" href="#flex-experimental"></a>
 </h2>
 <p>Use <code><a href="../reference/flex.html">flex()</a></code> when the implementation strategy is the
 search problem. GEPA can change which predictors run, add deterministic
 R logic, or call a selected tool—not only rewrite instructions inside a
 fixed module.</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
 <span><span class="va">program</span><span class="op">$</span><span class="va">module_src</span></span></code></pre></div>
 <p>Use a regular module when its shape is known, or an explicit pipeline
@@ -802,8 +940,9 @@ unnecessary model calls.</p>
 <div class="section level2">
 <h2 id="combining-modules">Combining Modules<a class="anchor" aria-label="anchor" href="#combining-modules"></a>
 </h2>
-<p>These modules can be composed for sophisticated pipelines:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<p>These modules can be composed when one execution pattern is not
+enough:</p>
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># ChainOfThought inside BestOfN</span></span>
 <span><span class="va">cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"math_problem -&gt; solution"</span><span class="op">)</span></span>
 <span><span class="va">reliable_cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">cot</span>, N <span class="op">=</span> <span class="fl">3</span>, reward_fn <span class="op">=</span> <span class="va">math_checker</span><span class="op">)</span></span>
@@ -819,8 +958,57 @@ unnecessary model calls.</p>
 <div class="section level2">
 <h2 id="optimization-support">Optimization Support<a class="anchor" aria-label="anchor" href="#optimization-support"></a>
 </h2>
-<p>All advanced modules integrate with dsprrr’s optimization:</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<p>Wrapper modules retain their underlying optimizable predictors. RLM
+exposes separate <code>generate_action</code> and <code>extract</code>
+children, but optimizer support is deliberately explicit:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Optimizer</th>
+<th>RLM support</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/GEPA.html">GEPA()</a></code></td>
+<td>Tunes both child predictors with end-to-end feedback;
+<code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code> can derive feedback from the bounded
+RLM trajectory</td>
+</tr>
+<tr class="even">
+<td>
+<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> / <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
+</td>
+<td>Discovers and applies both graph children</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/MIPROv2.html">MIPROv2()</a></code></td>
+<td>Tunes child instructions only when
+<code>max_bootstrapped_demos = 0L</code>
+</td>
+</tr>
+<tr class="even">
+<td>
+<code><a href="../reference/BootstrapFewShot.html">BootstrapFewShot()</a></code> /
+<code><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch()</a></code>
+</td>
+<td>Programs containing Flex or an RLM are rejected; use GEPA, or
+instruction-only MIPROv2 for an RLM graph</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code></td>
+<td>Programs containing an RLM are rejected because root examples do not
+match child signatures</td>
+</tr>
+</tbody>
+</table>
+<p>Nested MIPRO demo bootstrapping fails with an actionable typed error
+until RLM collects predictor-local child evidence. This avoids attaching
+task-level demos to incompatible <code>state -&gt; ...</code>
+predictors.</p>
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Grid search over wrapper parameters</span></span>
 <span><span class="va">wrapper</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">qa</span>, N <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="va">wrapper</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
@@ -842,75 +1030,32 @@ unnecessary model calls.</p>
 <div class="section level3">
 <h3 id="token-usage">Token Usage<a class="anchor" aria-label="anchor" href="#token-usage"></a>
 </h3>
-<p>Advanced modules use more tokens than simple prediction:</p>
-<ul>
-<li>
-<strong>ChainOfThought</strong>: ~1.5-2x tokens (reasoning +
-answer)</li>
-<li>
-<strong>BestOfN(N=3)</strong>: Up to 3x tokens (worst case, no early
-stopping)</li>
-<li>
-<strong>Refine(N=3)</strong>: Up to 3x tokens plus feedback
-overhead</li>
-<li>
-<strong>MCC(M=3)</strong>: ~4x tokens (M chains + 1 comparison)</li>
-</ul>
+<p>Advanced modules trade additional calls for reasoning, retries,
+comparison, or exploration. The actual cost depends on early stopping,
+provider behavior, trajectory length, and recursive queries. Set
+explicit iteration and call budgets, then inspect returned metadata
+rather than relying on a fixed multiplier.</p>
 </div>
 <div class="section level3">
 <h3 id="cost-tracking">Cost Tracking<a class="anchor" aria-label="anchor" href="#cost-tracking"></a>
 </h3>
-<p>All modules track costs in metadata:</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mcc</span>, question <span class="op">=</span> <span class="st">"Test"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">.metadata</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">total_cost</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">.metadata</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">total_tokens</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">.metadata</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">n_llm_calls</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="when-to-use-each">When to Use Each<a class="anchor" aria-label="anchor" href="#when-to-use-each"></a>
-</h3>
-<table class="table">
-<colgroup>
-<col width="27%">
-<col width="34%">
-<col width="37%">
-</colgroup>
-<thead><tr class="header">
-<th>Module</th>
-<th>Best For</th>
-<th>Trade-off</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>ChainOfThought</td>
-<td>Complex reasoning, math, logic</td>
-<td>Slight cost increase</td>
-</tr>
-<tr class="even">
-<td>BestOfN</td>
-<td>High-variance tasks, critical outputs</td>
-<td>N× cost (with early stopping)</td>
-</tr>
-<tr class="odd">
-<td>Refine</td>
-<td>Tasks with clear failure modes</td>
-<td>N× cost + feedback gen</td>
-</tr>
-<tr class="even">
-<td>MCC</td>
-<td>Complex analysis, multiple valid approaches</td>
-<td>(M+1)× cost</td>
-</tr>
-</tbody>
-</table>
+<p>Structured results expose the usage and cost metadata available for
+the module:</p>
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">mcc</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"Test"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">cost</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">total_tokens</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
-<p>dsprrr’s advanced modules bring battle-tested patterns from DSPy to
-R:</p>
+<p>These modules cover distinct execution strategies:</p>
 <table class="table">
 <colgroup>
 <col width="27%">
@@ -926,22 +1071,22 @@ R:</p>
 <tr class="odd">
 <td><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code></td>
 <td>Complex reasoning, math, logic</td>
-<td>Slight cost increase</td>
+<td>Longer model output</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/best_of_n.html">best_of_n()</a></code></td>
 <td>High-variance tasks, critical outputs</td>
-<td>N× cost (with early stopping)</td>
+<td>Additional candidate calls</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/refine.html">refine()</a></code></td>
 <td>Tasks with clear failure modes</td>
-<td>N× cost + feedback gen</td>
+<td>Iterative feedback calls</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/multi_chain_comparison.html">multi_chain_comparison()</a></code></td>
 <td>Complex analysis, multiple valid approaches</td>
-<td>(M+1)× cost</td>
+<td>Candidate and comparison calls</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
@@ -954,6 +1099,12 @@ R:</p>
 <td>Agent loop overhead</td>
 </tr>
 <tr class="odd">
+<td><code><a href="../reference/rlm_module.html">rlm_module()</a></code></td>
+<td>Adaptive exploration of large or irregular R objects</td>
+<td>Experimental; iterative calls and an explicit execution
+boundary</td>
+</tr>
+<tr class="even">
 <td><code><a href="../reference/flex.html">flex()</a></code></td>
 <td>Optimizing the choice among predictors, R logic, and tools</td>
 <td>Experimental; executable source requires a sandbox</td>
@@ -965,21 +1116,24 @@ R:</p>
 <strong>BestOfN</strong> when you need reliability - Use
 <strong>ProgramOfThought</strong> for exact computation (math,
 statistics) - Use <strong>CodeAct</strong> when you need tools AND code
-execution together - Use <strong>Flex</strong> when the implementation
-strategy itself is the experiment</p>
+execution together - Use <strong>RLM</strong> when the exploration path
+is unknown for this input - Use <strong>Flex</strong> when the
+implementation strategy itself is the experiment</p>
 </div>
 <div class="section level2">
 <h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
 </h2>
 <p><strong>Tutorials:</strong> - <a href="tutorial-improve-with-demos.html">Improving with Examples</a> —
 Learn few-shot prompting - <a href="tutorial-optimize-your-module.html">Finding Best Configuration</a>
-— Grid search optimization</p>
+— Grid search optimization - <a href="tutorial-rlm-dsprrr.html">Investigate a Release Regression with an
+RLM</a> — Explore a deterministic large object</p>
 <p><strong>How-to Guides:</strong> - <a href="compilation-optimization.html">Compile &amp; Optimize</a> — Full
 optimization workflow with advanced modules - <a href="rag-workflows.html">Build RAG Pipelines</a> — Use modules in
 retrieval workflows</p>
 <p><strong>Concepts:</strong> - <a href="concepts-signatures-modules.html">Understanding Signatures &amp;
 Modules</a> — S7 vs R6 design choices - <a href="concepts-optimization-theory.html">How Optimization Works</a> —
-Teleprompter theory</p>
+Teleprompter theory - <a href="how-rlm-works.html">How the RLM Works</a>
+— Lifecycle, replay, typed submission, and runner boundaries</p>
 <p><strong>Reference:</strong> - <a href="cheatsheet.html">Quick
 Reference</a> — Syntax and patterns at a glance</p>
 </div>

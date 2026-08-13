@@ -2,7 +2,9 @@
 
 A simple teleprompter that adds labeled examples from the training set
 as demonstrations to the module. This is the simplest form of few-shot
-learning.
+learning. The target must be a root Predict module; programs with nested
+predictors (including RLM) are rejected because root examples do not
+define predictor-local demonstrations.
 
 ## Usage
 

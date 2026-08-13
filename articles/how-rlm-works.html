@@ -18,9 +18,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="How the Recursive Language Model (RLM) Works">
-<meta name="description" content="From the research origins to dsprrr's R implementation: what Recursive Language Models are, why they matter, and how the internals work.
+<meta name="description" content="The RLM execution contract: external context, iterative R code, recursive queries, typed submission, runner ownership, and bounded evidence.
 ">
-<meta property="og:description" content="From the research origins to dsprrr's R implementation: what Recursive Language Models are, why they matter, and how the internals work.
+<meta property="og:description" content="The RLM execution contract: external context, iterative R code, recursive queries, typed submission, runner ownership, and bounded evidence.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
@@ -56,7 +56,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
@@ -131,7 +131,7 @@
                         <h4 data-toc-skip class="author">James H.
 Wade</h4>
             
-            <h4 data-toc-skip class="date">2026-08-11</h4>
+            <h4 data-toc-skip class="date">2026-08-13</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/articles/how-rlm-works.Rmd" class="external-link"><code>vignettes/articles/how-rlm-works.Rmd</code></a></small>
       <div class="d-none name"><code>how-rlm-works.Rmd</code></div>
@@ -139,600 +139,445 @@ Wade</h4>
 
     
     
+<p>An RLM changes where context lives. A regular predictor serializes
+its inputs into the model request. An RLM keeps the inputs in an R
+execution environment and initially shows the model only their names,
+types, sizes, and previews. The model writes R code to select evidence,
+observes bounded output, and repeats until it can submit the signature’s
+typed outputs.</p>
+<p>That makes RLM an inference strategy for discovery, not a more
+elaborate way to answer every prompt.</p>
 <div class="section level2">
-<h2 id="the-problem-context-rot">The Problem: Context Rot<a class="anchor" aria-label="anchor" href="#the-problem-context-rot"></a>
+<h2 id="decide-before-you-build">Decide before you build<a class="anchor" aria-label="anchor" href="#decide-before-you-build"></a>
 </h2>
-<p>Modern LLMs accept enormous context windows. GPT-5 handles a million
-tokens; Gemini stretches to two million. But bigger windows do not solve
-the fundamental problem.</p>
-<p>As context grows, performance degrades: details get lost and answers
-go wrong. The MIT researchers who introduced Recursive Language Models
-call this <em>context rot</em>, the empirical observation that output
-quality deteriorates as prompts grow, even when the relevant information
-is technically within the window <span class="citation">(see Zhang et
-al. 2025)</span>. The model misses what it needs with increasing
-frequency as input length grows.</p>
-<p>And there is no adaptive retrieval. The model cannot decide to
-re-read section 14 after discovering something relevant in section 42.
-It processes the entire input in one pass and produces output from
-whatever signal survived.</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Need</th>
+<th>Prefer</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Short context and a direct answer</td>
+<td><code>Predict</code></td>
+</tr>
+<tr class="even">
+<td>Hard reasoning over already selected context</td>
+<td><code>ChainOfThought</code></td>
+</tr>
+<tr class="odd">
+<td>A known calculation expressed as generated R code</td>
+<td><code>ProgramOfThought</code></td>
+</tr>
+<tr class="even">
+<td>External actions or data acquisition through tools</td>
+<td>
+<code>ReAct</code> or <code>CodeAct</code>
+</td>
+</tr>
+<tr class="odd">
+<td>Retrieval from a prepared index</td>
+<td>RAG</td>
+</tr>
+<tr class="even">
+<td>Adaptive exploration of large or irregular in-memory objects</td>
+<td>RLM</td>
+</tr>
+<tr class="odd">
+<td>Search for a reusable implementation across labeled cases</td>
+<td>Flex</td>
+</tr>
+</tbody>
+</table>
+<p>Use RLM when the model must discover <em>how</em> to inspect the
+supplied context. Skip it when a direct R function, SQL query, retrieval
+rule, or ordinary module already describes the path. Every RLM iteration
+adds another model call and another code execution.</p>
+<p>The <a href="tutorial-rlm-dsprrr.html">release-regression
+tutorial</a> shows the intended shape: use R to identify an anomalous
+cohort, inspect one relevant change record, and validate the answer
+against an independent calculation.</p>
 </div>
 <div class="section level2">
-<h2 id="the-insight-context-as-environment">The Insight: Context as Environment<a class="anchor" aria-label="anchor" href="#the-insight-context-as-environment"></a>
+<h2 id="one-invocation-step-by-step">One invocation, step by step<a class="anchor" aria-label="anchor" href="#one-invocation-step-by-step"></a>
 </h2>
-<p>The core idea behind RLMs is simple: <em>don’t put the context in the
-prompt</em>. Instead, store it as a variable in a programming
-environment and let the model write code to explore it.</p>
-<p>A traditional call looks like this:</p>
+<p>An invocation has six observable stages.</p>
+<ol style="list-style-type: decimal">
+<li>
+<code><a href="../reference/rlm_module.html">rlm_module()</a></code> reads the signature and fixes the
+iteration, recursive-call, and output budgets.</li>
+<li>The runner loads the signature inputs into <code>.context</code>. A
+persistent runner keeps its execution state for the whole
+invocation.</li>
+<li>The outer model receives variable metadata and the trajectory so
+far, then proposes one R code block.</li>
+<li>The runner executes that code. After any stricter runner transport
+limit, bounded head-and-tail output enters the next model turn; the full
+source object does not.</li>
+<li>A valid <code>SUBMIT(...)</code> ends the loop. An invalid typed
+submission becomes repairable feedback instead.</li>
+<li>If the loop spends <code>max_iters</code> without a valid
+submission, a final extraction pass attempts to produce the best typed
+answer supported by the trajectory; provider or type-validation failure
+remains terminal.</li>
+</ol>
+<p>The core interface is small:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">llm</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Summarize this document:"</span>, <span class="va">huge_document</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>An RLM inverts the relationship. The document lives outside the model
-as a variable in an R session, and the model generates code to interact
-with it. When you call <code><a href="../reference/run.html">run()</a></code>, dsprrr provides a REPL: the
-model writes R code, dsprrr executes it in a subprocess, and the printed
-output feeds back into the next iteration. A typical exploration might
-look like this:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># The model generates and executes code like this:</span></span>
-<span><span class="va">intro</span> <span class="op">&lt;-</span> <span class="fu">peek</span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">document</span>, <span class="fl">1</span>, <span class="fl">2000</span><span class="op">)</span></span>
-<span><span class="va">findings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/search.html" class="external-link">search</a></span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">document</span>, <span class="st">"\\b(conclusion|finding|result)\\b"</span><span class="op">)</span></span>
-<span><span class="va">section_42</span> <span class="op">&lt;-</span> <span class="fu">peek</span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">document</span>, <span class="fl">85000</span>, <span class="fl">90000</span><span class="op">)</span></span>
-<span><span class="fu">SUBMIT</span><span class="op">(</span>answer <span class="op">=</span> <span class="st">"The document concludes that..."</span><span class="op">)</span></span></code></pre></div>
-<p>The shift is from treating context as <em>input</em> to treating it
-as <em>environment</em>. The model reads what it needs, skips what it
-doesn’t, and revisits sections as its picture of the data develops.</p>
-<p>In dsprrr’s API, the module receives input arguments (e.g.,
-<code>question</code>), holds context variables (e.g.,
-<code>document</code>) outside the prompt, and exposes
-<code>llm_query()</code> so the model can delegate sub-questions to a
-secondary model from generated code. In the paper’s notation <span class="citation">(Zhang et al. 2025)</span>, these correspond to a query
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>q</mi><annotation encoding="application/x-tex">q</annotation></semantics></math>,
-context
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>,
-and a recursive tool call
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mtext mathvariant="normal">RLM</mtext><mi>M</mi></msub><mo stretchy="false" form="prefix">(</mo><mover><mi>q</mi><mo accent="true">̂</mo></mover><mo>,</mo><mover><mi>C</mi><mo accent="true">̂</mo></mover><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\text{RLM}_M(\hat{q}, \hat{C})</annotation></semantics></math>
-that spawns an isolated sub-instance with a new query and a transformed
-slice of the context.</p>
-</div>
-<div class="section level2">
-<h2 id="origin-and-ecosystem">Origin and Ecosystem<a class="anchor" aria-label="anchor" href="#origin-and-ecosystem"></a>
-</h2>
-<p>RLMs were introduced by Alex Zhang, Tim Kraska, and Omar Khattab at
-MIT <span class="citation">(Zhang et al. 2025)</span>. On
-BrowseComp-Plus (a benchmark with 6–11 million token inputs), standard
-models scored 0% while an RLM powered by GPT-5 achieved 91.33%. That
-comparison is less “RLM beats prompting” than “RLM makes previously
-intractable tasks tractable”; inputs that large exceed every current
-model’s context window. The fairer apples-to-apples result is that their
-post-trained RLM-Qwen3-8B outperformed the base Qwen3-8B by 28.3% on
-average across long-context tasks.</p>
-<p>The idea has since spread quickly. DSPy integrated RLMs as a
-first-class module (<a href="https://dspy.ai/api/modules/RLM/" class="external-link"><code>dspy.RLM</code></a>) in
-version 3.1.2+, using a Pyodide WASM sandbox for code execution.
-Google’s Agent Development Kit <a href="https://medium.com/google-cloud/recursive-language-models-in-adk-d9dc736f0478" class="external-link">re-implemented
-the pattern</a> with Gemini models. The <a href="https://github.com/alexzhang13/rlm" class="external-link">official <code>rlm</code>
-Python package</a>, a <a href="https://github.com/ysz/recursive-llm" class="external-link">community
-implementation</a>, and <a href="https://www.primeintellect.ai/blog/rlm" class="external-link">Prime Intellect’s research
-program</a> round out the ecosystem. The <a href="#how-dsprrrs-rlm-compares">comparison table below</a> summarizes
-the key differences.</p>
-<p>dsprrr’s <code><a href="../reference/rlm_module.html">rlm_module()</a></code> brings the same approach to R,
-using R as the REPL language instead of Python and structured outputs
-via <a href="https://ellmer.tidyverse.org/" class="external-link">ellmer</a>. Execution is
-delegated to the selected runner backend: the built-in
-<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> uses <a href="https://callr.r-lib.org/" class="external-link">callr</a>, while the default managed
-<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> uses an OS-sandboxed persistent
-session.</p>
-</div>
-<div class="section level2">
-<h2 id="how-dsprrr-implements-rlm">How dsprrr Implements RLM<a class="anchor" aria-label="anchor" href="#how-dsprrr-implements-rlm"></a>
-</h2>
-<p>The rest of this article walks through dsprrr’s implementation. For a
-practical example, see
-<code>vignette("tutorial-rlm-dsprrr", package = "dsprrr")</code>, which
-uses <code><a href="../reference/rlm_module.html">rlm_module()</a></code> to trace a theming bug across the bslib,
-shiny, and brand.yml codebases.</p>
-<div class="section level3">
-<h3 id="the-user-facing-api">The User-Facing API<a class="anchor" aria-label="anchor" href="#the-user-facing-api"></a>
-</h3>
-<p>Creating an RLM module requires a signature plus exactly one
-execution binding. To reuse a caller-owned runner object, pass
-<code>runner</code>:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">rlm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
-<span>  signature <span class="op">=</span> <span class="st">"document, question -&gt; answer"</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span></span>
+<span><span class="va">explorer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<span>  <span class="st">"document, question -&gt; answer, evidence"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="op">}</span>,</span>
+<span>  max_iters <span class="op">=</span> <span class="fl">10</span>,</span>
+<span>  max_llm_calls <span class="op">=</span> <span class="fl">6</span>,</span>
+<span>  max_output_chars <span class="op">=</span> <span class="fl">10000</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>For tasks that benefit from recursive sub-queries, you can wire up a
-secondary model:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rlm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
-<span>  signature <span class="op">=</span> <span class="st">"document, question -&gt; answer"</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
-<span>  sub_lm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span>,</span>
-<span>  max_llm_calls <span class="op">=</span> <span class="fl">10</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>You can also inject custom R functions as tools available in the
-REPL. The factory validates these against reserved names
-(<code>SUBMIT</code>, <code>peek</code>, <code>search</code>,
-<code>llm_query</code>, etc.) to prevent collisions.</p>
+<p>All signature inputs are available under <code>.context</code>:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">document</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/search.html" class="external-link">search</a></span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">document</span>, <span class="st">"renewal|termination"</span><span class="op">)</span></span>
+<span><span class="fu">peek</span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">document</span>, start <span class="op">=</span> <span class="fl">12000</span>, end <span class="op">=</span> <span class="fl">15000</span><span class="op">)</span></span></code></pre></div>
+<p><code>peek()</code> and <code><a href="https://rdrr.io/r/base/search.html" class="external-link">search()</a></code> are conveniences, not a
+separate query language. The generated program can use ordinary R
+functions appropriate to the value in <code>.context</code>.</p>
 </div>
-<div class="section level3">
-<h3 id="the-repl-loop">The REPL Loop<a class="anchor" aria-label="anchor" href="#the-repl-loop"></a>
-</h3>
-<p>When you call <code>run(rlm, ...)</code>, dsprrr dispatches to the
-module’s internal <code>forward()</code> method. This is where the REPL
-loop lives. A <code>PredictModule</code>’s <code>forward()</code> makes
-a single call; the RLM module loops, up to <code>max_iterations</code>
-times (default 20):</p>
+<div class="section level2">
+<h2 id="state-belongs-to-one-invocation">State belongs to one invocation<a class="anchor" aria-label="anchor" href="#state-belongs-to-one-invocation"></a>
+</h2>
+<p>RLM code is iterative. A value calculated on one turn should remain
+available on the next, so the runner used for an invocation must provide
+persistent state.</p>
+<p>The recommended lifecycle is a zero-argument factory:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">explorer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<span>  <span class="st">"records, question -&gt; answer"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  max_iters <span class="op">=</span> <span class="fl">10</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>dsprrr creates one runner from the factory, uses it for that
+invocation, and closes it exactly once on success, error, or interrupt.
+Factory-backed modules can create isolated runners for concurrent
+invocations.</p>
+<p>A directly supplied <code>runner</code> is caller-owned. dsprrr
+neither resets nor closes it. RLM attempts to remove staged context and
+invocation-private variables when a call ends. Inspect cleanup warnings
+and close or reset the runner if cleanup fails. No cleanup can undo
+arbitrary file, option, or network side effects from guest code. Reuse a
+caller-owned runner only sequentially and within one trust boundary:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">local</a></span><span class="op">(</span><span class="op">{</span></span>
+<span>  <span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit</a></span><span class="op">(</span><span class="va">runner</span><span class="op">$</span><span class="fu">close</span><span class="op">(</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="va">explorer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<span>    <span class="st">"records, question -&gt; answer"</span>,</span>
+<span>    runner <span class="op">=</span> <span class="va">runner</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="co"># Run explorer sequentially inside this scope.</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="recursive-calls-happen-through-the-host">Recursive calls happen through the host<a class="anchor" aria-label="anchor" href="#recursive-calls-happen-through-the-host"></a>
+</h2>
+<p>The outer model is responsible for planning and code. Generated code
+can ask a model to interpret a focused slice:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># From R/module-rlm.R (error handling, sub-query interception, and</span></span>
-<span><span class="co"># fallback extraction omitted -- see those sections below)</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">iter</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">self</span><span class="op">$</span><span class="va">max_iterations</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Build prompt including all previous iterations</span></span>
-<span>  <span class="va">prompt</span> <span class="op">&lt;-</span> <span class="va">private</span><span class="op">$</span><span class="fu">build_iteration_prompt</span><span class="op">(</span><span class="va">system_prompt</span>, <span class="va">history</span>, <span class="va">iter</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Ask the model to generate R code</span></span>
-<span>  <span class="va">response</span> <span class="op">&lt;-</span> <span class="va">private</span><span class="op">$</span><span class="fu">get_code_response</span><span class="op">(</span><span class="va">llm</span>, <span class="va">prompt</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Execute code in isolated subprocess with RLM tools injected</span></span>
-<span>  <span class="va">exec_result</span> <span class="op">&lt;-</span> <span class="va">private</span><span class="op">$</span><span class="fu">execute_with_rlm_tools</span><span class="op">(</span></span>
-<span>    <span class="va">response</span><span class="op">$</span><span class="va">code</span>,</span>
-<span>    <span class="va">inputs</span>,</span>
-<span>    <span class="va">call_counter</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Record in history -- the model sees this on the next iteration</span></span>
-<span>  <span class="va">history</span><span class="op">[[</span><span class="va">iter</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    iteration <span class="op">=</span> <span class="va">iter</span>,</span>
-<span>    reasoning <span class="op">=</span> <span class="va">response</span><span class="op">$</span><span class="va">reasoning</span>,</span>
-<span>    code <span class="op">=</span> <span class="va">response</span><span class="op">$</span><span class="va">code</span>,</span>
-<span>    output <span class="op">=</span> <span class="va">exec_result</span><span class="op">$</span><span class="va">formatted_output</span>,</span>
-<span>    success <span class="op">=</span> <span class="va">exec_result</span><span class="op">$</span><span class="va">success</span>,</span>
-<span>    is_final <span class="op">=</span> <span class="va">exec_result</span><span class="op">$</span><span class="va">is_final</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># SUBMIT() terminates the loop</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="va">exec_result</span><span class="op">$</span><span class="va">is_final</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">final_answer</span> <span class="op">&lt;-</span> <span class="va">exec_result</span><span class="op">$</span><span class="va">final_value</span></span>
-<span>    <span class="kw">break</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p>Each iteration produces a structured response with two fields:
-<code>reasoning</code> (the model’s explanation of its plan for that
-step) and <code>code</code> (R code to execute). This uses ellmer’s
-structured output support:</p>
+<code class="sourceCode R"><span><span class="va">candidate</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">notes</span>, <span class="va">component</span> <span class="op">==</span> <span class="st">"checkout-auth"</span><span class="op">)</span></span>
+<span><span class="va">interpretation</span> <span class="op">&lt;-</span> <span class="fu">llm_query</span><span class="op">(</span></span>
+<span>  <span class="st">"Which change could reduce successful token refreshes?"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">candidate</span><span class="op">$</span><span class="va">note</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">SUBMIT</span><span class="op">(</span>answer <span class="op">=</span> <span class="va">interpretation</span><span class="op">)</span></span></code></pre></div>
+<p>The replay bridge does not pass model credentials into the recursive
+call path. Guest access to environment variables and other host
+resources still depends on the selected runner: only a verified sandbox
+enforces that boundary. The guest emits a nonce-bound, schema-checked
+request, dsprrr calls the sub-model in the host process, and the code
+evaluation is replayed with the response. Ordinary R assignments are
+committed only after the replay completes, and bridged host tools
+execute once. Direct file, network, or other external side effects
+before a query cannot be rolled back and may repeat, so keep pre-query
+guest work read-only.</p>
+<p>Bridge requests use unclassed JSON-compatible values. Missing values,
+<code>NaN</code>, infinities, and classed R objects are rejected instead
+of being silently coerced. A ToolDef schema helps the model form a call;
+the host function must still enforce domain-specific constraints before
+acting.</p>
+<p><code>sub_lm = NULL</code> inherits the outer model passed to
+<code><a href="../reference/run.html">run()</a></code>. Supply a separate chat when narrow interpretation
+can use a cheaper model:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># From R/module-rlm.R -- structured code generation</span></span>
-<span><span class="va">output_type</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>  reasoning <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Your thought process for this step"</span><span class="op">)</span>,</span>
-<span>  code <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"R code to execute"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">explorer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<span>  <span class="st">"documents, question -&gt; answer"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  sub_lm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  max_llm_calls <span class="op">=</span> <span class="fl">8</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><code>llm_query_batched()</code> runs independent focused questions
+concurrently and returns results in input order. A per-request provider
+failure becomes an ordered <code>[ERROR] ...</code> slot. An unexpected
+exception, malformed batch result, or transport-level failure terminates
+the invocation instead of masquerading as a model answer. Every
+requested prompt consumes one unit of <code>max_llm_calls</code>. Set
+that budget from the economics of the task, not from the largest number
+the provider permits.</p>
+</div>
+<div class="section level2">
+<h2 id="submission-is-part-of-the-contract">Submission is part of the contract<a class="anchor" aria-label="anchor" href="#submission-is-part-of-the-contract"></a>
+</h2>
+<p>The signature defines both the names and types accepted by
+<code>SUBMIT()</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">typed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>    <span class="st">"logs -&gt;"</span>,</span>
+<span>    <span class="st">"error_count: integer,"</span>,</span>
+<span>    <span class="st">"severity: enum('low', 'high'),"</span>,</span>
+<span>    <span class="st">"evidence: array(string)"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Generated code can submit named values:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">SUBMIT</span><span class="op">(</span></span>
+<span>  error_count <span class="op">=</span> <span class="fl">7L</span>,</span>
+<span>  severity <span class="op">=</span> <span class="st">"high"</span>,</span>
+<span>  evidence <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"AUTH-401 increased"</span>, <span class="st">"Refresh retries fell to zero"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Missing required fields, extra fields, and incompatible values do not
+silently become a final answer. Optional fields may be omitted. The
+validation message joins the trajectory, giving the model a chance to
+repair its submission. Positional submission is supported, but named
+fields are easier to audit.</p>
+<p>RLM strictly validates explicit ellmer string, number, integer,
+boolean, enum, array, and object types, including nested combinations.
+It rejects opaque <code>TypeJsonSchema</code> output nodes at
+construction because accepting them without a JSON Schema validator
+would make the repair contract misleading. Express the output with
+ellmer’s explicit type constructors when using RLM.</p>
+<p>If <code>max_iters</code> is exhausted, fallback extraction reads the
+trajectory and attempts to return the signature fields. Provider or
+output-validation failure still terminates the invocation. Treat a
+successful fallback as degraded completion: it is useful, but it is
+evidence that the exploration budget or instructions may need work.</p>
+</div>
+<div class="section level2">
+<h2 id="output-is-bounded-evidence">Output is bounded evidence<a class="anchor" aria-label="anchor" href="#output-is-bounded-evidence"></a>
+</h2>
+<p><code>max_output_chars</code> limits how much runner output from each
+execution enters model history. The default 10,000-character module
+display retains the head and tail. A runner may impose a stricter limit
+first: managed MCP rejects file/pager compaction for RLM rather than
+treating an incomplete preview as evidence. The module bound is not
+permission to return arbitrarily large control payloads.</p>
+<p>Ask for structured output when the trajectory matters:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">explorer</span>,</span>
+<span>  records <span class="op">=</span> <span class="va">records</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"Which change preceded the failure spike?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">llm</span><span class="op">$</span><span class="fu">chat_structured</span><span class="op">(</span><span class="va">prompt</span>, type <span class="op">=</span> <span class="va">output_type</span><span class="op">)</span></span></code></pre></div>
-<p>The accumulated history gives the model a growing record of what it
-has tried. Failed executions are included. The model sees its own errors
-and can correct course.</p>
-</div>
+<span><span class="va">result</span><span class="op">$</span><span class="va">output</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">repl_history</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">iterations</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">llm_calls</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">runner_policy</span></span></code></pre></div>
+<p>Each trajectory entry records the proposed reasoning, executed code,
+displayed output, success state, and whether a final submission
+occurred. Prefer the returned metadata over mutable module state for
+async or batch work.</p>
 <div class="section level3">
-<h3 id="repl-tools">REPL Tools<a class="anchor" aria-label="anchor" href="#repl-tools"></a>
+<h3 id="one-investigation-or-many">One investigation or many<a class="anchor" aria-label="anchor" href="#one-investigation-or-many"></a>
 </h3>
-<p>Before each execution, dsprrr injects a “prelude” that defines the
-tools available in the subprocess. These are defined in
-<code>R/rlm-tools.R</code>:</p>
-<p><code>peek(var, start, end)</code> views a slice of a variable. It
-dispatches on the input type: for a character vector, <code>start</code>
-and <code>end</code> are element indices; for a single string, they are
-character positions:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># From R/rlm-tools.R</span></span>
-<span><span class="va">peek</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">var</span>, <span class="va">start</span> <span class="op">=</span> <span class="fl">1L</span>, <span class="va">end</span> <span class="op">=</span> <span class="fl">1000L</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">is.character</a></span><span class="op">(</span><span class="va">var</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">var</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">var</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="va">var</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="va">start</span><span class="op">)</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">var</span><span class="op">)</span>, <span class="va">end</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">var</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="va">start</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">var</span><span class="op">)</span>, <span class="va">end</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p><code>search(var, pattern)</code> runs a Perl-compatible regex
-against a variable and returns all matches:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># From R/rlm-tools.R</span></span>
-<span><span class="va">search</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">var</span>, <span class="va">pattern</span>, <span class="va">ignore_case</span> <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">is.character</a></span><span class="op">(</span><span class="va">var</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">var</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">var</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">var</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span>  <span class="va">matches</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/regmatches.html" class="external-link">regmatches</a></span><span class="op">(</span></span>
-<span>    <span class="va">var</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gregexpr</a></span><span class="op">(</span><span class="va">pattern</span>, <span class="va">var</span>, ignore.case <span class="op">=</span> <span class="va">ignore_case</span>, perl <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="va">matches</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p><code>SUBMIT(...)</code> terminates the loop and returns the final
-answer. It validates that the provided values match the signature’s
-output fields, supporting both positional
-(<code>SUBMIT("my answer")</code>) and named
-(<code>SUBMIT(answer = "my answer")</code>) arguments:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># From R/rlm-tools.R -- simplified; see source for full validation logic</span></span>
-<span><span class="va">SUBMIT</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">args</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span>
-<span>  <span class="va">arg_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">args</span><span class="op">)</span></span>
-<span>  <span class="va">has_any_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nzchar</a></span><span class="op">(</span><span class="va">arg_names</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="st">""</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">has_any_names</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="co"># Positional: match by order against signature output fields</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">.rlm_output_fields</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="co"># Named: validate that all required fields are present</span></span>
-<span>    <span class="va">missing</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="va">.rlm_output_fields</span>, <span class="va">arg_names</span><span class="op">)</span></span>
-<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">missing</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"SUBMIT() missing outputs: "</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">missing</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="op">}</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rlm_final"</span>, <span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">args</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">args</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p>The <code>.rlm_output_fields</code> variable is not magic. It is
-injected into the subprocess by the same prelude that defines
-<code>peek()</code>, <code><a href="https://rdrr.io/r/base/search.html" class="external-link">search()</a></code>, and <code>SUBMIT()</code>
-itself. The prelude reads the signature’s output field names and writes
-them as a character vector at the top of the execution script.</p>
-<p>The <code>rlm_final</code> class is a sentinel: when the parent
-process sees it in the subprocess result, it exits the loop and extracts
-the answer.</p>
+<p><code><a href="../reference/run.html">run()</a></code> always stages each RLM input as one REPL variable.
+Its R length does not imply a batch: an atomic vector, list, matrix,
+data frame, or fitted model is one context object for one investigation.
+This matches the way generated code reads the inputs through
+<code>.context</code> and avoids silently splitting irregular
+objects.</p>
+<p>Use <code><a href="../reference/run_dataset.html">run_dataset()</a></code> for multiple investigations. Each
+data-frame row is one RLM invocation; put rich per-row objects in
+list-columns. A factory-backed RLM owns one fresh runner per row and can
+use isolated mirai execution. A caller-owned runner is reused
+sequentially and rejects concurrent dataset execution.</p>
+<p>The counters separate workflow steps from paid provider work.
+<code>action_calls</code>, <code>recursive_calls</code>, and
+<code>extraction_calls</code> count logical RLM operations.
+<code>provider_calls</code> sums the verified provider turns behind
+them, with component fields for action, recursive, and extraction calls.
+A cached action or extraction contributes zero provider calls and zero
+current-run usage. If a backend cannot prove every contributing turn,
+provider, token, and cost totals remain <code>NA</code> instead of
+reporting a partial total.</p>
 </div>
-<div class="section level3">
-<h3 id="runner-selected-isolation">Runner-Selected Isolation<a class="anchor" aria-label="anchor" href="#runner-selected-isolation"></a>
-</h3>
-<p>The example in this article uses <code>RCodeRunner</code>, so each
-generated code fragment runs in an isolated R subprocess via
-<code><a href="https://callr.r-lib.org/reference/r.html" class="external-link">callr::r()</a></code>. The <code>RCodeRunner</code> class in
-<code>R/r-code-runner.R</code> handles that backend:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># From R/r-code-runner.R -- subprocess execution (simplified)</span></span>
-<span><span class="va">exec_result</span> <span class="op">&lt;-</span> <span class="fu">callr</span><span class="fu">::</span><span class="fu"><a href="https://callr.r-lib.org/reference/r.html" class="external-link">r</a></span><span class="op">(</span></span>
-<span>  func <span class="op">=</span> <span class="va">private</span><span class="op">$</span><span class="va">execution_wrapper</span>,</span>
-<span>  args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>code <span class="op">=</span> <span class="va">code</span>, context <span class="op">=</span> <span class="va">context</span>, <span class="va">...</span><span class="op">)</span>,</span>
-<span>  timeout <span class="op">=</span> <span class="va">self</span><span class="op">$</span><span class="va">timeout</span>,</span>
-<span>  stdout <span class="op">=</span> <span class="va">stdout_file</span>,</span>
-<span>  stderr <span class="op">=</span> <span class="va">stderr_file</span>,</span>
-<span>  user_profile <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Inside the subprocess, a fresh environment is created with the
-context available as <code>.context</code>. The wrapper overrides
-<code><a href="https://rdrr.io/r/base/library.html" class="external-link">library()</a></code> and <code><a href="https://rdrr.io/r/base/library.html" class="external-link">require()</a></code> to enforce a package
-allowlist, and a pattern scanner rejects calls to <code><a href="https://rdrr.io/r/base/system.html" class="external-link">system()</a></code>,
-<code><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink()</a></code>, <code><a href="https://rdrr.io/r/base/quit.html" class="external-link">quit()</a></code>, and
-<code><a href="https://rdrr.io/r/utils/download.file.html" class="external-link">download.file()</a></code>. Each iteration spawns a new subprocess, so
-each pays a cold-start cost (typically 200–400ms depending on
-platform).</p>
 </div>
-<div class="section level3">
-<h3 id="recursive-sub-queries">Recursive Sub-Queries<a class="anchor" aria-label="anchor" href="#recursive-sub-queries"></a>
-</h3>
-<p>This is where the “recursive” in RLM comes from. When
-<code>sub_lm</code> is provided, the model can write
-<code>llm_query("What does section 3 say?", context_slice)</code> in its
-generated code. The function does not execute the sub-call inside the
-subprocess, which would be a security problem. Instead, it returns a
-marker object:</p>
+<div class="section level2">
+<h2 id="choose-the-execution-boundary">Choose the execution boundary<a class="anchor" aria-label="anchor" href="#choose-the-execution-boundary"></a>
+</h2>
+<p>RLM executes model-generated code. Runner choice is therefore part of
+the program’s security and data contract.</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Runner path</th>
+<th>Strength</th>
+<th>Limitation</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Managed <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code>
+</td>
+<td>OS sandbox, network disabled, fresh factory-owned invocation</td>
+<td>Workspace writes remain allowed; bounded transport is intended for
+compact JSON-compatible context</td>
+</tr>
+<tr class="even">
+<td>Persistent <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code>
+</td>
+<td>Preserves rich R objects in a long-lived callr process</td>
+<td>Not a security sandbox; process retains the host user’s
+permissions</td>
+</tr>
+<tr class="odd">
+<td>Custom runner</td>
+<td>Can provide a remote sandbox or domain-specific resource
+loading</td>
+<td>Must implement and truthfully report the dsprrr runner policy</td>
+</tr>
+</tbody>
+</table>
+<p>The one-call <code><a href="../reference/rlm.html">rlm()</a></code> helper chooses a fresh managed MCP
+runner by default. Install the suggested R package and external
+executable first:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="ex">R</span> <span class="at">-q</span> <span class="at">-e</span> <span class="st">'install.packages("mcptools")'</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="ex">uv</span> tool install posit-mcp-repl</span></code></pre></div>
+<p>Then run a compact investigation:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># From R/rlm-tools.R -- returns a marker, not a result</span></span>
-<span><span class="va">llm_query</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">query</span>, <span class="va">context_slice</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/structure.html" class="external-link">structure</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="va">query</span>, context <span class="op">=</span> <span class="va">context_slice</span>, batch <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    class <span class="op">=</span> <span class="st">"rlm_query_request"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p>The parent process intercepts this marker after execution, performs
-the actual call, and feeds the result back on the next iteration. A
-batched variant, <code>llm_query_batched()</code>, allows multiple
-sub-questions at once, running concurrently via
-<code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat()</a></code> when available.</p>
-<p>A shared call counter tracks total calls across all iterations and
-enforces the <code>max_llm_calls</code> budget, preventing runaway
-recursion.</p>
-</div>
-<div class="section level3">
-<h3 id="fallback-and-output-normalization">Fallback and Output Normalization<a class="anchor" aria-label="anchor" href="#fallback-and-output-normalization"></a>
-</h3>
-<p>If the model exhausts all iterations without calling
-<code>SUBMIT()</code>, the module performs fallback extraction: it feeds
-the entire exploration trajectory back and asks for a synthesized answer
-from what was discovered. This uses a two-phase approach, trying
-structured output via <code>chat_structured()</code> first, then
-unstructured <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">chat()</a></code> if that fails.</p>
-<p>The final answer passes through output normalization, which coerces
-whatever was produced into the signature’s declared output fields. This
-handles named lists, positional lists, scalar values, and
-case-insensitive enum matching (e.g., <code>"Positive"</code> is mapped
-to <code>"positive"</code> if the signature declares
-<code>type_enum("positive", "negative")</code>).</p>
-</div>
-<div class="section level3">
-<h3 id="observability">Observability<a class="anchor" aria-label="anchor" href="#observability"></a>
-</h3>
-<p>Every RLM execution records its full REPL history: reasoning, code,
-output, success or failure, and timing for each iteration:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="va">rlm</span><span class="op">$</span><span class="fu">get_repl_history</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">last_run</span> <span class="op">&lt;-</span> <span class="va">history</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">history</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
-<span></span>
-<span><span class="va">last_run</span><span class="op">$</span><span class="va">iterations_used</span></span>
-<span><span class="co">#&gt; [1] 5</span></span>
-<span><span class="va">last_run</span><span class="op">$</span><span class="va">llm_calls_used</span></span>
-<span><span class="co">#&gt; [1] 3</span></span></code></pre></div>
-<p>You can see what the model tried, where it went wrong, and how it
-recovered.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="how-dsprrrs-rlm-compares">How dsprrr’s RLM Compares<a class="anchor" aria-label="anchor" href="#how-dsprrrs-rlm-compares"></a>
-</h2>
-<p>The table below summarizes the key implementations:</p>
-<table class="table">
-<colgroup>
-<col width="20%">
-<col width="20%">
-<col width="20%">
-<col width="20%">
-<col width="20%">
-</colgroup>
-<thead><tr class="header">
-<th></th>
-<th>dsprrr</th>
-<th>DSPy</th>
-<th>Official <code>rlm</code>
-</th>
-<th>Google ADK</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><strong>Language</strong></td>
-<td>R</td>
-<td>Python</td>
-<td>Python</td>
-<td>Python</td>
-</tr>
-<tr class="even">
-<td><strong>REPL</strong></td>
-<td>R via callr</td>
-<td>Python via Pyodide/WASM</td>
-<td>Python (isolated or not)</td>
-<td>Python via ADK</td>
-</tr>
-<tr class="odd">
-<td><strong>Sandbox</strong></td>
-<td>Subprocess (callr)</td>
-<td>Deno/WASM</td>
-<td>Configurable</td>
-<td>ADK orchestration</td>
-</tr>
-<tr class="even">
-<td><strong>Structured output</strong></td>
-<td>ellmer types</td>
-<td>DSPy signatures</td>
-<td>Freeform</td>
-<td>ADK tools</td>
-</tr>
-<tr class="odd">
-<td><strong>Recursive calls</strong></td>
-<td><code>llm_query()</code></td>
-<td>Built-in</td>
-<td>Built-in</td>
-<td>Child agents</td>
-</tr>
-<tr class="even">
-<td><strong>Optimization</strong></td>
-<td>Teleprompters, grid search</td>
-<td>DSPy optimizers</td>
-<td>Manual</td>
-<td>Manual</td>
-</tr>
-<tr class="odd">
-<td><strong>Batched sub-calls</strong></td>
-<td><code>llm_query_batched()</code></td>
-<td><code>llm_query_batched()</code></td>
-<td>–</td>
-<td>–</td>
-</tr>
-</tbody>
-</table>
-<p>The “batched sub-calls” row refers specifically to issuing multiple
-recursive sub-queries from one REPL iteration and running them
-concurrently. Both dsprrr and DSPy 3.3 expose that operation. dsprrr
-dispatches its batch through <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat()</a></code> while
-preserving the R runner’s lifecycle and call budget.</p>
-<p>dsprrr is the only implementation that uses R as the REPL language,
-which matters when your context <em>is</em> R data: data frames, model
-objects, or package source code. It also inherits dsprrr’s full
-optimization infrastructure (teleprompters, grid search, evaluation
-metrics), so you can systematically improve RLM performance, not just
-run it.</p>
-</div>
-<div class="section level2">
-<h2 id="when-to-use-rlms-and-when-not-to">When to Use RLMs (and When Not To)<a class="anchor" aria-label="anchor" href="#when-to-use-rlms-and-when-not-to"></a>
-</h2>
-<p>The hard part of any task here is either <em>finding</em> the right
-context or <em>reasoning</em> about it once found. RLMs help with the
-first problem. If the context is already short and well-scoped, simpler
-approaches are faster and cheaper.</p>
-<table class="table">
-<colgroup>
-<col width="22%">
-<col width="22%">
-<col width="20%">
-<col width="34%">
-</colgroup>
-<thead><tr class="header">
-<th>Approach</th>
-<th>Best for</th>
-<th>Latency</th>
-<th>Context limit</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>PredictModule</code></td>
-<td>Short, self-contained tasks</td>
-<td>Low</td>
-<td>Context window</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code></td>
-<td>Complex reasoning, known context</td>
-<td>Medium</td>
-<td>Context window</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/rag_module.html">rag_module()</a></code></td>
-<td>Lookup in large corpora</td>
-<td>Medium</td>
-<td>Chunk size</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/rlm_module.html">rlm_module()</a></code></td>
-<td>Exploration of large, interconnected data</td>
-<td>High</td>
-<td>Unlimited*</td>
-</tr>
-</tbody>
-</table>
-<p>*Bounded by <code>max_iterations</code> and
-<code>max_llm_calls</code>, not by context window size.</p>
-<p><strong>Skip RLMs when the context is short.</strong> If the document
-fits comfortably in the context window, a <code>PredictModule</code> or
-<code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> will be faster and cheaper. The overhead
-of multiple REPL round-trips is not justified when one call
-suffices.</p>
-<p><strong>Skip RLMs when the task is well-defined.</strong> If you know
-what you are looking for (extracting a specific field from a known
-document format, say), a prompt-optimized module will outperform an RLM.
-RLMs spend iterations discovering a good exploration path. If you
-already know the path, skip the discovery.</p>
-<p><strong>Skip RLMs when cost-per-query matters.</strong> An RLM with
-15 iterations makes at least 15 calls, plus any recursive sub-queries.
-For a production pipeline processing thousands of inputs, that
-multiplier adds up. If a single-call module with good prompting gets you
-80% of the accuracy at 5% of the cost, the economics favor the simpler
-approach.</p>
-<p><strong>Skip RLMs when the context contains bad information.</strong>
-RLMs gather more evidence than simpler approaches, which is usually
-beneficial. But more evidence also means more surface area for
-misleading content. If the context contains contradictions, outdated
-facts, or adversarial content, a <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> module
-with curated context gives explicit control over what the model
-sees.</p>
-</div>
-<div class="section level2">
-<h2 id="improvement-opportunities">Improvement Opportunities<a class="anchor" aria-label="anchor" href="#improvement-opportunities"></a>
-</h2>
-<p>dsprrr’s RLM implementation is functional but young. The items below
-are split into design constraints that affect deployment and API
-improvements that would make the module more ergonomic.</p>
-<div class="section level3">
-<h3 id="design-constraints">Design Constraints<a class="anchor" aria-label="anchor" href="#design-constraints"></a>
-</h3>
-<p><strong>Choose the runner as a security boundary.</strong>
-<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> provides a fresh callr subprocess and
-package allowlist, but it retains the host user’s permissions and is
-only for trusted code. For model-generated or otherwise untrusted code,
-<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> launches Posit’s mcp-repl with an
-OS-enforced workspace-write sandbox and network access disabled. A
-user-supplied <code>repl</code> function is reported as unverified and
-is not accepted where dsprrr requires sandboxed execution.</p>
-<p><strong>Runner ownership is explicit.</strong> A directly supplied
-<code>runner</code> is caller-owned and reused across separate
-<code>forward()</code> calls; dsprrr never closes it. The backend
-determines whether execution state persists and whether
-<code>reset()</code> is available. mcp-repl retains variables and loaded
-packages until you call <code>runner$reset()</code>. Reset that
-persistent backend between logically isolated jobs and never share it
-across concurrent invocations.</p>
-<p>For isolated invocations, pass <code>interpreter_factory</code>
-instead. It must be a zero-argument function returning a valid runner.
-dsprrr calls it once per invocation, owns that fresh runner, and closes
-it exactly once when the invocation ends, including after a failure:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rlm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm.html">rlm</a></span><span class="op">(</span></span>
 <span>  <span class="st">"document, question -&gt; answer"</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span>  document <span class="op">=</span> <span class="st">"Owner: team-a\nObligation: rotate signing keys quarterly"</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"Which obligations have no owner?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .max_iterations <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>  .max_llm_calls <span class="op">=</span> <span class="fl">0L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><code>runner</code> and <code>interpreter_factory</code> are mutually
-exclusive, and one is required.</p>
-<p>Factory-backed RLM invocations can also use <code><a href="../reference/run_async.html">run_async()</a></code>
-and isolated mirai dataset batches. A caller-owned runner remains
-sequential-only because dsprrr cannot prove that shared interpreter
-state is safe under overlap. Async streaming and finite batch
-timeout/error-budget controls are not adapted yet and fail before runner
-work.</p>
-<p><strong>Execution and interpreter failures are different.</strong> A
-submitted R expression can fail in a repairable way, allowing the RLM to
-inspect the error and try a new expression. Process, transport,
-protocol, startup, and shutdown failures are terminal: the runner is
-invalidated and is never retried or reused. If execution and teardown
-both fail, dsprrr preserves the primary execution condition and attaches
-teardown evidence instead of replacing it.</p>
-<p><strong>Custom tools execute on the host.</strong> Guest code emits
-an authenticated tool request, dsprrr invokes the original function and
-its live closure in the host process, and the guest program is replayed
-with that immutable response. The function itself is never deparsed or
-serialized into generated code. This runner-neutral bridge works with
-both <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> and mcp-repl; arguments and results
-still need to cross the runner’s value boundary. A host tool is called
-once even though deterministic guest code before it may be replayed.</p>
-<p><strong>mcp-repl control results are intentionally bounded.</strong>
-RLM submit and recursive query frames are capped at 3,000 encoded bytes
-to stay inline. If incidental output triggers an mcp-repl file preview
-or pager, the iteration fails closed rather than trusting a partial
-control frame. Keep <code>SUBMIT()</code> values compact; use a
-transport with structured out-of-band results when larger payloads are a
-requirement.</p>
-<p><strong>Fresh subprocesses have cold-start overhead.</strong>
-<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> pays process startup cost on each iteration
-in exchange for clean process state. A persistent mcp-repl runner avoids
-that repeated startup, but requires the reset and concurrency discipline
-above.</p>
-</div>
-<div class="section level3">
-<h3 id="api-improvements">API Improvements<a class="anchor" aria-label="anchor" href="#api-improvements"></a>
-</h3>
-<p><strong><code>peek()</code> dual-dispatch API.</strong>
-<code>peek()</code> silently changes meaning depending on whether the
-input is a single string (character positions) or a character vector
-(element indices). The model has to infer which form
-<code>.context$document</code> is in, and if it guesses wrong, the slice
-is nonsensical. Splitting into <code>peek_chars()</code> and
-<code>peek_lines()</code> (or adding a <code>unit</code> argument) would
-make the contract explicit.</p>
-<p><strong><code><a href="https://rdrr.io/r/base/search.html" class="external-link">search()</a></code> returns raw matches, not
-locations.</strong> The model gets the matched text but not the byte
-offset or surrounding context, so it often has to follow up with a
-<code>peek()</code> call to figure out <em>where</em> the match
-occurred. Returning match positions or a concordance-style snippet would
-save an iteration.</p>
-</div>
+<p>The managed default runs model-generated code under an OS sandbox
+with network access disabled; it can still mutate allowed workspace
+files. The final JSON-RPC request must fit the 7 KB wire bound. When the
+raw request is too large, dsprrr first tries a gzip/base64 wrapper and
+rejects it before execution only if that request still does not fit.
+<code>SUBMIT()</code> values, recursive-query context slices, and
+host-tool arguments also cross a 3,000-byte encoded control-frame
+boundary. Replayed query and tool results instead count against the next
+7 KB raw-or-compressed request. Large data frames and fitted models can
+use an explicit trusted <code>r_code_runner(persistent = TRUE)</code>.
+Live external-pointer resources generally need a child-side resource
+loader or a custom runner rather than callr serialization.</p>
+<p>The runner boundary is not a privacy guarantee. RLM automatically
+sends up to 1,000 characters of a structural preview for each input
+value to the outer model; <code><a href="https://rdrr.io/r/utils/str.html" class="external-link">str()</a></code>-style previews can include
+sample values. Anything printed into the trajectory, passed to
+<code>llm_query()</code>, or returned in the final answer can also be
+sent to the configured provider. Declared host tools run in the dsprrr
+host process, outside the guest sandbox, with the host’s
+permissions.</p>
+<p>Action and fallback predictor requests also follow dsprrr’s
+response-cache configuration, which can include memory and disk. For
+sensitive investigations, pass <code>.cache = FALSE</code> to
+<code><a href="../reference/run.html">run()</a></code> or configure a memory-only or disabled cache.
+Recursive <code>llm_query()</code> calls and runner execution are not
+response-cached.</p>
 </div>
 <div class="section level2">
-<h2 id="whats-next">What’s Next<a class="anchor" aria-label="anchor" href="#whats-next"></a>
+<h2 id="repairable-and-terminal-failures">Repairable and terminal failures<a class="anchor" aria-label="anchor" href="#repairable-and-terminal-failures"></a>
 </h2>
-<p>RLMs trade latency for reach. They can explore contexts that no model
-handles well in a single pass, with subprocess isolation, recursive
-sub-queries, and full optimization support through dsprrr’s
-teleprompters and grid search.</p>
-<p>For a hands-on walkthrough, see
-<code>vignette("tutorial-rlm-dsprrr", package = "dsprrr")</code>, which
-uses <code><a href="../reference/rlm_module.html">rlm_module()</a></code> to trace a real theming bug across bslib,
-shiny, and brand.yml: nearly 4 million characters of source, explored in
-under 15 iterations.</p>
+<p>Ordinary R errors are part of exploration. A malformed regular
+expression or missing column can be shown to the model so it can try a
+corrected expression.</p>
+<p>Interpreter startup, transport, protocol, and shutdown failures are
+different. They invalidate the execution boundary and terminate the
+invocation. dsprrr does not disguise those failures as an empty
+observation or reuse a runner whose state is uncertain.</p>
+<p>Three budgets keep the ordinary loop finite:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Argument</th>
+<th>Bounds</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>max_iters</code></td>
+<td>Outer model/code/observation turns before fallback</td>
+</tr>
+<tr class="even">
+<td><code>max_llm_calls</code></td>
+<td>Host-side recursive model calls; batch items count separately</td>
+</tr>
+<tr class="odd">
+<td><code>max_output_chars</code></td>
+<td>Head-and-tail execution output retained per turn</td>
+</tr>
+</tbody>
+</table>
+<p>The host bridge also enforces an internal safety ceiling of 1,000
+declared tool calls in one generated R step. This is a protocol guard,
+not a recommended working budget; generated steps should make a small,
+auditable number of calls.</p>
+<p>Start small, inspect the returned trajectory, and increase a budget
+only when the trace shows useful unfinished work.</p>
+</div>
+<div class="section level2">
+<h2 id="relationship-to-dspy">Relationship to DSPy<a class="anchor" aria-label="anchor" href="#relationship-to-dspy"></a>
+</h2>
+<p>RLMs were introduced by Zhang, Kraska, and Khattab <span class="citation">(Zhang et al. 2025)</span>. DSPy makes the pattern a
+module with a per-invocation interpreter, recursive query tools, typed
+final output, and trajectory metadata. dsprrr follows those execution
+contracts while using R and ellmer:</p>
+<ul>
+<li>inputs appear as <code>.context$name</code> and generated programs
+are R;</li>
+<li>
+<code>sub_lm = NULL</code> inherits the invocation’s outer ellmer
+chat;</li>
+<li>a factory creates one persistent runner per invocation; a
+caller-owned persistent runner can be reused sequentially;</li>
+<li>invalid typed submissions are repairable observations;</li>
+<li>recursive calls and host tools cross a validated replay boundary;
+and</li>
+<li>
+<code>run(..., .return_format = "structured")</code> returns outputs
+with trajectory and runner evidence.</li>
+</ul>
+<p>The R implementation is not a line-by-line port. In particular,
+runner and serialization capabilities determine which R objects can
+cross into an execution environment. Those limits should be visible and
+testable rather than described as unlimited context.</p>
+</div>
+<div class="section level2">
+<h2 id="the-practical-rule">The practical rule<a class="anchor" aria-label="anchor" href="#the-practical-rule"></a>
+</h2>
+<p>Use RLM for high-value questions where the useful slice and
+computation are not known beforehand. Inspect its trajectory as
+seriously as its answer. When the same exploration pattern repeats,
+replace discovery with a deterministic R function, a dsprrr pipeline, or
+an optimized executable program.</p>
+<p>For a complete deterministic example, continue to <a href="tutorial-rlm-dsprrr.html">Investigate a Release Regression with an
+RLM</a>.</p>
 </div>
 <div class="section level2 unnumbered">
 <h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

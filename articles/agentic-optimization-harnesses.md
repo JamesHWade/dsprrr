@@ -99,17 +99,17 @@ fail-closed rule prevents a custom or test connection from silently
 inheriting the trust assigned to a dsprrr-managed mcp-repl process.
 
 For RLM submit and recursive-query messages, dsprrr uses a versioned,
-per-invocation authenticated text frame capped at 3,000 encoded bytes.
-That cap keeps ordinary control messages below mcp-repl’s inline-output
-threshold. If user code produces enough additional output to trigger a
-file preview or interactive pager, dsprrr fails the iteration (and
-attempts to reset the pager) instead of accepting a possibly partial
-frame. The upstream MCP response currently exposes compaction only as a
-plain-text marker, so this detection is conservative; dsprrr
-deliberately does not read the disclosed sandbox file from the host
-process. Use smaller submissions, suppress large incidental prints, or
-use a runner transport with a structured out-of-band result for larger
-payloads.
+per-invocation nonce-bound, schema-checked text frame capped at 3,000
+encoded bytes. That cap keeps ordinary control messages below mcp-repl’s
+inline-output threshold. If user code produces enough additional output
+to trigger a file preview or interactive pager, dsprrr fails the
+iteration (and attempts to reset the pager) instead of accepting a
+possibly partial frame. The upstream MCP response currently exposes
+compaction only as a plain-text marker, so this detection is
+conservative; dsprrr deliberately does not read the disclosed sandbox
+file from the host process. Use smaller submissions, suppress large
+incidental prints, or use a runner transport with a structured
+out-of-band result for larger payloads.
 
 [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
 is intentionally rejected while sandboxing is enabled. Its callr

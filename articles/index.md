@@ -6,24 +6,36 @@ Learn dsprrr step by step, from first LLM call to production deployment
 
 - [Getting Started with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/getting-started.md):
+
 - [Tutorial 1: Your First LLM
   Call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md):
+
 - [Tutorial 2: Building a Reusable
   Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md):
+
 - [Tutorial 3: Extracting Structured
   Data](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md):
+
 - [Tutorial 4: Improving with
   Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md):
+
 - [Tutorial 5: Finding the Best
   Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md):
+
 - [Tutorial 6: Taking to
   Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md):
+
 - [Building a Text Adventure
   Game](https://jameshwade.github.io/dsprrr/articles/text-adventure.md):
+
 - [Generating llms.txt for R
   Packages](https://jameshwade.github.io/dsprrr/articles/llms-txt.md):
-- [Recursive Language Models: Exploring Codebases with
-  dsprrr](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md):
+
+- [Investigate a Release Regression with an
+  RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md):
+
+  Use an RLM to explore a large R data frame, isolate a conversion
+  regression, and connect it to a relevant change record.
 
 ### How-to Guides
 
@@ -69,8 +81,9 @@ Understand the philosophy, design, and theory behind dsprrr
 - [How the Recursive Language Model (RLM)
   Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md):
 
-  From the research origins to dsprrr’s R implementation: what Recursive
-  Language Models are, why they matter, and how the internals work.
+  The RLM execution contract: external context, iterative R code,
+  recursive queries, typed submission, runner ownership, and bounded
+  evidence.
 
 - [Flex: Optimize the Whole
   Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md):

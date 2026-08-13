@@ -56,7 +56,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
@@ -233,17 +233,17 @@ enforcement, and a sandbox-required harness rejects it. This fail-closed
 rule prevents a custom or test connection from silently inheriting the
 trust assigned to a dsprrr-managed mcp-repl process.</p>
 <p>For RLM submit and recursive-query messages, dsprrr uses a versioned,
-per-invocation authenticated text frame capped at 3,000 encoded bytes.
-That cap keeps ordinary control messages below mcp-repl’s inline-output
-threshold. If user code produces enough additional output to trigger a
-file preview or interactive pager, dsprrr fails the iteration (and
-attempts to reset the pager) instead of accepting a possibly partial
-frame. The upstream MCP response currently exposes compaction only as a
-plain-text marker, so this detection is conservative; dsprrr
-deliberately does not read the disclosed sandbox file from the host
-process. Use smaller submissions, suppress large incidental prints, or
-use a runner transport with a structured out-of-band result for larger
-payloads.</p>
+per-invocation nonce-bound, schema-checked text frame capped at 3,000
+encoded bytes. That cap keeps ordinary control messages below mcp-repl’s
+inline-output threshold. If user code produces enough additional output
+to trigger a file preview or interactive pager, dsprrr fails the
+iteration (and attempts to reset the pager) instead of accepting a
+possibly partial frame. The upstream MCP response currently exposes
+compaction only as a plain-text marker, so this detection is
+conservative; dsprrr deliberately does not read the disclosed sandbox
+file from the host process. Use smaller submissions, suppress large
+incidental prints, or use a runner transport with a structured
+out-of-band result for larger payloads.</p>
 <p><code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> is intentionally rejected while
 sandboxing is enabled. Its callr subprocess is useful for trusted code,
 but it retains the host user’s permissions and is not a security

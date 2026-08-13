@@ -4,7 +4,8 @@ The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
 tool-using modules, "chain_of_thought" for step-by-step reasoning,
 "multichain" for multi-chain comparison, "program_of_thought" for code
-execution modules, and experimental "flex" for declarative or
+execution, "codeact" for tools plus code, "rlm" for adaptive R-object
+investigation, and experimental "flex" for declarative or
 interpreter-backed programs.
 
 ## Usage
@@ -70,7 +71,7 @@ module(
   - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef
     objects.
 
-  - for `type = "rlm"`: named list of R functions exposed to the REPL.
+  - for `type = "rlm"`: named host functions or ellmer ToolDef objects.
 
   - for executable `type = "flex"`: named host functions or ToolDef
     objects. If provided with `type = "predict"`, automatically upgrades
@@ -94,6 +95,8 @@ module(
 
   Optional caller-owned code runner implementing `execute()` and
   `policy()` for code execution types. It is never automatically closed.
+  For `type = "rlm"`, the policy must advertise `persistent = TRUE`; use
+  `r_code_runner(persistent = TRUE)` for the trusted callr backend.
 
 - max_iters:
 
@@ -137,7 +140,8 @@ module(
   and executable Flex modules. It creates one fresh runner per
   invocation. Supply exactly one of `runner` and `interpreter_factory`
   for ordinary code-executing types; Flex accepts only the factory so
-  every invocation is isolated.
+  every invocation is isolated. For RLM, every returned runner must
+  advertise `persistent = TRUE`.
 
 - module_src:
 
@@ -197,16 +201,21 @@ result <- classifier |> run(text = "Great package!", .llm = llm)
 
 # Or create module with Chat attached
 classifier <- signature("text -> sentiment") |>
-  module(type = "predict", chat = chat_openai())
+  module(type = "predict", chat = ellmer::chat_openai())
 result <- classifier |> run(text = "Great package!")  # No .llm needed
 
 # Create a ReAct module with tools
+search_fn <- function(query) paste("Result for", query)
 search_tool <- ellmer::tool(
   search_fn,
   description = "Search for information",
   arguments = list(query = ellmer::type_string())
 )
 agent <- signature("question -> answer") |>
-  module(type = "react", tools = list(search_tool), chat = chat_openai())
+  module(
+    type = "react",
+    tools = list(search_tool),
+    chat = ellmer::chat_openai()
+  )
 } # }
 ```

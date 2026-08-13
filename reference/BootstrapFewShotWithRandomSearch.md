@@ -14,6 +14,10 @@ The optimizer generates candidates including:
 
 4.  BootstrapFewShot with various random seeds
 
+Programs containing Flex or RLM modules are rejected before candidate
+evaluation because their predictor-local demonstration contracts are not
+currently available to this optimizer.
+
 ## Usage
 
 ``` r
@@ -100,6 +104,10 @@ tp <- BootstrapFewShotWithRandomSearch(
 )
 
 # Compile with validation set (required)
+qa_module <- module(signature("question -> answer"))
+trainset <- data.frame(question = "Capital of France?", answer = "Paris")
+valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
+llm <- ellmer::chat_openai()
 compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
 
 # Access ranked candidates

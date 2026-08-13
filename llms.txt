@@ -12,7 +12,7 @@ examples, or the program that executes them.
 # Install
 pak::pak("JamesHWade/dsprrr")
 
-# That's it. Start using LLMs.
+# Configure credentials for an ellmer-supported provider, then:
 library(dsprrr)
 dsp("question -> answer", question = "What is the capital of France?")
 #> "Paris"
@@ -73,8 +73,8 @@ classify <- module(sig, type = "react", tools = list(lookup_tool))
 ### Optimizers
 
 **Compile your program against a metric.** Give dsprrr examples and a
-scoring function; it tunes prompts and demos automatically until quality
-converges.
+scoring function; it selects the best candidate observed within the
+configured budget.
 
 [Try optimizers
 →](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
@@ -94,6 +94,70 @@ optimized <- compile(tp, router, trainset)
 board <- pins::board_temp()
 pin_module_config(board, "ticket-router-v2", optimized)
 ```
+
+## Find the release cohort that broke
+
+A release-level average can reveal a regression without explaining it.
+If the useful grouping and calculation are not known in advance, an RLM
+keeps the source object in an R environment, lets the model inspect it
+with R code, and returns only bounded observations between steps.
+
+The deterministic tutorial asks an RLM to explore 40,000 checkout
+sessions and 200 change records. The answer is fixed and independently
+validated:
+
+``` text
+release:      2.4.0
+cohort:       platform=mobile / plan=pro
+before_rate:  0.92
+after_rate:   0.61
+drop_pp:      31
+change_id:    CHG-1842
+```
+
+``` r
+
+investigator <- rlm_module(
+  paste(
+    "sessions, changes, question ->",
+    "release: string, cohort: string, before_rate: number,",
+    "after_rate: number, drop_pp: number, change_id: string, evidence: string"
+  ),
+  interpreter_factory = function() {
+    r_code_runner(timeout = 30, persistent = TRUE)
+  },
+  max_iters = 8,
+  max_llm_calls = 0L
+)
+```
+
+This persistent callr runner stages rich R objects once, but it is
+explicitly trusted-input-only. For compact JSON-compatible context, the
+one-call [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md)
+helper creates a fresh managed `mcp-repl` OS sandbox by default. It
+disables network access but allows writes inside the workspace. Install
+`mcptools` and the external `mcp-repl` executable first. The final
+JSON-RPC request has a 7 KB wire bound, with gzip/base64 attempted when
+the raw request is too large, and RLM control frames have a 3,000-byte
+encoded bound.
+
+[Investigate the deterministic regression
+→](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md)
+ ·  [Understand the RLM execution contract
+→](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)
+
+### ProgramOfThought, RLM, or Flex?
+
+| If the task requires… | Use… |
+|----|----|
+| A calculation whose steps are already known | [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) |
+| A new exploration path for this input at inference time | [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) |
+| A reusable implementation discovered from labeled examples | [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) with GEPA |
+
+RLM is experimental inference-time exploration; one invocation does not
+learn an exploration program. Supported optimizers can still tune its
+action and fallback instructions. Flex searches during compilation for
+an implementation to reuse.
 
 ## Optimize the program, not only the prompt
 
@@ -438,9 +502,10 @@ tidyverse.
 
 ##### Observable
 
-Every LLM call is traced. Inspect prompts, debug failures, track costs.
+Inspect bounded module traces, debug failures, and track usage when
+providers report it.
 
-##### Production-Ready
+##### Deployment building blocks
 
 Persistence with pins, orchestration with targets, deployment with
 vetiver.
@@ -455,6 +520,9 @@ vetiver.
 - [Compilation &
   Optimization](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
   — Improve with data
+- [Release Regression with an
+  RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md)
+  — Investigate a large R object adaptively
 - [Agentic Optimization
   Harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)
   — Run sandboxed AutoResearch and Meta-Harness loops
@@ -470,6 +538,9 @@ vetiver.
 - [Function
   Reference](https://jameshwade.github.io/dsprrr/reference/index.md) —
   All functions documented
+- [How the RLM
+  Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)
+  — Execution, replay, typed submission, and runner boundaries
 
 ## Ecosystem
 
@@ -1029,24 +1100,36 @@ Learn dsprrr step by step, from first LLM call to production deployment
 
 - [Getting Started with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/getting-started.md):
+
 - [Tutorial 1: Your First LLM
   Call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md):
+
 - [Tutorial 2: Building a Reusable
   Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md):
+
 - [Tutorial 3: Extracting Structured
   Data](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md):
+
 - [Tutorial 4: Improving with
   Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md):
+
 - [Tutorial 5: Finding the Best
   Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md):
+
 - [Tutorial 6: Taking to
   Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md):
+
 - [Building a Text Adventure
   Game](https://jameshwade.github.io/dsprrr/articles/text-adventure.md):
+
 - [Generating llms.txt for R
   Packages](https://jameshwade.github.io/dsprrr/articles/llms-txt.md):
-- [Recursive Language Models: Exploring Codebases with
-  dsprrr](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md):
+
+- [Investigate a Release Regression with an
+  RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md):
+
+  Use an RLM to explore a large R data frame, isolate a conversion
+  regression, and connect it to a relevant change record.
 
 ### How-to Guides
 
@@ -1092,8 +1175,9 @@ Understand the philosophy, design, and theory behind dsprrr
 - [How the Recursive Language Model (RLM)
   Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md):
 
-  From the research origins to dsprrr’s R implementation: what Recursive
-  Language Models are, why they matter, and how the internals work.
+  The RLM execution contract: external context, iterative R code,
+  recursive queries, typed submission, runner ownership, and bounded
+  evidence.
 
 - [Flex: Optimize the Whole
   Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md):

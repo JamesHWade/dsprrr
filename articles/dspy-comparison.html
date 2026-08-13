@@ -51,7 +51,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
@@ -222,11 +222,12 @@ protocol</td>
 </tr>
 <tr class="odd">
 <td><code>dspy.RLM</code></td>
-<td><code><a href="../reference/rlm_module.html">rlm_module()</a></code></td>
-<td>Recursive language models over an R REPL; accepts the 3.3
-<code>max_iters</code> spelling and either runner lifecycle. Tool names,
-inputs, sub-LM responses, and authenticated control frames are validated
-strictly; compacted mcp-repl control responses fail closed</td>
+<td>
+<code><a href="../reference/rlm_module.html">rlm_module()</a></code> (experimental)</td>
+<td>Inference-time adaptive exploration over an R REPL, with optimizable
+action and extraction predictors, inherited or separate sub-LMs,
+replayed recursive values, typed submission repair, and trajectory
+metadata</td>
 </tr>
 <tr class="even">
 <td>Experimental <code>dspy.Flex</code>
@@ -279,6 +280,129 @@ the factory form and requires an enforced sandbox by default; JSON Flex
 needs no interpreter. See <a href="flex-optimization.html">Flex:
 Optimize the Whole Program</a> for the practical choice between those
 modes.</p>
+<p>The one-call <code><a href="../reference/rlm.html">rlm()</a></code> helper is the exception to the
+explicit-binding rule: it creates a fresh managed <code>mcp-repl</code>
+sandbox factory by default. That path is intended for compact
+JSON-compatible context. For trusted rich R objects, opt into
+<code>r_code_runner(persistent = TRUE)</code> so one callr process
+stages the context once and keeps derived values for the invocation.</p>
+<div class="section level3">
+<h3 id="rlm-parity-and-intentional-differences">RLM parity and intentional differences<a class="anchor" aria-label="anchor" href="#rlm-parity-and-intentional-differences"></a>
+</h3>
+<p>dsprrr now matches the DSPy 3.3 RLM execution contracts that
+determine how an investigation behaves:</p>
+<ul>
+<li>one factory-owned interpreter belongs to each invocation, and
+persistent backends retain state across its iterations;</li>
+<li>
+<code>generate_action</code> and <code>extract</code> are child
+predictors visible to graph optimizers;</li>
+<li>
+<code>sub_lm = NULL</code> inherits the outer LM, while an explicit
+sub-LM can handle focused queries;</li>
+<li>
+<code>llm_query()</code> and <code>llm_query_batched()</code> return
+host-produced values to the same generated R evaluation through
+validated replay;</li>
+<li>invalid typed <code>SUBMIT()</code> calls become repairable
+observations rather than silently becoming final output;</li>
+<li>execution observations use a 10,000-character head-and-tail module
+bound after any stricter runner transport limit; and</li>
+<li>structured results include the output source, bounded REPL
+trajectory, recursive-call counts, usage, and runner policy.</li>
+</ul>
+<p>The remaining RLM differences are intentional and user-visible:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Boundary</th>
+<th>DSPy</th>
+<th>dsprrr</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Generated language</td>
+<td>Python</td>
+<td>R, with signature inputs under <code>.context</code>
+</td>
+</tr>
+<tr class="even">
+<td>Returned value</td>
+<td>Prediction with trajectory and top-level
+<code>final_reasoning</code>
+</td>
+<td>
+<code><a href="../reference/run.html">run()</a></code> output plus structured metadata; per-step
+reasoning is in the bounded trajectory and output source is
+explicit</td>
+</tr>
+<tr class="odd">
+<td>Interpreter binding</td>
+<td>Optional interpreter may be supplied to each <code>forward()</code>
+call</td>
+<td>Runner or factory is bound when constructing
+<code><a href="../reference/rlm_module.html">rlm_module()</a></code>; the one-call <code><a href="../reference/rlm.html">rlm()</a></code> helper
+creates that binding for one invocation</td>
+</tr>
+<tr class="even">
+<td>Default local execution</td>
+<td>DSPy interpreter configuration</td>
+<td>
+<code><a href="../reference/rlm.html">rlm()</a></code> creates a fresh managed <code>mcp-repl</code> OS
+sandbox with network disabled and workspace writes allowed</td>
+</tr>
+<tr class="odd">
+<td>Large or rich input</td>
+<td>
+<code>SandboxSerializable</code> can define interpreter-specific
+one-time staging</td>
+<td>Persistent trusted callr stages serializable native R objects once;
+no general public custom-staging protocol yet. Managed MCP requires the
+final raw-or-compressed JSON-RPC request to fit 7 KB and each encoded
+control frame to fit 3,000 bytes</td>
+</tr>
+<tr class="even">
+<td>Typed outputs</td>
+<td>Signature adapters validate the configured Python/Pydantic type</td>
+<td>RLM validates explicit ellmer string, number, integer, boolean,
+enum, array, and object types; opaque <code>TypeJsonSchema</code> nodes
+are rejected rather than accepted without validation</td>
+</tr>
+<tr class="odd">
+<td>Stored trajectory</td>
+<td>Full interpreter trajectory</td>
+<td>Bounded, formatted execution evidence; large raw runner output is
+not retained</td>
+</tr>
+<tr class="even">
+<td>Recursive replay</td>
+<td>Interpreter-dependent</td>
+<td>One nonce-bound, schema-checked ordered ledger returns query/tool
+values in code, but cannot roll back direct external side effects before
+a request</td>
+</tr>
+<tr class="odd">
+<td>Batch failures</td>
+<td>Per-provider failures become ordered error values</td>
+<td>Per-request provider failures become ordered
+<code>[ERROR] ...</code> values; unexpected or batch-infrastructure
+failures terminate</td>
+</tr>
+<tr class="even">
+<td>Host tools</td>
+<td>Interpreter-defined</td>
+<td>Declared RLM tools execute in the host process, outside the guest
+sandbox; the bridge caps one generated step at 1,000 tool calls</td>
+</tr>
+</tbody>
+</table>
+<p>RLM remains experimental in dsprrr. The execution and result
+contracts are tested; the convenience API may still evolve. See <a href="tutorial-rlm-dsprrr.html">the deterministic release regression</a>
+and <a href="how-rlm-works.html">the RLM execution contract</a>.</p>
 <p>One notable difference: DSPy 3.0 <em>removed</em>
 <code>dspy.Assert</code>/<code>dspy.Suggest</code> in favor of
 <code>BestOfN</code>/<code>Refine</code>. dsprrr keeps both styles:
@@ -288,6 +412,7 @@ declarative assertions with retry/backtracking
 <code><a href="../reference/best_of_n.html">best_of_n()</a></code>/<code><a href="../reference/refine.html">refine()</a></code> wrappers. If you prefer
 the modern DSPy style, use the wrappers; use assertions when you want
 declarative output contracts with automatic feedback injection.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="optimizers-teleprompters">Optimizers (teleprompters)<a class="anchor" aria-label="anchor" href="#optimizers-teleprompters"></a>
@@ -307,24 +432,31 @@ declarative output contracts with automatic feedback injection.</p>
 <tr class="odd">
 <td><code>LabeledFewShot</code></td>
 <td><code>LabeledFewShot</code></td>
-<td>Equivalent</td>
+<td>Equivalent for a root Predict module; nested-predictor graphs,
+including RLM and Flex wrappers, are rejected rather than receiving
+mismatched root-task demos</td>
 </tr>
 <tr class="even">
 <td><code>BootstrapFewShot</code></td>
 <td><code>BootstrapFewShot</code></td>
-<td>Equivalent; compiles pipelines jointly (demos for every step
-harvested from end-to-end traces)</td>
+<td>Compiles ordinary pipelines jointly; programs containing Flex or RLM
+are rejected because their runtime predictors cannot receive root-task
+demos</td>
 </tr>
 <tr class="odd">
 <td><code>BootstrapFewShotWithRandomSearch</code></td>
 <td><code>BootstrapFewShotWithRandomSearch</code></td>
-<td>Equivalent</td>
+<td>Random search over ordinary labeled/bootstrap candidates; rejects
+programs containing Flex or RLM rather than returning a baseline-only
+no-op</td>
 </tr>
 <tr class="even">
 <td><code>MIPROv2</code></td>
 <td><code>MIPROv2</code></td>
-<td>Discrete Bayesian optimization with UCB over instruction + demo
-candidates</td>
+<td>Root Predict modules search instruction + demo candidates; nested
+graphs search child instructions with
+<code>max_bootstrapped_demos = 0L</code>
+</td>
 </tr>
 <tr class="odd">
 <td><code>SIMBA</code></td>
@@ -413,6 +545,14 @@ selection, lineage, budgets, and checkpoint resume</td>
 </tr>
 </tbody>
 </table>
+<p>For an RLM graph, GEPA can tune both child predictors. MIPROv2
+currently tunes their instructions only and requires
+<code>max_bootstrapped_demos = 0L</code>; nested demo bootstrapping
+fails explicitly until predictor-local child evidence is available.
+<code><a href="../reference/BootstrapFewShot.html">BootstrapFewShot()</a></code>, its random-search variant, and
+<code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code> reject programs containing an RLM because
+task examples do not match the children’s <code>state -&gt; ...</code>
+signatures.</p>
 <div class="section level3">
 <h3 id="gepa-feedback-metrics">GEPA feedback metrics<a class="anchor" aria-label="anchor" href="#gepa-feedback-metrics"></a>
 </h3>
@@ -697,8 +837,15 @@ sweeps.</li>
 <div class="section level2">
 <h2 id="known-gaps-roadmap">Known gaps (roadmap)<a class="anchor" aria-label="anchor" href="#known-gaps-roadmap"></a>
 </h2>
+<p>The RLM differences above are disclosed boundaries. Some are
+intentional API choices; others, such as a general public custom-staging
+protocol, remain parity work. Remaining package-level gaps are:</p>
 <p>In rough priority order, based on the stable DSPy 3.3 runtime:</p>
 <ol style="list-style-type: decimal">
+<li>
+<strong>General custom input staging for interpreter-backed
+modules</strong>, analogous to DSPy’s <code>SandboxSerializable</code>,
+beyond the current persistent-callr and runner-specific paths.</li>
 <li>
 <strong>Remaining Flex gaps</strong>: concurrent executable
 evaluation, fine-grained checkpoint resume, and GEPA’s cached subsample
@@ -718,9 +865,9 @@ provider telemetry.</li>
 <strong>Native reasoning-trace capture</strong> as a typed output
 (analogous to <code>dspy.Reasoning</code>).</li>
 <li>
-<strong>Joint multi-step optimization for other instruction
-optimizers</strong> (including MIPROv2); demo bootstrapping is already
-joint and GEPA now selects complete-program components explicitly.</li>
+<strong>Predictor-local RLM demo evidence</strong> so MIPROv2 can
+bootstrap child demos; its graph mode currently tunes child instructions
+only, while GEPA selects the RLM child components explicitly.</li>
 <li>
 <strong>Adapter-style fallbacks</strong> for models with weak
 structured-output support (analogous to

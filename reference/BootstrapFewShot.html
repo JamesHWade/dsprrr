@@ -49,7 +49,7 @@ Optionally runs multiple rounds, updating the teacher with new demos
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -194,7 +194,11 @@ every step's <code>(inputs, output)</code> pair from that trace is harvested as 
 demonstration for the corresponding step module. Intermediate steps
 therefore receive demos even though the training set only labels the
 final output. Labeled demos (<code>max_labeled_demos</code>) are applied to the
-final step only, and only when its input fields exist in the trainset.</p>
+final step only, and only when its input fields exist in the trainset.
+Programs containing Flex or an RLM, at the root or nested, are rejected.
+Flex constructs its inner predictors per invocation; RLM root examples do
+not match its children's <code>state -&gt; ...</code> signatures. Use GEPA for these
+programs, or instruction-only MIPROv2 for an RLM graph.</p>
 </div>
 
     </div>
@@ -210,6 +214,9 @@ final step only, and only when its input fields exist in the trainset.</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Compile a module</span></span></span>
+<span class="r-in"><span><span class="va">qa_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="module.html">module</a></span><span class="op">(</span><span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>question <span class="op">=</span> <span class="st">"Capital of France?"</span>, answer <span class="op">=</span> <span class="st">"Paris"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>

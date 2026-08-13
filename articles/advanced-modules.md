@@ -8,9 +8,7 @@ library(ellmer)
 
 ## Overview
 
-dsprrr provides advanced module types inspired by
-[DSPy](https://dspy.ai/) that implement sophisticated reasoning
-patterns. These modules go beyond simple prompt-response to enable:
+Choose a module by the work it needs to do:
 
 - **Step-by-step reasoning** with ChainOfThought
 - **Multiple attempts** with BestOfN
@@ -18,22 +16,22 @@ patterns. These modules go beyond simple prompt-response to enable:
 - **Ensemble reasoning** with MultiChainComparison
 - **Exact computation** with ProgramOfThought (code generation)
 - **Hybrid agents** with CodeAct (tools + code execution)
+- **Adaptive investigation** of large or awkward R objects with RLM
+- **Implementation search** across predictors, R logic, and tools with
+  Flex
 
-Each pattern addresses different challenges in LLM reliability and
-output quality.
+The sections below show each execution pattern and its tradeoffs.
 
 ## ChainOfThought
 
-ChainOfThought (CoT) is the foundational advanced reasoning pattern. It
-prompts the model to “show its work” by generating step-by-step
-reasoning before the final answer.
+ChainOfThought (CoT) asks the model for a reasoning field before the
+final answer.
 
 ### Why Use ChainOfThought?
 
-Research shows that asking models to reason step-by-step improves
-accuracy on complex tasks like math, logic, and multi-step reasoning.
-The model’s intermediate reasoning also provides transparency into how
-it arrived at an answer.
+Use it when intermediate reasoning is useful to the task or evaluator.
+It adds tokens and does not make the reasoning inherently faithful, so
+evaluate the final output against a task-specific metric.
 
 ### Basic Usage
 
@@ -346,18 +344,14 @@ refined$get_feedback_history(all = TRUE)
 
 ## MultiChainComparison
 
-MultiChainComparison (MCC) implements ensemble reasoning by running
-multiple independent reasoning chains and synthesizing the best answer.
+MultiChainComparison (MCC) runs several independent reasoning chains and
+asks a final model call to synthesize one answer.
 
 ### Why Use MultiChainComparison?
 
-Different reasoning paths can lead to different insights. MCC: -
-Generates M diverse reasoning attempts (using temperature for
-variation) - Compares all attempts in a synthesis step - Produces a
-final answer that leverages the best reasoning
-
-This is particularly effective for complex reasoning tasks where there’s
-no single “right” approach.
+MCC: - Generates M diverse reasoning attempts (using temperature for
+variation) - Compares all attempts in a synthesis step - Produces one
+answer from the compared attempts
 
 ### Basic Usage
 
@@ -492,11 +486,10 @@ runner <- r_code_runner(
 **Security note**:
 [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
 provides subprocess isolation but is not a security sandbox. For
-untrusted inputs, supply
+untrusted generated code, use a fresh managed
 [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
-or another runner with verified OS-level sandboxing. mcp-repl is
-persistent: reset it between logically isolated jobs and do not share
-one runner across concurrent invocations.
+from an interpreter factory or another runner with verified OS-level
+sandboxing.
 
 ProgramOfThought, CodeAct, and RLM accept exactly one execution binding.
 Pass `runner` to retain a caller-owned runner object that dsprrr reuses
@@ -515,11 +508,10 @@ pot <- program_of_thought(
 )
 ```
 
-The factory form is the safer default when state must not cross
-invocation boundaries. The direct-runner form is useful for object reuse
-or intentional REPL persistence; never share a stateful runner across
-concurrent calls. Supplying both forms is an error. Factory-backed
-ProgramOfThought, CodeAct, and RLM support
+The factory form prevents state from crossing invocation boundaries. A
+direct runner is caller-owned and sequential; never share a stateful
+runner across concurrent calls. Supplying both forms is an error.
+Factory-backed ProgramOfThought, CodeAct, and RLM support
 [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
 and isolated mirai batch execution because every invocation owns a fresh
 runner. Caller-owned runners remain sequential. Specialized token
@@ -595,9 +587,9 @@ result <- run(
 
 ## CodeAct
 
-CodeAct combines the best of both worlds: it can use external tools AND
-execute R code. This makes it ideal for complex agentic tasks that
-require both information retrieval and computation.
+CodeAct combines declared host tools with generated R execution. Use it
+when a task needs both an external action and computation inside one
+bounded agent loop.
 
 ### Why Use CodeAct?
 
@@ -700,6 +692,147 @@ agent <- code_act(
 )
 ```
 
+## Recursive Language Model (experimental)
+
+Use an RLM when the answer is inside an R object but the useful slice
+and calculation are not known in advance. The model proposes one R
+operation, observes bounded output, and chooses the next operation. The
+full object does not enter every model prompt.
+
+That is a different job from the other code-oriented modules:
+
+| Need | Module |
+|----|----|
+| Execute a calculation whose steps are already known | [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) |
+| Discover an exploration path for this invocation | [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) |
+| Learn a reusable implementation from labeled examples | [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) with GEPA |
+
+### Investigate a large R object
+
+The release-regression tutorial uses 40,000 session rows and 200 change
+records. A persistent callr runner stages those rich R objects once and
+keeps derived values between iterations:
+
+``` r
+
+incident <- rlm_module(
+  paste(
+    "sessions, changes, question ->",
+    "release: string, cohort: string, before_rate: number,",
+    "after_rate: number, drop_pp: number, change_id: string, evidence: string"
+  ),
+  interpreter_factory = function() {
+    r_code_runner(timeout = 30, persistent = TRUE)
+  },
+  max_iters = 8,
+  max_llm_calls = 0L,
+  max_output_chars = 10000
+)
+
+result <- run(
+  incident,
+  sessions = sessions,
+  changes = changes,
+  question = "Which cohort regressed, and which change best explains it?",
+  .llm = chat_openai(),
+  .return_format = "structured"
+)
+```
+
+This configuration is appropriate only when the fixture and generated
+code are trusted. `persistent = TRUE` preserves one callr process, but
+that process has the host user’s file, network, and environment
+permissions.
+
+The default `max_output_chars = 10000` keeps a head-and-tail excerpt
+from each execution in the next prompt. It bounds model-visible
+evidence; it does not increase a runner’s transport limit.
+
+### Recursive queries return values
+
+`sub_lm = NULL` inherits the outer model passed to
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md).
+Generated code can therefore assign and use the result of a focused
+query:
+
+``` r
+
+candidate <- subset(.context$changes, component == "checkout-auth")
+interpretation <- llm_query(
+  "Which change could reduce successful token refreshes?",
+  paste(candidate$note, collapse = "\n")
+)
+SUBMIT(answer = interpretation)
+```
+
+The guest emits a nonce-bound, schema-checked request, dsprrr calls the
+model in the host, then replays the same code evaluation with the
+returned value. One ordered ledger prevents query/tool replay from
+changing operation kind. It cannot roll back an external side effect
+performed directly by generated code before the query, so RLM code
+should keep pre-query work read-only.
+
+`SUBMIT()` is checked against the signature. Missing required, extra, or
+incompatible fields become a repairable observation so the next
+iteration can correct the submission; optional fields may be omitted. If
+the iteration budget ends first, the extraction predictor attempts to
+produce the best typed answer supported by the trajectory; provider or
+type-validation failure remains terminal.
+
+The action and fallback extraction steps are graph-visible child
+predictors:
+
+``` r
+
+names(incident$graph_children())
+#> [1] "generate_action" "extract"
+```
+
+Structured results report whether the answer came from `SUBMIT()` or
+fallback, and retain the bounded trajectory:
+
+``` r
+
+result$output
+result$metadata$output_source
+result$metadata$repl_history
+result$metadata$runner_policy
+```
+
+### Choose the execution boundary
+
+The one-call helper creates a fresh managed MCP sandbox by default:
+
+``` r
+
+answer <- rlm(
+  "document, question -> answer",
+  document = "Owner: team-a\nCommitment: rotate signing keys quarterly",
+  question = "Which commitments have no owner?",
+  .llm = chat_openai(),
+  .max_iterations = 4L,
+  .max_llm_calls = 0L
+)
+```
+
+Managed `mcp-repl` requires the suggested R package `mcptools` plus the
+external `mcp-repl` executable. It disables network access and applies
+an OS sandbox, but workspace writes remain allowed. Requests have a 7 KB
+wire bound and RLM control frames have a 3,000-byte encoded bound. When
+a raw request is too large, dsprrr first tries a gzip/base64 wrapper;
+the final JSON-RPC request must still fit the wire bound. Oversized
+output may be rejected by the runner before the module’s
+10,000-character head-and-tail formatter. Host tools run outside that
+sandbox with host permissions. Use explicit persistent
+[`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
+for trusted large data frames and fitted models; it is not a sandbox.
+
+See [Investigate a Release Regression with an
+RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md)
+for the deterministic demo and [How the RLM
+Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)
+for the complete execution contract.
+
 ## Flex (experimental)
 
 Use [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
@@ -721,7 +854,7 @@ removing unnecessary model calls.
 
 ## Combining Modules
 
-These modules can be composed for sophisticated pipelines:
+These modules can be composed when one execution pattern is not enough:
 
 ``` r
 
@@ -740,7 +873,21 @@ refined_cot <- refine(cot_with_feedback, N = 3, reward_fn = quality_score)
 
 ## Optimization Support
 
-All advanced modules integrate with dsprrr’s optimization:
+Wrapper modules retain their underlying optimizable predictors. RLM
+exposes separate `generate_action` and `extract` children, but optimizer
+support is deliberately explicit:
+
+| Optimizer | RLM support |
+|----|----|
+| [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) | Tunes both child predictors with end-to-end feedback; [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md) can derive feedback from the bounded RLM trajectory |
+| [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md) / [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md) | Discovers and applies both graph children |
+| [`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md) | Tunes child instructions only when `max_bootstrapped_demos = 0L` |
+| [`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md) / [`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md) | Programs containing Flex or an RLM are rejected; use GEPA, or instruction-only MIPROv2 for an RLM graph |
+| [`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md) | Programs containing an RLM are rejected because root examples do not match child signatures |
+
+Nested MIPRO demo bootstrapping fails with an actionable typed error
+until RLM collects predictor-local child evidence. This avoids attaching
+task-level demos to incompatible `state -> ...` predictors.
 
 ``` r
 
@@ -764,52 +911,49 @@ compiled <- compile(tp, wrapper, trainset)
 
 ### Token Usage
 
-Advanced modules use more tokens than simple prediction:
-
-- **ChainOfThought**: ~1.5-2x tokens (reasoning + answer)
-- **BestOfN(N=3)**: Up to 3x tokens (worst case, no early stopping)
-- **Refine(N=3)**: Up to 3x tokens plus feedback overhead
-- **MCC(M=3)**: ~4x tokens (M chains + 1 comparison)
+Advanced modules trade additional calls for reasoning, retries,
+comparison, or exploration. The actual cost depends on early stopping,
+provider behavior, trajectory length, and recursive queries. Set
+explicit iteration and call budgets, then inspect returned metadata
+rather than relying on a fixed multiplier.
 
 ### Cost Tracking
 
-All modules track costs in metadata:
+Structured results expose the usage and cost metadata available for the
+module:
 
 ``` r
 
-result <- run(mcc, question = "Test", .llm = llm)
-result$.metadata[[1]]$total_cost
-result$.metadata[[1]]$total_tokens
-result$.metadata[[1]]$n_llm_calls
+result <- run(
+  mcc,
+  question = "Test",
+  .llm = llm,
+  .return_format = "structured"
+)
+result$metadata$cost
+result$metadata$total_tokens
 ```
-
-### When to Use Each
-
-| Module | Best For | Trade-off |
-|----|----|----|
-| ChainOfThought | Complex reasoning, math, logic | Slight cost increase |
-| BestOfN | High-variance tasks, critical outputs | N× cost (with early stopping) |
-| Refine | Tasks with clear failure modes | N× cost + feedback gen |
-| MCC | Complex analysis, multiple valid approaches | (M+1)× cost |
 
 ## Summary
 
-dsprrr’s advanced modules bring battle-tested patterns from DSPy to R:
+These modules cover distinct execution strategies:
 
 | Module | Best For | Trade-off |
 |----|----|----|
-| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Complex reasoning, math, logic | Slight cost increase |
-| [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | High-variance tasks, critical outputs | N× cost (with early stopping) |
-| [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | Tasks with clear failure modes | N× cost + feedback gen |
-| [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) | Complex analysis, multiple valid approaches | (M+1)× cost |
+| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Complex reasoning, math, logic | Longer model output |
+| [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | High-variance tasks, critical outputs | Additional candidate calls |
+| [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | Tasks with clear failure modes | Iterative feedback calls |
+| [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) | Complex analysis, multiple valid approaches | Candidate and comparison calls |
 | [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | Exact computation, data analysis | Code execution overhead |
 | [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | Tasks needing both tools AND computation | Agent loop overhead |
+| [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) | Adaptive exploration of large or irregular R objects | Experimental; iterative calls and an explicit execution boundary |
 | [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) | Optimizing the choice among predictors, R logic, and tools | Experimental; executable source requires a sandbox |
 
 **Getting started:** - Start with **ChainOfThought** for complex
 reasoning tasks - Add **BestOfN** when you need reliability - Use
 **ProgramOfThought** for exact computation (math, statistics) - Use
 **CodeAct** when you need tools AND code execution together - Use
+**RLM** when the exploration path is unknown for this input - Use
 **Flex** when the implementation strategy itself is the experiment
 
 ## Further Reading
@@ -818,7 +962,9 @@ reasoning tasks - Add **BestOfN** when you need reliability - Use
 Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
 — Learn few-shot prompting - [Finding Best
 Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
-— Grid search optimization
+— Grid search optimization - [Investigate a Release Regression with an
+RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md)
+— Explore a deterministic large object
 
 **How-to Guides:** - [Compile &
 Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
@@ -830,7 +976,9 @@ Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md)
 Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)
 — S7 vs R6 design choices - [How Optimization
 Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)
-— Teleprompter theory
+— Teleprompter theory - [How the RLM
+Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md) —
+Lifecycle, replay, typed submission, and runner boundaries
 
 **Reference:** - [Quick
 Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md) —

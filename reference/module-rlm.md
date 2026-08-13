@@ -1,98 +1,81 @@
 # Recursive Language Model (RLM) Module
 
-A module that transforms context from "input" to "environment", enabling
-LLMs to programmatically explore large contexts through a REPL interface
-rather than embedding them in prompts.
+An experimental inference-time analyst for inputs whose useful evidence
+is too large, irregular, or unpredictable to place in one prompt. RLM
+keeps the inputs in an R environment and lets the model iteratively
+inspect summaries, run computations, and decide what to examine next.
 
 ## Details
 
-Instead of `llm(prompt, context=huge_document)`, RLM stores context as R
-variables that the LLM can peek, slice, search, and recursively query.
+Each input is available under `.context`. Generated R code can use
+ordinary R plus `peek()`,
+[`search()`](https://rdrr.io/r/base/search.html), value-returning
+`llm_query()` calls, declared host tools, and `SUBMIT(...)`. RLM
+requires a runner whose `policy()` advertises `persistent = TRUE`;
+variables therefore remain available across turns within one invocation.
+Invalid submitted fields or types become iteration errors that the model
+can repair. If no valid submission is produced, the separate `extract`
+predictor performs one typed fallback. RLM validates explicit ellmer
+string, number, integer, boolean, enum, array, and object outputs.
+Opaque `TypeJsonSchema` nodes are rejected at construction because they
+cannot participate in this strict repair loop.
 
-The execution flow is:
+The `generate_action` and `extract` predictors are graph-visible through
+[`named_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md).
+GEPA can tune them; nested MIPROv2 is instruction-only with bootstrapped
+demos disabled. BootstrapFewShot and LabeledFewShot reject programs
+containing an RLM until predictor-local demonstrations are available.
+Model-visible execution evidence defaults to a 10,000-character
+head-and-tail view after any runner-level transport limit; that
+formatted evidence is retained in the returned trajectory. Trace state
+retains hashes and sizes for input objects, not their full values.
+Structured metadata separates logical action, recursive, and extraction
+counts from verified provider calls. A child-predictor cache hit
+contributes zero provider calls and zero current-run usage; totals
+remain `NA` whenever every contributing provider turn cannot be
+verified.
 
-1.  Context is made available as variables in an R execution environment
+For generated code, prefer a fresh sandboxed
+[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+factory. Its managed transport is intentionally bounded and is best for
+compact, JSON-compatible context. Its default policy disables network
+access but allows writes within the configured workspace. Declared host
+tools execute in the dsprrr host process, outside that guest sandbox.
+This backend requires the suggested `mcptools` package and Posit's
+external `mcp-repl` executable. For large data frames or richer local R
+objects, `r_code_runner(persistent = TRUE)` can stage context once, but
+it is trusted-input-only: the child process retains the host user's
+file, network, and environment permissions.
 
-2.  LLM generates R code to explore and analyze the context
-
-3.  Code is executed by the configured code runner
-
-4.  Results are fed back to the LLM for the next iteration
-
-5.  Process continues until SUBMIT() is called or max_iterations reached
-
-6.  If max_iterations reached without SUBMIT(), fallback extraction is
-    used
-
-Available REPL tools:
-
-- `SUBMIT(...)`: Terminate and return final output values
-
-- `peek(var, start, end)`: View a slice of a variable (default: first
-  1000 chars)
-
-- `search(var, pattern)`: Regex search in variable
-
-- `llm_query(query, context_slice)`: Recursive LLM call (requires
-  sub_lm)
-
-- `llm_query_batched(queries, slices)`: Batched recursive calls
-
-Security: Code execution requires explicit opt-in via `runner` or
-`interpreter_factory`. The built-in runner uses a separate process but
-is NOT a security sandbox. Inspect `runner$policy()` before execution.
-For untrusted inputs, provide a runner backed by OS-level sandboxing,
-such as
-[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md).
-Authenticated RLM control frames sent through mcp-repl are limited to
-3,000 encoded bytes. If aggregate output is compacted into a file
-preview or pager, the iteration fails closed because mcp-repl does not
-expose structured compaction metadata; dsprrr does not read a
-sandbox-disclosed path from the host process.
-
-Runner lifecycle: supply exactly one runtime source. `runner` is
-caller-owned, reused across calls, and never closed by dsprrr. The
-backend determines whether execution state persists and whether
-`reset()` is available; serialize access to stateful backends.
-`interpreter_factory` is a zero-argument function that returns a fresh
-runner implementing `execute()`, `policy()`, optional
-[`start()`](https://rdrr.io/r/stats/start.html), and terminal
-`shutdown()` or [`close()`](https://rdrr.io/r/base/connections.html).
-The module owns that runner for one invocation and shuts it down exactly
-once on success, error, or interrupt.
-
+Supply exactly one runtime source. A caller-owned `runner` is reused and
+never closed by dsprrr. An `interpreter_factory` creates one
+invocation-owned runner which dsprrr shuts down on success, error, or
+interrupt. Factory-backed RLM supports
 [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
-supports factory-backed RLM in an isolated mirai process and rejects
-caller-owned runners.
-[`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
-and a module's `$stream()` method remain unavailable because streaming
-would bypass execution. The
-[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
-one-shot `forward()` fallback remains available.
+and isolated
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+execution; token streaming is unavailable. A direct
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) call
+always stages each supplied value as one REPL variable, regardless of
+its R length. Use
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+for multiple invocations, with list-columns for data frames, vectors,
+lists, matrices, or other rich per-row values.
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
-# Create a runner (required for code execution)
-runner <- r_code_runner(timeout = 30)
-
-# Create an RLM module for exploring large documents
-rlm <- rlm_module(
+analyst <- rlm_module(
   signature = "document, question -> answer",
-  runner = runner
+  interpreter_factory = function() mcp_repl_runner(timeout = 30)
 )
-
-# Use it for context exploration
-long_doc <- paste(readLines("large_file.txt"), collapse = "\n")
-result <- run(rlm, document = long_doc, question = "What are the main themes?", .llm = llm)
-
-# Enable recursive LLM calls for complex reasoning
-rlm_recursive <- rlm_module(
-  signature = "document -> summary",
-  runner = runner,
-  sub_lm = ellmer::chat_openai(model = "gpt-4o-mini"),
-  max_llm_calls = 10
+compact_doc <- "Section 1: ...\nSection 2: ..."
+result <- run(
+  analyst,
+  document = compact_doc,
+  question = "What evidence supports the conclusion?",
+  .llm = ellmer::chat_openai()
 )
 } # }
 ```

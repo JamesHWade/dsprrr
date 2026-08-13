@@ -8,11 +8,15 @@ Callables and runtime objects are never captured implicitly. Supply a named
 registry to store stable IDs, or set trusted = TRUE to embed them. Embedded
 values are restored only when trusted = TRUE is also supplied while loading.
 Registry IDs are the recommended contract for tools, custom functions,
-retrievers, stores, code runners, and interpreter factories. Format version 4
-records exactly one runner or factory for each code-executing module without
-invoking a factory during write or restore. Valid version 3 runner-only
-manifests are checked against their original schema and integrity digest,
-then upgraded in memory; other historical versions are rejected.
+retrievers, stores, code runners, and interpreter factories. Format version 5
+adds graph-visible RLM action and extraction predictors. Version 4 records
+exactly one runner or factory for each code-executing module. Valid version 3
+runner-only and version 4 manifests are checked against their original schema
+and integrity digest. Non-RLM manifests are upgraded in memory. A legacy
+childless RLM is restored under its original schema with fresh default child
+predictors and becomes a complete version 5 graph when it is next saved.
+Other historical versions are rejected. Factories are never invoked during
+write or restore.
 Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 through a closed codec. Remote content URLs must be stable HTTPS URLs without
 user information, query strings, fragments, or recognizable signed-path
@@ -31,11 +35,15 @@ Callables and runtime objects are never captured implicitly. Supply a named
 registry to store stable IDs, or set trusted = TRUE to embed them. Embedded
 values are restored only when trusted = TRUE is also supplied while loading.
 Registry IDs are the recommended contract for tools, custom functions,
-retrievers, stores, code runners, and interpreter factories. Format version 4
-records exactly one runner or factory for each code-executing module without
-invoking a factory during write or restore. Valid version 3 runner-only
-manifests are checked against their original schema and integrity digest,
-then upgraded in memory; other historical versions are rejected.
+retrievers, stores, code runners, and interpreter factories. Format version 5
+adds graph-visible RLM action and extraction predictors. Version 4 records
+exactly one runner or factory for each code-executing module. Valid version 3
+runner-only and version 4 manifests are checked against their original schema
+and integrity digest. Non-RLM manifests are upgraded in memory. A legacy
+childless RLM is restored under its original schema with fresh default child
+predictors and becomes a complete version 5 graph when it is next saved.
+Other historical versions are rejected. Factories are never invoked during
+write or restore.
 Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 through a closed codec. Remote content URLs must be stable HTTPS URLs without
 user information, query strings, fragments, or recognizable signed-path
@@ -75,7 +83,7 @@ identity at every edge."><meta property="og:image" content="https://jameshwade.g
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -144,11 +152,15 @@ prompts, caches, and execution history are excluded.</p>
 <code>registry</code> to store stable IDs, or set <code>trusted = TRUE</code> to embed them. Embedded
 values are restored only when <code>trusted = TRUE</code> is also supplied while loading.
 Registry IDs are the recommended contract for tools, custom functions,
-retrievers, stores, code runners, and interpreter factories. Format version 4
-records exactly one runner or factory for each code-executing module without
-invoking a factory during write or restore. Valid version 3 runner-only
-manifests are checked against their original schema and integrity digest,
-then upgraded in memory; other historical versions are rejected.</p>
+retrievers, stores, code runners, and interpreter factories. Format version 5
+adds graph-visible RLM action and extraction predictors. Version 4 records
+exactly one runner or factory for each code-executing module. Valid version 3
+runner-only and version 4 manifests are checked against their original schema
+and integrity digest. Non-RLM manifests are upgraded in memory. A legacy
+childless RLM is restored under its original schema with fresh default child
+predictors and becomes a complete version 5 graph when it is next saved.
+Other historical versions are rejected. Factories are never invoked during
+write or restore.</p>
 <p>Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 through a closed codec. Remote content URLs must be stable HTTPS URLs without
 user information, query strings, fragments, or recognizable signed-path
@@ -214,7 +226,7 @@ new destination may already be present.</p></dd>
 <span class="r-in"><span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">artifact</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Restored program artifact</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Root module: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Artifact version: <span style="color: #0000BB;">4</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Artifact version: <span style="color: #0000BB;">5</span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">save_program</span><span class="op">(</span><span class="va">mod</span>, <span class="va">path</span><span class="op">)</span></span></span>

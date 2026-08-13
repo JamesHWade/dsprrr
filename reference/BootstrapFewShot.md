@@ -88,7 +88,10 @@ harvested as a demonstration for the corresponding step module.
 Intermediate steps therefore receive demos even though the training set
 only labels the final output. Labeled demos (`max_labeled_demos`) are
 applied to the final step only, and only when its input fields exist in
-the trainset.
+the trainset. Programs containing Flex or an RLM, at the root or nested,
+are rejected. Flex constructs its inner predictors per invocation; RLM
+root examples do not match its children's `state -> ...` signatures. Use
+GEPA for these programs, or instruction-only MIPROv2 for an RLM graph.
 
 ## Examples
 
@@ -102,6 +105,9 @@ tp <- BootstrapFewShot(
 )
 
 # Compile a module
+qa_module <- module(signature("question -> answer"))
+trainset <- data.frame(question = "Capital of France?", answer = "Paris")
+llm <- ellmer::chat_openai()
 compiled <- compile(tp, qa_module, trainset, .llm = llm)
 } # }
 ```

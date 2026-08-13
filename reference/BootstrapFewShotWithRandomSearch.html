@@ -8,7 +8,10 @@ LabeledFewShot-only program
 BootstrapFewShot with unshuffled examples
 BootstrapFewShot with various random seeds
 
-"><meta property="og:description" content="A teleprompter that extends BootstrapFewShot with random search over
+
+Programs containing Flex or RLM modules are rejected before candidate
+evaluation because their predictor-local demonstration contracts are not
+currently available to this optimizer."><meta property="og:description" content="A teleprompter that extends BootstrapFewShot with random search over
 multiple candidate programs. It generates several candidate configurations
 and selects the best based on validation set performance.
 The optimizer generates candidates including:
@@ -17,7 +20,10 @@ LabeledFewShot-only program
 BootstrapFewShot with unshuffled examples
 BootstrapFewShot with various random seeds
 
-"><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
+
+Programs containing Flex or RLM modules are rejected before candidate
+evaluation because their predictor-local demonstration contracts are not
+currently available to this optimizer."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -47,7 +53,7 @@ BootstrapFewShot with various random seeds
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -114,7 +120,10 @@ and selects the best based on validation set performance.</p>
 <li><p>LabeledFewShot-only program</p></li>
 <li><p>BootstrapFewShot with unshuffled examples</p></li>
 <li><p>BootstrapFewShot with various random seeds</p></li>
-</ol></div>
+</ol><p>Programs containing Flex or RLM modules are rejected before candidate
+evaluation because their predictor-local demonstration contracts are not
+currently available to this optimizer.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
@@ -207,6 +216,10 @@ If NULL, defaults to <code>list(temperature = 0.7)</code>.</p></dd>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Compile with validation set (required)</span></span></span>
+<span class="r-in"><span><span class="va">qa_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="module.html">module</a></span><span class="op">(</span><span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>question <span class="op">=</span> <span class="st">"Capital of France?"</span>, answer <span class="op">=</span> <span class="st">"Paris"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>question <span class="op">=</span> <span class="st">"Capital of Japan?"</span>, answer <span class="op">=</span> <span class="st">"Tokyo"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Access ranked candidates</span></span></span>

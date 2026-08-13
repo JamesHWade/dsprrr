@@ -15,14 +15,13 @@ The prelude defines these functions in the execution environment:
 - `search(var, pattern)`: Regex search in variable
 
 - `llm_query(query, context_slice)`: Request a recursive LLM call
-  (returns marker for interception)
 
 - `llm_query_batched(queries, slices)`: Request batched LLM calls
-  (returns marker for interception)
 
 - `rlm_query()` / `rlm_query_batch()`: Backward-compatible aliases
 
-The recursive-query helper functions return special marker objects that
-the main RLM process intercepts and handles. The actual LLM calls happen
-in the parent R process, not in the sandboxed code execution
-environment.
+Recursive-query helpers suspend execution with a nonce-bound,
+schema-checked request. The main RLM process handles the request and
+replays the code with an immutable response, so the helpers behave like
+ordinary value-returning R functions. The actual LLM calls happen in the
+parent R process, not in the sandboxed code execution environment.

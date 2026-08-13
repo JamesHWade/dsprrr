@@ -51,7 +51,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
@@ -251,16 +251,17 @@ other runtime objects are not captured implicitly. Supply a named
 <code>registry</code> to persist stable IDs and pass the same registry
 to <code><a href="../reference/restore_module_config.html">restore_module_config()</a></code>. Arbitrary embedded runtime
 values require <code>trusted = TRUE</code> both when writing and
-restoring. Version 4 records exactly one of <code>runner</code> or
-<code>interpreter_factory</code> for each code-executing module, without
-invoking a factory while writing or restoring the artifact. It also
-preserves a Flex module’s source language, complete source, predictor-
-and host-tool-call limits, sandbox requirement, and registry-backed
-factory and tools when executable mode is used.</p>
-<p>Restoration accepts the current closed schema and validated version 3
-runner-only artifacts. A version 3 manifest is checked against its
-original schema and integrity digest before dsprrr upgrades it in
-memory; other versions are rejected. The stored signature remains
+restoring. Version 5 records exactly one of <code>runner</code> or
+<code>interpreter_factory</code> for each code-executing module without
+invoking a factory while writing or restoring the artifact. It preserves
+Flex source/runtime limits and registry-backed tools, and stores the
+graph-visible RLM <code>generate_action</code> and <code>extract</code>
+children with their tuned state.</p>
+<p>Restoration accepts the current closed schema plus validated version
+3 and 4 artifacts. Legacy manifests are checked against their original
+schema and integrity digest before migration; a childless legacy RLM
+receives fresh default children and is written as version 5 on its next
+save. Other versions are rejected. The stored signature remains
 authoritative. To change a signature, update the source program and
 write a new artifact.</p>
 </div>

@@ -1,15 +1,9 @@
 # Create a Recursive Language Model (RLM) Module
 
-Factory function to create an RLMModule that enables LLMs to
-programmatically explore large contexts through a REPL interface. Use
-[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) to
-execute it.
-[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
-supports factory-backed modules; async streaming and module `$stream()`
-reject RLM.
-[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
-preserves the synchronous `forward()` fallback unless a matching
-token-stream request is active; that request is rejected first.
+Create an RLM whose implementation can adaptively explore R objects at
+inference time. Use RLM when the inspection path is not known in
+advance; use ordinary R when that path becomes stable, or Flex when
+labeled examples should discover a reusable implementation.
 
 ## Usage
 
@@ -19,7 +13,7 @@ rlm_module(
   runner = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
-  max_output_chars = 100000L,
+  max_output_chars = 10000L,
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
@@ -33,13 +27,17 @@ rlm_module(
 
 - signature:
 
-  A Signature object or string notation defining inputs/outputs
+  A Signature object or string notation defining inputs/outputs with
+  explicit ellmer string, number, integer, boolean, enum, array, or
+  object output types. Opaque `TypeJsonSchema` outputs are unsupported.
 
 - runner:
 
   Optional caller-owned code runner implementing `execute()` and
-  `policy()`. It is retained, never automatically closed, and must not
-  be shared concurrently when persistent.
+  `policy()`. Its policy must declare `persistent = TRUE`. It is
+  retained, never automatically closed, and must not be shared
+  concurrently. For the trusted callr backend, use
+  `r_code_runner(persistent = TRUE)`.
 
 - max_iterations:
 
@@ -51,11 +49,13 @@ rlm_module(
 
 - max_output_chars:
 
-  Maximum characters per execution output (default 100000)
+  Maximum model-visible characters per execution output. Longer output
+  is shown as a head-and-tail excerpt. Default 10000.
 
 - sub_lm:
 
-  Optional ellmer Chat for recursive queries. NULL = disabled.
+  Optional ellmer Chat for recursive queries. `NULL` inherits the
+  invocation's outer Chat. Set `max_llm_calls = 0` to disable recursion.
 
 - verbose:
 
@@ -63,10 +63,16 @@ rlm_module(
 
 - tools:
 
-  Named list of user-defined host functions. Guest code emits an
-  authenticated request, dsprrr invokes the original function in the
-  host, and the guest is replayed with the response. Closures are never
-  deparsed or serialized into generated code.
+  Named list of user-defined host functions or ellmer ToolDef objects.
+  Guest code emits an invocation-bound request, dsprrr validates it and
+  invokes the original function in the host, and the guest is replayed
+  with the response. Closures are never deparsed or serialized into
+  generated code. These tools execute in the host process, outside the
+  guest runner sandbox, with the host's permissions. ToolDef schemas
+  guide generation; the callable must still enforce semantic constraints
+  beyond the bridge's lossless JSON-compatible value checks. A protocol
+  safety ceiling permits at most 1,000 host-tool calls in one generated
+  R step.
 
 - max_iters:
 
@@ -83,8 +89,9 @@ rlm_module(
   `execute()`, `policy()`, optional
   [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
   terminal `shutdown()` or
-  [`close()`](https://rdrr.io/r/base/connections.html). Supply exactly
-  one of `runner` and `interpreter_factory`.
+  [`close()`](https://rdrr.io/r/base/connections.html). Its policy must
+  advertise `persistent = TRUE` for RLM. Supply exactly one of `runner`
+  and `interpreter_factory`.
 
 ## Value
 
@@ -94,8 +101,15 @@ An RLMModule object
 
 ``` r
 if (FALSE) { # \dontrun{
-runner <- r_code_runner(timeout = 30)
-rlm <- rlm_module("question -> answer", runner = runner)
-result <- run(rlm, question = "What is the 10th Fibonacci number?", .llm = llm)
+analyst <- rlm_module(
+  "document, question -> answer",
+  interpreter_factory = function() mcp_repl_runner(timeout = 30)
+)
+result <- run(
+  analyst,
+  document = "Owner: team-a\nObligation: rotate keys quarterly",
+  question = "Which obligations have no owner?",
+  .llm = ellmer::chat_openai()
+)
 } # }
 ```

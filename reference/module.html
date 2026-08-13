@@ -3,12 +3,14 @@
 "predict" for standard structured prediction, "react" for ReAct-style
 tool-using modules, "chain_of_thought" for step-by-step reasoning,
 "multichain" for multi-chain comparison, "program_of_thought" for code
-execution modules, and experimental "flex" for declarative or
+execution, "codeact" for tools plus code, "rlm" for adaptive R-object
+investigation, and experimental "flex" for declarative or
 interpreter-backed programs.'><meta property="og:description" content='The primary function for creating executable LLM modules. Supports
 "predict" for standard structured prediction, "react" for ReAct-style
 tool-using modules, "chain_of_thought" for step-by-step reasoning,
 "multichain" for multi-chain comparison, "program_of_thought" for code
-execution modules, and experimental "flex" for declarative or
+execution, "codeact" for tools plus code, "rlm" for adaptive R-object
+investigation, and experimental "flex" for declarative or
 interpreter-backed programs.'><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -39,7 +41,7 @@ interpreter-backed programs.'><meta property="og:image" content="https://jameshw
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -103,7 +105,8 @@ interpreter-backed programs.'><meta property="og:image" content="https://jameshw
 "predict" for standard structured prediction, "react" for ReAct-style
 tool-using modules, "chain_of_thought" for step-by-step reasoning,
 "multichain" for multi-chain comparison, "program_of_thought" for code
-execution modules, and experimental "flex" for declarative or
+execution, "codeact" for tools plus code, "rlm" for adaptive R-object
+investigation, and experimental "flex" for declarative or
 interpreter-backed programs.</p>
     </div>
 
@@ -156,7 +159,7 @@ interpreter-backed programs.</p>
 
 <dt id="arg-tools">tools<a class="anchor" aria-label="anchor" href="#arg-tools"></a></dt>
 <dd><p>Optional tools configuration:</p><ul><li><p>for <code>type = "react"</code> or <code>type = "codeact"</code>: list of ellmer ToolDef objects.</p></li>
-<li><p>for <code>type = "rlm"</code>: named list of R functions exposed to the REPL.</p></li>
+<li><p>for <code>type = "rlm"</code>: named host functions or ellmer ToolDef objects.</p></li>
 <li><p>for executable <code>type = "flex"</code>: named host functions or ToolDef objects.
 If provided with <code>type = "predict"</code>, automatically upgrades to react.</p></li>
 </ul></dd>
@@ -178,7 +181,9 @@ caps tool calls within one invocation; exceeding that inner budget errors.</p></
 
 <dt id="arg-runner">runner<a class="anchor" aria-label="anchor" href="#arg-runner"></a></dt>
 <dd><p>Optional caller-owned code runner implementing <code>execute()</code> and
-<code>policy()</code> for code execution types. It is never automatically closed.</p></dd>
+<code>policy()</code> for code execution types. It is never automatically closed.
+For <code>type = "rlm"</code>, the policy must advertise <code>persistent = TRUE</code>; use
+<code>r_code_runner(persistent = TRUE)</code> for the trusted callr backend.</p></dd>
 
 
 <dt id="arg-max-iters">max_iters<a class="anchor" aria-label="anchor" href="#arg-max-iters"></a></dt>
@@ -219,7 +224,8 @@ module will use this Chat for all predictions unless overridden with <code>.llm<
 program-of-thought, CodeAct, RLM, and executable Flex modules. It creates
 one fresh runner per invocation. Supply exactly one of <code>runner</code> and
 <code>interpreter_factory</code> for ordinary code-executing types; Flex accepts only
-the factory so every invocation is isolated.</p></dd>
+the factory so every invocation is isolated. For RLM, every returned
+runner must advertise <code>persistent = TRUE</code>.</p></dd>
 
 
 <dt id="arg-module-src">module_src<a class="anchor" aria-label="anchor" href="#arg-module-src"></a></dt>
@@ -279,17 +285,22 @@ advertises an enforced sandbox.</p></dd>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Or create module with Chat attached</span></span></span>
 <span class="r-in"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">module</span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, chat <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">module</span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, chat <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span> <span class="fu"><a href="run.html">run</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Great package!"</span><span class="op">)</span>  <span class="co"># No .llm needed</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create a ReAct module with tools</span></span></span>
+<span class="r-in"><span><span class="va">search_fn</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Result for"</span>, <span class="va">query</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">search_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">search_fn</span>,</span></span>
 <span class="r-in"><span>  description <span class="op">=</span> <span class="st">"Search for information"</span>,</span></span>
 <span class="r-in"><span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">module</span><span class="op">(</span>type <span class="op">=</span> <span class="st">"react"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search_tool</span><span class="op">)</span>, chat <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">module</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    type <span class="op">=</span> <span class="st">"react"</span>,</span></span>
+<span class="r-in"><span>    tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search_tool</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    chat <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

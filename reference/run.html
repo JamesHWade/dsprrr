@@ -37,7 +37,7 @@ across workers."><meta property="og:image" content="https://jameshwade.github.io
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -119,7 +119,9 @@ across workers.</p>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Named arguments corresponding to the module's signature inputs.
-Can be single values or vectors for batch processing. Additional parameters:</p><dl><dt>.llm</dt>
+Can be single values or vectors for batch processing. RLM is the exception:
+every supplied value is one context variable regardless of its R length;
+use <code><a href="run_dataset.html">run_dataset()</a></code> for multiple RLM invocations. Additional parameters:</p><dl><dt>.llm</dt>
 <dd><p>An ellmer chat object for LLM interaction (optional)</p></dd>
 
 <dt>.verbose</dt>
@@ -176,6 +178,10 @@ for more details.</p>
 Empty batches return immediately without resolving a Chat or touching cache,
 trace, or prompt-history state. Mixing zero-length and non-empty inputs is an
 error.</p>
+<p>RLM inputs use scalar object semantics: vectors, lists, matrices, data frames,
+and fitted models each remain one <code>.context</code> variable for one investigation.
+Use <code><a href="run_dataset.html">run_dataset()</a></code> for multiple RLM invocations and list-columns for rich
+per-row objects.</p>
 <p>Scalar and batch Predict calls record one trace per attempted row. Structured
 metadata reports usage, error, cache, backend, and batch-index fields. Native
 ellmer and mirai workers return row records that are committed to module and

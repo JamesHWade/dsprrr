@@ -9,7 +9,8 @@ r_code_runner(
   timeout = 30,
   max_output_chars = 100000L,
   allowed_packages = c("base", "stats", "utils", "methods"),
-  prelude = character()
+  prelude = character(),
+  persistent = FALSE
 )
 ```
 
@@ -35,6 +36,13 @@ r_code_runner(
 
   Character vector. R code to run before user code. Useful for setting
   options or loading common utilities.
+
+- persistent:
+
+  Logical. Whether to reuse one callr session and execution environment
+  across calls to `execute()`. This preserves variables and supports
+  staging a base context with `prepare_context()`. Default `FALSE`
+  preserves one fresh subprocess per execution.
 
 ## Value
 

@@ -31,7 +31,7 @@ This code is run before user-generated code by the configured code runner."><met
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -101,12 +101,15 @@ This code is run before user-generated code by the configured code runner.</p>
     <p>The prelude defines these functions in the execution environment:</p><ul><li><p><code>SUBMIT(...)</code>: Terminate and return final output values</p></li>
 <li><p><code>peek(var, start, end)</code>: View a slice of a variable</p></li>
 <li><p><code>search(var, pattern)</code>: Regex search in variable</p></li>
-<li><p><code>llm_query(query, context_slice)</code>: Request a recursive LLM call (returns marker for interception)</p></li>
-<li><p><code>llm_query_batched(queries, slices)</code>: Request batched LLM calls (returns marker for interception)</p></li>
+<li><p><code>llm_query(query, context_slice)</code>: Request a recursive LLM call</p></li>
+<li><p><code>llm_query_batched(queries, slices)</code>: Request batched LLM calls</p></li>
 <li><p><code>rlm_query()</code> / <code>rlm_query_batch()</code>: Backward-compatible aliases</p></li>
-</ul><p>The recursive-query helper functions return special marker objects
-that the main RLM process intercepts and handles. The actual LLM calls happen
-in the parent R process, not in the sandboxed code execution environment.</p>
+</ul><p>Recursive-query helpers suspend execution with a nonce-bound, schema-checked
+request. The main RLM process handles the request and replays the code with
+an immutable response, so the helpers behave like ordinary value-returning R
+functions.
+The actual LLM calls happen in the parent R process, not in the sandboxed code
+execution environment.</p>
     </div>
 
   </main></div>

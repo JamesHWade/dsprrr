@@ -24,7 +24,11 @@ run(module, ...)
 - ...:
 
   Named arguments corresponding to the module's signature inputs. Can be
-  single values or vectors for batch processing. Additional parameters:
+  single values or vectors for batch processing. RLM is the exception:
+  every supplied value is one context variable regardless of its R
+  length; use
+  [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+  for multiple RLM invocations. Additional parameters:
 
   .llm
 
@@ -100,6 +104,12 @@ Zero-length inputs form an empty batch only when every input is zero
 length. Empty batches return immediately without resolving a Chat or
 touching cache, trace, or prompt-history state. Mixing zero-length and
 non-empty inputs is an error.
+
+RLM inputs use scalar object semantics: vectors, lists, matrices, data
+frames, and fitted models each remain one `.context` variable for one
+investigation. Use
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+for multiple RLM invocations and list-columns for rich per-row objects.
 
 Scalar and batch Predict calls record one trace per attempted row.
 Structured metadata reports usage, error, cache, backend, and

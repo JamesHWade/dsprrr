@@ -4,7 +4,7 @@ mcp-repl MCP server.
 mcp-repl keeps a long-lived R session and enforces its sandbox with
 operating-system primitives. This makes it suitable for code proposed by an
 optimizer or language model.
-For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+For nonce-bound RLM submit/query traffic, dsprrr caps each encoded control
 frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
 If mcp-repl nevertheless returns a file-preview or active-pager marker (for
 example because user code printed a large value first), the runner fails the
@@ -23,7 +23,7 @@ mcp-repl MCP server.
 mcp-repl keeps a long-lived R session and enforces its sandbox with
 operating-system primitives. This makes it suitable for code proposed by an
 optimizer or language model.
-For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+For nonce-bound RLM submit/query traffic, dsprrr caps each encoded control
 frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
 If mcp-repl nevertheless returns a file-preview or active-pager marker (for
 example because user code printed a large value first), the runner fails the
@@ -67,7 +67,7 @@ fit."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/log
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
     <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Explore Codebases with RLMs</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
@@ -132,7 +132,7 @@ fit."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/log
 <code>mcp-repl</code> keeps a long-lived R session and enforces its sandbox with
 operating-system primitives. This makes it suitable for code proposed by an
 optimizer or language model.</p>
-<p>For authenticated RLM submit/query traffic, dsprrr caps each encoded control
+<p>For nonce-bound RLM submit/query traffic, dsprrr caps each encoded control
 frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
 If mcp-repl nevertheless returns a file-preview or active-pager marker (for
 example because user code printed a large value first), the runner fails the
@@ -218,10 +218,11 @@ empty because arbitrary server flags can weaken the managed sandbox policy.</p><
 <li><p>the <code>workspace-write</code> sandbox;</p></li>
 <li><p>network access disabled by the sandbox; and</p></li>
 <li><p>oversized output written to sandbox-visible files.</p></li>
-</ul><p>The sandbox is deliberately on by default. Setting <code>sandbox = "off"</code> is
-rejected because this runner advertises itself as safe for untrusted code.
-Use <code><a href="r_code_runner.html">r_code_runner()</a></code> explicitly for trusted-input-only subprocess
-isolation.</p>
+</ul><p>The sandbox is deliberately on by default. It disables network access but
+the <code>workspace-write</code> policy still permits mutation inside allowed workspace
+paths. Setting <code>sandbox = "off"</code> is rejected because this runner advertises
+an enforced sandbox. Use <code><a href="r_code_runner.html">r_code_runner()</a></code> explicitly for trusted-input-only
+subprocess isolation.</p>
 <p>Supplying <code>repl</code> is useful for an externally managed MCP connection and for
 deterministic tests. It must be a function with the mcp-repl tool contract:
 <code>repl(input, timeout_ms)</code>. Because dsprrr did not launch that function's
@@ -240,6 +241,7 @@ ownership cannot be captured. This path is tested against mcptools 1.0.1.</p>
 <span class="r-in"><span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu">mcp_repl_runner</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">runner</span><span class="op">$</span><span class="fu">execute</span><span class="op">(</span><span class="st">"mean(1:10)"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">runner</span><span class="op">$</span><span class="fu">reset</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">runner</span><span class="op">$</span><span class="fu">close</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

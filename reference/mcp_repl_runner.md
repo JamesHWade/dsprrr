@@ -6,7 +6,7 @@ Creates a dsprrr code runner backed by Posit's
 operating-system primitives. This makes it suitable for code proposed by
 an optimizer or language model.
 
-For authenticated RLM submit/query traffic, dsprrr caps each encoded
+For nonce-bound RLM submit/query traffic, dsprrr caps each encoded
 control frame at 3,000 bytes so it stays below mcp-repl's inline-output
 threshold. If mcp-repl nevertheless returns a file-preview or
 active-pager marker (for example because user code printed a large value
@@ -99,9 +99,10 @@ with:
 
 - oversized output written to sandbox-visible files.
 
-The sandbox is deliberately on by default. Setting `sandbox = "off"` is
-rejected because this runner advertises itself as safe for untrusted
-code. Use
+The sandbox is deliberately on by default. It disables network access
+but the `workspace-write` policy still permits mutation inside allowed
+workspace paths. Setting `sandbox = "off"` is rejected because this
+runner advertises an enforced sandbox. Use
 [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
 explicitly for trusted-input-only subprocess isolation.
 
@@ -126,5 +127,6 @@ if (FALSE) { # \dontrun{
 runner <- mcp_repl_runner()
 runner$execute("mean(1:10)")
 runner$reset()
+runner$close()
 } # }
 ```

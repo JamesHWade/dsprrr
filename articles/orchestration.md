@@ -98,17 +98,18 @@ runtime objects are not captured implicitly. Supply a named `registry`
 to persist stable IDs and pass the same registry to
 [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md).
 Arbitrary embedded runtime values require `trusted = TRUE` both when
-writing and restoring. Version 4 records exactly one of `runner` or
-`interpreter_factory` for each code-executing module, without invoking a
-factory while writing or restoring the artifact. It also preserves a
-Flex module’s source language, complete source, predictor- and
-host-tool-call limits, sandbox requirement, and registry-backed factory
-and tools when executable mode is used.
+writing and restoring. Version 5 records exactly one of `runner` or
+`interpreter_factory` for each code-executing module without invoking a
+factory while writing or restoring the artifact. It preserves Flex
+source/runtime limits and registry-backed tools, and stores the
+graph-visible RLM `generate_action` and `extract` children with their
+tuned state.
 
-Restoration accepts the current closed schema and validated version 3
-runner-only artifacts. A version 3 manifest is checked against its
-original schema and integrity digest before dsprrr upgrades it in
-memory; other versions are rejected. The stored signature remains
+Restoration accepts the current closed schema plus validated version 3
+and 4 artifacts. Legacy manifests are checked against their original
+schema and integrity digest before migration; a childless legacy RLM
+receives fresh default children and is written as version 5 on its next
+save. Other versions are rejected. The stored signature remains
 authoritative. To change a signature, update the source program and
 write a new artifact.
 
