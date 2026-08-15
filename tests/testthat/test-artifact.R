@@ -210,6 +210,58 @@ test_that("program artifact IDs cover semantic and graph changes", {
   expect_length(unique(ids), 4L)
 })
 
+test_that("restored programs retain source identity until semantic change", {
+  forward <- function(text, ...) list(answer = text)
+  registry <- list(forward_v1 = forward)
+  source <- program_artifact(
+    module_fn("text -> answer", forward),
+    registry = registry
+  )
+  source$metadata$r_version <- "1.0"
+  source$format_version <- as.numeric(source$format_version)
+  source <- artifact_rehash(source)
+  source_id <- program_artifact_id(source)
+  path <- withr::local_tempfile(fileext = ".rds")
+  saveRDS(source, path)
+
+  restored <- load_program(path, registry = registry)
+  current_artifact <- program_artifact(restored)
+  result <- run(restored, text = "hello", .return_format = "structured")
+  trace <- tail(restored$state$traces, 1L)[[1L]]
+
+  expect_identical(program_artifact_id(restored), source_id)
+  expect_false(identical(program_artifact_id(current_artifact), source_id))
+  expect_identical(result$metadata$program_artifact_id, source_id)
+  expect_identical(trace$program_artifact_id, source_id)
+  expect_identical(
+    program_artifact_id(restored$copy(deep = TRUE)),
+    source_id
+  )
+
+  changed_instruction <- restored$copy(deep = TRUE)
+  changed_instruction$signature@instructions <- "Use changed instructions."
+  expect_false(identical(
+    program_artifact_id(changed_instruction),
+    source_id
+  ))
+
+  changed_graph <- pipeline(
+    restored$copy(deep = TRUE),
+    artifact_leaf("answer", "summary")
+  )
+  expect_false(identical(program_artifact_id(changed_graph), source_id))
+
+  demo_source <- program_artifact(artifact_leaf())
+  demo_source$metadata$r_version <- "1.0"
+  demo_source <- artifact_rehash(demo_source)
+  changed_demo <- dsprrr:::restore_program_artifact(demo_source)
+  changed_demo$demos <- list(list(text = "example", answer = "response"))
+  expect_false(identical(
+    program_artifact_id(changed_demo),
+    program_artifact_id(demo_source)
+  ))
+})
+
 test_that("runtime state and credentials do not change program identity", {
   first <- artifact_leaf()
   second <- artifact_leaf()
@@ -325,6 +377,7 @@ test_that("trusted restored programs keep identity recomputation explicit", {
   result <- run(restored, text = "hello", .return_format = "structured")
 
   expect_s3_class(condition, "dsprrr_artifact_unsafe_value")
+  expect_null(dsprrr:::artifact_restored_identity(restored))
   expect_identical(program_artifact_id(artifact), expected_id)
   expect_match(program_artifact_id(explicit), "^sha256:[0-9a-f]{64}$")
   expect_identical(result$metadata$program_artifact_id, NA_character_)

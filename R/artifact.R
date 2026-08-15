@@ -60,8 +60,14 @@
 #'   When `x` is a Module, registry entries actually referenced by the validated
 #'   artifact are retained as detached runtime bindings so subsequent execution
 #'   and module copies can recover the same verified ID without re-supplying the
-#'   registry. Artifact inputs are checked for structure and integrity without
-#'   requiring their recorded dependency versions to be installed.
+#'   registry. A Module reconstructed from a validated current-format artifact
+#'   retains that source artifact ID while its current serialization remains
+#'   unchanged. This keeps the exact source producer environment represented in
+#'   execution traces. Calling `program_artifact()` or `save_program()` creates a
+#'   new artifact, whose ID can differ from the retained source ID. Semantic
+#'   mutation switches the Module to the newly serialized artifact ID. Artifact
+#'   inputs are checked for structure and integrity without requiring their
+#'   recorded dependency versions to be installed.
 #'   A Module restored from embedded trusted values is intentionally different:
 #'   retain the validated artifact's ID, or explicitly create and identify a
 #'   new artifact with `program_artifact(module, trusted = TRUE)`. Automatic
@@ -167,6 +173,7 @@ program_artifact <- function(program, registry = list(), trusted = FALSE) {
 #' @rdname program-artifact
 #' @export
 program_artifact_id <- function(x, registry = list()) {
+  restored_identity <- NULL
   artifact <- if (inherits(x, "dsprrr_program_artifact")) {
     artifact_validate_manifest(x, dependencies = FALSE)
     x
@@ -182,6 +189,7 @@ program_artifact_id <- function(x, registry = list()) {
       artifact,
       registry
     )
+    restored_identity <- artifact_restored_identity(x)
     artifact
   } else {
     cli::cli_abort(
@@ -190,11 +198,17 @@ program_artifact_id <- function(x, registry = list()) {
     )
   }
 
-  paste0(
-    artifact$integrity$algorithm,
-    ":",
-    artifact$integrity$payload_sha256
-  )
+  if (
+    !is.null(restored_identity) &&
+      identical(
+        artifact_manifest_id(artifact),
+        restored_identity$baseline_id
+      )
+  ) {
+    return(restored_identity$source_id)
+  }
+
+  artifact_manifest_id(artifact)
 }
 
 #' @rdname program-artifact
@@ -331,6 +345,14 @@ artifact_integrity <- function(artifact) {
   list(
     algorithm = "sha256",
     payload_sha256 = digest::digest(payload, algo = "sha256", serialize = TRUE)
+  )
+}
+
+artifact_manifest_id <- function(artifact) {
+  paste0(
+    artifact$integrity$algorithm,
+    ":",
+    artifact$integrity$payload_sha256
   )
 }
 
@@ -977,6 +999,47 @@ artifact_detached_runtime <- function(module) {
   attr(module, "dsprrr_artifact_runtime", exact = TRUE) %||% list()
 }
 
+artifact_restored_identity <- function(module) {
+  identity <- artifact_detached_runtime(module)$restored_identity
+  valid <- is.list(identity) &&
+    identical(names(identity), c("source_id", "baseline_id")) &&
+    is.character(identity$source_id) &&
+    length(identity$source_id) == 1L &&
+    !is.na(identity$source_id) &&
+    grepl("^sha256:[0-9a-f]{64}$", identity$source_id) &&
+    is.character(identity$baseline_id) &&
+    length(identity$baseline_id) == 1L &&
+    !is.na(identity$baseline_id) &&
+    grepl("^sha256:[0-9a-f]{64}$", identity$baseline_id)
+  if (!valid) {
+    return(NULL)
+  }
+  identity
+}
+
+artifact_bind_restored_identity <- function(program, source_artifact) {
+  # Legacy manifests keep their existing upgrade identity semantics. Trusted
+  # runtimes cannot be reidentified without a new explicit trust decision.
+  if (
+    !identical(
+      as.integer(source_artifact$format_version),
+      artifact_format_version()
+    ) ||
+      artifact_has_trusted_runtime(source_artifact$graph$nodes)
+  ) {
+    return(invisible(program))
+  }
+
+  baseline <- program_artifact(program)
+  runtime <- artifact_detached_runtime(program)
+  runtime$restored_identity <- list(
+    source_id = artifact_manifest_id(source_artifact),
+    baseline_id = artifact_manifest_id(baseline)
+  )
+  attr(program, "dsprrr_artifact_runtime") <- runtime
+  invisible(program)
+}
+
 artifact_copy_runtime <- function(source, target) {
   source_graph <- module_graph(
     source,
@@ -1064,6 +1127,35 @@ artifact_registry_ids <- function(value) {
   }
   visit(value)
   unique(ids)
+}
+
+artifact_has_trusted_runtime <- function(value) {
+  found <- FALSE
+  visit <- function(item) {
+    if (found || !is.list(item)) {
+      return(invisible(NULL))
+    }
+    if (artifact_is_envelope_candidate(item)) {
+      envelope <- item$.dsprrr
+      if (
+        identical(envelope$kind, "runtime") &&
+          identical(envelope$payload$kind, "trusted")
+      ) {
+        found <<- TRUE
+      } else if (identical(envelope$kind, "plain")) {
+        for (child in envelope$payload) {
+          visit(child)
+        }
+      }
+      return(invisible(NULL))
+    }
+    for (child in item) {
+      visit(child)
+    }
+    invisible(NULL)
+  }
+  visit(value)
+  found
 }
 
 artifact_bind_registry <- function(modules, artifact, registry) {
@@ -2404,6 +2496,7 @@ restore_program_artifact <- function(
   registry <- artifact_validate_registry(registry)
   trusted <- artifact_validate_trusted(trusted)
   artifact_validate_manifest(artifact)
+  source_artifact <- artifact
   artifact <- artifact_upgrade_manifest(artifact)
 
   cache <- new.env(parent = emptyenv(), hash = TRUE)
@@ -2419,6 +2512,7 @@ restore_program_artifact <- function(
   modules <- mget(ls(cache, all.names = TRUE), envir = cache, inherits = FALSE)
   artifact_bind_registry(modules, artifact, registry)
   artifact_bind_state_exclusions(modules, artifact)
+  artifact_bind_restored_identity(program, source_artifact)
   program
 }
 

@@ -45,8 +45,14 @@ payload; it is an integrity check, not an authenticity or trust signal.
 When \code{x} is a Module, registry entries actually referenced by the validated
 artifact are retained as detached runtime bindings so subsequent execution
 and module copies can recover the same verified ID without re-supplying the
-registry. Artifact inputs are checked for structure and integrity without
-requiring their recorded dependency versions to be installed.
+registry. A Module reconstructed from a validated current-format artifact
+retains that source artifact ID while its current serialization remains
+unchanged. This keeps the exact source producer environment represented in
+execution traces. Calling \code{program_artifact()} or \code{save_program()} creates a
+new artifact, whose ID can differ from the retained source ID. Semantic
+mutation switches the Module to the newly serialized artifact ID. Artifact
+inputs are checked for structure and integrity without requiring their
+recorded dependency versions to be installed.
 A Module restored from embedded trusted values is intentionally different:
 retain the validated artifact's ID, or explicitly create and identify a
 new artifact with \code{program_artifact(module, trusted = TRUE)}. Automatic
