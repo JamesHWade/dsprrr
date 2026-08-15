@@ -27,6 +27,9 @@ NULL
 .dsprrr_env$cache_privacy_status <- "not_checked"
 .dsprrr_env$cache_privacy_reason <- NULL
 .dsprrr_env$cache_disk_guard <- NULL
+.dsprrr_env$trace_context <- list()
+.dsprrr_env$trace_program_artifact_id <- NA_character_
+.dsprrr_env$trace_program <- NULL
 
 #' Get the Default Chat
 #'

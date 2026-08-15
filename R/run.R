@@ -28,6 +28,9 @@
 #'     \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 #'     \item{.return_format}{Character, either "simple" (default) or "structured".
 #'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
+#'     \item{.trace_context}{A named, JSON-compatible list copied into run
+#'       metadata and traces. Credential-like fields and runtime objects are
+#'       rejected before execution.}
 #'     \item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
 #'       If TRUE, attempts to use cache (no effect if caching globally disabled).
 #'       If FALSE, bypasses cache for this call only.}
@@ -55,6 +58,13 @@
 #' global trace state by the parent in input order. Specialized Predict
 #' subclasses, such as ReAct, preserve their scalar `forward()` method and
 #' currently reject vectorized inputs rather than bypassing specialized logic.
+#'
+#' Trace context is correlation-only: it is not included in prompts, provider
+#' requests, cache keys, or program artifact identity. Each attempted execution
+#' also records `program_artifact_id`, derived from the program's existing
+#' artifact integrity digest. `program_artifact_id` is a reserved field: for a
+#' registry-backed program, call [program_artifact_id()] once with its registry
+#' to bind the verified runtime references before execution.
 #'
 #' @return For single inputs with .return_format="simple": The parsed output according to the module's signature.
 #'   For single inputs with .return_format="structured": A list with components:
@@ -256,8 +266,33 @@ run.Module <- function(
   .progress = TRUE,
   .return_format = "simple",
   .show_prompt = FALSE,
-  .cache = NULL
+  .cache = NULL,
+  .trace_context = list()
 ) {
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
+  )
+  trace_cursor <- evaluation_trace_cursor(module)
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    inherit_program_id = !trace_context_supplied
+  )
+  invocation_trace_fields <- trace_context_fields()
+  on.exit(
+    {
+      trace_context_restore(previous_trace_context)
+      trace_context_annotate_module_traces(
+        module,
+        trace_cursor,
+        fields = invocation_trace_fields
+      )
+    },
+    add = TRUE
+  )
+
   parallel_missing <- missing(.parallel)
   parallel_method_missing <- missing(.parallel_method)
   concurrency_missing <- missing(.concurrency)
@@ -335,15 +370,18 @@ run.Module <- function(
           module_batch_recycle_input(module, value, input_contract$size)
         }
       )
-      return(run_factory_interpreter_batch(
-        module = module,
-        inputs = inputs,
-        n = input_contract$size,
-        .llm = .llm,
-        .progress = .progress,
-        .return_format = .return_format,
-        .concurrency = concurrency_runtime,
-        .cache = .cache
+      return(trace_context_annotate_result(
+        run_factory_interpreter_batch(
+          module = module,
+          inputs = inputs,
+          n = input_contract$size,
+          .llm = .llm,
+          .progress = .progress,
+          .return_format = .return_format,
+          .concurrency = concurrency_runtime,
+          .cache = .cache
+        ),
+        fields = invocation_trace_fields
       ))
     }
     unsupported_control <- is.finite(concurrency$max_errors) ||
@@ -383,7 +421,10 @@ run.Module <- function(
     if (identical(.return_format, "structured")) {
       class(results) <- c("dsprrr_batch_result", "list")
     }
-    return(results)
+    return(trace_context_annotate_result(
+      results,
+      fields = invocation_trace_fields
+    ))
   }
 
   # Delegate to the module's run method
@@ -402,7 +443,10 @@ run.Module <- function(
     execution_args$.parallel <- .parallel
     execution_args$.parallel_method <- .parallel_method
   }
-  do.call(module$run, c(inputs, execution_args))
+  trace_context_annotate_result(
+    do.call(module$run, c(inputs, execution_args)),
+    fields = invocation_trace_fields
+  )
 }
 
 #' @export
@@ -417,8 +461,33 @@ run.PredictModule <- function(
   .progress = TRUE,
   .return_format = "simple",
   .show_prompt = FALSE,
-  .cache = NULL
+  .cache = NULL,
+  .trace_context = list()
 ) {
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
+  )
+  trace_cursor <- evaluation_trace_cursor(module)
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    inherit_program_id = !trace_context_supplied
+  )
+  invocation_trace_fields <- trace_context_fields()
+  on.exit(
+    {
+      trace_context_restore(previous_trace_context)
+      trace_context_annotate_module_traces(
+        module,
+        trace_cursor,
+        fields = invocation_trace_fields
+      )
+    },
+    add = TRUE
+  )
+
   parallel_missing <- missing(.parallel)
   parallel_method_missing <- missing(.parallel_method)
   concurrency_missing <- missing(.concurrency)
@@ -485,37 +554,46 @@ run.PredictModule <- function(
     inputs <- lapply(inputs, batch_recycle_input, size = input_contract$size)
 
     # Process batch
-    return(run_batch(
-      module,
-      inputs,
-      input_contract$size,
-      .llm,
-      .verbose,
-      .progress,
-      .return_format,
-      .cache,
-      concurrency
+    return(trace_context_annotate_result(
+      run_batch(
+        module,
+        inputs,
+        input_contract$size,
+        .llm,
+        .verbose,
+        .progress,
+        .return_format,
+        .cache,
+        concurrency
+      ),
+      fields = invocation_trace_fields
     ))
   }
 
   if (!identical(class(module)[1], "PredictModule")) {
-    return(run_predict_forward(
+    return(trace_context_annotate_result(
+      run_predict_forward(
+        module = module,
+        inputs = inputs,
+        .llm = .llm,
+        .verbose = .verbose,
+        .return_format = .return_format,
+        .cache = .cache
+      ),
+      fields = invocation_trace_fields
+    ))
+  }
+
+  trace_context_annotate_result(
+    run_predict_scalar(
       module = module,
       inputs = inputs,
       .llm = .llm,
       .verbose = .verbose,
       .return_format = .return_format,
       .cache = .cache
-    ))
-  }
-
-  run_predict_scalar(
-    module = module,
-    inputs = inputs,
-    .llm = .llm,
-    .verbose = .verbose,
-    .return_format = .return_format,
-    .cache = .cache
+    ),
+    fields = invocation_trace_fields
   )
 }
 
@@ -1030,6 +1108,7 @@ canonical_run_metadata <- function(
       latency_ms = latency_ms
     ),
     concurrency_metadata(),
+    trace_context_fields(),
     usage
   )
 }
@@ -1127,6 +1206,8 @@ canonical_run_trace <- function(
     )],
     cost = metadata$cost,
     model = metadata$model,
+    program_artifact_id = metadata$program_artifact_id,
+    trace_context = metadata$trace_context,
     metadata = metadata
   )
   if (isTRUE(store_chat)) {
@@ -1182,6 +1263,7 @@ commit_run_traces <- function(module, traces) {
     )
   }
 
+  traces <- lapply(traces, trace_context_annotate_event)
   module$state$traces <- append(module$state$traces, traces)
   for (trace in traces) {
     add_to_global_history(trace, source = "PredictModule")
@@ -4540,6 +4622,9 @@ run_dataset <- function(module, ...) {
 #'   `.parallel_method`.
 #' @param .progress Logical whether to show progress bar
 #' @param .return_format Character either "simple" or "structured"
+#' @param .trace_context A named, JSON-compatible list copied into row metadata
+#'   and traces. When omitted inside another dsprrr operation, the active
+#'   context is inherited.
 #' @export
 run_dataset.Module <- function(
   module,
@@ -4551,8 +4636,33 @@ run_dataset.Module <- function(
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
-  ...
+  ...,
+  .trace_context = list()
 ) {
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
+  )
+  trace_cursor <- evaluation_trace_cursor(module)
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    inherit_program_id = !trace_context_supplied
+  )
+  invocation_trace_fields <- trace_context_fields()
+  on.exit(
+    {
+      trace_context_restore(previous_trace_context)
+      trace_context_annotate_module_traces(
+        module,
+        trace_cursor,
+        fields = invocation_trace_fields
+      )
+    },
+    add = TRUE
+  )
+
   parallel_missing <- missing(.parallel)
   parallel_method_missing <- missing(.parallel_method)
   concurrency_missing <- missing(.concurrency)
@@ -4862,10 +4972,17 @@ run_dataset.Module <- function(
     data$.chat <- lapply(results, `[[`, "chat")
   }
 
-  output <- tibble::as_tibble(data)
+  output <- trace_context_annotate_result(
+    tibble::as_tibble(data),
+    fields = invocation_trace_fields
+  )
   attr(output, "dsprrr_error_conditions") <- error_conditions
   if (!is.null(row_trace_events)) {
-    attr(output, "dsprrr_row_trace_events") <- row_trace_events
+    attr(output, "dsprrr_row_trace_events") <- lapply(
+      row_trace_events,
+      trace_context_annotate_events,
+      fields = invocation_trace_fields
+    )
   }
   output
 }

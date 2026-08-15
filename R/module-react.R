@@ -482,14 +482,17 @@ ReactModule <- R6::R6Class(
     #' Create a reset copy of the module
     #' @return New ReactModule with reset state
     reset_copy = function() {
-      ReactModule$new(
-        signature = self$signature,
-        tools = self$tools,
-        max_iterations = self$max_iterations,
-        template = self$template,
-        demos = list(),
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        ReactModule$new(
+          signature = self$signature,
+          tools = self$tools,
+          max_iterations = self$max_iterations,
+          template = self$template,
+          demos = list(),
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
@@ -527,7 +530,7 @@ ReactModule <- R6::R6Class(
 
       new_module$state <- lapply(self$state, function(x) x)
 
-      new_module
+      artifact_copy_runtime(self, new_module)
     }
   )
 )

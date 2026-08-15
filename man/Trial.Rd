@@ -14,7 +14,8 @@ Trial(
   end_time = NULL,
   notes = "",
   compiled_artifact_ref = NULL,
-  status = "pending"
+  status = "pending",
+  trace_context = list()
 )
 }
 \arguments{
@@ -38,6 +39,9 @@ Trial(
 persisted with \code{\link[=save_program]{save_program()}} rather than serialized as a live R object.}
 
 \item{status}{Trial status: "pending", "running", "completed", "failed".}
+
+\item{trace_context}{A named, JSON-compatible correlation context retained
+with the trial throughout its lifecycle and persistence.}
 }
 \description{
 S7 class representing a single optimization trial. Captures all metadata

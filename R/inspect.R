@@ -27,6 +27,8 @@ NULL
 #'   - `cost`: Cost in USD (if available)
 #'   - `timestamp`: When the call was made
 #'   - `source`: Where the call originated ("dsp()" or module name)
+#'   - `program_artifact_id`: Exact executable program identity, when available
+#'   - `trace_context`: Caller-supplied correlation context
 #'
 #' Returns `NULL` if no LLM calls have been made.
 #'
@@ -84,6 +86,8 @@ get_last_prompt <- function() {
 #'   - `tokens_out`: Output tokens
 #'   - `cost`: Cost in USD (if available)
 #'   - `duration_s`: Duration in seconds (if available)
+#'   - `program_artifact_id`: Exact executable program identity, when available
+#'   - `trace_context`: Caller-supplied correlation context
 #'   - `prompt`: Full prompt text (if `include_prompts = TRUE`)
 #'   - `response`: Full response text (if `include_responses = TRUE`)
 #'
@@ -155,6 +159,25 @@ inspect_history <- function(
       entries,
       function(e) e$duration_s %||% NA_real_,
       numeric(1)
+    ),
+    program_artifact_id = vapply(
+      entries,
+      function(entry) {
+        id <- entry$program_artifact_id %||% NA_character_
+        if (
+          !is.character(id) ||
+            length(id) != 1L ||
+            is.na(id)
+        ) {
+          return(NA_character_)
+        }
+        id
+      },
+      character(1)
+    ),
+    trace_context = lapply(
+      entries,
+      function(entry) entry$trace_context %||% list()
     )
   )
 
@@ -315,6 +338,8 @@ prompt_history_generation_delta <- function(before, after) {
 add_to_global_history <- function(trace, source = "unknown") {
   tryCatch(
     {
+      trace <- trace_context_annotate_event(trace)
+
       # Initialize history if needed
       if (is.null(.dsprrr_env$prompt_history)) {
         .dsprrr_env$prompt_history <- list()
@@ -439,6 +464,10 @@ extract_history_entry <- function(trace, source) {
 
   # Extract model name
   entry$model <- trace$model %||% NA_character_
+  entry$program_artifact_id <- trace$program_artifact_id %||%
+    current_trace_program_artifact_id()
+  entry$trace_context <- trace$trace_context %||% current_trace_context()
+  entry$metadata <- trace_context_annotate_metadata(trace$metadata %||% list())
 
   entry
 }
@@ -507,7 +536,9 @@ create_prompt_inspection <- function(entry) {
       cost = entry$cost %||% NA_real_,
       duration_s = entry$duration_s %||% NA_real_,
       timestamp = entry$timestamp %||% Sys.time(),
-      source = entry$source %||% "unknown"
+      source = entry$source %||% "unknown",
+      program_artifact_id = entry$program_artifact_id %||% NA_character_,
+      trace_context = entry$trace_context %||% list()
     ),
     class = "dsprrr_prompt_inspection"
   )

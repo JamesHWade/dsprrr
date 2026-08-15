@@ -24,6 +24,8 @@ A tibble with one row per trace containing:
 \item cost: Cost in USD (if available from the provider)
 \item model: The model name/version used
 \item prompt_length: Character length of the prompt
+\item program_artifact_id: Exact executable program identity, when available
+\item trace_context: Caller-supplied correlation context
 \item prompt: The full prompt text (if include_prompts = TRUE)
 \item output: The model output (if include_outputs = TRUE)
 }

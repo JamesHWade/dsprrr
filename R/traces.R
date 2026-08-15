@@ -16,6 +16,8 @@
 #'   - cost: Cost in USD (if available from the provider)
 #'   - model: The model name/version used
 #'   - prompt_length: Character length of the prompt
+#'   - program_artifact_id: Exact executable program identity, when available
+#'   - trace_context: Caller-supplied correlation context
 #'   - prompt: The full prompt text (if include_prompts = TRUE)
 #'   - output: The model output (if include_outputs = TRUE)
 #'
@@ -49,7 +51,7 @@ export_traces <- function(
 
   if (length(traces) == 0) {
     cli::cli_inform("No traces recorded in this module")
-    return(tibble::tibble())
+    return(module$get_traces())
   }
 
   # Start with basic metrics

@@ -77,6 +77,7 @@ Module <- R6::R6Class(
     #' @param .concurrency Optional policy created by [concurrency_control()]
     #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
+    #' @param .trace_context A named JSON-compatible correlation context
     #' @return Module outputs. For .return_format="simple", returns the output value directly.
     #'   For "structured", returns a tibble with output, chat, and metadata columns.
     run = function(
@@ -90,8 +91,33 @@ Module <- R6::R6Class(
       .progress = TRUE,
       .return_format = "simple",
       .cache = NULL,
-      .predict_compat = FALSE
+      .predict_compat = FALSE,
+      .trace_context = list()
     ) {
+      trace_context_supplied <- !missing(.trace_context)
+      trace_context <- trace_context_resolve(
+        .trace_context,
+        supplied = trace_context_supplied
+      )
+      trace_cursor <- evaluation_trace_cursor(self)
+      previous_trace_context <- trace_context_enter(
+        trace_context,
+        program = self,
+        inherit_program_id = !trace_context_supplied
+      )
+      invocation_trace_fields <- trace_context_fields()
+      on.exit(
+        {
+          trace_context_restore(previous_trace_context)
+          trace_context_annotate_module_traces(
+            self,
+            trace_cursor,
+            fields = invocation_trace_fields
+          )
+        },
+        add = TRUE
+      )
+
       parallel_missing <- missing(.parallel)
       parallel_method_missing <- missing(.parallel_method)
       concurrency_missing <- missing(.concurrency)
@@ -182,15 +208,18 @@ Module <- R6::R6Class(
               module_batch_recycle_input(self, value, input_contract$size)
             }
           )
-          return(run_factory_interpreter_batch(
-            module = self,
-            inputs = inputs,
-            n = input_contract$size,
-            .llm = .llm,
-            .progress = .progress,
-            .return_format = .return_format,
-            .concurrency = runtime,
-            .cache = .cache
+          return(trace_context_annotate_result(
+            run_factory_interpreter_batch(
+              module = self,
+              inputs = inputs,
+              n = input_contract$size,
+              .llm = .llm,
+              .progress = .progress,
+              .return_format = .return_format,
+              .concurrency = runtime,
+              .cache = .cache
+            ),
+            fields = invocation_trace_fields
           ))
         }
         if (
@@ -245,7 +274,10 @@ Module <- R6::R6Class(
       }
 
       if (identical(input_contract$kind, "empty")) {
-        return(empty_batch_result(.return_format))
+        return(trace_context_annotate_result(
+          empty_batch_result(.return_format),
+          fields = invocation_trace_fields
+        ))
       }
 
       # Exact Predict modules share the same scheduler whether callers use the
@@ -257,17 +289,20 @@ Module <- R6::R6Class(
           batch_recycle_input,
           size = input_contract$size
         )
-        return(run_batch(
-          module = self,
-          inputs = inputs,
-          n = input_contract$size,
-          .llm = .llm,
-          .verbose = .verbose,
-          .progress = .progress,
-          .return_format = .return_format,
-          .cache = .cache,
-          .concurrency = runtime,
-          .isolate_rows = !isTRUE(.predict_compat)
+        return(trace_context_annotate_result(
+          run_batch(
+            module = self,
+            inputs = inputs,
+            n = input_contract$size,
+            .llm = .llm,
+            .verbose = .verbose,
+            .progress = .progress,
+            .return_format = .return_format,
+            .cache = .cache,
+            .concurrency = runtime,
+            .isolate_rows = !isTRUE(.predict_compat)
+          ),
+          fields = invocation_trace_fields
         ))
       }
 
@@ -277,13 +312,16 @@ Module <- R6::R6Class(
       if (.return_format == "simple") {
         return(result$output[[1]])
       } else {
-        return(structure(
-          list(
-            output = result$output[[1]],
-            chat = result$chat[[1]],
-            metadata = result$metadata[[1]]
+        return(trace_context_annotate_result(
+          structure(
+            list(
+              output = result$output[[1]],
+              chat = result$chat[[1]],
+              metadata = result$metadata[[1]]
+            ),
+            class = "dsprrr_result"
           ),
-          class = "dsprrr_result"
+          fields = invocation_trace_fields
         ))
       }
     },
@@ -582,7 +620,9 @@ Module <- R6::R6Class(
           model = character(0),
           prompt_length = integer(0),
           prompt = character(0),
-          response = character(0)
+          response = character(0),
+          program_artifact_id = character(0),
+          trace_context = list()
         ))
       }
 
@@ -625,7 +665,26 @@ Module <- R6::R6Class(
           integer(1)
         ),
         prompt = vapply(traces, trace_prompt_text, character(1)),
-        response = vapply(traces, trace_response_text, character(1))
+        response = vapply(traces, trace_response_text, character(1)),
+        program_artifact_id = vapply(
+          traces,
+          function(trace) {
+            id <- trace$program_artifact_id %||% NA_character_
+            if (
+              !is.character(id) ||
+                length(id) != 1L ||
+                is.na(id)
+            ) {
+              return(NA_character_)
+            }
+            id
+          },
+          character(1)
+        ),
+        trace_context = lapply(
+          traces,
+          function(trace) trace$trace_context %||% list()
+        )
       )
     },
 
@@ -953,9 +1012,18 @@ Module <- R6::R6Class(
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
+    #' @param .trace_context A named JSON-compatible correlation context
     #' @return A promise that resolves to the result
-    run_async = function(..., .llm = NULL) {
-      dsprrr::run_async(self, ..., .llm = .llm)
+    run_async = function(..., .llm = NULL, .trace_context = list()) {
+      if (missing(.trace_context)) {
+        return(dsprrr::run_async(self, ..., .llm = .llm))
+      }
+      dsprrr::run_async(
+        self,
+        ...,
+        .llm = .llm,
+        .trace_context = .trace_context
+      )
     },
 
     #' @description
@@ -1045,7 +1113,7 @@ Module <- R6::R6Class(
         best_trial = NULL
       )
 
-      new_mod
+      artifact_copy_runtime(self, new_mod)
     },
 
     #' @description

@@ -152,6 +152,38 @@ test_that("BootstrapFewShot compiles pipelines jointly with per-step demos", {
   expect_length(p$steps[[2]]@module$demos, 0)
 })
 
+test_that("BootstrapFewShot preserves registry-backed pipeline identity", {
+  runtime_hook <- function(value) value
+  first <- module(
+    signature("question -> draft"),
+    config = list(runtime_hook = runtime_hook)
+  )
+  second <- module(signature("draft -> answer"))
+  program <- pipeline(first, second)
+  program_artifact_id(
+    program,
+    registry = list(runtime_hook_v1 = runtime_hook)
+  )
+  optimizer <- BootstrapFewShot(
+    metric = function(...) 1,
+    max_labeled_demos = 0L,
+    max_bootstrapped_demos = 0L
+  )
+
+  compiled <- dsprrr:::compile_bootstrap_pipeline(
+    optimizer,
+    program,
+    data.frame(question = "q", answer = "a"),
+    control = dsprrr:::optimizer_control(progress = FALSE)
+  )
+
+  expect_match(program_artifact_id(compiled), "^sha256:[0-9a-f]{64}$")
+  expect_named(
+    dsprrr:::artifact_detached_runtime(compiled)$registry,
+    "runtime_hook_v1"
+  )
+})
+
 test_that("joint pipeline compilation respects metric threshold", {
   p <- make_qa_pipeline()
   trainset <- qa_trainset()

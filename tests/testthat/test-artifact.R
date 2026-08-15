@@ -170,6 +170,305 @@ test_that("artifacts round-trip nested graphs and shared identity", {
   expect_identical(round_trip$integrity, artifact$integrity)
 })
 
+test_that("program artifact IDs are stable content addresses", {
+  program <- artifact_leaf()
+  artifact <- program_artifact(program)
+  expected <- paste0("sha256:", artifact$integrity$payload_sha256)
+
+  expect_identical(program_artifact_id(program), expected)
+  expect_identical(program_artifact_id(artifact), expected)
+  expect_match(expected, "^sha256:[0-9a-f]{64}$")
+
+  path <- tempfile(fileext = ".rds")
+  on.exit(unlink(path), add = TRUE)
+  save_program(program, path)
+  expect_identical(program_artifact_id(readRDS(path)), expected)
+  expect_identical(program_artifact_id(load_program(path)), expected)
+})
+
+test_that("program artifact IDs cover semantic and graph changes", {
+  base <- module(
+    signature("text -> answer", instructions = "Answer briefly")
+  )
+  changed_instruction <- module(
+    signature("text -> answer", instructions = "Answer with evidence")
+  )
+  changed_demo <- module(
+    signature("text -> answer", instructions = "Answer briefly")
+  )
+  changed_demo$demos <- list(list(text = "example", answer = "response"))
+  changed_graph <- pipeline(
+    base,
+    artifact_leaf("answer", "summary")
+  )
+
+  ids <- vapply(
+    list(base, changed_instruction, changed_demo, changed_graph),
+    program_artifact_id,
+    character(1)
+  )
+  expect_length(unique(ids), 4L)
+})
+
+test_that("runtime state and credentials do not change program identity", {
+  first <- artifact_leaf()
+  second <- artifact_leaf()
+  first$config$api_key <- "first-runtime-secret"
+  second$config$api_key <- "second-runtime-secret"
+  expect_identical(program_artifact_id(first), program_artifact_id(second))
+
+  before <- program_artifact_id(first)
+  first$state$traces <- list(list(prompt = "runtime", output = "history"))
+  first$state$cache <- list(key = "runtime-cache")
+  expect_identical(program_artifact_id(first), before)
+})
+
+test_that("execution environment metadata remains part of program identity", {
+  artifact <- program_artifact(artifact_leaf())
+  changed_environment <- artifact
+  changed_environment$metadata$r_version <- "1.0"
+  changed_environment <- artifact_rehash(changed_environment)
+
+  changed_time <- artifact
+  changed_time$metadata$created_at <- "2030-01-01T00:00:00Z"
+
+  expect_false(identical(
+    program_artifact_id(artifact),
+    program_artifact_id(changed_environment)
+  ))
+  expect_identical(
+    program_artifact_id(artifact),
+    program_artifact_id(changed_time)
+  )
+})
+
+test_that("program artifact IDs reject malformed inputs and forged manifests", {
+  artifact <- program_artifact(artifact_leaf())
+  artifact$graph$nodes[[artifact$root]]$config$temperature <- 0.7
+
+  expect_error(
+    program_artifact_id(artifact),
+    class = "dsprrr_artifact_integrity_error"
+  )
+  expect_error(
+    program_artifact_id("not a program"),
+    class = "dsprrr_program_artifact_id_error"
+  )
+})
+
+test_that("pre-change v5 runtime exclusions preserve identity after restore", {
+  artifact <- program_artifact(artifact_leaf())
+  excluded_fields <- c("traces", "cache")
+  artifact$exclusions <- lapply(
+    excluded_fields,
+    function(field) {
+      list(
+        path = paste0(
+          "graph.nodes.",
+          artifact$root,
+          ".state.",
+          field
+        ),
+        reason = "runtime-data"
+      )
+    }
+  )
+  artifact <- artifact_rehash(artifact)
+  expected_id <- program_artifact_id(artifact)
+
+  restored <- dsprrr:::restore_program_artifact(artifact)
+  reidentified <- program_artifact(restored)
+
+  expect_identical(program_artifact_id(restored), expected_id)
+  expect_identical(reidentified$exclusions, artifact$exclusions)
+})
+
+test_that("program artifact registries reject duplicate runtime aliases", {
+  forward <- function(text, ...) list(answer = text)
+  program <- module_fn("text -> answer", forward)
+
+  expect_error(
+    program_artifact_id(
+      program,
+      registry = list(forward_v1 = forward, forward_alias = forward)
+    ),
+    class = "dsprrr_artifact_registry_error"
+  )
+})
+
+test_that("artifact IDs remain readable across future dependency metadata", {
+  artifact <- program_artifact(artifact_leaf())
+  artifact$metadata$packages$dsprrr <- "999.0.0"
+  artifact <- artifact_rehash(artifact)
+
+  expect_error(
+    dsprrr:::artifact_validate_manifest(artifact),
+    class = "dsprrr_artifact_dependency_error"
+  )
+  expect_identical(
+    program_artifact_id(artifact),
+    paste0("sha256:", artifact$integrity$payload_sha256)
+  )
+})
+
+test_that("trusted restored programs keep identity recomputation explicit", {
+  forward <- function(text, ...) list(answer = text)
+  program <- module_fn("text -> answer", forward)
+  path <- withr::local_tempfile(fileext = ".rds")
+  save_program(program, path, trusted = TRUE)
+  artifact <- readRDS(path)
+  expected_id <- program_artifact_id(artifact)
+
+  restored <- load_program(path, trusted = TRUE)
+  condition <- rlang::catch_cnd(program_artifact_id(restored))
+  explicit <- program_artifact(restored, trusted = TRUE)
+  result <- run(restored, text = "hello", .return_format = "structured")
+
+  expect_s3_class(condition, "dsprrr_artifact_unsafe_value")
+  expect_identical(program_artifact_id(artifact), expected_id)
+  expect_match(program_artifact_id(explicit), "^sha256:[0-9a-f]{64}$")
+  expect_identical(result$metadata$program_artifact_id, NA_character_)
+})
+
+test_that("registry-backed identity remains bound through execution", {
+  forward <- function(text, ...) list(answer = paste0(text, "!"))
+  program <- module_fn("text -> answer", forward)
+  expected_id <- program_artifact_id(
+    program,
+    registry = list(forward_v1 = forward)
+  )
+
+  result <- run(
+    program,
+    text = "hello",
+    .return_format = "structured"
+  )
+  trace <- tail(program$state$traces, 1L)[[1L]]
+
+  expect_identical(result$output, list(answer = "hello!"))
+  expect_identical(result$metadata$program_artifact_id, expected_id)
+  expect_identical(trace$program_artifact_id, expected_id)
+  expect_identical(program_artifact_id(program), expected_id)
+})
+
+test_that("registry binding ignores ordinary registry-shaped data", {
+  forward <- function(text, ...) list(answer = text)
+  unused <- function(...) NULL
+  program <- module_fn(
+    "text -> answer",
+    forward,
+    config = list(marker = list(kind = "registry", id = "unused"))
+  )
+
+  program_artifact_id(
+    program,
+    registry = list(forward_v1 = forward, unused = unused)
+  )
+  runtime <- dsprrr:::artifact_detached_runtime(program)
+
+  expect_named(runtime$registry, "forward_v1")
+})
+
+test_that("composed programs gather registry bindings from child modules", {
+  forward <- function(text, ...) list(answer = text)
+  child <- module_fn("text -> answer", forward)
+  program_artifact_id(
+    child,
+    registry = list(forward_v1 = forward)
+  )
+
+  program <- pipeline(child)
+  program_id <- program_artifact_id(program)
+
+  expect_match(program_id, "^sha256:[0-9a-f]{64}$")
+  expect_named(
+    dsprrr:::artifact_detached_runtime(program)$registry,
+    "forward_v1"
+  )
+})
+
+test_that("registry-backed identity survives module copies", {
+  search <- function(query) paste("found", query)
+  tool <- ellmer::tool(
+    search,
+    description = "Search",
+    arguments = list(query = ellmer::type_string()),
+    name = "search"
+  )
+  program <- module(
+    signature("question -> answer"),
+    type = "react",
+    tools = list(tool)
+  )
+  expected_id <- program_artifact_id(
+    program,
+    registry = list(search_tool_v1 = tool)
+  )
+
+  optimizer_copy <- dsprrr:::copy_module(program)
+  public_copy <- program$copy(deep = TRUE)
+  bespoke_copy <- program$deepcopy()
+  expect_identical(program_artifact_id(optimizer_copy), expected_id)
+  expect_identical(program_artifact_id(public_copy), expected_id)
+  expect_identical(program_artifact_id(bespoke_copy), expected_id)
+
+  forward <- function(text, ...) {
+    list(answer = dsprrr:::current_trace_program_artifact_id())
+  }
+  tool_program <- module_fn("text -> answer", forward)
+  tool_program_id <- program_artifact_id(
+    tool_program,
+    registry = list(forward_v1 = forward)
+  )
+  deep_tool <- as_ellmer_tool(
+    tool_program,
+    name = "identity_tool",
+    output = "raw",
+    copy = "deep"
+  )
+
+  expect_identical(
+    deep_tool(text = "hello"),
+    list(answer = tool_program_id)
+  )
+})
+
+test_that("registry-backed identity survives reset copies", {
+  search <- function(query) paste("found", query)
+  tool <- ellmer::tool(
+    search,
+    description = "Search",
+    arguments = list(query = ellmer::type_string()),
+    name = "search"
+  )
+  program <- module(
+    signature("question -> answer"),
+    type = "react",
+    tools = list(tool)
+  )
+  expected_id <- program_artifact_id(
+    program,
+    registry = list(search_tool_v1 = tool)
+  )
+
+  reset <- program$reset_copy()
+  expect_identical(program_artifact_id(reset), expected_id)
+  expect_named(
+    dsprrr:::artifact_detached_runtime(reset)$registry,
+    "search_tool_v1"
+  )
+
+  composite <- pipeline(program)
+  composite_id <- program_artifact_id(program_artifact(composite))
+  expect_null(dsprrr:::artifact_detached_runtime(composite)$registry)
+  composite_reset <- composite$reset_copy()
+  expect_identical(program_artifact_id(composite_reset), composite_id)
+  expect_named(
+    dsprrr:::artifact_detached_runtime(composite_reset)$registry,
+    "search_tool_v1"
+  )
+})
+
 test_that("safe artifact lists preserve nested named and unnamed NULLs", {
   program <- artifact_leaf()
   program$config$null_contract <- list(

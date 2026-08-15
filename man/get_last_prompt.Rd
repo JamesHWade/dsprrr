@@ -17,6 +17,8 @@ A \code{dsprrr_prompt_inspection} object containing:
 \item \code{cost}: Cost in USD (if available)
 \item \code{timestamp}: When the call was made
 \item \code{source}: Where the call originated ("dsp()" or module name)
+\item \code{program_artifact_id}: Exact executable program identity, when available
+\item \code{trace_context}: Caller-supplied correlation context
 }
 
 Returns \code{NULL} if no LLM calls have been made.

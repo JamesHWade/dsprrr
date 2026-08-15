@@ -80,7 +80,7 @@ sum_trial_counts <- function(values) {
 }
 
 trial_json_record <- function(trial) {
-  list(
+  record <- list(
     trial_id = trial@trial_id,
     optimizer_name = trial@optimizer_name,
     params = trial@params,
@@ -99,10 +99,33 @@ trial_json_record <- function(trial) {
     notes = trial@notes,
     status = trial@status
   )
+  if (length(trial@trace_context) > 0L) {
+    record$trace_context <- trace_context_validate(trial@trace_context)
+  }
+  record
 }
 
 trial_json_line <- function(trial) {
-  jsonlite::toJSON(trial_json_record(trial), auto_unbox = TRUE)
+  record <- trial_json_record(trial)
+  context <- record$trace_context
+  record$trace_context <- NULL
+  line <- as.character(jsonlite::toJSON(record, auto_unbox = TRUE))
+  if (is.null(context)) {
+    return(line)
+  }
+
+  context_json <- as.character(jsonlite::toJSON(
+    context,
+    auto_unbox = TRUE,
+    null = "null",
+    digits = 17
+  ))
+  paste0(
+    substr(line, 1L, nchar(line) - 1L),
+    ",\"trace_context\":",
+    context_json,
+    "}"
+  )
 }
 
 trial_records_identical <- function(x, y) {
@@ -1162,6 +1185,8 @@ trial_log_read_metadata <- function(path, guard) {
 #' @param compiled_artifact_ref Optional compiled module. The best module is
 #'   persisted with [save_program()] rather than serialized as a live R object.
 #' @param status Trial status: "pending", "running", "completed", "failed".
+#' @param trace_context A named, JSON-compatible correlation context retained
+#'   with the trial throughout its lifecycle and persistence.
 #'
 #' @export
 Trial <- S7::new_class(
@@ -1189,6 +1214,14 @@ Trial <- S7::new_class(
         }
         NULL
       }
+    ),
+    trace_context = S7::new_property(
+      S7::class_list,
+      default = list(),
+      validator = function(value) {
+        trace_context_validate(value, arg = "trace_context")
+        NULL
+      }
     )
   )
 )
@@ -1202,6 +1235,9 @@ Trial <- S7::new_class(
 #' @param params List of parameters for this trial.
 #' @param trial_id Optional trial ID. If NULL, auto-generated.
 #' @param notes Optional notes.
+#' @param trace_context A named, JSON-compatible correlation context. When
+#'   omitted during [compile()], the active compilation context is inherited;
+#'   supply `list()` explicitly to clear it.
 #'
 #' @return A Trial object.
 #' @export
@@ -1215,11 +1251,20 @@ create_trial <- function(
   optimizer_name,
   params = list(),
   trial_id = NULL,
-  notes = ""
+  notes = "",
+  trace_context = list()
 ) {
+  trace_context_missing <- missing(trace_context)
   if (is.null(trial_id)) {
     trial_id <- generate_trial_id()
   }
+  if (trace_context_missing) {
+    trace_context <- current_trace_context()
+  }
+  trace_context <- trace_context_validate(
+    trace_context,
+    arg = "trace_context"
+  )
 
   Trial(
     trial_id = trial_id,
@@ -1227,6 +1272,7 @@ create_trial <- function(
     params = params,
     start_time = Sys.time(),
     notes = notes,
+    trace_context = trace_context,
     status = "pending"
   )
 }
@@ -1251,6 +1297,10 @@ start_trial <- function(trial) {
     end_time = trial@end_time,
     notes = trial@notes,
     compiled_artifact_ref = trial@compiled_artifact_ref,
+    trace_context = trace_context_validate(
+      trial@trace_context,
+      arg = "trace_context"
+    ),
     status = "running"
   )
 }
@@ -1303,6 +1353,10 @@ complete_trial <- function(
     end_time = Sys.time(),
     notes = notes %||% trial@notes,
     compiled_artifact_ref = compiled_artifact_ref,
+    trace_context = trace_context_validate(
+      trial@trace_context,
+      arg = "trace_context"
+    ),
     status = "completed"
   )
 }
@@ -1328,6 +1382,10 @@ fail_trial <- function(trial, error_message) {
     end_time = Sys.time(),
     notes = paste0(trial@notes, "\nError: ", error_message),
     compiled_artifact_ref = trial@compiled_artifact_ref,
+    trace_context = trace_context_validate(
+      trial@trace_context,
+      arg = "trace_context"
+    ),
     status = "failed"
   )
 }
@@ -1740,6 +1798,7 @@ TrialLog <- R6::R6Class(
           start_time = .POSIXct(numeric()),
           end_time = .POSIXct(numeric()),
           params = list(),
+          trace_context = list(),
           notes = character()
         ))
       }
@@ -1839,6 +1898,12 @@ TrialLog <- R6::R6Class(
           )
         ),
         params = lapply(self$trials, function(t) t@params),
+        trace_context = lapply(
+          self$trials,
+          function(t) {
+            trace_context_validate(t@trace_context, arg = "trace_context")
+          }
+        ),
         notes = vapply(
           self$trials,
           function(t) t@notes,
@@ -2065,6 +2130,7 @@ trial_log_parse_jsonl_file <- function(path) {
     tryCatch(
       {
         data <- jsonlite::fromJSON(line)
+        trace_data <- jsonlite::fromJSON(line, simplifyVector = FALSE)
 
         # Parse timestamps
         start_time <- if (is_valid_timestamp(data$start_time)) {
@@ -2115,6 +2181,10 @@ trial_log_parse_jsonl_file <- function(path) {
           start_time = start_time,
           end_time = end_time,
           notes = data$notes %||% "",
+          trace_context = trace_context_validate(
+            trace_data$trace_context %||% list(),
+            arg = "trace_context"
+          ),
           status = data$status %||% "pending"
         )
       },
@@ -2122,8 +2192,7 @@ trial_log_parse_jsonl_file <- function(path) {
         cli::cli_warn(
           c(
             "Failed to parse trial on line {i}",
-            "i" = "Error: {conditionMessage(e)}",
-            "i" = "Line content: {substr(line, 1, 100)}..."
+            "i" = "The record was skipped because it is invalid or unsafe."
           ),
           class = "dsprrr_parse_warning"
         )

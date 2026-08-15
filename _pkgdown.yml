@@ -396,6 +396,7 @@ reference:
     contents:
     - program-artifact
     - program_artifact
+    - program_artifact_id
     - save_program
     - load_program
     - orchestration

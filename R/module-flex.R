@@ -497,17 +497,20 @@ FlexModule <- R6::R6Class(
     },
 
     reset_copy = function() {
-      FlexModule$new(
-        signature = self$signature,
-        module_src = private$.module_src,
-        tools = private$.tools,
-        interpreter_factory = private$.interpreter_factory,
-        source_format = private$.source_format,
-        max_predictor_calls = private$.max_predictor_calls,
-        max_tool_calls = private$.max_tool_calls,
-        require_sandbox = private$.require_sandbox,
-        config = self$config,
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        FlexModule$new(
+          signature = self$signature,
+          module_src = private$.module_src,
+          tools = private$.tools,
+          interpreter_factory = private$.interpreter_factory,
+          source_format = private$.source_format,
+          max_predictor_calls = private$.max_predictor_calls,
+          max_tool_calls = private$.max_tool_calls,
+          require_sandbox = private$.require_sandbox,
+          config = self$config,
+          chat = self$chat
+        )
       )
     },
 
@@ -525,7 +528,7 @@ FlexModule <- R6::R6Class(
         chat = self$chat
       )
       new_module$state <- lapply(self$state, identity)
-      new_module
+      artifact_copy_runtime(self, new_module)
     },
 
     apply_optimization_params = function(params = list(), module_src = NULL) {

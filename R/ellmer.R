@@ -38,6 +38,9 @@ copy_ellmer_type <- function(type) {
 #'   - `"return"` signals the error as a classed `dsprrr_tool_error` condition
 #'     carrying the structured observation in `$payload`. Callers can install
 #'     a `withCallingHandlers()` to inspect the failure without aborting.
+#' @param trace_context A named, JSON-compatible list captured by the tool and
+#'   propagated to dsprrr execution metadata and traces. The tool's declared
+#'   result schema is unchanged.
 #'
 #' @return A `ToolDef` object from ellmer, suitable for use with
 #'   `ellmer::Chat$register_tool()`.
@@ -69,8 +72,13 @@ as_ellmer_tool <- function(
   annotations = list(),
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
-  error = c("reject", "abort", "return")
+  error = c("reject", "abort", "return"),
+  trace_context = list()
 ) {
+  trace_context <- trace_context_validate(
+    trace_context,
+    arg = "trace_context"
+  )
   output <- match.arg(output)
   copy <- match.arg(copy)
   error <- match.arg(error)
@@ -142,6 +150,7 @@ as_ellmer_tool <- function(
   captured_output <- output
   captured_copy <- copy
   captured_error <- error
+  captured_trace_context <- trace_context
 
   # Create a function with named parameters matching the signature inputs
   # ellmer::tool() requires argument names to match function formals
@@ -174,7 +183,8 @@ as_ellmer_tool <- function(
       tool_name = .(captured_name),
       output = .(captured_output),
       copy = .(captured_copy),
-      error = .(captured_error)
+      error = .(captured_error),
+      trace_context = .(captured_trace_context)
     )
   })
 
@@ -205,7 +215,8 @@ invoke_ellmer_tool_module <- function(
   tool_name,
   output,
   copy,
-  error
+  error,
+  trace_context
 ) {
   working_module <- if (copy == "deep") {
     module$copy(deep = TRUE)
@@ -219,7 +230,11 @@ invoke_ellmer_tool_module <- function(
       c(
         list(working_module),
         inputs,
-        list(.llm = .llm, .return_format = "simple")
+        list(
+          .llm = .llm,
+          .return_format = "simple",
+          .trace_context = trace_context
+        )
       )
     ),
     error = function(err) handle_ellmer_tool_error(err, tool_name, error)
@@ -371,6 +386,8 @@ structure_ellmer_tool_error <- function(err, tool_name) {
 #' @param copy Whether tool calls should use the supplied module directly or a
 #'   fresh deep copy. See [as_ellmer_tool()].
 #' @param error Tool error handling mode. See [as_ellmer_tool()].
+#' @param trace_context A named, JSON-compatible list captured by the tool and
+#'   propagated to dsprrr execution metadata and traces.
 #'
 #' @return The Chat object (invisibly), with the tool registered.
 #'
@@ -395,7 +412,8 @@ register_dsprrr_tool <- function(
   annotations = list(),
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
-  error = c("reject", "abort", "return")
+  error = c("reject", "abort", "return"),
+  trace_context = list()
 ) {
   if (!inherits(chat, "Chat")) {
     cli::cli_abort(c(
@@ -416,7 +434,8 @@ register_dsprrr_tool <- function(
     annotations = annotations,
     output = output,
     copy = copy,
-    error = error
+    error = error,
+    trace_context = trace_context
   )
 
   # Register the ToolDef with the Chat

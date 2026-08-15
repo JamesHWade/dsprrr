@@ -645,7 +645,8 @@ gepa_invalid_candidate_eval <- function(
     provider_calls = 0L,
     metric_calls = 0L,
     provider_usage_unknown = FALSE,
-    token_usage_unknown = FALSE
+    token_usage_unknown = FALSE,
+    trace_context = current_trace_context()
   )
 }
 

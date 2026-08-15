@@ -450,7 +450,7 @@ PipelineModule <- R6::R6Class(
         chat = self$chat
       )
       new_pipeline$state <- lapply(self$state, function(x) x)
-      new_pipeline
+      artifact_copy_runtime(self, new_pipeline)
     },
 
     #' @description
@@ -472,10 +472,13 @@ PipelineModule <- R6::R6Class(
         )
       })
 
-      PipelineModule$new(
-        steps = new_steps,
-        config = self$config,
-        chat = NULL
+      artifact_copy_runtime(
+        self,
+        PipelineModule$new(
+          steps = new_steps,
+          config = self$config,
+          chat = NULL
+        )
       )
     }
   ),

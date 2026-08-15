@@ -1308,20 +1308,23 @@ RLMModule <- R6::R6Class(
     #' Create a fresh copy of this module
     #' @return New RLMModule with same settings
     reset_copy = function() {
-      RLMModule$new(
-        signature = self$signature,
-        runner = self$runner,
-        interpreter_factory = self$interpreter_factory,
-        max_iterations = self$max_iterations,
-        max_llm_calls = self$max_llm_calls,
-        max_output_chars = self$max_output_chars,
-        sub_lm = self$sub_lm,
-        verbose = self$verbose,
-        tools = self$tools,
-        config = self$config,
-        chat = self$chat,
-        generate_action = self$generate_action$reset_copy(),
-        extract = self$extract$reset_copy()
+      artifact_copy_runtime(
+        self,
+        RLMModule$new(
+          signature = self$signature,
+          runner = self$runner,
+          interpreter_factory = self$interpreter_factory,
+          max_iterations = self$max_iterations,
+          max_llm_calls = self$max_llm_calls,
+          max_output_chars = self$max_output_chars,
+          sub_lm = self$sub_lm,
+          verbose = self$verbose,
+          tools = self$tools,
+          config = self$config,
+          chat = self$chat,
+          generate_action = self$generate_action$reset_copy(),
+          extract = self$extract$reset_copy()
+        )
       )
     },
 
@@ -1345,7 +1348,7 @@ RLMModule <- R6::R6Class(
         extract = self$extract$deepcopy()
       )
       copied$state <- lapply(self$state, identity)
-      copied
+      artifact_copy_runtime(self, copied)
     },
 
     #' @description

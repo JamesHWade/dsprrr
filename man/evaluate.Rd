@@ -25,6 +25,9 @@ Additional arguments passed to \code{\link[=run_dataset]{run_dataset()}}:
 \item \code{.concurrency}: A policy created by \code{\link[=concurrency_control]{concurrency_control()}}. Do not also
 pass \code{.parallel} when using an explicit policy.
 \item \code{.progress}: Logical; whether to display progress while evaluating
+\item \code{.trace_context}: A named, JSON-compatible list copied into evaluation
+results, row metadata, and traces. Credential-like fields and runtime
+objects are rejected before execution.
 \item \code{.return_format}: Character; \code{"simple"} returns just scores and predictions,
 \code{"structured"} (default) includes full metadata and data
 \item \code{epochs}: Integer; number of times to repeat evaluation for statistical
@@ -54,6 +57,8 @@ attempted row-epoch.
 Each contains \code{row_id}, \code{epoch}, \code{status}, ordered module \code{events}, and
 per-row \code{metadata}. Trace events can contain prompts, inputs, and model
 responses, so treat them as potentially sensitive.
+\item \code{program_artifact_id}, \code{trace_context}: the executable program identity
+and caller-supplied correlation context.
 \item \code{data}: input data augmented with prediction metadata.
 }
 

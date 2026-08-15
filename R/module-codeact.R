@@ -559,14 +559,17 @@ CodeActModule <- R6::R6Class(
     #' Create a fresh copy of this module
     #' @return New CodeActModule with same settings
     reset_copy = function() {
-      CodeActModule$new(
-        signature = self$signature,
-        tools = self$tools,
-        runner = self$runner,
-        interpreter_factory = self$interpreter_factory,
-        max_iterations = self$max_iterations,
-        config = self$config,
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        CodeActModule$new(
+          signature = self$signature,
+          tools = self$tools,
+          runner = self$runner,
+          interpreter_factory = self$interpreter_factory,
+          max_iterations = self$max_iterations,
+          config = self$config,
+          chat = self$chat
+        )
       )
     },
 
@@ -584,7 +587,7 @@ CodeActModule <- R6::R6Class(
         interpreter_factory = self$interpreter_factory
       )
       copied$state <- lapply(self$state, identity)
-      copied
+      artifact_copy_runtime(self, copied)
     },
 
     #' @description

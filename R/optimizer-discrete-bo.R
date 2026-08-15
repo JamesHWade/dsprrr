@@ -72,6 +72,10 @@ discrete_bo_restore_trial_record <- function(record) {
     start_time = parse_time(record$start_time),
     end_time = parse_time(record$end_time),
     notes = record$notes %||% "",
+    trace_context = trace_context_validate(
+      record$trace_context %||% list(),
+      arg = "trace_context"
+    ),
     status = record$status
   )
 }

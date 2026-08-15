@@ -4,7 +4,13 @@
 \alias{create_trial}
 \title{Create a Trial Record}
 \usage{
-create_trial(optimizer_name, params = list(), trial_id = NULL, notes = "")
+create_trial(
+  optimizer_name,
+  params = list(),
+  trial_id = NULL,
+  notes = "",
+  trace_context = list()
+)
 }
 \arguments{
 \item{optimizer_name}{Name of the optimizer.}
@@ -14,6 +20,10 @@ create_trial(optimizer_name, params = list(), trial_id = NULL, notes = "")
 \item{trial_id}{Optional trial ID. If NULL, auto-generated.}
 
 \item{notes}{Optional notes.}
+
+\item{trace_context}{A named, JSON-compatible correlation context. When
+omitted during \code{\link[=compile]{compile()}}, the active compilation context is inherited;
+supply \code{list()} explicitly to clear it.}
 }
 \value{
 A Trial object.

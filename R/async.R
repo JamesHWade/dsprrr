@@ -26,6 +26,9 @@ NULL
 #' @param module A dsprrr Module object
 #' @param ... Named inputs matching the module's signature
 #' @param .llm Optional ellmer Chat object
+#' @param .trace_context A named JSON-compatible correlation context. The
+#'   returned async handle carries the verified fields in its
+#'   `dsprrr_trace_context` attribute.
 #'
 #' @return A promise that resolves to the structured output
 #'
@@ -45,10 +48,22 @@ NULL
 #'     # Process results
 #'   })
 #' }
-run_async <- function(module, ..., .llm = NULL) {
+run_async <- function(module, ..., .llm = NULL, .trace_context = list()) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
+  )
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    inherit_program_id = !trace_context_supplied
+  )
+  on.exit(trace_context_restore(previous_trace_context), add = TRUE)
+  invocation_trace_fields <- trace_context_fields()
   if (interpreter_workflow_module(module)) {
     assert_factory_interpreter_async_supported(module, "run_async")
     inputs <- list(...)
@@ -60,7 +75,9 @@ run_async <- function(module, ..., .llm = NULL) {
       type = "warn",
       context = "inputs"
     )
-    return(run_factory_interpreter_async(module, inputs, .llm = .llm))
+    result <- run_factory_interpreter_async(module, inputs, .llm = .llm)
+    attr(result, "dsprrr_trace_context") <- invocation_trace_fields
+    return(result)
   }
   assert_direct_provider_async_supported(module, "run_async")
 
@@ -69,10 +86,12 @@ run_async <- function(module, ..., .llm = NULL) {
   llm <- resolve_module_llm(module, .llm = .llm)
 
   # Use ellmer's async method
-  llm$chat_structured_async(
+  result <- llm$chat_structured_async(
     request$payload,
     type = module$signature@output_type
   )
+  attr(result, "dsprrr_trace_context") <- invocation_trace_fields
+  result
 }
 
 

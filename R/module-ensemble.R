@@ -325,12 +325,15 @@ EnsembleModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      EnsembleModule$new(
-        modules = lapply(self$modules, function(m) m$reset_copy()),
-        reduce_fn = self$reduce_fn,
-        weights = self$weights,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        EnsembleModule$new(
+          modules = lapply(self$modules, function(m) m$reset_copy()),
+          reduce_fn = self$reduce_fn,
+          weights = self$weights,
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
