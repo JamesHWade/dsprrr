@@ -19,7 +19,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_labeled(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_labeled,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(GridSearchTeleprompter, S7::class_any)) <- function(
@@ -29,7 +35,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_gridsearch(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_gridsearch,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(BootstrapFewShot, S7::class_any)) <- function(
@@ -39,7 +51,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_bootstrap(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_bootstrap,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(
@@ -52,7 +70,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_bootstrap_rs(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_bootstrap_rs,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(BetterTogether, S7::class_any)) <- function(
@@ -62,7 +86,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_better_together(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_better_together,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(Omni, S7::class_any)) <- function(
@@ -72,7 +102,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_omni(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_omni,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(AutoResearch, S7::class_any)) <- function(
@@ -82,7 +118,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_autoresearch(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_autoresearch,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(MetaHarness, S7::class_any)) <- function(
@@ -92,7 +134,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_meta_harness(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_meta_harness,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(KNNFewShot, S7::class_any)) <- function(
@@ -102,7 +150,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_knn(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_knn,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(SIMBA, S7::class_any)) <- function(
@@ -112,7 +166,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_simba(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_simba,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(GEPA, S7::class_any)) <- function(
@@ -122,7 +182,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_gepa(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_gepa,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(MIPROv2, S7::class_any)) <- function(
@@ -132,7 +198,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_mipro(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_mipro,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(COPRO, S7::class_any)) <- function(
@@ -142,7 +214,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_copro(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_copro,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(Ensemble, S7::class_any)) <- function(
@@ -152,7 +230,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_ensemble(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_ensemble,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   S7::method(compile, list(Teleprompter, S7::class_any)) <- function(
@@ -162,7 +246,13 @@
     ...
   ) {
     abort_if_fn_module(program)
-    compile_default(teleprompter, program, trainset, ...)
+    compile_with_trace_context(
+      compile_default,
+      teleprompter,
+      program,
+      trainset,
+      ...
+    )
   }
 
   # Register parsnip engine if parsnip is available. Wrap in tryCatch so a

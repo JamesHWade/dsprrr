@@ -10,7 +10,8 @@ compile_module(
   trainset,
   valset = NULL,
   .llm = NULL,
-  ...
+  ...,
+  .trace_context = list()
 )
 }
 \arguments{
@@ -25,6 +26,9 @@ compile_module(
 \item{.llm}{Optional ellmer chat object to reuse during compilation}
 
 \item{...}{Additional arguments passed to the teleprompter}
+
+\item{.trace_context}{A named, JSON-compatible list propagated to
+evaluations, optimizer trials, and execution traces.}
 }
 \value{
 An optimized module with updated demonstrations and/or instructions

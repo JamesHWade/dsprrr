@@ -4,7 +4,7 @@
 \alias{run_async}
 \title{Run a module asynchronously}
 \usage{
-run_async(module, ..., .llm = NULL)
+run_async(module, ..., .llm = NULL, .trace_context = list())
 }
 \arguments{
 \item{module}{A dsprrr Module object}
@@ -12,6 +12,10 @@ run_async(module, ..., .llm = NULL)
 \item{...}{Named inputs matching the module's signature}
 
 \item{.llm}{Optional ellmer Chat object}
+
+\item{.trace_context}{A named JSON-compatible correlation context. The
+returned async handle carries the verified fields in its
+\code{dsprrr_trace_context} attribute.}
 }
 \value{
 A promise that resolves to the structured output

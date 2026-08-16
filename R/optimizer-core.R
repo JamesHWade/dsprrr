@@ -436,7 +436,15 @@ EvalResult <- S7::new_class(
     epoch_scores = S7::new_property(S7::class_list, default = list()),
     score_std = S7::new_property(S7::class_any, default = NA_real_),
     ci_lower = S7::new_property(S7::class_any, default = NA_real_),
-    ci_upper = S7::new_property(S7::class_any, default = NA_real_)
+    ci_upper = S7::new_property(S7::class_any, default = NA_real_),
+    trace_context = S7::new_property(
+      S7::class_list,
+      default = list(),
+      validator = function(value) {
+        trace_context_validate(value, arg = "trace_context")
+        NULL
+      }
+    )
   )
 )
 
@@ -462,6 +470,8 @@ EvalResult <- S7::new_class(
 #' @param epochs Integer; number of times to repeat evaluation for statistical
 #'   significance. Defaults to 1L. When > 1, computes std and confidence intervals.
 #' @param ... Additional arguments passed to [evaluate()].
+#' @param .trace_context A named JSON-compatible correlation context copied to
+#'   the returned `EvalResult` and all program execution traces.
 #'
 #' @return An EvalResult object containing:
 #'   - `examples`: tibble with per-example row_id, score, error, predicted,
@@ -474,6 +484,7 @@ EvalResult <- S7::new_class(
 #'   - `total_tokens`: total tokens used
 #'   - `total_cost`: total cost in USD
 #'   - `total_latency_ms`: total time in milliseconds
+#'   - `trace_context`: the validated correlation context for this evaluation
 #'
 #'   When `epochs > 1`, additional fields:
 #'   - `epochs`: number of epochs run
@@ -510,12 +521,25 @@ eval_program <- function(
   .llm = NULL,
   control = NULL,
   epochs = 1L,
-  ...
+  ...,
+  .trace_context = list()
 ) {
   # Validate inputs
   if (!inherits(program, "Module")) {
     cli::cli_abort("{.arg program} must be a DSPrrr Module object")
   }
+
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
+  )
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = program,
+    inherit_program_id = !trace_context_supplied
+  )
+  on.exit(trace_context_restore(previous_trace_context), add = TRUE)
 
   if (!is.data.frame(dataset)) {
     cli::cli_abort("{.arg dataset} must be a data frame or tibble")
@@ -547,7 +571,8 @@ eval_program <- function(
       mean_score = NA_real_,
       std_error = NA_real_,
       n_evaluated = 0L,
-      n_errors = 0L
+      n_errors = 0L,
+      trace_context = trace_context
     ))
   }
 
@@ -707,7 +732,8 @@ eval_program <- function(
     epoch_scores = epoch_scores_list,
     score_std = score_std,
     ci_lower = ci_values[1],
-    ci_upper = ci_values[2]
+    ci_upper = ci_values[2],
+    trace_context = eval_result$trace_context %||% current_trace_context()
   )
 }
 
@@ -2847,7 +2873,8 @@ optimizer_combine_eval_records <- function(records, dataset) {
       examples = tibble::tibble(),
       mean_score = NA_real_,
       n_evaluated = 0L,
-      n_errors = 0L
+      n_errors = 0L,
+      trace_context = current_trace_context()
     ))
   }
   order_index <- order(vapply(records, `[[`, integer(1), "row_index"))
@@ -2940,7 +2967,8 @@ optimizer_combine_eval_records <- function(records, dataset) {
     metric_calls = metric_calls,
     provider_usage_unknown = provider_unknown || is.na(provider_calls),
     token_usage_unknown = token_unknown,
-    total_latency_ms = optimizer_eval_known_sum(records, "latency_ms")
+    total_latency_ms = optimizer_eval_known_sum(records, "latency_ms"),
+    trace_context = current_trace_context()
   )
 }
 
@@ -2997,7 +3025,7 @@ optimizer_eval_candidate <- function(
       planned_outcomes = max(1L, nrow(dataset))
     )
   ) {
-    return(EvalResult())
+    return(EvalResult(trace_context = current_trace_context()))
   }
   result <- eval_program(
     program,

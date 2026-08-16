@@ -19,6 +19,9 @@
 #'   - `.concurrency`: A policy created by [concurrency_control()]. Do not also
 #'     pass `.parallel` when using an explicit policy.
 #'   - `.progress`: Logical; whether to display progress while evaluating
+#'   - `.trace_context`: A named, JSON-compatible list copied into evaluation
+#'     results, row metadata, and traces. Credential-like fields and runtime
+#'     objects are rejected before execution.
 #'   - `.return_format`: Character; `"simple"` returns just scores and predictions,
 #'     `"structured"` (default) includes full metadata and data
 #'   - `epochs`: Integer; number of times to repeat evaluation for statistical
@@ -45,6 +48,8 @@
 #'     Each contains `row_id`, `epoch`, `status`, ordered module `events`, and
 #'     per-row `metadata`. Trace events can contain prompts, inputs, and model
 #'     responses, so treat them as potentially sensitive.
+#'   - `program_artifact_id`, `trace_context`: the executable program identity
+#'     and caller-supplied correlation context.
 #'   - `data`: input data augmented with prediction metadata.
 #'
 #'   When `epochs > 1`, additional fields are included:
@@ -324,8 +329,33 @@ evaluate.Module <- function(
   epochs = 1L,
   .trace_row_ids = NULL,
   .propagate_provider_errors = FALSE,
-  ...
+  ...,
+  .trace_context = list()
 ) {
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
+  )
+  trace_cursor <- evaluation_trace_cursor(module)
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    inherit_program_id = !trace_context_supplied
+  )
+  invocation_trace_fields <- trace_context_fields()
+  on.exit(
+    {
+      trace_context_restore(previous_trace_context)
+      trace_context_annotate_module_traces(
+        module,
+        trace_cursor,
+        fields = invocation_trace_fields
+      )
+    },
+    add = TRUE
+  )
+
   parallel_missing <- missing(.parallel)
   concurrency_missing <- missing(.concurrency)
   explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
@@ -414,7 +444,9 @@ evaluate.Module <- function(
       total_cost = 0,
       feedbacks = character(),
       traces = list(),
-      data = data
+      data = data,
+      program_artifact_id = current_trace_program_artifact_id(),
+      trace_context = current_trace_context()
     ))
   }
 
@@ -716,7 +748,9 @@ evaluate.Module <- function(
     n_metric_errors = n_metric_errors,
     metric_errors = metric_errors[metric_errors != ""],
     total_cost = total_cost,
-    feedbacks = feedbacks
+    feedbacks = feedbacks,
+    program_artifact_id = current_trace_program_artifact_id(),
+    trace_context = current_trace_context()
   )
 
   # Add epoch-specific statistics when epochs > 1

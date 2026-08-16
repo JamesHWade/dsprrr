@@ -687,7 +687,8 @@ omni_compile_explorers_parallel <- function(
         program = copy_module(program),
         trainset = trainset,
         valset = valset,
-        step_args = explorer_compile_args[[name]] %||% list()
+        step_args = explorer_compile_args[[name]] %||% list(),
+        trace_context = current_trace_context()
       )
     }
   )
@@ -703,7 +704,8 @@ omni_compile_explorers_parallel <- function(
             program = job$program,
             trainset = job$trainset,
             valset = job$valset,
-            .llm = worker_llm
+            .llm = worker_llm,
+            .trace_context = job$trace_context
           )
           for (name in names(job$step_args)) {
             call_args[[name]] <- job$step_args[[name]]

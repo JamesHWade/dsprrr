@@ -3,11 +3,14 @@
 \name{program-artifact}
 \alias{program-artifact}
 \alias{program_artifact}
+\alias{program_artifact_id}
 \alias{save_program}
 \alias{load_program}
 \title{Persist Complete dsprrr Programs}
 \usage{
 program_artifact(program, registry = list(), trusted = FALSE)
+
+program_artifact_id(x, registry = list())
 
 save_program(program, path, registry = list(), trusted = FALSE)
 
@@ -23,6 +26,8 @@ contain registry names, never the registered values themselves.}
 This is \code{FALSE} by default and should be enabled only for artifacts and code
 you trust.}
 
+\item{x}{A dsprrr \code{Module} or a \code{dsprrr_program_artifact} manifest.}
+
 \item{path}{An artifact path on a stable local filesystem, in a containing
 directory trusted against hostile concurrent mutation. \code{save_program()}
 stages and validates a private temporary file in the same directory, then
@@ -34,6 +39,25 @@ new destination may already be present.}
 \value{
 \itemize{
 \item \code{program_artifact()} returns a \code{dsprrr_program_artifact} manifest.
+\item \code{program_artifact_id()} returns the artifact integrity digest as a scalar
+string prefixed with \code{"sha256:"}. The ID names the validated artifact
+payload; it is an integrity check, not an authenticity or trust signal.
+When \code{x} is a Module, registry entries actually referenced by the validated
+artifact are retained as detached runtime bindings so subsequent execution
+and module copies can recover the same verified ID without re-supplying the
+registry. A Module reconstructed from a validated current-format artifact
+retains that source artifact ID while its current serialization remains
+unchanged. This keeps the exact source producer environment represented in
+execution traces. Calling \code{program_artifact()} or \code{save_program()} creates a
+new artifact, whose ID can differ from the retained source ID. Semantic
+mutation switches the Module to the newly serialized artifact ID. Artifact
+inputs are checked for structure and integrity without requiring their
+recorded dependency versions to be installed.
+A Module restored from embedded trusted values is intentionally different:
+retain the validated artifact's ID, or explicitly create and identify a
+new artifact with \code{program_artifact(module, trusted = TRUE)}. Automatic
+execution metadata may omit the program ID when safe serialization cannot
+reproduce it without that explicit trust decision.
 \item \code{save_program()} invisibly returns \code{path}.
 \item \code{load_program()} returns the reconstructed root module.
 }
@@ -66,6 +90,10 @@ credentials. Demo fields with credential-like names are rejected instead of
 being silently removed from the program. Thinking, tool-call, uploaded, and
 other runtime content still requires a registry or trusted embedding. The
 payload digest detects changes but is not an authenticity or trust signal.
+Registry-backed implementations are identified by their registry name and
+interface digest, not by their function bodies, so registry names should be
+immutable and versioned. Structural exclusion records participate in the
+digest even though excluded runtime values do not.
 
 Artifacts currently reject cyclic module graphs with a typed error. Shared
 acyclic nodes are represented once and reconstructed with identical R6

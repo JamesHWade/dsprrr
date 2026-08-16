@@ -17,7 +17,8 @@ run_dataset(module, ...)
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
-  ...
+  ...,
+  .trace_context = list()
 )
 }
 \arguments{
@@ -45,6 +46,10 @@ parallelism (more efficient, single process).
 \item{.progress}{Logical whether to show progress bar}
 
 \item{.return_format}{Character either "simple" or "structured"}
+
+\item{.trace_context}{A named, JSON-compatible list copied into row metadata
+and traces. When omitted inside another dsprrr operation, the active
+context is inherited.}
 }
 \value{
 A tibble with the input columns plus a \code{result} list-column. With

@@ -86,6 +86,17 @@ First development changelog. dsprrr is experimental; the API may change.
   version 5 graph the next time it is saved. Artifact construction and
   restoration never invoke a stored factory.
 
+* `program_artifact_id()` exposes the validated SHA-256 identity already stored
+  in each program artifact. Restored current-format programs retain their
+  validated source ID across compatible producer environments until the program
+  changes. `run()`, `run_dataset()`, `evaluate()`, `compile()`, and
+  `as_ellmer_tool()` accept strict JSON-compatible correlation context and carry
+  it through scalar and batch traces, evaluation results, optimizer trials,
+  Flex, and RLM. Execution and evaluation metadata also name the exact program
+  artifact identity. Correlation context rejects credential-like field names
+  and runtime objects, and never enters prompts, provider requests, cache keys,
+  or artifact identity.
+
 * DSPy 3.3 alignment adds immutable `with_instructions()` and
   `append_instructions()` transforms, plus `metric_with_trace()` for objectives
   that score both outputs and row-owned execution traces. Structured

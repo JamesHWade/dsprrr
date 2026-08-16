@@ -11,7 +11,9 @@ compile(teleprompter, program, ...)
 
 \item{program}{A module to optimize}
 
-\item{...}{Additional arguments including trainset (training data)}
+\item{...}{Additional arguments including \code{trainset} (training data) and
+optional \code{.trace_context}, a named JSON-compatible list propagated to
+evaluations, optimizer trials, and execution traces.}
 }
 \value{
 An optimized module

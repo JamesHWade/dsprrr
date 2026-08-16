@@ -34,6 +34,8 @@ A tibble with one row per LLM call containing:
 \item \code{tokens_out}: Output tokens
 \item \code{cost}: Cost in USD (if available)
 \item \code{duration_s}: Duration in seconds (if available)
+\item \code{program_artifact_id}: Exact executable program identity, when available
+\item \code{trace_context}: Caller-supplied correlation context
 \item \code{prompt}: Full prompt text (if \code{include_prompts = TRUE})
 \item \code{response}: Full response text (if \code{include_responses = TRUE})
 }

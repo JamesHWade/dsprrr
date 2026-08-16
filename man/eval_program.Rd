@@ -11,7 +11,8 @@ eval_program(
   .llm = NULL,
   control = NULL,
   epochs = 1L,
-  ...
+  ...,
+  .trace_context = list()
 )
 }
 \arguments{
@@ -29,6 +30,9 @@ eval_program(
 significance. Defaults to 1L. When > 1, computes std and confidence intervals.}
 
 \item{...}{Additional arguments passed to \code{\link[=evaluate]{evaluate()}}.}
+
+\item{.trace_context}{A named JSON-compatible correlation context copied to
+the returned \code{EvalResult} and all program execution traces.}
 }
 \value{
 An EvalResult object containing:
@@ -43,6 +47,7 @@ feedback (textual feedback from feedback-aware metrics, see
 \item \code{total_tokens}: total tokens used
 \item \code{total_cost}: total cost in USD
 \item \code{total_latency_ms}: total time in milliseconds
+\item \code{trace_context}: the validated correlation context for this evaluation
 }
 
 When \code{epochs > 1}, additional fields:

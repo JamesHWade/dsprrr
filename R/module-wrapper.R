@@ -366,14 +366,17 @@ BestOfNModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      BestOfNModule$new(
-        module = self$module$reset_copy(),
-        N = self$N,
-        reward_fn = self$reward_fn,
-        threshold = self$threshold,
-        fail_count = self$fail_count,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        BestOfNModule$new(
+          module = self$module$reset_copy(),
+          N = self$N,
+          reward_fn = self$reward_fn,
+          threshold = self$threshold,
+          fail_count = self$fail_count,
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
@@ -879,16 +882,19 @@ RefineModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      RefineModule$new(
-        module = self$module$reset_copy(),
-        N = self$N,
-        reward_fn = self$reward_fn,
-        threshold = self$threshold,
-        fail_count = self$fail_count,
-        feedback_template = self$feedback_template,
-        feedback_field = self$feedback_field,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        RefineModule$new(
+          module = self$module$reset_copy(),
+          N = self$N,
+          reward_fn = self$reward_fn,
+          threshold = self$threshold,
+          fail_count = self$fail_count,
+          feedback_template = self$feedback_template,
+          feedback_field = self$feedback_field,
+          config = list(),
+          chat = self$chat
+        )
       )
     }
   ),

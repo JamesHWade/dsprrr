@@ -369,14 +369,17 @@ ProgramOfThoughtModule <- R6::R6Class(
     #' Create a fresh copy of this module
     #' @return New ProgramOfThoughtModule with same settings
     reset_copy = function() {
-      ProgramOfThoughtModule$new(
-        signature = self$signature,
-        runner = self$runner,
-        interpreter_factory = self$interpreter_factory,
-        max_iters = self$max_iters,
-        extract_answer = self$extract_answer,
-        config = self$config,
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        ProgramOfThoughtModule$new(
+          signature = self$signature,
+          runner = self$runner,
+          interpreter_factory = self$interpreter_factory,
+          max_iters = self$max_iters,
+          extract_answer = self$extract_answer,
+          config = self$config,
+          chat = self$chat
+        )
       )
     },
 
@@ -394,7 +397,7 @@ ProgramOfThoughtModule <- R6::R6Class(
         interpreter_factory = self$interpreter_factory
       )
       copied$state <- lapply(self$state, identity)
-      copied
+      artifact_copy_runtime(self, copied)
     },
 
     #' @description

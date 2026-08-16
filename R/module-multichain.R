@@ -359,14 +359,17 @@ MultiChainComparisonModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      MultiChainComparisonModule$new(
-        signature = self$signature,
-        inner_module = self$inner_module$reset_copy(),
-        M = self$M,
-        temperature = self$temperature,
-        comparison_template = self$comparison_template,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        MultiChainComparisonModule$new(
+          signature = self$signature,
+          inner_module = self$inner_module$reset_copy(),
+          M = self$M,
+          temperature = self$temperature,
+          comparison_template = self$comparison_template,
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 

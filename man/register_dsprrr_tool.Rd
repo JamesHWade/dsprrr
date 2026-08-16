@@ -13,7 +13,8 @@ register_dsprrr_tool(
   annotations = list(),
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
-  error = c("reject", "abort", "return")
+  error = c("reject", "abort", "return"),
+  trace_context = list()
 )
 }
 \arguments{
@@ -37,6 +38,9 @@ If not provided, the module's stored chat or default chat is used.}
 fresh deep copy. See \code{\link[=as_ellmer_tool]{as_ellmer_tool()}}.}
 
 \item{error}{Tool error handling mode. See \code{\link[=as_ellmer_tool]{as_ellmer_tool()}}.}
+
+\item{trace_context}{A named, JSON-compatible list captured by the tool and
+propagated to dsprrr execution metadata and traces.}
 }
 \value{
 The Chat object (invisibly), with the tool registered.

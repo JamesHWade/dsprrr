@@ -28,6 +28,9 @@ so each worker can create an independent client).}
 \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 \item{.return_format}{Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
+\item{.trace_context}{A named, JSON-compatible list copied into run
+metadata and traces. Credential-like fields and runtime objects are
+rejected before execution.}
 \item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
 If TRUE, attempts to use cache (no effect if caching globally disabled).
 If FALSE, bypasses cache for this call only.}
@@ -76,6 +79,13 @@ ellmer and mirai workers return row records that are committed to module and
 global trace state by the parent in input order. Specialized Predict
 subclasses, such as ReAct, preserve their scalar \code{forward()} method and
 currently reject vectorized inputs rather than bypassing specialized logic.
+
+Trace context is correlation-only: it is not included in prompts, provider
+requests, cache keys, or program artifact identity. Each attempted execution
+also records \code{program_artifact_id}, derived from the program's existing
+artifact integrity digest. \code{program_artifact_id} is a reserved field: for a
+registry-backed program, call \code{\link[=program_artifact_id]{program_artifact_id()}} once with its registry
+to bind the verified runtime references before execution.
 }
 \examples{
 \dontrun{

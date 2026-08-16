@@ -134,6 +134,7 @@ Collate:
     'teleprompter-mipro.R'
     'teleprompter-omni.R'
     'teleprompter-simba.R'
+    'trace-context.R'
     'traces.R'
     'utils.R'
     'vitals.R'

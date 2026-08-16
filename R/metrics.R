@@ -602,7 +602,9 @@ new_program_trace <- function(events = list(), metadata, row_id, epoch) {
       epoch = as.integer(epoch),
       status = status,
       events = events,
-      metadata = metadata
+      program_artifact_id = current_trace_program_artifact_id(),
+      trace_context = current_trace_context(),
+      metadata = trace_context_annotate_metadata(metadata)
     ),
     class = c("dsprrr_program_trace", "list")
   )

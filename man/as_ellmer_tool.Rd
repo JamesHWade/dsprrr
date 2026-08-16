@@ -12,7 +12,8 @@ as_ellmer_tool(
   annotations = list(),
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
-  error = c("reject", "abort", "return")
+  error = c("reject", "abort", "return"),
+  trace_context = list()
 )
 }
 \arguments{
@@ -54,6 +55,10 @@ in \verb{$type}.
 carrying the structured observation in \verb{$payload}. Callers can install
 a \code{withCallingHandlers()} to inspect the failure without aborting.
 }}
+
+\item{trace_context}{A named, JSON-compatible list captured by the tool and
+propagated to dsprrr execution metadata and traces. The tool's declared
+result schema is unchanged.}
 }
 \value{
 A \code{ToolDef} object from ellmer, suitable for use with

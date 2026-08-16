@@ -441,14 +441,17 @@ AssertModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      AssertModule$new(
-        module = self$module$reset_copy(),
-        assertions = self$assertion_set,
-        max_retries = self$max_retries,
-        on_failure = self$on_failure,
-        feedback_template = self$feedback_template,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        AssertModule$new(
+          module = self$module$reset_copy(),
+          assertions = self$assertion_set,
+          max_retries = self$max_retries,
+          on_failure = self$on_failure,
+          feedback_template = self$feedback_template,
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 

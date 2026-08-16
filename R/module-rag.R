@@ -240,14 +240,17 @@ RAGModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      RAGModule$new(
-        signature = self$signature,
-        store = self$store,
-        retriever = self$retriever,
-        k = self$k,
-        context_format = self$context_format,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        RAGModule$new(
+          signature = self$signature,
+          store = self$store,
+          retriever = self$retriever,
+          k = self$k,
+          context_format = self$context_format,
+          config = list(),
+          chat = self$chat
+        )
       )
     }
   ),

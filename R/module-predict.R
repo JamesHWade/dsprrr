@@ -320,12 +320,15 @@ PredictModule <- R6::R6Class(
     #' Create a reset copy of the module
     #' @return New PredictModule with reset state
     reset_copy = function() {
-      PredictModule$new(
-        signature = self$signature,
-        template = self$template,
-        demos = list(),
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        PredictModule$new(
+          signature = self$signature,
+          template = self$template,
+          demos = list(),
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
@@ -365,7 +368,7 @@ PredictModule <- R6::R6Class(
       # Copy state
       new_module$state <- lapply(self$state, function(x) x)
 
-      new_module
+      artifact_copy_runtime(self, new_module)
     },
 
     #' @description

@@ -426,7 +426,7 @@ copy_module <- function(module) {
   }
 
   # Use the module's deepcopy method
-  module$deepcopy()
+  artifact_copy_runtime(module, module$deepcopy())
 }
 
 #' Copy a signature

@@ -159,7 +159,8 @@ bootstrap_budget_eval_result <- function(budget) {
     metric_calls = as.integer(summary$metric_calls),
     provider_usage_unknown = summary$unknown_usage$provider_calls > 0L,
     token_usage_unknown = token_usage_unknown,
-    total_latency_ms = summary$elapsed_seconds * 1000
+    total_latency_ms = summary$elapsed_seconds * 1000,
+    trace_context = current_trace_context()
   )
 }
 
@@ -935,8 +936,8 @@ compile_bootstrap_pipeline <- function(
   trainset <- sample_dataset(trainset, n = NULL, seed = teleprompter@seed)
 
   # Independent copies: teacher generates traces, student receives demos
-  teacher <- program$deepcopy()
-  student <- program$deepcopy()
+  teacher <- copy_module(program)
+  student <- copy_module(program)
 
   pipeline_inputs <- vapply(
     program$signature@inputs,
@@ -1057,7 +1058,7 @@ compile_bootstrap_pipeline <- function(
   }
 
   write_pipeline_checkpoint <- function(phase = "bootstrap") {
-    partial <- student$deepcopy()
+    partial <- copy_module(student)
     for (i in demo_steps) {
       key <- as.character(i)
       partial$steps[[i]]@module$demos <- c(

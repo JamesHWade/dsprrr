@@ -10,7 +10,9 @@
 #'
 #' @param teleprompter A Teleprompter object
 #' @param program A module to optimize
-#' @param ... Additional arguments including trainset (training data)
+#' @param ... Additional arguments including `trainset` (training data) and
+#'   optional `.trace_context`, a named JSON-compatible list propagated to
+#'   evaluations, optimizer trials, and execution traces.
 #'
 #' @return An optimized module
 #' @seealso [compile_module()] for the pipe-friendly wrapper with
@@ -29,6 +31,48 @@ compile <- S7::new_generic("compile", c("teleprompter", "program"))
 
 # Method registration moved to zzz.R to ensure proper loading order
 
+compile_with_trace_context <- function(
+  compiler,
+  teleprompter,
+  program,
+  trainset,
+  ...
+) {
+  compiler_expression <- substitute(compiler)
+  compiler_name <- if (is.symbol(compiler_expression)) {
+    as.character(compiler_expression)
+  } else {
+    NULL
+  }
+  dots <- rlang::list2(...)
+  dot_names <- names(dots) %||% rep("", length(dots))
+  context_index <- which(dot_names == ".trace_context")
+  if (length(context_index) > 1L) {
+    cli::cli_abort(
+      "{.arg .trace_context} must be supplied at most once",
+      class = "dsprrr_trace_context_error"
+    )
+  }
+  context_supplied <- length(context_index) == 1L
+  context <- if (context_supplied) {
+    dots[[context_index]]
+  } else {
+    list()
+  }
+  if (context_supplied) {
+    dots <- dots[-context_index]
+  }
+  context <- trace_context_resolve(context, supplied = context_supplied)
+  previous_trace_context <- trace_context_enter(context)
+  on.exit(trace_context_restore(previous_trace_context), add = TRUE)
+
+  do.call(
+    compiler_name %||% compiler,
+    c(list(teleprompter, program, trainset), dots),
+    envir = environment(compiler) %||% parent.frame()
+  )
+}
+
 #' Compile a DSPrrr Program
 #'
 #' @description
@@ -40,6 +84,8 @@ compile <- S7::new_generic("compile", c("teleprompter", "program"))
 #' @param trainset Training data as a data frame
 #' @param valset Optional validation set for evaluation
 #' @param .llm Optional ellmer chat object to reuse during compilation
+#' @param .trace_context A named, JSON-compatible list propagated to
+#'   evaluations, optimizer trials, and execution traces.
 #' @param ... Additional arguments passed to the teleprompter
 #'
 #' @return An optimized module with updated demonstrations and/or instructions
@@ -81,8 +127,10 @@ compile_module <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
-  ...
+  ...,
+  .trace_context = list()
 ) {
+  trace_context_supplied <- !missing(.trace_context)
   # Validate inputs
   if (!inherits(teleprompter, "dsprrr::Teleprompter")) {
     cli::cli_abort(c(
@@ -117,7 +165,20 @@ compile_module <- function(
   }
 
   # Dispatch to appropriate compile method
-  compile(teleprompter, program, trainset, valset = valset, .llm = .llm, ...)
+  args <- c(
+    list(
+      teleprompter = teleprompter,
+      program = program,
+      trainset = trainset,
+      valset = valset,
+      .llm = .llm
+    ),
+    list(...)
+  )
+  if (trace_context_supplied) {
+    args$.trace_context <- .trace_context
+  }
+  do.call(compile, args)
 }
 
 #' Create Training Data for DSPrrr

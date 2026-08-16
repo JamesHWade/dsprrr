@@ -174,7 +174,7 @@ KNNFewShotModule <- R6::R6Class(
       new_module$state <- as.list(self$state)
       new_module$original_demos <- self$original_demos
 
-      new_module
+      artifact_copy_runtime(self, new_module)
     },
 
     #' @description

@@ -28,12 +28,17 @@
 #' being silently removed from the program. Thinking, tool-call, uploaded, and
 #' other runtime content still requires a registry or trusted embedding. The
 #' payload digest detects changes but is not an authenticity or trust signal.
+#' Registry-backed implementations are identified by their registry name and
+#' interface digest, not by their function bodies, so registry names should be
+#' immutable and versioned. Structural exclusion records participate in the
+#' digest even though excluded runtime values do not.
 #'
 #' Artifacts currently reject cyclic module graphs with a typed error. Shared
 #' acyclic nodes are represented once and reconstructed with identical R6
 #' identity at every edge.
 #'
 #' @param program A dsprrr `Module` program.
+#' @param x A dsprrr `Module` or a `dsprrr_program_artifact` manifest.
 #' @param registry A named list of functions or runtime objects. Artifact records
 #'   contain registry names, never the registered values themselves.
 #' @param trusted Whether arbitrary runtime values may be embedded or restored.
@@ -49,6 +54,25 @@
 #'
 #' @return
 #' * `program_artifact()` returns a `dsprrr_program_artifact` manifest.
+#' * `program_artifact_id()` returns the artifact integrity digest as a scalar
+#'   string prefixed with `"sha256:"`. The ID names the validated artifact
+#'   payload; it is an integrity check, not an authenticity or trust signal.
+#'   When `x` is a Module, registry entries actually referenced by the validated
+#'   artifact are retained as detached runtime bindings so subsequent execution
+#'   and module copies can recover the same verified ID without re-supplying the
+#'   registry. A Module reconstructed from a validated current-format artifact
+#'   retains that source artifact ID while its current serialization remains
+#'   unchanged. This keeps the exact source producer environment represented in
+#'   execution traces. Calling `program_artifact()` or `save_program()` creates a
+#'   new artifact, whose ID can differ from the retained source ID. Semantic
+#'   mutation switches the Module to the newly serialized artifact ID. Artifact
+#'   inputs are checked for structure and integrity without requiring their
+#'   recorded dependency versions to be installed.
+#'   A Module restored from embedded trusted values is intentionally different:
+#'   retain the validated artifact's ID, or explicitly create and identify a
+#'   new artifact with `program_artifact(module, trusted = TRUE)`. Automatic
+#'   execution metadata may omit the program ID when safe serialization cannot
+#'   reproduce it without that explicit trust decision.
 #' * `save_program()` invisibly returns `path`.
 #' * `load_program()` returns the reconstructed root module.
 #'
@@ -75,7 +99,10 @@ artifact_supported_format_versions <- function() {
 #' @export
 program_artifact <- function(program, registry = list(), trusted = FALSE) {
   module_graph_check_program(program)
-  registry <- artifact_validate_registry(registry)
+  registry <- artifact_merge_registries(
+    artifact_bound_registry(program),
+    artifact_validate_registry(registry)
+  )
   trusted <- artifact_validate_trusted(trusted)
 
   graph <- module_graph(program, boundaries = "cross", cycles = "record")
@@ -145,6 +172,47 @@ program_artifact <- function(program, registry = list(), trusted = FALSE) {
 
 #' @rdname program-artifact
 #' @export
+program_artifact_id <- function(x, registry = list()) {
+  restored_identity <- NULL
+  artifact <- if (inherits(x, "dsprrr_program_artifact")) {
+    artifact_validate_manifest(x, dependencies = FALSE)
+    x
+  } else if (inherits(x, "Module")) {
+    registry <- artifact_merge_registries(
+      artifact_bound_registry(x),
+      artifact_validate_registry(registry)
+    )
+    artifact <- program_artifact(x, registry = registry)
+    graph <- module_graph(x, boundaries = "cross", cycles = "record")
+    artifact_bind_registry(
+      graph$module[!graph$shared],
+      artifact,
+      registry
+    )
+    restored_identity <- artifact_restored_identity(x)
+    artifact
+  } else {
+    cli::cli_abort(
+      "{.arg x} must be a dsprrr Module or program artifact",
+      class = "dsprrr_program_artifact_id_error"
+    )
+  }
+
+  if (
+    !is.null(restored_identity) &&
+      identical(
+        artifact_manifest_id(artifact),
+        restored_identity$baseline_id
+      )
+  ) {
+    return(restored_identity$source_id)
+  }
+
+  artifact_manifest_id(artifact)
+}
+
+#' @rdname program-artifact
+#' @export
 save_program <- function(program, path, registry = list(), trusted = FALSE) {
   artifact <- program_artifact(
     program,
@@ -181,7 +249,63 @@ artifact_validate_registry <- function(registry) {
       class = "dsprrr_artifact_registry_error"
     )
   }
+  if (length(registry) > 1L) {
+    duplicate <- NULL
+    for (index in seq_len(length(registry) - 1L)) {
+      matches <- vapply(
+        registry[seq.int(index + 1L, length(registry))],
+        identical,
+        logical(1),
+        y = registry[[index]]
+      )
+      if (any(matches)) {
+        duplicate <- c(
+          names(registry)[[index]],
+          names(registry)[seq.int(index + 1L, length(registry))][which(matches)[
+            1L
+          ]]
+        )
+        break
+      }
+    }
+    if (!is.null(duplicate)) {
+      cli::cli_abort(
+        c(
+          "{.arg registry} assigns one runtime value to multiple IDs",
+          "x" = "Conflicting aliases: {.val {duplicate}}.",
+          "i" = "Use one immutable, versioned ID for each runtime value."
+        ),
+        class = "dsprrr_artifact_registry_error"
+      )
+    }
+  }
   registry
+}
+
+artifact_merge_registries <- function(bound, supplied) {
+  bound <- artifact_validate_registry(bound)
+  supplied <- artifact_validate_registry(supplied)
+  shared <- intersect(names(bound), names(supplied))
+  conflicting <- shared[
+    !vapply(
+      shared,
+      function(name) identical(bound[[name]], supplied[[name]]),
+      logical(1)
+    )
+  ]
+  if (length(conflicting) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg registry} conflicts with program-bound registry IDs",
+        "x" = "Conflicting IDs: {.val {conflicting}}."
+      ),
+      class = "dsprrr_artifact_registry_error"
+    )
+  }
+  artifact_validate_registry(c(
+    supplied,
+    bound[setdiff(names(bound), names(supplied))]
+  ))
 }
 
 artifact_validate_trusted <- function(trusted) {
@@ -221,6 +345,14 @@ artifact_integrity <- function(artifact) {
   list(
     algorithm = "sha256",
     payload_sha256 = digest::digest(payload, algo = "sha256", serialize = TRUE)
+  )
+}
+
+artifact_manifest_id <- function(artifact) {
+  paste0(
+    artifact$integrity$algorithm,
+    ":",
+    artifact$integrity$payload_sha256
   )
 }
 
@@ -551,29 +683,15 @@ artifact_serialize_state <- function(
     )
   })
   names(values) <- names
-  runtime_state <- c(
-    "traces",
-    "cache",
-    "trials",
-    "last_grid",
-    "optimization_history",
-    "attempts",
-    "assertion_results",
-    "executions",
-    "trajectories",
-    "repl_history",
-    "demo_selections",
-    "individual_results"
-  )
-  for (name in runtime_state) {
-    value <- state[[name]]
-    if (!is.null(value) && length(value) > 0L) {
-      artifact_record_exclusion(
-        exclusions,
-        paste0(node_path, ".state.", name),
-        "runtime-data"
-      )
-    }
+  preserved <- artifact_detached_runtime(module)$state_exclusions %||%
+    character()
+  preserved <- intersect(preserved, artifact_runtime_state_fields())
+  for (name in preserved) {
+    artifact_record_exclusion(
+      exclusions,
+      paste0(node_path, ".state.", name),
+      "runtime-data"
+    )
   }
   values$compiled <- is_module_compiled_internal(module)
   values
@@ -879,6 +997,182 @@ artifact_provider_model <- function(chat) {
 
 artifact_detached_runtime <- function(module) {
   attr(module, "dsprrr_artifact_runtime", exact = TRUE) %||% list()
+}
+
+artifact_restored_identity <- function(module) {
+  identity <- artifact_detached_runtime(module)$restored_identity
+  valid <- is.list(identity) &&
+    identical(names(identity), c("source_id", "baseline_id")) &&
+    is.character(identity$source_id) &&
+    length(identity$source_id) == 1L &&
+    !is.na(identity$source_id) &&
+    grepl("^sha256:[0-9a-f]{64}$", identity$source_id) &&
+    is.character(identity$baseline_id) &&
+    length(identity$baseline_id) == 1L &&
+    !is.na(identity$baseline_id) &&
+    grepl("^sha256:[0-9a-f]{64}$", identity$baseline_id)
+  if (!valid) {
+    return(NULL)
+  }
+  identity
+}
+
+artifact_bind_restored_identity <- function(program, source_artifact) {
+  # Legacy manifests keep their existing upgrade identity semantics. Trusted
+  # runtimes cannot be reidentified without a new explicit trust decision.
+  if (
+    !identical(
+      as.integer(source_artifact$format_version),
+      artifact_format_version()
+    ) ||
+      artifact_has_trusted_runtime(source_artifact$graph$nodes)
+  ) {
+    return(invisible(program))
+  }
+
+  baseline <- program_artifact(program)
+  runtime <- artifact_detached_runtime(program)
+  runtime$restored_identity <- list(
+    source_id = artifact_manifest_id(source_artifact),
+    baseline_id = artifact_manifest_id(baseline)
+  )
+  attr(program, "dsprrr_artifact_runtime") <- runtime
+  invisible(program)
+}
+
+artifact_copy_runtime <- function(source, target) {
+  source_graph <- module_graph(
+    source,
+    boundaries = "cross",
+    cycles = "record"
+  )
+  source_modules <- stats::setNames(source_graph$module, source_graph$path)
+  source_runtime <- lapply(source_modules, function(module) {
+    attr(module, "dsprrr_artifact_runtime", exact = TRUE)
+  })
+  has_runtime <- !vapply(source_runtime, is.null, logical(1))
+  if (!any(has_runtime)) {
+    return(target)
+  }
+
+  target_graph <- module_graph(
+    target,
+    boundaries = "cross",
+    cycles = "record"
+  )
+  target_modules <- stats::setNames(target_graph$module, target_graph$path)
+
+  runtime_paths <- names(source_runtime)[has_runtime]
+  for (path in intersect(runtime_paths, names(target_modules))) {
+    attr(target_modules[[path]], "dsprrr_artifact_runtime") <-
+      source_runtime[[path]]
+  }
+  target
+}
+
+artifact_bound_registry <- function(module) {
+  graph <- module_graph(module, boundaries = "cross", cycles = "record")
+  modules <- graph$module[!graph$shared]
+  bound <- list()
+  for (item in modules) {
+    bound <- artifact_merge_registries(
+      bound,
+      artifact_detached_runtime(item)$registry %||% list()
+    )
+  }
+  bound
+}
+
+artifact_runtime_state_fields <- function() {
+  c(
+    "traces",
+    "cache",
+    "trials",
+    "last_grid",
+    "optimization_history",
+    "attempts",
+    "assertion_results",
+    "executions",
+    "trajectories",
+    "repl_history",
+    "demo_selections",
+    "individual_results"
+  )
+}
+
+artifact_registry_ids <- function(value) {
+  ids <- character()
+  visit <- function(item) {
+    if (!is.list(item)) {
+      return(invisible(NULL))
+    }
+    if (artifact_is_envelope_candidate(item)) {
+      envelope <- item$.dsprrr
+      if (
+        identical(envelope$kind, "runtime") &&
+          identical(envelope$payload$kind, "registry")
+      ) {
+        ids <<- c(ids, envelope$payload$id)
+      } else if (identical(envelope$kind, "plain")) {
+        for (child in envelope$payload) {
+          visit(child)
+        }
+      }
+      return(invisible(NULL))
+    }
+    for (child in item) {
+      visit(child)
+    }
+    invisible(NULL)
+  }
+  visit(value)
+  unique(ids)
+}
+
+artifact_has_trusted_runtime <- function(value) {
+  found <- FALSE
+  visit <- function(item) {
+    if (found || !is.list(item)) {
+      return(invisible(NULL))
+    }
+    if (artifact_is_envelope_candidate(item)) {
+      envelope <- item$.dsprrr
+      if (
+        identical(envelope$kind, "runtime") &&
+          identical(envelope$payload$kind, "trusted")
+      ) {
+        found <<- TRUE
+      } else if (identical(envelope$kind, "plain")) {
+        for (child in envelope$payload) {
+          visit(child)
+        }
+      }
+      return(invisible(NULL))
+    }
+    for (child in item) {
+      visit(child)
+    }
+    invisible(NULL)
+  }
+  visit(value)
+  found
+}
+
+artifact_bind_registry <- function(modules, artifact, registry) {
+  ids <- artifact_registry_ids(artifact$graph$nodes)
+  bound <- registry[intersect(names(registry), ids)]
+  if (length(bound) == 0L) {
+    return(invisible(modules))
+  }
+  for (module in modules) {
+    runtime <- artifact_detached_runtime(module)
+    runtime$registry <- artifact_merge_registries(
+      runtime$registry %||% list(),
+      bound
+    )
+    attr(module, "dsprrr_artifact_runtime") <- runtime
+  }
+  invisible(modules)
 }
 
 artifact_record_exclusion <- function(exclusions, path, reason) {
@@ -2202,6 +2496,7 @@ restore_program_artifact <- function(
   registry <- artifact_validate_registry(registry)
   trusted <- artifact_validate_trusted(trusted)
   artifact_validate_manifest(artifact)
+  source_artifact <- artifact
   artifact <- artifact_upgrade_manifest(artifact)
 
   cache <- new.env(parent = emptyenv(), hash = TRUE)
@@ -2214,7 +2509,40 @@ restore_program_artifact <- function(
     trusted = trusted
   )
   artifact_validate_restored_graph(program, artifact)
+  modules <- mget(ls(cache, all.names = TRUE), envir = cache, inherits = FALSE)
+  artifact_bind_registry(modules, artifact, registry)
+  artifact_bind_state_exclusions(modules, artifact)
+  artifact_bind_restored_identity(program, source_artifact)
   program
+}
+
+artifact_bind_state_exclusions <- function(modules, artifact) {
+  records <- artifact$exclusions %||% list()
+  for (id in intersect(names(modules), names(artifact$graph$nodes))) {
+    prefix <- paste0("graph.nodes.", id, ".state.")
+    fields <- vapply(
+      records,
+      function(record) {
+        path <- record$path %||% ""
+        if (
+          identical(record$reason %||% NULL, "runtime-data") &&
+            startsWith(path, prefix)
+        ) {
+          substring(path, nchar(prefix) + 1L)
+        } else {
+          ""
+        }
+      },
+      character(1)
+    )
+    fields <- intersect(fields[nzchar(fields)], artifact_runtime_state_fields())
+    if (length(fields) > 0L) {
+      runtime <- artifact_detached_runtime(modules[[id]])
+      runtime$state_exclusions <- fields
+      attr(modules[[id]], "dsprrr_artifact_runtime") <- runtime
+    }
+  }
+  invisible(modules)
 }
 
 artifact_is_plain_list <- function(value) {
@@ -2230,7 +2558,7 @@ artifact_names_match <- function(names, expected) {
     setequal(names, expected)
 }
 
-artifact_validate_manifest <- function(artifact) {
+artifact_validate_manifest <- function(artifact, dependencies = TRUE) {
   malformed <- function(message) {
     cli::cli_abort(
       c("Malformed dsprrr program artifact", "x" = message),
@@ -2367,7 +2695,9 @@ artifact_validate_manifest <- function(artifact) {
   artifact_validate_exclusions(artifact$exclusions, malformed)
   artifact_validate_metadata(artifact$metadata)
   artifact_validate_integrity(artifact)
-  artifact_validate_dependencies(artifact$metadata)
+  if (isTRUE(dependencies)) {
+    artifact_validate_dependencies(artifact$metadata)
+  }
   invisible(artifact)
 }
 
