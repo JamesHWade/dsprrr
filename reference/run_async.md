@@ -11,7 +11,7 @@ invocations.
 ## Usage
 
 ``` r
-run_async(module, ..., .llm = NULL)
+run_async(module, ..., .llm = NULL, .trace_context = list())
 ```
 
 ## Arguments
@@ -27,6 +27,11 @@ run_async(module, ..., .llm = NULL)
 - .llm:
 
   Optional ellmer Chat object
+
+- .trace_context:
+
+  A named JSON-compatible correlation context. The returned async handle
+  carries the verified fields in its `dsprrr_trace_context` attribute.
 
 ## Value
 

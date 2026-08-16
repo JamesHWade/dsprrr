@@ -149,6 +149,11 @@ so each worker can create an independent client).</p></dd>
 <dd><p>Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.</p></dd>
 
+<dt>.trace_context</dt>
+<dd><p>A named, JSON-compatible list copied into run
+metadata and traces. Credential-like fields and runtime objects are
+rejected before execution.</p></dd>
+
 <dt>.cache</dt>
 <dd><p>Logical or NULL. Per-call cache control. If NULL (default), uses global config.
 If TRUE, attempts to use cache (no effect if caching globally disabled).
@@ -188,6 +193,12 @@ ellmer and mirai workers return row records that are committed to module and
 global trace state by the parent in input order. Specialized Predict
 subclasses, such as ReAct, preserve their scalar <code>forward()</code> method and
 currently reject vectorized inputs rather than bypassing specialized logic.</p>
+<p>Trace context is correlation-only: it is not included in prompts, provider
+requests, cache keys, or program artifact identity. Each attempted execution
+also records <code>program_artifact_id</code>, derived from the program's existing
+artifact integrity digest. <code>program_artifact_id</code> is a reserved field: for a
+registry-backed program, call <code><a href="program-artifact.html">program_artifact_id()</a></code> once with its registry
+to bind the verified runtime references before execution.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

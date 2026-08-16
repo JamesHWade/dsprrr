@@ -43,6 +43,10 @@ A tibble with one row per trace containing:
 
 - prompt_length: Character length of the prompt
 
+- program_artifact_id: Exact executable program identity, when available
+
+- trace_context: Caller-supplied correlation context
+
 - prompt: The full prompt text (if include_prompts = TRUE)
 
 - output: The model output (if include_outputs = TRUE)

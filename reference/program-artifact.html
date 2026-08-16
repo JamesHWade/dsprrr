@@ -24,6 +24,10 @@ credentials. Demo fields with credential-like names are rejected instead of
 being silently removed from the program. Thinking, tool-call, uploaded, and
 other runtime content still requires a registry or trusted embedding. The
 payload digest detects changes but is not an authenticity or trust signal.
+Registry-backed implementations are identified by their registry name and
+interface digest, not by their function bodies, so registry names should be
+immutable and versioned. Structural exclusion records participate in the
+digest even though excluded runtime values do not.
 Artifacts currently reject cyclic module graphs with a typed error. Shared
 acyclic nodes are represented once and reconstructed with identical R6
 identity at every edge."><meta property="og:description" content="Program artifacts are versioned, transport-independent manifests for complete
@@ -51,6 +55,10 @@ credentials. Demo fields with credential-like names are rejected instead of
 being silently removed from the program. Thinking, tool-call, uploaded, and
 other runtime content still requires a registry or trusted embedding. The
 payload digest detects changes but is not an authenticity or trust signal.
+Registry-backed implementations are identified by their registry name and
+interface digest, not by their function bodies, so registry names should be
+immutable and versioned. Structural exclusion records participate in the
+digest even though excluded runtime values do not.
 Artifacts currently reject cyclic module graphs with a typed error. Shared
 acyclic nodes are represented once and reconstructed with identical R6
 identity at every edge."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
@@ -167,7 +175,11 @@ user information, query strings, fragments, or recognizable signed-path
 credentials. Demo fields with credential-like names are rejected instead of
 being silently removed from the program. Thinking, tool-call, uploaded, and
 other runtime content still requires a registry or trusted embedding. The
-payload digest detects changes but is not an authenticity or trust signal.</p>
+payload digest detects changes but is not an authenticity or trust signal.
+Registry-backed implementations are identified by their registry name and
+interface digest, not by their function bodies, so registry names should be
+immutable and versioned. Structural exclusion records participate in the
+digest even though excluded runtime values do not.</p>
 <p>Artifacts currently reject cyclic module graphs with a typed error. Shared
 acyclic nodes are represented once and reconstructed with identical R6
 identity at every edge.</p>
@@ -176,6 +188,8 @@ identity at every edge.</p>
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">program_artifact</span><span class="op">(</span><span class="va">program</span>, registry <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, trusted <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">program_artifact_id</span><span class="op">(</span><span class="va">x</span>, registry <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">save_program</span><span class="op">(</span><span class="va">program</span>, <span class="va">path</span>, registry <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, trusted <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
@@ -201,6 +215,10 @@ This is <code>FALSE</code> by default and should be enabled only for artifacts a
 you trust.</p></dd>
 
 
+<dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
+<dd><p>A dsprrr <code>Module</code> or a <code>dsprrr_program_artifact</code> manifest.</p></dd>
+
+
 <dt id="arg-path">path<a class="anchor" aria-label="anchor" href="#arg-path"></a></dt>
 <dd><p>An artifact path on a stable local filesystem, in a containing
 directory trusted against hostile concurrent mutation. <code>save_program()</code>
@@ -215,6 +233,25 @@ new destination may already be present.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
 
 <ul><li><p><code>program_artifact()</code> returns a <code>dsprrr_program_artifact</code> manifest.</p></li>
+<li><p><code>program_artifact_id()</code> returns the artifact integrity digest as a scalar
+string prefixed with <code>"sha256:"</code>. The ID names the validated artifact
+payload; it is an integrity check, not an authenticity or trust signal.
+When <code>x</code> is a Module, registry entries actually referenced by the validated
+artifact are retained as detached runtime bindings so subsequent execution
+and module copies can recover the same verified ID without re-supplying the
+registry. A Module reconstructed from a validated current-format artifact
+retains that source artifact ID while its current serialization remains
+unchanged. This keeps the exact source producer environment represented in
+execution traces. Calling <code>program_artifact()</code> or <code>save_program()</code> creates a
+new artifact, whose ID can differ from the retained source ID. Semantic
+mutation switches the Module to the newly serialized artifact ID. Artifact
+inputs are checked for structure and integrity without requiring their
+recorded dependency versions to be installed.
+A Module restored from embedded trusted values is intentionally different:
+retain the validated artifact's ID, or explicitly create and identify a
+new artifact with <code>program_artifact(module, trusted = TRUE)</code>. Automatic
+execution metadata may omit the program ID when safe serialization cannot
+reproduce it without that explicit trust decision.</p></li>
 <li><p><code>save_program()</code> invisibly returns <code>path</code>.</p></li>
 <li><p><code>load_program()</code> returns the reconstructed root module.</p></li>
 </ul></div>

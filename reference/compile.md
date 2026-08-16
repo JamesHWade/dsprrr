@@ -20,7 +20,9 @@ compile(teleprompter, program, ...)
 
 - ...:
 
-  Additional arguments including trainset (training data)
+  Additional arguments including `trainset` (training data) and optional
+  `.trace_context`, a named JSON-compatible list propagated to
+  evaluations, optimizer trials, and execution traces.
 
 ## Value
 

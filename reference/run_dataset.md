@@ -21,7 +21,8 @@ run_dataset(
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
-  ...
+  ...,
+  .trace_context = list()
 )
 ```
 
@@ -75,6 +76,12 @@ run_dataset(
 - .return_format:
 
   Character either "simple" or "structured"
+
+- .trace_context:
+
+  A named, JSON-compatible list copied into row metadata and traces.
+  When omitted inside another dsprrr operation, the active context is
+  inherited.
 
 ## Value
 

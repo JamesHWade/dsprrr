@@ -16,7 +16,8 @@ Trial(
   end_time = NULL,
   notes = "",
   compiled_artifact_ref = NULL,
-  status = "pending"
+  status = "pending",
+  trace_context = list()
 )
 ```
 
@@ -63,3 +64,8 @@ Trial(
 - status:
 
   Trial status: "pending", "running", "completed", "failed".
+
+- trace_context:
+
+  A named, JSON-compatible correlation context retained with the trial
+  throughout its lifecycle and persistence.

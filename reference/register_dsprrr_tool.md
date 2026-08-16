@@ -15,7 +15,8 @@ register_dsprrr_tool(
   annotations = list(),
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
-  error = c("reject", "abort", "return")
+  error = c("reject", "abort", "return"),
+  trace_context = list()
 )
 ```
 
@@ -62,6 +63,11 @@ register_dsprrr_tool(
 
   Tool error handling mode. See
   [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md).
+
+- trace_context:
+
+  A named, JSON-compatible list captured by the tool and propagated to
+  dsprrr execution metadata and traces.
 
 ## Value
 

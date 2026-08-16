@@ -26,7 +26,8 @@ eval_program(
   .llm = NULL,
   control = NULL,
   epochs = 1L,
-  ...
+  ...,
+  .trace_context = list()
 )
 ```
 
@@ -63,6 +64,11 @@ eval_program(
   Additional arguments passed to
   [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md).
 
+- .trace_context:
+
+  A named JSON-compatible correlation context copied to the returned
+  `EvalResult` and all program execution traces.
+
 ## Value
 
 An EvalResult object containing:
@@ -85,6 +91,8 @@ An EvalResult object containing:
 - `total_cost`: total cost in USD
 
 - `total_latency_ms`: total time in milliseconds
+
+- `trace_context`: the validated correlation context for this evaluation
 
 When `epochs > 1`, additional fields:
 

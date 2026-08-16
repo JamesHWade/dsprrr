@@ -993,6 +993,7 @@ Extract outputs, costs, and display formatted results
 Pin configurations, validate workflows, and deploy to production
 
 - [`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  [`program_artifact_id()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
   [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
   [`load_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
   : Persist Complete dsprrr Programs

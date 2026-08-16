@@ -5,7 +5,13 @@ Convenience function to create a Trial record with auto-generated ID.
 ## Usage
 
 ``` r
-create_trial(optimizer_name, params = list(), trial_id = NULL, notes = "")
+create_trial(
+  optimizer_name,
+  params = list(),
+  trial_id = NULL,
+  notes = "",
+  trace_context = list()
+)
 ```
 
 ## Arguments
@@ -25,6 +31,13 @@ create_trial(optimizer_name, params = list(), trial_id = NULL, notes = "")
 - notes:
 
   Optional notes.
+
+- trace_context:
+
+  A named, JSON-compatible correlation context. When omitted during
+  [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md),
+  the active compilation context is inherited; supply
+  [`list()`](https://rdrr.io/r/base/list.html) explicitly to clear it.
 
 ## Value
 

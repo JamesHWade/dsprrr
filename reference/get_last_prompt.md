@@ -32,6 +32,11 @@ A `dsprrr_prompt_inspection` object containing:
 
 - `source`: Where the call originated ("dsp()" or module name)
 
+- `program_artifact_id`: Exact executable program identity, when
+  available
+
+- `trace_context`: Caller-supplied correlation context
+
 Returns `NULL` if no LLM calls have been made.
 
 ## Examples

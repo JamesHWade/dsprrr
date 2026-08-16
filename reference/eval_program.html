@@ -128,7 +128,8 @@ plus aggregated statistics.</p>
 <span>  .llm <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  control <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  epochs <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  <span class="va">...</span></span>
+<span>  <span class="va">...</span>,</span>
+<span>  .trace_context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -164,6 +165,11 @@ significance. Defaults to 1L. When &gt; 1, computes std and confidence intervals
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to <code><a href="evaluate.html">evaluate()</a></code>.</p></dd>
 
+
+<dt id="arg--trace-context">.trace_context<a class="anchor" aria-label="anchor" href="#arg--trace-context"></a></dt>
+<dd><p>A named JSON-compatible correlation context copied to
+the returned <code>EvalResult</code> and all program execution traces.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -177,6 +183,7 @@ feedback (textual feedback from feedback-aware metrics, see
 <li><p><code>total_tokens</code>: total tokens used</p></li>
 <li><p><code>total_cost</code>: total cost in USD</p></li>
 <li><p><code>total_latency_ms</code>: total time in milliseconds</p></li>
+<li><p><code>trace_context</code>: the validated correlation context for this evaluation</p></li>
 </ul><p>When <code>epochs &gt; 1</code>, additional fields:</p><ul><li><p><code>epochs</code>: number of epochs run</p></li>
 <li><p><code>epoch_scores</code>: list of score vectors, one per epoch</p></li>
 <li><p><code>score_std</code>: standard deviation of mean scores across epochs</p></li>

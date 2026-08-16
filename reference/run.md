@@ -70,6 +70,12 @@ run(module, ...)
       returns just the output, "structured" returns list with output,
       chat, and metadata.
 
+  .trace_context
+
+  :   A named, JSON-compatible list copied into run metadata and traces.
+      Credential-like fields and runtime objects are rejected before
+      execution.
+
   .cache
 
   :   Logical or NULL. Per-call cache control. If NULL (default), uses
@@ -118,6 +124,15 @@ that are committed to module and global trace state by the parent in
 input order. Specialized Predict subclasses, such as ReAct, preserve
 their scalar `forward()` method and currently reject vectorized inputs
 rather than bypassing specialized logic.
+
+Trace context is correlation-only: it is not included in prompts,
+provider requests, cache keys, or program artifact identity. Each
+attempted execution also records `program_artifact_id`, derived from the
+program's existing artifact integrity digest. `program_artifact_id` is a
+reserved field: for a registry-backed program, call
+[`program_artifact_id()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+once with its registry to bind the verified runtime references before
+execution.
 
 ## See also
 

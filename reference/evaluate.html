@@ -122,6 +122,9 @@ module's signature inputs plus any expected fields used by metric.</p></li>
 <li><p><code>.concurrency</code>: A policy created by <code><a href="concurrency_control.html">concurrency_control()</a></code>. Do not also
 pass <code>.parallel</code> when using an explicit policy.</p></li>
 <li><p><code>.progress</code>: Logical; whether to display progress while evaluating</p></li>
+<li><p><code>.trace_context</code>: A named, JSON-compatible list copied into evaluation
+results, row metadata, and traces. Credential-like fields and runtime
+objects are rejected before execution.</p></li>
 <li><p><code>.return_format</code>: Character; <code>"simple"</code> returns just scores and predictions,
 <code>"structured"</code> (default) includes full metadata and data</p></li>
 <li><p><code>epochs</code>: Integer; number of times to repeat evaluation for statistical
@@ -151,6 +154,8 @@ attempted row-epoch.</p></li>
 Each contains <code>row_id</code>, <code>epoch</code>, <code>status</code>, ordered module <code>events</code>, and
 per-row <code>metadata</code>. Trace events can contain prompts, inputs, and model
 responses, so treat them as potentially sensitive.</p></li>
+<li><p><code>program_artifact_id</code>, <code>trace_context</code>: the executable program identity
+and caller-supplied correlation context.</p></li>
 <li><p><code>data</code>: input data augmented with prediction metadata.</p></li>
 </ul><p>When <code>epochs &gt; 1</code>, additional fields are included:</p><ul><li><p><code>epoch_scores</code>: list of numeric vectors, one per epoch</p></li>
 <li><p><code>epoch_traces</code>: list of row-aligned trace lists, one per epoch</p></li>

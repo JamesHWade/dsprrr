@@ -16,7 +16,8 @@ as_ellmer_tool(
   annotations = list(),
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
-  error = c("reject", "abort", "return")
+  error = c("reject", "abort", "return"),
+  trace_context = list()
 )
 ```
 
@@ -84,6 +85,12 @@ as_ellmer_tool(
     can install a
     [`withCallingHandlers()`](https://rdrr.io/r/base/conditions.html) to
     inspect the failure without aborting.
+
+- trace_context:
+
+  A named, JSON-compatible list captured by the tool and propagated to
+  dsprrr execution metadata and traces. The tool's declared result
+  schema is unchanged.
 
 ## Value
 

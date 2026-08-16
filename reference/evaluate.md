@@ -43,6 +43,10 @@ evaluate(module, ...)
 
   - `.progress`: Logical; whether to display progress while evaluating
 
+  - `.trace_context`: A named, JSON-compatible list copied into
+    evaluation results, row metadata, and traces. Credential-like fields
+    and runtime objects are rejected before execution.
+
   - `.return_format`: Character; `"simple"` returns just scores and
     predictions, `"structured"` (default) includes full metadata and
     data
@@ -90,6 +94,9 @@ A list with elements. When `.return_format = "structured"` (default):
   Each contains `row_id`, `epoch`, `status`, ordered module `events`,
   and per-row `metadata`. Trace events can contain prompts, inputs, and
   model responses, so treat them as potentially sensitive.
+
+- `program_artifact_id`, `trace_context`: the executable program
+  identity and caller-supplied correlation context.
 
 - `data`: input data augmented with prediction metadata.
 

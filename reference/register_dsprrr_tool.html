@@ -106,7 +106,8 @@ it with a Chat object in one step.</p>
 <span>  annotations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"json"</span>, <span class="st">"text"</span>, <span class="st">"raw"</span><span class="op">)</span>,</span>
 <span>  copy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"deep"</span><span class="op">)</span>,</span>
-<span>  error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reject"</span>, <span class="st">"abort"</span>, <span class="st">"return"</span><span class="op">)</span></span>
+<span>  error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reject"</span>, <span class="st">"abort"</span>, <span class="st">"return"</span><span class="op">)</span>,</span>
+<span>  trace_context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -151,6 +152,11 @@ fresh deep copy. See <code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></c
 
 <dt id="arg-error">error<a class="anchor" aria-label="anchor" href="#arg-error"></a></dt>
 <dd><p>Tool error handling mode. See <code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>.</p></dd>
+
+
+<dt id="arg-trace-context">trace_context<a class="anchor" aria-label="anchor" href="#arg-trace-context"></a></dt>
+<dd><p>A named, JSON-compatible list captured by the tool and
+propagated to dsprrr execution metadata and traces.</p></dd>
 
 </dl></div>
     <div class="section level2">

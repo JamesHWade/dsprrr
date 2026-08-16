@@ -12,7 +12,8 @@ compile_module(
   trainset,
   valset = NULL,
   .llm = NULL,
-  ...
+  ...,
+  .trace_context = list()
 )
 ```
 
@@ -42,6 +43,11 @@ compile_module(
 - ...:
 
   Additional arguments passed to the teleprompter
+
+- .trace_context:
+
+  A named, JSON-compatible list propagated to evaluations, optimizer
+  trials, and execution traces.
 
 ## Value
 

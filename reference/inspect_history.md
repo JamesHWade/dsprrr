@@ -53,6 +53,11 @@ A tibble with one row per LLM call containing:
 
 - `duration_s`: Duration in seconds (if available)
 
+- `program_artifact_id`: Exact executable program identity, when
+  available
+
+- `trace_context`: Caller-supplied correlation context
+
 - `prompt`: Full prompt text (if `include_prompts = TRUE`)
 
 - `response`: Full response text (if `include_responses = TRUE`)
