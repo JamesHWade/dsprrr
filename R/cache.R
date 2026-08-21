@@ -395,6 +395,13 @@ cache_stats <- function() {
     result$disk_entries <- .dsprrr_env$cache_disk$size()
   }
 
+  # A rejected disk tier leaves `enabled` TRUE, which on its own reads as a
+  # healthy cache. Report the degradation so the drop is visible here too.
+  if (isTRUE(.dsprrr_env$cache_degraded)) {
+    result$degraded <- TRUE
+    result$degraded_reason <- .dsprrr_env$cache_degraded_reason
+  }
+
   structure(result, class = "dsprrr_cache_stats")
 }
 
@@ -419,6 +426,13 @@ print.dsprrr_cache_stats <- function(x, ...) {
 
   if (!is.null(x$disk_entries)) {
     cli::cli_bullets(c("*" = "Disk entries: {x$disk_entries}"))
+  }
+
+  if (isTRUE(x$degraded)) {
+    cli::cli_bullets(c(
+      "!" = "Disk caching is degraded",
+      "x" = x$degraded_reason %||% "the disk cache could not be trusted"
+    ))
   }
 
   invisible(x)
@@ -1688,6 +1702,49 @@ cache_record_disk_guard_failure <- function(guard, reason) {
   invisible(NULL)
 }
 
+#' Describe why a path failed an exact-mode check
+#'
+#' A setgid bit inherited from a shared parent leaves the permission triplet
+#' looking correct, so name that case rather than reporting a bare mismatch the
+#' user cannot see in the obvious places.
+#' @noRd
+cache_exact_mode_reason <- function(mode, expected, what) {
+  special <- bitwAnd(mode, as.integer(as.octmode("7000")))
+  permissions <- bitwAnd(mode, as.integer(as.octmode("0777")))
+  if (
+    special != 0L &&
+      identical(permissions, as.integer(as.octmode(expected)))
+  ) {
+    names <- c("sticky", "setgid", "setuid")[
+      bitwAnd(special, c(1L, 2L, 4L) * 512L) != 0L
+    ]
+    return(paste0(
+      "an existing private ",
+      what,
+      " carries the ",
+      paste(names, collapse = " and "),
+      " bit, which dsprrr does not accept even with owner-only permissions"
+    ))
+  }
+  paste0(
+    "an existing private ",
+    what,
+    " must have mode exactly ",
+    expected,
+    ", but it is ",
+    format(as.octmode(mode))
+  )
+}
+
+#' Build a chmod remediation hint for a rejected cache path
+#'
+#' dsprrr no longer repairs stored permissions before reusing a cache, so the
+#' reported reason has to say what to run instead.
+#' @noRd
+cache_chmod_remedy <- function(mode, path) {
+  paste0("restrict it yourself, then retry: chmod ", mode, " ", path)
+}
+
 #' Abort a guarded operation after recording its trust failure
 #' @noRd
 cache_abort_disk_guard <- function(guard, reason) {
@@ -1825,7 +1882,11 @@ audit_private_cache_directory <- function(disk_path) {
   if (mode != as.integer(as.octmode("0700"))) {
     return(list(
       ok = FALSE,
-      reason = "an existing private cache directory must have mode exactly 0700"
+      reason = paste0(
+        cache_exact_mode_reason(mode, "0700", "cache directory"),
+        "; ",
+        cache_chmod_remedy("700", disk_path)
+      )
     ))
   }
 
@@ -1954,7 +2015,14 @@ audit_private_cache_entries <- function(disk_path) {
   if (any(modes != as.integer(as.octmode("0600")))) {
     return(list(
       ok = FALSE,
-      reason = "existing private cache files must have mode exactly 0600"
+      reason = local({
+        offender <- which(modes != as.integer(as.octmode("0600")))[[1]]
+        paste0(
+          cache_exact_mode_reason(modes[[offender]], "0600", "cache file"),
+          "; ",
+          cache_chmod_remedy("600", entries[[offender]])
+        )
+      })
     ))
   }
 

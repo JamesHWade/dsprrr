@@ -1457,7 +1457,8 @@ test_that("private cache directories reject special mode bits unchanged", {
   )
 
   expect_false(directory_audit$ok)
-  expect_match(directory_audit$reason, "mode exactly 0700")
+  expect_match(directory_audit$reason, "sticky")
+  expect_match(directory_audit$reason, "chmod 700", fixed = TRUE)
   expect_identical(cache_test_mode(directory), "1700")
   expect_length(list.files(directory, all.files = TRUE, no.. = TRUE), 0L)
 })
@@ -1483,7 +1484,8 @@ test_that("private cache files reject special mode bits unchanged", {
   file_audit <- dsprrr:::prepare_cache_directory(cache_dir, private = TRUE)
 
   expect_false(file_audit$ok)
-  expect_match(file_audit$reason, "mode exactly 0600")
+  expect_match(file_audit$reason, "sticky")
+  expect_match(file_audit$reason, "chmod 600", fixed = TRUE)
   expect_identical(cache_test_mode(entry), "1600")
   expect_identical(
     readBin(entry, what = "raw", n = file.info(entry)$size),
@@ -2749,4 +2751,50 @@ test_that("rollout_id threads from forward() into the cache key (dsprrr-pcd)", {
   # Repeating a rollout_id hits the cache -> no new call.
   mod$forward(list(q = "x"), .llm = chats[[3]], rollout_id = 1)
   expect_equal(calls$n, 2L)
+})
+
+test_that("a setgid cache directory is named as such, not as a mode mismatch", {
+  skip_on_os("windows")
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "2700")
+  skip_if_not(
+    identical(
+      bitwAnd(
+        as.integer(file.info(dir)$mode),
+        as.integer(as.octmode("7777"))
+      ),
+      as.integer(as.octmode("2700"))
+    ),
+    "filesystem did not retain the setgid bit"
+  )
+
+  audit <- audit_private_cache_directory(dir)
+  expect_false(audit$ok)
+  expect_match(audit$reason, "setgid")
+  expect_match(audit$reason, "chmod 700", fixed = TRUE)
+})
+
+test_that("a plain mode mismatch reports the mode it found", {
+  skip_on_os("windows")
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "0755")
+
+  audit <- audit_private_cache_directory(dir)
+  expect_false(audit$ok)
+  expect_match(audit$reason, "755")
+  expect_match(audit$reason, "chmod 700", fixed = TRUE)
+})
+
+test_that("cache_stats() reports a degraded disk tier", {
+  local_reset_cache()
+  withr::defer({
+    .dsprrr_env$cache_degraded <- NULL
+    .dsprrr_env$cache_degraded_reason <- NULL
+  })
+  .dsprrr_env$cache_degraded <- TRUE
+  .dsprrr_env$cache_degraded_reason <- "test reason"
+
+  stats <- cache_stats()
+  expect_true(stats$degraded)
+  expect_equal(stats$degraded_reason, "test reason")
 })

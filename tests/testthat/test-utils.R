@@ -283,3 +283,58 @@ test_that("trace_cost accepts only canonical current-call fields", {
   expect_equal(dsprrr:::trace_cost(list(cost = 0.1)), 0.1)
   expect_true(is.na(dsprrr:::trace_cost(list(total_cost = 0.2))))
 })
+
+test_that("undeclared dot-prefixed inputs are rejected", {
+  sig <- signature("q -> a")
+
+  expect_error(
+    validate_signature_inputs(sig, list(q = "x", .bogus = TRUE)),
+    class = "dsprrr_reserved_input_error"
+  )
+})
+
+test_that("removed runtime arguments name their replacement", {
+  sig <- signature("q -> a")
+
+  expect_error(
+    validate_signature_inputs(sig, list(q = "x", .parallel = TRUE)),
+    ".concurrency",
+    fixed = TRUE
+  )
+  expect_error(
+    validate_signature_inputs(sig, list(q = "x", .parallel_method = "mirai")),
+    ".concurrency",
+    fixed = TRUE
+  )
+})
+
+test_that("dot-prefixed inputs are rejected for zero-input signatures", {
+  sig <- signature(
+    inputs = list(),
+    output_type = ellmer::type_string(),
+    instructions = "Say hello"
+  )
+
+  expect_error(
+    validate_signature_inputs(sig, list(.parallel = TRUE)),
+    class = "dsprrr_reserved_input_error"
+  )
+})
+
+test_that("a declared dot-prefixed field is still accepted", {
+  sig <- signature(
+    inputs = list(input(".ok")),
+    output_type = ellmer::type_string()
+  )
+
+  expect_silent(validate_signature_inputs(sig, list(.ok = "x")))
+})
+
+test_that("run() rejects the removed .parallel argument", {
+  mod <- module(signature("q -> a"))
+
+  expect_error(
+    run(mod, q = "hi", .parallel = TRUE, .llm = new_test_chat()),
+    class = "dsprrr_reserved_input_error"
+  )
+})

@@ -1233,3 +1233,82 @@ test_that("public append failure leaves the previous journal intact", {
     before
   )
 })
+
+test_that("a record without schema_version names the missing field", {
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "0700")
+  path <- file.path(dir, "trials.jsonl")
+  writeLines(
+    paste0(
+      '{"trial_id":"legacy","optimizer_name":"o","params":{},',
+      '"metric_summary":{},"cost_summary":{},"notes":"","status":"completed"}'
+    ),
+    path
+  )
+  Sys.chmod(path, "0600")
+
+  expect_warning(
+    tryCatch(read_trials_jsonl(path), error = function(e) NULL),
+    "schema_version"
+  )
+})
+
+test_that("a fully unreadable journal aborts instead of returning nothing", {
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "0700")
+  path <- file.path(dir, "trials.jsonl")
+  writeLines('{"trial_id":"legacy"}', path)
+  Sys.chmod(path, "0600")
+
+  expect_error(
+    suppressWarnings(read_trials_jsonl(path)),
+    class = "dsprrr_trial_log_unreadable"
+  )
+})
+
+test_that("a partially readable journal keeps its valid records", {
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "0700")
+  path <- file.path(dir, "trials.jsonl")
+  write_trials_jsonl(list(create_trial("X", list(k = 1))), path)
+  cat('{"trial_id":"legacy"}\n', file = path, append = TRUE)
+
+  expect_length(suppressWarnings(read_trials_jsonl(path)), 1L)
+})
+
+test_that("an empty journal reads as no trials without aborting", {
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "0700")
+  path <- file.path(dir, "trials.jsonl")
+  file.create(path)
+  Sys.chmod(path, "0600")
+
+  expect_length(read_trials_jsonl(path), 0L)
+})
+
+test_that("a rejected log directory reports the chmod that fixes it", {
+  skip_on_os("windows")
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "0755")
+
+  expect_error(
+    TrialLog$new(optimizer_name = "o", log_dir = dir),
+    "chmod 700",
+    fixed = TRUE
+  )
+})
+
+test_that("a rejected log file reports the chmod that fixes it", {
+  skip_on_os("windows")
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "0700")
+  path <- file.path(dir, "trials.jsonl")
+  file.create(path)
+  Sys.chmod(path, "0644")
+
+  expect_error(
+    TrialLog$new(optimizer_name = "o", log_dir = dir),
+    "chmod 600",
+    fixed = TRUE
+  )
+})

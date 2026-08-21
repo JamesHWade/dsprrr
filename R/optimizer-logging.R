@@ -82,11 +82,43 @@ validate_trial_record <- function(
     is.list(record$trace_context)
   if (!isTRUE(valid)) {
     cli::cli_abort(
-      "Trial record does not match the current schema",
+      c(
+        "Trial record does not match the current schema",
+        "i" = trial_record_schema_reason(record)
+      ),
       class = class
     )
   }
   invisible(record)
+}
+
+#' Explain why a trial record failed schema validation
+#'
+#' Records written before schema versioning carry no `schema_version` at all,
+#' which is by far the most common cause. Name that case explicitly so the
+#' remedy (re-run the optimization, or keep the old dsprrr) is obvious.
+#' @noRd
+trial_record_schema_reason <- function(record) {
+  current <- format(trial_record_schema_version())
+  version <- if (is.list(record)) record$schema_version else NULL
+  if (is.null(version)) {
+    return(paste0(
+      "It has no {.field schema_version}, so it was written by a dsprrr ",
+      "version older than record schema ",
+      current,
+      ". Re-run the optimization to write a current log."
+    ))
+  }
+  if (!identical(version, trial_record_schema_version())) {
+    return(paste0(
+      "It declares {.field schema_version} ",
+      format(version)[[1]],
+      "; this dsprrr reads only ",
+      current,
+      "."
+    ))
+  }
+  "Its fields do not match the current record schema."
 }
 
 format_trial_cost <- function(cost) {
@@ -244,17 +276,33 @@ trial_log_merge_unique <- function(existing, incoming, source = "trial log") {
   existing
 }
 
-trial_log_trust_abort <- function(message, parent = NULL) {
+trial_log_trust_abort <- function(message, parent = NULL, remedy = NULL) {
   cli::cli_abort(
     c(
       "Trial log path trust verification failed",
-      "x" = message
+      "x" = message,
+      if (!is.null(remedy)) c("i" = remedy)
     ),
     parent = parent,
     class = c(
       "dsprrr_trial_log_trust_error",
       "dsprrr_trial_log_io_error"
     )
+  )
+}
+
+#' Build a chmod remediation hint for a rejected log path
+#'
+#' dsprrr no longer widens or narrows stored permissions on the user's behalf,
+#' so the abort has to say what to run instead.
+#' @noRd
+trial_log_chmod_remedy <- function(path, mode) {
+  paste0(
+    "Restrict it yourself, then retry: {.code chmod ",
+    mode,
+    " ",
+    path,
+    "}"
   )
 }
 
@@ -491,7 +539,8 @@ trial_log_audit_directory <- function(path, private) {
       ok = FALSE,
       reason = paste0(
         "a pre-existing private log directory must have mode exactly 0700"
-      )
+      ),
+      remedy = trial_log_chmod_remedy(path, "700")
     ))
   }
 
@@ -576,7 +625,10 @@ trial_log_prepare_directory <- function(
     }
     directory_audit <- trial_log_audit_directory(canonical, private)
     if (!isTRUE(directory_audit$ok)) {
-      trial_log_trust_abort(directory_audit$reason)
+      trial_log_trust_abort(
+        directory_audit$reason,
+        remedy = directory_audit$remedy
+      )
     }
     parent_audit <- trial_log_audit_parent_capability(canonical)
     if (!isTRUE(parent_audit$ok)) {
@@ -716,7 +768,8 @@ trial_log_assert_private_file <- function(path, what, guard) {
   }
   if (!identical(prior_mode, as.integer(as.octmode("0600")))) {
     trial_log_trust_abort(
-      paste0(what, " must have mode exactly 0600")
+      paste0(what, " must have mode exactly 0600"),
+      remedy = trial_log_chmod_remedy(path, "600")
     )
   }
   identity <- trial_log_file_identity(path, guard)
@@ -2332,10 +2385,19 @@ trial_log_parse_jsonl_file <- function(path) {
         )
       },
       error = function(e) {
+        # Only schema diagnostics are safe to echo: they name fields and the
+        # record's own version, never stored values. Any other failure could
+        # quote record content, which must not reach the console.
+        detail <- if (inherits(e, "dsprrr_trial_record_malformed")) {
+          conditionMessage(e)
+        } else {
+          NULL
+        }
         cli::cli_warn(
           c(
             "Failed to parse trial on line {i}",
-            "i" = "The record was skipped because it is invalid or unsafe."
+            "i" = "The record was skipped because it is invalid or unsafe.",
+            if (!is.null(detail)) c("x" = detail)
           ),
           class = "dsprrr_parse_warning"
         )
@@ -2345,7 +2407,21 @@ trial_log_parse_jsonl_file <- function(path) {
   })
 
   # Filter out failed parses (NULL values)
-  Filter(Negate(is.null), parsed_trials)
+  trials <- Filter(Negate(is.null), parsed_trials)
+
+  # Returning an empty list after rejecting every record is indistinguishable
+  # from reading an empty log, so a total failure has to be loud.
+  if (length(trials) == 0L && length(lines) > 0L) {
+    cli::cli_abort(
+      c(
+        "No readable trial records in {.path {path}}",
+        "x" = "All {length(lines)} record{?s} {?was/were} rejected.",
+        "i" = "See the warnings above for the reason for each record."
+      ),
+      class = "dsprrr_trial_log_unreadable"
+    )
+  }
+  trials
 }
 
 #' Read Trials from JSONL File

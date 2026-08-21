@@ -90,7 +90,10 @@ test_that("trial persistence rejects incomplete records", {
   writeLines(incomplete_line, path)
   Sys.chmod(path, mode = "0600")
   expect_warning(
-    expect_length(read_trials_jsonl(path), 0L),
+    expect_error(
+      read_trials_jsonl(path),
+      class = "dsprrr_trial_log_unreadable"
+    ),
     class = "dsprrr_parse_warning"
   )
 
@@ -133,15 +136,16 @@ test_that("unsafe trial records are rejected without echoing their content", {
   Sys.chmod(path, mode = "0600")
   warning <- NULL
 
-  result <- withCallingHandlers(
-    read_trials_jsonl(path),
+  failure <- withCallingHandlers(
+    tryCatch(read_trials_jsonl(path), error = function(condition) condition),
     warning = function(condition) {
       warning <<- condition
       invokeRestart("muffleWarning")
     }
   )
 
-  expect_length(result, 0L)
+  expect_s3_class(failure, "dsprrr_trial_log_unreadable")
   expect_s3_class(warning, "dsprrr_parse_warning")
   expect_false(grepl(sentinel, conditionMessage(warning), fixed = TRUE))
+  expect_false(grepl(sentinel, conditionMessage(failure), fixed = TRUE))
 })

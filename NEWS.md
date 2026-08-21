@@ -29,9 +29,28 @@ First development changelog. dsprrr is experimental; the API may change.
   type fallback are no longer accepted.
 
 * Existing private disk caches and trial logs on Unix must already use mode
-  `0700` for their directory and `0600` for their files. dsprrr no longer
-  repairs broader permissions and then reuses the stored data; it fails closed
-  before enumeration, deserialization, locking, or mutation.
+  `0700` for their directory and `0600` for their files, with no special mode
+  bits. dsprrr no longer repairs broader permissions and then reuses the stored
+  data; it fails closed before enumeration, deserialization, locking, or
+  mutation. To migrate an existing directory, run `chmod 700` on it and
+  `chmod 600` on its files; the reported reason names the exact path and
+  command. A directory that inherited a setgid bit from a shared parent is
+  rejected even though its permission triplet looks correct, and the reason
+  says so. A rejected disk cache is reported by `cache_stats()` as degraded
+  rather than silently dropping to memory-only.
+
+* Trial logs written before record schema versioning cannot be read. The
+  rejection names the missing `schema_version` rather than reporting a generic
+  parse failure, and `read_trials_jsonl()` now aborts instead of returning an
+  empty list when every record in a non-empty file is rejected. Re-run the
+  optimization to write a current log.
+
+* Undeclared dot-prefixed arguments to `run()`, `run_dataset()`, and
+  `evaluate()` are an error. Runtime arguments are formal parameters, so a
+  dot-prefixed name reaching `...` is a typo or an argument this version no
+  longer accepts; it is no longer absorbed as a signature field with a warning.
+  Calls passing the removed `.parallel` or `.parallel_method` are named
+  explicitly and pointed at `.concurrency`.
 
 * dsprrr does not expose or depend on an external Agent SDK compatibility
   layer. The unused `signature_to_json_schema()` integration hook has been

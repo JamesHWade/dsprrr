@@ -155,6 +155,49 @@ suggest_match <- function(input, valid_options, max_distance = 3L) {
   }
 }
 
+#' Runtime arguments that were removed from the public calling contract
+#'
+#' Dot-prefixed names never reach `...` while they are formal arguments, so an
+#' undeclared dot-prefixed input is always a mistyped or removed runtime
+#' argument rather than a signature field.
+#' @noRd
+removed_runtime_arguments <- function() {
+  c(
+    ".parallel" = "Use {.arg .concurrency} with {.fn concurrency_control}.",
+    ".parallel_method" = "Use {.arg .concurrency} with {.fn concurrency_control}."
+  )
+}
+
+#' Reject undeclared dot-prefixed inputs
+#'
+#' Runtime arguments are formal parameters, so anything dot-prefixed that lands
+#' in `...` is a typo or an argument this version no longer accepts. Absorbing
+#' it as a template field would silently change behaviour, so fail closed.
+#' @noRd
+validate_reserved_input_names <- function(provided_names, declared_names) {
+  dotted <- setdiff(
+    grep("^\\.", provided_names, value = TRUE),
+    declared_names
+  )
+  if (length(dotted) == 0L) {
+    return(invisible(NULL))
+  }
+
+  removed <- removed_runtime_arguments()
+  hints <- unname(removed[intersect(dotted, names(removed))])
+  cli::cli_abort(
+    c(
+      "Unknown dot-prefixed argument{?s}: {.arg {dotted}}",
+      "x" = "These are not treated as signature fields.",
+      rlang::set_names(hints, rep("i", length(hints)))
+    ),
+    class = c(
+      "dsprrr_reserved_input_error",
+      "dsprrr_input_validation_error"
+    )
+  )
+}
+
 #' Validate call inputs against a signature
 #' @noRd
 validate_signature_inputs <- function(
@@ -169,11 +212,17 @@ validate_signature_inputs <- function(
   extra <- match.arg(extra)
   type <- match.arg(type)
 
+  declared_names <- if (length(sig@inputs) == 0) {
+    character()
+  } else {
+    vapply(sig@inputs, function(x) x$name, character(1))
+  }
+  validate_reserved_input_names(names(inputs) %||% character(), declared_names)
+
   if (length(sig@inputs) == 0) {
     return(invisible(NULL))
   }
 
-  declared_names <- vapply(sig@inputs, function(x) x$name, character(1))
   required <- vapply(
     sig@inputs,
     function(x) tryCatch(isTRUE(x$type@required), error = function(e) TRUE),
