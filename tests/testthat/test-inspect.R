@@ -110,9 +110,11 @@ test_that("last_prompt returns dsprrr_prompt_inspection object", {
     prompt = "Test prompt",
     output = list(answer = "Test response"),
     model = "test-model",
-    input_tokens = 10L,
-    output_tokens = 5L,
-    cost = 0.001
+    metadata = list(
+      input_tokens = 10L,
+      output_tokens = 5L,
+      cost = 0.001
+    )
   )
   add_to_global_history(trace, source = "test")
 
@@ -135,10 +137,12 @@ test_that("inspect_history returns correct tibble structure", {
       prompt = paste("Prompt", i),
       output = paste("Response", i),
       model = "test-model",
-      input_tokens = 10L,
-      output_tokens = 5L,
-      cost = 0.001,
-      duration_s = 0.5
+      metadata = list(
+        input_tokens = 10L,
+        output_tokens = 5L,
+        cost = 0.001,
+        duration_s = 0.5
+      )
     )
     add_to_global_history(trace, source = paste("source", i))
   }
@@ -215,9 +219,11 @@ test_that("inspect_history writes a plain transcript to file", {
     prompt = "Test prompt",
     output = "Test response",
     model = "test-model",
-    input_tokens = 10L,
-    output_tokens = 5L,
-    cost = 0.001
+    metadata = list(
+      input_tokens = 10L,
+      output_tokens = 5L,
+      cost = 0.001
+    )
   )
   add_to_global_history(trace, source = "test")
 
@@ -243,10 +249,12 @@ test_that("print.dsprrr_prompt_inspection works", {
     prompt = "Test prompt text",
     output = "Test response text",
     model = "gpt-4o-mini",
-    input_tokens = 50L,
-    output_tokens = 20L,
-    cost = 0.0012,
-    duration_s = 0.8
+    metadata = list(
+      input_tokens = 50L,
+      output_tokens = 20L,
+      cost = 0.0012,
+      duration_s = 0.8
+    )
   )
   add_to_global_history(trace, source = "test")
 
@@ -265,7 +273,7 @@ test_that("print.dsprrr_prompt_inspection works", {
 
 test_that("Module$inspect() method exists and works", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Process the text"
   )

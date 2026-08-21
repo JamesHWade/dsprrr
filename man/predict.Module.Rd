@@ -2,18 +2,18 @@
 % Please edit documentation in R/module-base.R
 \name{predict.Module}
 \alias{predict.Module}
-\alias{predict.PredictModule}
 \title{Predict Method for Modules (tidymodels-style)}
 \usage{
-\method{predict}{Module}(object, new_data, ...)
-
-\method{predict}{PredictModule}(object, new_data, ...)
+\method{predict}{Module}(object, new_data, .llm = NULL, ...)
 }
 \arguments{
 \item{object}{A dsprrr Module object}
 
 \item{new_data}{A data frame or tibble with columns matching the module's
 signature inputs}
+
+\item{.llm}{Optional ellmer Chat object. When supplied, it takes precedence
+over the Chat stored on \code{object} and the package default.}
 
 \item{...}{Additional arguments passed to \code{run_dataset()}}
 }

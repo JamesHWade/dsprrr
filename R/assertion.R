@@ -7,26 +7,16 @@
 #' Assertions for Output Validation
 #'
 #' @description
-#' S7 classes and helper functions for defining output validation constraints
-#' with backtracking support. Hard assertions trigger retries when they fail,
-#' while soft suggestions log warnings but allow execution to continue.
-#'
-#' @param condition A function or formula that takes the output and returns TRUE/FALSE.
-#'   For formulas, use `.x` to reference the output (e.g., `~ nchar(.x$answer) <= 100`).
-#' @param message Error message to display when the assertion fails.
-#' @param field Optional. The specific output field to validate. If NULL, the entire
-#'   output is passed to the condition.
-#' @param type For `Assertion` class: "assert" for hard assertion, "suggest" for soft
-#'   suggestion. Use the helper functions `assert_output()` and `suggest_output()`
-#'   instead of setting this directly.
-#' @param assertions For `AssertionSet` class: A list of Assertion objects.
-#' @param ... For `assertion_set()`: Assertion objects to combine into a set.
+#' Use [assert_output()] and [suggest_output()] to define output validation
+#' constraints, then combine them with [assertion_set()]. Hard assertions
+#' trigger retries when they fail, while soft suggestions log warnings and
+#' allow execution to continue.
 #'
 #' @name assertions
 NULL
 
-#' @rdname assertions
-#' @export
+#' Internal output-assertion record class
+#' @noRd
 Assertion <- S7::new_class(
   "Assertion",
   properties = list(
@@ -94,8 +84,8 @@ S7::method(print, Assertion) <- function(x, ...) {
   invisible(x)
 }
 
-#' @rdname assertions
-#' @export
+#' Internal assertion-set record class
+#' @noRd
 AssertionSet <- S7::new_class(
   "AssertionSet",
   properties = list(
@@ -161,7 +151,7 @@ S7::method(print, AssertionSet) <- function(x, ...) {
 #' @param field Optional. The specific output field to validate. If NULL, the entire
 #'   output is passed to the condition.
 #'
-#' @return An Assertion object.
+#' @return An output assertion for [assertion_set()] or [with_assertions()].
 #'
 #' @details
 #' ## Backtracking Behavior
@@ -348,10 +338,11 @@ evaluate_assertion_set <- function(assertion_set, output) {
   )
 }
 
-#' Create an AssertionSet from a list of assertions
+#' Combine Output Assertions
 #'
-#' @param ... Assertion objects or a list of Assertion objects.
-#' @return An AssertionSet object.
+#' @param ... Output assertions created by [assert_output()] or
+#'   [suggest_output()], or one list of such assertions.
+#' @return An assertion set for [with_assertions()].
 #'
 #' @examples
 #' \dontrun{

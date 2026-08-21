@@ -170,11 +170,7 @@ reference:
     desc: Declare typed schemas for LLM operations
     contents:
     - signature
-    - Signature
     - input
-    - starts_with("input_")
-    - signature_to_json_schema
-    - dsp_trainset
 
   - title: Signature Transforms
     desc: Add reasoning, chain-of-thought, and other prompt-level behaviors
@@ -196,11 +192,8 @@ reference:
     - run_dataset
     - concurrency_control
     - predict.Module
-    - dsp
-    - as_module
     - module_fn
     - module-graph
-    - get_last_trace
 
   - title: Pipelines
     desc: Chain modules into multi-step workflows
@@ -208,9 +201,6 @@ reference:
     - pipeline
     - "%>>%"
     - step
-    - map_inputs
-    - with_inputs
-    - select_outputs
 
   - title: Reasoning & Ensemble Modules
     desc: Combine and refine outputs for improved accuracy
@@ -249,8 +239,6 @@ reference:
     desc: Validate outputs and retry with automatic backtracking
     contents:
     - assertions
-    - Assertion
-    - AssertionSet
     - assert_output
     - suggest_output
     - assertion_set
@@ -270,7 +258,6 @@ reference:
     desc: Score module outputs and measure performance
     contents:
     - evaluate
-    - evaluate_dsp
     - starts_with("metric_")
 
   - title: Teleprompters
@@ -290,9 +277,6 @@ reference:
     - GEPA
     - MIPROv2
     - COPRO
-    - teleprompter-ensemble
-    - Ensemble
-    - ensemble_from_programs
 
   - title: Optimization
     desc: Compile modules and tune parameters
@@ -310,7 +294,6 @@ reference:
     - optimizer-accessors
     - best_params
     - best_demos
-    - module_demos_as_tibble
     - apply_best_config
     - top_trials
     - config_diff
@@ -321,12 +304,10 @@ reference:
   - title: Optimizer Infrastructure
     desc: Low-level building blocks for custom optimizers
     contents:
-    - OptimizerControl
     - optimizer_control
     - eval_program
     - sample_dataset
     - split_dataset
-    - Trial
     - TrialLog
     - create_trial
     - complete_trial
@@ -381,15 +362,6 @@ reference:
     - print.dsprrr_evaluation
     - print.dsprrr_batch_result
     - print.dsprrr_cost_summary
-    - print.EvalResult
-    - print.Trial
-    - print.BootstrapFewShot
-    - print.BootstrapFewShotWithRandomSearch
-    - print.GEPA
-    - print.AutoResearch
-    - print.MetaHarness
-    - print.SIMBA
-    - print.COPRO
 
   - title: Production & Deployment
     desc: Pin configurations, validate workflows, and deploy to production
@@ -427,7 +399,6 @@ reference:
     desc: Tool registration with ellmer and retrieval with ragnar
     contents:
     - as_ellmer_tool
-    - register_dsprrr_tool
     - ragnar_tool
     - create_search_tool
     - print.ragnar_tool
@@ -450,9 +421,6 @@ reference:
     - run_demo
 
   - title: Utilities
-    desc: Model detection, provider defaults, and helper functions
+    desc: Model detection helpers
     contents:
     - is_reasoning_model
-    - provider_defaults
-    - eval_vignette
-    - has_ellmer_credentials

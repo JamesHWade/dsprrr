@@ -28,11 +28,8 @@ test_that("stream with callback consumes chunks", {
     coro::yield("!")
   })
 
-  mock_chat <- structure(
-    list(
-      stream = function(...) mock_gen
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    stream = function(...) mock_gen
   )
 
   sig <- signature("text -> result")
@@ -57,11 +54,8 @@ test_that("stream without callback returns generator", {
     coro::yield("test")
   })
 
-  mock_chat <- structure(
-    list(
-      stream = function(...) mock_gen
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    stream = function(...) mock_gen
   )
 
   sig <- signature("text -> result")
@@ -74,11 +68,8 @@ test_that("stream without callback returns generator", {
 })
 
 test_that("stream validates callback is function", {
-  mock_chat <- structure(
-    list(
-      stream = function(...) NULL
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    stream = function(...) NULL
   )
 
   sig <- signature("text -> result")
@@ -99,14 +90,11 @@ test_that("stream includes instructions in prompt", {
     coro::yield("done")
   })
 
-  mock_chat <- structure(
-    list(
-      stream = function(prompt, ...) {
-        prompt_received <<- prompt
-        mock_gen
-      }
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    stream = function(prompt, ...) {
+      prompt_received <<- prompt
+      mock_gen
+    }
   )
 
   sig <- signature(

@@ -16,15 +16,8 @@
 #'   \describe{
 #'     \item{.llm}{An ellmer chat object for LLM interaction (optional)}
 #'     \item{.verbose}{Logical indicating whether to print debug information}
-#'     \item{.parallel}{Logical indicating whether to process batch inputs in parallel (default FALSE).}
-#'     \item{.parallel_method}{Character, either "ellmer" (default) or "mirai".
-#'       "ellmer" uses ellmer's `parallel_chat_structured()` for native async HTTP
-#'       parallelism (more efficient, single process).
-#'       "mirai" uses mirai for multi-process parallelism (requires `.llm = NULL`
-#'       so each worker can create an independent client).}
 #'     \item{.concurrency}{A validated policy created by
-#'       [concurrency_control()]. When supplied, do not also pass `.parallel` or
-#'       `.parallel_method`.}
+#'       [concurrency_control()]. Omission uses sequential execution.}
 #'     \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 #'     \item{.return_format}{Character, either "simple" (default) or "structured".
 #'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
@@ -66,7 +59,9 @@
 #' registry-backed program, call [program_artifact_id()] once with its registry
 #' to bind the verified runtime references before execution.
 #'
-#' @return For single inputs with .return_format="simple": The parsed output according to the module's signature.
+#' @return For single inputs with `.return_format = "simple"`, the parsed
+#'   output according to the module's signature. Object-shaped outputs remain
+#'   named records for both scalar and batch calls.
 #'   For single inputs with .return_format="structured": A list with components:
 #'   - output: The parsed output
 #'   - chat: The ellmer chat object used
@@ -99,7 +94,6 @@
 #' options(ellmer_max_tries = 5)
 #' }
 #' @seealso
-#' * [dsp()] for one-shot LLM calls without creating a module
 #' * [run_dataset()] for running a module on a data frame
 #' * [evaluate()] for running with metric evaluation
 #' * [module()] for creating modules
@@ -260,8 +254,6 @@ run.Module <- function(
   ...,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
@@ -269,6 +261,11 @@ run.Module <- function(
   .cache = NULL,
   .trace_context = list()
 ) {
+  if (!is.null(.llm)) {
+    assert_ellmer_chat(.llm, arg = ".llm")
+  } else {
+    assert_ellmer_chat(module$chat, arg = "module$chat", allow_null = TRUE)
+  }
   trace_context_supplied <- !missing(.trace_context)
   trace_context <- trace_context_resolve(
     .trace_context,
@@ -293,19 +290,7 @@ run.Module <- function(
     add = TRUE
   )
 
-  parallel_missing <- missing(.parallel)
-  parallel_method_missing <- missing(.parallel_method)
-  concurrency_missing <- missing(.concurrency)
-  concurrency <- resolve_concurrency_control(
-    .concurrency = .concurrency,
-    concurrency_missing = concurrency_missing,
-    .parallel = .parallel,
-    parallel_missing = parallel_missing,
-    .parallel_method = .parallel_method,
-    parallel_method_missing = parallel_method_missing
-  )
-  explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
-  .parallel_method <- match.arg(.parallel_method)
+  concurrency <- resolve_concurrency_control(.concurrency)
   .return_format <- match.arg(.return_format, c("simple", "structured"))
   validate_cache_arg(.cache)
 
@@ -437,11 +422,8 @@ run.Module <- function(
   )
   if (!is.null(concurrency_runtime)) {
     execution_args$.concurrency_runtime <- concurrency_runtime
-  } else if (explicit_concurrency) {
-    execution_args$.concurrency <- concurrency
   } else {
-    execution_args$.parallel <- .parallel
-    execution_args$.parallel_method <- .parallel_method
+    execution_args$.concurrency <- concurrency
   }
   trace_context_annotate_result(
     do.call(module$run, c(inputs, execution_args)),
@@ -455,8 +437,6 @@ run.PredictModule <- function(
   ...,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
@@ -488,17 +468,7 @@ run.PredictModule <- function(
     add = TRUE
   )
 
-  parallel_missing <- missing(.parallel)
-  parallel_method_missing <- missing(.parallel_method)
-  concurrency_missing <- missing(.concurrency)
-  concurrency <- resolve_concurrency_control(
-    .concurrency = .concurrency,
-    concurrency_missing = concurrency_missing,
-    .parallel = .parallel,
-    parallel_missing = parallel_missing,
-    .parallel_method = .parallel_method,
-    parallel_method_missing = parallel_method_missing
-  )
+  concurrency <- resolve_concurrency_control(.concurrency)
 
   # Validate .cache parameter
   validate_cache_arg(.cache)
@@ -608,6 +578,21 @@ normalize_module_config <- function(config) {
     cli::cli_abort("{.arg config} must be a list")
   }
 
+  invalid_chat_fields <- intersect(
+    names(config),
+    c("provider", "model", "api_args", "base_url", "credentials")
+  )
+  if (length(invalid_chat_fields) > 0L) {
+    cli::cli_abort(
+      c(
+        "Chat configuration does not belong in {.arg config}",
+        "i" = "Invalid fields: {.field {invalid_chat_fields}}",
+        "i" = "Attach an ellmer Chat with {.arg chat} or configure the default Chat."
+      ),
+      class = "dsprrr_module_config_error"
+    )
+  }
+
   params <- config$params %||% list()
   for (name in runtime_param_names()) {
     if (is.null(params[[name]]) && !is.null(config[[name]])) {
@@ -637,12 +622,6 @@ runtime_param_names <- function() {
   )
 }
 
-#' Legacy config fields that should no longer create Chat clients
-#' @noRd
-legacy_chat_config_fields <- function() {
-  c("provider", "model", "api_args", "base_url", "credentials")
-}
-
 #' Infer the logical module kind
 #' @noRd
 module_kind <- function(module) {
@@ -668,38 +647,23 @@ resolve_module_llm <- function(
   create = TRUE,
   extra_params = NULL
 ) {
-  ignored_fields <- intersect(
-    names(module$config %||% list()),
-    legacy_chat_config_fields()
-  )
+  llm_arg <- if (!is.null(.llm)) {
+    ".llm"
+  } else if (!is.null(module$chat)) {
+    "module$chat"
+  } else {
+    "default Chat"
+  }
   llm <- .llm %||% module$chat %||% get_default_chat(create = FALSE)
 
   if (is.null(llm)) {
-    if (length(ignored_fields) > 0) {
-      cli::cli_abort(c(
-        "Module config no longer creates Chat clients",
-        "i" = "Ignored fields: {.field {ignored_fields}}",
-        "i" = "Attach a Chat with {.code module(..., chat = chat)} or pass {.code .llm = chat}",
-        "i" = "Or configure a default Chat with {.code set_default_chat()} or {.code dsp_configure()}"
-      ))
-    }
-
     if (!create) {
       return(NULL)
     }
 
     llm <- get_default_chat(create = TRUE)
-  } else if (length(ignored_fields) > 0) {
-    cli::cli_warn(
-      c(
-        "Ignoring module config fields that no longer create Chats",
-        "i" = "Ignored fields: {.field {ignored_fields}}",
-        "i" = "Runtime now comes from {.arg .llm}, {.code module$chat}, or the default Chat"
-      ),
-      .frequency = "once",
-      .frequency_id = paste0("legacy-chat-config-", module_kind(module))
-    )
   }
+  llm <- assert_ellmer_chat(llm, arg = llm_arg)
 
   params <- module_runtime_params(module, extra_params = extra_params)
   if (length(params) == 0) {
@@ -727,50 +691,43 @@ module_runtime_params <- function(module, extra_params = NULL) {
 #' Clone a Chat and apply runtime params to its provider
 #' @noRd
 apply_chat_params <- function(chat, params) {
-  if (is.null(chat) || length(params) == 0) {
+  if (is.null(chat)) {
+    return(chat)
+  }
+  chat <- assert_ellmer_chat(chat, arg = "chat")
+  if (length(params) == 0) {
     return(chat)
   }
 
-  cloned <- tryCatch(
-    {
-      if (is.function(chat$clone)) {
-        chat$clone(deep = TRUE)
-      } else {
-        cli::cli_warn(
-          c(
-            "Chat object does not support cloning",
-            "i" = "Runtime parameters will be applied to the original Chat",
-            "i" = "This may cause unexpected behavior in batch/optimization contexts"
-          ),
-          .frequency = "once",
-          .frequency_id = "chat-clone-unsupported"
-        )
-        chat
-      }
-    },
-    error = function(e) {
-      cli::cli_warn(
-        c(
-          "Failed to clone Chat for parameter isolation",
-          "x" = e$message,
-          "i" = "Runtime parameters will be applied to the original Chat"
-        ),
-        .frequency = "once",
-        .frequency_id = "chat-clone-failed"
-      )
-      chat
-    }
-  )
+  cloned <- clone_ellmer_chat(chat, arg = "chat", reset_turns = FALSE)
 
   provider <- tryCatch(
     cloned$.__enclos_env__$private$provider,
-    error = function(e) NULL
+    error = function(e) {
+      cli::cli_abort(
+        "Cannot access the cloned Chat provider",
+        class = "dsprrr_chat_params_error",
+        parent = e
+      )
+    }
   )
   if (is.null(provider)) {
-    return(cloned)
+    cli::cli_abort(
+      "Cannot apply runtime parameters because the cloned Chat has no provider",
+      class = "dsprrr_chat_params_error"
+    )
   }
 
-  existing_args <- tryCatch(provider@extra_args, error = function(e) list())
+  existing_args <- tryCatch(
+    provider@extra_args,
+    error = function(e) {
+      cli::cli_abort(
+        "Cannot read runtime parameters from the cloned Chat provider",
+        class = "dsprrr_chat_params_error",
+        parent = e
+      )
+    }
+  )
   if (is.null(existing_args)) {
     existing_args <- list()
   }
@@ -785,15 +742,14 @@ apply_chat_params <- function(chat, params) {
     },
     error = function(e) {
       param_names <- paste(names(params), collapse = ", ")
-      cli::cli_warn(
+      cli::cli_abort(
         c(
           "Failed to apply runtime parameters to Chat provider",
           "x" = "Parameters not applied: {.field {param_names}}",
-          "i" = "The module will run with the provider's default settings",
           "i" = "Error: {e$message}"
         ),
-        .frequency = "once",
-        .frequency_id = "chat-params-failed"
+        class = "dsprrr_chat_params_error",
+        parent = e
       )
     }
   )
@@ -882,7 +838,7 @@ verified_chat_turn_delta <- function(chat, turns_before) {
 
 #' Extract usage metadata from verified current-call assistant turns
 #'
-#' @param chat An ellmer Chat or compatible object
+#' @param chat An ellmer Chat object
 #' @param turns_before Verified Chat history captured immediately before the call
 #' @return Named list of token and cost fields; unknown values remain `NA`
 #' @noRd
@@ -1374,7 +1330,7 @@ process_batch_item <- function(
     store_chat = isTRUE(module$config$store_chat_in_traces)
   )
   result <- if (.return_format == "simple") {
-    extract_simple_output(response, module$signature@output_type)
+    response
   } else {
     list(output = response, chat = completed_chat, metadata = metadata)
   }
@@ -1392,6 +1348,9 @@ process_batch_item <- function(
 #' logging Chat instead.
 #' @noRd
 batch_chat_turns <- function(chat) {
+  if (!is_ellmer_chat(chat)) {
+    return(NULL)
+  }
   get_turns <- tryCatch(chat$get_turns, error = function(e) NULL)
   if (!is.function(get_turns)) {
     return(NULL)
@@ -1503,31 +1462,6 @@ mock_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
     )
   }
   mock
-}
-
-#' Extract simple output from LLM response
-#'
-#' For single-field outputs, extract just the field value.
-#'
-#' @param response The LLM response
-#' @param output_type The signature output type
-#' @return Extracted value or full response
-#' @noRd
-extract_simple_output <- function(response, output_type) {
-  if (
-    inherits(output_type, "ellmer::TypeObject") &&
-      length(output_type@properties) == 1
-  ) {
-    field_name <- names(output_type@properties)[1]
-    # Safely check if response is a list or environment with the field
-    if (
-      (is.list(response) || is.environment(response)) &&
-        field_name %in% names(response)
-    ) {
-      return(response[[field_name]])
-    }
-  }
-  response
 }
 
 #' Create error result for batch processing
@@ -1810,8 +1744,8 @@ run_predict_scalar <- function(
   error <- attr(item, "dsprrr_error_condition", exact = TRUE)
   commit_run_traces(module, list(trace))
   item <- strip_run_trace(item)
-  # Scalar calls historically return the caller's stateful Chat. The completed
-  # branch is needed only for canonical trace reconstruction.
+  # Scalar calls return the caller's Chat. The completed branch is needed only
+  # for canonical trace reconstruction.
   item$chat <- llm
 
   if (!is.null(error)) {
@@ -1824,9 +1758,8 @@ run_predict_scalar <- function(
   }
 
   if (.return_format == "simple") {
-    # Preserve the scalar `run()` contract: structured provider responses stay
-    # named so callers can address declared output fields. Batch rows retain
-    # their historical single-field simplification in `process_batch_item()`.
+    # Structured provider responses stay named so callers can address declared
+    # output fields consistently across scalar and batch execution.
     item$output
   } else {
     structure(item, class = "dsprrr_result")
@@ -1916,8 +1849,7 @@ ellmer_parallel_schema_runtime <- function(module, runtime) {
     "ellmer batch conversion cannot preserve absent versus present-empty",
     "values for this output schema"
   )
-  may_fallback <- identical(runtime$requested_backend, "auto") ||
-    isTRUE(runtime$legacy)
+  may_fallback <- identical(runtime$requested_backend, "auto")
   if (!may_fallback) {
     cli::cli_abort(
       c(
@@ -1949,8 +1881,7 @@ run_batch <- function(
   .progress,
   .return_format,
   .cache = NULL,
-  .concurrency,
-  .isolate_rows = TRUE
+  .concurrency
 ) {
   if (n == 0L) {
     return(empty_batch_result(.return_format))
@@ -1969,8 +1900,7 @@ run_batch <- function(
       .return_format,
       .progress,
       .cache,
-      .concurrency,
-      .isolate_rows
+      .concurrency
     )
   } else if (identical(.concurrency$effective_backend, "ellmer")) {
     # Use ellmer's parallel_chat_structured for native parallelism
@@ -1986,7 +1916,7 @@ run_batch <- function(
       .concurrency
     )
   } else {
-    # Default: mirai-based parallelism
+    # Use mirai-based parallelism
     results <- run_batch_parallel(
       module,
       input_sets,
@@ -2022,8 +1952,7 @@ run_batch_sequential <- function(
   .return_format,
   .progress,
   .cache = NULL,
-  .concurrency = NULL,
-  .isolate_rows = TRUE
+  .concurrency = NULL
 ) {
   if (is.null(.concurrency)) {
     .concurrency <- normalize_concurrency_runtime(
@@ -2031,11 +1960,7 @@ run_batch_sequential <- function(
     )
   }
   baseline_llm <- resolve_module_llm(module, .llm = .llm)
-  row_llms <- if (isTRUE(.isolate_rows)) {
-    batch_chat_branches(baseline_llm, n)
-  } else {
-    rep(list(baseline_llm), n)
-  }
+  row_llms <- batch_chat_branches(baseline_llm, n)
   results <- vector("list", n)
 
   # Create progress bar if requested
@@ -2153,766 +2078,75 @@ run_batch_sequential <- function(
   collect_backend_traces(results)
 }
 
-#' Find mutable environments reachable from a Chat's state surface
+#' Read and validate one current Chat history
 #' @noRd
-batch_chat_state_environments <- function(chat, normalize_source = FALSE) {
-  found <- character()
-  seen <- new.env(hash = TRUE, parent = emptyenv())
-  expanded <- new.env(hash = TRUE, parent = emptyenv())
-  source_visiting <- new.env(hash = TRUE, parent = emptyenv())
-  runtime_environments <- new.env(hash = TRUE, parent = emptyenv())
-  source_environments <- new.env(hash = TRUE, parent = emptyenv())
-  trusted_ellmer <- cache_is_trusted_ellmer_chat(chat)
-
-  immutable_environment <- function(env) {
-    identical(env, emptyenv()) ||
-      identical(env, baseenv()) ||
-      (trusted_ellmer && isNamespace(env))
-  }
-
-  shared_scope <- function(env) {
-    identical(env, baseenv()) ||
-      identical(env, globalenv()) ||
-      isNamespace(env) ||
-      startsWith(environmentName(env), "package:")
-  }
-
-  binding_is_lazy <- function(env, name) {
-    isTRUE(unname(rlang::env_binding_are_lazy(env, name))[[1]])
-  }
-
-  runtime_attributes <- function(value) {
-    attributes(value) %||% list()
-  }
-
-  canonical_source_reference <- function(value) {
-    value_attributes <- attributes(value)
-    is.integer(value) &&
-      length(value) == 8L &&
-      !anyNA(value) &&
-      inherits(value, "srcref") &&
-      length(class(value)) == 1L &&
-      !is.null(value_attributes) &&
-      setequal(names(value_attributes), c("srcfile", "class")) &&
-      is.environment(attr(value, "srcfile", exact = TRUE))
-  }
-
-  source_file_schema <- function(source_file) {
-    source_class <- class(source_file)
-    source_attributes <- attributes(source_file)
-    schema <- if (identical(source_class, "srcfile")) {
-      list(
-        required = c("Enc", "encoding", "filename", "timestamp", "wd"),
-        allowed = c(
-          "Enc",
-          "encoding",
-          "filename",
-          "timestamp",
-          "wd",
-          "lines",
-          "parseData"
-        )
-      )
-    } else if (identical(source_class, c("srcfilecopy", "srcfile"))) {
-      list(
-        required = c(
-          "Enc",
-          "filename",
-          "fixedNewlines",
-          "isFile",
-          "lines",
-          "timestamp",
-          "wd"
-        ),
-        allowed = c(
-          "Enc",
-          "filename",
-          "fixedNewlines",
-          "isFile",
-          "lines",
-          "parseData",
-          "timestamp",
-          "wd"
-        )
-      )
-    } else if (identical(source_class, c("srcfilealias", "srcfile"))) {
-      list(
-        required = c("filename", "original"),
-        allowed = c("filename", "original", "parseData")
-      )
-    } else {
-      NULL
-    }
-    members <- ls(source_file, all.names = TRUE)
-    if (
-      is.null(schema) ||
-        !identical(parent.env(source_file), emptyenv()) ||
-        !identical(names(source_attributes), "class") ||
-        !all(schema$required %in% members) ||
-        !all(members %in% schema$allowed)
-    ) {
-      cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "State contains noncanonical source metadata."
-        ),
-        class = "dsprrr_chat_isolation_error"
-      )
-    }
-    schema
-  }
-
-  check_binding <- function(env, name) {
-    if (bindingIsActive(name, env)) {
-      cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "State references active binding {.field {name}}."
-        ),
-        class = "dsprrr_chat_isolation_error"
-      )
-    }
-    if (binding_is_lazy(env, name)) {
-      cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "State references delayed binding {.field {name}}."
-        ),
-        class = "dsprrr_chat_isolation_error"
-      )
-    }
-    invisible(NULL)
-  }
-
-  known_safe_shared_binding <- function(env, name) {
-    base_scope <- identical(env, baseenv()) ||
-      identical(env, asNamespace("base"))
-    package_scope <- isNamespace(env) ||
-      startsWith(environmentName(env), "package:")
-    if (!base_scope && !package_scope) {
-      return(FALSE)
-    }
-    check_binding(env, name)
-    if (!bindingIsLocked(name, env)) {
-      return(FALSE)
-    }
-    value <- get(name, envir = env, inherits = FALSE)
-    if (is.atomic(value) || is.null(value)) {
-      return(TRUE)
-    }
-    if (!is.function(value)) {
-      return(FALSE)
-    }
-    function_environment <- environment(value)
-    is.null(function_environment) ||
-      identical(function_environment, baseenv()) ||
-      isNamespace(function_environment)
-  }
-
-  mark_seen <- function(value) {
-    address <- rlang::obj_address(value)
-    already_seen <- exists(address, envir = seen, inherits = FALSE)
-    if (!already_seen) {
-      assign(address, TRUE, envir = seen)
-    }
-    already_seen
-  }
-
-  record <- function(env, role = "runtime") {
-    if (immutable_environment(env)) {
-      return(invisible(NULL))
-    }
-    address <- rlang::obj_address(env)
-    current <- if (identical(role, "source")) {
-      source_environments
-    } else {
-      runtime_environments
-    }
-    opposite <- if (identical(role, "source")) {
-      runtime_environments
-    } else {
-      source_environments
-    }
-    if (exists(address, envir = opposite, inherits = FALSE)) {
-      cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "A source metadata environment is also reachable as ordinary runtime state."
-        ),
-        class = "dsprrr_chat_isolation_error"
-      )
-    }
-    assign(address, TRUE, envir = current)
-    if (!mark_seen(env)) {
-      found <<- c(found, address)
-    }
-    invisible(NULL)
-  }
-
-  unsupported <- function(value) {
+batch_chat_history <- function(chat, stage = "batch execution") {
+  chat <- assert_ellmer_chat(chat, arg = "chat")
+  getter <- tryCatch(chat[["get_turns"]], error = function(e) NULL)
+  if (!is.function(getter)) {
     cli::cli_abort(
-      c(
-        "Cannot prove opaque Chat isolation",
-        "x" = "State contains unsupported {.code {typeof(value)}} data."
-      ),
+      "Cannot inspect the Chat history for {stage}",
       class = "dsprrr_chat_isolation_error"
     )
   }
 
-  visit_attributes <- function(value) {
-    value_attributes <- runtime_attributes(value)
-    if (length(value_attributes) == 0L) {
-      return(invisible(NULL))
-    }
-    attribute_names <- names(value_attributes)
-    source_carrier <- is.function(value) ||
-      is.language(value) ||
-      is.pairlist(value) ||
-      is.expression(value)
-    for (index in seq_along(value_attributes)) {
-      source_edge <- source_carrier &&
-        attribute_names[[index]] %in% c("srcref", "wholeSrcref") &&
-        canonical_source_reference(value_attributes[[index]])
-      visit(value_attributes[[index]], source_metadata = source_edge)
-    }
-    invisible(NULL)
-  }
-
-  visit_source_file <- function(source_file) {
-    source_file_schema(source_file)
-    record(source_file, role = "source")
-    address <- rlang::obj_address(source_file)
-    if (exists(address, envir = expanded, inherits = FALSE)) {
-      return(invisible(NULL))
-    }
-    if (exists(address, envir = source_visiting, inherits = FALSE)) {
+  turns <- tryCatch(
+    getter(),
+    error = function(e) {
       cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "Source metadata contains a cyclic alias."
-        ),
-        class = "dsprrr_chat_isolation_error"
+        "Cannot inspect the Chat history for {stage}",
+        class = "dsprrr_chat_isolation_error",
+        parent = e
       )
     }
-    assign(address, TRUE, envir = source_visiting)
-    on.exit(rm(list = address, envir = source_visiting), add = TRUE)
-
-    members <- ls(source_file, all.names = TRUE)
-    for (name in members) {
-      if (bindingIsActive(name, source_file)) {
-        cli::cli_abort(
-          c(
-            "Cannot prove opaque Chat isolation",
-            "x" = "Source metadata references active binding {.field {name}}."
-          ),
-          class = "dsprrr_chat_isolation_error"
-        )
-      }
-      if (binding_is_lazy(source_file, name)) {
-        if (!name %in% c("lines", "parseData")) {
-          cli::cli_abort(
-            c(
-              "Cannot prove opaque Chat isolation",
-              "x" = "Source metadata references unexpected delayed binding {.field {name}}."
-            ),
-            class = "dsprrr_chat_isolation_error"
-          )
-        }
-        if (isTRUE(normalize_source)) {
-          if (
-            environmentIsLocked(source_file) ||
-              bindingIsLocked(name, source_file)
-          ) {
-            cli::cli_abort(
-              c(
-                "Cannot prove opaque Chat isolation",
-                "x" = "Executable source metadata retains locked delayed binding {.field {name}}."
-              ),
-              class = "dsprrr_chat_isolation_error"
-            )
-          }
-          rm(list = name, envir = source_file)
-          if (identical(name, "lines")) {
-            assign(name, character(), envir = source_file)
-          }
-        }
-        next
-      }
-      member <- get(name, envir = source_file, inherits = FALSE)
-      if (identical(name, "original")) {
-        if (!is.environment(member) || !inherits(member, "srcfile")) {
-          cli::cli_abort(
-            c(
-              "Cannot prove opaque Chat isolation",
-              "x" = "Source metadata contains an invalid alias target."
-            ),
-            class = "dsprrr_chat_isolation_error"
-          )
-        }
-        visit_source_file(member)
-      } else {
-        visit(member)
-      }
-    }
-    assign(address, TRUE, envir = expanded)
-    invisible(NULL)
-  }
-
-  visit <- function(value, source_metadata = FALSE) {
-    if (is.null(value)) {
-      return(invisible(NULL))
-    }
-    if (
-      trusted_ellmer &&
-        (inherits(value, "ellmer::Provider") ||
-          inherits(value, "ellmer::ToolDef"))
-    ) {
-      return(invisible(NULL))
-    }
-    if (canonical_source_reference(value)) {
-      if (!isTRUE(source_metadata)) {
-        cli::cli_abort(
-          c(
-            "Cannot prove opaque Chat isolation",
-            "x" = "A source reference is reachable as ordinary runtime state."
-          ),
-          class = "dsprrr_chat_isolation_error"
-        )
-      }
-      visit_source_file(attr(value, "srcfile", exact = TRUE))
-      return(invisible(NULL))
-    }
-    if (is.function(value)) {
-      if (mark_seen(value)) {
-        return(invisible(NULL))
-      }
-      env <- environment(value)
-      if (!is.null(env)) {
-        # A closure's enclosing package/namespace is not itself proof of
-        # mutable state. Inspect every referenced binding below and allow only
-        # locked scalar/function bindings. Local environments remain part of
-        # the identity proof because they are copied per branch.
-        shared_function_scope <- !trusted_ellmer && shared_scope(env)
-        if (!immutable_environment(env) && !shared_function_scope) {
-          record(env)
-        }
-        self <- NULL
-        if (exists("self", envir = env, inherits = FALSE)) {
-          check_binding(env, "self")
-          self <- get("self", envir = env, inherits = FALSE)
-        }
-        r6_clone_method <- inherits(self, "R6") &&
-          identical(
-            value,
-            tryCatch(self$clone, error = function(e) NULL)
-          )
-        if (!trusted_ellmer && !r6_clone_method) {
-          calls <- all.names(body(value), functions = TRUE, unique = TRUE)
-          dynamic_state_calls <- c(
-            ":::",
-            "as.environment",
-            "asNamespace",
-            "assign",
-            "baseenv",
-            "bquote",
-            "delayedAssign",
-            "do.call",
-            "dynGet",
-            "env_bind",
-            "env_bind_active",
-            "env_bind_lazy",
-            "env_get",
-            "env_get_list",
-            "env_parent",
-            "env_parents",
-            "env_poke",
-            "env_unbind",
-            "environment",
-            "environment<-",
-            "eval",
-            "eval.parent",
-            "exists",
-            "get",
-            "get0",
-            "getAnywhere",
-            "getExportedValue",
-            "getFromNamespace",
-            "getLoadedDLLs",
-            "getNativeSymbolInfo",
-            "getNamespace",
-            "getNamespaceExports",
-            "getNamespaceImports",
-            "getNamespaceInfo",
-            "getNamespaceName",
-            "getNamespaceUsers",
-            "getNamespaceVersion",
-            "globalenv",
-            "global_env",
-            "library",
-            "loadNamespace",
-            "loadedNamespaces",
-            "lockBinding",
-            "makeActiveBinding",
-            "mget",
-            "ns_env",
-            "namespaceExport",
-            "namespaceImport",
-            "parse",
-            "parent.env",
-            "parent.env<-",
-            "parent.frame",
-            "pos.to.env",
-            "pkg_env",
-            "require",
-            "rm",
-            "source",
-            "substitute",
-            "sys.source",
-            "sys.call",
-            "sys.calls",
-            "sys.frame",
-            "sys.function",
-            "topenv",
-            "unlockBinding",
-            "assignInNamespace",
-            "attach",
-            "detach",
-            "dyn.load",
-            "dyn.unload"
-          )
-          if (any(calls %in% dynamic_state_calls)) {
-            cli::cli_abort(
-              c(
-                "Cannot prove opaque Chat isolation",
-                "x" = "A Chat closure uses dynamic environment access."
-              ),
-              class = "dsprrr_chat_isolation_error"
-            )
-          }
-          globals <- codetools::findGlobals(
-            value,
-            merge = FALSE
-          )
-          property_roots <- character()
-          find_property_roots <- function(expr) {
-            if (is.call(expr)) {
-              operator <- if (is.symbol(expr[[1]])) {
-                as.character(expr[[1]])
-              } else {
-                ""
-              }
-              if (operator %in% c("$", "$<-", "@", "@<-")) {
-                target <- expr[[2]]
-                while (
-                  is.call(target) &&
-                    is.symbol(target[[1]]) &&
-                    as.character(target[[1]]) %in% c("$", "@")
-                ) {
-                  target <- target[[2]]
-                }
-                if (is.symbol(target)) {
-                  property_roots <<- c(
-                    property_roots,
-                    as.character(target)
-                  )
-                }
-              }
-              lapply(as.list(expr)[-1], find_property_roots)
-            } else if (is.pairlist(expr) || is.expression(expr)) {
-              lapply(expr, find_property_roots)
-            }
-            invisible(NULL)
-          }
-          find_property_roots(body(value))
-          find_property_roots(formals(value))
-          referenced <- unique(c(
-            globals$variables,
-            globals$functions,
-            property_roots
-          ))
-          referenced <- setdiff(referenced, names(formals(value)))
-          for (name in referenced) {
-            current <- env
-            repeat {
-              if (identical(current, emptyenv())) {
-                break
-              }
-              if (exists(name, envir = current, inherits = FALSE)) {
-                check_binding(current, name)
-                if (shared_scope(current)) {
-                  if (!known_safe_shared_binding(current, name)) {
-                    cli::cli_abort(
-                      c(
-                        "Cannot prove opaque Chat isolation",
-                        "x" = "Closure state {.field {name}} resolves from shared environment {.envvar {environmentName(current)}}."
-                      ),
-                      class = "dsprrr_chat_isolation_error"
-                    )
-                  }
-                } else {
-                  record(current)
-                  visit(get(name, envir = current, inherits = FALSE))
-                }
-                break
-              }
-              current <- parent.env(current)
-            }
-          }
-        }
-      }
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    if (is.environment(value)) {
-      if (immutable_environment(value)) {
-        return(invisible(NULL))
-      }
-      if (!trusted_ellmer && shared_scope(value)) {
-        cli::cli_abort(
-          c(
-            "Cannot prove opaque Chat isolation",
-            "x" = "State reaches shared environment {.envvar {environmentName(value)}}."
-          ),
-          class = "dsprrr_chat_isolation_error"
-        )
-      }
-      record(value)
-      address <- rlang::obj_address(value)
-      if (exists(address, envir = expanded, inherits = FALSE)) {
-        return(invisible(NULL))
-      }
-      assign(address, TRUE, envir = expanded)
-      members <- ls(value, all.names = TRUE)
-      for (name in members) {
-        check_binding(value, name)
-        member <- tryCatch(
-          get(name, envir = value, inherits = FALSE),
-          error = function(e) unsupported(value)
-        )
-        visit(member)
-      }
-      return(invisible(NULL))
-    }
-    if (inherits(value, "S7_object")) {
-      if (!any(startsWith(class(value), "ellmer::"))) {
-        unsupported(value)
-      }
-      if (mark_seen(value)) {
-        return(invisible(NULL))
-      }
-      properties <- tryCatch(
-        S7::props(value),
-        error = function(e) unsupported(value)
-      )
-      lapply(properties, visit)
-      return(invisible(NULL))
-    }
-    if (isS4(value)) {
-      if (mark_seen(value)) {
-        return(invisible(NULL))
-      }
-      lapply(methods::slotNames(value), function(name) {
-        visit(methods::slot(value, name))
-      })
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    if (is.list(value) || is.pairlist(value) || is.expression(value)) {
-      if (mark_seen(value)) {
-        return(invisible(NULL))
-      }
-      lapply(value, visit)
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    if (is.language(value)) {
-      visit(as.list(value))
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    if (typeof(value) %in% c("externalptr", "weakref")) {
-      unsupported(value)
-    }
-    if (
-      is.atomic(value) ||
-        typeof(value) %in% c("symbol", "builtin", "special")
-    ) {
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    unsupported(value)
-  }
-
-  visit(chat)
-  unique(found)
-}
-
-#' Read Chat turns when an inspection method is available
-#' @noRd
-batch_chat_history <- function(chat) {
-  getter <- tryCatch(chat$get_turns, error = function(e) NULL)
-  if (!is.function(getter)) {
-    return(NULL)
-  }
-  turns <- tryCatch(getter(), error = function(e) e)
-  if (inherits(turns, "condition") || !is.list(turns)) {
+  )
+  if (!is.list(turns)) {
     cli::cli_abort(
-      "Cannot inspect Chat history for batch isolation",
-      class = "dsprrr_chat_isolation_error",
-      parent = if (inherits(turns, "condition")) turns else NULL
+      "The Chat history for {stage} must be a list",
+      class = "dsprrr_chat_isolation_error"
     )
   }
   turns
 }
 
-#' Create one isolated Chat without invoking opaque clone methods
+#' Create one independent current Chat while preserving its history
 #' @noRd
-batch_chat_copy <- function(chat, stage, source_state = NULL) {
-  if (is.null(source_state)) {
-    source_state <- list(
-      environments = batch_chat_state_environments(chat),
-      history = batch_chat_history(chat)
-    )
-  }
-  branch <- if (cache_is_trusted_ellmer_chat(chat)) {
-    tryCatch(
-      chat$clone(deep = TRUE),
-      error = function(e) {
-        cli::cli_abort(
-          "Cannot deep-clone ellmer Chat for the {stage}",
-          class = "dsprrr_chat_isolation_error",
-          parent = e
-        )
-      }
-    )
-  } else {
-    tryCatch(
-      unserialize(serialize(chat, connection = NULL, version = 3)),
-      error = function(e) {
-        cli::cli_abort(
-          c(
-            "Cannot isolate the Chat for batch execution",
-            "x" = "The opaque Chat could not be copied for the {stage}."
-          ),
-          class = "dsprrr_chat_isolation_error",
-          parent = e
-        )
-      }
-    )
-  }
-
-  if (
-    is.null(branch) ||
-      identical(rlang::obj_address(branch), rlang::obj_address(chat))
-  ) {
-    cli::cli_abort(
-      c(
-        "Cannot isolate the Chat for batch execution",
-        "x" = "Copying returned the original mutable Chat for the {stage}."
-      ),
-      class = "dsprrr_chat_isolation_error"
-    )
-  }
-
-  branch_envs <- batch_chat_state_environments(
-    branch,
-    normalize_source = !cache_is_trusted_ellmer_chat(chat)
+batch_chat_copy <- function(chat, stage) {
+  starting_history <- batch_chat_history(chat, stage)
+  branch <- clone_ellmer_chat(
+    chat,
+    arg = "chat",
+    reset_turns = FALSE
   )
-  if (length(intersect(source_state$environments, branch_envs)) > 0L) {
+  if (!identical(batch_chat_history(branch, stage), starting_history)) {
     cli::cli_abort(
-      c(
-        "Cannot isolate the Chat for batch execution",
-        "x" = "The {stage} still shares mutable environment-backed state."
-      ),
-      class = "dsprrr_chat_isolation_error"
+      "The cloned Chat did not preserve the exact history for {stage}",
+      class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error")
     )
   }
-
-  source_history <- source_state$history
-  branch_history <- batch_chat_history(branch)
-  if (
-    !is.null(source_history) &&
-      !identical(source_history, branch_history)
-  ) {
-    setter <- tryCatch(branch$set_turns, error = function(e) NULL)
-    if (is.function(setter)) {
-      tryCatch(
-        setter(rlang::duplicate(source_history, shallow = FALSE)),
-        error = function(e) NULL
-      )
-      branch_history <- batch_chat_history(branch)
-    }
-  }
-  if (
-    xor(is.null(source_history), is.null(branch_history)) ||
-      (!is.null(source_history) && !identical(source_history, branch_history))
-  ) {
-    cli::cli_abort(
-      c(
-        "Cannot isolate the Chat for batch execution",
-        "x" = "The {stage} did not preserve the exact starting history."
-      ),
-      class = "dsprrr_chat_isolation_error"
-    )
-  }
-
   branch
 }
 
-#' Create independent Chat branches for sequential batch rows
-#'
-#' Every row receives an isolated copy of the caller's starting state. Canonical
-#' ellmer Chats use their deep-clone contract; opaque Chats are copied without
-#' calling custom clone methods and rejected if any mutable environments remain
-#' shared.
+#' Create independent current Chat branches for batch rows
 #' @noRd
 batch_chat_branches <- function(chat, n) {
-  if (n == 0) {
+  if (n == 0L) {
     return(list())
   }
 
-  source_state <- list(
-    environments = batch_chat_state_environments(chat),
-    history = batch_chat_history(chat)
-  )
+  chat <- assert_ellmer_chat(chat, arg = "chat")
   branches <- lapply(seq_len(n), function(i) {
-    batch_chat_copy(
-      chat,
-      paste0("branch for row ", i),
-      source_state = source_state
-    )
+    batch_chat_copy(chat, paste0("row ", i))
   })
-
   branch_ids <- vapply(branches, rlang::obj_address, character(1))
-  branch_envs <- lapply(branches, batch_chat_state_environments)
-  shared_branch_state <- anyDuplicated(branch_ids) > 0L ||
-    any(vapply(
-      seq_along(branches),
-      function(i) {
-        if (i == 1L) {
-          return(FALSE)
-        }
-        length(intersect(
-          branch_envs[[i]],
-          unique(unlist(branch_envs[seq_len(i - 1L)], use.names = FALSE))
-        )) >
-          0L
-      },
-      logical(1)
-    ))
-  if (shared_branch_state) {
+  if (anyDuplicated(branch_ids) > 0L) {
     cli::cli_abort(
-      c(
-        "Cannot isolate the Chat for batch execution",
-        "x" = "Multiple rows received shared mutable Chat state."
-      ),
-      class = "dsprrr_chat_isolation_error"
+      "Chat cloning returned the same object for multiple batch rows",
+      class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error")
     )
   }
-
   branches
 }
-
 #' Reconstruct one scalar value from ellmer's vectorized batch representation
 #' @noRd
 ellmer_parallel_scalar_value <- function(value, type) {
@@ -3358,7 +2592,7 @@ run_batch_ellmer_parallel <- function(
         c(
           "Parallel LLM call failed",
           "x" = e$message,
-          "i" = "Try sequential processing with {.code .parallel = FALSE}"
+          "i" = "Try {.code .concurrency = concurrency_control(backend = \"sequential\")}"
         ),
         parent = e
       )
@@ -3477,9 +2711,6 @@ run_batch_ellmer_parallel <- function(
         output_fields,
         c(token_fields, "total_tokens", "cost", "duration_s")
       )] <- NULL
-      # Ellmer reports total wall time for the parallel group. Preserve the
-      # historical per-row estimate while keeping one canonical metadata shape.
-      metadata$latency_ms <- total_latency / n
 
       if (!is.null(error)) {
         error_chat <- batch_chat_copy(
@@ -3522,7 +2753,7 @@ run_batch_ellmer_parallel <- function(
         store_chat = isTRUE(module$config$store_chat_in_traces)
       )
       result <- if (.return_format == "simple") {
-        extract_simple_output(response, module$signature@output_type)
+        response
       } else {
         list(output = response, chat = completed_chat, metadata = metadata)
       }
@@ -3841,7 +3072,7 @@ mirai_worker_result <- function(
     store_chat = isTRUE(module$config$store_chat_in_traces)
   )
   result <- if (.return_format == "simple") {
-    extract_simple_output(record$response, module$signature@output_type)
+    record$response
   } else {
     list(output = record$response, chat = completed_chat, metadata = metadata)
   }
@@ -3859,15 +3090,8 @@ run_batch_parallel <- function(
   .return_format,
   .progress,
   .cache = NULL,
-  .concurrency = NULL
+  .concurrency
 ) {
-  if (is.null(.concurrency)) {
-    .concurrency <- normalize_concurrency_runtime(concurrency_control(
-      backend = "mirai",
-      max_active = getOption("dsprrr.max_active", 10L),
-      total_timeout = getOption("dsprrr.parallel_timeout", 600)
-    ))
-  }
   requests <- lapply(input_sets, function(input_set) {
     build_module_request(module, input_set)
   })
@@ -4405,18 +3629,22 @@ build_prompt <- function(module, inputs) {
   # Add the main template with inputs
   if (nchar(module$template) > 0) {
     if (grepl("\\{\\{[^}]+\\}\\}", module$template)) {
-      filled_template <- rlang::inject(
-        ellmer::interpolate(module$template, !!!inputs)
-      )
-    } else {
-      filled_template <- glue::glue_data(
-        .x = inputs,
-        module$template,
-        .open = "{",
-        .close = "}",
-        .envir = parent.frame()
+      cli::cli_abort(
+        c(
+          "Predict templates use single-brace placeholders",
+          "x" = "Found a double-brace placeholder in {.arg template}.",
+          "i" = "Use one brace pair around each declared input name."
+        ),
+        class = "dsprrr_template_syntax_error"
       )
     }
+    filled_template <- glue::glue_data(
+      .x = inputs,
+      module$template,
+      .open = "{",
+      .close = "}",
+      .envir = parent.frame()
+    )
     prompt_parts <- c(prompt_parts, filled_template)
   } else {
     # Auto-generate template from inputs
@@ -4588,8 +3816,9 @@ call_llm <- function(
 #' @param data A tibble or data frame with columns matching the module's inputs.
 #' @param ... Additional arguments passed to [run()].
 #'
-#' @return A tibble with the input columns plus a `result` list-column. With
-#'   `.return_format = "structured"`, the tibble also contains `.error`,
+#' @return A tibble with the input columns plus a `result` list-column containing
+#'   one named declared-output record per row.
+#'   With `.return_format = "structured"`, the tibble also contains `.error`,
 #'   `.metadata`, and `.chat`; `.error` is `NA` for successful rows and contains
 #'   the LLM execution error message for failed rows.
 #' @export
@@ -4612,14 +3841,8 @@ run_dataset <- function(module, ...) {
 #' @rdname run_dataset
 #' @param .llm Optional ellmer Chat object for LLM calls
 #' @param .verbose Logical whether to print verbose output
-#' @param .parallel Logical whether to enable parallel processing
-#' @param .parallel_method Character, either "ellmer" (default) or "mirai".
-#'   "ellmer" uses ellmer's `parallel_chat_structured()` for native async HTTP
-#'   parallelism (more efficient, single process).
-#'   "mirai" uses mirai for multi-process parallelism (requires `.llm = NULL`).
 #' @param .concurrency Optional batch policy created by
-#'   [concurrency_control()]. Do not combine it with `.parallel` or
-#'   `.parallel_method`.
+#'   [concurrency_control()]. Omission uses sequential execution.
 #' @param .progress Logical whether to show progress bar
 #' @param .return_format Character either "simple" or "structured"
 #' @param .trace_context A named, JSON-compatible list copied into row metadata
@@ -4631,8 +3854,6 @@ run_dataset.Module <- function(
   data,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
@@ -4663,19 +3884,7 @@ run_dataset.Module <- function(
     add = TRUE
   )
 
-  parallel_missing <- missing(.parallel)
-  parallel_method_missing <- missing(.parallel_method)
-  concurrency_missing <- missing(.concurrency)
-  concurrency <- resolve_concurrency_control(
-    .concurrency = .concurrency,
-    concurrency_missing = concurrency_missing,
-    .parallel = .parallel,
-    parallel_missing = parallel_missing,
-    .parallel_method = .parallel_method,
-    parallel_method_missing = parallel_method_missing
-  )
-  explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
-  .parallel_method <- match.arg(.parallel_method)
+  concurrency <- resolve_concurrency_control(.concurrency)
   .return_format <- match.arg(.return_format, c("simple", "structured"))
   dots <- list(...)
   if (".cache" %in% names(dots)) {
@@ -4753,14 +3962,7 @@ run_dataset.Module <- function(
   }
 
   # Run batch processing
-  execution_args <- if (explicit_concurrency) {
-    list(.concurrency = concurrency)
-  } else {
-    list(
-      .parallel = .parallel,
-      .parallel_method = .parallel_method
-    )
-  }
+  execution_args <- list(.concurrency = concurrency)
   specialized_predict <- inherits(module, "PredictModule") &&
     !identical(class(module)[1], "PredictModule")
   factory_interpreter_adapter <- inherits(module, "RLMModule") &&
@@ -4938,6 +4140,7 @@ run_dataset.Module <- function(
     "dsprrr_error_conditions",
     exact = TRUE
   )
+  attr(results, "dsprrr_error_conditions") <- NULL
   if (is.null(error_conditions)) {
     error_conditions <- lapply(
       results,
@@ -4950,12 +4153,9 @@ run_dataset.Module <- function(
   # Add results to data
   if (.return_format == "simple") {
     if (nrow(data) == 1L) {
-      # `run()` preserves named scalar responses, while dataset rows use the
-      # same simplified shape as rows produced by vectorized batch execution.
-      results <- list(extract_simple_output(
-        results,
-        module$signature@output_type
-      ))
+      # A scalar `run()` returns one output record; store that record as the
+      # single element of the dataset's result list-column.
+      results <- list(results)
     } else if (length(results) != nrow(data)) {
       results <- list(results)
     }
@@ -5029,9 +4229,7 @@ run_scalar_dataset_rows <- function(
     rep(list(NULL), n)
   } else if (inherits(module, "RLMModule")) {
     # RLMModule creates and clears a fresh action Chat inside each forward()
-    # call. Requiring an additional opaque-Chat branch here rejects valid
-    # sequential test/provider adapters whose closure state is intentionally
-    # shared, without adding isolation at the provider boundary.
+    # call, so the dataset layer does not create another branch here.
     rep(list(.runtime_chat), n)
   } else {
     batch_chat_branches(.runtime_chat, n)
@@ -5091,12 +4289,6 @@ run_scalar_dataset_rows <- function(
       module,
       trace_count_before
     )
-    if (identical(.return_format, "simple")) {
-      results[i] <- list(extract_simple_output(
-        results[[i]],
-        module$signature@output_type
-      ))
-    }
     results[i] <- list(annotate_concurrency_result(
       results[[i]],
       .concurrency_runtime,

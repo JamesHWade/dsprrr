@@ -251,8 +251,9 @@ result$metadata$n_attempts     # How many attempts were made
 result$metadata$best_score     # Score of selected result
 result$metadata$all_scores     # Scores of all attempts
 result$metadata$early_stopped  # Did we hit threshold?
-result$metadata$total_tokens   # Tokens across all attempts
-result$metadata$total_cost     # Cost across all attempts
+result$metadata$total_tokens   # Tokens across all attempts, or NA if unknown
+result$metadata$cost           # Cost across all attempts, or NA if unknown
+result$metadata$provider_calls # Provider calls across all attempts, or NA
 
 # For batch operations with run_dataset(), use .metadata column:
 # batch_result$.metadata[[1]]$n_attempts
@@ -479,11 +480,11 @@ OS-level sandboxing.
 
 ProgramOfThought, CodeAct, and RLM accept exactly one execution binding. Pass
 `runner` to retain a caller-owned runner object that dsprrr reuses and never
-closes. Whether execution state persists depends on the backend. Serialize a
+shuts down. Whether execution state persists depends on the backend. Serialize a
 stateful runner, and reset it between unrelated jobs when that backend supports
 `reset()`.
 Alternatively, pass a zero-argument `interpreter_factory`; dsprrr calls it once
-per invocation, owns the fresh runner, and closes it exactly once when the
+per invocation, owns the fresh runner, and shuts it down exactly once when the
 invocation ends, including after an error:
 
 ```{r interpreter-lifecycle, eval=FALSE}
@@ -696,7 +697,7 @@ incident <- rlm_module(
   interpreter_factory = function() {
     r_code_runner(timeout = 30, persistent = TRUE)
   },
-  max_iters = 8,
+  max_iterations = 8,
   max_llm_calls = 0L,
   max_output_chars = 10000
 )

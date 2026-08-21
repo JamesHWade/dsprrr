@@ -57,7 +57,7 @@ task <- Task$new(
     input = c("I love this!", "This is terrible"),
     target = c("positive", "negative")
   ),
-  solver = as_vitals_solver(sentiment_module, llm = chat_openai()),
+  solver = as_vitals_solver(sentiment_module, .llm = chat_openai()),
   scorer = model_graded_qa()
 )
 
@@ -101,7 +101,7 @@ Convert vitals scorers to dsprrr metrics for use in optimization:
 teleprompter <- GridSearchTeleprompter(
   variants = tibble(
     id = c("brief", "detailed"),
-    instructions_mod = c(
+    instructions_suffix = c(
       "Be concise",
       "Provide detailed analysis"
     )
@@ -176,23 +176,26 @@ eval_task <- Task$new(
 eval_task$eval()
 ```
 
-## Module as Function
+## Call a Module from a Function
 
-The new `as_function()` feature makes modules even more natural to use:
+Wrap `run()` when an application benefits from a task-specific function:
 
 ```{r}
-# Convert module to function
-classify <- as_function(sentiment_module, .llm = chat_openai())
+# Capture one configured Chat and keep dsprrr's typed execution boundary
+chat <- chat_openai()
+classify <- function(input) {
+  run(sentiment_module, input = input, .llm = chat)
+}
 
 # Use like any R function
-result <- classify(text = "Amazing!")
+result <- classify("Amazing!")
 print(result$sentiment)
 #> [1] "positive"
 
 # Works great in pipelines
 dataset |>
   mutate(
-    sentiment = map_chr(text, ~ classify(text = .x)$sentiment)
+    sentiment = map_chr(text, ~ classify(.x)$sentiment)
   )
 ```
 
@@ -206,12 +209,15 @@ large_dataset <- tibble(
   text = sample_texts[1:100]
 )
 
-# Automatic parallel processing with progress bar
+# Explicit concurrent processing with progress bar
 results <- sentiment_module |>
   run_dataset(
     large_dataset,
     .llm = chat_openai(),
-    .parallel = TRUE, # Default
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 10L
+    ),
     .progress = TRUE # Default
   )
 ```

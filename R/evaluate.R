@@ -15,9 +15,8 @@
 #'
 #'   Additional arguments passed to [run_dataset()]:
 #'   - `.llm`: Optional ellmer chat object
-#'   - `.parallel`: Logical; whether to allow parallel execution
-#'   - `.concurrency`: A policy created by [concurrency_control()]. Do not also
-#'     pass `.parallel` when using an explicit policy.
+#'   - `.concurrency`: A policy created by [concurrency_control()]. Omission
+#'     uses sequential execution.
 #'   - `.progress`: Logical; whether to display progress while evaluating
 #'   - `.trace_context`: A named, JSON-compatible list copied into evaluation
 #'     results, row metadata, and traces. Credential-like fields and runtime
@@ -74,7 +73,7 @@
 #'   type = "predict"
 #' )
 #'
-#' testset <- dsp_trainset(
+#' testset <- data.frame(
 #'   text = c("I love it!", "Awful.", "It's fine."),
 #'   sentiment = c("positive", "negative", "neutral")
 #' )
@@ -209,9 +208,7 @@ evaluation_trace_row <- function(event) {
   suppressWarnings(as.integer(candidate))
 }
 
-# Group ordered top-level trace events by dataset row. All normal execution
-# paths provide batch_index. The positional fallback covers older/custom
-# modules that emit exactly one unindexed event per still-unmatched row.
+# Group top-level trace events by the batch index required by run_dataset().
 align_evaluation_trace_events <- function(events, n_rows) {
   aligned <- vector("list", n_rows)
   if (n_rows == 0L || length(events) == 0L) {
@@ -226,15 +223,6 @@ align_evaluation_trace_events <- function(events, n_rows) {
       aligned[[row_index]],
       list(events[[event_index]])
     )
-  }
-
-  unindexed <- which(is.na(event_rows) | event_rows < 1L | event_rows > n_rows)
-  if (length(indexed) == 0L && length(unindexed) == n_rows) {
-    for (offset in seq_len(n_rows)) {
-      aligned[[offset]] <- list(events[[unindexed[[offset]]]])
-    }
-  } else if (n_rows == 1L && length(unindexed) > 0L) {
-    aligned[[1L]] <- append(aligned[[1L]], events[unindexed])
   }
 
   aligned
@@ -309,12 +297,6 @@ summarize_epoch_scores <- function(epoch_scores) {
 
 #' Evaluate an R6 Module
 #'
-#' @details
-#' Parallel execution is conservative by default to avoid reusing non-
-#' serialisable LLM client objects across workers. When `.parallel = TRUE`, a
-#' fresh client is created per worker only if `.llm` is `NULL`; otherwise the
-#' call falls back to sequential execution with a warning.
-#'
 #' @exportS3Method
 #' @noRd
 evaluate.Module <- function(
@@ -322,7 +304,6 @@ evaluate.Module <- function(
   data,
   metric,
   .llm = NULL,
-  .parallel = FALSE,
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = c("structured", "simple"),
@@ -356,21 +337,7 @@ evaluate.Module <- function(
     add = TRUE
   )
 
-  parallel_missing <- missing(.parallel)
-  concurrency_missing <- missing(.concurrency)
-  explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
-  if (explicit_concurrency && !parallel_missing) {
-    cli::cli_abort(
-      c(
-        "{.arg .concurrency} cannot be combined with {.arg .parallel}",
-        "i" = "Configure workers and backend with {.fn concurrency_control} only."
-      ),
-      class = "dsprrr_concurrency_argument_conflict"
-    )
-  }
-  if (explicit_concurrency) {
-    .concurrency <- validate_concurrency_control(.concurrency)
-  }
+  .concurrency <- resolve_concurrency_control(.concurrency)
   .return_format <- match.arg(.return_format)
   if (
     !is.logical(.propagate_provider_errors) ||
@@ -450,15 +417,6 @@ evaluate.Module <- function(
     ))
   }
 
-  # Safety: disallow parallel reuse of custom LLM clients
-  parallel_allowed <- .parallel
-  if (!explicit_concurrency && .parallel && !is.null(.llm)) {
-    cli::cli_warn(
-      "Parallel execution requires a NULL .llm so each worker can create its own client; falling back to sequential processing"
-    )
-    parallel_allowed <- FALSE
-  }
-
   # Run evaluation for each epoch
   epoch_results <- vector("list", epochs)
 
@@ -469,11 +427,6 @@ evaluate.Module <- function(
     }
 
     # Execute module with error handling
-    execution_args <- if (explicit_concurrency) {
-      list(.concurrency = .concurrency)
-    } else {
-      list(.parallel = parallel_allowed)
-    }
     trace_count_before <- evaluation_trace_cursor(module)
     evaluated <- tryCatch(
       {
@@ -484,10 +437,10 @@ evaluate.Module <- function(
               module = module,
               data = data,
               .llm = .llm,
+              .concurrency = .concurrency,
               .progress = .progress && epochs == 1,
               .return_format = "structured"
             ),
-            execution_args,
             list(...)
           )
         )
@@ -516,7 +469,7 @@ evaluate.Module <- function(
           "Epoch {epoch}/{epochs} failed during module execution",
           "x" = conditionMessage(e),
           "i" = "Successfully completed {epoch - 1} epoch(s) before failure",
-          "i" = "Consider reducing dataset size or disabling parallel processing"
+          "i" = "Consider reducing dataset size or using sequential execution"
         ))
       }
     )

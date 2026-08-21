@@ -795,12 +795,8 @@ omni_candidates_tbl <- function(candidates, selected_id) {
   )
 }
 
-#' Print method for Omni
-#' @param x An Omni object.
-#' @param ... Additional arguments.
-#' @rdname Omni
-#' @export
-print.Omni <- function(x, ...) {
+# Print an Omni object through its S7 method.
+print_omni <- function(x, ...) {
   cli::cli_h3("Omni Teleprompter")
   cli::cli_text("{.field Explorers}: {.field {names(x@explorers)}}")
   cli::cli_text(
@@ -811,4 +807,4 @@ print.Omni <- function(x, ...) {
   invisible(x)
 }
 
-S7::method(print, Omni) <- print.Omni
+S7::method(print, Omni) <- print_omni

@@ -628,12 +628,8 @@ format_better_together_score <- function(score) {
   }
 }
 
-#' Print method for BetterTogether
-#' @param x A BetterTogether object
-#' @param ... Additional arguments
-#' @keywords internal
-#' @export
-print.BetterTogether <- function(x, ...) {
+# Print a BetterTogether object through its S7 method.
+print_better_together <- function(x, ...) {
   cli::cli_h3("BetterTogether Teleprompter")
   cli::cli_text("{.field Default strategy}: {.val {x@default_strategy}}")
   cli::cli_text("{.field Validation split}: {x@valset_ratio}")
@@ -648,4 +644,4 @@ print.BetterTogether <- function(x, ...) {
   invisible(x)
 }
 
-S7::method(print, BetterTogether) <- print.BetterTogether
+S7::method(print, BetterTogether) <- print_better_together

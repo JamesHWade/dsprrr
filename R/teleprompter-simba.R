@@ -39,7 +39,8 @@
 #'   variability. Default is 6.
 #' @param max_steps Maximum number of optimization steps. Default is 8.
 #' @param max_demos Maximum number of demonstrations to keep. Default is 4.
-#' @param prompt_model Optional LLM for rule generation (reflection).
+#' @param prompt_model Optional ellmer Chat for rule generation. If `NULL`,
+#'   uses the deterministic example-based rule fallback.
 #' @param seed Random seed for reproducibility. Default is 0.
 #' @param log_dir Directory for trial logging. Default is NULL.
 #'
@@ -110,16 +111,10 @@ SIMBA <- S7::new_class(
         if (is.null(value)) {
           return(NULL)
         }
-        if (is.function(value)) {
+        if (is_ellmer_chat(value)) {
           return(NULL)
         }
-        if (inherits(value, "Chat")) {
-          return(NULL)
-        }
-        if (is.list(value) && "chat_structured" %in% names(value)) {
-          return(NULL)
-        }
-        "prompt_model must be NULL, a function, a Chat object, or a list with chat_structured method"
+        "prompt_model must be NULL or an ellmer Chat R6 object"
       }
     ),
     seed = S7::new_property(
@@ -601,8 +596,7 @@ generate_simba_rule <- function(
     return(request$value)
   }
 
-  if (inherits(prompt_model, "Chat")) {
-    # Handle ellmer Chat objects (e.g., from chat_openai())
+  if (!is.null(prompt_model)) {
     rule <- tryCatch(
       prompt_model$chat(prompt),
       error = function(e) {
@@ -617,47 +611,6 @@ generate_simba_rule <- function(
         NULL
       }
     )
-  } else if (is.function(prompt_model)) {
-    rule <- tryCatch(
-      prompt_model(prompt),
-      error = function(e) {
-        cli::cli_warn(
-          c(
-            "SIMBA prompt_model function failed to generate rule",
-            "x" = conditionMessage(e),
-            "i" = "Falling back to example-based rule"
-          ),
-          class = "dsprrr_simba_rule_warning"
-        )
-        NULL
-      }
-    )
-  } else if (is.list(prompt_model) && !is.null(prompt_model$chat_structured)) {
-    response <- tryCatch(
-      prompt_model$chat_structured(prompt, ellmer::type_string()),
-      error = function(e) {
-        cli::cli_warn(
-          c(
-            "SIMBA prompt_model chat_structured call failed",
-            "x" = conditionMessage(e),
-            "i" = "Falling back to example-based rule"
-          ),
-          class = "dsprrr_simba_rule_warning"
-        )
-        NULL
-      }
-    )
-    if (!is.null(response)) {
-      if (is.character(response)) {
-        rule <- response
-      } else if (is.list(response)) {
-        if ("rule" %in% names(response)) {
-          rule <- response$rule
-        } else {
-          rule <- response[[1]]
-        }
-      }
-    }
   }
 
   if (is.null(rule) || !nzchar(rule)) {
@@ -756,11 +709,8 @@ simba_safe_metric <- function(metric, prediction, row) {
   )
 }
 
-#' Print method for SIMBA
-#' @param x A SIMBA object
-#' @param ... Additional arguments (unused)
-#' @export
-print.SIMBA <- function(x, ...) {
+# Print a SIMBA object through its S7 method.
+print_simba <- function(x, ...) {
   cli::cli_h3("SIMBA Teleprompter")
 
   cli::cli_text("{.field bsize}: {x@bsize}")
@@ -779,4 +729,4 @@ print.SIMBA <- function(x, ...) {
   invisible(x)
 }
 
-S7::method(print, SIMBA) <- print.SIMBA
+S7::method(print, SIMBA) <- print_simba

@@ -1,5 +1,23 @@
+local_private_trial_log_dir <- function() {
+  root <- withr::local_tempdir(.local_envir = parent.frame())
+  log_dir <- file.path(root, "log")
+  dir.create(log_dir, mode = "0700")
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
+  }
+  log_dir
+}
+
+trial_log_test_raw_mode <- function(path) {
+  info <- file.info(path, extra_cols = FALSE)
+  bitwAnd(
+    as.integer(info$mode[[1L]]),
+    as.integer(as.octmode("7777"))
+  )
+}
+
 test_that("TrialLog resumes existing JSONL without rewriting records", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   trials_path <- file.path(log_dir, "trials.jsonl")
 
   first <- complete_trial(
@@ -43,7 +61,7 @@ test_that("TrialLog resumes existing JSONL without rewriting records", {
 })
 
 test_that("duplicate trial IDs are idempotent or rejected on conflict", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   trials_path <- file.path(log_dir, "trials.jsonl")
   trial <- complete_trial(
     create_trial("DuplicateOptimizer", trial_id = "stable-id"),
@@ -73,7 +91,7 @@ test_that("duplicate trial IDs are idempotent or rejected on conflict", {
 })
 
 test_that("save synchronizes missing trials with append-only persistence", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   trials_path <- file.path(log_dir, "trials.jsonl")
   log <- TrialLog$new("SaveOptimizer")
 
@@ -95,7 +113,7 @@ test_that("save synchronizes missing trials with append-only persistence", {
 })
 
 test_that("usage persistence keeps unknown values distinct from zero", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   log <- TrialLog$new("UsageOptimizer", log_dir = log_dir)
 
   unknown <- complete_trial(
@@ -146,7 +164,7 @@ test_that("usage persistence keeps unknown values distinct from zero", {
 })
 
 test_that("best programs are stored as safe program artifacts", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   program <- module(signature("question -> answer"))
   trial <- complete_trial(
     create_trial("ArtifactOptimizer", trial_id = "best"),
@@ -165,7 +183,8 @@ test_that("best programs are stored as safe program artifacts", {
 
 test_that("persisted journals and derived files are owner-only", {
   skip_on_os("windows")
-  log_dir <- withr::local_tempdir()
+  root <- withr::local_tempdir()
+  log_dir <- file.path(root, "log")
   trial <- complete_trial(
     create_trial("PrivateOptimizer", trial_id = "private"),
     EvalResult(mean_score = 1, n_evaluated = 1L)
@@ -189,6 +208,40 @@ test_that("persisted journals and derived files are owner-only", {
   )
 
   expect_identical(unname(modes), rep("600", length(paths)))
+  directory_mode <- bitwAnd(
+    as.integer(file.info(log_dir, extra_cols = FALSE)$mode[[1L]]),
+    as.integer(as.octmode("0777"))
+  )
+  expect_identical(directory_mode, as.integer(as.octmode("0700")))
+})
+
+test_that("TrialLog rejects non-private pre-existing directories unchanged", {
+  skip_on_os("windows")
+  root <- withr::local_tempdir()
+  log_dir <- file.path(root, "existing")
+  dir.create(log_dir, mode = "0700")
+  Sys.chmod(log_dir, mode = "0755", use_umask = FALSE)
+  marker <- file.path(log_dir, "marker")
+  writeLines("unchanged", marker)
+  Sys.chmod(marker, mode = "0600", use_umask = FALSE)
+  before_entries <- list.files(log_dir, all.files = TRUE, no.. = TRUE)
+
+  condition <- rlang::catch_cnd(
+    TrialLog$new("PrivateDirectoryOptimizer", log_dir = log_dir)
+  )
+  mode <- bitwAnd(
+    as.integer(file.info(log_dir, extra_cols = FALSE)$mode[[1L]]),
+    as.integer(as.octmode("0777"))
+  )
+
+  expect_s3_class(condition, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(condition), "mode exactly 0700")
+  expect_identical(mode, as.integer(as.octmode("0755")))
+  expect_identical(
+    list.files(log_dir, all.files = TRUE, no.. = TRUE),
+    before_entries
+  )
+  expect_identical(readLines(marker, warn = FALSE), "unchanged")
 })
 
 test_that("TrialLog rejects symbolic-link directories and journals", {
@@ -309,12 +362,117 @@ test_that("TrialLog rejects attacker-owned sticky ancestors and children", {
   expect_s3_class(child_condition, "dsprrr_trial_log_trust_error")
   expect_match(
     conditionMessage(child_condition),
-    "child not owned by the effective user"
+    "ancestor is not owned by the effective user or root"
+  )
+})
+
+test_that("TrialLog rejects attacker-owned non-writable ancestors", {
+  skip_on_os("windows")
+  root <- withr::local_tempdir()
+  effective_owner <- cache_effective_owner_id()
+  skip_if(is.na(effective_owner), "effective user ID unavailable")
+  original_owner <- cache_path_owner_id
+  attacker_owner <- effective_owner + 1000L
+  attacker_parent <- file.path(root, "attacker-parent")
+  dir.create(attacker_parent, mode = "0700")
+  Sys.chmod(attacker_parent, mode = "0700", use_umask = FALSE)
+  canonical_attacker <- as.character(fs::path_real(attacker_parent))
+  testthat::local_mocked_bindings(
+    cache_path_owner_id = function(path) {
+      canonical <- tryCatch(
+        as.character(fs::path_real(path)),
+        error = function(e) as.character(fs::path_abs(path))
+      )
+      if (identical(canonical, canonical_attacker)) {
+        return(attacker_owner)
+      }
+      original_owner(path)
+    },
+    .package = "dsprrr"
+  )
+  log_dir <- file.path(attacker_parent, "log")
+
+  condition <- rlang::catch_cnd(
+    TrialLog$new("AncestorOwnerOptimizer", log_dir = log_dir)
+  )
+
+  expect_s3_class(condition, "dsprrr_trial_log_trust_error")
+  expect_match(
+    conditionMessage(condition),
+    "ancestor is not owned by the effective user or root"
+  )
+  expect_false(dir.exists(log_dir))
+})
+
+test_that("TrialLog rejects special directory mode bits unchanged", {
+  skip_on_os("windows")
+  root <- withr::local_tempdir()
+  log_dir <- file.path(root, "special-directory")
+  dir.create(log_dir, mode = "0700")
+  Sys.chmod(log_dir, mode = "01700", use_umask = FALSE)
+  skip_if_not(
+    identical(
+      trial_log_test_raw_mode(log_dir),
+      as.integer(as.octmode("1700"))
+    ),
+    "special directory mode bits unavailable"
+  )
+  expect_identical(
+    dsprrr:::cache_path_mode(log_dir),
+    as.integer(as.octmode("1700"))
+  )
+
+  directory_condition <- rlang::catch_cnd(
+    TrialLog$new("SpecialModeOptimizer", log_dir = log_dir)
+  )
+
+  expect_s3_class(directory_condition, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(directory_condition), "mode exactly 0700")
+  expect_identical(
+    dsprrr:::cache_path_mode(log_dir),
+    as.integer(as.octmode("1700"))
+  )
+  expect_length(list.files(log_dir, all.files = TRUE, no.. = TRUE), 0L)
+})
+
+test_that("TrialLog rejects special file mode bits unchanged", {
+  skip_on_os("windows")
+
+  log_dir <- local_private_trial_log_dir()
+  metadata <- file.path(log_dir, "metadata.json")
+  writeLines('{"sentinel":"unchanged"}', metadata)
+  Sys.chmod(metadata, mode = "01600", use_umask = FALSE)
+  skip_if_not(
+    identical(
+      trial_log_test_raw_mode(metadata),
+      as.integer(as.octmode("1600"))
+    ),
+    "special file mode bits unavailable"
+  )
+  expect_identical(
+    dsprrr:::cache_path_mode(metadata),
+    as.integer(as.octmode("1600"))
+  )
+  before <- readBin(metadata, what = "raw", n = file.info(metadata)$size)
+
+  file_condition <- rlang::catch_cnd(
+    TrialLog$new("SpecialModeOptimizer", log_dir = log_dir)
+  )
+
+  expect_s3_class(file_condition, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(file_condition), "mode exactly 0600")
+  expect_identical(
+    dsprrr:::cache_path_mode(metadata),
+    as.integer(as.octmode("1600"))
+  )
+  expect_identical(
+    readBin(metadata, what = "raw", n = file.info(metadata)$size),
+    before
   )
 })
 
 test_that("TrialLog rejects missing or non-finite directory identities", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   original_info <- trial_log_path_info
   invalid_identity <- NA_real_
   testthat::local_mocked_bindings(
@@ -343,7 +501,7 @@ test_that("TrialLog rejects missing or non-finite directory identities", {
 })
 
 test_that("non-POSIX TrialLog files require stable platform identities", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   journal <- file.path(log_dir, "trials.jsonl")
   writeLines(character(), journal)
   original_info <- trial_log_path_info
@@ -398,7 +556,7 @@ test_that("TrialLog retains its original canonical directory identity", {
 
 test_that("publication rejects staging and target replacement races", {
   skip_on_os("windows")
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   log <- TrialLog$new("RaceOptimizer", log_dir = log_dir)
   replaced_stage <- FALSE
   withr::local_options(
@@ -564,30 +722,107 @@ test_that("derived symlink failures do not roll back the journal", {
   )
 })
 
-test_that("legacy public journals are hardened with disclosure warning", {
+test_that("non-private journals are rejected without repair or reads", {
   skip_on_os("windows")
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   journal <- file.path(log_dir, "trials.jsonl")
-  writeLines(character(), journal)
+  writeLines("not valid JSON", journal)
   Sys.chmod(journal, mode = "0644", use_umask = FALSE)
+  before <- readBin(journal, what = "raw", n = file.info(journal)$size)
+  before_entries <- list.files(log_dir, all.files = TRUE, no.. = TRUE)
 
   condition <- rlang::catch_cnd(
-    TrialLog$new("LegacyOptimizer", log_dir = log_dir)
+    TrialLog$new("PrivateFileOptimizer", log_dir = log_dir)
   )
   mode <- bitwAnd(
     as.integer(file.info(journal, extra_cols = FALSE)$mode[[1L]]),
     as.integer(as.octmode("0777"))
   )
 
-  expect_s3_class(
-    condition,
-    "dsprrr_trial_log_permission_repair_warning"
+  expect_s3_class(condition, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(condition), "mode exactly 0600")
+  expect_identical(mode, as.integer(as.octmode("0644")))
+  expect_identical(
+    readBin(journal, what = "raw", n = file.info(journal)$size),
+    before
   )
-  expect_identical(mode, as.integer(as.octmode("0600")))
+  expect_identical(
+    list.files(log_dir, all.files = TRUE, no.. = TRUE),
+    before_entries
+  )
+})
+
+test_that("non-private best program artifacts fail initialization unchanged", {
+  skip_on_os("windows")
+  log_dir <- local_private_trial_log_dir()
+  artifact <- file.path(log_dir, "best_program.rds")
+  writeLines("not an artifact", artifact)
+  Sys.chmod(artifact, mode = "0644", use_umask = FALSE)
+  before <- readBin(artifact, what = "raw", n = file.info(artifact)$size)
+  before_entries <- list.files(log_dir, all.files = TRUE, no.. = TRUE)
+
+  condition <- rlang::catch_cnd(
+    TrialLog$new("PrivateArtifactOptimizer", log_dir = log_dir)
+  )
+  mode <- bitwAnd(
+    as.integer(file.info(artifact, extra_cols = FALSE)$mode[[1L]]),
+    as.integer(as.octmode("0777"))
+  )
+
+  expect_s3_class(condition, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(condition), "mode exactly 0600")
+  expect_identical(mode, as.integer(as.octmode("0644")))
+  expect_identical(
+    readBin(artifact, what = "raw", n = file.info(artifact)$size),
+    before
+  )
+  expect_identical(
+    list.files(log_dir, all.files = TRUE, no.. = TRUE),
+    before_entries
+  )
+})
+
+test_that("save preflights existing metadata before locking or mutation", {
+  skip_on_os("windows")
+  log <- TrialLog$new("SavePreflightOptimizer")
+  log$add_trial(create_trial("SavePreflightOptimizer", trial_id = "memory"))
+  log_dir <- local_private_trial_log_dir()
+  metadata <- file.path(log_dir, "metadata.json")
+  writeLines('{"sentinel":"unchanged"}', metadata)
+  Sys.chmod(metadata, mode = "0644", use_umask = FALSE)
+  before <- readBin(metadata, what = "raw", n = file.info(metadata)$size)
+  before_entries <- list.files(log_dir, all.files = TRUE, no.. = TRUE)
+  locks <- 0L
+  testthat::local_mocked_bindings(
+    trial_log_with_lock = function(...) {
+      locks <<- locks + 1L
+      stop("save reached the lock")
+    },
+    .package = "dsprrr"
+  )
+
+  condition <- rlang::catch_cnd(log$save(log_dir))
+
+  expect_s3_class(condition, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(condition), "mode exactly 0600")
+  expect_identical(locks, 0L)
+  expect_identical(log$n_trials(), 1L)
+  expect_identical(
+    readBin(metadata, what = "raw", n = file.info(metadata)$size),
+    before
+  )
+  expect_identical(
+    dsprrr:::cache_path_mode(metadata),
+    as.integer(as.octmode("0644"))
+  )
+  expect_identical(
+    list.files(log_dir, all.files = TRUE, no.. = TRUE),
+    before_entries
+  )
 })
 
 test_that("torn journal tails are rejected without mutation", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   TrialLog$new("TornOptimizer", log_dir = log_dir)
   journal <- file.path(log_dir, "trials.jsonl")
   connection <- file(journal, open = "wb")
@@ -608,7 +843,7 @@ test_that("torn journal tails are rejected without mutation", {
 })
 
 test_that("failed atomic publication leaves journal and derived state intact", {
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   log <- TrialLog$new("AtomicOptimizer", log_dir = log_dir)
   first <- complete_trial(
     create_trial("AtomicOptimizer", trial_id = "first"),
@@ -659,7 +894,7 @@ test_that("failed atomic publication leaves journal and derived state intact", {
 
 test_that("two writers persist one identical trial idempotently", {
   skip_if_not_installed("callr")
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   package_context <- callr_dsprrr_context()
   package_loader <- callr_load_dsprrr
   gate <- tempfile(tmpdir = log_dir)
@@ -753,7 +988,7 @@ test_that("two writers persist one identical trial idempotently", {
 
 test_that("two writers reject conflicting records for the same trial ID", {
   skip_if_not_installed("callr")
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   package_context <- callr_dsprrr_context()
   package_loader <- callr_load_dsprrr
   gate <- tempfile(tmpdir = log_dir)
@@ -857,7 +1092,7 @@ test_that("two writers reject conflicting records for the same trial ID", {
 
 test_that("process death releases the interprocess trial log lock", {
   skip_if_not_installed("callr")
-  log_dir <- withr::local_tempdir()
+  log_dir <- local_private_trial_log_dir()
   package_context <- callr_dsprrr_context()
   package_loader <- callr_load_dsprrr
   ready <- file.path(log_dir, "lock-held")
@@ -914,6 +1149,37 @@ test_that("public JSONL writes are atomic, private, and idempotent", {
     )
     expect_identical(mode, as.integer(as.octmode("0600")))
   }
+})
+
+test_that("public JSONL writes reject non-private targets unchanged", {
+  skip_on_os("windows")
+  root <- withr::local_tempdir()
+  path <- file.path(root, "trials.jsonl")
+  writeLines("unchanged", path)
+  Sys.chmod(path, mode = "0644", use_umask = FALSE)
+  before <- readBin(path, what = "raw", n = file.info(path)$size)
+  before_entries <- list.files(root, all.files = TRUE, no.. = TRUE)
+
+  condition <- rlang::catch_cnd(write_trials_jsonl(
+    list(create_trial("PublicWriter", trial_id = "next")),
+    path
+  ))
+  mode <- bitwAnd(
+    as.integer(file.info(path, extra_cols = FALSE)$mode[[1L]]),
+    as.integer(as.octmode("0777"))
+  )
+
+  expect_s3_class(condition, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(condition), "mode exactly 0600")
+  expect_identical(mode, as.integer(as.octmode("0644")))
+  expect_identical(
+    readBin(path, what = "raw", n = file.info(path)$size),
+    before
+  )
+  expect_identical(
+    list.files(root, all.files = TRUE, no.. = TRUE),
+    before_entries
+  )
 })
 
 test_that("public append rejects a torn journal without changing it", {

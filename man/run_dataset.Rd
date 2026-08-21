@@ -12,8 +12,6 @@ run_dataset(module, ...)
   data,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
@@ -32,16 +30,8 @@ run_dataset(module, ...)
 
 \item{.verbose}{Logical whether to print verbose output}
 
-\item{.parallel}{Logical whether to enable parallel processing}
-
-\item{.parallel_method}{Character, either "ellmer" (default) or "mirai".
-"ellmer" uses ellmer's \code{parallel_chat_structured()} for native async HTTP
-parallelism (more efficient, single process).
-"mirai" uses mirai for multi-process parallelism (requires \code{.llm = NULL}).}
-
 \item{.concurrency}{Optional batch policy created by
-\code{\link[=concurrency_control]{concurrency_control()}}. Do not combine it with \code{.parallel} or
-\code{.parallel_method}.}
+\code{\link[=concurrency_control]{concurrency_control()}}. Omission uses sequential execution.}
 
 \item{.progress}{Logical whether to show progress bar}
 
@@ -52,8 +42,9 @@ and traces. When omitted inside another dsprrr operation, the active
 context is inherited.}
 }
 \value{
-A tibble with the input columns plus a \code{result} list-column. With
-\code{.return_format = "structured"}, the tibble also contains \code{.error},
+A tibble with the input columns plus a \code{result} list-column containing
+one named declared-output record per row.
+With \code{.return_format = "structured"}, the tibble also contains \code{.error},
 \code{.metadata}, and \code{.chat}; \code{.error} is \code{NA} for successful rows and contains
 the LLM execution error message for failed rows.
 }

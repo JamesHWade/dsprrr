@@ -16,8 +16,8 @@ with_assertions(
 \arguments{
 \item{module}{A Module object to wrap}
 
-\item{assertions}{List of Assertion objects (from \code{assert_output()} or
-\code{suggest_output()}) or an AssertionSet}
+\item{assertions}{A list of assertion rules (from \code{assert_output()} or
+\code{suggest_output()}) or the result of \code{assertion_set()}}
 
 \item{max_retries}{Maximum number of retry attempts (default 3)}
 

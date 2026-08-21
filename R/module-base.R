@@ -31,9 +31,7 @@ Module <- R6::R6Class(
         cli::cli_abort("signature must be a Signature object")
       }
 
-      if (!is.null(chat) && !inherits(chat, "Chat")) {
-        cli::cli_abort("chat must be an ellmer Chat object")
-      }
+      assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
 
       self$signature <- signature
       self$config <- normalize_module_config(config)
@@ -66,14 +64,12 @@ Module <- R6::R6Class(
     #' Run the module with inputs
     #'
     #' This method provides a convenient interface for executing modules directly.
-    #' For batch processing with parallel execution support, use the `run()` generic
+    #' For batch processing with concurrency controls, use the `run()` generic
     #' function instead: `run(module, ...)`.
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
     #' @param .verbose Logical for debug output (currently unused, for API consistency)
-    #' @param .parallel Logical for parallel batch processing (requires using run() generic)
-    #' @param .parallel_method Legacy parallel backend passed through by [run()]
     #' @param .concurrency Optional policy created by [concurrency_control()]
     #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
@@ -84,16 +80,18 @@ Module <- R6::R6Class(
       ...,
       .llm = NULL,
       .verbose = FALSE,
-      .parallel = FALSE,
-      .parallel_method = c("ellmer", "mirai"),
       .concurrency = NULL,
       .concurrency_runtime = NULL,
       .progress = TRUE,
       .return_format = "simple",
       .cache = NULL,
-      .predict_compat = FALSE,
       .trace_context = list()
     ) {
+      if (!is.null(.llm)) {
+        assert_ellmer_chat(.llm, arg = ".llm")
+      } else {
+        assert_ellmer_chat(self$chat, arg = "module$chat", allow_null = TRUE)
+      }
       trace_context_supplied <- !missing(.trace_context)
       trace_context <- trace_context_resolve(
         .trace_context,
@@ -118,18 +116,8 @@ Module <- R6::R6Class(
         add = TRUE
       )
 
-      parallel_missing <- missing(.parallel)
-      parallel_method_missing <- missing(.parallel_method)
-      concurrency_missing <- missing(.concurrency)
       if (is.null(.concurrency_runtime)) {
-        concurrency <- resolve_concurrency_control(
-          .concurrency = .concurrency,
-          concurrency_missing = concurrency_missing,
-          .parallel = .parallel,
-          parallel_missing = parallel_missing,
-          .parallel_method = .parallel_method,
-          parallel_method_missing = parallel_method_missing
-        )
+        concurrency <- resolve_concurrency_control(.concurrency)
       } else if (
         !inherits(
           .concurrency_runtime,
@@ -146,17 +134,6 @@ Module <- R6::R6Class(
       # value must fail loudly instead of being silently forwarded.
       validate_cache_arg(.cache)
       .return_format <- match.arg(.return_format, c("simple", "structured"))
-      if (
-        !is.logical(.predict_compat) ||
-          length(.predict_compat) != 1L ||
-          is.na(.predict_compat)
-      ) {
-        cli::cli_abort(
-          "Internal predict compatibility mode is invalid",
-          class = "dsprrr_runtime_config_error"
-        )
-      }
-
       inputs <- list(...)
 
       # Validate inputs against signature
@@ -187,21 +164,6 @@ Module <- R6::R6Class(
             runtime,
             explicit_llm = !is.null(.llm)
           )
-          if (
-            isTRUE(.predict_compat) &&
-              !identical(runtime$effective_backend, "sequential")
-          ) {
-            cli::cli_abort(
-              c(
-                "Stateful predict batches require sequential execution",
-                "i" = "Use {.fn run} for isolated concurrent batch execution."
-              ),
-              class = c(
-                "dsprrr_predict_concurrency_unsupported",
-                "dsprrr_concurrency_unsupported_error"
-              )
-            )
-          }
           inputs <- lapply(
             inputs,
             function(value) {
@@ -256,21 +218,6 @@ Module <- R6::R6Class(
             .llm = .llm,
             .chat = runtime_chat
           )
-        if (
-          isTRUE(.predict_compat) &&
-            !identical(runtime$effective_backend, "sequential")
-        ) {
-          cli::cli_abort(
-            c(
-              "Stateful predict batches require sequential execution",
-              "i" = "Use {.fn run} for isolated concurrent batch execution."
-            ),
-            class = c(
-              "dsprrr_predict_concurrency_unsupported",
-              "dsprrr_concurrency_unsupported_error"
-            )
-          )
-        }
       }
 
       if (identical(input_contract$kind, "empty")) {
@@ -299,8 +246,7 @@ Module <- R6::R6Class(
             .progress = .progress,
             .return_format = .return_format,
             .cache = .cache,
-            .concurrency = runtime,
-            .isolate_rows = !isTRUE(.predict_compat)
+            .concurrency = runtime
           ),
           fields = invocation_trace_fields
         ))
@@ -340,8 +286,7 @@ Module <- R6::R6Class(
       result <- self$run(
         ...,
         .llm = .llm,
-        .return_format = "structured",
-        .predict_compat = TRUE
+        .return_format = "structured"
       )
       if (inherits(result, "dsprrr_batch_result")) {
         return(lapply(result, `[[`, "output"))
@@ -480,7 +425,6 @@ Module <- R6::R6Class(
           data = data,
           metric = metric,
           .llm = .llm,
-          .parallel = control$parallel,
           .progress = control$evaluation_progress,
           ...
         )
@@ -783,59 +727,6 @@ Module <- R6::R6Class(
     },
 
     #' @description
-    #' Create a vitals-compatible solver function
-    #' @param .llm Optional ellmer chat object
-    #' @param .parallel Logical for parallel processing
-    #' @param .return_format Either "simple" or "structured"
-    #' @param ... Additional arguments
-    #' @return Function compatible with vitals Tasks
-    as_vitals_solver = function(
-      .llm = NULL,
-      .parallel = FALSE,
-      .return_format = "structured",
-      ...
-    ) {
-      module <- self
-
-      function(inputs, ...) {
-        if (!is.data.frame(inputs)) {
-          inputs <- as.data.frame(inputs)
-        }
-
-        # This will use the full run_dataset logic once migrated
-        results <- tibble::tibble(
-          result = vector("list", nrow(inputs)),
-          .chat = vector("list", nrow(inputs)),
-          .metadata = vector("list", nrow(inputs))
-        )
-
-        # Process each row
-        for (i in seq_len(nrow(inputs))) {
-          row_inputs <- as.list(inputs[i, , drop = FALSE])
-          result <- module$forward(row_inputs, .llm = .llm, trace = TRUE)
-
-          results$result[i] <- list(result$output[[1]])
-          results$.chat[i] <- list(result$chat[[1]] %||% NULL)
-          results$.metadata[i] <- list(result$metadata[[1]] %||% list())
-        }
-
-        if (.return_format == "simple") {
-          list(
-            result = results$result,
-            solver_chat = replicate(nrow(results), NULL, simplify = FALSE),
-            metadata = replicate(nrow(results), list(), simplify = FALSE)
-          )
-        } else {
-          list(
-            result = results$result,
-            solver_chat = results$.chat,
-            metadata = results$.metadata
-          )
-        }
-      }
-    },
-
-    #' @description
     #' Print the module
     print = function() {
       cli::cli_h2("Module")
@@ -1125,6 +1016,21 @@ Module <- R6::R6Class(
   ),
 
   private = list(
+    # Module$copy() handles Chat isolation explicitly after the structural R6
+    # clone. Preserve the original reference during that first pass so an
+    # ellmer clone failure is reported through the package's typed boundary.
+    deep_clone = function(name, value) {
+      if (identical(name, "chat")) {
+        return(value)
+      }
+      is_r6_object <- is.environment(value) &&
+        !is.null(get0(".__enclos_env__", value, inherits = FALSE))
+      if (is_r6_object) {
+        return(value$clone(deep = TRUE))
+      }
+      value
+    },
+
     # Build prompt from inputs (to be overridden by subclasses)
     build_prompt = function(inputs) {
       cli::cli_abort("build_prompt() must be implemented by subclass")
@@ -1136,52 +1042,7 @@ Module <- R6::R6Class(
       if (is.null(chat)) {
         return(NULL)
       }
-
-      # Use R6's clone method (ellmer Chat is R6)
-      # deep = TRUE ensures internal state is also cloned
-      tryCatch(
-        {
-          cloned <- chat$clone(deep = TRUE)
-          # Reset the turn history to start fresh
-          cloned$set_turns(list())
-          cloned
-        },
-        error = function(e) {
-          # If clone fails, try to recreate from provider info
-          model <- tryCatch(chat$get_model(), error = function(e) NULL)
-          class_names <- class(chat)
-
-          for (cls in class_names) {
-            result <- switch(
-              cls,
-              "Chat" = NULL, # Skip base class
-              # OpenAI variants
-              "OpenAIChat" = ,
-              "chat_openai" = ellmer::chat_openai(model = model),
-              # Anthropic variants
-              "ClaudeChat" = ,
-              "chat_claude" = ellmer::chat_claude(model = model),
-              # Google variants
-              "ChatGoogleGemini" = ,
-              "chat_google_gemini" = ellmer::chat_google_gemini(model = model),
-              # Ollama variants
-              "OllamaChat" = ,
-              "chat_ollama" = ellmer::chat_ollama(model = model),
-              NULL
-            )
-
-            if (!is.null(result)) {
-              return(result)
-            }
-          }
-
-          # Fallback: return same chat (not ideal but better than failing)
-          cli::cli_warn(
-            "Could not clone Chat of class {.cls {class_names[1]}}; sharing reference"
-          )
-          chat
-        }
-      )
+      clone_ellmer_chat(chat, arg = "chat", reset_turns = TRUE)
     },
 
     # Postprocess model output (to be overridden by subclasses)
@@ -1414,9 +1275,7 @@ run_factory_interpreter_batch <- function(
   history_field <- factory_interpreter_history_field(module)
   row_trace_events <- vector("list", n)
   llm <- .llm %||% module$chat %||% get_default_chat()
-  if (is.null(llm)) {
-    cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
-  }
+  llm <- assert_ellmer_chat(llm, arg = ".llm")
 
   if (identical(.concurrency$effective_backend, "sequential")) {
     rows <- vector("list", n)
@@ -1655,6 +1514,8 @@ run_factory_interpreter_batch <- function(
 #' @param object A dsprrr Module object
 #' @param new_data A data frame or tibble with columns matching the module's
 #'   signature inputs
+#' @param .llm Optional ellmer Chat object. When supplied, it takes precedence
+#'   over the Chat stored on `object` and the package default.
 #' @param ... Additional arguments passed to `run_dataset()`
 #'
 #' @return A tibble with the input columns plus prediction results.
@@ -1674,34 +1535,10 @@ run_factory_interpreter_batch <- function(
 #' # Equivalent to run_dataset()
 #' run_dataset(mod, new_data, .llm = mod$chat)
 #' }
-predict.Module <- function(object, new_data, ...) {
+predict.Module <- function(object, new_data, .llm = NULL, ...) {
   if (!is.data.frame(new_data)) {
     cli::cli_abort("{.arg new_data} must be a data frame or tibble")
   }
 
-  # Get the LLM to use - prefer stored chat, then try default
-  llm <- object$chat
-  if (is.null(llm)) {
-    llm <- tryCatch(
-      get_default_chat(create = TRUE),
-      error = function(e) {
-        cli::cli_abort(c(
-          "No Chat available for prediction",
-          "i" = "Either set a chat on the module: {.code mod$chat <- chat_openai()}",
-          "i" = "Or pass .llm: {.code predict(mod, data, .llm = chat)}"
-        ))
-      }
-    )
-  }
-
-  # Use run_dataset for the actual processing
-  run_dataset(object, new_data, .llm = llm, ...)
-}
-
-#' Predict Method for PredictModule
-#'
-#' @rdname predict.Module
-#' @export
-predict.PredictModule <- function(object, new_data, ...) {
-  predict.Module(object, new_data, ...)
+  run_dataset(object, new_data, .llm = .llm, ...)
 }

@@ -24,7 +24,8 @@ eval_program(
 
 \item{.llm}{Optional ellmer Chat object for LLM calls.}
 
-\item{control}{An OptimizerControl object or NULL for defaults.}
+\item{control}{An object created by \code{\link[=optimizer_control]{optimizer_control()}}, or \code{NULL} for
+defaults.}
 
 \item{epochs}{Integer; number of times to repeat evaluation for statistical
 significance. Defaults to 1L. When > 1, computes std and confidence intervals.}

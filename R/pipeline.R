@@ -65,7 +65,7 @@ PipelineStep <- S7::new_class(
 #'
 #' * **Automatic field matching**: When module A outputs field `answer` and
 #'   module B expects input `answer`, the connection is automatic.
-#' * **Explicit mapping**: Use `map_inputs()` to rename fields between modules.
+#' * **Explicit mapping**: Use `step()` to rename fields between modules.
 #' * **Metadata aggregation**: Tracks total tokens, cost, and latency across
 #'   all steps.
 #' * **Works like any module**: Can be run, optimized, and compiled.
@@ -607,27 +607,21 @@ PipelineModule <- R6::R6Class(
 
     # Aggregate metadata from all steps
     aggregate_metadata = function(step_metadata, total_latency_ms) {
-      total_tokens <- 0
-      total_cost <- 0
       models <- character(0)
 
       for (meta in step_metadata) {
-        if (!is.null(meta$total_tokens) && !is.na(meta$total_tokens)) {
-          total_tokens <- total_tokens + meta$total_tokens
-        }
-        if (!is.null(meta$cost) && !is.na(meta$cost)) {
-          total_cost <- total_cost + meta$cost
-        }
         if (!is.null(meta$model) && !is.na(meta$model)) {
           models <- c(models, meta$model)
         }
       }
+      usage <- aggregate_module_usage_metadata(step_metadata)
 
       list(
         timestamp = Sys.time(),
         n_steps = length(step_metadata),
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
+        provider_calls = usage$provider_calls,
         latency_ms = total_latency_ms,
         models = unique(models),
         step_metadata = step_metadata
@@ -649,7 +643,7 @@ PipelineModule <- R6::R6Class(
 #' output and input, they are automatically connected.
 #'
 #' @param lhs A Module or PipelineModule
-#' @param rhs A Module, PipelineModule, or module with mapping (via `map_inputs()`)
+#' @param rhs A Module or PipelineModule.
 #'
 #' @return A PipelineModule combining both modules
 #'
@@ -662,26 +656,14 @@ PipelineModule <- R6::R6Class(
 #' # Run the pipeline
 #' result <- run(qa_pipeline, text = "What is 2+2?", .llm = llm)
 #'
-#' # With explicit mapping when names don't match
-#' rag_pipeline <- mod_retrieve %>>%
-#'   map_inputs(mod_answer, documents = "context") %>>%
-#'   mod_summarize
 #' }
 `%>>%` <- function(lhs, rhs) {
-  # Handle PipelineMappedModule (from map_inputs, with_inputs, select_outputs)
-  if (inherits(rhs, "PipelineMappedModule")) {
-    rhs_step <- PipelineStep(
-      module = rhs$module,
-      input_map = rhs$mapping,
-      output_select = rhs$output_select %||% character(0),
-      static_inputs = rhs$static_inputs %||% list()
-    )
-  } else if (inherits(rhs, "Module")) {
+  if (inherits(rhs, "Module")) {
     rhs_step <- PipelineStep(module = rhs)
   } else {
     cli::cli_abort(c(
       "Invalid right-hand side for %>>%",
-      "x" = "Expected Module or mapped module, got {.cls {class(rhs)[1]}}"
+      "x" = "Expected Module or PipelineModule, got {.cls {class(rhs)[1]}}"
     ))
   }
 
@@ -689,15 +671,6 @@ PipelineModule <- R6::R6Class(
   if (inherits(lhs, "PipelineModule")) {
     # Extend existing pipeline
     steps <- c(lhs$steps, list(rhs_step))
-  } else if (inherits(lhs, "PipelineMappedModule")) {
-    # Start new pipeline with mapped module on left
-    lhs_step <- PipelineStep(
-      module = lhs$module,
-      input_map = lhs$mapping,
-      output_select = lhs$output_select %||% character(0),
-      static_inputs = lhs$static_inputs %||% list()
-    )
-    steps <- list(lhs_step, rhs_step)
   } else if (inherits(lhs, "Module")) {
     # Start new pipeline
     lhs_step <- PipelineStep(module = lhs)
@@ -754,13 +727,6 @@ pipeline <- function(...) {
   steps <- lapply(args, function(x) {
     if (inherits(x, "dsprrr::PipelineStep")) {
       x
-    } else if (inherits(x, "PipelineMappedModule")) {
-      PipelineStep(
-        module = x$module,
-        input_map = x$mapping,
-        output_select = x$output_select %||% character(0),
-        static_inputs = x$static_inputs %||% list()
-      )
     } else if (inherits(x, "Module")) {
       PipelineStep(module = x)
     } else {
@@ -833,195 +799,4 @@ step <- function(module, map = list(), select = character(0), ...) {
     output_select = select,
     static_inputs = static_inputs
   )
-}
-
-
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
-#' Map Inputs for Pipeline Steps
-#'
-#' @description
-#' Specifies how output fields from the previous step should be mapped to
-#' input fields of this module. Use with `%>>%` operator.
-#'
-#' @param module A Module object
-#' @param ... Named mappings: `output_field = "input_field"`
-#'
-#' @return A PipelineMappedModule object for use with `%>>%`
-#'
-#' @export
-#' @examples
-#' \dontrun{
-#' # Map 'documents' output to 'context' input
-#' mod_retrieve %>>%
-#'   map_inputs(mod_answer, documents = "context") %>>%
-#'   mod_format
-#' }
-map_inputs <- function(module, ...) {
-  if (!inherits(module, "Module")) {
-    cli::cli_abort(c(
-      "map_inputs() requires a Module as first argument",
-      "x" = "Got {.cls {class(module)[1]}}"
-    ))
-  }
-
-  mapping <- list(...)
-
-  if (length(mapping) == 0) {
-    cli::cli_warn(c(
-      "map_inputs() called with no mappings",
-      "i" = "Use map_inputs(module, upstream_field = 'input_field') to rename fields"
-    ))
-    # Return consistent type even with empty mapping
-    return(structure(
-      list(module = module, mapping = list(), static_inputs = list()),
-      class = "PipelineMappedModule"
-    ))
-  }
-
-  # Validate mapping format
-  if (is.null(names(mapping)) || any(names(mapping) == "")) {
-    cli::cli_abort(c(
-      "map_inputs() requires named arguments",
-      "i" = "Format: map_inputs(module, output_field = 'input_field')"
-    ))
-  }
-
-  structure(
-    list(
-      module = module,
-      mapping = mapping,
-      static_inputs = list()
-    ),
-    class = "PipelineMappedModule"
-  )
-}
-
-
-#' Inject Static Inputs for Pipeline Steps
-#'
-#' @description
-#' Specifies constant values to inject as inputs to a module, regardless
-#' of what the upstream module outputs.
-#'
-#' @param module A Module object
-#' @param ... Named values to inject as inputs
-#'
-#' @return A PipelineMappedModule object for use with `%>>%`
-#'
-#' @export
-#' @examples
-#' \dontrun{
-#' # Inject a constant system prompt
-#' mod_retrieve %>>%
-#'   with_inputs(mod_answer, system_prompt = "Be very concise") %>>%
-#'   mod_format
-#' }
-with_inputs <- function(module, ...) {
-  if (!inherits(module, "Module")) {
-    cli::cli_abort(c(
-      "with_inputs() requires a Module as first argument",
-      "x" = "Got {.cls {class(module)[1]}}"
-    ))
-  }
-
-  static <- list(...)
-
-  if (length(static) == 0) {
-    cli::cli_warn(c(
-      "with_inputs() called with no inputs",
-      "i" = "Use with_inputs(module, input_name = value) to inject static values"
-    ))
-    # Return consistent type even with empty inputs
-    return(structure(
-      list(module = module, mapping = list(), static_inputs = list()),
-      class = "PipelineMappedModule"
-    ))
-  }
-
-  structure(
-    list(
-      module = module,
-      mapping = list(),
-      static_inputs = static
-    ),
-    class = "PipelineMappedModule"
-  )
-}
-
-
-#' Select Outputs for Pipeline Steps
-#'
-#' @description
-#' Filters which output fields from a module should be passed to the next step.
-#' By default, all fields are passed forward.
-#'
-#' @param module A Module object
-#' @param ... Field names to select (as character strings)
-#'
-#' @return A PipelineMappedModule object for use with `%>>%`
-#'
-#' @export
-#' @examples
-#' \dontrun{
-#' # Only pass 'answer' field, drop 'reasoning'
-#' mod_cot %>>%
-#'   select_outputs(mod_next, "answer") %>>%
-#'   mod_format
-#' }
-select_outputs <- function(module, ...) {
-  if (!inherits(module, "Module")) {
-    cli::cli_abort(c(
-      "select_outputs() requires a Module as first argument",
-      "x" = "Got {.cls {class(module)[1]}}"
-    ))
-  }
-
-  fields <- c(...)
-
-  if (is.null(fields) || length(fields) == 0) {
-    cli::cli_abort(c(
-      "select_outputs() requires at least one field name",
-      "i" = "Use select_outputs(module, 'field1', 'field2') to filter outputs"
-    ))
-  }
-
-  if (!is.character(fields)) {
-    cli::cli_abort(c(
-      "select_outputs() requires character field names",
-      "x" = "Got {.cls {class(fields)[1]}}"
-    ))
-  }
-
-  structure(
-    list(
-      module = module,
-      mapping = list(),
-      static_inputs = list(),
-      output_select = fields
-    ),
-    class = "PipelineMappedModule"
-  )
-}
-
-
-#' Print method for PipelineMappedModule
-#' @noRd
-#' @export
-print.PipelineMappedModule <- function(x, ...) {
-  cli::cli_text("Mapped module: {.cls {class(x$module)[1]}}")
-  if (length(x$mapping) > 0) {
-    cli::cli_text(
-      "  Input mappings: {.field {names(x$mapping)}} -> {.field {unlist(x$mapping)}}"
-    )
-  }
-  if (length(x$static_inputs) > 0) {
-    cli::cli_text("  Static inputs: {.field {names(x$static_inputs)}}")
-  }
-  if (!is.null(x$output_select) && length(x$output_select) > 0) {
-    cli::cli_text("  Output selection: {.field {x$output_select}}")
-  }
-  invisible(x)
 }

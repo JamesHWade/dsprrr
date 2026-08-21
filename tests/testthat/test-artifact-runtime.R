@@ -1,4 +1,4 @@
-artifact_v4_runner <- function() {
+artifact_runtime_runner <- function() {
   list(
     execute = function(code, context = list()) {
       list(
@@ -17,11 +17,11 @@ artifact_v4_runner <- function() {
         sandboxed = TRUE
       )
     },
-    close = function() invisible(NULL)
+    shutdown = function() invisible(NULL)
   )
 }
 
-artifact_v4_modules <- function(interpreter_factory) {
+artifact_runtime_modules <- function(interpreter_factory) {
   list(
     program_of_thought = dsprrr:::ProgramOfThoughtModule$new(
       signature = signature("question -> answer"),
@@ -39,40 +39,20 @@ artifact_v4_modules <- function(interpreter_factory) {
   )
 }
 
-artifact_v4_rehash <- function(artifact) {
+artifact_runtime_rehash <- function(artifact) {
   artifact$integrity <- dsprrr:::artifact_integrity(artifact)
   artifact
 }
 
-artifact_v4_strip_rlm_children <- function(artifact, node_id = "$") {
-  child_ids <- vapply(
-    artifact$graph$nodes[[node_id]]$children,
-    `[[`,
-    character(1),
-    ".node"
-  )
-  artifact$graph$nodes[[node_id]]$children <- list()
-  artifact$graph$nodes <- artifact$graph$nodes[
-    !names(artifact$graph$nodes) %in% child_ids
-  ]
-  artifact$graph$edges <- Filter(
-    function(edge) {
-      !edge$from %in% child_ids && !edge$to %in% child_ids
-    },
-    artifact$graph$edges
-  )
-  artifact
-}
-
-test_that("v5 interpreter factories round-trip without being invoked", {
+test_that("current v5 interpreter factories round-trip without being invoked", {
   calls <- 0L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
-    artifact_v4_runner()
+    artifact_runtime_runner()
   }
   registry <- list(interpreter_factory = interpreter_factory)
 
-  for (program in artifact_v4_modules(interpreter_factory)) {
+  for (program in artifact_runtime_modules(interpreter_factory)) {
     artifact <- program_artifact(program, registry = registry)
     expect_identical(artifact$format_version, 5L)
     fields <- artifact$graph$nodes[["$"]]$fields
@@ -108,7 +88,7 @@ test_that("v5 RLM predictor children preserve tuned state", {
   calls <- 0L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
-    artifact_v4_runner()
+    artifact_runtime_runner()
   }
   action <- dsprrr:::new_rlm_action_module()
   extract <- dsprrr:::new_rlm_extract_module(
@@ -171,40 +151,8 @@ test_that("v5 RLM predictor children preserve tuned state", {
   )
 })
 
-test_that("childless v4 RLM artifacts restore with default predictors", {
-  calls <- 0L
-  interpreter_factory <- function(.unused = NULL) {
-    calls <<- calls + 1L
-    artifact_v4_runner()
-  }
-  registry <- list(interpreter_factory = interpreter_factory)
-  program <- dsprrr:::RLMModule$new(
-    signature = signature("question -> answer"),
-    interpreter_factory = interpreter_factory,
-    max_llm_calls = 0L
-  )
-  artifact <- program_artifact(program, registry = registry) |>
-    artifact_v4_strip_rlm_children()
-  artifact$format_version <- 4L
-  artifact <- artifact_v4_rehash(artifact)
-
-  expect_no_error(dsprrr:::artifact_validate_manifest(artifact))
-  restored <- restore_module_config(artifact, registry = registry)
-
-  expect_named(module_children(restored), c("generate_action", "extract"))
-  expect_s3_class(restored$generate_action, "PredictModule")
-  expect_s3_class(restored$extract, "PredictModule")
-  expect_identical(restored$interpreter_factory, interpreter_factory)
-  expect_identical(calls, 0L)
-  upgraded <- program_artifact(restored, registry = registry)
-  expect_named(
-    upgraded$graph$nodes[["$"]]$children,
-    c("generate_action", "extract")
-  )
-})
-
 test_that("v5 RLM artifacts reject partial predictor child schemas", {
-  interpreter_factory <- function(.unused = NULL) artifact_v4_runner()
+  interpreter_factory <- function(.unused = NULL) artifact_runtime_runner()
   registry <- list(interpreter_factory = interpreter_factory)
   program <- dsprrr:::RLMModule$new(
     signature = signature("question -> answer"),
@@ -213,7 +161,7 @@ test_that("v5 RLM artifacts reject partial predictor child schemas", {
   )
   artifact <- program_artifact(program, registry = registry)
   artifact$graph$nodes[["$"]]$children$extract <- NULL
-  artifact <- artifact_v4_rehash(artifact)
+  artifact <- artifact_runtime_rehash(artifact)
 
   expect_error(
     dsprrr:::artifact_validate_manifest(artifact),
@@ -225,7 +173,7 @@ test_that("v5 interpreter factories support explicit trusted embedding", {
   calls <- 0L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
-    artifact_v4_runner()
+    artifact_runtime_runner()
   }
   program <- dsprrr:::ProgramOfThoughtModule$new(
     signature = signature("question -> answer"),
@@ -244,8 +192,8 @@ test_that("v5 interpreter factories support explicit trusted embedding", {
 })
 
 test_that("v5 runtime bindings enforce exact XOR", {
-  runner <- artifact_v4_runner()
-  factory <- function(.unused = NULL) artifact_v4_runner()
+  runner <- artifact_runtime_runner()
+  factory <- function(.unused = NULL) artifact_runtime_runner()
   registry <- list(runner = runner, factory = factory)
   runner_artifact <- program_artifact(
     dsprrr:::ProgramOfThoughtModule$new(
@@ -265,7 +213,7 @@ test_that("v5 runtime bindings enforce exact XOR", {
   both <- factory_artifact
   both$graph$nodes[["$"]]$fields$runner <-
     runner_artifact$graph$nodes[["$"]]$fields$runner
-  both <- artifact_v4_rehash(both)
+  both <- artifact_runtime_rehash(both)
   expect_error(
     restore_module_config(both, registry = registry),
     class = "dsprrr_artifact_malformed"
@@ -273,50 +221,10 @@ test_that("v5 runtime bindings enforce exact XOR", {
 
   neither <- factory_artifact
   neither$graph$nodes[["$"]]$fields$interpreter_factory <- NULL
-  neither <- artifact_v4_rehash(neither)
+  neither <- artifact_runtime_rehash(neither)
   expect_error(
     restore_module_config(neither, registry = registry),
     class = "dsprrr_artifact_malformed"
-  )
-})
-
-test_that("validated v3 runner artifacts upgrade before restoration", {
-  runner <- artifact_v4_runner()
-  registry <- list(runner = runner)
-  program <- dsprrr:::RLMModule$new(
-    signature = signature("question -> answer"),
-    runner = runner,
-    max_llm_calls = 1L
-  )
-  artifact <- program_artifact(program, registry = registry)
-  artifact <- artifact_v4_strip_rlm_children(artifact)
-  fields <- artifact$graph$nodes[["$"]]$fields
-  fields$interpreter_factory <- NULL
-  fields <- fields[setdiff(names(fields), "interpreter_factory")]
-  artifact$graph$nodes[["$"]]$fields <- fields
-  artifact$format_version <- 3L
-  artifact <- artifact_v4_rehash(artifact)
-
-  expect_no_error(dsprrr:::artifact_validate_manifest(artifact))
-  restored <- restore_module_config(artifact, registry = registry)
-
-  expect_identical(restored$runner, runner)
-  expect_null(restored$interpreter_factory)
-  expect_identical(restored$max_llm_calls, 1L)
-
-  zero_calls <- artifact
-  zero_calls$graph$nodes[["$"]]$fields$max_llm_calls <- 0L
-  zero_calls <- artifact_v4_rehash(zero_calls)
-  expect_error(
-    dsprrr:::artifact_validate_manifest(zero_calls),
-    class = "dsprrr_artifact_malformed"
-  )
-
-  corrupt <- artifact
-  corrupt$graph$nodes[["$"]]$fields$max_iterations <- 999L
-  expect_error(
-    restore_module_config(corrupt, registry = registry),
-    class = "dsprrr_artifact_integrity_error"
   )
 })
 
@@ -354,7 +262,11 @@ test_that("Flex modules keep their resource-free codec in v5", {
   expect_length(fields$tools, 0L)
   expect_null(fields$interpreter_factory)
   expect_true(fields$require_sandbox)
-  expect_false(any(grepl("active_lease", capture.output(dput(artifact)))))
+  expect_false(any(grepl(
+    "active_lease",
+    capture.output(dput(artifact)),
+    fixed = TRUE
+  )))
   expect_s3_class(restored, "FlexModule")
   expect_identical(restored$module_src, program$module_src)
   expect_identical(restored$max_predictor_calls, 7L)
@@ -426,7 +338,7 @@ test_that("executable Flex runtime dependencies round-trip through a registry", 
   offset <- 3L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
-    artifact_v4_runner()
+    artifact_runtime_runner()
   }
   add_offset <- function(value) value + offset
   registry <- list(
@@ -468,37 +380,29 @@ test_that("executable Flex runtime dependencies round-trip through a registry", 
   expect_identical(calls, 0L)
 })
 
-test_that("legacy two-field v4 Flex artifacts remain readable", {
-  program <- suppressWarnings(flex("question -> answer"))
-  artifact <- program_artifact(program)
-  artifact$graph$nodes[["$"]]$fields <- artifact$graph$nodes[["$"]]$fields[
-    c("module_src", "max_predictor_calls")
-  ]
-  artifact <- artifact_v4_rehash(artifact)
-
-  expect_no_error(dsprrr:::artifact_validate_manifest(artifact))
-  restored <- restore_module_config(artifact)
-  expect_identical(restored$source_format, "json")
-  expect_identical(restored$module_src, program$module_src)
-  expect_identical(restored$max_tool_calls, 100L)
-})
-
-test_that("earlier runtime-aware v4 Flex artifacts remain readable", {
+test_that("v5 Flex artifacts require the complete field schema", {
   program <- suppressWarnings(flex("question -> answer"))
   artifact <- program_artifact(program)
   fields <- artifact$graph$nodes[["$"]]$fields
-  artifact$graph$nodes[["$"]]$fields <- fields[
-    setdiff(names(fields), "max_tool_calls")
-  ]
-  artifact <- artifact_v4_rehash(artifact)
+  incomplete <- list(
+    fields[c("module_src", "max_predictor_calls")],
+    fields[setdiff(names(fields), "max_tool_calls")]
+  )
 
-  expect_no_error(dsprrr:::artifact_validate_manifest(artifact))
-  restored <- restore_module_config(artifact)
-  expect_identical(restored$max_tool_calls, 100L)
+  for (candidate_fields in incomplete) {
+    candidate <- artifact
+    candidate$graph$nodes[["$"]]$fields <- candidate_fields
+    candidate <- artifact_runtime_rehash(candidate)
+
+    error <- rlang::catch_cnd(
+      dsprrr:::artifact_validate_manifest(candidate)
+    )
+    expect_s3_class(error, "dsprrr_artifact_malformed")
+  }
 })
 
 test_that("Flex artifact validation rejects invalid host-tool maps", {
-  interpreter_factory <- function() artifact_v4_runner()
+  interpreter_factory <- function() artifact_runtime_runner()
   identity_tool <- function(value) value
   registry <- list(
     interpreter_factory = interpreter_factory,
@@ -513,7 +417,7 @@ test_that("Flex artifact validation rejects invalid host-tool maps", {
   ))
   artifact <- program_artifact(program, registry = registry)
   names(artifact$graph$nodes[["$"]]$fields$tools) <- "bad name"
-  artifact <- artifact_v4_rehash(artifact)
+  artifact <- artifact_runtime_rehash(artifact)
 
   error <- tryCatch(
     dsprrr:::artifact_validate_manifest(artifact),

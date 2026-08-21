@@ -14,6 +14,43 @@ compose_rollout_id <- function(rollout_id, i) {
   if (is.null(rollout_id)) as.character(i) else paste0(rollout_id, ".", i)
 }
 
+#' Reject R's partial matching for public constructor arguments
+#' @noRd
+reject_partial_argument_matches <- function(call, fn) {
+  supplied <- names(as.list(call)[-1L])
+  if (is.null(supplied)) {
+    return(invisible(NULL))
+  }
+
+  supplied <- supplied[nzchar(supplied)]
+  formal_names <- setdiff(names(formals(fn)), "...")
+  partial <- supplied[
+    !supplied %in% formal_names &
+      vapply(
+        supplied,
+        function(name) sum(startsWith(formal_names, name)) == 1L,
+        logical(1)
+      )
+  ]
+  if (length(partial) == 0L) {
+    return(invisible(NULL))
+  }
+
+  matched <- vapply(
+    partial,
+    function(name) formal_names[startsWith(formal_names, name)][[1L]],
+    character(1)
+  )
+  details <- paste0("`", partial, "` -> `", matched, "`")
+  cli::cli_abort(
+    c(
+      "Argument names must match exactly",
+      "x" = "Partial matches: {details}"
+    ),
+    class = "dsprrr_argument_name_error"
+  )
+}
+
 #' Check if object inherits from ellmer type
 #'
 #' @noRd
@@ -26,15 +63,8 @@ is_ellmer_type <- function(x) {
     inherits(x, "ellmer::TypeJsonSchema")
 }
 
-#' Determine if vignettes should be evaluated
-#'
-#' Checks for vcr cassettes or API credentials to determine
-#' if vignette code should be executed. Always returns FALSE during
-#' R CMD check to avoid cassette mismatch errors.
-#'
-#' @return Logical indicating whether to evaluate vignette code
-#' @export
-#' @keywords internal
+#' Decide whether local vignette examples can run
+#' @noRd
 eval_vignette <- function() {
   # Skip during R CMD check or CI (cassettes may not match current code)
   if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
@@ -366,42 +396,6 @@ is_reasoning_model <- function(model_name) {
   any(vapply(reasoning_patterns, function(p) grepl(p, model_lower), logical(1)))
 }
 
-#' Get default parameters for a provider
-#'
-#' Returns sensible default parameter values and capability flags
-#' for different LLM providers.
-#'
-#' @param provider Character string identifying the provider
-#'   (e.g., "openai", "anthropic", "google").
-#' @return A named list with default values and capabilities.
-#' @export
-#' @examples
-#' provider_defaults("openai")
-#' provider_defaults("anthropic")
-provider_defaults <- function(provider) {
-  defaults <- list(
-    openai = list(
-      temperature = 0.7,
-      supports_json_schema = TRUE,
-      supports_reasoning = TRUE
-    ),
-    anthropic = list(
-      temperature = 1.0,
-      supports_json_schema = TRUE,
-      supports_extended_thinking = TRUE
-    ),
-    google = list(
-      temperature = 0.7,
-      supports_json_schema = TRUE
-    ),
-    ollama = list(
-      temperature = 0.7,
-      supports_json_schema = FALSE
-    )
-  )
-  defaults[[tolower(provider)]] %||% list(temperature = 0.7)
-}
-
 #' Render an ellmer Turn as plain text
 #' @noRd
 render_turn_text <- function(turn) {
@@ -565,7 +559,6 @@ trace_tokens <- function(trace) {
 #' @noRd
 trace_cost <- function(trace) {
   trace$cost %||%
-    trace$total_cost %||%
     tryCatch(trace$assistant_turn@cost, error = function(e) NA_real_)
 }
 

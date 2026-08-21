@@ -134,10 +134,10 @@ test_that("format_inputs creates proper format", {
   sig_inputs <- list(
     input(
       name = "text",
-      class = S7::class_character,
+      type = "string",
       description = "Input text"
     ),
-    input(name = "count", class = S7::class_integer, description = "A count")
+    input(name = "count", type = "integer", description = "A count")
   )
 
   inputs <- list(text = "hello", count = 5)
@@ -157,7 +157,7 @@ test_that("format_inputs handles empty inputs", {
 
 test_that("format_inputs handles inputs without descriptions", {
   sig_inputs <- list(
-    input(name = "text", class = S7::class_character)
+    input(name = "text", type = "string")
   )
 
   inputs <- list(text = "hello")
@@ -278,4 +278,8 @@ test_that("suggest_match returns NULL for no match", {
   options <- c("question", "answer")
 
   expect_null(dsprrr:::suggest_match("xyz", options))
+})
+test_that("trace_cost accepts only canonical current-call fields", {
+  expect_equal(dsprrr:::trace_cost(list(cost = 0.1)), 0.1)
+  expect_true(is.na(dsprrr:::trace_cost(list(total_cost = 0.2))))
 })

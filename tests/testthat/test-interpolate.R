@@ -1,13 +1,10 @@
 # Tests for template interpolation
 
 test_that("glue-style { } interpolation works", {
-  mock_chat <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        list(result = prompt)
-      }
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      list(result = prompt)
+    }
   )
 
   sig <- signature("name, age -> result")
@@ -26,66 +23,33 @@ test_that("glue-style { } interpolation works", {
   expect_true(grepl("you are 30 years old", result$result, fixed = TRUE))
 })
 
-test_that("ellmer-style {{ }} interpolation works", {
-  skip_if_not_installed("ellmer")
-
-  mock_chat <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        list(result = prompt)
-      }
-    ),
-    class = "Chat"
+test_that("double-brace placeholders are rejected before provider work", {
+  calls <- 0L
+  mock_chat <- new_test_chat(
+    chat_structured = function(...) {
+      calls <<- calls + 1L
+      list(result = "unexpected")
+    }
   )
-
-  sig <- signature("name, age -> result")
   mod <- module(
-    sig,
+    signature("name -> result"),
     type = "predict",
-    template = "Hello {{name}}, you are {{age}} years old",
+    template = "Hello {{name}}",
     chat = mock_chat
   )
 
-  result <- run(mod, name = "Bob", age = 25)
+  condition <- rlang::catch_cnd(run(mod, name = "Alice"))
 
-  # The result should contain the interpolated template
-  expect_true(grepl("Hello Bob", result$result, fixed = TRUE))
-  expect_true(grepl("you are 25 years old", result$result, fixed = TRUE))
-})
-
-test_that("mixed template detection uses ellmer for {{ }}", {
-  skip_if_not_installed("ellmer")
-
-  mock_chat <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        list(result = prompt)
-      }
-    ),
-    class = "Chat"
-  )
-
-  # Template with {{ }} should use ellmer interpolate
-  sig <- signature("x -> result")
-  mod <- module(
-    sig,
-    type = "predict",
-    template = "Value is {{x}}",
-    chat = mock_chat
-  )
-
-  result <- run(mod, x = "test_value")
-  expect_true(grepl("test_value", result$result, fixed = TRUE))
+  expect_s3_class(condition, "dsprrr_template_syntax_error")
+  expect_match(conditionMessage(condition), "single-brace placeholders")
+  expect_identical(calls, 0L)
 })
 
 test_that("template without braces still works", {
-  mock_chat <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        list(result = prompt)
-      }
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      list(result = prompt)
+    }
   )
 
   sig <- signature("text -> result")
@@ -102,13 +66,10 @@ test_that("template without braces still works", {
 })
 
 test_that("empty template uses auto-generated format", {
-  mock_chat <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        list(result = prompt)
-      }
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      list(result = prompt)
+    }
   )
 
   sig <- signature("question -> answer")

@@ -28,7 +28,7 @@ styling.}
 A tibble with one row per LLM call containing:
 \itemize{
 \item \code{timestamp}: When the call was made
-\item \code{source}: Where the call originated ("dsp()" or module class name)
+\item \code{source}: The module class that originated the call
 \item \code{model}: The model used
 \item \code{tokens_in}: Input tokens
 \item \code{tokens_out}: Output tokens
@@ -41,7 +41,7 @@ A tibble with one row per LLM call containing:
 }
 }
 \description{
-Returns a tibble of recent LLM calls across all modules and \code{dsp()} calls.
+Returns a tibble of recent LLM calls across all modules.
 Similar to DSPy's \code{dspy.inspect_history(n)}.
 }
 \examples{

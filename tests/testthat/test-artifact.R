@@ -578,10 +578,7 @@ test_that("signature schemas and complex strings round-trip exactly", {
 
   restored <- restore_module_config(program_artifact(program))
 
-  expect_identical(
-    signature_to_json_schema(restored$signature),
-    signature_to_json_schema(program$signature)
-  )
+  expect_identical(restored$signature, program$signature)
   expect_identical(restored$signature@instructions, sig@instructions)
   expect_identical(restored$template, complex)
   expect_identical(restored$demos, program$demos)
@@ -1039,14 +1036,18 @@ test_that("runtime fields are excluded across camel and acronym styles", {
 
 test_that("chat configuration records only provider and model", {
   sentinel <- "CHAT_HISTORY_SENTINEL"
-  fake_chat <- structure(
-    list(
-      api_key = sentinel,
-      turns = list(sentinel),
-      chat = function(prompt) "safe response",
-      get_model = function() "safe-model"
+  fake_chat <- new_test_chat(
+    model = "safe-model",
+    turns = list(sentinel),
+    chat = function(prompt) "safe response"
+  )
+  fake_chat$api_key <- sentinel
+  provider_model <- list(
+    provider = paste0(
+      '{"class":"ellmer::Provider","name":"test",',
+      '"base_url":null}'
     ),
-    class = c("SafeProviderChat", "Chat")
+    model = "safe-model"
   )
   program <- artifact_leaf()
   program$chat <- fake_chat
@@ -1057,13 +1058,13 @@ test_that("chat configuration records only provider and model", {
 
   expect_identical(
     artifact$graph$nodes[["$"]]$provider_model,
-    list(provider = "SafeProviderChat", model = "safe-model")
+    provider_model
   )
   expect_identical(grepl(sentinel, rendered, fixed = TRUE), FALSE)
   expect_null(restored$chat)
   expect_identical(
     dsprrr:::artifact_detached_runtime(restored)$chat,
-    list(provider = "SafeProviderChat", model = "safe-model")
+    provider_model
   )
 
   runner <- list(
@@ -1089,7 +1090,7 @@ test_that("chat configuration records only provider and model", {
   expect_null(restored_rlm$sub_lm)
   expect_identical(
     dsprrr:::artifact_detached_runtime(restored_rlm)$sub_lm,
-    list(provider = "SafeProviderChat", model = "safe-model")
+    provider_model
   )
   restored_artifact <- program_artifact(restored)
   restored_rlm_artifact <- program_artifact(
@@ -1250,6 +1251,29 @@ test_that("tools require registry IDs and round-trip by identity", {
   artifact <- program_artifact(program, registry = registry)
   restored <- restore_module_config(artifact, registry = registry)
   expect_identical(restored$tools[[1]], tool)
+})
+
+test_that("artifact descriptors recognize only ellmer ToolDefs as tools", {
+  tool <- ellmer::tool(
+    \(query) query,
+    name = "search",
+    description = "Search",
+    arguments = list(query = ellmer::type_string())
+  )
+  bare_tool <- \(query) query
+  class(bare_tool) <- c("ToolDef", "function")
+  bare_object <- structure(
+    list(fun = \(query) query),
+    class = "ToolDef"
+  )
+
+  current <- dsprrr:::artifact_runtime_interface_descriptor(tool)
+  bare <- dsprrr:::artifact_runtime_interface_descriptor(bare_tool)
+  bare_list <- dsprrr:::artifact_runtime_interface_descriptor(bare_object)
+
+  expect_identical(current$type, "tool")
+  expect_identical(bare$type, "function")
+  expect_identical(bare_list$type, "list")
 })
 
 test_that("embedded runtime values require dual trusted opt-in", {
@@ -2153,6 +2177,14 @@ test_that("malformed, unsupported, and corrupt artifacts fail with typed errors"
     rlang::catch_cnd(restore_module_config(unsupported)),
     "dsprrr_artifact_unsupported_version"
   )
+  for (version in c(3L, 4L)) {
+    historical <- artifact
+    historical$format_version <- version
+    expect_s3_class(
+      rlang::catch_cnd(restore_module_config(historical)),
+      "dsprrr_artifact_unsupported_version"
+    )
+  }
 
   corrupt <- artifact
   corrupt$graph$nodes[["$"]]$fields$template <- "tampered"
@@ -2233,7 +2265,7 @@ test_that("malformed, unsupported, and corrupt artifacts fail with typed errors"
 })
 
 test_that("only the current artifact schema reaches constructors", {
-  legacy <- list(
+  noncurrent_schema <- list(
     format_version = 2L,
     module_kind = "predict",
     signature = list(),
@@ -2251,7 +2283,7 @@ test_that("only the current artifact schema reaches constructors", {
     .package = "dsprrr"
   )
 
-  condition <- rlang::catch_cnd(restore_module_config(legacy))
+  condition <- rlang::catch_cnd(restore_module_config(noncurrent_schema))
   expect_s3_class(condition, "dsprrr_artifact_malformed")
   expect_false(constructor_called)
 
@@ -2275,9 +2307,9 @@ test_that("only the current artifact schema reaches constructors", {
       rm(list = method_name, envir = globalenv())
     }
   })
-  class(legacy) <- c("artifact_evil", "list")
+  class(noncurrent_schema) <- c("artifact_evil", "list")
 
-  condition <- rlang::catch_cnd(restore_module_config(legacy))
+  condition <- rlang::catch_cnd(restore_module_config(noncurrent_schema))
   expect_s3_class(condition, "dsprrr_artifact_malformed")
   expect_false(probe$called)
   expect_false(constructor_called)

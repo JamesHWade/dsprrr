@@ -10,10 +10,10 @@ read_trials_jsonl(path)
 \item{path}{File path for the JSONL file.}
 }
 \value{
-A list of Trial objects.
+A list of optimization trial records.
 }
 \description{
-Read Trial objects from a JSONL file.
+Read optimization trial records from a JSONL file.
 }
 \examples{
 \dontrun{

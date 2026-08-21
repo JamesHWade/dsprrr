@@ -7,7 +7,7 @@ test_that("basic LLM integration works", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Echo the text back"
@@ -33,7 +33,7 @@ test_that("structured output works with real LLM", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_object(
       sentiment = ellmer::type_enum(
@@ -69,7 +69,7 @@ test_that("batch processing works with real LLM", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify as positive or negative"
@@ -104,7 +104,7 @@ test_that("optimize_grid integrates with real LLM", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Return the sentiment label as a single word."
@@ -221,7 +221,7 @@ test_that("finetune::tune_race_anova() workflow is compatible", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify sentiment"
@@ -322,7 +322,7 @@ test_that("module_parameter_set works with finetune grid functions", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = ""

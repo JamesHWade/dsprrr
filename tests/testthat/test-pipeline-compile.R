@@ -43,12 +43,12 @@ make_qa_pipeline <- function() {
   )
 
   sig1 <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_object(draft = ellmer::type_string()),
     instructions = "Draft an answer"
   )
   sig2 <- Signature(
-    inputs = list(input(name = "draft", class = S7::class_character)),
+    inputs = list(input(name = "draft", type = "string")),
     output_type = ellmer::type_object(answer = ellmer::type_string()),
     instructions = "Finalize the answer"
   )

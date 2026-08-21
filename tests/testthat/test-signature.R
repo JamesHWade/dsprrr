@@ -1,7 +1,7 @@
 test_that("Signature can be created with valid inputs", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify the text"
@@ -57,7 +57,7 @@ test_that("Signature validates instructions must be character", {
 test_that("Signature rejects missing instructions", {
   expect_snapshot(
     Signature(
-      inputs = list(input(name = "text", class = S7::class_character)),
+      inputs = list(input(name = "text", type = "string")),
       output_type = ellmer::type_string(),
       instructions = NA_character_
     ),
@@ -110,7 +110,7 @@ test_that("Signature requires either inputs or instructions", {
 test_that("Signature with complex output types works", {
   sig <- Signature(
     inputs = list(
-      input(name = "data", class = S7::class_character)
+      input(name = "data", type = "string")
     ),
     output_type = ellmer::type_object(
       sentiment = ellmer::type_enum(
@@ -133,7 +133,7 @@ test_that("Signature print method works", {
     inputs = list(
       input(
         name = "text",
-        class = S7::class_character,
+        type = "string",
         description = "Input text"
       )
     ),

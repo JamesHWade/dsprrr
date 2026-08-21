@@ -182,64 +182,13 @@ validate_concurrency_control <- function(control) {
   )
 }
 
-#' Validate one legacy parallel flag
+#' Resolve a concurrency policy, defaulting to sequential execution
 #' @noRd
-validate_parallel_flag <- function(value) {
-  if (!is.logical(value) || length(value) != 1L || is.na(value)) {
-    cli::cli_abort(
-      "{.arg .parallel} must be one non-missing logical value",
-      class = "dsprrr_concurrency_config_error"
-    )
+resolve_concurrency_control <- function(.concurrency = NULL) {
+  if (is.null(.concurrency)) {
+    return(concurrency_control(backend = "sequential", max_active = 1L))
   }
-  value
-}
-
-#' Resolve explicit concurrency and legacy parallel arguments
-#' @noRd
-resolve_concurrency_control <- function(
-  .concurrency,
-  concurrency_missing,
-  .parallel,
-  parallel_missing,
-  .parallel_method,
-  parallel_method_missing
-) {
-  explicit_control <- !concurrency_missing && !is.null(.concurrency)
-  if (explicit_control && (!parallel_missing || !parallel_method_missing)) {
-    cli::cli_abort(
-      c(
-        "{.arg .concurrency} cannot be combined with legacy parallel arguments",
-        "i" = "Configure backend and workers with {.fn concurrency_control} only."
-      ),
-      class = "dsprrr_concurrency_argument_conflict"
-    )
-  }
-
-  if (explicit_control) {
-    control <- validate_concurrency_control(.concurrency)
-    attr(control, "legacy") <- FALSE
-    return(control)
-  }
-
-  .parallel <- validate_parallel_flag(.parallel)
-  .parallel_method <- match.arg(.parallel_method, c("ellmer", "mirai"))
-  if (!.parallel) {
-    control <- concurrency_control(backend = "sequential", max_active = 1L)
-  } else {
-    max_active <- getOption("dsprrr.max_active", 10L)
-    total_timeout <- if (identical(.parallel_method, "mirai")) {
-      getOption("dsprrr.parallel_timeout", 600)
-    } else {
-      Inf
-    }
-    control <- concurrency_control(
-      backend = .parallel_method,
-      max_active = max_active,
-      total_timeout = total_timeout
-    )
-  }
-  attr(control, "legacy") <- TRUE
-  control
+  validate_concurrency_control(.concurrency)
 }
 
 #' Report whether a batch backend is installed and callable
@@ -261,7 +210,6 @@ concurrency_backend_available <- function(backend) {
 #' Normalize a validated control into an executable batch contract
 #' @noRd
 normalize_concurrency_runtime <- function(control, .llm = NULL, .chat = .llm) {
-  legacy <- isTRUE(attr(control, "legacy"))
   control <- validate_concurrency_control(control)
   requested_backend <- control$backend
   effective_backend <- requested_backend
@@ -317,52 +265,20 @@ normalize_concurrency_runtime <- function(control, .llm = NULL, .chat = .llm) {
     !identical(requested_backend, "auto") &&
       !concurrency_backend_available(effective_backend)
   ) {
-    if (legacy && identical(effective_backend, "ellmer")) {
-      effective_backend <- if (
-        is.null(.llm) && concurrency_backend_available("mirai")
-      ) {
-        "mirai"
-      } else {
-        "sequential"
-      }
-      fallback_reason <- "ellmer parallel execution is unavailable"
-      cli::cli_warn(c(
-        "ellmer parallel execution is unavailable",
-        "i" = "Falling back to {effective_backend} processing."
-      ))
-    } else {
-      cli::cli_abort(
-        "Requested concurrency backend {.val {requested_backend}} is unavailable",
-        class = "dsprrr_concurrency_backend_unavailable"
-      )
-    }
+    cli::cli_abort(
+      "Requested concurrency backend {.val {requested_backend}} is unavailable",
+      class = "dsprrr_concurrency_backend_unavailable"
+    )
   }
 
   if (identical(effective_backend, "mirai") && !is.null(.llm)) {
-    if (legacy) {
-      effective_backend <- "sequential"
-      # The legacy timeout option governed mirai collection only. Once this
-      # compatibility path falls back, it must not be misrepresented as an
-      # enforceable sequential deadline.
-      control$task_timeout <- Inf
-      control$total_timeout <- Inf
-      fallback_reason <- paste(
-        "mirai requires .llm = NULL so each worker owns an isolated Chat"
-      )
-      cli::cli_warn(c(
-        "mirai parallel execution requires {.code .llm = NULL} so each worker can create an independent client",
-        "i" = "Falling back to sequential processing",
-        "i" = "To enable parallel: remove {.arg .llm}, set {.code .llm = NULL}, or use {.code .parallel_method = \"ellmer\"}"
-      ))
-    } else {
-      cli::cli_abort(
-        c(
-          "The mirai backend requires {.code .llm = NULL}",
-          "i" = "Attach a serializable default Chat to the module or choose the ellmer backend."
-        ),
-        class = "dsprrr_concurrency_chat_error"
-      )
-    }
+    cli::cli_abort(
+      c(
+        "The mirai backend requires {.code .llm = NULL}",
+        "i" = "Attach a serializable default Chat to the module or choose the ellmer backend."
+      ),
+      class = "dsprrr_concurrency_chat_error"
+    )
   }
 
   finite_timeout <- is.finite(control$task_timeout) ||
@@ -391,8 +307,7 @@ normalize_concurrency_runtime <- function(control, .llm = NULL, .chat = .llm) {
         effective_backend = effective_backend,
         requested_workers = control$max_active,
         effective_workers = effective_workers,
-        fallback_reason = fallback_reason,
-        legacy = legacy
+        fallback_reason = fallback_reason
       )
     ),
     class = "dsprrr_concurrency_runtime"

@@ -38,7 +38,7 @@ This enables tracking model performance over time and across experiments.
 board <- pins::board_folder("pins")
 
 # Evaluate module on test set
-eval_result <- evaluate(mod, test_data, metric = exact_match)
+eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
 
 # Pin the evaluation results
 pin_vitals_log(board, "sentiment-eval-v1", eval_result,

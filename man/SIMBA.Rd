@@ -35,7 +35,8 @@ variability. Default is 6.}
 
 \item{max_demos}{Maximum number of demonstrations to keep. Default is 4.}
 
-\item{prompt_model}{Optional LLM for rule generation (reflection).}
+\item{prompt_model}{Optional ellmer Chat for rule generation. If \code{NULL},
+uses the deterministic example-based rule fallback.}
 
 \item{seed}{Random seed for reproducibility. Default is 0.}
 

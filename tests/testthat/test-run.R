@@ -6,18 +6,14 @@ test_that("run generic exists and works with modules", {
 
 test_that("run.PredictModule warns about input type mismatches", {
   sig <- signature(
-    inputs = list(input_integer("count")),
+    inputs = list(input("count", "integer")),
     output_type = ellmer::type_object(answer = ellmer::type_string())
   )
   mod <- module(sig, type = "predict")
-  mock_chat <- structure(
-    list(
-      chat_structured = function(...) list(answer = "ok"),
-      get_model = function() "mock-model",
-      get_turns = function() list(),
-      last_turn = function(role = NULL) NULL
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    chat_structured = function(...) list(answer = "ok"),
+    model = "mock-model",
+    last_turn = function(role = NULL) NULL
   )
 
   old <- options(dsprrr.warn_on_type_mismatch = TRUE)
@@ -32,8 +28,8 @@ test_that("run.PredictModule warns about input type mismatches", {
 test_that("run validates required inputs", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character),
-      input(name = "language", class = S7::class_character)
+      input(name = "text", type = "string"),
+      input(name = "language", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Translate"
@@ -49,6 +45,7 @@ test_that("run validates required inputs", {
   mock_llm <- list(
     chat_structured = function(...) "translated"
   )
+  mock_llm <- as_test_chat(mock_llm)
 
   expect_error(
     run(pred, text = "Hello", .llm = mock_llm),
@@ -83,7 +80,7 @@ test_that("run and Module$run preserve dotted signature input names", {
 test_that("build_prompt creates proper prompt", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify sentiment"
@@ -104,7 +101,7 @@ test_that("build_prompt creates proper prompt", {
 test_that("build_prompt includes demonstrations", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify"
@@ -161,7 +158,7 @@ test_that("format_inputs handles missing template", {
   sig_inputs <- list(
     input(
       name = "text",
-      class = S7::class_character,
+      type = "string",
       description = "The input text"
     )
   )
@@ -195,7 +192,7 @@ test_that("format_output handles different output types", {
 test_that("get_default_llm returns ellmer chat object", {
   # Create a mock module
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string()
   )
   mod <- module(signature = sig, type = "predict")
@@ -209,42 +206,86 @@ test_that("get_default_llm returns ellmer chat object", {
   }
 
   # Test with module that has chat stored
-  mock_llm <- list(chat = function(...) "test")
-  class(mock_llm) <- "Chat"
+  mock_llm <- new_test_chat(chat = function(...) "test")
   mod$chat <- mock_llm
   llm <- dsprrr:::get_default_llm(mod)
   expect_identical(llm, mock_llm)
 })
 
-test_that("module config no longer synthesizes chats from provider fields", {
-  old_opt <- options(dsprrr.default_chat = NULL)
-  on.exit(options(old_opt), add = TRUE)
-  clear_default_chat()
-
-  old_env <- Sys.getenv(c(
-    "OPENAI_API_KEY",
-    "ANTHROPIC_API_KEY",
-    "GOOGLE_API_KEY"
-  ))
-  on.exit(do.call(Sys.setenv, as.list(old_env)), add = TRUE)
-  Sys.unsetenv(c("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"))
-
-  mod <- module(
-    signature("text -> result"),
-    type = "predict",
-    config = list(provider = "openai", model = "gpt-4o-mini")
+test_that("resolve_module_llm rejects class-tagged list adapters", {
+  mod <- module(signature("text -> answer"))
+  adapter <- structure(
+    list(chat_structured = function(...) "answer"),
+    class = "Chat"
   )
 
   expect_error(
-    run(mod, text = "hello"),
-    "no longer creates Chat clients"
+    dsprrr:::resolve_module_llm(mod, .llm = adapter),
+    class = "dsprrr_chat_type_error"
+  )
+})
+
+test_that("runtime Chat parameters are isolated on an independent clone", {
+  provider <- ellmer::Provider(
+    name = "test",
+    model = "test-model",
+    base_url = "",
+    extra_args = list(existing = TRUE)
+  )
+  chat <- new_test_chat(
+    provider = provider,
+    turns = list("prior turn")
+  )
+
+  configured <- dsprrr:::apply_chat_params(
+    chat,
+    list(temperature = 0.2)
+  )
+
+  expect_false(identical(configured, chat))
+  expect_identical(configured$get_turns(), list("prior turn"))
+  expect_identical(chat$get_provider()@extra_args, list(existing = TRUE))
+  expect_identical(
+    configured$get_provider()@extra_args,
+    list(existing = TRUE, temperature = 0.2)
+  )
+})
+
+test_that("runtime Chat parameters fail closed when cloning fails", {
+  chat <- new_test_chat()
+  override_test_chat_method(chat, "clone", function(...) stop("cannot clone"))
+
+  expect_error(
+    dsprrr:::apply_chat_params(chat, list(temperature = 0.2)),
+    class = "dsprrr_chat_clone_error"
+  )
+})
+
+test_that("runtime Chat parameters fail closed without a provider", {
+  chat <- new_test_chat()
+  chat$.__enclos_env__$private$provider <- NULL
+
+  expect_error(
+    dsprrr:::apply_chat_params(chat, list(temperature = 0.2)),
+    class = "dsprrr_chat_params_error"
+  )
+})
+
+test_that("module config rejects Chat fields", {
+  expect_error(
+    module(
+      signature("text -> result"),
+      type = "predict",
+      config = list(provider = "openai", model = "gpt-4o-mini")
+    ),
+    class = "dsprrr_module_config_error"
   )
 })
 
 test_that("batch processing works with multiple inputs", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Echo the text"
@@ -263,7 +304,7 @@ test_that("batch processing works with multiple inputs", {
       gsub("Echo the text\n\n", "", prompt)
     }
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- as_test_chat(mock_llm)
 
   # Test batch processing
   results <- run(
@@ -281,7 +322,7 @@ test_that("batch processing works with multiple inputs", {
 test_that("structured return format includes metadata", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Echo"
@@ -297,7 +338,7 @@ test_that("structured return format includes metadata", {
   mock_llm <- list(
     chat_structured = function(prompt, ...) "response"
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- as_test_chat(mock_llm)
 
   # Test structured return
   result <- run(
@@ -322,7 +363,7 @@ test_that("structured return format includes metadata", {
 test_that("run_dataset processes data frames", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Process"
@@ -341,7 +382,7 @@ test_that("run_dataset processes data frames", {
       paste0("processed_", gsub("Process\n\n", "", prompt))
     }
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- as_test_chat(mock_llm)
 
   # Create test dataset
   test_data <- data.frame(
@@ -363,7 +404,7 @@ test_that("run_dataset processes data frames", {
 test_that("module as function interface works", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Echo"
@@ -379,7 +420,7 @@ test_that("module as function interface works", {
   mock_llm <- list(
     chat_structured = function(prompt, ...) "result"
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- as_test_chat(mock_llm)
 
   # Test converting module to function
   skip("as_function not yet implemented for modules")
@@ -391,7 +432,7 @@ test_that("module as function interface works", {
 test_that("batch processing handles errors gracefully", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Process"
@@ -412,7 +453,7 @@ test_that("batch processing handles errors gracefully", {
       "success"
     }
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- as_test_chat(mock_llm)
 
   # Test with mixed success/failure
   expect_warning(
@@ -433,14 +474,13 @@ test_that("batch processing handles errors gracefully", {
 
 test_that("structured datasets expose row-level LLM errors", {
   mod <- module(signature("text -> answer"), type = "predict")
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) {
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
       if (grepl("explode", prompt, fixed = TRUE)) {
         stop("provider exploded")
       }
       "ok"
-    }),
-    class = "Chat"
+    }
   )
 
   expect_warning(
@@ -489,7 +529,7 @@ test_that("ellmer parallel preserves successes around a failed request", {
   )
 
   mod <- module(signature("text -> answer"), type = "predict")
-  mock_llm <- structure(list(), class = "Chat")
+  mock_llm <- new_test_chat()
   result <- dsprrr:::run_batch_ellmer_parallel(
     module = mod,
     input_sets = list(
@@ -549,7 +589,7 @@ test_that("ellmer parallel preserves outputs named like telemetry", {
     module = mod,
     input_sets = list(list(text = "a"), list(text = "b")),
     n = 2,
-    .llm = structure(list(), class = "Chat"),
+    .llm = new_test_chat(),
     .verbose = FALSE,
     .return_format = "structured",
     .progress = FALSE
@@ -563,44 +603,38 @@ test_that("ellmer parallel preserves outputs named like telemetry", {
   expect_false("input_tokens" %in% names(result[[1]]$metadata))
 })
 
-test_that("run warns when mirai parallel execution with custom llm", {
+test_that("explicit mirai rejects a custom llm", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string()
   )
   module <- module(signature = sig, type = "predict", template = "{text}")
 
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "ok"),
-    class = "Chat"
-  )
+  mock_llm <- new_test_chat(chat_structured = function(prompt, ...) "ok")
 
-  # mirai parallel method requires .llm = NULL
-  expect_warning(
-    out <- run(
+  expect_error(
+    run(
       module,
       text = c("a", "b"),
       .llm = mock_llm,
-      .parallel = TRUE,
-      .parallel_method = "mirai",
+      .concurrency = concurrency_control(
+        backend = "mirai",
+        max_active = 2L
+      ),
       .progress = FALSE
     ),
-    "mirai parallel execution requires"
+    class = "dsprrr_concurrency_chat_error"
   )
-  expect_equal(length(out), 2)
 })
 
 test_that("run does NOT warn about mirai when ellmer parallel with custom llm", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string()
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "ok"),
-    class = "Chat"
-  )
+  mock_llm <- new_test_chat(chat_structured = function(prompt, ...) "ok")
 
   # ellmer parallel method should NOT warn about "mirai parallel execution"
   # when .llm is provided (ellmer needs .llm to work).
@@ -619,8 +653,10 @@ test_that("run does NOT warn about mirai when ellmer parallel with custom llm", 
         mod,
         text = c("a", "b"),
         .llm = mock_llm,
-        .parallel = TRUE,
-        .parallel_method = "ellmer",
+        .concurrency = concurrency_control(
+          backend = "ellmer",
+          max_active = 2L
+        ),
         .progress = FALSE
       ),
       error = function(e) NULL
@@ -641,54 +677,48 @@ test_that("run does NOT warn about mirai when ellmer parallel with custom llm", 
   expect_length(mirai_warnings, 0)
 })
 
-test_that("ellmer parallel falls back to sequential when unavailable with .llm", {
+test_that("explicit ellmer fails closed when unavailable", {
   skip_if(
     exists("parallel_chat_structured", envir = asNamespace("ellmer")),
     "Test only runs when ellmer::parallel_chat_structured is NOT available"
   )
 
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string()
   )
 
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "ok"),
-    class = "Chat"
-  )
+  mock_llm <- new_test_chat(chat_structured = function(prompt, ...) "ok")
 
-  # When parallel_chat_structured is unavailable and .llm is provided,
-
-  # should warn about falling back to sequential (not mirai)
-  expect_warning(
-    out <- run(
+  expect_error(
+    run(
       mod,
       text = c("a", "b"),
       .llm = mock_llm,
-      .parallel = TRUE,
-      .parallel_method = "ellmer",
+      .concurrency = concurrency_control(
+        backend = "ellmer",
+        max_active = 2L
+      ),
       .progress = FALSE
     ),
-    "Falling back to sequential processing"
+    class = "dsprrr_concurrency_backend_unavailable"
   )
-  expect_equal(length(out), 2)
 })
 
 # --- Parallel execution tests ---
 
 test_that("process_batch_item returns correct format for simple mode", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "response"),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) "response"
   )
 
   result <- dsprrr:::process_batch_item(
@@ -705,46 +735,42 @@ test_that("process_batch_item returns correct format for simple mode", {
 
 test_that("process_batch_item returns correct format for structured mode", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
   turns <- list()
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(
-              contents = list(ellmer::ContentText(as.character(prompt)))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentText("response")),
-              tokens = c(10L, 2L, 1L),
-              cost = 0.001
-            )
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      turns <<- c(
+        turns,
+        list(
+          ellmer::UserTurn(
+            contents = list(ellmer::ContentText(as.character(prompt)))
+          ),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("response")),
+            tokens = c(10L, 2L, 1L),
+            cost = 0.001
           )
         )
-        "response"
-      },
-      last_turn = function(role = "assistant") {
-        ellmer::AssistantTurn(
-          contents = list(ellmer::ContentText("response")),
-          tokens = c(10L, 2L, 1L),
-          cost = 0.001
-        )
-      },
-      clone = function(...) mock_llm,
-      set_turns = function(value) {
-        turns <<- value
-        invisible(NULL)
-      },
-      get_turns = function(...) turns
-    ),
-    class = "Chat"
+      )
+      "response"
+    },
+    last_turn = function(role = "assistant") {
+      ellmer::AssistantTurn(
+        contents = list(ellmer::ContentText("response")),
+        tokens = c(10L, 2L, 1L),
+        cost = 0.001
+      )
+    },
+    set_turns = function(value) {
+      turns <<- value
+      invisible(NULL)
+    },
+    get_turns = function(...) turns
   )
 
   result <- dsprrr:::process_batch_item(
@@ -786,7 +812,7 @@ test_that("chat usage aggregates every verified assistant turn", {
       duration = 0.6
     )
   )
-  chat <- list(get_turns = function() turns)
+  chat <- new_test_chat(turns = turns)
 
   usage <- dsprrr:::chat_usage_metadata(chat, turns_before = list(prior))
 
@@ -801,33 +827,6 @@ test_that("chat usage aggregates every verified assistant turn", {
   unknown <- dsprrr:::chat_usage_metadata(chat, turns_before = list("wrong"))
   expect_true(is.na(unknown$provider_calls))
   expect_true(is.na(unknown$total_tokens))
-})
-
-test_that("extract_simple_output extracts single-field objects", {
-  # Create real TypeObject with single property
-  single_field_type <- ellmer::type_object(answer = ellmer::type_string())
-
-  response <- list(answer = "42")
-  result <- dsprrr:::extract_simple_output(response, single_field_type)
-  expect_equal(result, "42")
-})
-
-test_that("extract_simple_output returns full response for multi-field objects", {
-  multi_field_type <- ellmer::type_object(
-    a = ellmer::type_string(),
-    b = ellmer::type_string()
-  )
-
-  response <- list(a = "1", b = "2")
-  result <- dsprrr:::extract_simple_output(response, multi_field_type)
-  expect_equal(result, response)
-})
-
-test_that("extract_simple_output returns full response for non-TypeObject", {
-  simple_type <- ellmer::type_string()
-  response <- "hello"
-  result <- dsprrr:::extract_simple_output(response, simple_type)
-  expect_equal(result, "hello")
 })
 
 test_that("create_error_result formats simple errors correctly", {
@@ -907,19 +906,14 @@ test_that("create_error_result handles list-style error for structured format", 
 
 test_that("run_batch_sequential processes all items", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
-  call_count <- 0
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) {
-      call_count <<- call_count + 1
-      paste0("response_", call_count)
-    }),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) "response"
   )
 
   input_sets <- list(
@@ -939,146 +933,53 @@ test_that("run_batch_sequential processes all items", {
   )
 
   expect_length(results, 3)
-  expect_equal(results[[1]], "response_1")
-  expect_equal(results[[2]], "response_1")
-  expect_equal(results[[3]], "response_1")
-  expect_equal(call_count, 0L)
+  expect_identical(
+    vapply(results, identity, character(1)),
+    rep("response", 3L)
+  )
 })
 
-test_that("sequential batch rows branch from identical Chat state", {
-  StatefulBatchChat <- R6::R6Class(
-    "StatefulBatchChat",
-    private = list(
-      turns = NULL,
-      system_prompt = NULL,
-      tools = NULL,
-      provider_config = NULL
-    ),
-    public = list(
-      initialize = function(
-        turns = list(),
-        system_prompt = NULL,
-        tools = list(),
-        provider_config = list()
-      ) {
-        private$turns <- turns
-        private$system_prompt <- system_prompt
-        private$tools <- tools
-        private$provider_config <- provider_config
-      },
-      get_turns = function(...) private$turns,
-      get_system_prompt = function() private$system_prompt,
-      get_tools = function() private$tools,
-      set_turns = function(turns) {
-        private$turns <- turns
-        invisible(NULL)
-      },
-      chat_structured = function(prompt, type, echo = "none") {
-        initial_length <- length(private$turns)
-        private$turns <- c(
-          private$turns,
-          list(
-            ellmer::UserTurn(
-              contents = list(ellmer::ContentText(as.character(prompt)))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentText("ok"))
-            )
-          )
-        )
-        list(
-          answer = paste0(
-            initial_length,
-            ":",
-            private$system_prompt,
-            ":",
-            length(private$tools),
-            ":",
-            private$provider_config$model,
-            ":",
-            prompt
-          )
-        )
-      }
-    )
+test_that("batch branches preserve exact ellmer history independently", {
+  provider <- ellmer::Provider(
+    name = "test",
+    model = "batch-branch-test",
+    base_url = ""
   )
-
-  initial_turns <- list(
+  chat <- utils::getFromNamespace("Chat", "ellmer")$new(provider = provider)
+  starting_history <- list(
     ellmer::UserTurn(contents = list(ellmer::ContentText("prior"))),
     ellmer::AssistantTurn(contents = list(ellmer::ContentText("context")))
   )
-  caller_chat <- StatefulBatchChat$new(
-    turns = initial_turns,
-    system_prompt = "system",
-    tools = list("tool"),
-    provider_config = list(model = "model-a")
-  )
-  mod <- module(
-    signature("text -> answer"),
-    type = "predict",
-    template = "{text}"
-  )
+  chat$set_turns(starting_history)
 
-  results <- run(
-    mod,
-    text = c("a", "b"),
-    .llm = caller_chat,
-    .cache = FALSE,
-    .return_format = "structured",
-    .progress = FALSE
-  )
+  expect_identical(dsprrr:::batch_chat_branches(chat, 0L), list())
 
-  outputs <- vapply(
-    results,
-    function(result) result$output$answer,
-    character(1)
+  branches <- dsprrr:::batch_chat_branches(chat, 2L)
+  ids <- vapply(c(list(chat), branches), rlang::obj_address, character(1))
+  expect_length(unique(ids), 3L)
+  expect_identical(branches[[1]]$get_turns(), starting_history)
+  expect_identical(branches[[2]]$get_turns(), starting_history)
+
+  branch_history <- c(
+    starting_history,
+    list(ellmer::UserTurn(contents = list(ellmer::ContentText("branch one"))))
   )
-  expect_true(all(vapply(
-    outputs,
-    startsWith,
-    logical(1),
-    prefix = "2:system:1:model-a:"
-  )))
-  expect_true(endsWith(outputs[[1]], "a"))
-  expect_true(endsWith(outputs[[2]], "b"))
-  expect_length(results[[1]]$chat$get_turns(), 4)
-  expect_length(results[[2]]$chat$get_turns(), 4)
-  expect_identical(results[[1]]$chat$get_turns()[1:2], initial_turns)
-  expect_identical(results[[2]]$chat$get_turns()[1:2], initial_turns)
-  expect_true(endsWith(
-    results[[1]]$chat$get_turns()[[3]]@contents[[1]]@text,
-    "a"
-  ))
-  expect_true(endsWith(
-    results[[2]]$chat$get_turns()[[3]]@contents[[1]]@text,
-    "b"
-  ))
-  expect_length(caller_chat$get_turns(), 2)
-  expect_identical(caller_chat$get_turns(), initial_turns)
+  branches[[1]]$set_turns(branch_history)
+
+  expect_identical(chat$get_turns(), starting_history)
+  expect_identical(branches[[1]]$get_turns(), branch_history)
+  expect_identical(branches[[2]]$get_turns(), starting_history)
 })
 
 test_that("structured batches synthesize history when a Chat records no delta", {
-  NonRecordingChat <- R6::R6Class(
-    "NonRecordingChat",
-    private = list(turns = NULL),
-    public = list(
-      initialize = function(turns) {
-        private$turns <- turns
-        invisible(self)
-      },
-      get_turns = function(...) private$turns,
-      set_turns = function(turns) {
-        private$turns <- turns
-        invisible(self)
-      },
-      chat_structured = function(...) list(answer = "ok")
-    )
-  )
   baseline <- list(
     ellmer::UserTurn(contents = list(ellmer::ContentText("prior"))),
     ellmer::AssistantTurn(contents = list(ellmer::ContentText("context")))
   )
-  chat <- NonRecordingChat$new(baseline)
+  chat <- new_test_chat(
+    turns = baseline,
+    chat_structured = function(...) list(answer = "ok")
+  )
   mod <- module(
     signature("text -> answer"),
     type = "predict",
@@ -1096,7 +997,7 @@ test_that("structured batches synthesize history when a Chat records no delta", 
   )
 
   expect_identical(chat$get_turns(), baseline)
-  expect_length(result$chat$get_turns(), 4)
+  expect_length(result$chat$get_turns(), 4L)
   expect_identical(result$chat$get_turns()[1:2], baseline)
   expect_true(endsWith(
     result$chat$get_turns()[[3]]@contents[[1]]@text,
@@ -1104,7 +1005,7 @@ test_that("structured batches synthesize history when a Chat records no delta", 
   ))
 })
 
-test_that("non-cloneable closure Chats are copied before batch execution", {
+test_that("public batch run rejects class-tagged lists before work", {
   calls <- 0L
   chat <- structure(
     list(
@@ -1118,351 +1019,31 @@ test_that("non-cloneable closure Chats are copied before batch execution", {
   )
   mod <- module(signature("text -> answer"), type = "predict")
 
-  result <- run(
-    mod,
-    text = c("a", "b"),
-    .llm = chat,
-    .cache = FALSE,
-    .progress = FALSE
-  )
-  expect_identical(
-    unlist(result, use.names = FALSE),
-    c("unexpected", "unexpected")
-  )
-  expect_equal(calls, 0L)
-})
-
-test_that("batch Chat isolation handles zero, one, and many rows", {
-  EnvironmentStateChat <- R6::R6Class(
-    "EnvironmentStateChat",
-    private = list(state = NULL),
-    public = list(
-      initialize = function() {
-        private$state <- new.env(parent = emptyenv())
-        private$state$turns <- list()
-      },
-      get_turns = function(...) private$state$turns,
-      set_turns = function(turns) {
-        private$state$turns <- turns
-        invisible(NULL)
-      },
-      chat_structured = function(...) list(answer = "ok")
-    )
-  )
-  caller <- EnvironmentStateChat$new()
-
-  expect_identical(dsprrr:::batch_chat_branches(caller, 0L), list())
-
-  one <- dsprrr:::batch_chat_branches(caller, 1L)
-  expect_length(one, 1L)
-  one[[1]]$set_turns(list(ellmer::UserTurn("one")))
-  expect_identical(caller$get_turns(), list())
-
-  many <- dsprrr:::batch_chat_branches(caller, 3L)
-  many[[1]]$set_turns(list(ellmer::UserTurn("first")))
-  expect_identical(caller$get_turns(), list())
-  expect_length(many[[1]]$get_turns(), 1L)
-  expect_identical(many[[2]]$get_turns(), list())
-  expect_identical(many[[3]]$get_turns(), list())
-})
-
-test_that("opaque closure-backed histories are copied, never shared", {
-  turns <- list()
-  chat <- structure(
-    list(
-      get_turns = function(...) turns,
-      set_turns = function(value) {
-        turns <<- value
-        invisible(NULL)
-      },
-      chat_structured = function(...) list(answer = "ok")
+  expect_error(
+    run(
+      mod,
+      text = c("a", "b"),
+      .llm = chat,
+      .cache = FALSE,
+      .progress = FALSE
     ),
-    class = "Chat"
+    class = "dsprrr_chat_type_error"
   )
-
-  branches <- dsprrr:::batch_chat_branches(chat, 2L)
-  branches[[1]]$set_turns(list(ellmer::UserTurn("branch one")))
-
-  expect_identical(chat$get_turns(), list())
-  expect_length(branches[[1]]$get_turns(), 1L)
-  expect_identical(branches[[2]]$get_turns(), list())
+  expect_identical(calls, 0L)
 })
 
-test_that("batch isolation allows ordinary locked package functions", {
-  chat <- local({
-    structure(
-      list(
-        helper = stats::median,
-        chat_structured = function(...) list(answer = "ok")
-      ),
-      class = "Chat"
-    )
-  })
-
-  branches <- dsprrr:::batch_chat_branches(chat, 2L)
-
-  expect_length(branches, 2L)
-  expect_identical(branches[[1]]$helper(1:3), 2L)
-  expect_identical(branches[[2]]$helper(2:4), 3L)
-})
-
-test_that("batch isolation normalizes canonical source metadata only", {
-  initializations <- new.env(parent = emptyenv())
-  initializations$lines <- 0L
-  initializations$parse_data <- 0L
-  srcfile <- srcfilecopy(
-    "<batch-isolation-test>",
-    "function(...) list(answer = 'ok')"
-  )
-  rm("lines", envir = srcfile)
-  delayedAssign(
-    "lines",
-    {
-      initializations$lines <- initializations$lines + 1L
-      "function(...) list(answer = 'ok')"
-    },
-    eval.env = environment(),
-    assign.env = srcfile
-  )
-  delayedAssign(
-    "parseData",
-    {
-      initializations$parse_data <- initializations$parse_data + 1L
-      structure(integer(), class = "parseData")
-    },
-    eval.env = environment(),
-    assign.env = srcfile
-  )
-  reference <- structure(
-    rep(1L, 8L),
-    class = "srcref",
-    srcfile = srcfile
-  )
-  chat_structured <- function(...) list(answer = "ok")
-  attr(chat_structured, "srcref") <- reference
-  chat <- structure(list(chat_structured = chat_structured), class = "Chat")
-
-  branches <- dsprrr:::batch_chat_branches(chat, 2L)
-
-  expect_length(branches, 2L)
-  expect_identical(initializations$lines, 0L)
-  expect_identical(initializations$parse_data, 0L)
-  expect_true(rlang::env_binding_are_lazy(srcfile, "lines"))
-  expect_true(rlang::env_binding_are_lazy(srcfile, "parseData"))
-  for (branch in branches) {
-    branch_reference <- attr(branch$chat_structured, "srcref", exact = TRUE)
-    branch_source <- attr(branch_reference, "srcfile", exact = TRUE)
-    expect_false(rlang::env_binding_are_lazy(branch_source, "lines"))
-    expect_identical(branch_source$lines, character())
-    expect_false(exists("parseData", envir = branch_source, inherits = FALSE))
-  }
-
-  unsafe <- function(...) list(answer = "unexpected")
-  unsafe_source <- new.env(parent = emptyenv())
-  delayedAssign("lines", "unsafe", assign.env = unsafe_source)
-  attr(unsafe, "srcref") <- unsafe_source
-  unsafe_chat <- structure(list(chat_structured = unsafe), class = "Chat")
-  expect_error(
-    dsprrr:::batch_chat_branches(unsafe_chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_true(rlang::env_binding_are_lazy(unsafe_source, "lines"))
-
-  spoofed <- function(...) list(answer = "unexpected")
-  spoofed_source <- new.env(parent = emptyenv())
-  class(spoofed_source) <- "srcref"
-  spoofed_source$shared <- globalenv()
-  attr(spoofed, "srcref") <- spoofed_source
-  spoofed_chat <- structure(list(chat_structured = spoofed), class = "Chat")
-  expect_error(
-    dsprrr:::batch_chat_branches(spoofed_chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-
-  hidden <- function(...) list(answer = "unexpected")
-  hidden_source <- srcfilecopy(
-    "<spoofed-batch-isolation-test>",
-    "function(...) list(answer = 'unexpected')"
-  )
-  hidden_source$shared <- globalenv()
-  attr(hidden, "srcref") <- structure(
-    rep(1L, 8L),
-    class = "srcref",
-    srcfile = hidden_source
-  )
-  hidden_chat <- structure(list(chat_structured = hidden), class = "Chat")
-  expect_error(
-    dsprrr:::batch_chat_branches(hidden_chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-
-  attributed <- function(...) list(answer = "unexpected")
-  attributed_source <- srcfilecopy(
-    "<attributed-batch-isolation-test>",
-    "function(...) list(answer = 'unexpected')"
-  )
-  attr(attributed_source, "shared") <- globalenv()
-  attr(attributed, "srcref") <- structure(
-    rep(1L, 8L),
-    class = "srcref",
-    srcfile = attributed_source
-  )
-  attributed_chat <- structure(
-    list(chat_structured = attributed),
-    class = "Chat"
-  )
-  expect_error(
-    dsprrr:::batch_chat_branches(attributed_chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-
-  locked <- function(...) list(answer = "unexpected")
-  locked_source <- srcfilecopy(
-    "<locked-batch-isolation-test>",
-    "function(...) list(answer = 'unexpected')"
-  )
-  rm("lines", envir = locked_source)
-  delayedAssign("lines", "locked", assign.env = locked_source)
-  lockEnvironment(locked_source, bindings = FALSE)
-  attr(locked, "srcref") <- structure(
-    rep(1L, 8L),
-    class = "srcref",
-    srcfile = locked_source
-  )
-  locked_chat <- structure(list(chat_structured = locked), class = "Chat")
-  expect_error(
-    dsprrr:::batch_chat_branches(locked_chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_true(rlang::env_binding_are_lazy(locked_source, "lines"))
-
-  dual_source <- srcfilecopy(
-    "<dual-role-batch-isolation-test>",
-    "function(...) list(answer = 'unexpected')"
-  )
-  dual <- function(...) list(answer = "unexpected")
-  attr(dual, "srcref") <- structure(
-    rep(1L, 8L),
-    class = "srcref",
-    srcfile = dual_source
-  )
-  source_first <- structure(
-    list(chat_structured = dual, state_source = dual_source),
-    class = "Chat"
-  )
-  runtime_first <- structure(
-    list(state_source = dual_source, chat_structured = dual),
-    class = "Chat"
-  )
-  expect_error(
-    dsprrr:::batch_chat_branches(source_first, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_error(
-    dsprrr:::batch_chat_branches(runtime_first, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-
-  captured <- local({
-    captured_reference <- reference
-    function(...) {
-      captured_source <- attr(
-        captured_reference,
-        "srcfile",
-        exact = TRUE
-      )
-      list(answer = length(base::getSrcLines(captured_source, 1L, 1L)))
+test_that("public batch run reports typed clone failures before work", {
+  calls <- 0L
+  chat <- new_test_chat(
+    chat_structured = function(...) {
+      calls <<- calls + 1L
+      list(answer = "unexpected")
     }
-  })
-  captured_chat <- structure(
-    list(chat_structured = captured),
-    class = "Chat"
   )
-  expect_error(
-    dsprrr:::batch_chat_branches(captured_chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-
-  counter <- ".dsprrr_source_metadata_initializations"
-  assign(counter, 0L, envir = globalenv())
-  withr::defer(rm(list = counter, envir = globalenv()))
-  executable_source <- srcfilecopy(
-    "<executable-batch-isolation-test>",
-    "function(...) list(answer = 0L)"
-  )
-  rm("lines", envir = executable_source)
-  delayedAssign(
-    "lines",
-    {
-      .dsprrr_source_metadata_initializations <<-
-        .dsprrr_source_metadata_initializations + 1L
-      "shared source state"
-    },
-    eval.env = globalenv(),
-    assign.env = executable_source
-  )
-  executable_reference <- structure(
-    rep(1L, 8L),
-    class = "srcref",
-    srcfile = executable_source
-  )
-  self_referencing <- local({
-    self <- function(...) {
-      self_reference <- attr(self, "srcref", exact = TRUE)
-      self_source <- attr(self_reference, "srcfile", exact = TRUE)
-      list(answer = length(base::getSrcLines(self_source, 1L, 1L)))
-    }
-    attr(self, "srcref") <- executable_reference
-    self
-  })
-  executable_chat <- structure(
-    list(chat_structured = self_referencing),
-    class = "Chat"
-  )
-  executable_branches <- dsprrr:::batch_chat_branches(executable_chat, 2L)
-  expect_identical(executable_branches[[1]]$chat_structured()$answer, 0L)
-  expect_identical(executable_branches[[2]]$chat_structured()$answer, 0L)
-  expect_identical(
-    get(counter, envir = globalenv(), inherits = FALSE),
-    0L
-  )
-  expect_true(rlang::env_binding_are_lazy(executable_source, "lines"))
-
-  alias_one <- srcfilealias("alias-one.R", srcfile)
-  alias_two <- srcfilealias("alias-two.R", alias_one)
-  alias_one$original <- alias_two
-  cyclic_reference <- structure(
-    rep(1L, 8L),
-    class = "srcref",
-    srcfile = alias_one
-  )
-  cyclic <- function(...) list(answer = "unexpected")
-  attr(cyclic, "srcref") <- cyclic_reference
-  cyclic_chat <- structure(list(chat_structured = cyclic), class = "Chat")
-  expect_error(
-    dsprrr:::batch_chat_branches(cyclic_chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-})
-
-test_that("batch isolation aborts before rows when shared state remains", {
-  binding <- ".dsprrr_opaque_batch_calls"
-  assign(binding, 0L, envir = globalenv())
-  withr::defer(rm(list = binding, envir = globalenv()))
-
-  get_turns <- function(...) list()
-  environment(get_turns) <- globalenv()
-  chat_structured <- function(...) {
-    .dsprrr_opaque_batch_calls <<- .dsprrr_opaque_batch_calls + 1L
-    list(answer = "unexpected")
-  }
-  environment(chat_structured) <- globalenv()
-  chat <- structure(
-    list(
-      get_turns = get_turns,
-      chat_structured = chat_structured
-    ),
-    class = "Chat"
+  override_test_chat_method(
+    chat,
+    "clone",
+    function(...) stop("cannot clone")
   )
   mod <- module(signature("text -> answer"), type = "predict")
 
@@ -1474,216 +1055,25 @@ test_that("batch isolation aborts before rows when shared state remains", {
       .cache = FALSE,
       .progress = FALSE
     ),
-    class = "dsprrr_chat_isolation_error"
+    class = "dsprrr_chat_clone_error"
   )
-  expect_equal(get(binding, envir = globalenv()), 0L)
+  expect_identical(calls, 0L)
 })
-
-test_that("batch isolation scans deeply nested state without truncation", {
-  calls <- new.env(parent = emptyenv())
-  calls$n <- 0L
-  hidden <- globalenv()
-  for (i in seq_len(12L)) {
-    hidden <- list(hidden)
-  }
-  chat <- structure(
-    list(
-      hidden = hidden,
-      chat_structured = function(...) {
-        calls$n <- calls$n + 1L
-        list(answer = "unexpected")
-      }
-    ),
-    class = "Chat"
-  )
-
-  expect_error(
-    dsprrr:::batch_chat_branches(chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_equal(calls$n, 0L)
-})
-
-test_that("batch isolation rejects opaque external state before rows", {
-  calls <- 0L
-  chat <- structure(
-    list(
-      hidden = methods::new("externalptr"),
-      chat_structured = function(...) {
-        calls <<- calls + 1L
-        list(answer = "unexpected")
-      }
-    ),
-    class = "Chat"
-  )
-
-  expect_error(
-    dsprrr:::batch_chat_branches(chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_equal(calls, 0L)
-})
-
-test_that("batch isolation rejects namespace-held opaque closure state", {
-  package_state <- asNamespace("dsprrr")$.dsprrr_env
-  binding <- ".batch_namespace_probe"
-  package_state[[binding]] <- 0L
-  withr::defer(rm(list = binding, envir = package_state))
-
-  closure_env <- new.env(parent = asNamespace("dsprrr"))
-  chat_structured <- function(...) {
-    .dsprrr_env$.batch_namespace_probe <-
-      .dsprrr_env$.batch_namespace_probe + 1L
-    list(answer = "unexpected")
-  }
-  environment(chat_structured) <- closure_env
-  chat <- structure(list(chat_structured = chat_structured), class = "Chat")
-
-  expect_error(
-    dsprrr:::batch_chat_branches(chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_equal(package_state[[binding]], 0L)
-})
-
-test_that("batch isolation rejects reflective namespace state access", {
-  package_state <- asNamespace("dsprrr")$.dsprrr_env
-  binding <- ".batch_reflective_namespace_probe"
-  package_state[[binding]] <- 0L
-  withr::defer(rm(list = binding, envir = package_state))
-
-  chat <- local({
-    structure(
-      list(chat_structured = function(...) {
-        state <- getFromNamespace(".dsprrr_env", "dsprrr")
-        state$.batch_reflective_namespace_probe <-
-          state$.batch_reflective_namespace_probe + 1L
-        list(answer = "unexpected")
-      }),
-      class = "Chat"
-    )
-  })
-
-  expect_error(
-    dsprrr:::batch_chat_branches(chat, 2L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_equal(package_state[[binding]], 0L)
-})
-
-test_that("batch isolation rejects triple-colon namespace access", {
-  chat <- local({
-    structure(
-      list(chat_structured = function(...) {
-        dsprrr:::.dsprrr_env
-        list(answer = "unexpected")
-      }),
-      class = "Chat"
-    )
-  })
-
-  expect_error(
-    dsprrr:::batch_chat_branches(chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-})
-
-test_that("batch isolation rejects parent-resolved global closure state", {
-  binding <- ".dsprrr_parent_batch_state"
-  state <- new.env(parent = emptyenv())
-  state$calls <- 0L
-  assign(binding, state, envir = globalenv())
-  withr::defer(rm(list = binding, envir = globalenv()))
-
-  closure_env <- new.env(parent = globalenv())
-  chat_structured <- function(...) {
-    .dsprrr_parent_batch_state$calls <-
-      .dsprrr_parent_batch_state$calls + 1L
-    list(answer = "unexpected")
-  }
-  environment(chat_structured) <- closure_env
-  chat <- structure(list(chat_structured = chat_structured), class = "Chat")
-
-  expect_error(
-    dsprrr:::batch_chat_branches(chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_equal(state$calls, 0L)
-})
-
-test_that("batch isolation never forces delayed closure state", {
-  initializations <- new.env(parent = emptyenv())
-  initializations$n <- 0L
-  closure_env <- new.env(parent = baseenv())
-  closure_env$calls <- 0L
-  delayedAssign(
-    "state",
-    {
-      initializations$n <- initializations$n + 1L
-      new.env(parent = emptyenv())
-    },
-    eval.env = environment(),
-    assign.env = closure_env
-  )
-  chat_structured <- function(...) {
-    state
-    calls <<- calls + 1L
-    list(answer = "unexpected")
-  }
-  environment(chat_structured) <- closure_env
-  chat <- structure(list(chat_structured = chat_structured), class = "Chat")
-
-  expect_error(
-    dsprrr:::batch_chat_branches(chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_equal(initializations$n, 0L)
-  expect_equal(closure_env$calls, 0L)
-  expect_true(rlang::env_binding_are_lazy(closure_env, "state"))
-
-  self_initializations <- new.env(parent = emptyenv())
-  self_initializations$n <- 0L
-  self_env <- new.env(parent = baseenv())
-  delayedAssign(
-    "self",
-    {
-      self_initializations$n <- self_initializations$n + 1L
-      new.env(parent = emptyenv())
-    },
-    eval.env = environment(),
-    assign.env = self_env
-  )
-  self_chat_structured <- function(...) list(answer = "unexpected")
-  environment(self_chat_structured) <- self_env
-  self_chat <- structure(
-    list(chat_structured = self_chat_structured),
-    class = "Chat"
-  )
-
-  expect_error(
-    dsprrr:::batch_chat_branches(self_chat, 1L),
-    class = "dsprrr_chat_isolation_error"
-  )
-  expect_equal(self_initializations$n, 0L)
-  expect_true(rlang::env_binding_are_lazy(self_env, "self"))
-})
-
 test_that("run_batch_sequential handles errors per item", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) {
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
       if (grepl("fail", prompt, fixed = TRUE)) {
         stop("intentional failure")
       }
       "ok"
-    }),
-    class = "Chat"
+    }
   )
 
   input_sets <- list(
@@ -1715,19 +1105,17 @@ test_that("parallel execution works with mock factory", {
   skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
-  withr::local_options(dsprrr.parallel_timeout = 5)
 
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
   # Configure module to use a testable Chat
-  mod$chat <- structure(
-    list(chat_structured = function(prompt, ...) "parallel_result"),
-    class = "Chat"
+  mod$chat <- new_test_chat(
+    chat_structured = function(prompt, ...) "parallel_result"
   )
 
   # Use mirai explicitly since the mock doesn't implement get_provider(),
@@ -1735,8 +1123,11 @@ test_that("parallel execution works with mock factory", {
   results <- run(
     mod,
     text = c("a", "b", "c"),
-    .parallel = TRUE,
-    .parallel_method = "mirai",
+    .concurrency = concurrency_control(
+      backend = "mirai",
+      max_active = 3L,
+      total_timeout = 5
+    ),
     .progress = FALSE
   )
 
@@ -1748,16 +1139,15 @@ test_that("parallel execution works with mock factory", {
 
 test_that("run with .show_prompt=TRUE shows prompt preview", {
   sig <- Signature(
-    inputs = list(input(name = "q", class = S7::class_character)),
+    inputs = list(input(name = "q", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
   mod <- module(signature = sig, type = "predict", template = "Question: {q}")
 
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "answer"),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) "answer"
   )
 
   # cli output goes through message stream, so use expect_message
@@ -1770,15 +1160,14 @@ test_that("run with .show_prompt=TRUE shows prompt preview", {
 
 test_that("run with .show_prompt defaults to FALSE", {
   sig <- Signature(
-    inputs = list(input(name = "q", class = S7::class_character)),
+    inputs = list(input(name = "q", type = "string")),
     output_type = ellmer::type_string()
   )
 
   mod <- module(signature = sig, type = "predict", template = "{q}")
 
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) "answer"),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) "answer"
   )
 
   # Default .show_prompt = FALSE - should produce no output about prompt preview
@@ -1796,7 +1185,7 @@ test_that("run with .show_prompt defaults to FALSE", {
 
 test_that("get_total_cost returns 0 for module with no traces", {
   sig <- Signature(
-    inputs = list(input(name = "q", class = S7::class_character)),
+    inputs = list(input(name = "q", type = "string")),
     output_type = ellmer::type_string()
   )
 
@@ -1814,7 +1203,7 @@ test_that("get_total_cost preserves unknown trace cost", {
 
 test_that("get_cost_summary returns empty tibble for module with no traces", {
   sig <- Signature(
-    inputs = list(input(name = "q", class = S7::class_character)),
+    inputs = list(input(name = "q", type = "string")),
     output_type = ellmer::type_string()
   )
 
@@ -1832,7 +1221,7 @@ test_that("get_cost_summary returns empty tibble for module with no traces", {
 
 test_that("batch run with structured format returns dsprrr_batch_result class", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
@@ -1846,7 +1235,7 @@ test_that("batch run with structured format returns dsprrr_batch_result class", 
   mock_llm <- list(
     chat_structured = function(prompt, ...) "result"
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- as_test_chat(mock_llm)
 
   results <- run(
     pred,
@@ -1866,7 +1255,7 @@ test_that("batch run with structured format returns dsprrr_batch_result class", 
 
 test_that("dsprrr_batch_result print method handles many items", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
@@ -1880,7 +1269,7 @@ test_that("dsprrr_batch_result print method handles many items", {
   mock_llm <- list(
     chat_structured = function(prompt, ...) "result"
   )
-  class(mock_llm) <- "Chat"
+  mock_llm <- as_test_chat(mock_llm)
 
   # Run with 5 items to trigger truncated display
   results <- run(
@@ -1901,25 +1290,7 @@ test_that("dsprrr_batch_result print method handles many items", {
 # --- mock_batch_chat tests ---
 
 test_that("mock_batch_chat creates chat with user and assistant turns", {
-  # Create a minimal mock chat that supports clone and set_turns
-  turns_stored <- NULL
-  mock_chat <- structure(
-    list(
-      clone = function(...) {
-        cloned <- structure(
-          list(
-            set_turns = function(turns) {
-              turns_stored <<- turns
-            },
-            get_turns = function(...) turns_stored
-          ),
-          class = "Chat"
-        )
-        cloned
-      }
-    ),
-    class = "Chat"
-  )
+  mock_chat <- new_test_chat()
 
   result <- dsprrr:::mock_batch_chat(
     prompt = "What is 2+2?",
@@ -1933,24 +1304,7 @@ test_that("mock_batch_chat creates chat with user and assistant turns", {
 })
 
 test_that("mock_batch_chat handles structured response (JSON serializes)", {
-  turns_stored <- NULL
-  mock_chat <- structure(
-    list(
-      clone = function(...) {
-        cloned <- structure(
-          list(
-            set_turns = function(turns) {
-              turns_stored <<- turns
-            },
-            get_turns = function(...) turns_stored
-          ),
-          class = "Chat"
-        )
-        cloned
-      }
-    ),
-    class = "Chat"
-  )
+  mock_chat <- new_test_chat()
 
   # Pass a list response (structured output)
   result <- dsprrr:::mock_batch_chat(
@@ -1963,24 +1317,7 @@ test_that("mock_batch_chat handles structured response (JSON serializes)", {
 })
 
 test_that("mock_batch_chat handles character response directly", {
-  turns_stored <- NULL
-  mock_chat <- structure(
-    list(
-      clone = function(...) {
-        cloned <- structure(
-          list(
-            set_turns = function(turns) {
-              turns_stored <<- turns
-            },
-            get_turns = function(...) turns_stored
-          ),
-          class = "Chat"
-        )
-        cloned
-      }
-    ),
-    class = "Chat"
-  )
+  mock_chat <- new_test_chat()
 
   result <- dsprrr:::mock_batch_chat(
     prompt = "Echo this",

@@ -74,16 +74,19 @@ cache_test_key <- function(chat, payload, output_type, rollout_id = NULL) {
     output_type = output_type,
     rollout_id = rollout_id
   )
-  dsprrr:::cache_key(
-    prompt = payload,
-    model = "",
-    output_type = output_type,
-    fingerprint = fingerprint
-  )
+  dsprrr:::cache_key(fingerprint)
 }
 
 cache_test_mode <- function(path) {
   sprintf("%04o", dsprrr:::cache_path_mode(path))
+}
+
+cache_test_raw_mode <- function(path) {
+  info <- file.info(path, extra_cols = FALSE)
+  bitwAnd(
+    as.integer(info$mode[[1L]]),
+    as.integer(as.octmode("7777"))
+  )
 }
 
 test_that("configure_cache sets default values", {
@@ -158,48 +161,17 @@ test_that("configure_cache returns previous config", {
   expect_equal(old$memory_max_entries, 500L)
 })
 
-test_that("cache_key produces consistent keys", {
-  key1 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.7, "string")
-  key2 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.7, "string")
+test_that("cache_key hashes one complete fingerprint deterministically", {
+  fingerprint <- list(
+    version = dsprrr:::cache_request_schema_version(),
+    request = list(kind = "text", value = "opaque")
+  )
+  key1 <- dsprrr:::cache_key(fingerprint)
+  key2 <- dsprrr:::cache_key(fingerprint)
 
   expect_equal(key1, key2)
   expect_type(key1, "character")
   expect_equal(nchar(key1), 64)
-})
-
-test_that("cache_key differs with different prompts", {
-  key1 <- dsprrr:::cache_key("prompt1", "gpt-4o", 0.7, "string")
-  key2 <- dsprrr:::cache_key("prompt2", "gpt-4o", 0.7, "string")
-
-  expect_false(key1 == key2)
-})
-
-test_that("cache_key differs with different models", {
-  key1 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.7, "string")
-  key2 <- dsprrr:::cache_key("prompt", "gpt-4o-mini", 0.7, "string")
-
-  expect_false(key1 == key2)
-})
-
-test_that("cache_key differs with different temperatures", {
-  key1 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.7, "string")
-  key2 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.5, "string")
-
-  expect_false(key1 == key2)
-})
-
-test_that("cache_key differs with rollout_id", {
-  key1 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.7, "string", rollout_id = 1)
-  key2 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.7, "string", rollout_id = 2)
-
-  expect_false(key1 == key2)
-})
-
-test_that("cache_key without rollout_id differs from with rollout_id", {
-  key1 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.7, "string")
-  key2 <- dsprrr:::cache_key("prompt", "gpt-4o", 0.7, "string", rollout_id = 1)
-
-  expect_false(key1 == key2)
 })
 
 test_that("cache keys include exact recursive output schemas", {
@@ -466,12 +438,7 @@ test_that("legacy cache identities cannot satisfy current requests", {
   )
   legacy <- fingerprint
   legacy$version <- 1L
-  legacy_key <- dsprrr:::cache_key(
-    "prompt",
-    "model-a",
-    output_type = output_type,
-    fingerprint = legacy
-  )
+  legacy_key <- dsprrr:::cache_key(legacy)
   dsprrr:::get_cache()$set(legacy_key, list(answer = "legacy"))
 
   result <- dsprrr:::cached_chat_structured(
@@ -801,7 +768,7 @@ test_that("RLM cache accounting counts only current provider work", {
   )
   base <- cache_real_chat()
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   analyst <- rlm_module(
     "question -> answer: string",
     runner = runner,
@@ -861,12 +828,7 @@ test_that("real structured Chat branches replay ContentJson equivalently", {
     "prompt",
     output_type
   )
-  initial_key <- dsprrr:::cache_key(
-    "prompt",
-    "model-a",
-    output_type = output_type,
-    fingerprint = initial_fingerprint
-  )
+  initial_key <- dsprrr:::cache_key(initial_fingerprint)
 
   dsprrr:::cached_chat_structured(first, "prompt", output_type)
   envelope <- dsprrr:::get_cache()$get(initial_key)
@@ -1074,14 +1036,13 @@ test_that("cached_chat_structured bypasses cache when disabled", {
 
   # Create a mock LLM that tracks calls
   call_count <- 0
-  mock_llm <- list(
-    get_model = function() "mock-model",
+  mock_llm <- new_test_chat(
+    model = "mock-model",
     chat_structured = function(prompt, type, echo = "none") {
       call_count <<- call_count + 1
       list(answer = paste("response", call_count))
     }
   )
-  class(mock_llm) <- "Chat"
 
   output_type <- ellmer::type_object(answer = ellmer::type_string())
 
@@ -1320,6 +1281,98 @@ test_that("private audits require verifiable effective ownership", {
   expect_match(entry_audit$reason, "files not owned by the effective user")
 })
 
+test_that("private caches reject attacker-owned ancestors", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  root <- withr::local_tempdir()
+  effective_owner <- dsprrr:::cache_effective_owner_id()
+  skip_if(is.na(effective_owner), "effective user ID unavailable")
+  original_owner <- dsprrr:::cache_path_owner_id
+  attacker_owner <- effective_owner + 1000L
+  mocked_owner <- character()
+  mocked_owner_id <- attacker_owner
+  testthat::local_mocked_bindings(
+    cache_path_owner_id = function(path) {
+      canonical <- tryCatch(
+        as.character(fs::path_real(path)),
+        error = function(e) as.character(fs::path_abs(path))
+      )
+      if (identical(canonical, mocked_owner)) {
+        return(mocked_owner_id)
+      }
+      original_owner(path)
+    },
+    .package = "dsprrr"
+  )
+
+  attacker_outer <- file.path(root, "attacker-outer")
+  trusted_inner <- file.path(attacker_outer, "trusted-inner")
+  dir.create(trusted_inner, recursive = TRUE, mode = "0700")
+  Sys.chmod(
+    c(attacker_outer, trusted_inner),
+    mode = "0700",
+    use_umask = FALSE
+  )
+  mocked_owner <- as.character(fs::path_real(attacker_outer))
+  target <- file.path(trusted_inner, "cache")
+
+  unsafe <- dsprrr:::prepare_cache_directory(target, private = TRUE)
+
+  expect_false(unsafe$ok)
+  expect_match(unsafe$reason, "not owned by the effective user or root")
+  expect_false(dir.exists(target))
+
+  sticky_parent <- file.path(root, "attacker-sticky")
+  dir.create(sticky_parent, mode = "0700")
+  Sys.chmod(sticky_parent, mode = "01777", use_umask = FALSE)
+  mocked_owner <- as.character(fs::path_real(sticky_parent))
+  sticky_target <- file.path(sticky_parent, "cache")
+
+  sticky <- dsprrr:::prepare_cache_directory(sticky_target, private = TRUE)
+
+  expect_false(sticky$ok)
+  expect_match(sticky$reason, "not owned by the effective user or root")
+  expect_false(dir.exists(sticky_target))
+
+  mocked_owner <- character()
+  runtime_outer <- file.path(root, "runtime-outer")
+  runtime_inner <- file.path(runtime_outer, "runtime-inner")
+  dir.create(runtime_inner, recursive = TRUE, mode = "0700")
+  Sys.chmod(
+    c(runtime_outer, runtime_inner),
+    mode = "0700",
+    use_umask = FALSE
+  )
+  prepared <- dsprrr:::prepare_cache_directory(
+    file.path(runtime_inner, "cache"),
+    private = TRUE
+  )
+  expect_true(prepared$ok)
+  mocked_owner <- as.character(fs::path_real(runtime_outer))
+
+  recurring <- dsprrr:::audit_cache_parent_chain(prepared$path)
+
+  expect_false(recurring$ok)
+  expect_match(recurring$reason, "not owned by the effective user or root")
+
+  mocked_owner <- character()
+  trusted_sticky <- file.path(root, "trusted-sticky")
+  root_owned_child <- file.path(trusted_sticky, "root-owned-child")
+  dir.create(root_owned_child, recursive = TRUE, mode = "0700")
+  Sys.chmod(trusted_sticky, mode = "01777", use_umask = FALSE)
+  Sys.chmod(root_owned_child, mode = "0700", use_umask = FALSE)
+  mocked_owner <- as.character(fs::path_real(root_owned_child))
+  mocked_owner_id <- 0L
+
+  trusted <- dsprrr:::prepare_cache_directory(
+    file.path(root_owned_child, "cache"),
+    private = TRUE
+  )
+
+  expect_true(trusted$ok)
+})
+
 test_that("private writes verify 0600 staging before serialization", {
   skip_on_os("windows")
   local_reset_cache()
@@ -1381,38 +1434,156 @@ test_that("unsafe non-sticky parents fail and sticky parents remain usable", {
   expect_identical(safe$trust$owner_id, dsprrr:::cache_effective_owner_id())
 })
 
-test_that("readable existing disk caches are repaired before reuse", {
+test_that("private cache directories reject special mode bits unchanged", {
   skip_on_os("windows")
   local_reset_cache()
 
-  disk_path <- tempfile("cache_repair_")
-  withr::defer(unlink(disk_path, recursive = TRUE))
+  root <- withr::local_tempdir()
+  directory <- file.path(root, "special-directory")
+  dir.create(directory, mode = "0700")
+  Sys.chmod(directory, mode = "01700", use_umask = FALSE)
+  skip_if_not(
+    identical(
+      cache_test_raw_mode(directory),
+      as.integer(as.octmode("1700"))
+    ),
+    "special directory mode bits unavailable"
+  )
+  expect_identical(cache_test_mode(directory), "1700")
+
+  directory_audit <- dsprrr:::prepare_cache_directory(
+    directory,
+    private = TRUE
+  )
+
+  expect_false(directory_audit$ok)
+  expect_match(directory_audit$reason, "mode exactly 0700")
+  expect_identical(cache_test_mode(directory), "1700")
+  expect_length(list.files(directory, all.files = TRUE, no.. = TRUE), 0L)
+})
+
+test_that("private cache files reject special mode bits unchanged", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  root <- withr::local_tempdir()
+  cache_dir <- file.path(root, "special-file")
+  dir.create(cache_dir, mode = "0700")
+  Sys.chmod(cache_dir, mode = "0700", use_umask = FALSE)
+  entry <- file.path(cache_dir, "entry.rds")
+  saveRDS(list(answer = "unchanged"), entry)
+  Sys.chmod(entry, mode = "01600", use_umask = FALSE)
+  skip_if_not(
+    identical(cache_test_raw_mode(entry), as.integer(as.octmode("1600"))),
+    "special file mode bits unavailable"
+  )
+  expect_identical(cache_test_mode(entry), "1600")
+  before <- readBin(entry, what = "raw", n = file.info(entry)$size)
+
+  file_audit <- dsprrr:::prepare_cache_directory(cache_dir, private = TRUE)
+
+  expect_false(file_audit$ok)
+  expect_match(file_audit$reason, "mode exactly 0600")
+  expect_identical(cache_test_mode(entry), "1600")
+  expect_identical(
+    readBin(entry, what = "raw", n = file.info(entry)$size),
+    before
+  )
+})
+
+test_that("overexposed existing disk caches fail closed without repair", {
+  skip_on_os("windows")
+  local_reset_cache()
+
+  root <- tempfile("cache_no_repair_")
+  withr::defer(unlink(root, recursive = TRUE))
+  dir.create(root)
+
+  observed <- new.env(parent = emptyenv())
+  observed$enumerated <- character()
+  observed$deserialized <- 0L
+  observed$cachem_initialized <- 0L
+  list_entries <- dsprrr:::list_private_cache_entries
+  testthat::local_mocked_bindings(
+    list_private_cache_entries = function(disk_path) {
+      observed$enumerated <- c(observed$enumerated, disk_path)
+      list_entries(disk_path)
+    },
+    read_private_cache_value = function(...) {
+      observed$deserialized <- observed$deserialized + 1L
+      stop("overexposed response reached deserialization")
+    },
+    .package = "dsprrr"
+  )
+  testthat::local_mocked_bindings(
+    cache_disk = function(...) {
+      observed$cachem_initialized <- observed$cachem_initialized + 1L
+      stop("overexposed cache reached cachem")
+    },
+    .package = "cachem"
+  )
+
+  disk_path <- file.path(root, "overexposed-directory")
   dir.create(disk_path)
   legacy_file <- file.path(disk_path, "legacy.rds")
   saveRDS(list(answer = "legacy"), legacy_file)
   Sys.chmod(disk_path, mode = "0755", use_umask = FALSE)
   Sys.chmod(legacy_file, mode = "0644", use_umask = FALSE)
+  legacy_bytes <- readBin(legacy_file, "raw", n = file.size(legacy_file))
 
   configure_cache(
-    enable_memory = FALSE,
+    enable_memory = TRUE,
     enable_disk = TRUE,
     disk_path = disk_path
   )
   expect_warning(
     cache <- dsprrr:::get_cache(),
-    class = "dsprrr_cache_permissions_repaired"
+    class = "dsprrr_cache_security_warning"
   )
 
-  expect_identical(cache_test_mode(disk_path), "0700")
-  expect_identical(cache_test_mode(legacy_file), "0600")
-  expect_identical(cache$get("legacy")$answer, "legacy")
+  expect_s3_class(cache, "cache_mem")
+  expect_length(observed$enumerated, 0L)
+  expect_identical(observed$deserialized, 0L)
+  expect_identical(observed$cachem_initialized, 0L)
+  expect_identical(cache_test_mode(disk_path), "0755")
+  expect_identical(cache_test_mode(legacy_file), "0644")
+  expect_identical(
+    readBin(legacy_file, "raw", n = file.size(legacy_file)),
+    legacy_bytes
+  )
+  expect_true(cachem::is.key_missing(cache$get("legacy")))
 
+  disk_path <- file.path(root, "overexposed-file")
+  dir.create(disk_path)
+  legacy_file <- file.path(disk_path, "legacy.rds")
+  saveRDS(list(answer = "legacy"), legacy_file)
+  Sys.chmod(disk_path, mode = "0700", use_umask = FALSE)
+  Sys.chmod(legacy_file, mode = "0644", use_umask = FALSE)
+  legacy_bytes <- readBin(legacy_file, "raw", n = file.size(legacy_file))
   configure_cache(
-    enable_memory = FALSE,
+    enable_memory = TRUE,
     enable_disk = TRUE,
     disk_path = disk_path
   )
-  expect_no_warning(dsprrr:::get_cache())
+  expect_warning(
+    cache <- dsprrr:::get_cache(),
+    class = "dsprrr_cache_security_warning"
+  )
+
+  expect_s3_class(cache, "cache_mem")
+  expect_identical(
+    observed$enumerated,
+    dsprrr:::cache_canonical_target_path(disk_path)
+  )
+  expect_identical(observed$deserialized, 0L)
+  expect_identical(observed$cachem_initialized, 0L)
+  expect_identical(cache_test_mode(disk_path), "0700")
+  expect_identical(cache_test_mode(legacy_file), "0644")
+  expect_identical(
+    readBin(legacy_file, "raw", n = file.size(legacy_file)),
+    legacy_bytes
+  )
+  expect_true(cachem::is.key_missing(cache$get("legacy")))
 })
 
 test_that("writable cache directories and files fail closed", {
@@ -1999,21 +2170,19 @@ test_that("different mock LLMs don't share cache entries", {
   clear_cache()
 
   # Create two mock LLMs with same "unknown" model behavior
-  mock_llm1 <- list(
+  mock_llm1 <- new_test_chat(
     get_model = function() stop("no model"),
     chat_structured = function(prompt, type, echo = "none") {
       list(answer = "response from LLM 1")
     }
   )
-  class(mock_llm1) <- "Chat"
 
-  mock_llm2 <- list(
+  mock_llm2 <- new_test_chat(
     get_model = function() stop("no model"),
     chat_structured = function(prompt, type, echo = "none") {
       list(answer = "response from LLM 2")
     }
   )
-  class(mock_llm2) <- "Chat"
 
   output_type <- ellmer::type_object(answer = ellmer::type_string())
 
@@ -2169,15 +2338,13 @@ test_that(".cache = TRUE has no effect when caching globally disabled", {
 
   # Create a mock LLM that tracks calls
   call_count <- 0
-  mock_llm <- list(
-    get_model = function() "mock-model",
+  mock_llm <- new_test_chat(
+    model = "mock-model",
     chat_structured = function(prompt, type, echo = "none") {
       call_count <<- call_count + 1
       list(answer = paste("response", call_count))
-    },
-    `.__enclos_env__` = list(private = list(api_args = list(temperature = 0.7)))
+    }
   )
-  class(mock_llm) <- "Chat"
 
   output_type <- ellmer::type_object(answer = ellmer::type_string())
 
@@ -2325,7 +2492,7 @@ test_that("different pre-existing history misses cache and is preserved", {
   )
 })
 
-test_that("Chats without state getters execute but never cache", {
+test_that("class-tagged non-R6 Chats are rejected before provider work", {
   local_reset_cache()
   configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
 
@@ -2349,9 +2516,12 @@ test_that("Chats without state getters execute but never cache", {
   sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
   mod <- module(sig, type = "predict")
 
-  suppressWarnings(run(mod, text = "Great!", .llm = mock_env$mock_llm))
-  suppressWarnings(run(mod, text = "Great!", .llm = mock_env$mock_llm))
-  expect_equal(calls, 2L)
+  condition <- rlang::catch_cnd(
+    run(mod, text = "Great!", .llm = mock_env$mock_llm)
+  )
+
+  expect_s3_class(condition, "dsprrr_chat_type_error")
+  expect_equal(calls, 0L)
   expect_equal(cache_stats()$hits, 0L)
   expect_equal(cache_stats()$misses, 0L)
 })
@@ -2565,7 +2735,7 @@ test_that("rollout_id threads from forward() into the cache key (dsprrr-pcd)", {
   base <- cache_real_chat()
   chats <- lapply(seq_len(3), function(i) base$clone(deep = TRUE))
   sig <- Signature(
-    inputs = list(input(name = "q", class = S7::class_character)),
+    inputs = list(input(name = "q", type = "string")),
     output_type = ellmer::type_string(),
     instructions = ""
   )

@@ -17,7 +17,7 @@
 #' @noRd
 KNNFewShotModule <- R6::R6Class(
   "KNNFewShotModule",
-  inherit = Module,
+  inherit = PredictModule,
   public = list(
     #' @field module The wrapped module
     module = NULL,

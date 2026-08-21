@@ -78,7 +78,7 @@ sig <- signature(
   instructions = "Classify the sentiment of this product review."
 )
 
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   review = c(
     "Love it!", "Hate it!", "It's okay.",
     "Amazing!", "Terrible!", "Meh.",
@@ -251,7 +251,7 @@ optimized <- compile_module(
 )
 
 # 3. Evaluate on held-out test data (same columns as the trainset)
-testset <- dsp_trainset(
+testset <- tibble::tibble(
   review = c("Exceeded expectations!", "Broke after a week.", "It's fine."),
   sentiment = c("positive", "negative", "neutral")
 )
@@ -306,7 +306,7 @@ Set up regular checks:
 prod_module$trace_summary()
 
 # Weekly: Evaluate on a fresh sample of labeled production data
-weekly_sample <- dsp_trainset(
+weekly_sample <- tibble::tibble(
   review = c("Saved me hours!", "Refund please.", "Average at best."),
   sentiment = c("positive", "negative", "neutral")
 )

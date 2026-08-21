@@ -333,7 +333,7 @@ test_that("Omni requires worker-visible credentials for parallel exploration", {
   )
 })
 
-test_that("Omni rejects unsafe parallel chat serialization", {
+test_that("Omni rejects non-Chat .llm before parallel policy", {
   expect_snapshot(
     error = TRUE,
     compile(

@@ -4,7 +4,7 @@
 \alias{as_vitals_solver}
 \title{Convert a dsprrr module into a vitals solver}
 \usage{
-as_vitals_solver(module, .llm = NULL, ...)
+as_vitals_solver(module, .llm = NULL, .concurrency = NULL, ...)
 }
 \arguments{
 \item{module}{A DSPrrr module (e.g., created via \code{\link[=module]{module()}}).}
@@ -12,6 +12,9 @@ as_vitals_solver(module, .llm = NULL, ...)
 \item{.llm}{An ellmer chat object. If \code{NULL} (default), uses the module's
 stored chat or falls back to \code{\link[=get_default_chat]{get_default_chat()}}. The chat is cloned
 for each batch invocation.}
+
+\item{.concurrency}{Optional policy created by \code{\link[=concurrency_control]{concurrency_control()}}.
+Omission uses sequential execution.}
 
 \item{...}{Additional arguments forwarded to \code{\link[=run_dataset]{run_dataset()}}.}
 }
@@ -30,7 +33,8 @@ contain nested data (list of tibbles/lists) where each element has fields
 matching the module's signature inputs. Use \code{\link[=as_vitals_task]{as_vitals_task()}} to
 automatically create this structure from a flat dataset.
 
-The solver uses ellmer's parallel processing for efficiency. For structured
-outputs, mock Chat objects are created for vitals logging compatibility
-(following the same pattern as vitals' \code{generate_structured()}).
+Batch execution is sequential unless \code{.concurrency} requests another
+backend. For structured outputs, mock Chat objects are created for vitals
+logging compatibility (following the same pattern as vitals'
+\code{generate_structured()}).
 }

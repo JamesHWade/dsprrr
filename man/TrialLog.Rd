@@ -11,10 +11,18 @@ idempotent, while conflicting records with the same ID are rejected. The
 \code{trials.jsonl} journal is authoritative. \code{metadata.json}, \code{README.md}, and
 \code{best_program.rds} are independently refreshed, best-effort derived views;
 they may lag after an interruption and are rebuilt by a later successful
-save. Persistent Unix logs require an effective-user-owned directory with a
-safe parent chain and reject symbolic-link targets; Windows uses the
-account's filesystem ACLs, which base R cannot verify as owner-only, and
-fails closed if stable device and file identifiers are unavailable.
+save. On Unix, a pre-existing private log directory must be owned by the
+effective user with exactly mode \code{0700}, and every pre-existing log file must
+have exactly mode \code{0600}; special mode bits are rejected. Every existing
+ancestor must be owned by root or the effective user, including sticky
+shared parents. Before initialization or a save to another directory locks,
+reads, or mutates storage, dsprrr preflights every known target: the lock,
+journal, metadata, summary, and best-program artifact. Unsafe paths are
+rejected without repair or reads. Directories and files created for the
+current operation are enforced as owner-only. Non-symbolic regular files
+remain required. Windows uses the account's filesystem ACLs, which base R
+cannot verify as owner-only, and fails closed if stable device and file
+identifiers are unavailable.
 }
 \section{Public fields}{
   \if{html}{\out{<div class="r6-fields">}}
@@ -23,7 +31,7 @@ fails closed if stable device and file identifiers are unavailable.
 
     \item{\code{log_dir}}{Directory for persistence (NULL for in-memory only).}
 
-    \item{\code{trials}}{List of Trial objects.}
+    \item{\code{trials}}{List of optimization trial records.}
 
     \item{\code{metadata}}{Additional metadata about the optimization run.}
   }
@@ -80,7 +88,7 @@ program are then refreshed independently on a best-effort basis.
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{trial}}{A Trial object.}
+      \item{\code{trial}}{A trial record created by \code{\link[=create_trial]{create_trial()}}.}
       \item{\code{persist}}{Whether to immediately persist to disk if log_dir is set.}
     }
     \if{html}{\out{</div>}}
@@ -135,7 +143,8 @@ program are then refreshed independently on a best-effort basis.
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    The best Trial object, or NULL if no completed trials.
+    The best optimization trial record, or \code{NULL} if no trials have
+completed.
   }
 }
 

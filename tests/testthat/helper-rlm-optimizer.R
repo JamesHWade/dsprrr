@@ -17,11 +17,9 @@ make_rlm_optimizer_chat <- function() {
 
   new_chat <- NULL
   new_chat <- function() {
-    chat <- list(
-      clone = function(...) new_chat(),
-      set_turns = function(turns) invisible(NULL),
-      get_turns = function() list(),
-      get_model = function() "rlm-optimizer-test",
+    chat <- new_test_chat(
+      clone = function(deep = TRUE) new_chat(),
+      model = "rlm-optimizer-test",
       chat_structured = function(prompt, type, ...) {
         fields <- rlm_optimizer_type_fields(type)
 
@@ -55,7 +53,6 @@ make_rlm_optimizer_chat <- function() {
         list(answer = if (state$action_tuned && extract_tuned) "yes" else "no")
       }
     )
-    class(chat) <- c("Chat", class(chat))
     chat
   }
 

@@ -35,13 +35,11 @@ discrete_bo_checkpoint_trial_record <- function(trial) {
 }
 
 discrete_bo_restore_trial_record <- function(record) {
-  if (!is.list(record)) {
-    cli::cli_abort(
-      "Discrete BO trial record is malformed",
-      class = "dsprrr_optimizer_checkpoint_malformed"
-    )
-  }
-  cost_summary <- record$cost_summary %||% list()
+  validate_trial_record(
+    record,
+    class = "dsprrr_optimizer_checkpoint_malformed"
+  )
+  cost_summary <- record$cost_summary
   token_field <- which(names(cost_summary) == "tokens_unknown")
   if (length(token_field) == 1L) {
     names(cost_summary)[[token_field]] <- "token_usage_unknown"
@@ -66,14 +64,14 @@ discrete_bo_restore_trial_record <- function(record) {
   Trial(
     trial_id = record$trial_id,
     optimizer_name = record$optimizer_name,
-    params = record$params %||% list(),
-    metric_summary = record$metric_summary %||% list(),
+    params = record$params,
+    metric_summary = record$metric_summary,
     cost_summary = cost_summary,
     start_time = parse_time(record$start_time),
     end_time = parse_time(record$end_time),
-    notes = record$notes %||% "",
+    notes = record$notes,
     trace_context = trace_context_validate(
-      record$trace_context %||% list(),
+      record$trace_context,
       arg = "trace_context"
     ),
     status = record$status

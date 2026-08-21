@@ -9,16 +9,12 @@ input(name, type = NULL, description = NULL, ...)
 \arguments{
 \item{name}{Character string naming the input}
 
-\item{type}{Input type specification. Can be:
-\itemize{
-\item An ellmer type object (e.g., \code{type_string()}, \code{type_number()})
-\item A string shortcut (e.g., "string", "number", "boolean")
-\item An S7 class (for backward compatibility)
-\item NULL/missing (defaults to string type)
-}}
+\item{type}{An ellmer type object, one of \code{"string"}, \code{"number"},
+\code{"integer"}, \code{"boolean"}, \code{"array"}, or \code{"object"}, or \code{NULL} to use
+a string type.}
 
-\item{description}{Optional description of the input. When type is a string
-shortcut or NULL, this description will be passed to the ellmer type}
+\item{description}{Optional description of the input. When \code{type} is a
+canonical label or \code{NULL}, this description is passed to the ellmer type.}
 
 \item{...}{Additional metadata for the input}
 }
@@ -26,8 +22,7 @@ shortcut or NULL, this description will be passed to the ellmer type}
 A list with class "dsprrr_input" containing the input specification
 }
 \description{
-Create an input specification with flexible type notation.
-Supports ellmer types, string shortcuts, or S7 classes for backward compatibility.
+Create an input specification using an ellmer type or a canonical type label.
 }
 \examples{
 # Using ellmer types (recommended for consistency with outputs)
@@ -35,7 +30,7 @@ input("text", ellmer::type_string())
 input("age", ellmer::type_number())
 input("active", ellmer::type_boolean())
 
-# Using string shortcuts (simple and readable)
+# Using canonical labels
 input("text", "string")
 input("count", "integer")
 input("score", "number")

@@ -7,7 +7,7 @@
 write_trials_jsonl(trials, path, append = FALSE)
 }
 \arguments{
-\item{trials}{List of Trial objects.}
+\item{trials}{Trial records created by \code{\link[=create_trial]{create_trial()}}.}
 
 \item{path}{File path for the JSONL file.}
 
@@ -17,8 +17,12 @@ write_trials_jsonl(trials, path, append = FALSE)
 Invisibly returns the path.
 }
 \description{
-Write a list of Trial objects to a JSONL (JSON Lines) file.
-Each trial is written as a single JSON object on its own line.
+Write a list of optimization trial records to a JSONL (JSON Lines) file.
+Each trial is written as a single JSON object on its own line. On Unix, an
+existing target must already be owned by the effective user with mode
+exactly \code{0600}, without special bits, and every existing ancestor must be
+owned by root or the effective user. Unsafe paths are rejected rather than
+repaired.
 }
 \examples{
 \dontrun{

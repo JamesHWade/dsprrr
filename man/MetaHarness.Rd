@@ -2,7 +2,6 @@
 % Please edit documentation in R/teleprompter-harness.R
 \name{MetaHarness}
 \alias{MetaHarness}
-\alias{print.MetaHarness}
 \title{Meta-Harness Teleprompter}
 \usage{
 MetaHarness(
@@ -22,8 +21,6 @@ MetaHarness(
   max_candidates_per_iteration = 4L,
   frontier_size = 8L
 )
-
-\method{print}{MetaHarness}(x, ...)
 }
 \arguments{
 \item{metric}{Metric used to evaluate candidates.}
@@ -61,10 +58,6 @@ the harness requires evaluation progress.}
 proposer batch.}
 
 \item{frontier_size}{Maximum scored candidates summarized to each proposer.}
-
-\item{x}{A MetaHarness object.}
-
-\item{...}{Additional arguments.}
 }
 \value{
 A \code{MetaHarness} teleprompter.
@@ -89,10 +82,8 @@ Those analyses execute only through \code{runner}; with the default
 \code{sandbox = TRUE}, the runner must advertise an OS sandbox such as
 \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}. Proposer sessions are fresh by design, so each
 iteration must reason from the persisted frontier rather than hidden chat
-history. An ellmer \code{Chat} is cloned and reset automatically. A custom
-proposer must either provide \code{chat_structured()} and \code{clone()}, or be supplied
-as a zero-argument \code{.agent_llm} factory that returns a fresh compatible
-proposer on every call. Non-cloneable proposer objects are rejected.
+history. The proposer must be an ellmer \code{Chat}; it is cloned and reset
+automatically before each iteration.
 }
 \section{Compilation arguments}{
 

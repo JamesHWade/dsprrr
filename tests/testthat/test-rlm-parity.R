@@ -34,8 +34,8 @@ new_rlm_parity_chat <- function(
     invisible(NULL)
   }
 
-  chat <- list(
-    clone = function() {
+  chat <- new_test_chat(
+    clone = function(deep = TRUE) {
       new_rlm_parity_chat(
         actions = actions,
         query_values = query_values,
@@ -126,7 +126,7 @@ test_that("persistent R runners preserve variables across RLM iterations", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   chat <- new_rlm_parity_chat(list(
     list(reasoning = "Create a reusable value", code = "seed <- 40L; seed"),
     list(reasoning = "Use the prior value", code = "SUBMIT(seed + 2L)")
@@ -170,7 +170,7 @@ test_that("caller-owned persistent runners release context and bridge state", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   preexisting <- runner$execute(paste(
     "search <- 'PREEXISTING-SEARCH'",
     "domain_lookup <- 'PREEXISTING-TOOL'",
@@ -197,7 +197,7 @@ test_that("caller-owned persistent runners release context and bridge state", {
     "  context = .context,",
     "  bridge = intersect(",
     "    c('SUBMIT', 'peek', 'llm_query', 'llm_query_batched',",
-    "      'rlm_query', 'rlm_query_batch', '.rlm_host_tool_call'),",
+    "      '.rlm_host_tool_call'),",
     "    ls(all.names = TRUE)",
     "  ),",
     "  transient = ls(pattern = '^\\\\.rlm_', all.names = TRUE),",
@@ -297,7 +297,7 @@ test_that("typed SUBMIT failures are repairable on the next turn", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   cases <- list(
     integer = list(
       type = ellmer::type_integer(),
@@ -514,9 +514,7 @@ test_that("one ordered replay ledger rejects cross-kind divergence", {
     host_calls <<- host_calls + 1L
     "pong"
   }
-  sub_lm <- list(
-    clone = function(deep = FALSE) sub_lm,
-    set_turns = function(turns) invisible(NULL),
+  sub_lm <- new_test_chat(
     chat = function(prompt) {
       query_calls <<- query_calls + 1L
       "unexpected"
@@ -612,7 +610,7 @@ test_that("fallback provider and output failures are terminal", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   provider_chat <- new_rlm_parity_chat(
     actions = list(list(reasoning = "Inspect", code = "1 + 1")),
@@ -867,15 +865,14 @@ test_that("RLM usage totals include recursive calls and fail closed on gaps", {
 })
 
 test_that("RLM chat clones clear pre-existing conversation turns", {
-  state <- new.env(parent = emptyenv())
-  state$turns <- list("private prior turn")
-  cloned <- list(set_turns = function(turns) state$turns <- turns)
-  chat <- list(clone = function(deep = TRUE) cloned)
+  chat <- new_test_chat(turns = list("private prior turn"))
 
   result <- dsprrr:::clone_rlm_chat(chat)
 
-  expect_identical(result, cloned)
-  expect_identical(state$turns, list())
+  expect_s3_class(result, "Chat")
+  expect_false(identical(result, chat))
+  expect_identical(result$get_turns(), list())
+  expect_identical(chat$get_turns(), list("private prior turn"))
 })
 
 test_that("RLM traces retain input hashes and sizes, not source values", {

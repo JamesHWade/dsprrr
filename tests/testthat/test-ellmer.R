@@ -1,4 +1,4 @@
-# Tests for ellmer integration (as_ellmer_tool, register_dsprrr_tool)
+# Tests for ellmer module-as-tool integration
 
 test_that("as_ellmer_tool creates tool with correct function signature", {
   skip_if_not_installed("ellmer")
@@ -51,14 +51,10 @@ test_that("as_ellmer_tool function can be invoked with mock LLM", {
   skip_if_not_installed("ellmer")
 
   # Create mock LLM that returns predictable output
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(sentiment = "positive")
-      },
-      last_turn = function(...) NULL
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(sentiment = "positive")
+    }
   )
 
   mod <- module(
@@ -162,16 +158,6 @@ test_that("as_ellmer_tool rejects non-Module input", {
   )
 })
 
-test_that("register_dsprrr_tool rejects non-Chat input", {
-  skip_if_not_installed("ellmer")
-
-  mod <- module(signature("text -> answer"), type = "predict")
-  expect_error(
-    register_dsprrr_tool(list(), mod),
-    "must be an ellmer Chat"
-  )
-})
-
 test_that("as_ellmer_tool copy = 'deep' avoids mutating source traces", {
   skip_if_not_installed("ellmer")
   local_reset_cache()
@@ -259,71 +245,6 @@ test_that("as_ellmer_tool generates name from signature if not provided", {
   expect_true(nzchar(tool@name))
 })
 
-test_that("register_dsprrr_tool registers tool with chat", {
-  skip_if_not_installed("ellmer")
-
-  # Create a mock chat that tracks registered tools
-  registered_tools <- list()
-  mock_chat <- structure(
-    list(
-      register_tool = function(tool) {
-        registered_tools <<- c(registered_tools, list(tool))
-      }
-    ),
-    class = "Chat"
-  )
-
-  mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
-  )
-
-  result <- register_dsprrr_tool(
-    mock_chat,
-    mod,
-    name = "sentiment_tool",
-    description = "Analyze sentiment"
-  )
-
-  # Should return chat invisibly
-  expect_identical(result, mock_chat)
-
-  # Should have registered one tool
-  expect_length(registered_tools, 1)
-  expect_equal(registered_tools[[1]]@name, "sentiment_tool")
-})
-
-test_that("register_dsprrr_tool forwards ellmer tool options", {
-  skip_if_not_installed("ellmer")
-  local_reset_cache()
-
-  registered_tools <- list()
-  mock_chat <- structure(
-    list(
-      register_tool = function(tool) {
-        registered_tools <<- c(registered_tools, list(tool))
-      }
-    ),
-    class = "Chat"
-  )
-
-  mod <- module_fn("text -> answer", function(text, ...) list(answer = text))
-
-  register_dsprrr_tool(
-    mock_chat,
-    mod,
-    name = "answer_tool",
-    annotations = ellmer::tool_annotations(read_only_hint = TRUE),
-    output = "json",
-    copy = "deep"
-  )
-
-  expect_length(registered_tools, 1)
-  expect_true(registered_tools[[1]]@annotations$read_only_hint)
-  expect_equal(registered_tools[[1]](text = "hello"), "{\"answer\":\"hello\"}")
-  expect_length(mod$state$traces, 0)
-})
-
 test_that("as_ellmer_tool function environment has access to run", {
   skip_if_not_installed("ellmer")
 
@@ -348,13 +269,10 @@ test_that("as_ellmer_tool handles errors from module", {
   skip_if_not_installed("ellmer")
 
   # Create mock LLM that throws an error
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        stop("API error")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      stop("API error")
+    }
   )
 
   mod <- module(
@@ -392,13 +310,10 @@ test_that("as_ellmer_tool handles errors from module", {
 test_that("as_ellmer_tool error = 'return' signals a classed condition", {
   skip_if_not_installed("ellmer")
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        stop("API error")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      stop("API error")
+    }
   )
 
   mod <- module(signature("text -> sentiment"), type = "predict")

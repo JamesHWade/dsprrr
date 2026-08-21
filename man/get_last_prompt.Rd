@@ -16,7 +16,7 @@ A \code{dsprrr_prompt_inspection} object containing:
 \item \code{tokens_out}: Output tokens generated
 \item \code{cost}: Cost in USD (if available)
 \item \code{timestamp}: When the call was made
-\item \code{source}: Where the call originated ("dsp()" or module name)
+\item \code{source}: The module class that originated the call
 \item \code{program_artifact_id}: Exact executable program identity, when available
 \item \code{trace_context}: Caller-supplied correlation context
 }
@@ -26,12 +26,13 @@ Returns \code{NULL} if no LLM calls have been made.
 \description{
 Returns detailed information about the most recent LLM call, including
 the prompt sent, response received, and metadata like tokens and cost.
-Works with both \code{dsp()} calls and module-based calls.
+Works with module-based calls.
 }
 \examples{
 \dontrun{
 # Make an LLM call
-dsp("question -> answer", question = "What is 2+2?")
+mod <- module(signature("question -> answer"))
+run(mod, question = "What is 2+2?", .llm = ellmer::chat_openai())
 
 # Inspect what happened
 get_last_prompt()

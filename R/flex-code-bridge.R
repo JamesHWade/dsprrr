@@ -117,7 +117,6 @@ flex_validate_host_tools <- function(tools) {
     tools,
     function(tool) {
       is.function(tool) ||
-        inherits(tool, "ToolDef") ||
         inherits(tool, "ellmer::ToolDef")
     },
     logical(1)
@@ -163,23 +162,13 @@ flex_host_tool_names_valid <- function(tools) {
 }
 
 flex_tool_function <- function(tool, name) {
-  if (is.function(tool)) {
-    return(tool)
-  }
-  candidate <- tryCatch(tool@fun, error = function(error) NULL)
-  if (!is.function(candidate)) {
-    candidate <- tryCatch(
-      methods::slot(tool, "function"),
-      error = function(error) NULL
-    )
-  }
-  if (!is.function(candidate)) {
+  if (!is.function(tool)) {
     cli::cli_abort(
       "Flex host tool {.field {name}} does not expose a callable function",
       class = "dsprrr_flex_tools_error"
     )
   }
-  candidate
+  tool
 }
 
 flex_code_sandbox_template <- function() {
@@ -262,7 +251,7 @@ flex_code_sandbox_template <- function() {
       if (
         length(arguments) > 0L &&
           (is.null(argument_names) ||
-            any(!nzchar(argument_names)) ||
+            !all(nzchar(argument_names)) ||
             anyDuplicated(argument_names))
       ) {
         stop("Flex bridge call requires unique named arguments", call. = FALSE)
@@ -325,7 +314,7 @@ flex_code_sandbox_template <- function() {
       if (
         length(arguments) > 0L &&
           (is.null(argument_names) ||
-            any(!nzchar(argument_names)) ||
+            !all(nzchar(argument_names)) ||
             anyDuplicated(argument_names))
       ) {
         stop(context, " requires unique named arguments", call. = FALSE)
@@ -559,7 +548,7 @@ flex_code_decode_control <- function(values, nonce) {
     }
     pattern <- paste0(.flex_code_control_prefix, "[A-Za-z0-9+/=]+")
     matches <- regmatches(text, gregexpr(pattern, text, perl = TRUE))[[1L]]
-    if (length(matches) != prefix_count || any(!nzchar(matches))) {
+    if (length(matches) != prefix_count || !all(nzchar(matches))) {
       cli::cli_abort(
         "Malformed Flex bridge control frame",
         class = "dsprrr_flex_bridge_protocol_error"

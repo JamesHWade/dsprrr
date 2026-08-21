@@ -37,7 +37,7 @@ test_that("optimize_grid updates module configuration with best parameters", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Return sentiment"
@@ -50,11 +50,8 @@ test_that("optimize_grid updates module configuration with best parameters", {
     target = "positive"
   )
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(...) "unused"
-    ),
-    class = "MockChat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) "unused"
   )
 
   metric <- function(prediction, expected_row) {
@@ -145,7 +142,7 @@ test_that("optimize_grid accepts explicit grid data frames", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Return label"
@@ -161,11 +158,8 @@ test_that("optimize_grid accepts explicit grid data frames", {
     target = "positive"
   )
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(...) "unused"
-    ),
-    class = "MockChat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) "unused"
   )
 
   metric <- function(prediction, expected_row) {
@@ -239,7 +233,7 @@ test_that("module_parameter_set derives defaults from signature", {
 
 test_that("module_metric_summary handles modules without trials", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = ""
   )

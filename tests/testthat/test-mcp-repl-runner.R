@@ -497,7 +497,10 @@ test_that("managed runner closures are process-specific and idempotent", {
     sandbox = "workspace-write",
     sandbox_verified = TRUE,
     oversized_output = "files",
-    close_connection = function() first_closes <<- first_closes + 1L,
+    close_connection = function() {
+      first_closes <<- first_closes + 1L
+      invisible(NULL)
+    },
     connection_owned = TRUE
   )
   second <- dsprrr:::McpReplRunner$new(
@@ -507,16 +510,19 @@ test_that("managed runner closures are process-specific and idempotent", {
     sandbox = "workspace-write",
     sandbox_verified = TRUE,
     oversized_output = "files",
-    close_connection = function() second_closes <<- second_closes + 1L,
+    close_connection = function() {
+      second_closes <<- second_closes + 1L
+      invisible(NULL)
+    },
     connection_owned = TRUE
   )
 
-  first$close()
-  first$close()
+  first$shutdown()
+  first$shutdown()
   expect_identical(first_closes, 1L)
   expect_identical(second_closes, 0L)
   expect_identical(second$execute("1 + 1")$result, "second")
-  second$close()
+  second$shutdown()
   expect_identical(second_closes, 1L)
 })
 
@@ -536,9 +542,9 @@ test_that("a failed managed close still makes the runner terminal", {
     connection_owned = TRUE
   )
 
-  expect_error(runner$close(), "transport close failed")
+  expect_error(runner$shutdown(), "transport close failed")
   expect_true(runner$closed)
-  expect_invisible(runner$close())
+  expect_invisible(runner$shutdown())
   expect_identical(close_calls, 1L)
   expect_error(
     runner$execute("1 + 1"),

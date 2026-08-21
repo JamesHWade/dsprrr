@@ -84,16 +84,14 @@ NULL
 #'   object output types. Opaque `TypeJsonSchema` outputs are unsupported.
 #' @param runner Optional caller-owned code runner implementing `execute()` and
 #'   `policy()`. Its policy must declare `persistent = TRUE`. It is retained,
-#'   never automatically closed, and must not be shared concurrently. For the
+#'   never automatically shut down, and must not be shared concurrently. For the
 #'   trusted callr backend, use `r_code_runner(persistent = TRUE)`.
-#' @param max_iterations Maximum REPL iterations before fallback (default 20)
-#' @param max_iters DSPy 3.3-compatible alias for `max_iterations`. Supply only
-#'   one of these arguments.
 #' @param interpreter_factory Optional zero-argument function returning a fresh
 #'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
-#'   terminal `shutdown()` or `close()`. Its policy must advertise
+#'   terminal `shutdown()`. Its policy must advertise
 #'   `persistent = TRUE` for RLM.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
+#' @param max_iterations Maximum REPL iterations before fallback (default 20)
 #' @param max_llm_calls Maximum recursive LLM calls allowed (default 50)
 #' @param max_output_chars Maximum model-visible characters per execution output.
 #'   Longer output is shown as a head-and-tail excerpt. Default 10000.
@@ -132,16 +130,17 @@ NULL
 rlm_module <- function(
   signature,
   runner = NULL,
+  interpreter_factory = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
   max_output_chars = 10000L,
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
-  max_iters = NULL,
-  ...,
-  interpreter_factory = NULL
+  ...
 ) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+
   binding <- normalize_code_runner_binding(
     runner = runner,
     interpreter_factory = interpreter_factory,
@@ -158,16 +157,6 @@ rlm_module <- function(
       "signature must be a Signature object or string notation",
       "x" = "You provided: {.cls {class(signature)[1]}}"
     ))
-  }
-
-  if (!is.null(max_iters)) {
-    if (!missing(max_iterations)) {
-      cli::cli_abort(
-        "Supply only one of {.arg max_iterations} and {.arg max_iters}",
-        class = "dsprrr_rlm_argument_conflict"
-      )
-    }
-    max_iterations <- max_iters
   }
 
   # Validate before coercion so fractional, vector, infinite, and out-of-range
@@ -218,13 +207,9 @@ validate_rlm_sub_lm <- function(sub_lm) {
   if (is.null(sub_lm)) {
     return(invisible(sub_lm))
   }
-  chat <- tryCatch(sub_lm[["chat"]], error = function(e) NULL)
-  if (!is.function(chat)) {
+  if (!is_ellmer_chat(sub_lm)) {
     cli::cli_abort(
-      c(
-        "{.arg sub_lm} must be an ellmer Chat or compatible object",
-        "i" = "It must provide a {.code chat(prompt)} method."
-      ),
+      "{.arg sub_lm} must be an ellmer Chat R6 object",
       class = "dsprrr_rlm_sub_lm_error"
     )
   }
@@ -271,19 +256,7 @@ validate_rlm_output_type <- function(type) {
 
 
 clone_rlm_chat <- function(chat) {
-  clone <- tryCatch(chat[["clone"]], error = function(e) NULL)
-  if (is.function(clone)) {
-    cloned <- tryCatch(
-      clone(deep = TRUE),
-      error = function(e) clone()
-    )
-    set_turns <- tryCatch(cloned[["set_turns"]], error = function(e) NULL)
-    if (is.function(set_turns)) {
-      set_turns(list())
-    }
-    return(cloned)
-  }
-  chat
+  clone_ellmer_chat(chat, arg = "sub_lm", reset_turns = TRUE)
 }
 
 
@@ -521,9 +494,7 @@ rlm_reserved_tool_names <- function() {
     "peek",
     "search",
     "llm_query",
-    "llm_query_batched",
-    "rlm_query",
-    "rlm_query_batch"
+    "llm_query_batched"
   )
 }
 
@@ -1003,10 +974,7 @@ RLMModule <- R6::R6Class(
       }
 
       # Get LLM - clone for fresh conversation
-      base_llm <- .llm %||% self$chat %||% get_default_chat()
-      if (is.null(base_llm)) {
-        cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
-      }
+      base_llm <- resolve_module_llm(self, .llm = .llm)
 
       llm <- clone_rlm_chat(base_llm)
       sub_lm <- self$sub_lm %||% base_llm
@@ -1449,7 +1417,7 @@ RLMModule <- R6::R6Class(
           c(
             "RLM could not fully clear its caller-owned interpreter state",
             "x" = conditionMessage(cleanup_error),
-            "i" = "Reset or close the runner before reusing it."
+            "i" = "Reset or shut down the runner before reusing it."
           ),
           class = "dsprrr_rlm_cleanup_warning"
         )
@@ -3189,7 +3157,7 @@ answer possible with what was discovered.
 #'   question = "Where did conversion fall?",
 #'   .llm = ellmer::chat_openai(),
 #'   .runner = local_runner)
-#' local_runner$close()
+#' local_runner$shutdown()
 #' }
 #'
 #' @seealso
@@ -3197,7 +3165,6 @@ answer possible with what was discovered.
 #' * [r_code_runner()] for configuring the code execution backend
 #' * [mcp_repl_runner()] for managed sandboxed execution
 #' * [run()] for executing modules
-#' * [dsp()] for simple one-shot LLM calls (no code execution)
 rlm <- function(
   signature,
   ...,

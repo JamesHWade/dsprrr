@@ -25,9 +25,10 @@ optimizer_control(
 )
 }
 \arguments{
-\item{seed}{Random seed for reproducibility. Default is NULL (no seed).}
+\item{seed}{Random seed for reproducibility. Default is \code{NULL} (no seed).}
 
-\item{max_trials}{Maximum number of trials to run. Default is NULL (unlimited).}
+\item{max_trials}{Maximum number of trials to run. Default is \code{NULL}
+(unlimited).}
 
 \item{max_errors}{Non-negative integer error budget. Optimizers report total
 errors while stopping on a separate consecutive-error streak; each success
@@ -37,29 +38,31 @@ When a completed evaluation returns multiple outcomes, all are included in
 the final counters even if the stop boundary was crossed partway through;
 the first stop reason remains unchanged and prevents scheduling new work.}
 
-\item{max_metric_calls}{Maximum metric calls, or NULL for unlimited.}
+\item{max_metric_calls}{Maximum metric calls, or \code{NULL} for unlimited.}
 
-\item{max_provider_calls}{Maximum verified provider calls, or NULL for
+\item{max_provider_calls}{Maximum verified provider calls, or \code{NULL} for
 unlimited. Ambiguous provider usage stops a run that has this cap.}
 
-\item{max_input_tokens}{Maximum verified input tokens, or NULL for unlimited.}
+\item{max_input_tokens}{Maximum verified input tokens, or \code{NULL} for unlimited.}
 
-\item{max_output_tokens}{Maximum verified output tokens, or NULL for unlimited.}
-
-\item{max_total_tokens}{Maximum verified input plus output tokens, or NULL for
+\item{max_output_tokens}{Maximum verified output tokens, or \code{NULL} for
 unlimited.}
 
-\item{max_cost}{Maximum known provider cost in US dollars, or NULL for
+\item{max_total_tokens}{Maximum verified input plus output tokens, or \code{NULL}
+for unlimited.}
+
+\item{max_cost}{Maximum known provider cost in US dollars, or \code{NULL} for
 unlimited. Unknown cost stops a run that has this cap.}
 
 \item{max_elapsed_seconds}{Maximum active optimizer elapsed time in seconds,
-or NULL for unlimited. Checkpoint downtime is excluded.}
+or \code{NULL} for unlimited. Checkpoint downtime is excluded.}
 
 \item{num_threads}{Number of threads for parallel evaluation. Default is 1.}
 
-\item{progress}{Whether to display progress. Default is TRUE in interactive sessions.}
+\item{progress}{Whether to display progress. Default is \code{TRUE} in interactive
+sessions.}
 
-\item{log_dir}{Directory for trial logging. Default is NULL (no logging).}
+\item{log_dir}{Directory for trial logging. Default is \code{NULL} (no logging).}
 
 \item{checkpoint_path}{Optional optimizer checkpoint file.}
 
@@ -68,13 +71,25 @@ or NULL for unlimited. Checkpoint downtime is excluded.}
 \item{checkpoint_registry}{Named runtime registry used by safe program
 artifacts stored in checkpoints.}
 
-\item{verbose}{Whether to print detailed output. Default is FALSE}
+\item{verbose}{Whether to print detailed output. Default is \code{FALSE}.}
 }
 \value{
-An OptimizerControl object
+An optimizer control object.
 }
 \description{
-Convenience function to create an OptimizerControl object with defaults.
+Configure optimizer behavior with consistent defaults across optimizer types.
+}
+\details{
+Finite metric, provider, token, cost, and elapsed-time limits switch
+optimizer evaluation to row-sized work units. The maximum postflight
+overshoot is one already-started evaluation row, or one already-started
+direct provider request for optimizer-side generation. Unknown provider,
+token, or cost usage stops safely when the corresponding cap is finite.
+
+BootstrapFewShot and MIPROv2 support deterministic checkpoint resume. GEPA,
+SIMBA, and COPRO currently provide the shared ledger and return the best
+partial program, but reject \code{resume = TRUE} until their fine-grained search
+state is supported.
 }
 \examples{
 # Default control

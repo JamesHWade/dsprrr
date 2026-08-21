@@ -1494,11 +1494,8 @@ find_output_column <- function(trainset, input_names) {
   NULL
 }
 
-#' Print method for BootstrapFewShot
-#' @param x A BootstrapFewShot object
-#' @param ... Additional arguments (unused)
-#' @export
-print.BootstrapFewShot <- function(x, ...) {
+# Print a BootstrapFewShot object through its S7 method.
+print_bootstrap_few_shot <- function(x, ...) {
   cli::cli_h3("BootstrapFewShot Teleprompter")
 
   cli::cli_text("{.field max_bootstrapped_demos}: {x@max_bootstrapped_demos}")
@@ -1517,4 +1514,4 @@ print.BootstrapFewShot <- function(x, ...) {
 }
 
 # Register S7 print method
-S7::method(print, BootstrapFewShot) <- print.BootstrapFewShot
+S7::method(print, BootstrapFewShot) <- print_bootstrap_few_shot

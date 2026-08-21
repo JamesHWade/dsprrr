@@ -5,7 +5,8 @@
 #' custom callables the same `run()` and `evaluate()` surface as built-in
 #' modules without requiring users to subclass dsprrr internals.
 #'
-#' @param signature A [Signature] object or signature string.
+#' @param signature A signature object created by [signature()], or a signature
+#'   string.
 #' @param forward Function called with named signature inputs. If the function
 #'   accepts `.llm` or `...`, the active chat object is passed as `.llm`.
 #'   Return a named list matching the signature output fields, or a scalar when
@@ -148,12 +149,13 @@ FnModule <- R6::R6Class(
   )
 )
 
-#' Extract the model name from a Chat-like object for trace recording
+#' Extract the model name from a Chat for trace recording
 #' @noRd
 fn_module_model_name <- function(llm) {
-  if (is.null(llm) || !inherits(llm, "Chat")) {
+  if (is.null(llm)) {
     return(NA_character_)
   }
+  assert_ellmer_chat(llm, arg = ".llm")
   tryCatch(
     llm$get_model() %||% NA_character_,
     error = function(e) {

@@ -43,10 +43,10 @@
 #' deterministic tests. It must be a function with the mcp-repl tool contract:
 #' `repl(input, timeout_ms)`. Because dsprrr did not launch that function's
 #' server, its runner policy is deliberately marked unverified and it is
-#' rejected by optimizers that require an OS sandbox. Calling `$close()` makes
-#' the wrapper terminal but does not close that caller-managed connection.
+#' rejected by optimizers that require an OS sandbox. Calling `$shutdown()`
+#' makes the wrapper terminal but does not close that caller-managed connection.
 #'
-#' A managed runner captures and closes only the mcp-repl transport it starts.
+#' A managed runner captures and shuts down only the mcp-repl transport it starts.
 #' Some supported mcptools versions do not expose public per-server teardown,
 #' so dsprrr uses a guarded compatibility shim and fails setup if deterministic
 #' ownership cannot be captured. This path is tested against mcptools 1.0.1.
@@ -76,7 +76,7 @@
 #' runner <- mcp_repl_runner()
 #' runner$execute("mean(1:10)")
 #' runner$reset()
-#' runner$close()
+#' runner$shutdown()
 #' }
 mcp_repl_runner <- function(
   repl = NULL,
@@ -823,22 +823,18 @@ McpReplRunner <- R6::R6Class(
       invisible(self)
     },
 
-    close = function() {
+    shutdown = function() {
       if (self$closed) {
         return(invisible(self))
       }
-      # Terminal state is committed before teardown so a failing closer cannot
-      # make later calls reuse a partially closed interpreter or trigger an
-      # implicit lifecycle retry from the finalizer.
+      # Terminal state is committed before teardown so a failing shutdown
+      # cannot make later calls reuse a partially closed interpreter or trigger
+      # an implicit lifecycle retry from the finalizer.
       self$closed <- TRUE
       if (is.function(self$close_connection)) {
         self$close_connection()
       }
       invisible(self)
-    },
-
-    shutdown = function() {
-      self$close()
     },
 
     policy = function() {
@@ -933,7 +929,7 @@ McpReplRunner <- R6::R6Class(
     },
 
     finalize = function() {
-      try(self$close(), silent = TRUE)
+      try(self$shutdown(), silent = TRUE)
     }
   )
 )

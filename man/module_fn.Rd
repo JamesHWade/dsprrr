@@ -7,7 +7,8 @@
 module_fn(signature, forward, chat = NULL, name = NULL, config = list())
 }
 \arguments{
-\item{signature}{A \link{Signature} object or signature string.}
+\item{signature}{A signature object created by \code{\link[=signature]{signature()}}, or a signature
+string.}
 
 \item{forward}{Function called with named signature inputs. If the function
 accepts \code{.llm} or \code{...}, the active chat object is passed as \code{.llm}.

@@ -77,11 +77,12 @@ This creates a chat object you'll use for all your LLM calls.
 
 ## Step 3: Your First Structured Call
 
-Let's ask a simple question using `dsp()`:
+Define a typed module and run it:
 
 ```{r first-call}
 #| cassette: true
-chat |> dsp("question -> answer", question = "What is the capital of France?")
+qa <- module(signature("question -> answer"))
+run(qa, question = "What is the capital of France?", .llm = chat)
 ```
 
 You should see `"Paris"` returned. Let's break down what happened:
@@ -95,9 +96,9 @@ You should see `"Paris"` returned. Let's break down what happened:
 The same signature works for any question:
 ```{r more-questions}
 #| cassette: true
-chat |> dsp("question -> answer", question = "What is 7 * 8?")
+run(qa, question = "What is 7 * 8?", .llm = chat)
 
-chat |> dsp("question -> answer", question = "Who wrote Romeo and Juliet?")
+run(qa, question = "Who wrote Romeo and Juliet?", .llm = chat)
 ```
 
 Notice how you get clean, direct answers—no extra prose.
@@ -110,10 +111,8 @@ So far, answers have been strings. But what if you want a number or a specific c
 
 ```{r number-output}
 #| cassette: true
-chat |> dsp(
-  "math_problem -> result: number",
-  math_problem = "What is 15% of 200?"
-)
+math <- module(signature("math_problem -> result: number"))
+run(math, math_problem = "What is 15% of 200?", .llm = chat)
 ```
 
 The `: number` after `result` tells dsprrr you want a numeric value, not a string.
@@ -122,40 +121,29 @@ The `: number` after `result` tells dsprrr you want a numeric value, not a strin
 
 ```{r enum-output}
 #| cassette: true
-chat |> dsp(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')",
-  text = "I absolutely loved this movie!"
+sentiment <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
+run(sentiment, text = "I absolutely loved this movie!", .llm = chat)
 ```
 
 The LLM must pick from exactly those three options. Try changing the text to see different results:
 
 ```{r enum-variations}
 #| cassette: true
-chat |> dsp(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')",
-  text = "This was a complete waste of time."
-)
+run(sentiment, text = "This was a complete waste of time.", .llm = chat)
 
-chat |> dsp(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')",
-  text = "It was okay, I guess."
-)
+run(sentiment, text = "It was okay, I guess.", .llm = chat)
 ```
 
 ### Getting True/False
 
 ```{r bool-output}
 #| cassette: true
-chat |> dsp(
-  "statement -> is_true: bool",
-  statement = "The Earth orbits the Sun."
-)
+truth <- module(signature("statement -> is_true: bool"))
+run(truth, statement = "The Earth orbits the Sun.", .llm = chat)
 
-chat |> dsp(
-  "statement -> is_true: bool",
-  statement = "Cats are larger than elephants."
-)
+run(truth, statement = "Cats are larger than elephants.", .llm = chat)
 ```
 
 ## Step 6: Multiple Inputs
@@ -164,10 +152,12 @@ Signatures can have multiple inputs. Separate them with commas:
 
 ```{r multiple-inputs}
 #| cassette: true
-chat |> dsp(
-  "context, question -> answer",
+contextual_qa <- module(signature("context, question -> answer"))
+run(
+  contextual_qa,
   context = "R was created in 1993 by Ross Ihaka and Robert Gentleman at the University of Auckland.",
-  question = "When was R created?"
+  question = "When was R created?",
+  .llm = chat
 )
 ```
 
@@ -175,10 +165,11 @@ Now the LLM uses your context to answer the question:
 
 ```{r context-example}
 #| cassette: true
-chat |> dsp(
-  "context, question -> answer",
+run(
+  contextual_qa,
   context = "The bakery opens at 7am and closes at 6pm. They sell croissants for $3 each.",
-  question = "How much do croissants cost?"
+  question = "How much do croissants cost?",
+  .llm = chat
 )
 ```
 
@@ -188,22 +179,22 @@ You can guide the LLM's behavior with instructions:
 
 ```{r with-instructions}
 #| cassette: true
-chat |> dsp(
-  signature("question -> answer", instructions = "Answer in exactly one word."),
-  question = "What color is the sky on a clear day?"
+one_word <- module(
+  signature("question -> answer", instructions = "Answer in exactly one word.")
 )
+run(one_word, question = "What color is the sky on a clear day?", .llm = chat)
 
-chat |> dsp(
-  signature("question -> answer", instructions = "Answer like a pirate."),
-  question = "What is the capital of France?"
+pirate <- module(
+  signature("question -> answer", instructions = "Answer like a pirate.")
 )
+run(pirate, question = "What is the capital of France?", .llm = chat)
 ```
 
 ## What You Learned
 
 In this tutorial, you:
 
-1. Made your first structured LLM call with `dsp()`
+1. Built and ran your first typed module
 2. Used signatures to declare inputs and outputs
 3. Added output types: `string`, `number`, `bool`, `enum()`
 4. Combined multiple inputs

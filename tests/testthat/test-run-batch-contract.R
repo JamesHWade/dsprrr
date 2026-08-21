@@ -1,100 +1,115 @@
-batch_contract_chat <- function(fail_on = NULL, initial_turns = list()) {
-  force(fail_on)
-  force(initial_turns)
-  turns <- initial_turns
-  calls <- 0L
+BatchContractChat <- R6::R6Class(
+  "BatchContractChat",
+  inherit = TestChat,
+  public = list(
+    fail_on = NULL,
+    calls_count = 0L,
 
-  last_turn <- function(role = c("assistant", "user"), ...) {
-    role <- match.arg(role)
-    matching <- Filter(function(turn) identical(turn@role, role), turns)
-    if (length(matching) == 0L) {
-      stop("no matching turn")
-    }
-    matching[[length(matching)]]
-  }
+    initialize = function(fail_on = NULL, turns = list()) {
+      self$fail_on <- fail_on
+      super$initialize(
+        turns = turns,
+        model = "batch-contract-model"
+      )
+    },
 
-  structure(
-    list(
-      calls = function() calls,
-      get_turns = function(...) turns,
-      set_turns = function(value) {
-        turns <<- value
-        invisible(NULL)
-      },
-      last_turn = last_turn,
-      get_model = function() "batch-contract-model",
-      chat_structured = function(prompt, ...) {
-        calls <<- calls + 1L
-        prompt <- as.character(prompt)
-        if (!is.null(fail_on) && grepl(fail_on, prompt, fixed = TRUE)) {
-          error <- simpleError("provider row failed")
-          class(error) <- c("batch_contract_provider_error", class(error))
-          stop(error)
-        }
-        response <- list(answer = paste0("ok:", prompt))
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(
-              contents = list(ellmer::ContentText(prompt))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentText("ok")),
-              tokens = c(4L, 2L, 0L),
-              cost = 0.001,
-              duration = 0.01
-            )
+    last_turn = function(role = c("assistant", "user"), ...) {
+      role <- match.arg(role)
+      matching <- Filter(
+        function(turn) identical(turn@role, role),
+        self$turns
+      )
+      if (length(matching) == 0L) {
+        stop("no matching turn")
+      }
+      matching[[length(matching)]]
+    },
+
+    chat_structured = function(prompt, ...) {
+      self$calls_count <- self$calls_count + 1L
+      prompt <- as.character(prompt)
+      if (
+        !is.null(self$fail_on) &&
+          grepl(self$fail_on, prompt, fixed = TRUE)
+      ) {
+        error <- simpleError("provider row failed")
+        class(error) <- c("batch_contract_provider_error", class(error))
+        stop(error)
+      }
+      response <- list(answer = paste0("ok:", prompt))
+      self$turns <- c(
+        self$turns,
+        list(
+          ellmer::UserTurn(
+            contents = list(ellmer::ContentText(prompt))
+          ),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("ok")),
+            tokens = c(4L, 2L, 0L),
+            cost = 0.001,
+            duration = 0.01
           )
         )
-        response
-      }
-    ),
-    class = "Chat"
+      )
+      response
+    },
+
+    calls = function() {
+      self$calls_count
+    }
   )
+)
+
+batch_contract_chat <- function(fail_on = NULL, initial_turns = list()) {
+  BatchContractChat$new(fail_on = fail_on, turns = initial_turns)
 }
 
-batch_shape_chat <- function(responses) {
-  force(responses)
-  turns <- list()
-  calls <- 0L
+BatchShapeChat <- R6::R6Class(
+  "BatchShapeChat",
+  inherit = TestChat,
+  public = list(
+    responses = NULL,
+    calls_count = 0L,
 
-  structure(
-    list(
-      calls = function() calls,
-      get_turns = function(...) turns,
-      set_turns = function(value) {
-        turns <<- value
-        invisible(NULL)
-      },
-      get_model = function() "batch-shape-model",
-      chat_structured = function(prompt, ...) {
-        calls <<- calls + 1L
-        prompt <- as.character(prompt)
-        matches <- names(responses)[vapply(
-          names(responses),
-          function(name) grepl(name, prompt, fixed = TRUE),
-          logical(1)
-        )]
-        if (length(matches) != 1L) {
-          stop("could not select one batch-shape response")
-        }
-        response <- responses[[matches]]
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(
-              contents = list(ellmer::ContentText(prompt))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentText("ok"))
-            )
+    initialize = function(responses) {
+      self$responses <- responses
+      super$initialize(model = "batch-shape-model")
+    },
+
+    chat_structured = function(prompt, ...) {
+      self$calls_count <- self$calls_count + 1L
+      prompt <- as.character(prompt)
+      matches <- names(self$responses)[vapply(
+        names(self$responses),
+        function(name) grepl(name, prompt, fixed = TRUE),
+        logical(1)
+      )]
+      if (length(matches) != 1L) {
+        stop("could not select one batch-shape response")
+      }
+      response <- self$responses[[matches]]
+      self$turns <- c(
+        self$turns,
+        list(
+          ellmer::UserTurn(
+            contents = list(ellmer::ContentText(prompt))
+          ),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("ok"))
           )
         )
-        response
-      }
-    ),
-    class = "Chat"
+      )
+      response
+    },
+
+    calls = function() {
+      self$calls_count
+    }
   )
+)
+
+batch_shape_chat <- function(responses) {
+  BatchShapeChat$new(responses)
 }
 
 batch_contract_metadata_names <- c(
@@ -186,7 +201,10 @@ test_that("positive-row zero-input datasets execute every isolated row", {
   expect_equal(nrow(simple), 3L)
   expect_named(simple, "result")
   expect_length(simple$result, 3L)
-  expect_true(all(vapply(simple$result, is.character, logical(1))))
+  expect_identical(
+    lapply(simple$result, names),
+    rep(list("answer"), 3L)
+  )
   expect_length(simple_mod$state$traces, 3L)
   expect_equal(simple_chat$calls(), 0L)
   expect_length(simple_chat$get_turns(), 0L)
@@ -290,8 +308,8 @@ test_that("one-row datasets keep a simple result list-column", {
 
   expect_type(result$result, "list")
   expect_length(result$result, 1L)
-  expect_type(result$result[[1]], "character")
-  expect_match(result$result[[1]], "one", fixed = TRUE)
+  expect_named(result$result[[1]], "answer")
+  expect_match(result$result[[1]]$answer, "one", fixed = TRUE)
 })
 
 test_that("no-input signatures preserve zero-row dataset shape", {
@@ -504,7 +522,7 @@ test_that("direct custom Module batches reject before forward work", {
   expect_length(mod$state$traces, 0L)
 })
 
-test_that("scalar output stays named while batch rows stay simplified", {
+test_that("scalar and batch outputs retain named declared records", {
   scalar_mod <- module(signature("text -> answer"), type = "predict")
   batch_mod <- module(signature("text -> answer"), type = "predict")
 
@@ -524,11 +542,11 @@ test_that("scalar output stays named while batch rows stay simplified", {
 
   expect_named(scalar, "answer")
   expect_length(scalar, 1L)
-  expect_type(batch[[1]], "character")
-  expect_identical(scalar$answer, batch[[1]])
+  expect_named(batch[[1]], "answer")
+  expect_identical(scalar, batch[[1]])
 })
 
-test_that("Module predict preserves named records without changing run batches", {
+test_that("Module predict and run share the named output record contract", {
   responses <- list(
     ROW_ONE = list(sentiment = "first"),
     ROW_TWO = list(sentiment = "second")
@@ -555,9 +573,9 @@ test_that("Module predict preserves named records without changing run batches",
 
   expect_identical(scalar, responses[[1L]])
   expect_identical(predicted, unname(responses))
-  expect_identical(run_result, list("first", "second"))
+  expect_identical(run_result, unname(responses))
   expect_named(predicted[[1L]], "sentiment")
-  expect_type(run_result[[1L]], "character")
+  expect_named(run_result[[1L]], "sentiment")
 })
 
 test_that("sequential failures still commit one ordered trace per row", {
@@ -640,17 +658,15 @@ test_that("usage comes only from a verified current-call assistant delta", {
     )
   )
   turns <- baseline
-  opaque_success <- structure(
-    list(
-      get_turns = function(...) turns,
-      set_turns = function(value) {
-        turns <<- value
-        invisible(NULL)
-      },
-      last_turn = function(...) baseline[[2]],
-      chat_structured = function(...) list(answer = "fresh")
-    ),
-    class = "Chat"
+  opaque_success <- new_test_chat(
+    turns = baseline,
+    get_turns = function(...) turns,
+    set_turns = function(value) {
+      turns <<- value
+      invisible(NULL)
+    },
+    last_turn = function(...) baseline[[2]],
+    chat_structured = function(...) list(answer = "fresh")
   )
   mod <- module(signature("text -> answer"), type = "predict")
   success <- dsprrr:::process_batch_item(
@@ -801,6 +817,7 @@ test_that("native ellmer parallel traces successes and character errors", {
   clear_prompt_history()
   testthat::local_mocked_bindings(
     parallel_chat_structured = function(...) {
+      Sys.sleep(0.06)
       tibble::tibble(
         answer = c("first", NA_character_, "third"),
         input_tokens = c(3L, 0L, 5L),
@@ -818,8 +835,10 @@ test_that("native ellmer parallel traces successes and character errors", {
     mod,
     text = c("a", "b", "c"),
     .llm = batch_contract_chat(),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 3L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -852,6 +871,14 @@ test_that("native ellmer parallel traces successes and character errors", {
     function(trace) identical(trace$metadata$cache, "bypass"),
     logical(1)
   )))
+  expect_gte(
+    min(vapply(
+      result,
+      \(row) row$metadata$latency_ms,
+      numeric(1)
+    )),
+    30
+  )
 })
 
 test_that("native ellmer rows reconstruct nested and array output types", {
@@ -897,8 +924,10 @@ test_that("native ellmer rows reconstruct nested and array output types", {
     mod,
     text = c("one", "two"),
     .llm = batch_contract_chat(),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -968,8 +997,10 @@ test_that("native ellmer ignores ambiguous child probes for parent presence", {
     mod,
     text = c("one", "two"),
     .llm = batch_contract_chat(),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1008,8 +1039,10 @@ test_that("native ellmer preserves non-object row failures through a wrapper", {
     mod,
     text = c("one", "two"),
     .llm = batch_contract_chat(),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1070,8 +1103,10 @@ test_that("simple batches preserve valid optional NULL rows and traces", {
     native_module,
     text = names(responses),
     .llm = batch_contract_chat(),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 2L
+    ),
     .progress = FALSE,
     .cache = FALSE
   )
@@ -1123,8 +1158,10 @@ test_that("native ellmer distinguishes empty arrays from failed array rows", {
     mod,
     text = c("one", "two"),
     .llm = batch_contract_chat(),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1145,6 +1182,10 @@ test_that("native ellmer distinguishes empty arrays from failed array rows", {
 })
 
 test_that("ambiguous required-array presence uses isolated scalar rows", {
+  testthat::local_mocked_bindings(
+    cache_is_trusted_ellmer_chat = function(chat) TRUE,
+    .package = "dsprrr"
+  )
   output_type <- ellmer::type_object(
     label = ellmer::type_string(),
     details = ellmer::type_object(
@@ -1182,8 +1223,10 @@ test_that("ambiguous required-array presence uses isolated scalar rows", {
     mod,
     text = names(raw_rows),
     .llm = chat,
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "auto",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1200,7 +1243,7 @@ test_that("ambiguous required-array presence uses isolated scalar rows", {
   )
   expect_identical(
     vapply(result, function(row) row$metadata$requested_backend, character(1)),
-    rep("ellmer", 2L)
+    rep("auto", 2L)
   )
   expect_identical(
     vapply(result, function(row) row$metadata$effective_backend, character(1)),
@@ -1216,6 +1259,10 @@ test_that("ambiguous required-array presence uses isolated scalar rows", {
 })
 
 test_that("ambiguous object without required evidence preserves scalar shape", {
+  testthat::local_mocked_bindings(
+    cache_is_trusted_ellmer_chat = function(chat) TRUE,
+    .package = "dsprrr"
+  )
   output_type <- ellmer::type_object(
     label = ellmer::type_string(),
     details = ellmer::type_object(
@@ -1247,8 +1294,10 @@ test_that("ambiguous object without required evidence preserves scalar shape", {
     ),
     text = names(raw_rows),
     .llm = batch_shape_chat(scalar_rows),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "auto",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1266,6 +1315,10 @@ test_that("ambiguous object without required evidence preserves scalar shape", {
 })
 
 test_that("reserved top-level error fields use isolated scalar rows", {
+  testthat::local_mocked_bindings(
+    cache_is_trusted_ellmer_chat = function(chat) TRUE,
+    .package = "dsprrr"
+  )
   output_type <- ellmer::type_object(.error = ellmer::type_string())
   raw_rows <- list(
     ROW_ERROR_ONE = list(.error = "model-one"),
@@ -1292,8 +1345,10 @@ test_that("reserved top-level error fields use isolated scalar rows", {
     ),
     text = names(raw_rows),
     .llm = batch_shape_chat(scalar_rows),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "auto",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1313,6 +1368,10 @@ test_that("reserved top-level error fields use isolated scalar rows", {
 })
 
 test_that("empty object schemas preserve row count through scalar fallback", {
+  testthat::local_mocked_bindings(
+    cache_is_trusted_ellmer_chat = function(chat) TRUE,
+    .package = "dsprrr"
+  )
   output_type <- ellmer::type_object()
   scalar_rows <- list(ROW_EMPTY_ONE = list(), ROW_EMPTY_TWO = list())
   parallel_calls <- 0L
@@ -1334,8 +1393,10 @@ test_that("empty object schemas preserve row count through scalar fallback", {
     ),
     text = names(scalar_rows),
     .llm = batch_shape_chat(scalar_rows),
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "auto",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1415,8 +1476,10 @@ test_that("native ellmer row chats preserve baseline while traces keep deltas", 
     mod,
     text = c("a", "b"),
     .llm = caller,
-    .parallel = TRUE,
-    .parallel_method = "ellmer",
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 2L
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1446,7 +1509,6 @@ test_that("native ellmer row chats preserve baseline while traces keep deltas", 
 test_that("mirai workers return records committed by the parent in row order", {
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
-  withr::local_options(list(dsprrr.parallel_timeout = 5))
   current <- mirai::daemons(NULL)
   if (is.null(current) || current == 0L) {
     mirai::daemons(n = 1L)
@@ -1454,17 +1516,19 @@ test_that("mirai workers return records committed by the parent in row order", {
   }
 
   mod <- module(signature("text -> answer"), type = "predict")
-  mod$chat <- structure(
-    list(chat_structured = function(prompt, ...) {
+  mod$chat <- new_test_chat(
+    chat_structured = function(prompt, ...) {
       list(answer = paste0("worker:", as.character(prompt)))
-    }),
-    class = "Chat"
+    }
   )
   result <- run(
     mod,
     text = c("one", "two"),
-    .parallel = TRUE,
-    .parallel_method = "mirai",
+    .concurrency = concurrency_control(
+      backend = "mirai",
+      max_active = 2L,
+      total_timeout = 5
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1492,7 +1556,6 @@ test_that("mirai row failures retain ordered parent traces and error metadata", 
   clear_prompt_history()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
-  withr::local_options(list(dsprrr.parallel_timeout = 5))
   current <- mirai::daemons(NULL)
   if (is.null(current) || current == 0L) {
     mirai::daemons(n = 1L)
@@ -1500,22 +1563,24 @@ test_that("mirai row failures retain ordered parent traces and error metadata", 
   }
 
   mod <- module(signature("text -> answer"), type = "predict")
-  mod$chat <- structure(
-    list(chat_structured = function(prompt, ...) {
+  mod$chat <- new_test_chat(
+    chat_structured = function(prompt, ...) {
       if (grepl("FAIL", as.character(prompt), fixed = TRUE)) {
         error <- simpleError("mirai provider row failed")
         class(error) <- c("mirai_provider_error", class(error))
         stop(error)
       }
       list(answer = paste0("worker:", as.character(prompt)))
-    }),
-    class = "Chat"
+    }
   )
   result <- run(
     mod,
     text = c("first", "FAIL", "third"),
-    .parallel = TRUE,
-    .parallel_method = "mirai",
+    .concurrency = concurrency_control(
+      backend = "mirai",
+      max_active = 2L,
+      total_timeout = 5
+    ),
     .return_format = "structured",
     .progress = FALSE,
     .cache = FALSE
@@ -1757,12 +1822,11 @@ test_that("mirai timeouts stop tasks and commit typed elapsed failures", {
   )
 
   mod <- module(signature("text -> answer"), type = "predict")
-  mod$chat <- structure(
-    list(chat_structured = function(...) {
+  mod$chat <- new_test_chat(
+    chat_structured = function(...) {
       Sys.sleep(0.25)
       list(answer = "too late")
-    }),
-    class = "Chat"
+    }
   )
   expect_warning(
     result <- run(
@@ -1820,37 +1884,34 @@ test_that("ReAct scalar run preserves its specialized forward path", {
     matching <- Filter(function(turn) identical(turn@role, role), turns)
     matching[[length(matching)]]
   }
-  chat <- structure(
-    list(
-      register_tool = function(tool) invisible(NULL),
-      get_turns = function(...) turns,
-      last_turn = last_turn,
-      chat = function(prompt, ...) {
-        chat_calls <<- chat_calls + 1L
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentText("reasoning"))
-            )
+  chat <- new_test_chat(
+    model = "react-model",
+    get_turns = function(...) turns,
+    last_turn = last_turn,
+    chat = function(prompt, ...) {
+      chat_calls <<- chat_calls + 1L
+      turns <<- c(
+        turns,
+        list(
+          ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("reasoning"))
           )
         )
-        invisible(NULL)
-      },
-      chat_structured = function(...) {
-        turns <<- c(
-          turns,
-          list(ellmer::AssistantTurn(
-            contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
-          ))
-        )
-        list(answer = "done")
-      },
-      get_model = function() "react-model"
-    ),
-    class = "Chat"
+      )
+      invisible(NULL)
+    },
+    chat_structured = function(...) {
+      turns <<- c(
+        turns,
+        list(ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+        ))
+      )
+      list(answer = "done")
+    }
   )
+  chat$register_tool <- function(tool) invisible(NULL)
   mod <- module(signature("question -> answer"), type = "react")
 
   scalar <- run(
@@ -1905,22 +1966,19 @@ test_that("direct specialized Predict batches reject before forward work", {
   expect_length(mod$state$traces, 0L)
 })
 
-specialized_dataset_chat <- function() {
-  turns <- list()
-  structure(
-    list(
-      get_turns = function(...) turns,
-      set_turns = function(value) {
-        turns <<- value
-        invisible(NULL)
-      },
-      record = function(value) {
-        turns <<- append(turns, list(value))
-        invisible(NULL)
-      }
-    ),
-    class = "Chat"
+SpecializedDatasetChat <- R6::R6Class(
+  "SpecializedDatasetChat",
+  inherit = TestChat,
+  public = list(
+    record = function(value) {
+      self$turns <- append(self$turns, list(value))
+      invisible(NULL)
+    }
   )
+)
+
+specialized_dataset_chat <- function() {
+  SpecializedDatasetChat$new()
 }
 
 specialized_dataset_module <- function() {
@@ -2242,8 +2300,11 @@ test_that("specialized simple dataset rows have one stable output shape", {
     .progress = FALSE
   )
 
-  expect_identical(one$result, list("named:one"))
-  expect_identical(many$result, list("named:one", "named:two"))
+  expect_identical(one$result, list(list(answer = "named:one")))
+  expect_identical(
+    many$result,
+    list(list(answer = "named:one"), list(answer = "named:two"))
+  )
   expect_identical(one$result[[1]], many$result[[1]])
 })
 
@@ -2401,12 +2462,11 @@ test_that("specialized dataset row failures preserve structured shape", {
 
 test_that("cache observer failures never change model results", {
   calls <- 0L
-  chat <- structure(
-    list(chat_structured = function(...) {
+  chat <- new_test_chat(
+    chat_structured = function(...) {
       calls <<- calls + 1L
       list(answer = "ok")
-    }),
-    class = "Chat"
+    }
   )
 
   result <- dsprrr:::cached_chat_structured(
@@ -2447,12 +2507,11 @@ test_that("cache observer fires exactly once for every outcome", {
     package_state$cache_first_hit_shown <- old_first_hit
   })
   provider_calls <- 0L
-  chat <- structure(
-    list(chat_structured = function(...) {
+  chat <- new_test_chat(
+    chat_structured = function(...) {
       provider_calls <<- provider_calls + 1L
       list(answer = "ok")
-    }),
-    class = "Chat"
+    }
   )
   output_type <- ellmer::type_object(answer = ellmer::type_string())
   observe <- function() {
@@ -2498,9 +2557,8 @@ test_that("cache observer fires exactly once for every outcome", {
 
   stored <- cachem::key_missing()
   failure <- observe()
-  failing_chat <- structure(
-    list(chat_structured = function(...) stop("provider failed")),
-    class = "Chat"
+  failing_chat <- new_test_chat(
+    chat_structured = function(...) stop("provider failed")
   )
   expect_error(
     dsprrr:::cached_chat_structured(

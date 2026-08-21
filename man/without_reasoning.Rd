@@ -7,12 +7,12 @@
 without_reasoning(sig, reasoning_field = "reasoning")
 }
 \arguments{
-\item{sig}{A Signature object (typically one created with \code{with_reasoning()})}
+\item{sig}{A signature object, typically created with \code{\link[=with_reasoning]{with_reasoning()}}.}
 
 \item{reasoning_field}{Character. Name of reasoning field to remove.}
 }
 \value{
-A new Signature without the reasoning field
+A new signature object without the reasoning field.
 }
 \description{
 Reverses the \code{with_reasoning()} transform by removing the reasoning field

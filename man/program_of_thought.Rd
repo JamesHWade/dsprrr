@@ -7,18 +7,23 @@
 program_of_thought(
   signature,
   runner = NULL,
+  interpreter_factory = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
-  ...,
-  interpreter_factory = NULL
+  ...
 )
 }
 \arguments{
 \item{signature}{A Signature object or string notation defining inputs/outputs}
 
 \item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()}. It is retained, never automatically closed, and must not be
+\code{policy()}. It is retained, never automatically shut down, and must not be
 shared concurrently when persistent.}
+
+\item{interpreter_factory}{Optional zero-argument function returning a fresh
+runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
+terminal \code{shutdown()}.
+Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 
 \item{max_iters}{Maximum code generation/repair iterations (default 3)}
 
@@ -26,11 +31,6 @@ shared concurrently when persistent.}
 answer from execution result. If FALSE, return execution result directly.}
 
 \item{...}{Additional arguments passed to the module}
-
-\item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
-terminal \code{shutdown()} or \code{close()}.
-Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
 A ProgramOfThoughtModule object

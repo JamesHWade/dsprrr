@@ -47,7 +47,7 @@ NULL
 #'
 #' mod <- signature("text -> sentiment") |>
 #'   module(type = "predict") |>
-#'   optimize_grid(devset, metric = exact_match)
+#'   optimize_grid(data = devset, metric = metric_exact_match())
 #'
 #' pin_module_config(board, "sentiment-classifier-v1", mod,
 #'                   description = "Optimized sentiment classifier")
@@ -262,7 +262,7 @@ pin_trace <- function(
 #' board <- pins::board_folder("pins")
 #'
 #' # Evaluate module on test set
-#' eval_result <- evaluate(mod, test_data, metric = exact_match)
+#' eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
 #'
 #' # Pin the evaluation results
 #' pin_vitals_log(board, "sentiment-eval-v1", eval_result,

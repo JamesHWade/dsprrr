@@ -3,7 +3,7 @@
 # Create a mock module for testing
 create_test_module <- function(compiled = FALSE, with_demos = FALSE) {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test instructions"
   )
@@ -28,6 +28,7 @@ create_test_module <- function(compiled = FALSE, with_demos = FALSE) {
       score = c(0.6, 0.85, 0.75),
       n_evaluated = c(10L, 10L, 10L),
       n_errors = c(0L, 0L, 0L),
+      total_cost = c(0, 0, 0),
       evaluation = list(list(), list(), list()),
       timestamp = rep(Sys.time(), 3)
     )
@@ -129,6 +130,20 @@ test_that("apply_best_config copies demos when requested", {
   # PredictModule uses $demos field
   expect_length(target$demos, 2)
   expect_equal(target$demos[[1]]$text, "Great product!")
+})
+
+test_that("apply_best_config rejects demos for modules without demo storage", {
+  source <- create_test_module(compiled = TRUE, with_demos = TRUE)
+  target <- module_fn(
+    signature("text -> sentiment"),
+    function(inputs) list(sentiment = "neutral")
+  )
+
+  expect_error(
+    apply_best_config(source, target, include = "demos"),
+    "does not support demonstrations",
+    class = "dsprrr_demo_transfer_error"
+  )
 })
 
 test_that("apply_best_config creates fresh copy when target is NULL", {
@@ -305,6 +320,16 @@ test_that("optimization_summary preserves known and unknown trial costs", {
 
   mod$state$trials$total_cost[[2]] <- NA_real_
   expect_true(is.na(optimization_summary(mod)$total_cost))
+})
+
+test_that("optimization_summary requires the current trial schema", {
+  mod <- create_test_module(compiled = TRUE)
+  mod$state$trials$total_cost <- NULL
+
+  expect_error(
+    optimization_summary(mod),
+    class = "dsprrr_optimizer_state_error"
+  )
 })
 
 test_that("optimization_summary print works", {

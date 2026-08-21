@@ -112,7 +112,7 @@
 #' tp <- GEPA(metric = feedback_metric, seed = 42)
 #'
 #' qa <- module(signature("question -> answer"), type = "predict")
-#' trainset <- dsp_trainset(
+#' trainset <- data.frame(
 #'   question = c("What is 2 + 2?", "What is the capital of France?"),
 #'   answer = c("4", "Paris")
 #' )
@@ -547,9 +547,10 @@ gepa_mutate_instruction <- function(
   budget = NULL,
   unit_id = "gepa:reflection"
 ) {
-  if (is.null(.llm) || is.null(.llm$chat_structured)) {
+  if (is.null(.llm)) {
     return(gepa_fallback_mutation(instruction, failed_examples))
   }
+  assert_ellmer_chat(.llm, arg = ".llm")
 
   prompt <- gepa_reflection_prompt(instruction, failed_examples)
   type <- ellmer::type_object(instructions = ellmer::type_string())
@@ -674,11 +675,8 @@ gepa_fallback_mutation <- function(instruction, failed_examples) {
   paste(instruction, suffix)
 }
 
-#' Print method for GEPA
-#' @param x A GEPA object
-#' @param ... Additional arguments (unused)
-#' @export
-print.GEPA <- function(x, ...) {
+# Print a GEPA object through its S7 method.
+print_gepa <- function(x, ...) {
   cli::cli_h3("GEPA Teleprompter")
   cli::cli_text("{.field population_size}: {x@population_size}")
   cli::cli_text("{.field generations}: {x@generations}")
@@ -693,4 +691,4 @@ print.GEPA <- function(x, ...) {
   invisible(x)
 }
 
-S7::method(print, GEPA) <- print.GEPA
+S7::method(print, GEPA) <- print_gepa

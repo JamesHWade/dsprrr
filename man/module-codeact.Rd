@@ -29,7 +29,7 @@ caller-owned, reused across calls, and never closed by dsprrr. The backend deter
 whether execution state persists and whether \code{reset()} is available;
 serialize access to stateful backends. \code{interpreter_factory} is a
 zero-argument function that returns a fresh runner implementing \code{execute()},
-\code{policy()}, optional \code{start()}, and terminal \code{shutdown()} or \code{close()}. The
+\code{policy()}, optional \code{start()}, and terminal \code{shutdown()}. The
 module owns that runner for one invocation and shuts it down exactly once on
 success, error, or interrupt. Any retained code tool becomes terminal after
 shutdown.

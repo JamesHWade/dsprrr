@@ -7,24 +7,24 @@
 module(
   signature,
   type = "predict",
-  tools = NULL,
-  max_iterations = 10L,
-  M = 3L,
-  temperature = 0.7,
-  runner = NULL,
-  max_iters = 3L,
-  extract_answer = TRUE,
+  chat = NULL,
   template = "",
   demos = list(),
   config = list(),
-  chat = NULL,
-  ...,
+  tools = NULL,
+  runner = NULL,
   interpreter_factory = NULL,
+  max_iterations = NULL,
+  max_iters = 3L,
+  extract_answer = TRUE,
+  M = 3L,
+  temperature = 0.7,
   module_src = NULL,
+  source_format = c("auto", "json", "r"),
   max_predictor_calls = 100L,
   max_tool_calls = 100L,
-  source_format = c("auto", "json", "r"),
-  require_sandbox = TRUE
+  require_sandbox = TRUE,
+  ...
 )
 }
 \arguments{
@@ -43,6 +43,15 @@ module(
 \item \code{"flex"}: Experimental declarative or executable Flex program
 }}
 
+\item{chat}{Optional ellmer Chat object for LLM operations. If provided, the
+module will use this Chat for all predictions unless overridden with \code{.llm}.}
+
+\item{template}{Optional glue template for prompt generation}
+
+\item{demos}{Optional list of demonstration examples}
+
+\item{config}{Optional configuration list}
+
 \item{tools}{Optional tools configuration:
 \itemize{
 \item for \code{type = "react"} or \code{type = "codeact"}: list of ellmer ToolDef objects.
@@ -51,37 +60,10 @@ module(
 If provided with \code{type = "predict"}, automatically upgrades to react.
 }}
 
-\item{max_iterations}{Maximum iterations for ReAct, CodeAct, or RLM modules
-created through this generic factory (default: 10). For CodeAct it also
-caps tool calls within one invocation; exceeding that inner budget errors.}
-
-\item{M}{Number of reasoning chains for multichain (default: 3)}
-
-\item{temperature}{Temperature for multichain diversity (default: 0.7)}
-
 \item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()} for code execution types. It is never automatically closed.
+\code{policy()} for code execution types. It is never automatically shut down.
 For \code{type = "rlm"}, the policy must advertise \code{persistent = TRUE}; use
 \code{r_code_runner(persistent = TRUE)} for the trusted callr backend.}
-
-\item{max_iters}{Maximum code repair iterations for program_of_thought
-(default: 3), or the DSPy 3.3-compatible alias for RLM's
-\code{max_iterations}. For RLM, supply only one spelling.}
-
-\item{extract_answer}{Logical. For program_of_thought, whether to use LLM
-to extract final answer from execution result (default: TRUE)}
-
-\item{template}{Optional glue template for prompt generation}
-
-\item{demos}{Optional list of demonstration examples}
-
-\item{config}{Optional configuration list}
-
-\item{chat}{Optional ellmer Chat object for LLM operations. If provided, the
-module will use this Chat for all predictions unless overridden with \code{.llm}.}
-
-\item{...}{Additional arguments forwarded to \code{\link[=rlm_module]{rlm_module()}} when
-\code{type = "rlm"}. Reserved and required to be empty for \code{type = "flex"}.}
 
 \item{interpreter_factory}{Optional zero-argument factory for
 program-of-thought, CodeAct, RLM, and executable Flex modules. It creates
@@ -90,7 +72,24 @@ one fresh runner per invocation. Supply exactly one of \code{runner} and
 the factory so every invocation is isolated. For RLM, every returned
 runner must advertise \code{persistent = TRUE}.}
 
+\item{max_iterations}{Maximum iterations for ReAct, CodeAct, or RLM modules
+created through this generic factory. Defaults to 10 for ReAct and CodeAct
+and 20 for RLM. For CodeAct it also caps tool calls within one invocation;
+exceeding that inner budget errors.}
+
+\item{max_iters}{Maximum code repair iterations for program_of_thought
+(default: 3).}
+
+\item{extract_answer}{Logical. For program_of_thought, whether to use LLM
+to extract final answer from execution result (default: TRUE)}
+
+\item{M}{Number of reasoning chains for multichain (default: 3)}
+
+\item{temperature}{Temperature for multichain diversity (default: 0.7)}
+
 \item{module_src}{Optional complete source for \code{type = "flex"}.}
+
+\item{source_format}{Flex source language: \code{"auto"}, \code{"json"}, or \code{"r"}.}
 
 \item{max_predictor_calls}{Maximum bridged predictor calls allowed by Flex,
 or \code{NULL} for no limit.}
@@ -98,10 +97,11 @@ or \code{NULL} for no limit.}
 \item{max_tool_calls}{Maximum direct host-tool calls allowed by executable
 Flex, or \code{NULL} for no limit.}
 
-\item{source_format}{Flex source language: \code{"auto"}, \code{"json"}, or \code{"r"}.}
-
 \item{require_sandbox}{Whether executable Flex requires a runner that
 advertises an enforced sandbox.}
+
+\item{...}{Additional arguments forwarded to \code{\link[=rlm_module]{rlm_module()}} when
+\code{type = "rlm"}. Reserved and required to be empty for \code{type = "flex"}.}
 }
 \value{
 A module object (R6) that can be executed with \code{run()}

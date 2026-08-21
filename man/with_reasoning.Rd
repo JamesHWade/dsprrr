@@ -13,7 +13,8 @@ with_reasoning(
 )
 }
 \arguments{
-\item{x}{A Signature object or string notation (e.g., "question -> answer")}
+\item{x}{A signature object created by \code{\link[=signature]{signature()}}, or string notation
+such as \code{"question -> answer"}.}
 
 \item{prefix}{Character. The prefix for the reasoning field description.
 Default uses DSPy-style "Let's think step by step" prompt.}
@@ -27,7 +28,8 @@ If NULL (default), original instructions are preserved with reasoning context.}
 \item{...}{Additional arguments (unused)}
 }
 \value{
-A new Signature object with reasoning field added to output_type
+A new signature object with a reasoning field added to its output
+type.
 }
 \description{
 Transforms a signature to include a reasoning field before the original output.

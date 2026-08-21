@@ -4,16 +4,7 @@
 \alias{fit_llm_predict}
 \title{Fit LLM Predict Model}
 \usage{
-fit_llm_predict(
-  x,
-  y,
-  signature = NULL,
-  temperature = NULL,
-  top_p = NULL,
-  model = NULL,
-  provider = NULL,
-  ...
-)
+fit_llm_predict(x, y, signature = NULL, temperature = NULL, top_p = NULL)
 }
 \arguments{
 \item{x}{Training data predictors (data frame).}
@@ -25,12 +16,6 @@ fit_llm_predict(
 \item{temperature}{Temperature parameter.}
 
 \item{top_p}{Top-p parameter.}
-
-\item{model}{LLM model name.}
-
-\item{provider}{LLM provider.}
-
-\item{...}{Additional arguments.}
 }
 \value{
 A fitted dsprrr module.

@@ -2,7 +2,9 @@
 
 # Helper: Create a mock module for testing
 create_mock_module <- function(
-  responses = list("answer1", "answer2", "answer3")
+  responses = list("answer1", "answer2", "answer3"),
+  provider_calls = 1L,
+  cost = 0.001
 ) {
   idx <- 0
   mock_mod <- list(
@@ -15,13 +17,16 @@ create_mock_module <- function(
         output = list(list(reasoning = "thinking...", answer = response)),
         chat = list(NULL),
         metadata = list(list(
+          input_tokens = 60,
+          output_tokens = 40,
           total_tokens = 100,
-          cost = 0.001,
+          cost = cost,
+          provider_calls = provider_calls,
           model = "mock-model"
         ))
       )
     },
-    reset_copy = function() create_mock_module(responses)
+    reset_copy = function() create_mock_module(responses, provider_calls, cost)
   )
   class(mock_mod) <- c("MockModule", "PredictModule", "Module", "R6")
   mock_mod
@@ -275,11 +280,57 @@ test_that("MultiChainComparisonModule forward calls inner module M times", {
   skip("Requires LLM for run_comparison step - tested via integration tests")
 })
 
+test_that("MultiChainComparisonModule emits canonical live usage metadata", {
+  assistant_turn <- ellmer::AssistantTurn(
+    contents = list(ellmer::ContentText("best answer")),
+    tokens = c(4L, 2L, 0L),
+    cost = 0.002,
+    duration = 0.01
+  )
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) {
+      list(reasoning = "synthesis", answer = "answer1")
+    },
+    turns = list(assistant_turn),
+    model = "mock-model"
+  )
+
+  mcc <- multi_chain_comparison(
+    "question -> answer",
+    inner_module = create_mock_module(
+      list("answer1", "answer2", "answer3"),
+      provider_calls = 2L
+    ),
+    M = 3L
+  )
+  result <- mcc$forward(
+    list(question = "test"),
+    .llm = mock_llm,
+    trace = FALSE
+  )
+  metadata <- result$metadata[[1L]]
+
+  expect_identical(metadata$provider_calls, 7L)
+  expect_equal(metadata$cost, 0.005)
+  expect_equal(metadata$input_tokens, 184)
+  expect_equal(metadata$output_tokens, 122)
+  expect_equal(metadata$total_tokens, 306)
+  expect_false(any(c("n_llm_calls", "total_cost") %in% names(metadata)))
+})
+
 test_that("MultiChainComparisonModule forward handles partial failures", {
-  # Minimal mock LLM so resolve_module_llm doesn't try to create one
-  mock_llm <- list(
-    get_turns = function() list(),
-    clone = function(deep = FALSE) mock_llm
+  assistant_turn <- ellmer::AssistantTurn(
+    contents = list(ellmer::ContentText("best answer")),
+    tokens = c(4L, 2L, 0L),
+    cost = 0.002,
+    duration = 0.01
+  )
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) {
+      list(reasoning = "synthesis", answer = "answer1")
+    },
+    turns = list(assistant_turn),
+    model = "mock-model"
   )
 
   # First call succeeds, second fails, third succeeds
@@ -298,7 +349,12 @@ test_that("MultiChainComparisonModule forward handles partial failures", {
           answer = paste0("answer", call_count)
         )),
         chat = list(NULL),
-        metadata = list(list(total_tokens = 50, cost = 0.001, model = "mock"))
+        metadata = list(list(
+          total_tokens = 50,
+          cost = 0.001,
+          provider_calls = 1L,
+          model = "mock"
+        ))
       )
     },
     reset_copy = function() create_mock_module()
@@ -311,12 +367,17 @@ test_that("MultiChainComparisonModule forward handles partial failures", {
     inner_module = mock_mod
   )
 
-  # Note: run_comparison requires real LLM, so we just test that:
-  # 1. Partial failures are warned about
-  # 2. All attempts failing results in an error
-  # Full forward() testing would need VCR cassettes
+  expect_warning(
+    result <- mcc$forward(list(question = "test?"), .llm = mock_llm),
+    "Attempt 2 failed"
+  )
+  expect_true(is.na(result$metadata[[1L]]$provider_calls))
+  expect_true(is.na(result$metadata[[1L]]$cost))
+  expect_true(is.na(result$metadata[[1L]]$input_tokens))
+  expect_true(is.na(result$metadata[[1L]]$output_tokens))
+  expect_true(is.na(result$metadata[[1L]]$total_tokens))
 
-  # Test that when all attempts fail, we get appropriate error
+  # Test that when all attempts fail, we get an error.
   all_fail_mod <- list(
     signature = signature("question -> answer"),
     chat = NULL,

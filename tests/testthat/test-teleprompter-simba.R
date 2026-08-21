@@ -1,5 +1,9 @@
 # Tests for SIMBA teleprompter
 
+new_simba_prompt_chat <- function(chat) {
+  new_test_chat(chat = chat)
+}
+
 test_that("SIMBA can be created with defaults", {
   tp <- SIMBA()
   expect_s3_class(tp, "dsprrr::SIMBA")
@@ -16,7 +20,7 @@ test_that("SIMBA can be created with defaults", {
 
 test_that("SIMBA can be created with custom parameters", {
   metric_fn <- function(pred, exp) as.numeric(pred == exp)
-  prompt_model <- list(chat_structured = function(...) "rule")
+  prompt_model <- new_simba_prompt_chat(function(...) "rule")
 
   tp <- SIMBA(
     metric = metric_fn,
@@ -77,7 +81,7 @@ test_that("SIMBA validates properties", {
 
 test_that("SIMBA requires metric for compilation", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -97,7 +101,7 @@ test_that("SIMBA requires metric for compilation", {
 
 test_that("SIMBA compile returns unmodified program for empty trainset", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -114,19 +118,9 @@ test_that("SIMBA compile returns unmodified program for empty trainset", {
 })
 
 test_that("generate_simba_rule handles Chat objects", {
-  # Create a mock Chat object
-  MockChat <- R6::R6Class(
-    "MockChat",
-    inherit = NULL,
-    public = list(
-      chat = function(prompt) {
-        "Generated rule from Chat object"
-      }
-    )
+  prompt_model <- new_simba_prompt_chat(
+    function(prompt) "Generated rule from Chat object"
   )
-  # Set class to include "Chat" so inherits() works
-  mock_chat <- MockChat$new()
-  class(mock_chat) <- c("Chat", class(mock_chat))
 
   hard_examples <- data.frame(
     question = "What is 2+2?",
@@ -134,7 +128,7 @@ test_that("generate_simba_rule handles Chat objects", {
   )
 
   result <- dsprrr:::generate_simba_rule(
-    mock_chat,
+    prompt_model,
     hard_examples,
     input_names = "question",
     output_col = "answer"
@@ -143,24 +137,23 @@ test_that("generate_simba_rule handles Chat objects", {
   expect_equal(result, "Generated rule from Chat object")
 })
 
-test_that("generate_simba_rule handles plain functions", {
-  prompt_fn <- function(prompt) {
-    "Generated rule from function"
-  }
-
-  hard_examples <- data.frame(
-    question = "What is 2+2?",
-    answer = "4"
+test_that("SIMBA rejects non-Chat prompt models", {
+  expect_error(
+    SIMBA(prompt_model = function(prompt) "rule"),
+    "NULL or an ellmer Chat R6 object"
   )
-
-  result <- dsprrr:::generate_simba_rule(
-    prompt_fn,
-    hard_examples,
-    input_names = "question",
-    output_col = "answer"
+  expect_error(
+    SIMBA(prompt_model = list(chat = function(prompt) "rule")),
+    "NULL or an ellmer Chat R6 object"
   )
-
-  expect_equal(result, "Generated rule from function")
+  expect_error(
+    SIMBA(
+      prompt_model = list(
+        chat_structured = function(prompt, type) "rule"
+      )
+    ),
+    "NULL or an ellmer Chat R6 object"
+  )
 })
 
 test_that("generate_simba_rule falls back when prompt_model is NULL", {
@@ -179,38 +172,52 @@ test_that("generate_simba_rule falls back when prompt_model is NULL", {
   expect_match(result, "SIMBA rule:")
 })
 
+test_that("generate_simba_rule falls back when its Chat fails", {
+  prompt_model <- new_simba_prompt_chat(
+    function(prompt) stop("provider unavailable")
+  )
+  hard_examples <- data.frame(
+    question = "What is 2+2?",
+    answer = "4"
+  )
+
+  expect_warning(
+    result <- dsprrr:::generate_simba_rule(
+      prompt_model,
+      hard_examples,
+      input_names = "question",
+      output_col = "answer"
+    ),
+    class = "dsprrr_simba_rule_warning"
+  )
+
+  expect_match(result, "SIMBA rule:")
+})
+
 test_that("SIMBA compile applies rules and demos when improved", {
   # Track call count to simulate improvement after rule is applied
   call_count <- 0L
 
   # Mock LLM that returns wrong answers initially, correct after SIMBA_RULE
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          call_count <<- call_count + 1L
-          # Check if SIMBA_RULE has been applied by looking at the prompt
-          if (grepl("SIMBA_RULE", prompt, fixed = TRUE)) {
-            # After rule is applied, return correct answers
-            if (grepl("2\\+2", prompt)) {
-              return("4")
-            } else if (grepl("3\\+3", prompt)) {
-              return("6")
-            }
-          }
-          # Before rule, return wrong answer
-          "wrong"
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      call_count <<- call_count + 1L
+      # Check if SIMBA_RULE has been applied by looking at the prompt
+      if (grepl("SIMBA_RULE", prompt, fixed = TRUE)) {
+        # After rule is applied, return correct answers
+        if (grepl("2\\+2", prompt)) {
+          return("4")
+        } else if (grepl("3\\+3", prompt)) {
+          return("6")
+        }
+      }
+      # Before rule, return wrong answer
+      "wrong"
+    }
+  )
 
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -229,10 +236,8 @@ test_that("SIMBA compile applies rules and demos when improved", {
     as.numeric(pred == row$answer)
   }
 
-  prompt_model <- list(
-    chat_structured = function(prompt, type, ...) {
-      list(rule = "SIMBA_RULE")
-    }
+  prompt_model <- new_simba_prompt_chat(
+    function(prompt, ...) "SIMBA_RULE"
   )
 
   tp <- SIMBA(
@@ -307,6 +312,9 @@ test_that("SIMBA returns empty variability diagnostics when its budget stops", {
 test_that("SIMBA preserves and reports a complete baseline over a biased partial", {
   eval_calls <- 0L
   log_dir <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
+  }
 
   testthat::local_mocked_bindings(
     eval_program = function(program, dataset, ...) {

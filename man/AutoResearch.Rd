@@ -2,7 +2,6 @@
 % Please edit documentation in R/teleprompter-harness.R
 \name{AutoResearch}
 \alias{AutoResearch}
-\alias{print.AutoResearch}
 \title{AutoResearch Teleprompter}
 \usage{
 AutoResearch(
@@ -20,8 +19,6 @@ AutoResearch(
   log_dir = NULL,
   verbose = TRUE
 )
-
-\method{print}{AutoResearch}(x, ...)
 }
 \arguments{
 \item{metric}{Metric used to evaluate candidates.}
@@ -54,10 +51,6 @@ the harness requires evaluation progress.}
 \item{log_dir}{Optional directory for a durable \link{TrialLog}.}
 
 \item{verbose}{Whether to report progress.}
-
-\item{x}{An AutoResearch object.}
-
-\item{...}{Additional arguments.}
 }
 \value{
 An \code{AutoResearch} teleprompter.

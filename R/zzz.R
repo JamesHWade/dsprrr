@@ -223,22 +223,6 @@
     )
   }
 
-  S7::method(compile, list(Ensemble, S7::class_any)) <- function(
-    teleprompter,
-    program,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_ensemble,
-      teleprompter,
-      program,
-      trainset,
-      ...
-    )
-  }
-
   S7::method(compile, list(Teleprompter, S7::class_any)) <- function(
     teleprompter,
     program,

@@ -5,7 +5,7 @@
 \title{Default Chat Configuration}
 \description{
 Functions for managing the default ellmer Chat object used by dsprrr.
-When no Chat is explicitly provided to \code{dsp()} or \code{module()}, these
+When no Chat is explicitly provided to a module or \code{\link[=run]{run()}} call, these
 functions determine which Chat to use.
 }
 \details{

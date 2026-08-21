@@ -21,6 +21,16 @@ signature_output_field_names <- function(output_type) {
   "answer"
 }
 
+#' Return output field names for object-shaped output types
+#' @noRd
+output_field_names <- function(output_type) {
+  if (inherits(output_type, "ellmer::TypeObject")) {
+    names(output_type@properties)
+  } else {
+    character()
+  }
+}
+
 validate_signature_instructions <- function(instructions) {
   if (
     !is.character(instructions) ||
@@ -35,8 +45,8 @@ validate_signature_instructions <- function(instructions) {
   instructions
 }
 
-#' @rdname signature
-#' @export
+#' Internal signature record class
+#' @noRd
 Signature <- S7::new_class(
   "Signature",
   properties = list(
@@ -232,7 +242,7 @@ format_ellmer_type <- function(type, verbose = FALSE) {
   class(type)[1]
 }
 
-#' Create a Signature for LLM Operations
+#' Create a Typed Module Signature
 #'
 #' @description
 #' The primary function for creating signatures. Accepts either DSPy-style
@@ -245,7 +255,7 @@ format_ellmer_type <- function(type, verbose = FALSE) {
 #' @param instructions Optional instructions for the operation
 #' @param ... Additional arguments
 #'
-#' @return A Signature object
+#' @return A signature object for use with [module()] and related constructors.
 #' @export
 #' @examples
 #' # String notation (recommended for simple cases)

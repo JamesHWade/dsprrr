@@ -26,8 +26,8 @@ If NULL, uses the metric's default threshold.}
 \item{max_errors}{Maximum number of errors allowed during optimization.
 Default is 5.}
 
-\item{prompt_model}{Optional LLM for generating instruction candidates.
-If NULL, uses the task model (.llm) with higher temperature.}
+\item{prompt_model}{Optional ellmer Chat for generating instruction
+candidates. If \code{NULL}, uses the task Chat supplied through \code{.llm}.}
 
 \item{breadth}{Number of instruction candidates to generate per iteration.
 Default is 10.}

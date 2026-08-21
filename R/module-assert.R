@@ -26,7 +26,7 @@ AssertModule <- R6::R6Class(
     #' @field module The wrapped module
     module = NULL,
 
-    #' @field assertion_set AssertionSet with validation rules
+    #' @field assertion_set Validation rules created by `assertion_set()`
     assertion_set = NULL,
 
     #' @field max_retries Maximum retry attempts
@@ -42,7 +42,8 @@ AssertModule <- R6::R6Class(
     #' Initialize an Assert wrapper module
     #'
     #' @param module The module to wrap (must inherit from Module)
-    #' @param assertions List of Assertion objects or an AssertionSet
+    #' @param assertions A list of assertion rules or the result of
+    #'   `assertion_set()`
     #' @param max_retries Maximum number of retry attempts (default 3)
     #' @param on_failure What to do when max retries exceeded: "error" (default)
     #'   or "warn" (return best attempt with warning)
@@ -74,7 +75,7 @@ AssertModule <- R6::R6Class(
         assertion_set <- assertion_set(assertions)
       } else {
         cli::cli_abort(c(
-          "assertions must be a list of Assertion objects or an AssertionSet",
+          "assertions must be a list of assertion rules or the result of {.fn assertion_set}",
           "x" = "You provided: {.cls {class(assertions)[1]}}"
         ))
       }
@@ -144,8 +145,6 @@ AssertModule <- R6::R6Class(
       best_metadata <- NULL
       best_chat <- NULL
       best_assertion_result <- NULL
-      total_tokens <- 0L
-      total_cost <- 0
       current_batch <- batch
       previous_feedback <- NULL
 
@@ -195,14 +194,6 @@ AssertModule <- R6::R6Class(
         prediction <- result$output[[1]]
         metadata <- result$metadata[[1]]
         chat_obj <- result$chat[[1]]
-
-        # Accumulate token counts and costs
-        if (!is.null(metadata$total_tokens)) {
-          total_tokens <- total_tokens + metadata$total_tokens
-        }
-        if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-          total_cost <- total_cost + metadata$cost
-        }
 
         # Evaluate assertions
         assertion_result <- evaluate_assertion_set(
@@ -294,6 +285,11 @@ AssertModule <- R6::R6Class(
         }
       }
 
+      usage <- aggregate_module_usage_metadata(
+        lapply(attempts, function(attempt) attempt$metadata),
+        unknown_attempt = length(module_errors) > 0L
+      )
+
       # Create aggregated metadata
       final_metadata <- list(
         timestamp = end_time,
@@ -302,8 +298,9 @@ AssertModule <- R6::R6Class(
         assertions_passed = best_assertion_result$all_passed,
         n_hard_failed = best_assertion_result$n_hard_failed,
         n_soft_failed = best_assertion_result$n_soft_failed,
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
+        provider_calls = usage$provider_calls,
         latency_ms = latency_ms,
         module_errors = if (length(module_errors) > 0) module_errors else NULL
       )
@@ -507,8 +504,8 @@ AssertModule <- R6::R6Class(
 #' when hard assertions fail.
 #'
 #' @param module A Module object to wrap
-#' @param assertions List of Assertion objects (from `assert_output()` or
-#'   `suggest_output()`) or an AssertionSet
+#' @param assertions A list of assertion rules (from `assert_output()` or
+#'   `suggest_output()`) or the result of `assertion_set()`
 #' @param max_retries Maximum number of retry attempts (default 3)
 #' @param on_failure What to do when max retries exceeded: "error" (default)
 #'   or "warn" (return best attempt with warning)

@@ -98,7 +98,7 @@ result <- rlm("sessions, question -> answer", sessions = sessions,
   question = "Where did conversion fall?",
   .llm = ellmer::chat_openai(),
   .runner = local_runner)
-local_runner$close()
+local_runner$shutdown()
 }
 
 }
@@ -108,6 +108,5 @@ local_runner$close()
 \item \code{\link[=r_code_runner]{r_code_runner()}} for configuring the code execution backend
 \item \code{\link[=mcp_repl_runner]{mcp_repl_runner()}} for managed sandboxed execution
 \item \code{\link[=run]{run()}} for executing modules
-\item \code{\link[=dsp]{dsp()}} for simple one-shot LLM calls (no code execution)
 }
 }

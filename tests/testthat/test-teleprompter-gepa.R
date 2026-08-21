@@ -72,7 +72,7 @@ test_that("Pareto utilities identify frontier", {
 
 test_that("GEPA compiles with reflection-based mutation", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Be concise."
   )
@@ -92,33 +92,20 @@ test_that("GEPA compiles with reflection-based mutation", {
   # Track mutation calls to verify LLM is being used
   mutation_calls <- 0L
 
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          # Check if this is a mutation call (reflection prompt) or regular inference
-          if (
-            grepl("improving system instructions", prompt, ignore.case = TRUE)
-          ) {
-            mutation_calls <<- mutation_calls + 1L
-            list(instructions = "Be accurate and explicit.")
-          } else {
-            # Regular inference - return correct answer only if prompt contains
-            # "accurate" (from mutated instructions)
-            if (grepl("accurate", prompt, ignore.case = TRUE)) {
-              list(answer = "yes")
-            } else {
-              list(answer = "no") # Wrong answer for original instructions
-            }
-          }
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      # Check if this is a mutation call (reflection prompt) or regular inference
+      if (grepl("improving system instructions", prompt, ignore.case = TRUE)) {
+        mutation_calls <<- mutation_calls + 1L
+        list(instructions = "Be accurate and explicit.")
+      } else if (grepl("accurate", prompt, ignore.case = TRUE)) {
+        # Mutated instructions yield the correct answer.
+        list(answer = "yes")
+      } else {
+        list(answer = "no")
+      }
+    }
+  )
 
   tp <- GEPA(
     metrics = list(quality = metric_fn),
@@ -145,7 +132,7 @@ test_that("GEPA compiles with reflection-based mutation", {
     compiled$signature@instructions,
     ignore.case = TRUE
   ))
-  expect_true(length(compiled$config$optimizer$pareto_frontier) >= 1)
+  expect_true(length(compiled$config$optimizer$objective_pareto_front) >= 1)
 })
 
 test_that("GEPA accounts every metric-row outcome in execution order", {
@@ -387,6 +374,9 @@ test_that("GEPA Pareto selection survives an interrupted worse generation", {
 test_that("GEPA never selects or logs a biased partial metric evaluation", {
   eval_calls <- 0L
   log_dir <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
+  }
 
   testthat::local_mocked_bindings(
     eval_program = function(program, dataset, ...) {
@@ -557,7 +547,7 @@ test_that("GEPA tunes both graph-visible RLM predictors", {
   local_reset_cache()
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   expect_identical(runner$policy()$persistent, TRUE)
   program <- make_rlm_optimizer_program(runner)
   chat <- make_rlm_optimizer_chat()
@@ -613,7 +603,7 @@ test_that("GEPA reflection receives feedback from bounded RLM trajectories", {
   local_reset_cache()
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   expect_identical(runner$policy()$persistent, TRUE)
   program <- make_rlm_optimizer_program(runner, max_output_chars = 96L)
   chat <- make_rlm_optimizer_chat()

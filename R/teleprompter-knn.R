@@ -27,8 +27,9 @@
 #' For testing, you can provide a deterministic vectorizer that returns
 #' consistent embeddings for the same inputs.
 #'
-#' @param metric A metric function for evaluating predictions. If NULL,
-#'   uses exact_match() by default.
+#' @param metric Optional metric stored with the teleprompter. KNNFewShot
+#'   selects demonstrations by embedding similarity rather than candidate
+#'   evaluation.
 #' @param metric_threshold Minimum score required to be considered successful.
 #'   If NULL, uses the metric's default threshold.
 #' @param max_errors Maximum number of errors allowed during optimization.

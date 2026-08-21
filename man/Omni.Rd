@@ -2,7 +2,6 @@
 % Please edit documentation in R/teleprompter-omni.R
 \name{Omni}
 \alias{Omni}
-\alias{print.Omni}
 \title{Omni Teleprompter}
 \usage{
 Omni(
@@ -17,8 +16,6 @@ Omni(
   seed = NULL,
   verbose = TRUE
 )
-
-\method{print}{Omni}(x, ...)
 }
 \arguments{
 \item{metric}{Metric function used to compare every candidate on the same
@@ -49,10 +46,6 @@ uses one worker per explorer.}
 reproducible splitting, sequential exploration, and mirai worker streams.}
 
 \item{verbose}{Whether to print progress messages.}
-
-\item{x}{An Omni object.}
-
-\item{...}{Additional arguments.}
 }
 \description{
 A meta-teleprompter that explores several optimization strategies from the

@@ -59,60 +59,58 @@ test_that("executable Flex issue router preserves quality with fewer predictors"
       matching[[length(matching)]]
     }
 
-    structure(
-      list(
-        calls = function() calls,
-        get_model = function() "issue-router-test",
-        get_turns = function(...) turns,
-        last_turn = last_turn,
-        chat_structured = function(prompt, type, ...) {
-          prompt <- paste(as.character(prompt), collapse = "\n")
-          queue <- if (grepl("INC-PAY-4", prompt, fixed = TRUE)) {
-            "payments"
-          } else if (grepl("INC-DB-17", prompt, fixed = TRUE)) {
-            "database"
-          } else if (grepl("INC-SEC-9", prompt, fixed = TRUE)) {
-            "security"
-          } else if (
-            grepl(
-              "Reset email arrives after its token expires",
-              prompt,
-              fixed = TRUE
-            )
-          ) {
-            "identity"
-          } else if (
-            grepl("Renewal created two invoices", prompt, fixed = TRUE)
-          ) {
-            "payments"
-          } else if (
-            grepl("Read traffic fails after failover", prompt, fixed = TRUE)
-          ) {
-            "database"
-          } else {
-            stop("unexpected issue-router prompt")
-          }
+    chat <- new_test_chat(
+      model = "issue-router-test",
+      get_turns = function(...) turns,
+      last_turn = last_turn,
+      chat_structured = function(prompt, type, ...) {
+        prompt <- paste(as.character(prompt), collapse = "\n")
+        queue <- if (grepl("INC-PAY-4", prompt, fixed = TRUE)) {
+          "payments"
+        } else if (grepl("INC-DB-17", prompt, fixed = TRUE)) {
+          "database"
+        } else if (grepl("INC-SEC-9", prompt, fixed = TRUE)) {
+          "security"
+        } else if (
+          grepl(
+            "Reset email arrives after its token expires",
+            prompt,
+            fixed = TRUE
+          )
+        ) {
+          "identity"
+        } else if (
+          grepl("Renewal created two invoices", prompt, fixed = TRUE)
+        ) {
+          "payments"
+        } else if (
+          grepl("Read traffic fails after failover", prompt, fixed = TRUE)
+        ) {
+          "database"
+        } else {
+          stop("unexpected issue-router prompt")
+        }
 
-          calls <<- calls + 1L
-          turns <<- c(
-            turns,
-            list(
-              ellmer::UserTurn(
-                contents = list(ellmer::ContentText(prompt))
-              ),
-              ellmer::AssistantTurn(
-                contents = list(ellmer::ContentText(queue)),
-                tokens = c(2L, 1L, 0L),
-                cost = 0,
-                duration = 0.001
-              )
+        calls <<- calls + 1L
+        turns <<- c(
+          turns,
+          list(
+            ellmer::UserTurn(
+              contents = list(ellmer::ContentText(prompt))
+            ),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentText(queue)),
+              tokens = c(2L, 1L, 0L),
+              cost = 0,
+              duration = 0.001
             )
           )
-          list(queue = queue)
-        }
-      ),
-      class = "Chat"
+        )
+        list(queue = queue)
+      }
     )
+    chat$calls <- function() calls
+    chat
   }
 
   # Fixed reviewed fixtures are the only source run without a sandbox here.
@@ -287,62 +285,60 @@ test_that("GEPA selects the executable Flex issue-router hybrid", {
       matching[[length(matching)]]
     }
 
-    structure(
-      list(
-        proposal_calls = function() proposal_calls,
-        get_model = function() "issue-router-gepa-test",
-        get_turns = function(...) turns,
-        last_turn = last_turn,
-        chat_structured = function(prompt, type, ...) {
-          fields <- names(type@properties)
-          if (identical(fields, "module_src")) {
-            proposal_calls <<- proposal_calls + 1L
-            return(list(module_src = winner_source))
-          }
-          if (!identical(fields, "queue")) {
-            stop("unexpected issue-router structured output")
-          }
+    chat <- new_test_chat(
+      model = "issue-router-gepa-test",
+      get_turns = function(...) turns,
+      last_turn = last_turn,
+      chat_structured = function(prompt, type, ...) {
+        fields <- names(type@properties)
+        if (identical(fields, "module_src")) {
+          proposal_calls <<- proposal_calls + 1L
+          return(list(module_src = winner_source))
+        }
+        if (!identical(fields, "queue")) {
+          stop("unexpected issue-router structured output")
+        }
 
-          prompt <- paste(as.character(prompt), collapse = "\n")
-          queue <- if (grepl("INC-SEC-9", prompt, fixed = TRUE)) {
-            "security"
-          } else if (grepl("INC-PAY-4", prompt, fixed = TRUE)) {
-            "payments"
-          } else if (
-            grepl(
-              "Reset email arrives after its token expires",
-              prompt,
-              fixed = TRUE
-            )
-          ) {
-            "identity"
-          } else if (
-            grepl("Renewal created two invoices", prompt, fixed = TRUE)
-          ) {
-            "payments"
-          } else {
-            stop("unexpected issue-router prompt")
-          }
+        prompt <- paste(as.character(prompt), collapse = "\n")
+        queue <- if (grepl("INC-SEC-9", prompt, fixed = TRUE)) {
+          "security"
+        } else if (grepl("INC-PAY-4", prompt, fixed = TRUE)) {
+          "payments"
+        } else if (
+          grepl(
+            "Reset email arrives after its token expires",
+            prompt,
+            fixed = TRUE
+          )
+        ) {
+          "identity"
+        } else if (
+          grepl("Renewal created two invoices", prompt, fixed = TRUE)
+        ) {
+          "payments"
+        } else {
+          stop("unexpected issue-router prompt")
+        }
 
-          turns <<- c(
-            turns,
-            list(
-              ellmer::UserTurn(
-                contents = list(ellmer::ContentText(prompt))
-              ),
-              ellmer::AssistantTurn(
-                contents = list(ellmer::ContentText(queue)),
-                tokens = c(2L, 1L, 0L),
-                cost = 0,
-                duration = 0.001
-              )
+        turns <<- c(
+          turns,
+          list(
+            ellmer::UserTurn(
+              contents = list(ellmer::ContentText(prompt))
+            ),
+            ellmer::AssistantTurn(
+              contents = list(ellmer::ContentText(queue)),
+              tokens = c(2L, 1L, 0L),
+              cost = 0,
+              duration = 0.001
             )
           )
-          list(queue = queue)
-        }
-      ),
-      class = "Chat"
+        )
+        list(queue = queue)
+      }
     )
+    chat$proposal_calls <- function() proposal_calls
+    chat
   }
 
   make_program <- function(module_src) {

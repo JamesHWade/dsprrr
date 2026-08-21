@@ -97,12 +97,13 @@
       i Set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`
       i Otherwise use `parallel = FALSE`
 
-# Omni rejects unsafe parallel chat serialization
+# Omni rejects non-Chat .llm before parallel policy
 
     Code
       compile(make_omni(parallel = TRUE), make_omni_mock_module(), omni_trainset,
       valset = omni_valset, .llm = list(provider = "not-serializable"))
     Condition
-      Error in `compile_omni()`:
-      ! Parallel Omni exploration requires `.llm = NULL`
-      i Configure worker-visible default chat credentials, or use `parallel = FALSE`
+      Error in `assert_ellmer_chat()`:
+      ! `.llm` must be an ellmer Chat R6 object
+      x Got <list>.
+      i Create one with an `ellmer::chat_*()` constructor.

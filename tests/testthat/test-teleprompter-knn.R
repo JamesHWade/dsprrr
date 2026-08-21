@@ -27,7 +27,7 @@ fake_vectorizer <- function(texts) {
 }
 
 # Mock LLM for testing
-mock_llm <- list(
+mock_llm <- new_test_chat(
   chat_structured = function(prompt, type, ...) {
     list(answer = "mocked response")
   }
@@ -85,7 +85,7 @@ test_that("KNNFewShot validates properties", {
 test_that("KNNFewShot compile creates KNNFewShotModule", {
   # Create a simple module
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -145,7 +145,7 @@ test_that("KNNFewShot compile validates inputs", {
 
 test_that("KNNFewShot selects demos dynamically at runtime", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
@@ -199,9 +199,8 @@ test_that("KNNFewShot selects demos dynamically at runtime", {
 test_that("KNNFewShot exposes one fresh trace event per evaluation", {
   local_reset_cache()
   mod <- module(signature("question -> answer"), type = "predict")
-  llm <- structure(
-    list(chat_structured = function(...) list(answer = "yes")),
-    class = "Chat"
+  llm <- new_test_chat(
+    chat_structured = function(...) list(answer = "yes")
   )
   trainset <- data.frame(
     question = c("q1", "q2"),
@@ -243,12 +242,20 @@ test_that("KNNFewShot exposes one fresh trace event per evaluation", {
     vapply(observed, function(x) length(x$events), integer(1)),
     c(1L, 1L)
   )
+  expect_identical(
+    vapply(
+      observed,
+      function(x) x$events[[1L]]$metadata$batch_index,
+      integer(1)
+    ),
+    c(1L, 1L)
+  )
   expect_length(compiled$state$traces, 2L)
 })
 
 test_that("KNNFewShot works with batch inputs", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
@@ -281,8 +288,8 @@ test_that("KNNFewShot works with batch inputs", {
 test_that("KNNFewShot with custom input_text function", {
   sig <- Signature(
     inputs = list(
-      input(name = "context", class = S7::class_character),
-      input(name = "question", class = S7::class_character)
+      input(name = "context", type = "string"),
+      input(name = "question", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Answer based on context"
@@ -320,7 +327,7 @@ test_that("KNNFewShot with custom input_text function", {
 
 test_that("KNNFewShot merge_demos preserves original demos", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
@@ -356,7 +363,7 @@ test_that("KNNFewShot merge_demos preserves original demos", {
 
 test_that("KNNFewShotModule can be deep copied", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
@@ -388,7 +395,7 @@ test_that("KNNFewShotModule can be deep copied", {
 
 test_that("KNNFewShotModule reset clears selection history", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )

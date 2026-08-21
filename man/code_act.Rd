@@ -8,9 +8,9 @@ code_act(
   signature,
   tools = list(),
   runner = NULL,
+  interpreter_factory = NULL,
   max_iterations = 10L,
-  ...,
-  interpreter_factory = NULL
+  ...
 )
 }
 \arguments{
@@ -22,19 +22,19 @@ their ToolDef name. Effective names may contain only letters, numbers,
 hyphens, and underscores.}
 
 \item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()}. It is retained, never automatically closed, and must not be
+\code{policy()}. It is retained, never automatically shut down, and must not be
 shared concurrently when persistent.}
+
+\item{interpreter_factory}{Optional zero-argument function returning a fresh
+runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
+terminal \code{shutdown()}.
+Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 
 \item{max_iterations}{Maximum outer agent iterations and maximum tool calls
 within one invocation (default 10). Exceeding the inner tool-call budget
 raises a \code{dsprrr_codeact_iteration_limit} error.}
 
 \item{...}{Additional arguments passed to the module}
-
-\item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
-terminal \code{shutdown()} or \code{close()}.
-Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
 A CodeActModule object

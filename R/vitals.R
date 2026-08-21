@@ -11,14 +11,17 @@
 #' matching the module's signature inputs. Use [as_vitals_task()] to
 #' automatically create this structure from a flat dataset.
 #'
-#' The solver uses ellmer's parallel processing for efficiency. For structured
-#' outputs, mock Chat objects are created for vitals logging compatibility
-#' (following the same pattern as vitals' `generate_structured()`).
+#' Batch execution is sequential unless `.concurrency` requests another
+#' backend. For structured outputs, mock Chat objects are created for vitals
+#' logging compatibility (following the same pattern as vitals'
+#' `generate_structured()`).
 #'
 #' @param module A DSPrrr module (e.g., created via [module()]).
 #' @param .llm An ellmer chat object. If `NULL` (default), uses the module's
 #'   stored chat or falls back to [get_default_chat()]. The chat is cloned
 #'   for each batch invocation.
+#' @param .concurrency Optional policy created by [concurrency_control()].
+#'   Omission uses sequential execution.
 #' @param ... Additional arguments forwarded to [run_dataset()].
 #'
 #' @return A function accepting a list of input objects and returning a list
@@ -27,14 +30,15 @@
 as_vitals_solver <- function(
   module,
   .llm = NULL,
+  .concurrency = NULL,
   ...
 ) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("as_vitals_solver() requires an R6 Module object")
   }
 
-  # Resolve LLM using standard dsprrr pattern: explicit > module > default
-  .llm <- .llm %||% module$chat %||% get_default_chat(create = TRUE)
+  # Resolve and validate the canonical Chat once when creating the solver.
+  .llm <- resolve_module_llm(module, .llm = .llm)
 
   # Get signature info for extracting inputs from nested vitals format
 
@@ -81,26 +85,21 @@ as_vitals_solver <- function(
     # Build data frame from rows
     data <- tibble::as_tibble(do.call(rbind, lapply(rows, as.data.frame)))
 
-    # Clone chat for this batch
-    ch <- if (is.function(solver_chat)) solver_chat() else solver_chat$clone()
+    # Each batch gets an independent, history-free Chat.
+    ch <- clone_ellmer_chat(
+      solver_chat,
+      arg = "solver_chat",
+      reset_turns = TRUE
+    )
 
-    # Merge extra args, with defaults for parallel processing
-    # User-provided args override defaults
     call_args <- list(
       module = module,
       data = data,
       .llm = ch,
+      .concurrency = .concurrency,
       .return_format = "structured",
       .progress = FALSE
     )
-
-    # Add defaults for parallel processing (can be overridden by extra_args)
-    defaults <- list(.parallel = TRUE, .parallel_method = "ellmer")
-    for (nm in names(defaults)) {
-      if (!nm %in% names(extra_args) && !nm %in% names(list(...))) {
-        call_args[[nm]] <- defaults[[nm]]
-      }
-    }
 
     # Call run_dataset which properly uses demos, templates, and descriptions
     results <- do.call(
@@ -642,7 +641,8 @@ infer_provider_from_model <- function(model) {
 #' @param metrics Optional named list of metric functions. Each function
 #'   takes a vector of scores and returns a single numeric value.
 #' @param dir Directory for evaluation logs. Defaults to `vitals::vitals_log_dir()`.
-#' @param .parallel Logical; whether to run solver in parallel. Defaults to FALSE.
+#' @param .concurrency Optional policy created by [concurrency_control()].
+#'   Omission uses sequential execution.
 #' @param ... Additional arguments passed to [as_vitals_solver()].
 #'
 #' @return A vitals [vitals::Task] object ready for evaluation.
@@ -681,7 +681,7 @@ as_vitals_task <- function(
   epochs = 1L,
   metrics = NULL,
   dir = NULL,
-  .parallel = FALSE,
+  .concurrency = NULL,
   ...
 ) {
   rlang::check_installed("vitals", reason = "for Task creation")
@@ -742,7 +742,7 @@ as_vitals_task <- function(
   solver <- as_vitals_solver(
     module = module,
     .llm = .llm,
-    .parallel = .parallel,
+    .concurrency = .concurrency,
     ...
   )
 

@@ -12,14 +12,11 @@
 #' values are restored only when `trusted = TRUE` is also supplied while loading.
 #' Registry IDs are the recommended contract for tools, custom functions,
 #' retrievers, stores, code runners, and interpreter factories. Format version 5
-#' adds graph-visible RLM action and extraction predictors. Version 4 records
-#' exactly one runner or factory for each code-executing module. Valid version 3
-#' runner-only and version 4 manifests are checked against their original schema
-#' and integrity digest. Non-RLM manifests are upgraded in memory. A legacy
-#' childless RLM is restored under its original schema with fresh default child
-#' predictors and becomes a complete version 5 graph when it is next saved.
-#' Other historical versions are rejected. Factories are never invoked during
-#' write or restore.
+#' is the sole supported format. It records exactly one runner or factory for
+#' each code-executing module, preserves the complete Flex runtime contract, and
+#' stores graph-visible RLM action and extraction predictors. Manifests with any
+#' other format version are rejected before module construction. Factories are
+#' never invoked during write or restore.
 #'
 #' Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
 #' through a closed codec. Remote content URLs must be stable HTTPS URLs without
@@ -90,10 +87,6 @@
 NULL
 
 artifact_format_version <- function() 5L
-
-artifact_supported_format_versions <- function() {
-  c(3L, 4L, artifact_format_version())
-}
 
 #' @rdname program-artifact
 #' @export
@@ -580,10 +573,8 @@ artifact_module_class <- function(module) {
   class
 }
 
-artifact_supported_module_classes <- function(
-  version = artifact_format_version()
-) {
-  classes <- c(
+artifact_supported_module_classes <- function() {
+  c(
     "ReactModule",
     "PredictModule",
     "PipelineModule",
@@ -597,9 +588,9 @@ artifact_supported_module_classes <- function(
     "ProgramOfThoughtModule",
     "CodeActModule",
     "RLMModule",
-    "RAGModule"
+    "RAGModule",
+    "FlexModule"
   )
-  if (version >= 4L) c(classes, "FlexModule") else classes
 }
 
 artifact_module_kind <- function(module) {
@@ -1018,15 +1009,9 @@ artifact_restored_identity <- function(module) {
 }
 
 artifact_bind_restored_identity <- function(program, source_artifact) {
-  # Legacy manifests keep their existing upgrade identity semantics. Trusted
-  # runtimes cannot be reidentified without a new explicit trust decision.
-  if (
-    !identical(
-      as.integer(source_artifact$format_version),
-      artifact_format_version()
-    ) ||
-      artifact_has_trusted_runtime(source_artifact$graph$nodes)
-  ) {
+  # Trusted runtimes cannot be reidentified without a new explicit trust
+  # decision. Manifest validation has already established the current format.
+  if (artifact_has_trusted_runtime(source_artifact$graph$nodes)) {
     return(invisible(program))
   }
 
@@ -1236,7 +1221,6 @@ artifact_sanitize_value <- function(
   }
   if (
     is.function(value) ||
-      inherits(value, "ToolDef") ||
       inherits(value, "ellmer::ToolDef") ||
       is.environment(value) ||
       is.language(value) ||
@@ -1867,7 +1851,7 @@ artifact_runtime_interface <- function(value) {
 }
 
 artifact_runtime_interface_descriptor <- function(value) {
-  if (inherits(value, "ToolDef") || inherits(value, "ellmer::ToolDef")) {
+  if (inherits(value, "ellmer::ToolDef")) {
     return(list(
       type = "tool",
       class = class(value),
@@ -2496,8 +2480,6 @@ restore_program_artifact <- function(
   registry <- artifact_validate_registry(registry)
   trusted <- artifact_validate_trusted(trusted)
   artifact_validate_manifest(artifact)
-  source_artifact <- artifact
-  artifact <- artifact_upgrade_manifest(artifact)
 
   cache <- new.env(parent = emptyenv(), hash = TRUE)
   program <- artifact_build_node(
@@ -2512,7 +2494,7 @@ restore_program_artifact <- function(
   modules <- mget(ls(cache, all.names = TRUE), envir = cache, inherits = FALSE)
   artifact_bind_registry(modules, artifact, registry)
   artifact_bind_state_exclusions(modules, artifact)
-  artifact_bind_restored_identity(program, source_artifact)
+  artifact_bind_restored_identity(program, artifact)
   program
 }
 
@@ -2595,18 +2577,17 @@ artifact_validate_manifest <- function(artifact, dependencies = TRUE) {
   if (
     !is.numeric(version) ||
       length(version) != 1L ||
-      is.na(version)
+      is.na(version) ||
+      !is.finite(version) ||
+      version != floor(version)
   ) {
     malformed("format_version must be one integer.")
   }
-  if (
-    !version %in% artifact_supported_format_versions() ||
-      version != as.integer(version)
-  ) {
+  if (version != artifact_format_version()) {
     cli::cli_abort(
       c(
         "Unsupported dsprrr program artifact version",
-        "x" = "Got version {.val {version}}; this package supports versions {.val {artifact_supported_format_versions()}}."
+        "x" = "Got version {.val {version}}; this package supports version {.val {artifact_format_version()}}."
       ),
       class = "dsprrr_artifact_unsupported_version"
     )
@@ -2669,7 +2650,7 @@ artifact_validate_manifest <- function(artifact, dependencies = TRUE) {
       ))
     }
     artifact_validate_child_refs(node$children, names(nodes), malformed)
-    artifact_validate_node_payload(node, malformed, version = version)
+    artifact_validate_node_payload(node, malformed)
   }
   edges <- artifact$graph$edges
   if (!artifact_is_plain_list(edges)) {
@@ -2701,79 +2682,8 @@ artifact_validate_manifest <- function(artifact, dependencies = TRUE) {
   invisible(artifact)
 }
 
-artifact_upgrade_manifest <- function(artifact) {
-  version <- as.integer(artifact$format_version)
-  if (!version %in% c(3L, 4L)) {
-    return(artifact)
-  }
-
-  # Legacy RLM manifests are intentionally restored under their original
-  # schema so the constructor can supply fresh default child predictors. The
-  # next write serializes those children as a complete v5 graph.
-  has_childless_rlm <- any(vapply(
-    artifact$graph$nodes,
-    function(node) {
-      identical(node$class, "RLMModule") &&
-        artifact_is_plain_list(node$children) &&
-        length(node$children) == 0L
-    },
-    logical(1)
-  ))
-  if (has_childless_rlm) {
-    return(artifact)
-  }
-
-  upgraded <- artifact
-  if (identical(version, 3L)) {
-    runtime_classes <- c(
-      "ProgramOfThoughtModule",
-      "CodeActModule",
-      "RLMModule"
-    )
-    for (id in names(upgraded$graph$nodes)) {
-      node <- upgraded$graph$nodes[[id]]
-      if (node$class %in% runtime_classes) {
-        runner_position <- match("runner", names(node$fields))
-        node$fields <- append(
-          node$fields,
-          list(interpreter_factory = NULL),
-          after = runner_position
-        )
-        upgraded$graph$nodes[[id]] <- node
-      }
-    }
-  }
-  upgraded$format_version <- artifact_format_version()
-  upgraded$integrity <- artifact_integrity(upgraded)
-  artifact_validate_manifest(upgraded)
-  upgraded
-}
-
 artifact_validate_restored_graph <- function(program, artifact) {
   graph <- module_graph(program, boundaries = "cross", cycles = "record")
-  legacy_rlm_paths <- names(Filter(
-    function(node) {
-      identical(node$class, "RLMModule") &&
-        artifact_is_plain_list(node$children) &&
-        length(node$children) == 0L
-    },
-    artifact$graph$nodes
-  ))
-  if (length(legacy_rlm_paths) > 0L) {
-    implicit_child_paths <- unlist(
-      lapply(
-        legacy_rlm_paths,
-        function(path) {
-          paste0(path, "/", c("generate_action", "extract"))
-        }
-      ),
-      use.names = FALSE
-    )
-    # Older RLM artifacts predate graph-visible predictors. Their restored
-    # modules receive fresh default predictors, which are intentionally absent
-    # from the legacy manifest comparison.
-    graph <- graph[!graph$path %in% implicit_child_paths, , drop = FALSE]
-  }
   expected_paths <- c(
     artifact$root,
     vapply(artifact$graph$edges, `[[`, character(1), "path")
@@ -2864,7 +2774,7 @@ artifact_is_optional_number_scalar <- function(
   is.null(value) || artifact_is_number_scalar(value, whole, minimum)
 }
 
-artifact_validate_node_payload <- function(node, malformed, version) {
+artifact_validate_node_payload <- function(node, malformed) {
   expected_names <- c(
     "id",
     "path",
@@ -2884,7 +2794,7 @@ artifact_validate_node_payload <- function(node, malformed, version) {
   if (
     !is.character(node$class) ||
       length(node$class) != 1L ||
-      !node$class %in% artifact_supported_module_classes(version)
+      !node$class %in% artifact_supported_module_classes()
   ) {
     malformed(paste0("Node ", node$id, " has an unsupported class."))
   }
@@ -2913,8 +2823,8 @@ artifact_validate_node_payload <- function(node, malformed, version) {
   }
   artifact_validate_state_and_optimization(node, malformed)
   artifact_validate_provider_model(node$provider_model, node$id, malformed)
-  artifact_validate_fields(node, malformed, version = version)
-  artifact_validate_children_schema(node, malformed, version = version)
+  artifact_validate_fields(node, malformed)
+  artifact_validate_children_schema(node, malformed)
   invisible(node)
 }
 
@@ -3380,12 +3290,8 @@ artifact_validate_provider_model <- function(value, id, malformed) {
   invisible(value)
 }
 
-artifact_validate_fields <- function(node, malformed, version) {
-  runtime_binding_fields <- if (version >= 4L) {
-    c("runner", "interpreter_factory")
-  } else {
-    "runner"
-  }
+artifact_validate_fields <- function(node, malformed) {
+  runtime_binding_fields <- c("runner", "interpreter_factory")
   allowed <- switch(
     node$class,
     ReactModule = c("template", "demos", "max_iterations", "tools"),
@@ -3453,27 +3359,9 @@ artifact_validate_fields <- function(node, malformed, version) {
       "require_sandbox"
     )
   )
-  legacy_flex_fields <- identical(node$class, "FlexModule") &&
-    version >= 4L &&
-    (artifact_names_match(
-      names(node$fields),
-      c("module_src", "max_predictor_calls")
-    ) ||
-      artifact_names_match(
-        names(node$fields),
-        c(
-          "module_src",
-          "max_predictor_calls",
-          "source_format",
-          "tools",
-          "interpreter_factory",
-          "require_sandbox"
-        )
-      ))
   if (
     !artifact_is_plain_list(node$fields) ||
-      (!artifact_names_match(names(node$fields), allowed) &&
-        !legacy_flex_fields)
+      !artifact_names_match(names(node$fields), allowed)
   ) {
     malformed(paste0("Node ", node$id, " has invalid class-specific fields."))
   }
@@ -3482,11 +3370,7 @@ artifact_validate_fields <- function(node, malformed, version) {
     paste0("graph.nodes.", node$id, ".fields"),
     drop_runtime_names = FALSE
   )
-  runtime_paths <- artifact_validate_nested_fields(
-    node,
-    malformed,
-    version = version
-  )
+  runtime_paths <- artifact_validate_nested_fields(node, malformed)
   for (i in seq_along(runtime_paths)) {
     artifact_validate_runtime_field(
       runtime_paths[[i]],
@@ -3496,7 +3380,7 @@ artifact_validate_fields <- function(node, malformed, version) {
   if (identical(node$class, "RLMModule")) {
     artifact_validate_provider_model(node$fields$sub_lm, node$id, malformed)
   }
-  artifact_validate_field_domains(node, malformed, version = version)
+  artifact_validate_field_domains(node, malformed)
   invisible(node$fields)
 }
 
@@ -3520,7 +3404,7 @@ artifact_validate_runtime_field <- function(value, path) {
   invisible(value)
 }
 
-artifact_validate_field_domains <- function(node, malformed, version) {
+artifact_validate_field_domains <- function(node, malformed) {
   invalid <- function(label = "class-specific field values") {
     malformed(paste0("Node ", node$id, " has invalid ", label, "."))
   }
@@ -3579,24 +3463,16 @@ artifact_validate_field_domains <- function(node, malformed, version) {
       positive_integer(fields$max_iterations),
     RLMModule = valid_runtime_binding(fields) &&
       positive_integer(fields$max_iterations) &&
-      (if (version >= 4L) {
-        nonnegative_integer(fields$max_llm_calls)
-      } else {
-        positive_integer(fields$max_llm_calls)
-      }) &&
+      nonnegative_integer(fields$max_llm_calls) &&
       positive_integer(fields$max_output_chars) &&
       artifact_is_logical_scalar(fields$verbose),
     RAGModule = positive_integer(fields$k) &&
       artifact_is_character_scalar(fields$context_format, nonempty = TRUE),
     FlexModule = {
-      source_format <- fields$source_format %||% "json"
-      tools <- fields$tools %||% list()
+      source_format <- fields$source_format
+      tools <- fields$tools
       factory <- fields$interpreter_factory
-      max_tool_calls <- if ("max_tool_calls" %in% names(fields)) {
-        fields$max_tool_calls
-      } else {
-        100L
-      }
+      max_tool_calls <- fields$max_tool_calls
       artifact_is_character_scalar(fields$module_src, nonempty = TRUE) &&
         (is.null(fields$max_predictor_calls) ||
           nonnegative_integer(fields$max_predictor_calls)) &&
@@ -3605,12 +3481,11 @@ artifact_validate_field_domains <- function(node, malformed, version) {
         source_format %in% c("json", "r") &&
         artifact_is_plain_list(tools) &&
         flex_host_tool_names_valid(tools) &&
-        (is.null(fields$require_sandbox) ||
-          artifact_is_logical_scalar(fields$require_sandbox)) &&
+        artifact_is_logical_scalar(fields$require_sandbox) &&
         if (identical(source_format, "json")) {
           length(tools) == 0L && is.null(factory)
         } else {
-          !is.null(factory) && !is.null(fields$require_sandbox)
+          !is.null(factory)
         }
     },
     FALSE
@@ -3692,7 +3567,7 @@ artifact_validate_knn_fields <- function(node, malformed) {
   TRUE
 }
 
-artifact_validate_children_schema <- function(node, malformed, version) {
+artifact_validate_children_schema <- function(node, malformed) {
   children <- node$children
   invalid <- function() {
     malformed(paste0("Node ", node$id, " has invalid class-specific children."))
@@ -3719,18 +3594,14 @@ artifact_validate_children_schema <- function(node, malformed, version) {
       all(vapply(value, artifact_is_node_ref, logical(1)))
   }
   if (identical(node$class, "RLMModule")) {
-    legacy_childless <- version < 5L &&
-      artifact_is_plain_list(children) &&
-      length(children) == 0L
-    current_children <- version >= 5L &&
-      artifact_is_plain_list(children) &&
+    valid <- artifact_is_plain_list(children) &&
       artifact_names_match(
         names(children),
         c("generate_action", "extract")
       ) &&
       artifact_is_node_ref(children$generate_action) &&
       artifact_is_node_ref(children$extract)
-    if (!legacy_childless && !current_children) {
+    if (!valid) {
       invalid()
     }
     return(invisible(children))
@@ -3768,7 +3639,7 @@ artifact_validate_children_schema <- function(node, malformed, version) {
   invisible(children)
 }
 
-artifact_validate_nested_fields <- function(node, malformed, version) {
+artifact_validate_nested_fields <- function(node, malformed) {
   runtime_collection <- function(values, label) {
     if (!artifact_is_plain_list(values)) {
       malformed(paste0("Node ", node$id, " has invalid ", label, "."))
@@ -3839,26 +3710,26 @@ artifact_validate_nested_fields <- function(node, malformed, version) {
     FnModule = list(node$fields$forward_fn),
     ProgramOfThoughtModule = list(
       node$fields$runner,
-      if (version >= 4L) node$fields$interpreter_factory else NULL
+      node$fields$interpreter_factory
     ),
     CodeActModule = c(
       list(
         node$fields$runner,
-        if (version >= 4L) node$fields$interpreter_factory else NULL
+        node$fields$interpreter_factory
       ),
       runtime_collection(node$fields$tools, "tools")
     ),
     RLMModule = c(
       list(
         node$fields$runner,
-        if (version >= 4L) node$fields$interpreter_factory else NULL
+        node$fields$interpreter_factory
       ),
       runtime_collection(node$fields$tools, "tools")
     ),
     RAGModule = list(node$fields$store, node$fields$retriever),
     FlexModule = c(
       list(node$fields$interpreter_factory),
-      runtime_collection(node$fields$tools %||% list(), "tools")
+      runtime_collection(node$fields$tools, "tools")
     ),
     list()
   )
@@ -4373,16 +4244,12 @@ artifact_construct_module <- function(node, children, registry, trusted) {
     FlexModule = FlexModule$new(
       signature = signature,
       module_src = fields$module_src,
-      tools = runtime_list(fields$tools %||% list()),
+      tools = runtime_list(fields$tools),
       interpreter_factory = runtime(fields$interpreter_factory),
-      source_format = fields$source_format %||% "json",
+      source_format = fields$source_format,
       max_predictor_calls = fields$max_predictor_calls,
-      max_tool_calls = if ("max_tool_calls" %in% names(fields)) {
-        fields$max_tool_calls
-      } else {
-        100L
-      },
-      require_sandbox = fields$require_sandbox %||% TRUE,
+      max_tool_calls = fields$max_tool_calls,
+      require_sandbox = fields$require_sandbox,
       config = config,
       chat = NULL
     ),

@@ -7,7 +7,7 @@
 complete_trial(trial, eval_result, compiled_artifact_ref = NULL, notes = NULL)
 }
 \arguments{
-\item{trial}{A Trial object.}
+\item{trial}{A trial record created by \code{\link[=create_trial]{create_trial()}}.}
 
 \item{eval_result}{An EvalResult object from eval_program().}
 
@@ -17,7 +17,7 @@ safe program artifact when this trial wins.}
 \item{notes}{Optional additional notes.}
 }
 \value{
-Updated Trial object with status "completed".
+The updated trial record with status \code{"completed"}.
 }
 \description{
 Mark a trial as completed with evaluation results.

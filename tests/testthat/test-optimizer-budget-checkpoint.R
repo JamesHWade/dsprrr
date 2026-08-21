@@ -22,20 +22,16 @@ checkpoint_test_chat <- function(
 ) {
   provider_object <- checkpoint_test_provider(provider, model)
   local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          if (!is.null(counter)) {
-            counter$calls <- counter$calls + 1L
-          }
-          list(answer = answer)
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL),
-        get_provider = function() provider_object,
-        get_model = function() model
-      ),
-      class = "Chat"
+    self <- new_test_chat(
+      model = model,
+      provider = provider_object,
+      clone = function(...) self,
+      chat_structured = function(prompt, type, ...) {
+        if (!is.null(counter)) {
+          counter$calls <- counter$calls + 1L
+        }
+        list(answer = answer)
+      }
     )
     self
   })
@@ -450,7 +446,7 @@ test_that("restored budgets fail closed under every stricter current limit", {
   expect_false(optimizer_budget_preflight(stricter_errors, "new_work"))
 })
 
-test_that("new finite caps reject restored unknown historical usage", {
+test_that("new finite caps reject restored unknown usage", {
   cases <- list(
     max_metric_calls = list(field = "metric_calls", code = "unknown_metric"),
     max_provider_calls = list(
@@ -792,7 +788,7 @@ test_that("trial accounting and preflight reject capacity overflow", {
   expect_no_warning(expect_error(
     optimizer_budgeted_provider_call(
       outcome_budget,
-      model = function(...) NULL,
+      model = new_test_chat(),
       stage = "paid_work",
       unit_id = "provider:overflow",
       call = function() {
@@ -831,6 +827,43 @@ test_that("canonical evaluation metadata distinguishes hits and provider calls",
   expect_equal(usage$tokens_out, 2L)
   expect_equal(usage$total_cost, 0.01)
   expect_false(usage$provider_usage_unknown)
+})
+
+test_that("optimizer metadata accepts only canonical live usage fields", {
+  program <- ensemble(list(
+    module(signature("x -> y"), type = "predict"),
+    module(signature("x -> y"), type = "predict")
+  ))
+
+  canonical <- optimizer_metadata_usage(
+    program,
+    list(provider_calls = 2L, cost = 0.25)
+  )
+  expect_identical(canonical$provider_calls, 2L)
+  expect_equal(canonical$total_cost, 0.25)
+
+  removed <- optimizer_metadata_usage(
+    program,
+    list(n_llm_calls = 2L, total_cost = 0.25)
+  )
+  expect_true(is.na(removed$provider_calls))
+  expect_true(is.na(removed$total_cost))
+
+  predictor <- module(signature("x -> y"), type = "predict")
+  inferred <- optimizer_metadata_usage(predictor, list(cost = 0.1))
+  expect_identical(inferred$provider_calls, 1L)
+  explicit_unknown <- optimizer_metadata_usage(
+    predictor,
+    list(provider_calls = NA_integer_, cost = NA_real_)
+  )
+  expect_true(is.na(explicit_unknown$provider_calls))
+  expect_true(is.na(explicit_unknown$total_cost))
+
+  budget <- new_optimizer_budget(optimizer_control(max_cost = 1))
+  record_optimizer_usage(budget, list(cost = 0.25), "metadata")
+  expect_equal(budget$known_cost, 0)
+  record_optimizer_usage(budget, list(known_cost = 0.25), "metadata")
+  expect_equal(budget$known_cost, 0.25)
 })
 
 test_that("row-sized optimizer evaluation resumes without repeating paid rows", {
@@ -1230,6 +1263,9 @@ test_that("checkpoint reads detect same-inode rewrites with restored mtime", {
 test_that("concurrent checkpoint writers reject a stale predecessor", {
   skip_if_not_installed("callr")
   directory <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(directory, mode = "0700", use_umask = FALSE)
+  }
   path <- file.path(directory, "shared-checkpoint.rds")
   package_context <- callr_dsprrr_context()
   package_loader <- callr_load_dsprrr
@@ -1356,6 +1392,9 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
 test_that("checkpoint locks are released when a writer process dies", {
   skip_if_not_installed("callr")
   directory <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(directory, mode = "0700", use_umask = FALSE)
+  }
   path <- file.path(directory, "crash-checkpoint.rds")
   ready <- file.path(directory, "lock-held")
   package_context <- callr_dsprrr_context()
@@ -2113,15 +2152,12 @@ test_that("checkpointing fails before work without a stable effective Chat", {
 
 test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
   make_llm <- function(counter) {
-    structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          counter$calls <- counter$calls + 1L
-          list(answer = "yes")
-        },
-        get_model = function() "bootstrap-checkpoint-model"
-      ),
-      class = "Chat"
+    new_test_chat(
+      model = "bootstrap-checkpoint-model",
+      chat_structured = function(prompt, type, ...) {
+        counter$calls <- counter$calls + 1L
+        list(answer = "yes")
+      }
     )
   }
   program <- module(signature("question -> answer"), type = "predict")
@@ -2201,17 +2237,13 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
 test_that("MIPRO resumes an interrupted BO row without repeated provider calls", {
   make_chat <- function(counter) {
     local({
-      self <- structure(
-        list(
-          chat_structured = function(prompt, type, ...) {
-            counter$calls <- counter$calls + 1L
-            list(answer = "ok")
-          },
-          clone = function(...) self,
-          set_turns = function(turns) invisible(NULL),
-          get_model = function() "checkpoint-test-model"
-        ),
-        class = "Chat"
+      self <- new_test_chat(
+        model = "checkpoint-test-model",
+        clone = function(...) self,
+        chat_structured = function(prompt, type, ...) {
+          counter$calls <- counter$calls + 1L
+          list(answer = "ok")
+        }
       )
       self
     })
@@ -2305,17 +2337,13 @@ test_that("MIPRO replays one durable trial after failure between append and chec
   counter <- new.env(parent = emptyenv())
   counter$calls <- 0L
   chat <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          counter$calls <- counter$calls + 1L
-          list(answer = "ok")
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL),
-        get_model = function() "mipro-log-resume-model"
-      ),
-      class = "Chat"
+    self <- new_test_chat(
+      model = "mipro-log-resume-model",
+      clone = function(...) self,
+      chat_structured = function(prompt, type, ...) {
+        counter$calls <- counter$calls + 1L
+        list(answer = "ok")
+      }
     )
     self
   })

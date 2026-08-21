@@ -125,7 +125,7 @@ gepa_set_component_candidate_lineage <- function(
   ancestors <- unique(as.character(ancestors))
   if (
     anyNA(c(parents, ancestors)) ||
-      any(!nzchar(c(parents, ancestors)))
+      !all(nzchar(c(parents, ancestors)))
   ) {
     cli::cli_abort(
       "GEPA candidate lineage IDs must be non-empty strings",
@@ -195,7 +195,7 @@ gepa_component_selector_ids <- function(
     !is.character(selected) ||
       length(selected) == 0L ||
       anyNA(selected) ||
-      any(!nzchar(selected)) ||
+      !all(nzchar(selected)) ||
       anyDuplicated(selected) ||
       !all(selected %in% ids)
   ) {
@@ -768,13 +768,13 @@ gepa_signature_contract <- function(signature) {
     list(
       name = input$name,
       description = input$description %||% "",
-      schema = ellmer_type_to_json_schema(input$type)
+      schema = flex_type_schema(input$type)
     )
   })
   outputs <- lapply(
     names(flex_signature_output_types(signature)),
     function(name) {
-      schema <- ellmer_type_to_json_schema(
+      schema <- flex_type_schema(
         flex_signature_output_types(signature)[[name]]
       )
       list(
@@ -792,10 +792,7 @@ gepa_signature_contract <- function(signature) {
 }
 
 gepa_flex_tool_contract <- function(tool, name) {
-  if (
-    inherits(tool, "ellmer::ToolDef") ||
-      inherits(tool, "ToolDef")
-  ) {
+  if (inherits(tool, "ellmer::ToolDef")) {
     props <- tryCatch(S7::props(tool), error = function(error) list())
     arguments <- props$arguments %||% NULL
     return(list(
@@ -805,7 +802,7 @@ gepa_flex_tool_contract <- function(tool, name) {
       arguments_schema = if (is.null(arguments)) {
         NULL
       } else {
-        ellmer_type_to_json_schema(arguments)
+        flex_type_schema(arguments)
       }
     ))
   }
@@ -1098,13 +1095,14 @@ gepa_propose_flex_source <- function(
     )
   }
   current <- module$module_src
-  if (is.null(.llm) || !is.function(.llm$chat_structured)) {
+  if (is.null(.llm)) {
     return(gepa_flex_proposal(
       "unchanged_no_proposer",
       current,
       unit_id = unit_id
     ))
   }
+  assert_ellmer_chat(.llm, arg = ".llm")
 
   prompt <- gepa_flex_reflection_prompt(
     module,
@@ -1228,9 +1226,10 @@ gepa_propose_component_instructions <- function(
   budget = NULL,
   unit_id = "gepa:component_reflection"
 ) {
-  if (is.null(.llm) || !is.function(.llm$chat_structured)) {
+  if (is.null(.llm)) {
     return(gepa_fallback_mutation(instruction, failed_examples))
   }
+  assert_ellmer_chat(.llm, arg = ".llm")
 
   prompt <- gepa_reflection_prompt(instruction, failed_examples)
   type <- ellmer::type_object(instructions = ellmer::type_string())
@@ -2125,7 +2124,6 @@ compile_gepa_components <- function(
       best_outputs_valset = if (track_best_outputs) list() else NULL,
       discovery_eval_counts = integer(),
       objective_pareto_front = list(),
-      pareto_frontier = list(),
       resume_supported = FALSE,
       search_state = list(
         schema_version = 1L,
@@ -2510,9 +2508,6 @@ compile_gepa_components <- function(
     best_outputs_valset = validation_result$best_outputs_valset,
     discovery_eval_counts = validation_result$discovery_eval_counts,
     objective_pareto_front = objective_frontier,
-    # Compatibility alias for releases that exposed the multi-metric front as
-    # `pareto_frontier`; the validation-instance frontier is recorded above.
-    pareto_frontier = objective_frontier,
     resume_supported = FALSE,
     search_state = list(
       schema_version = 1L,

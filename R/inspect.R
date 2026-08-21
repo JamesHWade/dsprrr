@@ -16,7 +16,7 @@ NULL
 #' @description
 #' Returns detailed information about the most recent LLM call, including
 #' the prompt sent, response received, and metadata like tokens and cost.
-#' Works with both `dsp()` calls and module-based calls.
+#' Works with module-based calls.
 #'
 #' @return A `dsprrr_prompt_inspection` object containing:
 #'   - `prompt`: The full prompt sent to the LLM
@@ -26,7 +26,7 @@ NULL
 #'   - `tokens_out`: Output tokens generated
 #'   - `cost`: Cost in USD (if available)
 #'   - `timestamp`: When the call was made
-#'   - `source`: Where the call originated ("dsp()" or module name)
+#'   - `source`: The module class that originated the call
 #'   - `program_artifact_id`: Exact executable program identity, when available
 #'   - `trace_context`: Caller-supplied correlation context
 #'
@@ -36,7 +36,8 @@ NULL
 #' @examples
 #' \dontrun{
 #' # Make an LLM call
-#' dsp("question -> answer", question = "What is 2+2?")
+#' mod <- module(signature("question -> answer"))
+#' run(mod, question = "What is 2+2?", .llm = ellmer::chat_openai())
 #'
 #' # Inspect what happened
 #' get_last_prompt()
@@ -66,7 +67,7 @@ get_last_prompt <- function() {
 #' Inspect LLM Call History
 #'
 #' @description
-#' Returns a tibble of recent LLM calls across all modules and `dsp()` calls.
+#' Returns a tibble of recent LLM calls across all modules.
 #' Similar to DSPy's `dspy.inspect_history(n)`.
 #'
 #' @param n Number of recent calls to return. Default is 10.
@@ -80,7 +81,7 @@ get_last_prompt <- function() {
 #'
 #' @return A tibble with one row per LLM call containing:
 #'   - `timestamp`: When the call was made
-#'   - `source`: Where the call originated ("dsp()" or module class name)
+#'   - `source`: The module class that originated the call
 #'   - `model`: The model used
 #'   - `tokens_in`: Input tokens
 #'   - `tokens_out`: Output tokens
@@ -333,8 +334,7 @@ prompt_history_generation_delta <- function(before, after) {
   }
 }
 
-# Internal: Add an entry to the global prompt history
-# Called from dsp.R and module-predict.R
+# Internal: Add an entry to the global prompt history from module execution.
 add_to_global_history <- function(trace, source = "unknown") {
   tryCatch(
     {
@@ -391,7 +391,6 @@ add_to_global_history <- function(trace, source = "unknown") {
 
 # Internal: Extract a standardized history entry from a trace
 extract_history_entry <- function(trace, source) {
-  # Handle different trace formats (dsp() vs module)
   entry <- list(
     timestamp = trace$timestamp %||% Sys.time(),
     source = source
@@ -448,18 +447,18 @@ extract_history_entry <- function(trace, source) {
     )
   }
 
-  # Try legacy metadata fields
-  if (is.null(entry$tokens_in) && !is.null(trace$input_tokens)) {
-    entry$tokens_in <- as.integer(trace$input_tokens)
+  metadata <- trace$metadata %||% list()
+  if (is.null(entry$tokens_in) && !is.null(metadata$input_tokens)) {
+    entry$tokens_in <- as.integer(metadata$input_tokens)
   }
-  if (is.null(entry$tokens_out) && !is.null(trace$output_tokens)) {
-    entry$tokens_out <- as.integer(trace$output_tokens)
+  if (is.null(entry$tokens_out) && !is.null(metadata$output_tokens)) {
+    entry$tokens_out <- as.integer(metadata$output_tokens)
   }
-  if (is.null(entry$cost) && !is.null(trace$cost)) {
-    entry$cost <- trace$cost
+  if (is.null(entry$cost) && !is.null(metadata$cost)) {
+    entry$cost <- metadata$cost
   }
-  if (is.null(entry$duration_s) && !is.null(trace$duration_s)) {
-    entry$duration_s <- trace$duration_s
+  if (is.null(entry$duration_s) && !is.null(metadata$duration_s)) {
+    entry$duration_s <- metadata$duration_s
   }
 
   # Extract model name
@@ -467,7 +466,7 @@ extract_history_entry <- function(trace, source) {
   entry$program_artifact_id <- trace$program_artifact_id %||%
     current_trace_program_artifact_id()
   entry$trace_context <- trace$trace_context %||% current_trace_context()
-  entry$metadata <- trace_context_annotate_metadata(trace$metadata %||% list())
+  entry$metadata <- trace_context_annotate_metadata(metadata)
 
   entry
 }

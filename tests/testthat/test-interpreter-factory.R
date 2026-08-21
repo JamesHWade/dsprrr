@@ -42,7 +42,7 @@ factory_test_runner <- function(
         secret = "must-not-enter-metadata"
       )
     },
-    close = function() {
+    shutdown = function() {
       log$closed <- c(log$closed, id)
       if (!is.null(close_error)) {
         stop(close_error)
@@ -69,9 +69,7 @@ factory_test_factory <- function(log, result = NULL, close_error = NULL) {
 }
 
 factory_test_pot_chat <- function(error = NULL) {
-  chat <- NULL
-  chat <- list(
-    clone = function() chat,
+  new_test_chat(
     chat_structured = function(prompt, type, ...) {
       if (!is.null(error)) {
         stop(error)
@@ -80,29 +78,21 @@ factory_test_pot_chat <- function(error = NULL) {
     },
     chat = function(prompt, ...) "42"
   )
-  chat
 }
 
 factory_test_rlm_chat <- function() {
-  generator <- R6::R6Class(
-    "FactoryRlmChat",
-    public = list(
-      chat_structured = function(prompt, type, ...) {
-        list(
-          reasoning = "Return this row's question",
-          code = "SUBMIT(answer = .context$question)"
-        )
-      },
-      chat = function(prompt, ...) {
-        stop("recursive queries are disabled in this test", call. = FALSE)
-      },
-      get_model = function() "factory-rlm-test"
-    ),
-    cloneable = TRUE
+  new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(
+        reasoning = "Return this row's question",
+        code = "SUBMIT(answer = .context$question)"
+      )
+    },
+    chat = function(prompt, ...) {
+      stop("recursive queries are disabled in this test", call. = FALSE)
+    },
+    model = "factory-rlm-test"
   )
-  chat <- generator$new()
-  class(chat) <- c("Chat", class(chat))
-  chat
 }
 
 test_that("interpreter factories are validated without being invoked", {
@@ -190,7 +180,7 @@ test_that("module factory exposes Flex and invocation-owned runtimes", {
     suppressWarnings(
       module(sig, type = "flex", max_predictor_call = 7L)
     ),
-    "`...` must be empty"
+    class = "dsprrr_argument_name_error"
   )
 })
 
@@ -233,90 +223,7 @@ test_that("module factory rejects type-specific arguments for other types", {
   )
 })
 
-test_that("new factory arguments preserve existing positional APIs", {
-  log <- factory_test_log()
-  runner <- factory_test_runner(1L, log)
-
-  pot <- program_of_thought(
-    "question -> answer",
-    runner,
-    5L,
-    FALSE
-  )
-  codeact <- code_act(
-    "question -> answer",
-    list(),
-    runner,
-    6L
-  )
-  rlm <- rlm_module(
-    "question -> answer",
-    runner,
-    7L,
-    8L,
-    900L,
-    NULL,
-    TRUE,
-    list()
-  )
-
-  expect_identical(pot$runner, runner)
-  expect_identical(pot$max_iters, 5L)
-  expect_false(pot$extract_answer)
-  expect_identical(codeact$runner, runner)
-  expect_identical(codeact$max_iterations, 6L)
-  expect_identical(rlm$runner, runner)
-  expect_identical(rlm$max_iterations, 7L)
-  expect_identical(rlm$max_llm_calls, 8L)
-  expect_identical(rlm$max_output_chars, 900L)
-  expect_true(rlm$verbose)
-
-  expect_identical(
-    names(formals(program_of_thought))[seq_len(5L)],
-    c("signature", "runner", "max_iters", "extract_answer", "...")
-  )
-  expect_identical(
-    names(formals(code_act))[seq_len(5L)],
-    c("signature", "tools", "runner", "max_iterations", "...")
-  )
-  expect_identical(
-    names(formals(rlm_module))[seq_len(10L)],
-    c(
-      "signature",
-      "runner",
-      "max_iterations",
-      "max_llm_calls",
-      "max_output_chars",
-      "sub_lm",
-      "verbose",
-      "tools",
-      "max_iters",
-      "..."
-    )
-  )
-  expect_identical(
-    names(formals(module))[seq_len(15L)],
-    c(
-      "signature",
-      "type",
-      "tools",
-      "max_iterations",
-      "M",
-      "temperature",
-      "runner",
-      "max_iters",
-      "extract_answer",
-      "template",
-      "demos",
-      "config",
-      "chat",
-      "...",
-      "interpreter_factory"
-    )
-  )
-})
-
-test_that("factory-created runners are fresh and closed per invocation", {
+test_that("factory-created runners are fresh and shut down per invocation", {
   log <- factory_test_log()
   factory <- factory_test_factory(log)
   module <- program_of_thought(
@@ -351,7 +258,10 @@ test_that("factory runners use start and shutdown lifecycle methods", {
   events <- character()
   factory <- function() {
     list(
-      start = function() events <<- c(events, "start"),
+      start = function() {
+        events <<- c(events, "start")
+        invisible(NULL)
+      },
       execute = function(code, context = list()) {
         events <<- c(events, "execute")
         list(success = TRUE, result = 42)
@@ -359,7 +269,10 @@ test_that("factory runners use start and shutdown lifecycle methods", {
       policy = function() {
         list(backend = "lifecycle-test", trust = "test", sandboxed = TRUE)
       },
-      shutdown = function() events <<- c(events, "shutdown")
+      shutdown = function() {
+        events <<- c(events, "shutdown")
+        invisible(NULL)
+      }
     )
   }
   module <- program_of_thought(
@@ -381,7 +294,10 @@ test_that("terminal interpreter failures are not repaired or reused", {
   events <- character()
   factory <- function() {
     list(
-      start = function() events <<- c(events, "start"),
+      start = function() {
+        events <<- c(events, "start")
+        invisible(NULL)
+      },
       execute = function(code, context = list()) {
         events <<- c(events, "execute")
         list(
@@ -394,7 +310,10 @@ test_that("terminal interpreter failures are not repaired or reused", {
       policy = function() {
         list(backend = "terminal-test", trust = "test", sandboxed = TRUE)
       },
-      shutdown = function() events <<- c(events, "shutdown")
+      shutdown = function() {
+        events <<- c(events, "shutdown")
+        invisible(NULL)
+      }
     )
   }
   module <- program_of_thought(
@@ -433,24 +352,24 @@ test_that("CodeAct does not retry a terminal tool interpreter", {
       policy = function() {
         list(backend = "codeact-terminal", trust = "test", sandboxed = TRUE)
       },
-      shutdown = function() shutdowns <<- shutdowns + 1L
+      shutdown = function() {
+        shutdowns <<- shutdowns + 1L
+        invisible(NULL)
+      }
     )
   }
   registered <- list()
   chat_calls <- 0L
-  chat <- NULL
-  chat <- list(
-    clone = function() chat,
-    register_tool = function(tool) {
-      registered[[as.character(tool@name)]] <<- tool
-      invisible(NULL)
-    },
+  chat <- new_test_chat(
     chat = function(prompt, ...) {
       chat_calls <<- chat_calls + 1L
       registered$execute_r_code(code = "1 + 1")
-    },
-    get_turns = function() list()
+    }
   )
+  chat$register_tool <- function(tool) {
+    registered[[as.character(tool@name)]] <<- tool
+    invisible(NULL)
+  }
   module <- code_act(
     "question -> answer",
     interpreter_factory = factory,
@@ -513,7 +432,7 @@ test_that("runtime mutation cannot bypass the runner/factory XOR", {
   expect_length(log$created, 0L)
 })
 
-test_that("caller-owned runners are reused and never automatically closed", {
+test_that("caller-owned runners are reused and never automatically shut down", {
   log <- factory_test_log()
   runner <- factory_test_runner(7L, log)
   module <- program_of_thought(
@@ -543,20 +462,15 @@ test_that("leases close on module and runner protocol errors", {
       )
     },
     code_act = function(factory) {
-      chat <- NULL
-      chat <- list(
-        clone = function() chat,
-        register_tool = function(tool) stop("CodeAct failed")
-      )
+      chat <- new_test_chat()
+      chat$register_tool <- function(tool) stop("CodeAct failed")
       code_act(
         "question -> answer",
         interpreter_factory = factory
       )$forward(list(question = "test"), .llm = chat)
     },
     rlm = function(factory) {
-      chat <- NULL
-      chat <- list(
-        clone = function() chat,
+      chat <- new_test_chat(
         chat_structured = function(...) stop("RLM failed")
       )
       rlm_module(
@@ -596,7 +510,7 @@ test_that("leases reject an unusable close contract before execution", {
   factory <- function() {
     log$created <- c(log$created, 1L)
     runner <- factory_test_runner(1L, log)
-    runner$close <- function(force) {
+    runner$shutdown <- function(force) {
       if (isTRUE(force)) {
         log$closed <- c(log$closed, 1L)
       }
@@ -705,7 +619,10 @@ test_that("invalid factory runners are closed when possible", {
   invalid_factory <- function() {
     list(
       execute = function(code, context = list()) NULL,
-      close = function() closes <<- closes + 1L
+      shutdown = function() {
+        closes <<- closes + 1L
+        invisible(NULL)
+      }
     )
   }
 
@@ -730,7 +647,10 @@ test_that("factory runner cleanup preserves policy interrupts", {
     list(
       execute = function(code, context = list()) NULL,
       policy = function() stop(interrupt),
-      close = function() closes <<- closes + 1L
+      shutdown = function() {
+        closes <<- closes + 1L
+        invisible(NULL)
+      }
     )
   }
 
@@ -746,25 +666,24 @@ test_that("factory runner cleanup preserves policy interrupts", {
   expect_identical(closes, 1L)
 })
 
-test_that("a valid close fallback cleans up an invalid shutdown contract", {
-  closes <- 0L
+test_that("factory runners must implement a valid shutdown contract", {
   factory <- function() {
     list(
       execute = function(code, context = list()) {
         list(success = TRUE, result = 1)
       },
       policy = function() {
-        list(backend = "cleanup-fallback", trust = "test", sandboxed = TRUE)
+        list(backend = "invalid-shutdown", trust = "test", sandboxed = TRUE)
       },
       shutdown = function(required) invisible(required),
-      close = function() closes <<- closes + 1L
+      close = function() invisible(NULL)
     )
   }
 
-  lease <- dsprrr:::acquire_code_runner(NULL, factory, "test module")
-  expect_identical(lease$cleanup_method, "close")
-  expect_null(dsprrr:::close_code_runner_lease(lease))
-  expect_identical(closes, 1L)
+  expect_error(
+    dsprrr:::acquire_code_runner(NULL, factory, "test module"),
+    class = "dsprrr_interpreter_factory_error"
+  )
 })
 
 test_that("runner results are normalized and malformed results fail closed", {
@@ -784,7 +703,8 @@ test_that("runner results are normalized and malformed results fail closed", {
   repairable <- dsprrr:::validate_code_runner_result(list(
     success = FALSE,
     result = NULL,
-    error = "bad submitted code"
+    error = "bad submitted code",
+    error_type = "execution"
   ))
   expect_identical(repairable$error_type, "execution")
   expect_true(repairable$retryable)
@@ -863,21 +783,25 @@ test_that("runner policies reject ambiguous or malformed metadata", {
 test_that("CodeAct retained tools cannot outlive a factory lease", {
   log <- factory_test_log()
   registered <- list()
-  chat <- NULL
-  chat <- list(
-    clone = function() chat,
-    register_tool = function(tool) {
-      registered[[as.character(tool@name)]] <<- tool
-      invisible(NULL)
-    },
-    chat = function(prompt, ...) "done",
-    get_turns = function() {
-      list(list(
+  turns <- list()
+  chat <- new_test_chat(
+    chat = function(prompt, ...) {
+      turns <<- list(list(
         role = "assistant",
         contents = list("done")
       ))
+      "done"
+    },
+    get_turns = function() turns,
+    set_turns = function(value) {
+      turns <<- value
+      invisible(NULL)
     }
   )
+  chat$register_tool <- function(tool) {
+    registered[[as.character(tool@name)]] <<- tool
+    invisible(NULL)
+  }
   module <- code_act(
     "question -> answer",
     interpreter_factory = factory_test_factory(log)
@@ -1260,16 +1184,11 @@ test_that("factory-backed batches support isolated mirai concurrency", {
       shutdown = function() cat("shutdown\n", file = log_path, append = TRUE)
     )
   }
-  chat <- NULL
-  chat <- structure(
-    list(
-      clone = function() chat,
-      chat_structured = function(...) {
-        list(code = "ignored", explanation = "test")
-      },
-      chat = function(...) "unused"
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    chat_structured = function(...) {
+      list(code = "ignored", explanation = "test")
+    },
+    chat = function(...) "unused"
   )
   module <- program_of_thought(
     "question -> answer",
@@ -1602,27 +1521,21 @@ test_that("sequential factory RLM batches retain traces across failed rows", {
   clear_prompt_history()
   withr::defer(clear_prompt_history())
 
-  chat_class <- R6::R6Class(
-    "FactorySequentialTraceChat",
-    public = list(
-      chat_structured = function(prompt, type, ...) {
-        if (grepl("Preview: bad", prompt, fixed = TRUE)) {
-          stop("scripted action failure", call. = FALSE)
-        }
-        list(
-          reasoning = "Return this row's question",
-          code = "SUBMIT(answer = .context$question)"
-        )
-      },
-      chat = function(prompt, ...) {
-        stop("recursive queries are disabled in this test", call. = FALSE)
-      },
-      get_model = function() "factory-sequential-trace-test"
-    ),
-    cloneable = TRUE
+  chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      if (grepl("Preview: bad", prompt, fixed = TRUE)) {
+        stop("scripted action failure", call. = FALSE)
+      }
+      list(
+        reasoning = "Return this row's question",
+        code = "SUBMIT(answer = .context$question)"
+      )
+    },
+    chat = function(prompt, ...) {
+      stop("recursive queries are disabled in this test", call. = FALSE)
+    },
+    model = "factory-sequential-trace-test"
   )
-  chat <- chat_class$new()
-  class(chat) <- c("Chat", class(chat))
 
   module <- rlm_module(
     "question -> answer: string",
@@ -1679,11 +1592,11 @@ test_that("sequential factory RLM batches retain traces across failed rows", {
   )
 })
 
-test_that("built-in runners become terminal after close", {
+test_that("built-in runners become terminal after shutdown", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 1)
-  runner$close()
-  expect_invisible(runner$close())
+  runner$shutdown()
+  expect_invisible(runner$shutdown())
   expect_error(
     runner$execute("1 + 1"),
     class = "dsprrr_interpreter_closed_error"
@@ -1697,11 +1610,14 @@ test_that("built-in runners become terminal after close", {
     sandbox = "workspace-write",
     sandbox_verified = TRUE,
     oversized_output = "files",
-    close_connection = function() closes <<- closes + 1L,
+    close_connection = function() {
+      closes <<- closes + 1L
+      invisible(NULL)
+    },
     connection_owned = TRUE
   )
-  mcp$close()
-  mcp$close()
+  mcp$shutdown()
+  mcp$shutdown()
   expect_identical(closes, 1L)
   expect_error(
     mcp$execute("1 + 1"),

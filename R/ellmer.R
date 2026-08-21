@@ -87,7 +87,7 @@ as_ellmer_tool <- function(
     cli::cli_abort(c(
       "{.arg module} must be a DSPrrr Module object",
       "x" = "Got {.cls {class(module)[1]}}",
-      "i" = "Create a module with {.code module()} or {.code as_module()}"
+      "i" = "Create a module with {.fn module}"
     ))
   }
 
@@ -366,80 +366,4 @@ structure_ellmer_tool_error <- function(err, tool_name) {
     ),
     class = c("dsprrr_tool_observation", "list")
   )
-}
-
-#' Register a DSPrrr Module as a Tool in a Chat
-#'
-#' @description
-#' Convenience function that creates an ellmer tool from a module and registers
-#' it with a Chat object in one step.
-#'
-#' @param chat An ellmer Chat object.
-#' @param module A DSPrrr module.
-#' @param name Optional tool name.
-#' @param description Optional tool description.
-#' @param .llm Optional ellmer Chat object for the module to use when called.
-#'   If not provided, the module's stored chat or default chat is used.
-#' @param annotations Optional ellmer tool annotations list, passed through to
-#'   [ellmer::tool()].
-#' @param output Tool result serialization mode. See [as_ellmer_tool()].
-#' @param copy Whether tool calls should use the supplied module directly or a
-#'   fresh deep copy. See [as_ellmer_tool()].
-#' @param error Tool error handling mode. See [as_ellmer_tool()].
-#' @param trace_context A named, JSON-compatible list captured by the tool and
-#'   propagated to dsprrr execution metadata and traces.
-#'
-#' @return The Chat object (invisibly), with the tool registered.
-#'
-#' @export
-#' @examples
-#' \dontrun{
-#' chat <- ellmer::chat_openai()
-#' mod <- module(signature("query -> answer"), type = "predict")
-#'
-#' # Register in one step
-#' register_dsprrr_tool(chat, mod, name = "knowledge_lookup")
-#'
-#' # Use the tool
-#' chat$chat("Use the knowledge_lookup tool to answer: What is R?")
-#' }
-register_dsprrr_tool <- function(
-  chat,
-  module,
-  name = NULL,
-  description = NULL,
-  .llm = NULL,
-  annotations = list(),
-  output = c("auto", "json", "text", "raw"),
-  copy = c("none", "deep"),
-  error = c("reject", "abort", "return"),
-  trace_context = list()
-) {
-  if (!inherits(chat, "Chat")) {
-    cli::cli_abort(c(
-      "{.arg chat} must be an ellmer Chat object",
-      "x" = "Got {.cls {class(chat)[1]}}"
-    ))
-  }
-
-  output <- match.arg(output)
-  copy <- match.arg(copy)
-  error <- match.arg(error)
-
-  tool_def <- as_ellmer_tool(
-    module,
-    name = name,
-    description = description,
-    .llm = .llm,
-    annotations = annotations,
-    output = output,
-    copy = copy,
-    error = error,
-    trace_context = trace_context
-  )
-
-  # Register the ToolDef with the Chat
-  chat$register_tool(tool_def)
-
-  invisible(chat)
 }

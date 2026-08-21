@@ -36,7 +36,8 @@ if (should_eval) {
 }
 ```
 
-In [Tutorial 1](tutorial-hello-world.html), you made one-off LLM calls with `dsp()`. But what if you need to classify hundreds of texts? Creating a new call each time is tedious and slow.
+In [Tutorial 1](tutorial-hello-world.html), you built and ran a typed module. Now
+you will use that same contract across hundreds of texts.
 
 In this tutorial, you'll build a **reusable module**—a classifier you can use over and over.
 
@@ -59,28 +60,25 @@ library(dsprrr)
 library(ellmer)
 ```
 
-## Step 1: The Problem with `dsp()`
+## Step 1: Declare the Classifier
 
-In Tutorial 1, you classified sentiment like this:
+Declare the task once as a signature:
 
-```{r dsp-repeated, eval=FALSE}
-chat <- chat_openai()
-chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Great!")
-chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Awful")
-chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Meh")
+```{r declare-signature}
+sentiment_sig <- signature(
+  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+)
 ```
 
-This works, but you're repeating the signature every time. If you want to change the signature, you have to change it everywhere.
+The signature is the reusable typed contract for every call.
 
 ## Step 2: Create a Reusable Module
 
-The `as_module()` function wraps a signature into a reusable object:
+Wrap the signature in a reusable module:
 
 ```{r create-module}
 chat <- chat_openai()
-
-classifier <- chat |>
-  as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
+classifier <- module(sentiment_sig, type = "predict")
 
 classifier
 ```
@@ -89,46 +87,52 @@ Now `classifier` is an object you can use repeatedly.
 
 ## Step 3: Classify Single Texts
 
-Use the `$predict()` method to classify:
+Use `run()` to classify:
 
 ```{r predict-single}
 #| cassette: true
-classifier$predict(text = "I absolutely loved this movie!")
+run(classifier, text = "I absolutely loved this movie!", .llm = chat)
 ```
 
 Try a few more:
 
 ```{r predict-more}
 #| cassette: true
-classifier$predict(text = "This was a complete waste of time.")
+run(classifier, text = "This was a complete waste of time.", .llm = chat)
 
-classifier$predict(text = "It was okay, I guess.")
+run(classifier, text = "It was okay, I guess.", .llm = chat)
 
-classifier$predict(text = "The service was terrible but the food was amazing.")
+run(
+  classifier,
+  text = "The service was terrible but the food was amazing.",
+  .llm = chat
+)
 ```
 
 ## Step 4: Batch Processing
 
-Here's where modules shine. Process multiple texts at once by passing a vector:
+Here's where modules shine. Process multiple texts with `run_dataset()`:
 
 ```{r batch-vector}
 #| cassette: true
-reviews <- c(
-  "Best purchase I've ever made!",
-  "Broke after one day. Total garbage.",
-  "Does what it says. Nothing special.",
-  "Exceeded all my expectations!",
-  "Would not recommend to anyone."
+reviews <- tibble::tibble(
+  text = c(
+    "Best purchase I've ever made!",
+    "Broke after one day. Total garbage.",
+    "Does what it says. Nothing special.",
+    "Exceeded all my expectations!",
+    "Would not recommend to anyone."
+  )
 )
 
-classifier$predict(text = reviews)
+run_dataset(classifier, reviews, .llm = chat)
 ```
 
 All five classifications came back in a single call. Much more efficient than five separate calls.
 
-## Step 5: The Full Control Approach
+## Step 5: Add Instructions
 
-`as_module()` is convenient, but sometimes you need more control. The `signature()` + `module()` approach gives you that:
+Add task-specific guidance to the signature:
 
 ```{r full-control}
 # Define the signature separately
@@ -234,24 +238,16 @@ This shows you how many calls were made and the token costs.
 
 In this tutorial, you:
 
-1. Created reusable modules with `as_module()`
-2. Used `$predict()` for single and batch processing
-3. Built modules with full control using `signature()` + `module()`
+1. Declared a reusable signature and module
+2. Used `run()` for individual inputs
+3. Used `run_dataset()` for batch processing
 4. Processed data frames with `run_dataset()`
 5. Added input descriptions for clarity
 6. Checked your work with `trace_summary()`
 
-## When to Use Each Approach
-
-| Approach | Best For |
-|----------|----------|
-| `dsp()` | Quick one-off calls, exploration |
-| `as_module()` | Simple reusable modules, prototyping |
-| `signature()` + `module()` | Production code, optimization workflows |
-
 ## The Module Advantage
 
-Why bother with modules when `dsp()` works?
+The same module contract scales from exploration to optimization:
 
 1. **Reusability**: Define once, use everywhere
 2. **Efficiency**: Batch processing reduces API calls
