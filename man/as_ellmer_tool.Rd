@@ -73,8 +73,7 @@ the LLM can call dsprrr modules as part of its reasoning.
 \dontrun{
 # Create a sentiment analysis module
 sentiment_mod <- module(
-  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-  type = "predict"
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
 
 # Convert to ellmer tool

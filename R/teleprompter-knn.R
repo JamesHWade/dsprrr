@@ -60,7 +60,7 @@
 #' )
 #'
 #' # Compile a module
-#' compiled <- compile(tp, my_module, trainset, .llm = llm)
+#' compiled <- compile(my_module, tp, trainset, .llm = llm)
 #'
 #' # Now queries will get dynamically selected demos
 #' run(compiled, question = "What is 2+2?", .llm = llm)

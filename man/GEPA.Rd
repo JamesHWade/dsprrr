@@ -148,11 +148,11 @@ feedback_metric <- metric_with_feedback(
 )
 tp <- GEPA(metric = feedback_metric, seed = 42)
 
-qa <- module(signature("question -> answer"), type = "predict")
+qa <- module(signature("question -> answer"))
 trainset <- data.frame(
   question = c("What is 2 + 2?", "What is the capital of France?"),
   answer = c("4", "Paris")
 )
-optimized <- compile(tp, qa, trainset)
+optimized <- compile(qa, tp, trainset)
 }
 }

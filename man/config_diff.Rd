@@ -27,7 +27,7 @@ Useful for understanding the effect of optimization on module settings.
 }
 \examples{
 if (FALSE) {
-mod <- module(signature("text -> sentiment"), type = "predict")
+mod <- module(signature("text -> sentiment"))
 optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 config_diff(mod)
 }

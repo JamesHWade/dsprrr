@@ -282,7 +282,7 @@ dsprrr uses ellmer for all LLM calls. The integration is straightforward:
 |--------|-------------------|
 | `chat_openai()` | Pass to `run(..., .llm = )` |
 | `type_string()`, `type_enum()` | Used inside signatures |
-| `tool()` | Pass to `module(..., tools = )` |
+| `tool()` | Pass to `react(..., tools = )` |
 | `chat$chat_structured()` | `run(module(signature), ..., .llm = chat)` |
 
 ## Learning more

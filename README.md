@@ -123,7 +123,7 @@ Reusable, stateful wrappers around LLM calls:
 library(ellmer)
 
 # Create a module from a signature
-mod <- module(signature("text -> sentiment"), type = "predict")
+mod <- module(signature("text -> sentiment"))
 
 # Run it
 run(mod, text = "This is great!", .llm = chat_openai())
@@ -134,7 +134,7 @@ classifier <- module(
   chat = chat_openai()
 )
 
-classifier$predict(text = "Terrible experience")
+run(classifier, text = "Terrible experience")
 ```
 
 ### Pipelines
@@ -177,14 +177,12 @@ flow, deterministic R, and selected tools.
 
 ``` r
 # Compile with few-shot examples
-optimized <- compile(
-  LabeledFewShot(k = 3),
-  mod,
-  trainset = my_labeled_data
-)
+optimized <- mod |>
+  compile(LabeledFewShot(k = 3), my_labeled_data)
 
 # Grid search over parameters
-mod$optimize_grid(
+optimized <- optimize_grid(
+  mod,
   data = dev_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0.1, 0.5, 1.0))
@@ -215,7 +213,7 @@ sig <- signature(
 )
 
 # Create a module
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 # Run it
 result <- run(
@@ -226,29 +224,31 @@ result <- run(
 )
 ```
 
-## Module types
+## Program constructors
 
-| Type | Use case |
+Use `module()` for ordinary structured prediction. Choose a named
+constructor when the program has different execution semantics:
+
+| Constructor | Use case |
 |----|----|
-| `predict` | Basic text generation |
-| `react` | Tool use (wraps ellmer tools) |
-| `chain_of_thought` | Step-by-step reasoning |
-| `multichain` | Ensemble reasoning with multiple chains |
-| `program_of_thought` | Generate and execute R code |
-| `codeact` | Combine tools with R code execution |
-| `rlm` | Adaptively investigate large or awkward R objects (experimental) |
-| `flex` | Let GEPA optimize how a module uses predictors, R logic, and selected tools (experimental) |
+| `module()` | Standard structured prediction |
+| `react()` | Tool use with an explicit ReAct loop |
+| `chain_of_thought()` | Step-by-step reasoning |
+| `multi_chain_comparison()` | Ensemble reasoning with multiple chains |
+| `program_of_thought()` | Generate and execute R code |
+| `code_act()` | Combine tools with R code execution |
+| `rlm_module()` | Adaptively investigate large or awkward R objects |
+| `flex()` | Let GEPA optimize predictors, R logic, and selected tools |
 
 ``` r
 # ReAct agent with tools
-agent <- module(
+agent <- react(
   signature("question -> answer"),
-  type = "react",
   tools = list(my_search_tool)
 )
 
 # Chain of thought
-mod <- module(signature("question -> answer"), type = "chain_of_thought")
+mod <- chain_of_thought(signature("question -> answer"))
 ```
 
 ## Find the cohort that regressed
@@ -350,7 +350,7 @@ straightforward:
 |--------------------------------|--------------------------------------------|
 | `chat_openai()`                | Pass to `run(..., .llm = )`                |
 | `type_string()`, `type_enum()` | Used inside signatures                     |
-| `tool()`                       | Pass to `module(..., tools = )`            |
+| `tool()`                       | Pass to `react(..., tools = )`             |
 | `chat$chat_structured()`       | `run(module(signature), ..., .llm = chat)` |
 
 ## Learning more

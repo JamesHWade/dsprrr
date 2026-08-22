@@ -21,7 +21,7 @@ llm <- chat_openai(model = "gpt-4o-mini")
 # =============================================================================
 cat("\n=== Test 1: Basic Module ===\n")
 
-mod <- module(signature("question -> answer"), type = "predict")
+mod <- module(signature("question -> answer"))
 
 # Use structured format to get cost/token metadata
 result <- run(
@@ -92,8 +92,7 @@ print(rag_result)
 cat("\n=== Test 4: ellmer Tool Integration ===\n")
 
 sentiment_mod <- module(
-  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-  type = "predict"
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
 
 tool <- as_ellmer_tool(
@@ -122,7 +121,7 @@ print(response)
 # =============================================================================
 cat("\n=== Test 5: Streaming ===\n")
 
-stream_mod <- module(signature("topic -> summary"), type = "predict")
+stream_mod <- module(signature("topic -> summary"))
 
 cat("Streaming response:\n")
 stream_mod$stream(

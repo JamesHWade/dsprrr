@@ -42,7 +42,7 @@ module fields.
 }
 \examples{
 if (FALSE) {
-mod <- module(signature("text -> sentiment"), type = "predict")
+mod <- module(signature("text -> sentiment"))
 optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 
 # Get code as string

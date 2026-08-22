@@ -67,7 +67,7 @@
 #' qa_module <- module(signature("question -> answer"))
 #' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
 #' llm <- ellmer::chat_openai()
-#' compiled <- compile(tp, qa_module, trainset, .llm = llm)
+#' compiled <- compile(qa_module, tp, trainset, .llm = llm)
 #' }
 BootstrapFewShot <- S7::new_class(
   "BootstrapFewShot",
