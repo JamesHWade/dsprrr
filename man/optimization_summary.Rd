@@ -27,7 +27,7 @@ Combines information from trials, best parameters, and cost tracking.
 }
 \examples{
 if (FALSE) {
-mod$optimize_grid(data, metric, parameters)
+optimize_grid(mod, data, metric, parameters)
 summary <- optimization_summary(mod)
 print(summary)
 }

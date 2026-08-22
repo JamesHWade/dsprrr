@@ -54,9 +54,8 @@ artifact_codec_fixtures <- function() {
   )
   programs <- list(
     predict = artifact_leaf(),
-    react = module(
+    react = react(
       signature("question -> answer"),
-      type = "react",
       tools = list(tool)
     ),
     pipeline = pipeline(artifact_leaf(), artifact_leaf("answer", "summary")),
@@ -448,9 +447,8 @@ test_that("registry-backed identity survives module copies", {
     arguments = list(query = ellmer::type_string()),
     name = "search"
   )
-  program <- module(
+  program <- react(
     signature("question -> answer"),
-    type = "react",
     tools = list(tool)
   )
   expected_id <- program_artifact_id(
@@ -494,9 +492,8 @@ test_that("registry-backed identity survives reset copies", {
     arguments = list(query = ellmer::type_string()),
     name = "search"
   )
-  program <- module(
+  program <- react(
     signature("question -> answer"),
-    type = "react",
     tools = list(tool)
   )
   expected_id <- program_artifact_id(
@@ -1239,9 +1236,8 @@ test_that("tools require registry IDs and round-trip by identity", {
     arguments = list(query = ellmer::type_string()),
     name = "search"
   )
-  program <- module(
+  program <- react(
     signature("question -> answer"),
-    type = "react",
     tools = list(tool)
   )
 
@@ -1388,9 +1384,8 @@ test_that("all built-in module codecs reconstruct", {
   leaf <- artifact_leaf()
   modules <- list(
     predict = leaf,
-    react = module(
+    react = react(
       signature("question -> answer"),
-      type = "react",
       tools = list(tool)
     ),
     pipeline = pipeline(artifact_leaf(), artifact_leaf("answer", "summary")),

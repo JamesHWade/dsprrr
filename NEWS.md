@@ -4,6 +4,17 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Breaking changes
 
+* `module()` now constructs only standard prediction modules. Tool use and
+  other advanced execution semantics use explicit constructors such as
+  `react()`, `chain_of_thought()`, `program_of_thought()`, `code_act()`,
+  `rlm_module()`, and `flex()`; advanced arguments passed to `module()` fail
+  with a typed, actionable error instead of silently changing module type.
+  `compile(program, teleprompter, trainset)` is the only compilation entry point;
+  `compile_module()` and the shallow R6 `$predict()` and `$optimize()` aliases
+  have been removed. `stats::predict()` remains for data-frame interoperability,
+  `module_fn()` remains the custom-module extension seam, and the functional
+  `optimize_grid()` interface remains primary.
+
 * The public API now centers on `signature()`, `module()`, `run()`,
   `run_dataset()`, `evaluate()`, and `compile()`. Redundant DSP-style wrappers,
   typed-input convenience constructors, pipeline wrapper helpers, the separate
@@ -291,8 +302,8 @@ First development changelog. dsprrr is experimental; the API may change.
   as scalar calls. Direct `PredictModule$run()` batches now use the isolated,
   observable scheduler; unsupported custom and specialized modules reject
   vectorized execution before work instead of silently sharing mutable state
-  or bypassing specialized logic. `Module$predict()`, `run()`, and
-  `run_dataset()` retain named declared output records consistently across
+  or bypassing specialized logic. `run()` and `run_dataset()` retain named
+  declared output records consistently across
   scalar, batch, and Flex execution, and all batch routes isolate mutable Chat
   state per row. Native ellmer batches retain row failures
   for non-object outputs through an internal typed wrapper, including valid

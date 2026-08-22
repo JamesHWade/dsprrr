@@ -9,7 +9,6 @@ test_that("PredictModule can be created with valid signature", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}"
   )
 
@@ -32,7 +31,7 @@ test_that("predict.Module forwards .llm through the canonical dataset path", {
     .package = "dsprrr"
   )
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   result <- stats::predict(
     mod,
     data.frame(text = "hello"),
@@ -64,7 +63,7 @@ test_that("predict.Module preserves zero-row no-Chat execution", {
     get_default_chat = function(...) stop("Chat resolution must not run"),
     .package = "dsprrr"
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   result <- stats::predict(mod, data.frame(text = character()))
 
@@ -77,7 +76,6 @@ test_that("module() validates signature must be Signature object", {
   expect_error(
     module(
       signature = "not a signature",
-      type = "predict",
       template = "Template"
     ),
     "First argument must be a Signature object"
@@ -122,7 +120,6 @@ test_that("PredictModule accepts demos list", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}",
     demos = demos
   )
@@ -146,7 +143,6 @@ test_that("PredictModule accepts config list", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     config = config
   )
 
@@ -165,7 +161,6 @@ test_that("PredictModule print method works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}"
   )
 
@@ -186,8 +181,7 @@ test_that("PredictModule with empty template works", {
   )
 
   pred <- module(
-    signature = sig,
-    type = "predict"
+    signature = sig
   )
 
   expect_equal(pred$template, "")
@@ -204,7 +198,6 @@ test_that("PredictModule reset_copy works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}",
     demos = list(list(inputs = list(text = "test"), output = "result")),
     config = list(temperature = 0.7)
@@ -229,7 +222,6 @@ test_that("PredictModule deepcopy works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}",
     demos = list(list(inputs = list(text = "test"), output = "result")),
     config = list(temperature = 0.7)
@@ -255,8 +247,7 @@ test_that("PredictModule is_compiled works", {
   )
 
   pred <- module(
-    signature = sig,
-    type = "predict"
+    signature = sig
   )
 
   expect_false(pred$is_compiled())
@@ -274,7 +265,6 @@ test_that("module_demos_as_tibble converts simple demos to tibble", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     demos = list(
       list(inputs = list(text = "hello"), output = "positive"),
       list(inputs = list(text = "goodbye"), output = "negative")
@@ -298,7 +288,6 @@ test_that("module_demos_as_tibble handles nested outputs", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     demos = list(
       list(
         inputs = list(text = "hello"),
@@ -329,7 +318,7 @@ test_that("module_demos_as_tibble returns empty tibble for no demos", {
     instructions = "Classify"
   )
 
-  pred <- module(signature = sig, type = "predict")
+  pred <- module(signature = sig)
 
   result <- module_demos_as_tibble(pred)
 
@@ -346,7 +335,6 @@ test_that("demo_table active binding works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     demos = list(
       list(inputs = list(text = "test"), output = "result")
     )

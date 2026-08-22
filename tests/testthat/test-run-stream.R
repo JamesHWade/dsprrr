@@ -17,7 +17,7 @@ test_that("run_stream validates module and listeners", {
   expect_error(run_stream("not a module"), "must be a dsprrr Module")
 
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   expect_error(
     run_stream(mod, q = "x", listeners = list("bad")),
@@ -57,7 +57,7 @@ test_that("run_stream token-streams single string field outputs", {
   local_reset_cache()
 
   sig <- signature("question -> story")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   mock_llm <- new_test_chat(
     stream = function(prompt, ...) {
@@ -101,7 +101,7 @@ test_that("run_stream falls back to one-shot events for structured output", {
   )
 
   sig <- signature("question -> answer, confidence")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   skip_if_not(
     tryCatch(
@@ -147,7 +147,7 @@ test_that("field_complete fires once per field with multiple listeners", {
   )
 
   sig <- signature("question -> answer, confidence")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   first <- character()
   second <- character()
@@ -189,7 +189,7 @@ test_that("run_stream fallback execution bypasses the response cache", {
   )
 
   sig <- signature("question -> answer, confidence")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   r1 <- run_stream(mod, question = "same question", .llm = mock_llm)
   r2 <- run_stream(mod, question = "same question", .llm = mock_llm)

@@ -90,7 +90,7 @@ test_that("COPRO requires metric for compilation", {
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("What is 2+2?", "What is 3+3?"),
@@ -99,7 +99,7 @@ test_that("COPRO requires metric for compilation", {
 
   tp <- COPRO()
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "requires a metric"
   )
 })
@@ -110,13 +110,13 @@ test_that("COPRO compile returns unmodified program for empty trainset", {
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   empty_trainset <- data.frame(question = character(), answer = character())
   tp <- COPRO(metric = function(pred, exp) 1.0)
 
   expect_warning(
-    result <- compile(tp, mod, empty_trainset),
+    result <- compile(mod, tp, empty_trainset),
     "Empty trainset"
   )
   expect_identical(result, mod)
@@ -238,7 +238,7 @@ test_that("COPRO compile optimizes instructions", {
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("What is 2+2?", "What is 3+3?"),
@@ -260,7 +260,7 @@ test_that("COPRO compile optimizes instructions", {
     seed = 1L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_true(result$config$compiled)
   expect_equal(result$config$teleprompter, "COPRO")
@@ -284,7 +284,7 @@ test_that("COPRO tracks instruction history when track_stats is TRUE", {
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = "What is 2+2?",
@@ -301,7 +301,7 @@ test_that("COPRO tracks instruction history when track_stats is TRUE", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   # Should have history recorded
   expect_true(length(result$config$optimizer$history) > 0)
@@ -328,7 +328,7 @@ test_that("COPRO does not track history when track_stats is FALSE", {
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = "What is 2+2?",
@@ -345,7 +345,7 @@ test_that("COPRO does not track history when track_stats is FALSE", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_null(result$config$optimizer$history)
 })
@@ -533,7 +533,7 @@ test_that("COPRO preserves the best candidate when evaluation exhausts budget", 
   )
   result <- dsprrr:::compile_copro(
     teleprompter,
-    module(signature("question -> answer"), type = "predict"),
+    module(signature("question -> answer")),
     data.frame(question = "q", answer = "a")
   )
   optimizer <- result$config$optimizer
@@ -596,8 +596,7 @@ test_that("COPRO retains partial evidence without selecting or logging it", {
       track_stats = TRUE
     ),
     module(
-      signature("question -> answer", instructions = "Baseline"),
-      type = "predict"
+      signature("question -> answer", instructions = "Baseline")
     ),
     data.frame(
       question = c("q1", "q2"),

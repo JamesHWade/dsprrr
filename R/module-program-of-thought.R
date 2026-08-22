@@ -76,7 +76,9 @@ NULL
 #'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
 #'   terminal `shutdown()`.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
-#' @param ... Additional arguments passed to the module
+#' @param config Optional prediction configuration.
+#' @param chat Optional ellmer Chat object.
+#' @param ... Must be empty.
 #'
 #' @return A ProgramOfThoughtModule object
 #'
@@ -93,9 +95,12 @@ program_of_thought <- function(
   interpreter_factory = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
+  config = list(),
+  chat = NULL,
   ...
 ) {
   reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments("program_of_thought", ...)
 
   binding <- normalize_code_runner_binding(
     runner = runner,
@@ -116,14 +121,16 @@ program_of_thought <- function(
   }
   max_iters <- normalize_pot_max_iters(max_iters)
 
-  ProgramOfThoughtModule$new(
+  mod <- ProgramOfThoughtModule$new(
     signature = signature,
     runner = binding$runner,
     interpreter_factory = binding$interpreter_factory,
     max_iters = max_iters,
     extract_answer = extract_answer,
-    ...
+    config = config,
+    chat = chat
   )
+  stamp_module_kind(mod, "program_of_thought")
 }
 
 normalize_pot_max_iters <- function(value) {

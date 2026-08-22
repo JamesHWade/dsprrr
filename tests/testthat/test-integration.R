@@ -15,7 +15,6 @@ test_that("basic LLM integration works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Please repeat: {text}"
   )
 
@@ -48,7 +47,6 @@ test_that("structured output works with real LLM", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}"
   )
 
@@ -77,7 +75,6 @@ test_that("batch processing works with real LLM", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}\nSentiment:"
   )
 
@@ -112,7 +109,6 @@ test_that("optimize_grid integrates with real LLM", {
 
   mod <- module(
     signature = sig,
-    type = "predict",
     template = "Sentence: {text}\nLabel:"
   )
 
@@ -328,7 +324,7 @@ test_that("module_parameter_set works with finetune grid functions", {
     instructions = ""
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
   mod$config$temperature <- 0.5
   mod$config$top_p <- 0.9
 

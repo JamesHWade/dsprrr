@@ -128,7 +128,7 @@ test_that("zero-length Predict inputs return without runtime side effects", {
   clear_cache()
   clear_prompt_history()
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   chat <- batch_contract_chat()
   stats_before <- cache_stats()
 
@@ -153,7 +153,7 @@ test_that("zero-length Predict inputs return without runtime side effects", {
 
 test_that("zero-row datasets preserve simple and structured shapes", {
   clear_prompt_history()
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   chat <- batch_contract_chat()
   data <- data.frame(text = character(), group = integer())
 
@@ -188,7 +188,7 @@ test_that("positive-row zero-input datasets execute every isolated row", {
   )
   data <- data.frame(row.names = seq_len(3L))
 
-  simple_mod <- module(sig, type = "predict")
+  simple_mod <- module(sig)
   simple_chat <- batch_contract_chat()
   simple <- run_dataset(
     simple_mod,
@@ -210,7 +210,7 @@ test_that("positive-row zero-input datasets execute every isolated row", {
   expect_length(simple_chat$get_turns(), 0L)
 
   clear_prompt_history()
-  structured_mod <- module(sig, type = "predict")
+  structured_mod <- module(sig)
   structured_chat <- batch_contract_chat()
   control <- concurrency_control(backend = "sequential", max_active = 4L)
   structured <- run_dataset(
@@ -298,7 +298,7 @@ test_that("positive-row zero-input datasets execute every isolated row", {
 })
 
 test_that("one-row datasets keep a simple result list-column", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   result <- run_dataset(
     mod,
     data.frame(text = "one"),
@@ -318,7 +318,7 @@ test_that("no-input signatures preserve zero-row dataset shape", {
     output_type = ellmer::type_object(answer = ellmer::type_string()),
     instructions = "Produce an answer without inputs"
   )
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
   chat <- batch_contract_chat()
 
   result <- run_dataset(
@@ -336,7 +336,7 @@ test_that("no-input signatures preserve zero-row dataset shape", {
 
 test_that("mixed zero and incompatible lengths fail before execution", {
   sig <- signature("left, right -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
   chat <- batch_contract_chat()
 
   expect_error(
@@ -370,8 +370,8 @@ test_that("scalar runtime objects recycle by identity in both public paths", {
     .package = "dsprrr"
   )
 
-  generic <- module(sig, type = "predict")
-  direct <- module(sig, type = "predict")
+  generic <- module(sig)
+  direct <- module(sig)
   suppressWarnings(run(
     generic,
     text = c("one", "two"),
@@ -400,8 +400,8 @@ test_that("scalar runtime objects recycle by identity in both public paths", {
 
 test_that("scalar and sequential batch traces share one metadata contract", {
   clear_prompt_history()
-  scalar_mod <- module(signature("text -> answer"), type = "predict")
-  batch_mod <- module(signature("text -> answer"), type = "predict")
+  scalar_mod <- module(signature("text -> answer"))
+  batch_mod <- module(signature("text -> answer"))
 
   scalar <- run(
     scalar_mod,
@@ -455,7 +455,7 @@ test_that("direct Predict batches use isolated canonical row execution", {
     ellmer::AssistantTurn(contents = list(ellmer::ContentText("prior answer")))
   )
   caller <- batch_contract_chat(initial_turns = baseline)
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   result <- mod$run(
     text = c("one", "two"),
@@ -523,8 +523,8 @@ test_that("direct custom Module batches reject before forward work", {
 })
 
 test_that("scalar and batch outputs retain named declared records", {
-  scalar_mod <- module(signature("text -> answer"), type = "predict")
-  batch_mod <- module(signature("text -> answer"), type = "predict")
+  scalar_mod <- module(signature("text -> answer"))
+  batch_mod <- module(signature("text -> answer"))
 
   scalar <- run(
     scalar_mod,
@@ -546,24 +546,22 @@ test_that("scalar and batch outputs retain named declared records", {
   expect_identical(scalar, batch[[1]])
 })
 
-test_that("Module predict and run share the named output record contract", {
+test_that("run preserves named output records for scalar and batch inputs", {
   responses <- list(
     ROW_ONE = list(sentiment = "first"),
     ROW_TWO = list(sentiment = "second")
   )
   make_module <- function() {
-    module(signature("text -> sentiment"), type = "predict")
+    module(signature("text -> sentiment"))
   }
 
-  scalar <- make_module()$predict(
+  scalar <- run(
+    make_module(),
     text = "ROW_ONE",
-    .llm = batch_shape_chat(responses)
+    .llm = batch_shape_chat(responses),
+    .cache = FALSE
   )
-  predicted <- make_module()$predict(
-    text = names(responses),
-    .llm = batch_shape_chat(responses)
-  )
-  run_result <- run(
+  batch <- run(
     make_module(),
     text = names(responses),
     .llm = batch_shape_chat(responses),
@@ -572,15 +570,13 @@ test_that("Module predict and run share the named output record contract", {
   )
 
   expect_identical(scalar, responses[[1L]])
-  expect_identical(predicted, unname(responses))
-  expect_identical(run_result, unname(responses))
-  expect_named(predicted[[1L]], "sentiment")
-  expect_named(run_result[[1L]], "sentiment")
+  expect_identical(batch, unname(responses))
+  expect_named(batch[[1L]], "sentiment")
 })
 
 test_that("sequential failures still commit one ordered trace per row", {
   clear_prompt_history()
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   expect_warning(
     result <- run(
@@ -619,7 +615,7 @@ test_that("sequential failures still commit one ordered trace per row", {
 })
 
 test_that("simple failures warn once and return no internal attributes", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   warnings <- character()
   result <- withCallingHandlers(
     run(
@@ -668,7 +664,7 @@ test_that("usage comes only from a verified current-call assistant delta", {
     last_turn = function(...) baseline[[2]],
     chat_structured = function(...) list(answer = "fresh")
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   success <- dsprrr:::process_batch_item(
     list(text = "new"),
     mod,
@@ -698,7 +694,7 @@ test_that("usage comes only from a verified current-call assistant delta", {
 })
 
 test_that("scalar provider errors are traced then re-signalled unchanged", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   error <- rlang::catch_cnd(run(
     mod,
     text = "FAIL",
@@ -766,7 +762,7 @@ test_that("a genuine cache hit is recorded on the matching canonical trace", {
   ))
   first_chat <- base$clone(deep = TRUE)
   second_chat <- base$clone(deep = TRUE)
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   first <- run(
     mod,
@@ -829,7 +825,7 @@ test_that("native ellmer parallel traces successes and character errors", {
     },
     .package = "ellmer"
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   result <- run(
     mod,
@@ -918,7 +914,7 @@ test_that("native ellmer rows reconstruct nested and array output types", {
     },
     .package = "ellmer"
   )
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   result <- run(
     mod,
@@ -989,8 +985,7 @@ test_that("native ellmer ignores ambiguous child probes for parent presence", {
     signature(
       inputs = list(input("text", ellmer::type_string())),
       output_type = output_type
-    ),
-    type = "predict"
+    )
   )
 
   result <- run(
@@ -1031,8 +1026,7 @@ test_that("native ellmer preserves non-object row failures through a wrapper", {
     signature(
       inputs = list(input("text", ellmer::type_string())),
       output_type = output_type
-    ),
-    type = "predict"
+    )
   )
 
   result <- run(
@@ -1072,8 +1066,7 @@ test_that("simple batches preserve valid optional NULL rows and traces", {
       signature(
         inputs = list(input("text", ellmer::type_string())),
         output_type = output_type
-      ),
-      type = "predict"
+      )
     )
   }
 
@@ -1150,8 +1143,7 @@ test_that("native ellmer distinguishes empty arrays from failed array rows", {
     signature(
       inputs = list(input("text", ellmer::type_string())),
       output_type = output_type
-    ),
-    type = "predict"
+    )
   )
 
   result <- run(
@@ -1215,8 +1207,7 @@ test_that("ambiguous required-array presence uses isolated scalar rows", {
     signature(
       inputs = list(input("text", ellmer::type_string())),
       output_type = output_type
-    ),
-    type = "predict"
+    )
   )
 
   result <- run(
@@ -1289,8 +1280,7 @@ test_that("ambiguous object without required evidence preserves scalar shape", {
       signature(
         inputs = list(input("text", ellmer::type_string())),
         output_type = output_type
-      ),
-      type = "predict"
+      )
     ),
     text = names(raw_rows),
     .llm = batch_shape_chat(scalar_rows),
@@ -1340,8 +1330,7 @@ test_that("reserved top-level error fields use isolated scalar rows", {
       signature(
         inputs = list(input("text", ellmer::type_string())),
         output_type = output_type
-      ),
-      type = "predict"
+      )
     ),
     text = names(raw_rows),
     .llm = batch_shape_chat(scalar_rows),
@@ -1388,8 +1377,7 @@ test_that("empty object schemas preserve row count through scalar fallback", {
       signature(
         inputs = list(input("text", ellmer::type_string())),
         output_type = output_type
-      ),
-      type = "predict"
+      )
     ),
     text = names(scalar_rows),
     .llm = batch_shape_chat(scalar_rows),
@@ -1429,8 +1417,7 @@ test_that("explicit ellmer rejects ambiguous schemas before provider work", {
         signature(
           inputs = list(input("text", ellmer::type_string())),
           output_type = output_type
-        ),
-        type = "predict"
+        )
       ),
       text = c("ROW_ONE", "ROW_TWO"),
       .llm = chat,
@@ -1471,7 +1458,7 @@ test_that("native ellmer row chats preserve baseline while traces keep deltas", 
     },
     .package = "ellmer"
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   result <- run(
     mod,
     text = c("a", "b"),
@@ -1515,7 +1502,7 @@ test_that("mirai workers return records committed by the parent in row order", {
     withr::defer(mirai::daemons(0L))
   }
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- new_test_chat(
     chat_structured = function(prompt, ...) {
       list(answer = paste0("worker:", as.character(prompt)))
@@ -1562,7 +1549,7 @@ test_that("mirai row failures retain ordered parent traces and error metadata", 
     withr::defer(mirai::daemons(0L))
   }
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- new_test_chat(
     chat_structured = function(prompt, ...) {
       if (grepl("FAIL", as.character(prompt), fixed = TRUE)) {
@@ -1620,7 +1607,7 @@ test_that("mirai row failures retain ordered parent traces and error metadata", 
 })
 
 test_that("malformed mirai records become typed traced failure rows", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   request <- dsprrr:::build_module_request(mod, list(text = "row"))
   chat <- batch_contract_chat()
   started_at <- Sys.time() - 1
@@ -1728,8 +1715,7 @@ test_that("mirai accepts valid optional NULL responses at its boundary", {
     signature(
       inputs = list(input("text", ellmer::type_string())),
       output_type = ellmer::type_string(required = FALSE)
-    ),
-    type = "predict"
+    )
   )
   request <- dsprrr:::build_module_request(mod, list(text = "row"))
   now <- Sys.time()
@@ -1771,8 +1757,7 @@ test_that("mirai accepts valid optional NULL responses at its boundary", {
     signature(
       inputs = list(input("text", ellmer::type_string())),
       output_type = json_type
-    ),
-    type = "predict"
+    )
   )
   json_result <- dsprrr:::mirai_worker_result(
     record = record,
@@ -1821,7 +1806,7 @@ test_that("mirai timeouts stop tasks and commit typed elapsed failures", {
     .package = "cli"
   )
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- new_test_chat(
     chat_structured = function(...) {
       Sys.sleep(0.25)
@@ -1912,7 +1897,7 @@ test_that("ReAct scalar run preserves its specialized forward path", {
     }
   )
   chat$register_tool <- function(tool) invisible(NULL)
-  mod <- module(signature("question -> answer"), type = "react")
+  mod <- react(signature("question -> answer"))
 
   scalar <- run(
     mod,

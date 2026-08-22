@@ -297,7 +297,6 @@ fit_llm_predict <- function(
   # Create module
   mod <- module(
     signature = signature,
-    type = "predict",
     config = config
   )
 

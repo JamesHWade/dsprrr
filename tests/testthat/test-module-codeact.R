@@ -492,29 +492,27 @@ test_that("CodeActModule returns correct metadata", {
 })
 
 # ============================================================================
-# Integration with module() factory
+# Explicit constructor integration
 # ============================================================================
 
-test_that("module() factory works with type='codeact'", {
+test_that("code_act() constructs CodeAct", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5)
-  agent <- module(
+  agent <- code_act(
     signature("question -> answer"),
-    type = "codeact",
     runner = runner
   )
 
   expect_s3_class(agent, "CodeActModule")
 })
 
-test_that("module() factory requires runner for codeact", {
+test_that("code_act() requires a runner", {
   expect_error(
-    module(
-      signature("question -> answer"),
-      type = "codeact"
+    code_act(
+      signature("question -> answer")
     ),
-    "codeact requires a runner"
+    "CodeAct requires an explicit runner"
   )
 })
 

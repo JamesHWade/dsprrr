@@ -246,14 +246,14 @@ Keep it concise - this is reference documentation for AI systems."
 
 ### Create Modules
 
-Each module wraps a signature. We use `type = "chain_of_thought"` for the analysis stages—this asks the LLM to show its work, which improves accuracy for complex analysis tasks. The final `llmstxt` stage just needs to synthesize; no reasoning required.
+Each module wraps a signature. We use `chain_of_thought()` for the analysis stages—this asks the LLM to show its work, which improves accuracy for complex analysis tasks. The final `llmstxt` stage just needs to synthesize; no reasoning required.
 
 ```{r simple-modules}
 create_modules <- function(llm) {
   list(
-    purpose = module(analyze_purpose_sig, type = "chain_of_thought"),
-    structure = module(analyze_structure_sig, type = "chain_of_thought"),
-    examples = module(generate_examples_sig, type = "chain_of_thought"),
+    purpose = chain_of_thought(analyze_purpose_sig),
+    structure = chain_of_thought(analyze_structure_sig),
+    examples = chain_of_thought(generate_examples_sig),
     llmstxt = module(generate_llmstxt_sig),
     llm = llm
   )
@@ -696,7 +696,7 @@ who want systematic prompt optimization rather than manual tuning.
 library(dsprrr)
 library(ellmer)
 
-mod <- signature("question -> answer") |> module(type = "predict")
+mod <- signature("question -> answer") |> module()
 run(mod, question = "What is R?", .llm = chat_openai())
 ```
 
@@ -705,7 +705,7 @@ run(mod, question = "What is R?", .llm = chat_openai())
 ```r
 sig <- signature("context, question -> answer",
                  instructions = "Answer based only on context.")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 trainset <- tibble::tibble(
   context = c("R is for statistics.", "Python is general-purpose."),
@@ -713,7 +713,7 @@ trainset <- tibble::tibble(
   answer = c("Statistics", "General-purpose programming")
 )
 
-optimized <- compile(LabeledFewShot(k = 2), mod, trainset = trainset)
+optimized <- compile(mod, LabeledFewShot(k = 2), trainset = trainset)
 evaluate(optimized, testset, metric = metric_exact_match())
 ```
 

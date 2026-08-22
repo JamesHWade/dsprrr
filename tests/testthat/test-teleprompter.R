@@ -62,7 +62,7 @@ test_that("LabeledFewShot compile works", {
     output_type = ellmer::type_string(),
     instructions = "Classify text"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Create training data
   trainset <- data.frame(
@@ -73,7 +73,7 @@ test_that("LabeledFewShot compile works", {
 
   # Compile with LabeledFewShot
   tp <- LabeledFewShot(k = 2L, seed = 42L)
-  optimized <- compile(tp, mod, trainset)
+  optimized <- compile(mod, tp, trainset)
 
   expect_true(inherits(optimized, "Module"))
   expect_length(optimized$demos, 2)
@@ -94,14 +94,14 @@ test_that("LabeledFewShot compile works", {
   # Empty trainset
   empty_trainset <- data.frame(text = character(), label = character())
   optimized_empty <- expect_warning(
-    compile(tp, mod, empty_trainset),
+    compile(mod, tp, empty_trainset),
     "Empty trainset provided"
   )
   expect_length(optimized_empty$demos, 0)
 
   # No sampling
   tp_no_sample <- LabeledFewShot(k = 2L, sample = FALSE)
-  optimized_no_sample <- compile(tp_no_sample, mod, trainset)
+  optimized_no_sample <- compile(mod, tp_no_sample, trainset)
   expect_equal(optimized_no_sample$demos[[1]]$inputs$text, "hello")
   expect_equal(optimized_no_sample$demos[[2]]$inputs$text, "world")
 })
@@ -119,7 +119,7 @@ test_that("LabeledFewShot rejects root labels for nested predictors", {
   trainset <- data.frame(question = "What is 2 + 2?", answer = "4")
 
   expect_error(
-    compile(LabeledFewShot(k = 1L), program, trainset),
+    compile(program, LabeledFewShot(k = 1L), trainset),
     class = "dsprrr_labeled_graph_unsupported"
   )
   expect_length(program$generate_action$demos, 0L)
@@ -272,7 +272,7 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
     verbose = FALSE
   )
 
-  optimized <- compile(tp, mod, trainset, .llm = mock_llm)
+  optimized <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_true(inherits(optimized, "Module"))
   expect_true(inherits(optimized, "PredictModule"))
@@ -293,8 +293,7 @@ test_that("Module state management methods work", {
     signature = sig,
     template = "{text}",
     demos = list(list(inputs = list(text = "demo"), output = "result")),
-    config = list(compiled = TRUE, teleprompter = "test"),
-    type = "predict"
+    config = list(compiled = TRUE, teleprompter = "test")
   )
   # Manually set compiled state for testing
   module$state$compiled <- TRUE
@@ -330,26 +329,26 @@ test_that("compile generic dispatches correctly", {
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
   trainset <- data.frame(x = "test", y = "result")
 
   # Base Teleprompter should error
   tp_base <- Teleprompter()
   expect_error(
-    compile(tp_base, mod, trainset),
+    compile(mod, tp_base, trainset),
     "compile\\(\\) method not implemented"
   )
 
   # LabeledFewShot should work
   tp_labeled <- LabeledFewShot(k = 1L)
-  result <- compile(tp_labeled, mod, trainset)
+  result <- compile(mod, tp_labeled, trainset)
   expect_true(inherits(result, "Module"))
 
   # GridSearchTeleprompter requires metric
   variants <- data.frame(id = "v1", instructions = "test")
   tp_grid <- GridSearchTeleprompter(variants = variants)
   expect_error(
-    compile(tp_grid, mod, trainset),
+    compile(mod, tp_grid, trainset),
     "requires a metric"
   )
 })
@@ -456,7 +455,7 @@ test_that("LabeledFewShot uses metric field for output column", {
     output_type = ellmer::type_string(),
     instructions = "Classify text"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Trainset with non-standard column name "classification"
   trainset <- data.frame(
@@ -475,7 +474,7 @@ test_that("LabeledFewShot uses metric field for output column", {
   )
 
   # Should not warn about multiple output columns
-  optimized <- compile(tp, mod, trainset)
+  optimized <- compile(mod, tp, trainset)
 
   expect_true(inherits(optimized, "Module"))
   expect_length(optimized$demos, 2)

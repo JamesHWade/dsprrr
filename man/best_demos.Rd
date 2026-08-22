@@ -24,7 +24,7 @@ LabeledFewShot or BootstrapFewShot teleprompters).
 \examples{
 if (FALSE) {
 tp <- LabeledFewShot(k = 4L)
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 demos <- best_demos(compiled)
 }
 }

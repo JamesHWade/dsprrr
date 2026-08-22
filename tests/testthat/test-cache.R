@@ -722,7 +722,7 @@ test_that("Predict metadata distinguishes cache hits from provider calls", {
   calls$n <- 0L
   local_cache_openai_backend(calls)
   base <- cache_real_chat()
-  predictor <- module(signature("question -> answer"), type = "predict")
+  predictor <- module(signature("question -> answer"))
 
   miss <- predictor$forward(
     list(question = "same prompt"),
@@ -1129,7 +1129,7 @@ test_that("live private path replacement never returns or rewrites poison", {
     response = function(n) list(answer = paste0("provider-", n))
   )
   base <- cache_real_chat()
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   first <- run(
     mod,
@@ -2388,7 +2388,7 @@ test_that("run() respects .cache = FALSE parameter (single input)", {
   chats <- lapply(seq_len(4), function(i) base$clone(deep = TRUE))
 
   sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # First call - cache miss
   result1 <- run(mod, text = "Great!", .llm = chats[[1]])
@@ -2421,7 +2421,7 @@ test_that("cache hit replays semantic turns into the Chat object", {
   hit_chat <- base$clone(deep = TRUE)
 
   sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   invisible(run(mod, text = "Great!", .llm = miss_chat))
   expect_length(miss_chat$get_turns(), 2)
@@ -2459,7 +2459,7 @@ test_that("different pre-existing history misses cache and is preserved", {
   base <- cache_real_chat()
 
   sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   llm_warm <- base$clone(deep = TRUE)
   invisible(run(mod, text = "Great!", .llm = llm_warm))
@@ -2516,7 +2516,7 @@ test_that("class-tagged non-R6 Chats are rejected before provider work", {
   )
 
   sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   condition <- rlang::catch_cnd(
     run(mod, text = "Great!", .llm = mock_env$mock_llm)
@@ -2540,7 +2540,7 @@ test_that("replayed turn tokens/cost/duration are NA (not 0)", {
   hit_chat <- base$clone(deep = TRUE)
 
   sig <- signature("question -> answer: string")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # Cache miss — real call
   invisible(run(mod, question = "What?", .llm = miss_chat))
@@ -2565,7 +2565,7 @@ test_that("run() respects .cache = FALSE in batch processing", {
   chat <- cache_real_chat()
 
   sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # First batch call - cache miss for both
   results1 <- run(
@@ -2598,7 +2598,7 @@ test_that("run() respects .cache = FALSE in batch processing", {
 
 test_that("run() validates invalid .cache parameter values", {
   sig <- signature("text -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # Invalid: string instead of logical
   expect_error(
@@ -2741,7 +2741,7 @@ test_that("rollout_id threads from forward() into the cache key (dsprrr-pcd)", {
     output_type = ellmer::type_string(),
     instructions = ""
   )
-  mod <- module(signature = sig, type = "predict", template = "{q}")
+  mod <- module(signature = sig, template = "{q}")
 
   # Same prompt, different rollout_id -> both miss the cache -> 2 real calls.
   mod$forward(list(q = "x"), .llm = chats[[1]], rollout_id = 1)

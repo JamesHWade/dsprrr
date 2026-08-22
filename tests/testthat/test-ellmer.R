@@ -4,8 +4,7 @@ test_that("as_ellmer_tool creates tool with correct function signature", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(
@@ -32,8 +31,7 @@ test_that("as_ellmer_tool creates tool with multiple inputs", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("context, question -> answer"),
-    type = "predict"
+    signature("context, question -> answer")
   )
 
   tool <- as_ellmer_tool(
@@ -58,8 +56,7 @@ test_that("as_ellmer_tool function can be invoked with mock LLM", {
   )
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(
@@ -81,8 +78,7 @@ test_that("as_ellmer_tool passes annotations through to ellmer", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(
@@ -190,7 +186,7 @@ test_that("as_ellmer_tool preserves structured argument schemas", {
     output_type = ellmer::type_string()
   )
 
-  tool <- as_ellmer_tool(module(sig, type = "predict"), name = "structured")
+  tool <- as_ellmer_tool(module(sig), name = "structured")
 
   payload_type <- tool@arguments@properties$payload
 
@@ -206,8 +202,7 @@ test_that("as_ellmer_tool generates description from signature if not provided",
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment", instructions = "Analyze the sentiment"),
-    type = "predict"
+    signature("text -> sentiment", instructions = "Analyze the sentiment")
   )
 
   tool <- as_ellmer_tool(mod, name = "test_tool")
@@ -220,8 +215,7 @@ test_that("as_ellmer_tool generates fallback description without instructions", 
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(mod, name = "test_tool")
@@ -234,8 +228,7 @@ test_that("as_ellmer_tool generates name from signature if not provided", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(mod, description = "Test tool")
@@ -249,8 +242,7 @@ test_that("as_ellmer_tool function environment has access to run", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> answer"),
-    type = "predict"
+    signature("text -> answer")
   )
 
   tool <- as_ellmer_tool(mod, name = "test", description = "test")
@@ -276,8 +268,7 @@ test_that("as_ellmer_tool handles errors from module", {
   )
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(
@@ -316,7 +307,7 @@ test_that("as_ellmer_tool error = 'return' signals a classed condition", {
     }
   )
 
-  mod <- module(signature("text -> sentiment"), type = "predict")
+  mod <- module(signature("text -> sentiment"))
   tool <- as_ellmer_tool(
     mod,
     name = "return_tool",

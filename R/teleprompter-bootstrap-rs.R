@@ -61,7 +61,7 @@
 #' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
 #' valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 #' llm <- ellmer::chat_openai()
-#' compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+#' compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 #'
 #' # Access ranked candidates
 #' compiled$config$optimizer$candidate_programs
@@ -704,7 +704,7 @@ compile_candidate <- function(
       sample = TRUE,
       seed = config$seed %||% 123L
     )
-    compiled <- compile(tp, program, trainset)
+    compiled <- compile(program, tp, trainset)
     compiled$config$candidate_type <- "labeled"
     return(compiled)
   }
@@ -722,8 +722,8 @@ compile_candidate <- function(
       seed = config$seed
     )
     compiled <- compile(
-      tp,
       program,
+      tp,
       trainset,
       .llm = .llm,
       control = control,

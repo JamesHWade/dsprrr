@@ -6,7 +6,7 @@ test_that("as_vitals_solver returns vitals-compatible results", {
     output_type = ellmer::type_string(),
     instructions = "Repeat"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   # Create a more complete mock LLM that supports the methods needed by run_dataset
   mock_llm <- new_test_chat(
@@ -66,7 +66,7 @@ test_that("as_vitals_solver handles single-row inputs", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) "echoed"
@@ -81,7 +81,7 @@ test_that("as_vitals_solver handles single-row inputs", {
 })
 
 test_that("as_vitals_solver requires a current Chat for solver overrides", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   solver <- as_vitals_solver(mod, .llm = new_test_chat())
   inputs <- list(tibble::tibble(text = "hello"))
 
@@ -96,7 +96,7 @@ test_that("as_vitals_solver requires a current Chat for solver overrides", {
 })
 
 test_that("as_vitals_solver resets an override Chat clone without mutation", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   base_chat <- new_test_chat()
   override <- new_test_chat(
     turns = list("prior turn"),
@@ -122,7 +122,7 @@ test_that("as_vitals_solver handles multi-input modules", {
     output_type = ellmer::type_string(),
     instructions = "Answer based on context"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) "answer"
@@ -152,7 +152,7 @@ test_that("as_vitals_solver returns plain strings for enum outputs", {
     ),
     instructions = "Classify sentiment"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) "positive"
@@ -172,7 +172,7 @@ test_that("as_vitals_solver unwraps single-field enum object outputs for vitals"
   sig <- signature(
     "text -> sentiment: enum('positive', 'negative', 'neutral')"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) {
@@ -591,7 +591,7 @@ test_that("as_vitals_task requires vitals package", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   dataset <- tibble::tibble(
     input = c("hello", "world"),
@@ -636,7 +636,7 @@ test_that("as_vitals_task rejects non-dataframe dataset", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   expect_error(
     as_vitals_task(module = mod, dataset = "not a dataframe"),
@@ -657,7 +657,7 @@ test_that("as_vitals_task requires signature inputs and target columns", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Missing target
   expect_error(
@@ -696,7 +696,7 @@ test_that("as_vitals_task works with non-standard input column names", {
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Should work with question + target columns
   dataset <- tibble::tibble(
@@ -738,7 +738,7 @@ test_that("as_vitals_task accepts custom parameters", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   dataset <- tibble::tibble(
     input = c("hello", "world"),
@@ -779,7 +779,7 @@ test_that("as_vitals_task uses default scorer when not provided", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   dataset <- tibble::tibble(
     input = c("hello"),
@@ -812,7 +812,7 @@ test_that("as_vitals_task nests multi-input columns correctly", {
     output_type = ellmer::type_string(),
     instructions = "Answer based on context"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Flat dataset with multiple input columns
   dataset <- tibble::tibble(
@@ -854,7 +854,7 @@ test_that("as_vitals_task preserves extra columns", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Dataset with extra columns beyond signature inputs and target
   dataset <- tibble::tibble(

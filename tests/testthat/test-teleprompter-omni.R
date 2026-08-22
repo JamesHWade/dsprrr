@@ -7,9 +7,9 @@ OmniMarkingTeleprompter <- S7::new_class(
   )
 )
 
-S7::method(compile, list(OmniMarkingTeleprompter, S7::class_any)) <- function(
-  teleprompter,
+S7::method(compile, list(S7::class_any, OmniMarkingTeleprompter)) <- function(
   program,
+  teleprompter,
   trainset,
   ...
 ) {
@@ -32,9 +32,9 @@ OmniFailingTeleprompter <- S7::new_class(
   parent = Teleprompter
 )
 
-S7::method(compile, list(OmniFailingTeleprompter, S7::class_any)) <- function(
-  teleprompter,
+S7::method(compile, list(S7::class_any, OmniFailingTeleprompter)) <- function(
   program,
+  teleprompter,
   trainset,
   ...
 ) {
@@ -49,9 +49,9 @@ OmniWorkerLlmTeleprompter <- S7::new_class(
   )
 )
 
-S7::method(compile, list(OmniWorkerLlmTeleprompter, S7::class_any)) <- function(
-  teleprompter,
+S7::method(compile, list(S7::class_any, OmniWorkerLlmTeleprompter)) <- function(
   program,
+  teleprompter,
   trainset,
   .llm = NULL,
   ...
@@ -163,8 +163,8 @@ test_that("Omni validates its optimizer surface", {
 
 test_that("Omni explores from one seed and continues from the winner", {
   compiled <- compile(
-    make_omni(),
     make_omni_mock_module(),
+    make_omni(),
     omni_trainset,
     valset = omni_valset
   )
@@ -195,8 +195,8 @@ test_that("Omni preserves the best program when continuation regresses", {
     continuation = OmniMarkingTeleprompter(marker = "bad")
   )
   compiled <- compile(
-    tp,
     make_omni_mock_module(),
+    tp,
     omni_trainset,
     valset = omni_valset
   )
@@ -220,8 +220,8 @@ test_that("Omni isolates explorer failures", {
   compiled <- NULL
   expect_snapshot(
     compiled <- compile(
-      tp,
       make_omni_mock_module(),
+      tp,
       omni_trainset,
       valset = omni_valset
     )
@@ -242,8 +242,8 @@ test_that("Omni requires comparison data", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(),
       make_omni_mock_module(),
+      make_omni(),
       data.frame(x = "only-row", target = "unused")
     )
   )
@@ -253,8 +253,8 @@ test_that("Omni validates per-optimizer compile arguments", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(),
       make_omni_mock_module(),
+      make_omni(),
       omni_trainset,
       valset = omni_valset,
       explorer_compile_args = list(
@@ -266,8 +266,8 @@ test_that("Omni validates per-optimizer compile arguments", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(),
       make_omni_mock_module(),
+      make_omni(),
       omni_trainset,
       valset = omni_valset,
       continuation_compile_args = list(trainset = omni_trainset)
@@ -277,8 +277,8 @@ test_that("Omni validates per-optimizer compile arguments", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(),
       make_omni_mock_module(),
+      make_omni(),
       omni_trainset,
       valset = omni_valset,
       continuation_compile_args = list(TRUE)
@@ -305,8 +305,8 @@ test_that("Omni supports mirai exploration without a shared chat object", {
     verbose = FALSE
   )
   compiled <- compile(
-    tp,
     make_omni_mock_module(),
+    tp,
     omni_trainset,
     valset = omni_valset
   )
@@ -325,8 +325,8 @@ test_that("Omni requires worker-visible credentials for parallel exploration", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(parallel = TRUE),
       make_omni_mock_module(),
+      make_omni(parallel = TRUE),
       omni_trainset,
       valset = omni_valset
     )
@@ -337,8 +337,8 @@ test_that("Omni rejects non-Chat .llm before parallel policy", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(parallel = TRUE),
       make_omni_mock_module(),
+      make_omni(parallel = TRUE),
       omni_trainset,
       valset = omni_valset,
       .llm = list(provider = "not-serializable")

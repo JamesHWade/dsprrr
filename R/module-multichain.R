@@ -92,7 +92,7 @@ MultiChainComparisonModule <- R6::R6Class(
         self$inner_module <- inner_module
       } else {
         # Default: use ChainOfThought for better reasoning
-        self$inner_module <- module(sig, type = "chain_of_thought", chat = chat)
+        self$inner_module <- chain_of_thought(sig, chat = chat)
       }
 
       self$M <- as.integer(M)
@@ -569,7 +569,9 @@ MultiChainComparisonModule <- R6::R6Class(
 #' @param M Number of reasoning chains to generate (default 3)
 #' @param temperature Temperature for attempt diversity (default 0.7)
 #' @param comparison_template Optional custom template for comparison prompt
-#' @param ... Additional arguments passed to module constructor
+#' @param config Optional prediction configuration.
+#' @param chat Optional ellmer Chat object.
+#' @param ... Must be empty.
 #'
 #' @return A MultiChainComparisonModule object
 #'
@@ -592,14 +594,21 @@ multi_chain_comparison <- function(
   M = 3L,
   temperature = 0.7,
   comparison_template = NULL,
+  config = list(),
+  chat = NULL,
   ...
 ) {
-  MultiChainComparisonModule$new(
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments("multi_chain_comparison", ...)
+
+  mod <- MultiChainComparisonModule$new(
     signature = signature,
     inner_module = inner_module,
     M = M,
     temperature = temperature,
     comparison_template = comparison_template,
-    ...
+    config = config,
+    chat = chat
   )
+  stamp_module_kind(mod, "multichain")
 }

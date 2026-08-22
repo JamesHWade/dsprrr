@@ -76,7 +76,7 @@ test_that("GEPA compiles with reflection-based mutation", {
     output_type = ellmer::type_string(),
     instructions = "Be concise."
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("q1", "q2"),
@@ -117,7 +117,7 @@ test_that("GEPA compiles with reflection-based mutation", {
     verbose = FALSE
   )
 
-  compiled <- compile(tp, mod, trainset, .llm = mock_llm)
+  compiled <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_true(compiled$config$compiled)
   expect_equal(compiled$config$teleprompter, "GEPA")
@@ -174,7 +174,7 @@ test_that("GEPA accounts every metric-row outcome in execution order", {
   )
   result <- dsprrr:::compile_gepa(
     teleprompter,
-    module(signature("question -> answer"), type = "predict"),
+    module(signature("question -> answer")),
     data.frame(
       question = c("q1", "q2"),
       answer = c("a1", "a2")
@@ -240,8 +240,7 @@ test_that("GEPA preserves a complete partial generation at max_errors zero", {
       signature(
         "question -> answer",
         instructions = "Original instructions"
-      ),
-      type = "predict"
+      )
     ),
     data.frame(question = "q", answer = "a")
   )
@@ -299,8 +298,7 @@ test_that("GEPA keeps the scalar best across regressing generations", {
   result <- dsprrr:::compile_gepa(
     teleprompter,
     module(
-      signature("question -> answer", instructions = "Global best"),
-      type = "predict"
+      signature("question -> answer", instructions = "Global best")
     ),
     data.frame(question = "q", answer = "a")
   )
@@ -355,8 +353,7 @@ test_that("GEPA Pareto selection survives an interrupted worse generation", {
   result <- dsprrr:::compile_gepa(
     teleprompter,
     module(
-      signature("question -> answer", instructions = "Global Pareto best"),
-      type = "predict"
+      signature("question -> answer", instructions = "Global Pareto best")
     ),
     data.frame(question = "q", answer = "a")
   )
@@ -420,8 +417,7 @@ test_that("GEPA never selects or logs a biased partial metric evaluation", {
       verbose = FALSE
     ),
     module(
-      signature("question -> answer", instructions = "Baseline"),
-      type = "predict"
+      signature("question -> answer", instructions = "Baseline")
     ),
     data.frame(
       question = c("q1", "q2"),
@@ -487,8 +483,7 @@ test_that("GEPA reports an early budget stop without a failure warning", {
       verbose = FALSE
     ),
     module(
-      signature("question -> answer", instructions = "Baseline"),
-      type = "predict"
+      signature("question -> answer", instructions = "Baseline")
     ),
     data.frame(
       question = c("q1", "q2"),
@@ -556,6 +551,7 @@ test_that("GEPA tunes both graph-visible RLM predictors", {
 
   run <- capture_rlm_optimizer_warnings(
     compile(
+      program,
       GEPA(
         metric = rlm_optimizer_accuracy,
         population_size = 2L,
@@ -567,7 +563,6 @@ test_that("GEPA tunes both graph-visible RLM predictors", {
         seed = 17L,
         verbose = FALSE
       ),
-      program,
       data.frame(question = "inspect", answer = "yes"),
       .llm = chat
     )
@@ -623,6 +618,7 @@ test_that("GEPA reflection receives feedback from bounded RLM trajectories", {
 
   run <- capture_rlm_optimizer_warnings(
     compile(
+      program,
       GEPA(
         metric = trace_metric,
         population_size = 2L,
@@ -634,7 +630,6 @@ test_that("GEPA reflection receives feedback from bounded RLM trajectories", {
         seed = 23L,
         verbose = FALSE
       ),
-      program,
       data.frame(question = "inspect", answer = "yes"),
       .llm = chat
     )

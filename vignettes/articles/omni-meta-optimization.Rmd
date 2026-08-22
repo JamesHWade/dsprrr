@@ -104,8 +104,8 @@ omni <- Omni(
 )
 
 compiled <- compile(
-  omni,
   qa_module,
+  omni,
   trainset,
   valset = valset,
   .llm = llm
@@ -121,8 +121,8 @@ Arguments cannot replace Omni's core `program`, `trainset`, `valset`, or
 
 ```{r}
 compiled <- compile(
-  omni,
   qa_module,
+  omni,
   trainset,
   valset = valset,
   .llm = llm,
@@ -223,8 +223,8 @@ omni_parallel <- Omni(
 )
 
 compiled <- compile(
-  omni_parallel,
   qa_module,
+  omni_parallel,
   trainset,
   valset = valset,
   .llm = NULL

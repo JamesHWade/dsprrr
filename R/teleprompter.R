@@ -89,12 +89,12 @@ compile_default <- function(teleprompter, program, trainset, ...) {
 #'
 #' \dontrun{
 #' # Compile a module with few-shot demos drawn from the training set
-#' classifier <- module(signature("text -> sentiment"), type = "predict")
+#' classifier <- module(signature("text -> sentiment"))
 #' trainset <- data.frame(
 #'   text = c("I love it!", "Terrible experience", "It's okay"),
 #'   sentiment = c("positive", "negative", "neutral")
 #' )
-#' optimized <- compile(tp, classifier, trainset)
+#' optimized <- compile(classifier, tp, trainset)
 #' }
 #' @export
 LabeledFewShot <- S7::new_class(
@@ -386,7 +386,8 @@ compile_gridsearch <- function(
   optimized <- copy_module(program)
   optimized$demos <- demos
 
-  optimized$optimize_grid(
+  optimize_grid(
+    optimized,
     data = valset,
     metric = teleprompter@metric,
     grid = variants,

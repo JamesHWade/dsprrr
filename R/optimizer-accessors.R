@@ -26,8 +26,8 @@ NULL
 #'
 #' @examples
 #' if (FALSE) {
-#' mod <- module(signature("text -> sentiment"), type = "predict")
-#' mod$optimize_grid(
+#' mod <- module(signature("text -> sentiment"))
+#' optimize_grid(#'   mod,
 #'   data = train_data,
 #'   metric = metric_exact_match(),
 #'   parameters = list(temperature = c(0.3, 0.7, 1.0))
@@ -83,7 +83,7 @@ best_params <- function(module, flatten = TRUE) {
 #' @examples
 #' if (FALSE) {
 #' tp <- LabeledFewShot(k = 4L)
-#' compiled <- compile(tp, mod, trainset)
+#' compiled <- compile(mod, tp, trainset)
 #' demos <- best_demos(compiled)
 #' }
 best_demos <- function(module, as_tibble = FALSE) {
@@ -140,8 +140,8 @@ best_demos <- function(module, as_tibble = FALSE) {
 #' @examples
 #' if (FALSE) {
 #' # Transfer optimization from one module to another
-#' optimized <- mod$optimize_grid(data, metric, parameters)
-#' new_mod <- module(signature, type = "predict")
+#' optimized <- optimize_grid(mod, data, metric, parameters)
+#' new_mod <- module(signature)
 #' apply_best_config(optimized, new_mod)
 #'
 #' # Create a fresh copy with the optimized config
@@ -323,7 +323,7 @@ top_trials.TrialLog <- function(
 #' @examples
 #' if (FALSE) {
 #' mod <- module(signature("text -> sentiment"), type = "predict")
-#' mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
+#' optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 #' config_diff(mod)
 #' }
 config_diff <- function(module, baseline = NULL) {
@@ -422,7 +422,7 @@ config_diff <- function(module, baseline = NULL) {
 #' @examples
 #' if (FALSE) {
 #' mod <- module(signature("text -> sentiment"), type = "predict")
-#' mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
+#' optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 #'
 #' # Get code as string
 #' code <- export_module_code(mod)
@@ -524,7 +524,7 @@ export_module_code <- function(
 #'
 #' @examples
 #' if (FALSE) {
-#' mod$optimize_grid(data, metric, parameters)
+#' optimize_grid(mod, data, metric, parameters)
 #' summary <- optimization_summary(mod)
 #' print(summary)
 #' }

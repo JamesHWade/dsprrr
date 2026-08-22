@@ -157,8 +157,8 @@ research <- AutoResearch(
 )
 
 compiled <- compile(
-  research,
   qa_program,
+  research,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -205,8 +205,8 @@ harness <- MetaHarness(
 )
 
 compiled <- compile(
-  harness,
   qa_program,
+  harness,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -269,8 +269,8 @@ control <- optimizer_control(
 )
 
 compiled <- compile(
-  harness,
   qa_program,
+  harness,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -297,8 +297,8 @@ data, metric, and harness configuration; resource limits may be raised:
 
 ```{r}
 resumed <- compile(
-  harness,
   qa_program,
+  harness,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -360,8 +360,8 @@ omni <- Omni(
 )
 
 compiled <- compile(
-  omni,
   qa_program,
+  omni,
   trainset,
   valset = valset,
   .llm = task_chat,

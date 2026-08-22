@@ -531,3 +531,69 @@ ReactModule <- R6::R6Class(
     }
   )
 )
+
+
+#' Create a ReAct module
+#'
+#' @description
+#' Create a tool-using module that alternates reasoning with tool calls. Tool
+#' use is explicit: passing tools to [module()] never changes a prediction
+#' module into a ReAct agent.
+#'
+#' @param signature A Signature object or string notation defining inputs and
+#'   outputs.
+#' @param tools A list of ellmer ToolDef objects.
+#' @param max_iterations Maximum number of tool-call iterations.
+#' @param chat Optional ellmer Chat object.
+#' @param template Optional glue template for prompt generation.
+#' @param demos Optional list of demonstration examples.
+#' @param config Optional prediction configuration.
+#' @param ... Must be empty.
+#'
+#' @return A ReactModule executed with [run()].
+#' @export
+#' @examples
+#' agent <- react(
+#'   "question -> answer",
+#'   tools = list(),
+#'   max_iterations = 10
+#' )
+react <- function(
+  signature,
+  tools = list(),
+  max_iterations = 10L,
+  chat = NULL,
+  template = "",
+  demos = list(),
+  config = list(),
+  ...
+) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments(
+    "react",
+    ...,
+    hint = "Use code_act() for tools plus code execution."
+  )
+
+  if (is.character(signature)) {
+    signature <- signature(signature)
+  }
+  if (!S7::S7_inherits(signature, Signature)) {
+    cli::cli_abort(c(
+      "`signature` must be a Signature object or string notation",
+      "x" = "You provided: {.cls {class(signature)[1]}}"
+    ))
+  }
+  assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
+
+  mod <- ReactModule$new(
+    signature = signature,
+    tools = tools,
+    max_iterations = max_iterations,
+    template = template,
+    demos = demos,
+    config = config,
+    chat = chat
+  )
+  stamp_module_kind(mod, "react")
+}

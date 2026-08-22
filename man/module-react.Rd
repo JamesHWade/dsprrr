@@ -9,9 +9,10 @@ Use this to build tool-using agents that alternate between reasoning,
 tool calls, and observations before producing a final structured answer.
 }
 \details{
-Create a ReAct module with \code{module(type = "react", tools = list(...))}.
-If you pass \code{tools} with \code{type = "predict"}, the module automatically
-upgrades to \code{react}. ellmer executes the tool-calling loop internally; dsprrr
+Create a ReAct module explicitly with
+\code{react(signature, tools = list(...))}. Passing tools to \code{\link[=module]{module()}} is an
+error, so configuration never silently changes prediction into agency.
+ellmer executes the tool-calling loop internally; dsprrr
 preserves its native turn history and tool-call IDs, enforces
 \code{max_iterations}, and then produces a structured output based on the module
 signature. Multiple tool calls in one assistant turn count as one iteration.
@@ -27,9 +28,8 @@ search_tool <- ellmer::tool(
   arguments = list(query = ellmer::type_string())
 )
 
-agent <- module(
+agent <- react(
   signature("question -> answer"),
-  type = "react",
   tools = list(search_tool),
   max_iterations = 8L
 )

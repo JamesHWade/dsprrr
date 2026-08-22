@@ -2,7 +2,7 @@
 
 test_that("stream method exists on Module", {
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   expect_true("stream" %in% names(mod))
   expect_true(is.function(mod$stream))
@@ -10,7 +10,7 @@ test_that("stream method exists on Module", {
 
 test_that("stream method exists on ReactModule", {
   sig <- signature("text -> result")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_true("stream" %in% names(mod))
   expect_true(is.function(mod$stream))
@@ -33,7 +33,7 @@ test_that("stream with callback consumes chunks", {
   )
 
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict", chat = mock_chat)
+  mod <- module(sig, chat = mock_chat)
 
   result <- mod$stream(
     text = "test",
@@ -59,7 +59,7 @@ test_that("stream without callback returns generator", {
   )
 
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict", chat = mock_chat)
+  mod <- module(sig, chat = mock_chat)
 
   result <- mod$stream(text = "test")
 
@@ -73,7 +73,7 @@ test_that("stream validates callback is function", {
   )
 
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict", chat = mock_chat)
+  mod <- module(sig, chat = mock_chat)
 
   expect_error(
     mod$stream(text = "test", callback = "not a function"),
@@ -101,7 +101,7 @@ test_that("stream includes instructions in prompt", {
     "text -> result",
     instructions = "Be very helpful"
   )
-  mod <- module(sig, type = "predict", chat = mock_chat)
+  mod <- module(sig, chat = mock_chat)
 
   mod$stream(text = "test", callback = function(x) {})
 

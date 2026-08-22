@@ -81,7 +81,7 @@ Those details are implementation—handled by the framework, not you.
 A module wraps a signature with executable logic:
 
 ```{r}
-mod <- module(signature("text -> sentiment"), type = "predict")
+mod <- module(signature("text -> sentiment"))
 ```
 
 Modules are:
@@ -107,7 +107,7 @@ A dsprrr module has:
 Here's the radical part: instead of hand-tuning prompts, you define a metric and let the optimizer search:
 
 ```{r}
-mod$optimize_grid(
+optimize_grid(  mod,
   data = training_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0, 0.3, 0.7))
@@ -177,7 +177,7 @@ dsprrr brings DSPy's ideas to R with some adaptations:
 
 **S7 for Signatures**: Immutable, validated type objects. Once you define a signature, it doesn't change. This enables optimization—you can swap prompts while keeping the interface stable.
 
-**R6 for Modules**: Stateful execution context. Modules accumulate traces, store optimized configurations, and provide an object-oriented API (`$predict()`, `$optimize_grid()`).
+**R6 for Modules**: Stateful execution context. Modules accumulate traces and store optimized configurations; user workflows stay in the functional `run()` and `optimize_grid()` API.
 
 **ellmer Integration**: dsprrr builds on ellmer's chat infrastructure. You get the same `chat_openai()`, `chat_anthropic()` objects, with structured outputs handled via ellmer's type system.
 

@@ -12,49 +12,59 @@
   S7::method(print, MIPROv2) <- print_miprov2
 
   # Register compile methods for teleprompters (still S7)
-  S7::method(compile, list(LabeledFewShot, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(
+    compile,
+    list(S7::class_any, S7::class_any)
+  ) <- function(program, teleprompter, trainset, ...) {
+    validate_compile_inputs(program, teleprompter, trainset, list(...))
+    cli::cli_abort(
+      "No compiler is registered for {.cls {class(teleprompter)[1]}}"
+    )
+  }
+
+  S7::method(compile, list(S7::class_any, LabeledFewShot)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_labeled,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(GridSearchTeleprompter, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, GridSearchTeleprompter)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_gridsearch,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(BootstrapFewShot, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, BootstrapFewShot)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_bootstrap,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
@@ -62,178 +72,178 @@
 
   S7::method(
     compile,
-    list(BootstrapFewShotWithRandomSearch, S7::class_any)
+    list(S7::class_any, BootstrapFewShotWithRandomSearch)
   ) <- function(
-    teleprompter,
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_bootstrap_rs,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(BetterTogether, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, BetterTogether)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_better_together,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(Omni, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, Omni)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_omni,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(AutoResearch, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, AutoResearch)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_autoresearch,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(MetaHarness, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, MetaHarness)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_meta_harness,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(KNNFewShot, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, KNNFewShot)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_knn,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(SIMBA, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, SIMBA)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_simba,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(GEPA, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, GEPA)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_gepa,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(MIPROv2, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, MIPROv2)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_mipro,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(COPRO, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, COPRO)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_copro,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )
   }
 
-  S7::method(compile, list(Teleprompter, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, Teleprompter)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
     abort_if_fn_module(program)
     compile_with_trace_context(
       compile_default,
-      teleprompter,
       program,
+      teleprompter,
       trainset,
       ...
     )

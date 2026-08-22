@@ -277,7 +277,7 @@ test_that("Module$inspect() method exists and works", {
     output_type = ellmer::type_string(),
     instructions = "Process the text"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Check that inspect returns invisible self and doesn't error
   expect_invisible(mod$inspect())

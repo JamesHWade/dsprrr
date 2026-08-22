@@ -9,7 +9,7 @@ create_test_module <- function() {
     output_type = ellmer::type_string(),
     instructions = "Test instructions"
   )
-  module(signature = sig, type = "predict", template = "Test: {text}")
+  module(signature = sig, template = "Test: {text}")
 }
 
 # ---- pin_module_config tests ----
@@ -153,7 +153,7 @@ test_that("restore_module_config rejects legacy pinned configs", {
 test_that("pin_module_config round-trips chain_of_thought kind", {
   skip_if_not_installed("pins")
 
-  mod <- module(signature("question -> answer"), type = "chain_of_thought")
+  mod <- chain_of_thought(signature("question -> answer"))
   board <- pins::board_temp()
 
   pin_module_config(board, "cot", mod)
@@ -588,8 +588,8 @@ test_that("module config round-trips correctly", {
 test_that("pin_module_config preserves complete pipelines (dsprrr-07u)", {
   skip_if_not_installed("pins")
 
-  m1 <- module(signature("question -> thought"), type = "predict")
-  m2 <- module(signature("thought -> answer"), type = "predict")
+  m1 <- module(signature("question -> thought"))
+  m2 <- module(signature("thought -> answer"))
   pipe <- pipeline(m1, m2)
   board <- pins::board_temp()
 

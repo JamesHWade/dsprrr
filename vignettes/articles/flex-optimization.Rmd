@@ -219,6 +219,7 @@ candidate survives. Keep the first run deliberately small and bounded:
 llm <- ellmer::chat_openai(model = "gpt-5-mini")
 
 optimized <- compile(
+  baseline,
   GEPA(
     metric = route_metric,
     metric_threshold = 0.95,
@@ -229,7 +230,6 @@ optimized <- compile(
     track_best_outputs = TRUE,
     verbose = FALSE
   ),
-  baseline,
   trainset = train,
   valset = validation,
   .llm = llm,

@@ -71,7 +71,7 @@ sig <- signature(
   instructions = "Classify the sentiment of this product review."
 )
 
-classifier <- module(sig, type = "predict")
+classifier <- module(sig)
 ```
 
 Create training and test data:
@@ -117,7 +117,7 @@ Temperature controls randomness. Lower = more deterministic, higher = more creat
 
 ```{r grid-search-temp}
 #| cassette: true
-classifier$optimize_grid(
+optimize_grid(  classifier,
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
@@ -170,9 +170,9 @@ Instructions matter a lot. Let's test different phrasings:
 ```{r grid-instructions}
 #| cassette: true
 # Reset to try different parameters
-classifier2 <- module(sig, type = "predict")
+classifier2 <- module(sig)
 
-classifier2$optimize_grid(
+optimize_grid(  classifier2,
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
@@ -197,9 +197,9 @@ Search over multiple parameters at once:
 
 ```{r multi-param-grid}
 #| cassette: true
-classifier3 <- module(sig, type = "predict")
+classifier3 <- module(sig)
 
-classifier3$optimize_grid(
+optimize_grid(  classifier3,
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
@@ -235,8 +235,8 @@ teleprompter <- GridSearchTeleprompter(
   k = 2L  # Number of few-shot examples to include
 )
 
-optimized <- compile_module(
-  program = module(sig, type = "predict"),
+optimized <- compile(
+  program = module(sig),
   teleprompter = teleprompter,
   trainset = trainset,
   .llm = chat
@@ -265,7 +265,7 @@ Compare to baseline:
 
 ```{r baseline-comparison}
 #| cassette: true
-baseline <- module(sig, type = "predict")
+baseline <- module(sig)
 
 baseline_results <- evaluate(
   baseline,

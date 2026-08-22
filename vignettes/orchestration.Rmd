@@ -74,7 +74,7 @@ library(ellmer)
 
 # Create and optimize a module
 mod <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |>
-  module(type = "predict")
+  module()
 
 # Run optimization (in practice, with real data)
 # optimize_grid(mod, data = train_data, metric = metric_exact_match(), .llm = llm)
@@ -259,7 +259,7 @@ tar_target(test_data, load_test_data())
 # 2. Module Definition
 tar_target(module_definition, {
   signature("text -> sentiment") |>
-    module(type = "predict")
+    module()
 })
 
 # 3. Optimization
@@ -401,7 +401,7 @@ mod <- signature(
   "feedback -> sentiment: enum('positive', 'negative', 'neutral'), issues: array(string)",
   instructions = "Analyze customer feedback. Identify sentiment and extract specific issues mentioned."
 ) |>
-  module(type = "predict")
+  module()
 
 # ---- Optimize ----
 train_data <- read_csv("data/train.csv")

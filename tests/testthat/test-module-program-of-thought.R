@@ -387,28 +387,26 @@ test_that("ProgramOfThoughtModule returns correct metadata", {
 })
 
 # ============================================================================
-# Integration with module() factory
+# Explicit constructor integration
 # ============================================================================
 
-test_that("module() factory works with type='program_of_thought'", {
+test_that("program_of_thought() constructs its module", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5)
-  pot <- module(
+  pot <- program_of_thought(
     signature("question -> answer"),
-    type = "program_of_thought",
     runner = runner
   )
 
   expect_s3_class(pot, "ProgramOfThoughtModule")
 })
 
-test_that("module() factory requires runner for program_of_thought", {
+test_that("program_of_thought() requires a runner", {
   expect_error(
-    module(
-      signature("question -> answer"),
-      type = "program_of_thought"
+    program_of_thought(
+      signature("question -> answer")
     ),
-    "program_of_thought requires a runner"
+    "Code execution requires an explicit runner"
   )
 })

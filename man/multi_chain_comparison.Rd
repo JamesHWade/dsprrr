@@ -10,6 +10,8 @@ multi_chain_comparison(
   M = 3L,
   temperature = 0.7,
   comparison_template = NULL,
+  config = list(),
+  chat = NULL,
   ...
 )
 }
@@ -25,7 +27,11 @@ a ChainOfThought module from the signature.}
 
 \item{comparison_template}{Optional custom template for comparison prompt}
 
-\item{...}{Additional arguments passed to module constructor}
+\item{config}{Optional prediction configuration.}
+
+\item{chat}{Optional ellmer Chat object.}
+
+\item{...}{Must be empty.}
 }
 \value{
 A MultiChainComparisonModule object

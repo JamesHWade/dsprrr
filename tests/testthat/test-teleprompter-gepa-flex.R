@@ -58,8 +58,7 @@ gepa_flex_test_chat <- function(response = NULL, error = NULL) {
 
 gepa_flex_test_program <- function() {
   ordinary <- module(
-    signature("question -> draft", instructions = "Ordinary instructions."),
-    type = "predict"
+    signature("question -> draft", instructions = "Ordinary instructions.")
   )
   flexible <- suppressWarnings(flex(
     signature("draft -> answer", instructions = "Flex instructions.")
@@ -162,13 +161,13 @@ test_that("GEPA skips all work when a Flex graph has no mutable components", {
   )
 
   optimized <- compile(
+    program,
     GEPA(
       metric = function(...) 1,
       population_size = 4L,
       generations = 3L,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "q", answer = "a"),
     .llm = chat
   )
@@ -1381,8 +1380,8 @@ test_that("compile GEPA selects a valid structural Flex candidate", {
   )
 
   optimized <- compile(
-    teleprompter,
     program,
+    teleprompter,
     data.frame(question = "q", answer = "right"),
     .llm = chat
   )
@@ -1452,8 +1451,8 @@ test_that("compile GEPA audits but never selects an invalid Flex source", {
   )
 
   optimized <- compile(
-    teleprompter,
     program,
+    teleprompter,
     data.frame(question = "q", answer = "a"),
     .llm = chat
   )
@@ -1487,13 +1486,13 @@ test_that("compile GEPA returns a safe composite clone on an early budget stop",
   leaf <- suppressWarnings(flex("question -> answer"))
   program <- ensemble(list(leaf))
   optimized <- compile(
+    program,
     GEPA(
       metric = function(...) 1,
       population_size = 2L,
       generations = 1L,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "q", answer = "a"),
     .llm = gepa_flex_test_chat(list(module_src = gepa_flex_test_source())),
     control = dsprrr:::optimizer_control(max_provider_calls = 0L)
@@ -1512,8 +1511,7 @@ test_that("compile GEPA returns a safe composite clone on an early budget stop",
 
 test_that("ordinary programs use complete component candidates and result metadata", {
   program <- module(
-    signature("question -> answer", instructions = "Baseline."),
-    type = "predict"
+    signature("question -> answer", instructions = "Baseline.")
   )
   selector_calls <- 0L
   selector <- function(component_ids, candidate, failed_examples, context) {
@@ -1540,6 +1538,7 @@ test_that("ordinary programs use complete component candidates and result metada
   )
 
   optimized <- compile(
+    program,
     GEPA(
       metric = function(...) 1,
       population_size = 2L,
@@ -1548,7 +1547,6 @@ test_that("ordinary programs use complete component candidates and result metada
       track_best_outputs = TRUE,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "q", answer = "a")
   )
   metadata <- optimized$config$optimizer
@@ -1587,13 +1585,13 @@ test_that("GEPA separates discovery trainset from validation frontier data", {
   )
 
   optimized <- compile(
+    program,
     GEPA(
       metric = function(...) 1,
       population_size = 2L,
       generations = 1L,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "train", answer = "t", split = "discovery"),
     valset = data.frame(
       question = "validation",
@@ -1835,6 +1833,7 @@ test_that("GEPA proposes, executes, and selects executable Flex source", {
   )
 
   optimized <- compile(
+    program,
     GEPA(
       metric = metric_exact_match(field = "answer"),
       population_size = 2L,
@@ -1843,7 +1842,6 @@ test_that("GEPA proposes, executes, and selects executable Flex source", {
       track_best_outputs = TRUE,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "hello", answer = "HELLO"),
     .llm = chat,
     control = dsprrr:::optimizer_control(num_threads = 1L)

@@ -495,7 +495,7 @@ EvalResult <- S7::new_class(
 #' @examples
 #' \dontrun{
 #' sig <- signature("question -> answer")
-#' mod <- module(sig, type = "predict")
+#' mod <- module(sig)
 #'
 #' dataset <- tibble::tibble(
 #'   question = c("What is 2+2?", "What is 3+3?"),

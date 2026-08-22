@@ -32,7 +32,7 @@ test_that("instruction transforms are immutable and composable", {
 
 test_that("module optimization replaces its signature copy-on-write", {
   original <- signature("question -> answer", instructions = "Original")
-  mod <- module(original, type = "predict")
+  mod <- module(original)
 
   mod$apply_optimization_params(list(instructions = "Optimized"))
 

@@ -381,6 +381,7 @@ test_that("GEPA selects the executable Flex issue-router hybrid", {
 
   optimizer_chat <- issue_router_chat(winner_source)
   optimized <- compile(
+    make_program(baseline_source),
     GEPA(
       metric = route_metric,
       population_size = 2L,
@@ -389,7 +390,6 @@ test_that("GEPA selects the executable Flex issue-router hybrid", {
       track_best_outputs = TRUE,
       verbose = FALSE
     ),
-    make_program(baseline_source),
     trainset,
     valset = valset,
     .llm = optimizer_chat,

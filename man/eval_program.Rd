@@ -76,7 +76,7 @@ This is the core evaluation function used by all optimizers. It wraps
 \examples{
 \dontrun{
 sig <- signature("question -> answer")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 dataset <- tibble::tibble(
   question = c("What is 2+2?", "What is 3+3?"),

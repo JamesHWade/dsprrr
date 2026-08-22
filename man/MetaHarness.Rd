@@ -102,8 +102,8 @@ harness <- MetaHarness(
   max_candidates_per_iteration = 4L
 )
 compiled <- compile(
-  harness,
   program,
+  harness,
   trainset,
   valset = valset,
   .agent_llm = proposer_chat,

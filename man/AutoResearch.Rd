@@ -93,8 +93,8 @@ research <- AutoResearch(
   max_iterations = 12L
 )
 compiled <- compile(
-  research,
   program,
+  research,
   trainset,
   valset = valset,
   .llm = task_chat,

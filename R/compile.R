@@ -1,40 +1,88 @@
-#' Compile S7 Generic and Methods
-#'
-#' This file defines the compile generic and its methods for optimizing
-#' DSPrrr modules using teleprompters.
-
-#' Compile Generic
+#' Compile a program
 #'
 #' @description
-#' Generic method for compiling/optimizing a module using a teleprompter.
+#' Optimize a dsprrr program with a teleprompter. This is the single
+#' user-facing compilation entry point and is ordered for the native pipe:
+#' `program |> compile(teleprompter, trainset)`.
 #'
-#' @param teleprompter A Teleprompter object
-#' @param program A module to optimize
-#' @param ... Additional arguments including `trainset` (training data) and
-#'   optional `.trace_context`, a named JSON-compatible list propagated to
-#'   evaluations, optimizer trials, and execution traces.
+#' @param program A dsprrr module or compositional program to optimize.
+#' @param teleprompter A Teleprompter defining the optimization strategy.
+#' @param ... Additional arguments. The first is normally `trainset`, a data
+#'   frame. Optimizers may also accept `valset`, `.llm`, and
+#'   `.trace_context`.
 #'
-#' @return An optimized module
-#' @seealso [compile_module()] for the pipe-friendly wrapper with
-#'   validation and friendlier argument order
+#' @return An optimized program.
+#' @export
 #' @examples
 #' \dontrun{
-#' classifier <- module(signature("text -> sentiment"), type = "predict")
+#' classifier <- module(signature("text -> sentiment"))
 #' trainset <- data.frame(
 #'   text = c("I love it!", "Terrible experience"),
 #'   sentiment = c("positive", "negative")
 #' )
-#' optimized <- compile(LabeledFewShot(k = 2L), classifier, trainset)
+#'
+#' optimized <- classifier |>
+#'   compile(LabeledFewShot(k = 2L), trainset)
 #' }
-#' @export
-compile <- S7::new_generic("compile", c("teleprompter", "program"))
+compile <- S7::new_generic("compile", c("program", "teleprompter"))
 
-# Method registration moved to zzz.R to ensure proper loading order
+# Methods are registered in zzz.R after all teleprompter classes are loaded.
 
+#' Validate and normalize shared compilation inputs
+#' @noRd
+validate_compile_inputs <- function(program, teleprompter, trainset, dots) {
+  if (!inherits(teleprompter, "dsprrr::Teleprompter")) {
+    cli::cli_abort(c(
+      "`teleprompter` must be a Teleprompter object",
+      "x" = "Got {.cls {class(teleprompter)[1]}}"
+    ))
+  }
+  if (!is.data.frame(trainset)) {
+    cli::cli_abort(
+      "trainset must be a data frame",
+      class = "dsprrr_compile_argument_error"
+    )
+  }
+
+  dot_names <- names(dots) %||% rep("", length(dots))
+  valset_index <- which(dot_names == "valset")
+  if (length(valset_index) > 1L) {
+    cli::cli_abort("`valset` must be supplied at most once")
+  }
+  if (
+    length(valset_index) == 0L && length(dots) > 0L && dot_names[[1L]] == ""
+  ) {
+    valset_index <- 1L
+  }
+  if (length(valset_index) == 1L && !is.null(dots[[valset_index]])) {
+    dots[[valset_index]] <- tryCatch(
+      as.data.frame(dots[[valset_index]]),
+      error = function(error) {
+        cli::cli_abort(c(
+          "`valset` must be convertible to a data frame",
+          "x" = conditionMessage(error)
+        ))
+      }
+    )
+  }
+
+  if (inherits(program, "Module") && program$is_compiled()) {
+    cli::cli_warn(c(
+      "Program appears to be already compiled",
+      "i" = "Previous teleprompter: {program$config$teleprompter}",
+      "i" = "Recompiling with: {class(teleprompter)[1]}"
+    ))
+  }
+
+  dots
+}
+
+#' Invoke a compiler with correlation-only trace context
+#' @noRd
 compile_with_trace_context <- function(
   compiler,
-  teleprompter,
   program,
+  teleprompter,
   trainset,
   ...,
   .llm = NULL
@@ -46,7 +94,9 @@ compile_with_trace_context <- function(
   } else {
     NULL
   }
+
   dots <- rlang::list2(...)
+  dots <- validate_compile_inputs(program, teleprompter, trainset, dots)
   dot_names <- names(dots) %||% rep("", length(dots))
   context_index <- which(dot_names == ".trace_context")
   if (length(context_index) > 1L) {
@@ -73,112 +123,4 @@ compile_with_trace_context <- function(
     c(list(teleprompter, program, trainset, .llm = .llm), dots),
     envir = environment(compiler) %||% parent.frame()
   )
-}
-
-#' Compile a DSPrrr Program
-#'
-#' @description
-#' Main user-facing function to compile/optimize a DSPrrr module using
-#' a teleprompter optimization strategy.
-#'
-#' @param program A DSPrrr module to optimize (e.g., from `module()`)
-#' @param teleprompter A Teleprompter object defining the optimization strategy
-#' @param trainset Training data as a data frame
-#' @param valset Optional validation set for evaluation
-#' @param .llm Optional ellmer chat object to reuse during compilation
-#' @param .trace_context A named, JSON-compatible list propagated to
-#'   evaluations, optimizer trials, and execution traces.
-#' @param ... Additional arguments passed to the teleprompter
-#'
-#' @return An optimized module with updated demonstrations and/or instructions
-#'
-#' @export
-#' @examples
-#' \dontrun{
-#' # Create a simple module
-#' classifier <- signature("text -> sentiment") |>
-#'   module(type = "predict")
-#'
-#' # Prepare training data
-#' trainset <- data.frame(
-#'   text = c("I love it!", "Terrible experience"),
-#'   sentiment = c("positive", "negative")
-#' )
-#'
-#' # Compile with LabeledFewShot
-#' tp <- LabeledFewShot(k = 2)
-#' optimized <- compile_module(classifier, tp, trainset)
-#'
-#' # Compile with GridSearch
-#' variants <- data.frame(
-#'   id = c("terse", "detailed"),
-#'   instructions_suffix = c(
-#'     "Be concise.",
-#'     "Provide detailed reasoning."
-#'   )
-#' )
-#' tp <- GridSearchTeleprompter(
-#'   variants = variants,
-#'   metric = metric_exact_match(field = "sentiment")
-#' )
-#' optimized <- compile_module(classifier, tp, trainset)
-#' }
-compile_module <- function(
-  program,
-  teleprompter,
-  trainset,
-  valset = NULL,
-  .llm = NULL,
-  ...,
-  .trace_context = list()
-) {
-  trace_context_supplied <- !missing(.trace_context)
-  # Validate inputs
-  if (!inherits(teleprompter, "dsprrr::Teleprompter")) {
-    cli::cli_abort(c(
-      "teleprompter must be a Teleprompter object",
-      "i" = "Got: {.cls {class(teleprompter)[1]}}"
-    ))
-  }
-
-  if (!is.data.frame(trainset)) {
-    cli::cli_abort("trainset must be a data frame")
-  }
-
-  if (!is.null(valset) && !is.data.frame(valset)) {
-    valset <- tryCatch(
-      as.data.frame(valset),
-      error = function(e) {
-        cli::cli_abort(c(
-          "valset must be convertible to a data frame",
-          "x" = e$message
-        ))
-      }
-    )
-  }
-
-  # Check if program is already compiled and warn
-  if (inherits(program, "Module") && program$is_compiled()) {
-    cli::cli_warn(c(
-      "Program appears to be already compiled",
-      "i" = "Previous teleprompter: {program$config$teleprompter}",
-      "i" = "Recompiling with: {class(teleprompter)[1]}"
-    ))
-  }
-
-  # Dispatch to appropriate compile method
-  args <- c(
-    list(
-      teleprompter = teleprompter,
-      program = program,
-      trainset = trainset,
-      valset = valset,
-      .llm = .llm
-    ),
-    list(...)
-  )
-  if (trace_context_supplied) {
-    args$.trace_context <- .trace_context
-  }
-  do.call(compile, args)
 }

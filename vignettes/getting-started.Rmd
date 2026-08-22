@@ -99,11 +99,8 @@ trainset <- tibble::tibble(
   sentiment = c("positive", "negative", "neutral")
 )
 
-optimized <- compile_module(
-  program = classifier,
-  teleprompter = LabeledFewShot(k = 2),
-  trainset = trainset
-)
+optimized <- classifier |>
+  compile(LabeledFewShot(k = 2), trainset)
 ```
 
 ## Prerequisites

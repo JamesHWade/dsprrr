@@ -98,13 +98,13 @@ test_that("BootstrapFewShotWithRandomSearch requires metric", {
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
   trainset <- data.frame(question = "Q1", answer = "A1")
   valset <- data.frame(question = "Q2", answer = "A2")
 
   tp <- BootstrapFewShotWithRandomSearch()
   expect_error(
-    compile(tp, mod, trainset, valset = valset),
+    compile(mod, tp, trainset, valset = valset),
     "requires a metric"
   )
 })
@@ -131,8 +131,8 @@ test_that("BootstrapFewShotWithRandomSearch rejects RLM before candidates", {
 
   error <- tryCatch(
     compile(
-      optimizer,
       program,
+      optimizer,
       data.frame(question = "train", answer = "train"),
       valset = data.frame(question = "val", answer = "val")
     ),
@@ -162,8 +162,8 @@ test_that("BootstrapFewShotWithRandomSearch rejects wrapped Flex", {
 
   error <- tryCatch(
     compile(
-      optimizer,
       program,
+      optimizer,
       data.frame(question = "train", answer = "train"),
       valset = data.frame(question = "val", answer = "val")
     ),
@@ -185,14 +185,14 @@ test_that("BootstrapFewShotWithRandomSearch requires valset", {
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
   trainset <- data.frame(question = "Q1", answer = "A1")
 
   tp <- BootstrapFewShotWithRandomSearch(
     metric = function(pred, exp) 1.0
   )
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "requires a validation set"
   )
 })
@@ -203,7 +203,7 @@ test_that("BootstrapFewShotWithRandomSearch handles empty trainset", {
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
   empty_trainset <- data.frame(question = character(), answer = character())
   valset <- data.frame(question = "Q1", answer = "A1")
 
@@ -212,7 +212,7 @@ test_that("BootstrapFewShotWithRandomSearch handles empty trainset", {
   )
 
   expect_warning(
-    result <- compile(tp, mod, empty_trainset, valset = valset),
+    result <- compile(mod, tp, empty_trainset, valset = valset),
     "Empty trainset"
   )
   expect_identical(result, mod)
@@ -261,7 +261,7 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("Q1", "Q2", "Q3", "Q4"),
@@ -294,7 +294,7 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, valset = valset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, valset = valset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
@@ -319,7 +319,7 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
     instructions = "Test"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(x = c("a", "b", "c", "d"), y = c("1", "2", "3", "4"))
   valset <- data.frame(x = c("e", "f"), y = c("correct", "correct"))
@@ -340,7 +340,7 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
     max_bootstrapped_demos = 1L
   )
 
-  result <- compile(tp, mod, trainset, valset = valset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, valset = valset, .llm = mock_llm)
 
   # Should have stopped early (first candidate should hit threshold)
   expect_lt(
@@ -364,13 +364,13 @@ test_that("BootstrapFewShotWithRandomSearch print method works", {
   expect_identical(print(tp), tp)
 })
 
-test_that("compile_module works with BootstrapFewShotWithRandomSearch", {
+test_that("compile works with BootstrapFewShotWithRandomSearch", {
   sig <- Signature(
     inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Summarize"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     text = c("Hello world", "Goodbye world"),
@@ -395,7 +395,7 @@ test_that("compile_module works with BootstrapFewShotWithRandomSearch", {
     max_bootstrapped_demos = 1L
   )
 
-  result <- compile_module(mod, tp, trainset, valset = valset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, valset = valset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$is_compiled())
@@ -430,7 +430,7 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
     instructions = "Test"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(x = c("a", "b"), y = c("1", "2"))
   valset <- data.frame(x = c("c"), y = c("ok"))
@@ -453,7 +453,7 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
   )
 
   # Should complete successfully
-  result <- compile(tp, mod, trainset, valset = valset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, valset = valset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
@@ -490,7 +490,7 @@ test_that("Bootstrap random search resets its outer budget on valid candidates",
   result <- expect_test_warnings(
     dsprrr:::compile_bootstrap_rs(
       teleprompter,
-      module(signature("x -> y"), type = "predict"),
+      module(signature("x -> y")),
       data.frame(x = "train", y = "train"),
       valset = data.frame(x = "val", y = "val")
     ),
@@ -543,7 +543,7 @@ test_that("Bootstrap random search honors caller resource controls", {
   )
   result <- dsprrr:::compile_bootstrap_rs(
     teleprompter,
-    module(signature("x -> y"), type = "predict"),
+    module(signature("x -> y")),
     data.frame(x = "train", y = "train"),
     valset = data.frame(x = "val", y = "val"),
     control = dsprrr:::optimizer_control(
@@ -598,7 +598,7 @@ test_that("Bootstrap random search preserves mixed validation row outcomes", {
   )
   result <- dsprrr:::compile_bootstrap_rs(
     teleprompter,
-    module(signature("x -> y"), type = "predict"),
+    module(signature("x -> y")),
     data.frame(x = "train", y = "train"),
     valset = data.frame(
       x = c("first", "second"),
@@ -649,7 +649,7 @@ test_that("Bootstrap random search returns baseline when validation is blocked",
   )
   result <- dsprrr:::compile_bootstrap_rs(
     teleprompter,
-    module(signature("x -> y"), type = "predict"),
+    module(signature("x -> y")),
     data.frame(x = "train", y = "train"),
     valset = data.frame(x = "val", y = "val"),
     control = dsprrr:::optimizer_control(
@@ -713,7 +713,7 @@ test_that("Bootstrap random search preserves its best at the exact limit", {
   result <- expect_test_warnings(
     dsprrr:::compile_bootstrap_rs(
       teleprompter,
-      module(signature("x -> y"), type = "predict"),
+      module(signature("x -> y")),
       data.frame(x = "train", y = "train"),
       valset = data.frame(x = "val", y = "val")
     ),
@@ -755,7 +755,7 @@ test_that("Bootstrap random search rejects unusable evaluation scores", {
   result <- expect_test_warnings(
     dsprrr:::compile_bootstrap_rs(
       teleprompter,
-      module(signature("x -> y"), type = "predict"),
+      module(signature("x -> y")),
       data.frame(x = "train", y = "train"),
       valset = data.frame(x = "val", y = "val")
     ),
@@ -811,7 +811,7 @@ test_that("Bootstrap random search max_errors zero stops after one failure", {
   result <- expect_test_warnings(
     dsprrr:::compile_bootstrap_rs(
       teleprompter,
-      module(signature("x -> y"), type = "predict"),
+      module(signature("x -> y")),
       data.frame(x = "train", y = "train"),
       valset = data.frame(x = "val", y = "val")
     ),
@@ -835,7 +835,7 @@ test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
     instructions = "Test"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(x = c("a", "b"), y = c("1", "2"))
   valset <- data.frame(x = c("c"), y = c("ok"))
@@ -857,7 +857,7 @@ test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
   # Should error when all candidates fail
   expect_error(
     suppressWarnings(
-      compile(tp, mod, trainset, valset = valset, .llm = failing_llm)
+      compile(mod, tp, trainset, valset = valset, .llm = failing_llm)
     ),
     "All .* candidate programs failed"
   )

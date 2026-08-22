@@ -22,7 +22,7 @@ Useful for validating pipelines before running expensive LLM operations.
 }
 \examples{
 \dontrun{
-mod <- signature("text -> sentiment") |> module(type = "predict")
+mod <- signature("text -> sentiment") |> module()
 validate_workflow(mod, data = test_data)
 }
 }

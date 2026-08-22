@@ -1431,40 +1431,37 @@ test_that("RLMModule returns correct metadata", {
 })
 
 # ============================================================================
-# Integration with module() factory
+# Explicit constructor integration
 # ============================================================================
 
-test_that("module() factory works with type='rlm'", {
+test_that("rlm_module() constructs its module", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
   withr::defer(runner$shutdown())
-  rlm <- module(
+  rlm <- rlm_module(
     signature("question -> answer"),
-    type = "rlm",
     runner = runner
   )
 
   expect_s3_class(rlm, "RLMModule")
   expect_identical(rlm$max_iterations, 20L)
   expect_error(
-    module(
+    rlm_module(
       signature("question -> answer"),
-      type = "rlm",
       runner = runner,
       max_iters = 6L
     ),
-    class = "dsprrr_module_type_argument_error"
+    class = "dsprrr_module_argument_error"
   )
 })
 
-test_that("module() factory requires runner for rlm", {
+test_that("rlm_module() requires a runner", {
   expect_error(
-    module(
-      signature("question -> answer"),
-      type = "rlm"
+    rlm_module(
+      signature("question -> answer")
     ),
-    "rlm requires a runner"
+    "RLM requires an explicit runner"
   )
 })
 

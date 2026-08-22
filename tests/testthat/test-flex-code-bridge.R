@@ -589,9 +589,8 @@ test_that("executable Flex requires an advertised sandbox by default", {
 })
 
 test_that("the generic module factory exposes executable Flex", {
-  program <- suppressWarnings(module(
+  program <- suppressWarnings(flex(
     signature("value -> result"),
-    type = "flex",
     module_src = "forward <- function(value) list(result = value)",
     interpreter_factory = r_code_runner,
     source_format = "r",

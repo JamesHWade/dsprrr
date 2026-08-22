@@ -87,17 +87,17 @@ to bind the verified runtime references before execution.
 # Single input
 llm <- ellmer::chat_openai()
 result <- signature("text -> sentiment") |>
-  module(type = "predict") |>
+  module() |>
   run(text = "I love this!", .llm = llm)
 
 # Batch processing
 results <- signature("text -> sentiment") |>
-  module(type = "predict") |>
+  module() |>
   run(text = c("I love this!", "This is bad"), .llm = llm)
 
 # Structured return
 result <- signature("text -> sentiment") |>
-  module(type = "predict") |>
+  module() |>
   run(text = "Great!", .llm = llm, .return_format = "structured")
 # Access: result$output, result$chat, result$metadata
 

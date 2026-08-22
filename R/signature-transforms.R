@@ -224,7 +224,11 @@ with_reasoning <- function(
 #'
 #' @param x A signature object created by [signature()], or string notation.
 #' @param prefix Character. The prefix for the reasoning field.
-#' @param ... Additional arguments passed to `module()`
+#' @param chat Optional ellmer Chat object.
+#' @param template Optional glue template.
+#' @param demos Optional demonstration examples.
+#' @param config Optional prediction configuration.
+#' @param ... Must be empty.
 #'
 #' @return A PredictModule with reasoning enabled
 #'
@@ -240,10 +244,24 @@ with_reasoning <- function(
 chain_of_thought <- function(
   x,
   prefix = "Let's think step by step in order to",
+  chat = NULL,
+  template = "",
+  demos = list(),
+  config = list(),
   ...
 ) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments("chain_of_thought", ...)
+
   cot_sig <- with_reasoning(x, prefix = prefix)
-  module(cot_sig, type = "predict", ...)
+  mod <- module(
+    cot_sig,
+    chat = chat,
+    template = template,
+    demos = demos,
+    config = config
+  )
+  stamp_module_kind(mod, "chain_of_thought")
 }
 
 #' Extract Output Fields from an ellmer Type

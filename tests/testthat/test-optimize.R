@@ -226,7 +226,7 @@ test_that("module_parameter_set derives defaults from signature", {
     instructions = ""
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
   params <- module_parameters(mod)
   expect_true("input_mode" %in% params$id)
 })
@@ -237,7 +237,7 @@ test_that("module_metric_summary handles modules without trials", {
     output_type = ellmer::type_string(),
     instructions = ""
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   metrics <- module_metrics(mod)
   expect_equal(nrow(metrics), 0)
@@ -246,7 +246,7 @@ test_that("module_metric_summary handles modules without trials", {
 test_that("module_trials() warns and returns an inspectable summary when all trials fail (dsprrr-hew)", {
   # Regression: which.max() on all-NA scores returns integer(0), so indexing
   # threw "attempt to select less than one element" instead of a clear message.
-  mod <- module(signature("question -> answer"), type = "predict")
+  mod <- module(signature("question -> answer"))
   mod$state$trials <- tibble::tibble(
     trial_id = 1:3,
     score = NA_real_,

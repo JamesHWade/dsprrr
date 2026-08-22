@@ -38,7 +38,7 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
     instructions = "Answer the question"
   )
 
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   trainset <- data.frame(
     question = c(
@@ -85,7 +85,7 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
     log_dir = log_dir
   )
 
-  compiled <- compile(tp, mod, trainset, valset = trainset, .llm = mock_llm)
+  compiled <- compile(mod, tp, trainset, valset = trainset, .llm = mock_llm)
 
   expect_true(compiled$config$compiled)
   expect_equal(compiled$config$teleprompter, "MIPROv2")
@@ -180,6 +180,7 @@ test_that("MIPROv2 tunes nested predictor instructions as graph components", {
   )
 
   compiled <- compile(
+    program,
     MIPROv2(
       metric = function(...) 1,
       auto = NULL,
@@ -187,7 +188,6 @@ test_that("MIPROv2 tunes nested predictor instructions as graph components", {
       max_bootstrapped_demos = 0L,
       seed = 41L
     ),
-    program,
     trainset
   )
 
@@ -246,11 +246,11 @@ test_that("MIPROv2 fails explicitly without nested predictor evidence", {
 
   expect_error(
     compile(
+      program,
       MIPROv2(
         metric = function(...) 1,
         max_bootstrapped_demos = 1L
       ),
-      program,
       trainset
     ),
     class = "dsprrr_mipro_graph_bootstrap_unsupported"
@@ -264,12 +264,12 @@ test_that("MIPROv2 requires metric for compilation", {
     instructions = "Answer the question"
   )
 
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
   trainset <- data.frame(question = "test", answer = "test")
 
   tp <- MIPROv2(metric = NULL)
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "requires a metric"
   )
 })
@@ -623,7 +623,7 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
     .package = "dsprrr"
   )
 
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   teleprompter <- MIPROv2(metric = function(...) 1)
   compiled <- dsprrr:::compile_mipro(
     teleprompter,
@@ -653,7 +653,7 @@ test_that("MIPROv2 propagates num_threads into optimizer control", {
     .package = "dsprrr"
   )
 
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   teleprompter <- MIPROv2(
     metric = function(...) 1,
     num_threads = 3L

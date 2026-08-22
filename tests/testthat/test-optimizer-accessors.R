@@ -8,7 +8,7 @@ create_test_module <- function(compiled = FALSE, with_demos = FALSE) {
     instructions = "Test instructions"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   if (compiled) {
     # Set up a compiled state manually

@@ -187,8 +187,8 @@ harness_common_properties <- function() {
 #'   max_iterations = 12L
 #' )
 #' compiled <- compile(
-#'   research,
 #'   program,
+#'   research,
 #'   trainset,
 #'   valset = valset,
 #'   .llm = task_chat,
@@ -254,8 +254,8 @@ AutoResearch <- S7::new_class(
 #'   max_candidates_per_iteration = 4L
 #' )
 #' compiled <- compile(
-#'   harness,
 #'   program,
+#'   harness,
 #'   trainset,
 #'   valset = valset,
 #'   .agent_llm = proposer_chat,

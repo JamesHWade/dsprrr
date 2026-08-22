@@ -1,5 +1,5 @@
 test_that("export_traces renders turn content with tool fallbacks", {
-  mod <- module(signature("question -> answer"), type = "predict")
+  mod <- module(signature("question -> answer"))
 
   tool_request <- ellmer::ContentToolRequest(
     id = "tool-1",

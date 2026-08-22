@@ -148,22 +148,21 @@ test_that("interpreter factories are validated without being invoked", {
   )
 })
 
-test_that("module factory exposes Flex and invocation-owned runtimes", {
+test_that("explicit constructors expose Flex and invocation-owned runtimes", {
   log <- factory_test_log()
   factory <- factory_test_factory(log)
   sig <- signature("question -> answer")
 
   runtime_modules <- list(
-    module(
+    program_of_thought(
       sig,
-      type = "program_of_thought",
       interpreter_factory = factory
     ),
-    module(sig, type = "codeact", interpreter_factory = factory),
-    module(sig, type = "rlm", interpreter_factory = factory)
+    code_act(sig, interpreter_factory = factory),
+    rlm_module(sig, interpreter_factory = factory)
   )
   flex_module <- suppressWarnings(
-    module(sig, type = "flex", max_predictor_calls = 7L)
+    flex(sig, max_predictor_calls = 7L)
   )
 
   expect_true(all(vapply(
@@ -178,48 +177,46 @@ test_that("module factory exposes Flex and invocation-owned runtimes", {
 
   expect_error(
     suppressWarnings(
-      module(sig, type = "flex", max_predictor_call = 7L)
+      flex(sig, max_predictor_call = 7L)
     ),
     class = "dsprrr_argument_name_error"
   )
 })
 
-test_that("module factory rejects type-specific arguments for other types", {
+test_that("module rejects arguments owned by advanced constructors", {
   sig <- signature("question -> answer")
 
   expect_error(
-    module(sig, type = "predict", interpreter_factory = function() NULL),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, interpreter_factory = function() NULL),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    module(sig, type = "predict", module_src = "{}"),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, module_src = "{}"),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    module(sig, type = "predict", max_predictor_calls = 100L),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, max_predictor_calls = 100L),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    module(sig, type = "predict", source_format = "json"),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, source_format = "json"),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    module(sig, type = "predict", require_sandbox = FALSE),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, require_sandbox = FALSE),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    suppressWarnings(module(
+    suppressWarnings(flex(
       sig,
-      type = "flex",
       runner = factory_test_runner(1L)
     )),
-    class = "dsprrr_interpreter_binding_error"
+    class = "dsprrr_module_argument_error"
   )
 
-  # Preserve the pre-existing generic-factory behavior for runner.
-  expect_s3_class(
-    module(sig, type = "predict", runner = factory_test_runner(1L)),
-    "PredictModule"
+  expect_error(
+    module(sig, runner = factory_test_runner(1L)),
+    class = "dsprrr_module_argument_error"
   )
 })
 

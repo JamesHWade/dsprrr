@@ -42,9 +42,9 @@ provider communication.
 
 | DSPy | dsprrr | Notes |
 |------|--------|-------|
-| `dspy.Predict` | `module(sig, type = "predict")` | Core predictor |
+| `dspy.Predict` | `module(sig)` | Core predictor |
 | `dspy.ChainOfThought` | `chain_of_thought()`, `with_reasoning()` | Implemented as signature transforms |
-| `dspy.ReAct` / experimental `ReActV2` | `module(sig, type = "react")` | Native ellmer turn history, tool-call IDs, parallel calls per assistant turn, enforced iteration limit, then structured finalization; behaviorally aligned, not a port of the Python class |
+| `dspy.ReAct` / experimental `ReActV2` | `react(sig)` | Native ellmer turn history, tool-call IDs, parallel calls per assistant turn, enforced iteration limit, then structured finalization; behaviorally aligned, not a port of the Python class |
 | `dspy.ProgramOfThought` | `program_of_thought()` | Generates and executes **R** code (not Python); accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory |
 | `dspy.CodeAct` | `code_act()` | Hybrid tools + R code execution with an enforced inner tool-call limit; accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. The built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
 | `dspy.BestOfN` | `best_of_n()` | Reward-function-guided retries |
@@ -169,7 +169,7 @@ metric <- metric_with_feedback(
 )
 
 tp <- GEPA(metric = metric, generations = 5L)
-compiled <- compile(tp, mod, trainset, .llm = llm)
+compiled <- compile(mod, tp, trainset, .llm = llm)
 ```
 
 The feedback for failed examples is injected into GEPA's reflection

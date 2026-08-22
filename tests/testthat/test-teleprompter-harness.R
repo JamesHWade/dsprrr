@@ -53,8 +53,7 @@ make_harness_runner <- function(output = "[1] 2") {
 
 harness_program <- function() {
   module(
-    signature("question -> answer", instructions = "seed"),
-    type = "predict"
+    signature("question -> answer", instructions = "seed")
   )
 }
 
@@ -108,8 +107,8 @@ test_that("AutoResearch owns a persistent sandbox and experiment loop", {
   )
 
   compiled <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = agent,
@@ -152,8 +151,8 @@ test_that("MetaHarness evaluates a batch and controls the frontier", {
   )
 
   compiled <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = agent,
@@ -170,12 +169,10 @@ test_that("MetaHarness evaluates a batch and controls the frontier", {
 
 test_that("MetaHarness can optimize multiple pipeline components jointly", {
   first <- module(
-    signature("question -> middle", instructions = "first-seed"),
-    type = "predict"
+    signature("question -> middle", instructions = "first-seed")
   )
   second <- module(
-    signature("middle -> answer", instructions = "second-seed"),
-    type = "predict"
+    signature("middle -> answer", instructions = "second-seed")
   )
   program <- pipeline(first, second)
   task_llm <- new_test_chat(
@@ -212,8 +209,8 @@ test_that("MetaHarness can optimize multiple pipeline components jointly", {
   )
 
   compiled <- compile(
-    tp,
     program,
+    tp,
     data.frame(question = "start", answer = "yes"),
     .llm = task_llm,
     .agent_llm = agent,
@@ -286,8 +283,8 @@ test_that("agentic harnesses materialize both RLM predictor leaves", {
 
     run <- capture_rlm_optimizer_warnings(
       compile(
-        case$teleprompter,
         program,
+        case$teleprompter,
         data.frame(question = "inspect", answer = "yes"),
         .llm = chat,
         .agent_llm = case$agent,
@@ -336,8 +333,8 @@ test_that("MetaHarness deduplicates candidates by canonical snapshot", {
   )
 
   compiled <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = agent,
@@ -388,8 +385,8 @@ test_that("MetaHarness clones its Chat proposer for every iteration", {
   )
 
   compiled <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = proposer,
@@ -421,8 +418,8 @@ test_that("MetaHarness rejects Chat proposers that cannot be refreshed", {
 
   expect_error(
     compile(
-      tp,
       harness_program(),
+      tp,
       harness_data(),
       .llm = make_harness_task_llm(),
       .agent_llm = proposer,
@@ -437,8 +434,8 @@ test_that("agentic harnesses reject non-Chat proposer adapters", {
 
   expect_error(
     compile(
-      tp,
       harness_program(),
+      tp,
       harness_data(),
       .llm = make_harness_task_llm(),
       .agent_llm = list(chat_structured = function(...) NULL),
@@ -462,8 +459,8 @@ test_that("agentic harnesses require an OS-sandboxed runner by default", {
   expect_snapshot(
     error = TRUE,
     compile(
-      tp,
       harness_program(),
+      tp,
       harness_data(),
       .llm = make_harness_task_llm(),
       .agent_llm = agent
@@ -473,8 +470,8 @@ test_that("agentic harnesses require an OS-sandboxed runner by default", {
   expect_snapshot(
     error = TRUE,
     compile(
-      tp,
       harness_program(),
+      tp,
       harness_data(),
       .llm = make_harness_task_llm(),
       .agent_llm = agent,
@@ -504,8 +501,8 @@ test_that("agentic harness seeds are bounded and do not leak RNG state", {
   )))
 
   compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = agent
@@ -535,8 +532,8 @@ test_that("sandbox false disables agent code execution", {
   )
 
   compiled <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = agent,
@@ -586,8 +583,8 @@ test_that("AutoResearch limits count only accepted evaluations", {
   )
 
   compiled <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = agent,
@@ -620,8 +617,8 @@ test_that("non-improving candidates never displace the baseline", {
   )
 
   compiled <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = agent,
@@ -663,8 +660,8 @@ test_that("malformed actions and runner failures stay inside the harness", {
   )
 
   compiled <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = agent,
@@ -691,8 +688,8 @@ test_that("MetaHarness checkpoints and resumes without repeating baseline", {
   )
 
   first <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = make_harness_agent(list(list(
@@ -708,8 +705,8 @@ test_that("MetaHarness checkpoints and resumes without repeating baseline", {
   expect_equal(nrow(first$config$optimizer$candidates), 1L)
 
   resumed <- compile(
-    tp,
     harness_program(),
+    tp,
     harness_data(),
     .llm = make_harness_task_llm(),
     .agent_llm = make_harness_agent(list(list(
