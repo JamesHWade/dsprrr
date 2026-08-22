@@ -26,8 +26,9 @@ KNNFewShot(
 
 - metric:
 
-  A metric function for evaluating predictions. If NULL, uses
-  exact_match() by default.
+  Optional metric stored with the teleprompter. KNNFewShot selects
+  demonstrations by embedding similarity rather than candidate
+  evaluation.
 
 - metric_threshold:
 

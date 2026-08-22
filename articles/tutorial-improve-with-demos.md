@@ -64,12 +64,11 @@ This works, but how do we know it’s accurate? And how do we improve it?
 
 ## Step 2: Create Training Data
 
-First, let’s create labeled examples using
-[`dsp_trainset()`](https://jameshwade.github.io/dsprrr/reference/dsp_trainset.md):
+First, create labeled examples as an ordinary tibble:
 
 ``` r
 
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   ticket = c(
     "I was charged twice for the same item",
     "How do I update my payment method?",
@@ -99,10 +98,8 @@ trainset <- dsp_trainset(
 trainset
 ```
 
-The
-[`dsp_trainset()`](https://jameshwade.github.io/dsprrr/reference/dsp_trainset.md)
-function creates a properly formatted tibble where input columns are
-matched with expected output columns.
+Input columns are matched with expected output columns during
+compilation.
 
 ## Step 3: Measure Baseline Accuracy
 
@@ -212,7 +209,7 @@ See which examples the teleprompter chose:
 ``` r
 
 # The compiled module now has demos
-compiled$config$demos
+compiled$demos
 ```
 
 ## Step 8: Compare All Three Versions
@@ -291,8 +288,7 @@ LLM or exceed context limits.
 
 In this tutorial, you:
 
-1.  Created labeled training data with
-    [`dsp_trainset()`](https://jameshwade.github.io/dsprrr/reference/dsp_trainset.md)
+1.  Created labeled training data as a tibble
 2.  Measured baseline accuracy before improving
 3.  Added manual demonstrations with the `demos` parameter
 4.  Used `LabeledFewShot` for automatic demo selection

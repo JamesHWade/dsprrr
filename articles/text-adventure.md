@@ -167,11 +167,11 @@ predictable.
 
 scene_sig <- signature(
   inputs = list(
-    input("location", "Current location name"),
-    input("player_info", "Player stats summary"),
-    input("story_progress", "Story progress 0-10"),
-    input("recent_actions", "Last few player actions"),
-    input("visited_before", "Whether location was visited")
+    input("location", description = "Current location name"),
+    input("player_info", description = "Player stats summary"),
+    input("story_progress", description = "Story progress 0-10"),
+    input("recent_actions", description = "Last few player actions"),
+    input("visited_before", description = "Whether location was visited")
   ),
   output_type = type_object(
     description = type_string("2-3 sentence scene description"),
@@ -194,11 +194,11 @@ programmatically handle items changing hands.
 
 dialogue_sig <- signature(
   inputs = list(
-    input("npc_name", "NPC name"),
-    input("npc_role", "NPC role and personality"),
-    input("player_says", "Player's action or words"),
-    input("relationship", "new or returning"),
-    input("context", "Location and story context")
+    input("npc_name", description = "NPC name"),
+    input("npc_role", description = "NPC role and personality"),
+    input("player_says", description = "Player's action or words"),
+    input("relationship", description = "new or returning"),
+    input("context", description = "Location and story context")
   ),
   output_type = type_object(
     response = type_string("NPC dialogue (1-3 sentences)"),
@@ -219,11 +219,11 @@ state automatically.
 
 action_sig <- signature(
   inputs = list(
-    input("action", "What player attempts"),
-    input("relevant_skill", "Which skill applies"),
-    input("skill_value", "Player's skill value"),
-    input("difficulty", "easy/medium/hard"),
-    input("context", "Relevant circumstances")
+    input("action", description = "What player attempts"),
+    input("relevant_skill", description = "Which skill applies"),
+    input("skill_value", description = "Player's skill value"),
+    input("difficulty", description = "easy/medium/hard"),
+    input("context", description = "Relevant circumstances")
   ),
   output_type = type_object(
     success = type_boolean(),
@@ -577,11 +577,11 @@ With more structure, we can add richer AI interactions:
 
 scene_sig <- signature(
   inputs = list(
-    input("location", "Current location name"),
-    input("player_info", "Player stats summary"),
-    input("story_progress", "Story progress 0-10"),
-    input("recent_actions", "Last few player actions"),
-    input("visited_before", "Whether location was visited")
+    input("location", description = "Current location name"),
+    input("player_info", description = "Player stats summary"),
+    input("story_progress", description = "Story progress 0-10"),
+    input("recent_actions", description = "Last few player actions"),
+    input("visited_before", description = "Whether location was visited")
   ),
   output_type = type_object(
     description = type_string("2-3 sentence scene description"),
@@ -597,11 +597,11 @@ and exploration options. If visited before, note familiarity."
 
 dialogue_sig <- signature(
   inputs = list(
-    input("npc_name", "NPC name"),
-    input("npc_role", "NPC role and personality"),
-    input("player_says", "Player's action or words"),
-    input("relationship", "new or returning"),
-    input("context", "Location and story context")
+    input("npc_name", description = "NPC name"),
+    input("npc_role", description = "NPC role and personality"),
+    input("player_says", description = "Player's action or words"),
+    input("relationship", description = "new or returning"),
+    input("context", description = "Location and story context")
   ),
   output_type = type_object(
     response = type_string("NPC dialogue (1-3 sentences)"),
@@ -618,12 +618,12 @@ Build relationships over interactions. Reveal information gradually."
 
 action_sig <- signature(
   inputs = list(
-    input("action", "What player attempts"),
-    input("relevant_skill", "Which skill applies"),
-    input("skill_value", "Player's skill value"),
-    input("difficulty", "easy/medium/hard/very_hard"),
-    input("context", "Relevant circumstances"),
-    input("has_useful_item", "Whether player has helpful item")
+    input("action", description = "What player attempts"),
+    input("relevant_skill", description = "Which skill applies"),
+    input("skill_value", description = "Player's skill value"),
+    input("difficulty", description = "easy/medium/hard/very_hard"),
+    input("context", description = "Relevant circumstances"),
+    input("has_useful_item", description = "Whether player has helpful item")
   ),
   output_type = type_object(
     success = type_boolean(),

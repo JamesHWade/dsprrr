@@ -38,26 +38,11 @@ run(module, ...)
 
   :   Logical indicating whether to print debug information
 
-  .parallel
-
-  :   Logical indicating whether to process batch inputs in parallel
-      (default FALSE).
-
-  .parallel_method
-
-  :   Character, either "ellmer" (default) or "mirai". "ellmer" uses
-      ellmer's
-      [`parallel_chat_structured()`](https://ellmer.tidyverse.org/reference/parallel_chat.html)
-      for native async HTTP parallelism (more efficient, single
-      process). "mirai" uses mirai for multi-process parallelism
-      (requires `.llm = NULL` so each worker can create an independent
-      client).
-
   .concurrency
 
   :   A validated policy created by
       [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
-      When supplied, do not also pass `.parallel` or `.parallel_method`.
+      Omission uses sequential execution.
 
   .progress
 
@@ -85,8 +70,9 @@ run(module, ...)
 
 ## Value
 
-For single inputs with .return_format="simple": The parsed output
-according to the module's signature. For single inputs with
+For single inputs with `.return_format = "simple"`, the parsed output
+according to the module's signature. Object-shaped outputs remain named
+records for both scalar and batch calls. For single inputs with
 .return_format="structured": A list with components:
 
 - output: The parsed output
@@ -135,9 +121,6 @@ once with its registry to bind the verified runtime references before
 execution.
 
 ## See also
-
-- [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) for
-  one-shot LLM calls without creating a module
 
 - [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
   for running a module on a data frame

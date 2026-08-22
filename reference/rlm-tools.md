@@ -18,8 +18,6 @@ The prelude defines these functions in the execution environment:
 
 - `llm_query_batched(queries, slices)`: Request batched LLM calls
 
-- `rlm_query()` / `rlm_query_batch()`: Backward-compatible aliases
-
 Recursive-query helpers suspend execution with a nonce-bound,
 schema-checked request. The main RLM process handles the request and
 replays the code with an immutable response, so the helpers behave like

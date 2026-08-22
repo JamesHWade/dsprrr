@@ -300,7 +300,7 @@ Let the computer search for you:
 ``` r
 
 mod$optimize_grid(
-  devset = train_data,
+  data = train_data,
   metric = metric_exact_match(),
   parameters = list(
     temperature = c(0, 0.3, 0.7),

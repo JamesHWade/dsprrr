@@ -183,7 +183,8 @@ use.</p>
 </ol>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="invalid-provider">“Invalid provider”<a class="anchor" aria-label="anchor" href="#invalid-provider"></a>
@@ -298,12 +299,18 @@ signature requires.</p>
 <p><strong>Solution:</strong></p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Wrong - missing 'context'</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="va">sig</span>, question <span class="op">=</span> <span class="st">"What is R?"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"What is R?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Correct</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="va">sig</span>, context <span class="op">=</span> <span class="st">"R is a programming language."</span>, question <span class="op">=</span> <span class="st">"What is R?"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  context <span class="op">=</span> <span class="st">"R is a programming language."</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What is R?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="did-you-mean-typo-in-input-name">“Did you mean: …?” (typo in input name)<a class="anchor" aria-label="anchor" href="#did-you-mean-typo-in-input-name"></a>
@@ -316,10 +323,11 @@ signature requires.</p>
 <p><strong>Solution:</strong> Fix the typo:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Wrong - typo</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, qeustion <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, qeustion <span class="op">=</span> <span class="st">"What is 2+2?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Correct</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="ignoring-unknown-input">“Ignoring unknown input”<a class="anchor" aria-label="anchor" href="#ignoring-unknown-input"></a>
@@ -333,13 +341,15 @@ signature.</p>
 your signature:</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># This warns because 'context' isn't in the signature</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"Hi"</span>, context <span class="op">=</span> <span class="st">"extra"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"Hi"</span>, context <span class="op">=</span> <span class="st">"extra"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Option 1: Remove extra input</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"Hi"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"Hi"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Option 2: Add to signature</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span>, context <span class="op">=</span> <span class="st">"extra"</span>, question <span class="op">=</span> <span class="st">"Hi"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">context_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">context_mod</span>, context <span class="op">=</span> <span class="st">"extra"</span>, question <span class="op">=</span> <span class="st">"Hi"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
 </div>
@@ -361,7 +371,7 @@ your signature:</p>
 </ol>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"Try again"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"Try again"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li><strong>Use a different model:</strong></li>
 </ol>
@@ -372,8 +382,9 @@ your signature:</p>
 </ol>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; result"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">results</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"text -&gt; result"</span>, text <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">text</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="va">results</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, text <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">text</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span>  <span class="co"># Rate limit buffer</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 </div>
@@ -426,8 +437,10 @@ issues):</li>
 </ol>
 <div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Instead of a huge context, summarize first</span></span>
-<span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"text -&gt; brief_summary: string[100]"</span>, text <span class="op">=</span> <span class="va">long_text</span><span class="op">)</span></span>
-<span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span>, context <span class="op">=</span> <span class="va">summary</span>, question <span class="op">=</span> <span class="va">q</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">summarizer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; brief_summary: string[100]"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">answerer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">summarizer</span>, text <span class="op">=</span> <span class="va">long_text</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">answerer</span>, context <span class="op">=</span> <span class="va">summary</span>, question <span class="op">=</span> <span class="va">q</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li><strong>Use a faster model:</strong></li>
 </ol>
@@ -464,10 +477,16 @@ issues):</li>
 <div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Process in chunks</span></span>
 <span><span class="va">chunks</span> <span class="op">&lt;-</span> <span class="fu">split_text</span><span class="op">(</span><span class="va">long_doc</span>, chunk_size <span class="op">=</span> <span class="fl">5000</span><span class="op">)</span></span>
+<span><span class="va">summarizer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; summary"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">summaries</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">chunks</span>, <span class="kw">function</span><span class="op">(</span><span class="va">chunk</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"text -&gt; summary"</span>, text <span class="op">=</span> <span class="va">chunk</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">summarizer</span>, text <span class="op">=</span> <span class="va">chunk</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="va">final</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"summaries -&gt; combined"</span>, summaries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">summaries</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">combiner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"summaries -&gt; combined"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">final</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">combiner</span>,</span>
+<span>  summaries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">summaries</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="response-parsing-failed">“Response parsing failed”<a class="anchor" aria-label="anchor" href="#response-parsing-failed"></a>
@@ -540,10 +559,7 @@ request.</p>
 <span></span>
 <span><span class="co"># Correct - create signature first</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Or use as_module() which accepts strings</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="unknown-module-type">“Unknown module type”<a class="anchor" aria-label="anchor" href="#unknown-module-type"></a>
@@ -611,11 +627,11 @@ and model are active - API key status</p>
 <code class="sourceCode R"><span><span class="co"># See the full prompt that was sent</span></span>
 <span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Get the trace with all details</span></span>
-<span><span class="va">trace</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_last_trace.html">get_last_trace</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">trace</span><span class="op">$</span><span class="va">prompt</span>      <span class="co"># The prompt</span></span>
-<span><span class="va">trace</span><span class="op">$</span><span class="va">output</span>      <span class="co"># The raw output</span></span>
-<span><span class="va">trace</span><span class="op">$</span><span class="va">model</span>       <span class="co"># Which model was used</span></span></code></pre></div>
+<span><span class="co"># Get the latest module trace with prompts and outputs</span></span>
+<span><span class="va">trace</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">mod</span>, include_prompts <span class="op">=</span> <span class="cn">TRUE</span>, include_outputs <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  <span class="fl">1</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="step-3-view-history">Step 3: View History<a class="anchor" aria-label="anchor" href="#step-3-view-history"></a>
@@ -651,12 +667,22 @@ and model are active - API key status</p>
 <p>If something complex isn’t working:</p>
 <div class="sourceCode" id="cb57"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Start with the simplest possible signature</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span>, q <span class="op">=</span> <span class="st">"test"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, q <span class="op">=</span> <span class="st">"test"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Then add complexity incrementally</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"test"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer: string"</span>, question <span class="op">=</span> <span class="st">"test"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span>, context <span class="op">=</span> <span class="st">"ctx"</span>, question <span class="op">=</span> <span class="st">"test"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span>, question <span class="op">=</span> <span class="st">"test"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer: string"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"test"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  context <span class="op">=</span> <span class="st">"ctx"</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"test"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="step-6-check-for-known-issues">Step 6: Check for Known Issues<a class="anchor" aria-label="anchor" href="#step-6-check-for-known-issues"></a>
@@ -681,7 +707,8 @@ and model are active - API key status</p>
 <li><strong>Check the documentation:</strong></li>
 </ol>
 <div class="sourceCode" id="cb59"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="op">?</span><span class="va">dsp</span></span>
+<code class="sourceCode R"><span><span class="op">?</span><span class="va">module</span></span>
+<span><span class="op">?</span><span class="va">run</span></span>
 <span><span class="op">?</span><span class="va">signature</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"getting-started"</span>, package <span class="op">=</span> <span class="st">"dsprrr"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"cheatsheet"</span>, package <span class="op">=</span> <span class="st">"dsprrr"</span><span class="op">)</span></span></code></pre></div>

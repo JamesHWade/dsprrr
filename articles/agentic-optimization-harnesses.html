@@ -330,10 +330,8 @@ candidate.</p>
 </h2>
 <p>Meta-Harness creates a fresh proposer chat for each outer iteration.
 The proposer sees persisted evidence rather than relying on earlier
-conversation state. ellmer <code>Chat</code> objects are cloned and
-reset automatically. For custom adapters, pass either a cloneable object
-that implements <code>chat_structured()</code> and <code>clone()</code>,
-or a zero-argument factory that returns a new compatible proposer:</p>
+conversation state. Pass an ellmer <code>Chat</code>; dsprrr clones and
+resets it automatically before each iteration:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">harness</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/MetaHarness.html">MetaHarness</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
@@ -353,15 +351,10 @@ or a zero-argument factory that returns a new compatible proposer:</p>
 <span>  .agent_llm <span class="op">=</span> <span class="va">research_chat</span>,</span>
 <span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
 <span>  objective <span class="op">=</span> <span class="st">"Improve factual accuracy without increasing abstention errors."</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">custom_factory</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu">make_custom_proposer</span><span class="op">(</span><span class="op">)</span> <span class="co"># returns an object with chat_structured()</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p>Pass <code>custom_factory</code> as <code>.agent_llm</code> in place
-of <code>research_chat</code>. Meta-Harness rejects a non-cloneable
-custom object because reusing it could carry hidden conversation state
-across iterations.</p>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Meta-Harness rejects non-Chat adapters and non-cloneable Chat objects
+because reusing them could carry hidden conversation state across
+iterations.</p>
 <p>Within an iteration, the proposer may request a few sandbox steps
 before it submits its batch. The outer loop then:</p>
 <ol style="list-style-type: decimal">

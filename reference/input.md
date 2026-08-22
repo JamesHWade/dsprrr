@@ -1,8 +1,7 @@
 # Create an input specification for a Signature
 
-Create an input specification with flexible type notation. Supports
-ellmer types, string shortcuts, or S7 classes for backward
-compatibility.
+Create an input specification using an ellmer type or a canonical type
+label.
 
 ## Usage
 
@@ -18,22 +17,13 @@ input(name, type = NULL, description = NULL, ...)
 
 - type:
 
-  Input type specification. Can be:
-
-  - An ellmer type object (e.g.,
-    [`type_string()`](https://ellmer.tidyverse.org/reference/type_boolean.html),
-    [`type_number()`](https://ellmer.tidyverse.org/reference/type_boolean.html))
-
-  - A string shortcut (e.g., "string", "number", "boolean")
-
-  - An S7 class (for backward compatibility)
-
-  - NULL/missing (defaults to string type)
+  An ellmer type object, one of `"string"`, `"number"`, `"integer"`,
+  `"boolean"`, `"array"`, or `"object"`, or `NULL` to use a string type.
 
 - description:
 
-  Optional description of the input. When type is a string shortcut or
-  NULL, this description will be passed to the ellmer type
+  Optional description of the input. When `type` is a canonical label or
+  `NULL`, this description is passed to the ellmer type.
 
 - ...:
 
@@ -102,7 +92,7 @@ input("active", ellmer::type_boolean())
 #> attr(,"class")
 #> [1] "dsprrr_input"
 
-# Using string shortcuts (simple and readable)
+# Using canonical labels
 input("text", "string")
 #> $name
 #> [1] "text"

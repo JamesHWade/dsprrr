@@ -145,11 +145,11 @@ which we can then pass reliably to the next stage:
 # Stage 1: Analyze purpose
 analyze_purpose_sig <- signature(
   inputs = list(
-    input("pkg_name", "Package name"),
-    input("title", "Package title from DESCRIPTION"),
-    input("description_text", "Description from DESCRIPTION"),
-    input("readme_excerpt", "First 2000 chars of README"),
-    input("exported_functions", "Comma-separated exports")
+    input("pkg_name", description = "Package name"),
+    input("title", description = "Package title from DESCRIPTION"),
+    input("description_text", description = "Description from DESCRIPTION"),
+    input("readme_excerpt", description = "First 2000 chars of README"),
+    input("exported_functions", description = "Comma-separated exports")
   ),
   output_type = type_object(
     purpose = type_string("One sentence: what problem does this solve?"),
@@ -170,11 +170,11 @@ Be precise and technical. Focus on what makes it unique."
 # Stage 2: Analyze structure
 analyze_structure_sig <- signature(
   inputs = list(
-    input("pkg_name", "Package name"),
-    input("r_files", "R files in R/ directory"),
-    input("exports", "Exported function names"),
-    input("has_vignettes", "Whether package has vignettes"),
-    input("dependencies", "Package dependencies")
+    input("pkg_name", description = "Package name"),
+    input("r_files", description = "R files in R/ directory"),
+    input("exports", description = "Exported function names"),
+    input("has_vignettes", description = "Whether package has vignettes"),
+    input("dependencies", description = "Package dependencies")
   ),
   output_type = type_object(
     organization = type_string("How is code organized? (1-2 sentences)"),
@@ -195,10 +195,10 @@ Identify important files and entry points."
 # Stage 3: Generate examples
 generate_examples_sig <- signature(
   inputs = list(
-    input("pkg_name", "Package name"),
-    input("purpose", "What the package does"),
-    input("entry_points", "Main functions"),
-    input("key_concepts", "Core concepts as JSON")
+    input("pkg_name", description = "Package name"),
+    input("purpose", description = "What the package does"),
+    input("entry_points", description = "Main functions"),
+    input("key_concepts", description = "Core concepts as JSON")
   ),
   output_type = type_object(
     basic = type_string("3-5 line minimal example"),
@@ -212,16 +212,16 @@ Examples must be syntactically valid R."
 # Stage 4: Generate final llms.txt
 generate_llmstxt_sig <- signature(
   inputs = list(
-    input("pkg_name", "Package name"),
-    input("purpose", "Package purpose"),
-    input("target_audience", "Who uses this"),
-    input("key_concepts_json", "JSON of term/definition pairs"),
-    input("organization", "Code organization"),
-    input("entry_points", "Main functions"),
-    input("main_files_json", "JSON of file/purpose pairs"),
-    input("basic_example", "Basic usage example"),
-    input("intermediate_example", "Intermediate example"),
-    input("gotchas", "Common mistakes")
+    input("pkg_name", description = "Package name"),
+    input("purpose", description = "Package purpose"),
+    input("target_audience", description = "Who uses this"),
+    input("key_concepts_json", description = "JSON of term/definition pairs"),
+    input("organization", description = "Code organization"),
+    input("entry_points", description = "Main functions"),
+    input("main_files_json", description = "JSON of file/purpose pairs"),
+    input("basic_example", description = "Basic usage example"),
+    input("intermediate_example", description = "Intermediate example"),
+    input("gotchas", description = "Common mistakes")
   ),
   output_type = type_string(),
   instructions = "Generate llms.txt in markdown format with sections:
@@ -721,7 +721,7 @@ sig <- signature("context, question -> answer",
                  instructions = "Answer based only on context.")
 mod <- module(sig, type = "predict")
 
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   context = c("R is for statistics.", "Python is general-purpose."),
   question = c("What is R for?", "Describe Python."),
   answer = c("Statistics", "General-purpose programming")
@@ -754,8 +754,6 @@ variants in separate files. Optimization in teleprompter.R.
   Execute module with inputs
 - [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md):
   Optimize with teleprompter
-- [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md): Quick
-  one-liner for Chat objects
 
 ## Watch Out For
 

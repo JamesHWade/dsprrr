@@ -135,8 +135,11 @@ see <code><a href="with_lm.html">with_lm()</a></code>.</p>
 <span class="r-in"><span>  <span class="fu">local_lm</span><span class="op">(</span><span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_claude</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># These calls don't need .llm parameter</span></span></span>
-<span class="r-in"><span>  <span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="dsp.html">dsp</a></span><span class="op">(</span><span class="st">"data -&gt; summary"</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">insights</span> <span class="op">&lt;-</span> <span class="fu"><a href="dsp.html">dsp</a></span><span class="op">(</span><span class="st">"summary -&gt; insights"</span>, summary <span class="op">=</span> <span class="va">summary</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="run.html">run</a></span><span class="op">(</span><span class="fu"><a href="module.html">module</a></span><span class="op">(</span><span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"data -&gt; summary"</span><span class="op">)</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">insights</span> <span class="op">&lt;-</span> <span class="fu"><a href="run.html">run</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="module.html">module</a></span><span class="op">(</span><span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"summary -&gt; insights"</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    summary <span class="op">=</span> <span class="va">summary</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">insights</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>

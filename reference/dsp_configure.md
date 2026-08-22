@@ -2,8 +2,7 @@
 
 Configure the default LLM provider and settings for dsprrr. Similar to
 DSPy's `dspy.configure(lm=lm)`, this sets up a default Chat that will be
-used by [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md)
-and modules when no explicit Chat is provided.
+used by modules when no explicit Chat is provided.
 
 ## Usage
 
@@ -62,7 +61,7 @@ dsp_configure(provider = "openai", model = "gpt-4o-mini")
 dsp_configure(provider = "anthropic", model = "claude-3-5-sonnet-latest",
               temperature = 0.7)
 
-# Now dsp() uses this configuration
-dsp("question -> answer", question = "What is 2+2?")
+# Now run() uses this configuration
+run(module(signature("question -> answer")), question = "What is 2+2?")
 } # }
 ```

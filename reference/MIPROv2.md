@@ -14,7 +14,6 @@ MIPROv2(
   metric = NULL,
   metric_threshold = NULL,
   max_errors = 5L,
-  prompt_model = NULL,
   task_model = NULL,
   teacher_settings = NULL,
   max_bootstrapped_demos = 4L,
@@ -23,7 +22,6 @@ MIPROv2(
   num_candidates = NULL,
   num_threads = 1L,
   seed = 9L,
-  init_temperature = 1,
   track_stats = TRUE,
   log_dir = NULL
 )
@@ -43,13 +41,11 @@ MIPROv2(
 
   Maximum number of errors allowed during optimization.
 
-- prompt_model:
-
-  Optional model to propose instructions.
-
 - task_model:
 
-  Optional model to evaluate tasks. Defaults to .llm.
+  Optional ellmer Chat used to evaluate tasks. `NULL` uses the `.llm`
+  supplied to
+  [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
 
 - teacher_settings:
 
@@ -78,10 +74,6 @@ MIPROv2(
 - seed:
 
   Random seed for reproducibility.
-
-- init_temperature:
-
-  Initial temperature for instruction proposals.
 
 - track_stats:
 

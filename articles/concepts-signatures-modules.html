@@ -198,7 +198,7 @@ your evaluation results.</p>
 <p>Consider what happens during optimization:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
-<span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">train_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -373,7 +373,7 @@ grid search or teleprompter optimization:</p>
 <code class="sourceCode R"><span><span class="va">mod</span><span class="op">$</span><span class="fu">is_compiled</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span>
 <span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span><span class="va">devset</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span>data <span class="op">=</span> <span class="va">devset</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">is_compiled</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
@@ -604,7 +604,7 @@ happened</li>
 <p>When you call <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
-<span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">train_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>

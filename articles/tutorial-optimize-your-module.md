@@ -54,7 +54,7 @@ Create training and test data:
 ``` r
 
 # Training data for optimization
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   review = c(
     "Absolutely love this product! Best purchase ever.",
     "Complete waste of money. Broke after one day.",
@@ -76,7 +76,7 @@ trainset <- dsp_trainset(
 )
 
 # Held-out test data (never used for optimization)
-testset <- dsp_trainset(
+testset <- tibble::tibble(
   review = c(
     "Great value for money!",
     "Stopped working after a week.",

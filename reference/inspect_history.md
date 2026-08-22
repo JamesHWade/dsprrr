@@ -1,8 +1,7 @@
 # Inspect LLM Call History
 
-Returns a tibble of recent LLM calls across all modules and
-[`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) calls.
-Similar to DSPy's `dspy.inspect_history(n)`.
+Returns a tibble of recent LLM calls across all modules. Similar to
+DSPy's `dspy.inspect_history(n)`.
 
 ## Usage
 
@@ -41,7 +40,7 @@ A tibble with one row per LLM call containing:
 
 - `timestamp`: When the call was made
 
-- `source`: Where the call originated ("dsp()" or module class name)
+- `source`: The module class that originated the call
 
 - `model`: The model used
 

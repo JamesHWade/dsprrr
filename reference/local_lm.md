@@ -42,8 +42,11 @@ my_analysis <- function(data) {
   local_lm(ellmer::chat_claude())
 
   # These calls don't need .llm parameter
-  summary <- dsp("data -> summary", data = data)
-  insights <- dsp("summary -> insights", summary = summary)
+  summary <- run(module(signature("data -> summary")), data = data)
+  insights <- run(
+    module(signature("summary -> insights")),
+    summary = summary
+  )
   insights
 }
 

@@ -21,7 +21,7 @@ as_vitals_task(
   epochs = 1L,
   metrics = NULL,
   dir = NULL,
-  .parallel = FALSE,
+  .concurrency = NULL,
   ...
 )
 ```
@@ -71,9 +71,11 @@ as_vitals_task(
   Directory for evaluation logs. Defaults to
   [`vitals::vitals_log_dir()`](https://vitals.tidyverse.org/reference/vitals_log_dir.html).
 
-- .parallel:
+- .concurrency:
 
-  Logical; whether to run solver in parallel. Defaults to FALSE.
+  Optional policy created by
+  [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
+  Omission uses sequential execution.
 
 - ...:
 

@@ -93,7 +93,7 @@ board <- pins::board_folder("pins")
 
 mod <- signature("text -> sentiment") |>
   module(type = "predict") |>
-  optimize_grid(devset, metric = exact_match)
+  optimize_grid(data = devset, metric = metric_exact_match())
 
 pin_module_config(board, "sentiment-classifier-v1", mod,
                   description = "Optimized sentiment classifier")

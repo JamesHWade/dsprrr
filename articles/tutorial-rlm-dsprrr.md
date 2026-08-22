@@ -144,7 +144,7 @@ investigator <- rlm_module(
   interpreter_factory = function() {
     r_code_runner(timeout = 30, persistent = TRUE)
   },
-  max_iters = 8,
+  max_iterations = 8,
   max_llm_calls = 0L,
   max_output_chars = 10000
 )
@@ -158,8 +158,8 @@ process isolation, not an operating-system security sandbox. Do not use
 this configuration for adversarial context or untrusted generated code.
 
 The factory creates one runner for the invocation. State remains
-available between RLM iterations, and dsprrr closes the runner when the
-invocation ends.
+available between RLM iterations, and dsprrr shuts down the runner when
+the invocation ends.
 
 ## Run and retain the evidence
 

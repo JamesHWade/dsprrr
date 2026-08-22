@@ -5,13 +5,13 @@ to include additional fields like chain-of-thought reasoning.
 with_instructions() replaces a signature's instructions while preserving
 its input and output fields. append_instructions() layers additional
 instructions after the existing text, separated by a blank line. Both
-functions return a new Signature and never mutate the original."><meta property="og:description" content="Functions for transforming signatures to enable different reasoning patterns.
+functions return a new signature object and never mutate the original."><meta property="og:description" content="Functions for transforming signatures to enable different reasoning patterns.
 These are composable transforms that modify the output type of a signature
 to include additional fields like chain-of-thought reasoning.
 with_instructions() replaces a signature's instructions while preserving
 its input and output fields. append_instructions() layers additional
 instructions after the existing text, separated by a blank line. Both
-functions return a new Signature and never mutate the original."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
+functions return a new signature object and never mutate the original."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -107,7 +107,7 @@ to include additional fields like chain-of-thought reasoning.</p>
 <p><code>with_instructions()</code> replaces a signature's instructions while preserving
 its input and output fields. <code>append_instructions()</code> layers additional
 instructions after the existing text, separated by a blank line. Both
-functions return a new <a href="signature.html">Signature</a> and never mutate the original.</p>
+functions return a new signature object and never mutate the original.</p>
     </div>
 
     <div class="section level2">
@@ -122,8 +122,8 @@ functions return a new <a href="signature.html">Signature</a> and never mutate t
 
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>A <a href="signature.html">Signature</a> object or string notation such as
-<code>"question -&gt; answer"</code>.</p></dd>
+<dd><p>A signature object created by <code><a href="signature.html">signature()</a></code>, or string notation
+such as <code>"question -&gt; answer"</code>.</p></dd>
 
 
 <dt id="arg-instructions">instructions<a class="anchor" aria-label="anchor" href="#arg-instructions"></a></dt>
@@ -134,7 +134,7 @@ allowed when the resulting signature remains valid; for
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A new <a href="signature.html">Signature</a> object.</p>
+    <p>A new signature object.</p>
     </div>
 
     <div class="section level2">

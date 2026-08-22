@@ -57,7 +57,7 @@ Consider what happens during optimization:
 ``` r
 
 mod$optimize_grid(
-  devset = train_data,
+  data = train_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0, 0.3, 0.7))
 )
@@ -251,7 +251,7 @@ teleprompter optimization:
 mod$is_compiled()
 #> [1] FALSE
 
-mod$optimize_grid(devset, metric_exact_match())
+mod$optimize_grid(data = devset, metric = metric_exact_match())
 
 mod$is_compiled()
 #> [1] TRUE
@@ -469,7 +469,7 @@ When you call
 ``` r
 
 mod$optimize_grid(
-  devset = train_data,
+  data = train_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0, 0.3, 0.7))
 )

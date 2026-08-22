@@ -131,7 +131,7 @@
                         <h4 data-toc-skip class="author">James H.
 Wade</h4>
             
-            <h4 data-toc-skip class="date">2026-08-16</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/articles/how-rlm-works.Rmd" class="external-link"><code>vignettes/articles/how-rlm-works.Rmd</code></a></small>
       <div class="d-none name"><code>how-rlm-works.Rmd</code></div>
@@ -219,7 +219,7 @@ limit, bounded head-and-tail output enters the next model turn; the full
 source object does not.</li>
 <li>A valid <code>SUBMIT(...)</code> ends the loop. An invalid typed
 submission becomes repairable feedback instead.</li>
-<li>If the loop spends <code>max_iters</code> without a valid
+<li>If the loop spends <code>max_iterations</code> without a valid
 submission, a final extraction pass attempts to produce the best typed
 answer supported by the trajectory; provider or type-validation failure
 remains terminal.</li>
@@ -233,7 +233,7 @@ remains terminal.</li>
 <span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span>  <span class="op">}</span>,</span>
-<span>  max_iters <span class="op">=</span> <span class="fl">10</span>,</span>
+<span>  max_iterations <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  max_llm_calls <span class="op">=</span> <span class="fl">6</span>,</span>
 <span>  max_output_chars <span class="op">=</span> <span class="fl">10000</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -257,22 +257,23 @@ persistent state.</p>
 <code class="sourceCode R"><span><span class="va">explorer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
 <span>  <span class="st">"records, question -&gt; answer"</span>,</span>
 <span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  max_iters <span class="op">=</span> <span class="fl">10</span></span>
+<span>  max_iterations <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>dsprrr creates one runner from the factory, uses it for that
-invocation, and closes it exactly once on success, error, or interrupt.
-Factory-backed modules can create isolated runners for concurrent
-invocations.</p>
+invocation, and shuts it down exactly once on success, error, or
+interrupt. Factory-backed modules can create isolated runners for
+concurrent invocations.</p>
 <p>A directly supplied <code>runner</code> is caller-owned. dsprrr
-neither resets nor closes it. RLM attempts to remove staged context and
-invocation-private variables when a call ends. Inspect cleanup warnings
-and close or reset the runner if cleanup fails. No cleanup can undo
-arbitrary file, option, or network side effects from guest code. Reuse a
-caller-owned runner only sequentially and within one trust boundary:</p>
+neither resets nor shuts down it. RLM attempts to remove staged context
+and invocation-private variables when a call ends. Inspect cleanup
+warnings and shut down or reset the runner if cleanup fails. No cleanup
+can undo arbitrary file, option, or network side effects from guest
+code. Reuse a caller-owned runner only sequentially and within one trust
+boundary:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">local</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>  <span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit</a></span><span class="op">(</span><span class="va">runner</span><span class="op">$</span><span class="fu">close</span><span class="op">(</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit</a></span><span class="op">(</span><span class="va">runner</span><span class="op">$</span><span class="fu">shutdown</span><span class="op">(</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span>  <span class="va">explorer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
 <span>    <span class="st">"records, question -&gt; answer"</span>,</span>
 <span>    runner <span class="op">=</span> <span class="va">runner</span></span>
@@ -359,11 +360,12 @@ It rejects opaque <code>TypeJsonSchema</code> output nodes at
 construction because accepting them without a JSON Schema validator
 would make the repair contract misleading. Express the output with
 ellmer’s explicit type constructors when using RLM.</p>
-<p>If <code>max_iters</code> is exhausted, fallback extraction reads the
-trajectory and attempts to return the signature fields. Provider or
-output-validation failure still terminates the invocation. Treat a
-successful fallback as degraded completion: it is useful, but it is
-evidence that the exploration budget or instructions may need work.</p>
+<p>If <code>max_iterations</code> is exhausted, fallback extraction
+reads the trajectory and attempts to return the signature fields.
+Provider or output-validation failure still terminates the invocation.
+Treat a successful fallback as degraded completion: it is useful, but it
+is evidence that the exploration budget or instructions may need
+work.</p>
 </div>
 <div class="section level2">
 <h2 id="output-is-bounded-evidence">Output is bounded evidence<a class="anchor" aria-label="anchor" href="#output-is-bounded-evidence"></a>
@@ -521,7 +523,7 @@ observation or reuse a runner whose state is uncertain.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>max_iters</code></td>
+<td><code>max_iterations</code></td>
 <td>Outer model/code/observation turns before fallback</td>
 </tr>
 <tr class="even">

@@ -24,14 +24,21 @@ models. This enables:
 
 dsprrr registers an `llm_predict` model type with parsnip:
 
+The engine uses the ellmer Chat configured for the prediction context;
+it does not construct providers from model-name strings. For a workflow
+spanning multiple parsnip calls, configure the default Chat explicitly:
+
 ``` r
+
+chat <- chat_openai(model = "gpt-4o-mini")
+set_default_chat(chat)
 
 # Create an LLM prediction model specification
 llm_spec <- llm_predict(
   mode = "classification",
   signature = "text -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
-  set_engine("dsprrr", model = "gpt-4o-mini")
+  set_engine("dsprrr")
 
 print(llm_spec)
 ```
@@ -99,7 +106,7 @@ llm_spec_tune <- llm_predict(
   signature = "text -> sentiment",
   temperature = tune()
 ) |>
-  set_engine("dsprrr", model = "gpt-4o-mini")
+  set_engine("dsprrr")
 
 # Create resampling folds
 # library(rsample)

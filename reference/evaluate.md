@@ -35,11 +35,9 @@ evaluate(module, ...)
 
   - `.llm`: Optional ellmer chat object
 
-  - `.parallel`: Logical; whether to allow parallel execution
-
   - `.concurrency`: A policy created by
     [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
-    Do not also pass `.parallel` when using an explicit policy.
+    Omission uses sequential execution.
 
   - `.progress`: Logical; whether to display progress while evaluating
 
@@ -140,7 +138,7 @@ classifier <- module(
   type = "predict"
 )
 
-testset <- dsp_trainset(
+testset <- data.frame(
   text = c("I love it!", "Awful.", "It's fine."),
   sentiment = c("positive", "negative", "neutral")
 )

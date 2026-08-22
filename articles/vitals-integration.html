@@ -177,7 +177,7 @@ modules can now work directly with vitals:</p>
 <span>    input <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"This is terrible"</span><span class="op">)</span>,</span>
 <span>    target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  solver <span class="op">=</span> <span class="fu"><a href="../reference/as_vitals_solver.html">as_vitals_solver</a></span><span class="op">(</span><span class="va">sentiment_module</span>, llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  solver <span class="op">=</span> <span class="fu"><a href="../reference/as_vitals_solver.html">as_vitals_solver</a></span><span class="op">(</span><span class="va">sentiment_module</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -221,7 +221,7 @@ process tibbles:</p>
 <span><span class="va">teleprompter</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter</a></span><span class="op">(</span></span>
 <span>  variants <span class="op">=</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>    id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"brief"</span>, <span class="st">"detailed"</span><span class="op">)</span>,</span>
-<span>    instructions_mod <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>      <span class="st">"Be concise"</span>,</span>
 <span>      <span class="st">"Provide detailed analysis"</span></span>
 <span>    <span class="op">)</span></span>
@@ -295,23 +295,26 @@ process tibbles:</p>
 <span><span class="va">eval_task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="module-as-function">Module as Function<a class="anchor" aria-label="anchor" href="#module-as-function"></a>
+<h2 id="call-a-module-from-a-function">Call a Module from a Function<a class="anchor" aria-label="anchor" href="#call-a-module-from-a-function"></a>
 </h2>
-<p>The new <code>as_function()</code> feature makes modules even more
-natural to use:</p>
+<p>Wrap <code><a href="../reference/run.html">run()</a></code> when an application benefits from a
+task-specific function:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Convert module to function</span></span>
-<span><span class="va">classify</span> <span class="op">&lt;-</span> <span class="fu">as_function</span><span class="op">(</span><span class="va">sentiment_module</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Capture one configured Chat and keep dsprrr's typed execution boundary</span></span>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">classify</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">sentiment_module</span>, input <span class="op">=</span> <span class="va">input</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
 <span></span>
 <span><span class="co"># Use like any R function</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">classify</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Amazing!"</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">classify</span><span class="op">(</span><span class="st">"Amazing!"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">sentiment</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "positive"</span></span>
 <span></span>
 <span><span class="co"># Works great in pipelines</span></span>
 <span><span class="va">dataset</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    sentiment <span class="op">=</span> <span class="fu">map_chr</span><span class="op">(</span><span class="va">text</span>, <span class="op">~</span> <span class="fu">classify</span><span class="op">(</span>text <span class="op">=</span> <span class="va">.x</span><span class="op">)</span><span class="op">$</span><span class="va">sentiment</span><span class="op">)</span></span>
+<span>    sentiment <span class="op">=</span> <span class="fu">map_chr</span><span class="op">(</span><span class="va">text</span>, <span class="op">~</span> <span class="fu">classify</span><span class="op">(</span><span class="va">.x</span><span class="op">)</span><span class="op">$</span><span class="va">sentiment</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -325,12 +328,15 @@ benefits:</p>
 <span>  text <span class="op">=</span> <span class="va">sample_texts</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span><span class="op">]</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Automatic parallel processing with progress bar</span></span>
+<span><span class="co"># Explicit concurrent processing with progress bar</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="va">sentiment_module</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span></span>
 <span>    <span class="va">large_dataset</span>,</span>
 <span>    .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    .parallel <span class="op">=</span> <span class="cn">TRUE</span>, <span class="co"># Default</span></span>
+<span>    .concurrency <span class="op">=</span> <span class="fu"><a href="../reference/concurrency_control.html">concurrency_control</a></span><span class="op">(</span></span>
+<span>      backend <span class="op">=</span> <span class="st">"ellmer"</span>,</span>
+<span>      max_active <span class="op">=</span> <span class="fl">10L</span></span>
+<span>    <span class="op">)</span>,</span>
 <span>    .progress <span class="op">=</span> <span class="cn">TRUE</span> <span class="co"># Default</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 </div>

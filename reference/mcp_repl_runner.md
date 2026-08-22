@@ -111,10 +111,10 @@ for deterministic tests. It must be a function with the mcp-repl tool
 contract: `repl(input, timeout_ms)`. Because dsprrr did not launch that
 function's server, its runner policy is deliberately marked unverified
 and it is rejected by optimizers that require an OS sandbox. Calling
-`$close()` makes the wrapper terminal but does not close that
+`$shutdown()` makes the wrapper terminal but does not close that
 caller-managed connection.
 
-A managed runner captures and closes only the mcp-repl transport it
+A managed runner captures and shuts down only the mcp-repl transport it
 starts. Some supported mcptools versions do not expose public per-server
 teardown, so dsprrr uses a guarded compatibility shim and fails setup if
 deterministic ownership cannot be captured. This path is tested against
@@ -127,6 +127,6 @@ if (FALSE) { # \dontrun{
 runner <- mcp_repl_runner()
 runner$execute("mean(1:10)")
 runner$reset()
-runner$close()
+runner$shutdown()
 } # }
 ```

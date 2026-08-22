@@ -103,7 +103,6 @@ This code is run before user-generated code by the configured code runner.</p>
 <li><p><code>search(var, pattern)</code>: Regex search in variable</p></li>
 <li><p><code>llm_query(query, context_slice)</code>: Request a recursive LLM call</p></li>
 <li><p><code>llm_query_batched(queries, slices)</code>: Request batched LLM calls</p></li>
-<li><p><code>rlm_query()</code> / <code>rlm_query_batch()</code>: Backward-compatible aliases</p></li>
 </ul><p>Recursive-query helpers suspend execution with a nonce-bound, schema-checked
 request. The main RLM process handles the request and replays the code with
 an immutable response, so the helpers behave like ordinary value-returning R

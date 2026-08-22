@@ -6,20 +6,36 @@ idempotent, while conflicting records with the same ID are rejected. The
 trials.jsonl journal is authoritative. metadata.json, README.md, and
 best_program.rds are independently refreshed, best-effort derived views;
 they may lag after an interruption and are rebuilt by a later successful
-save. Persistent Unix logs require an effective-user-owned directory with a
-safe parent chain and reject symbolic-link targets; Windows uses the
-account's filesystem ACLs, which base R cannot verify as owner-only, and
-fails closed if stable device and file identifiers are unavailable."><meta property="og:description" content="R6 class for managing a collection of trials with optional persistence.
+save. On Unix, a pre-existing private log directory must be owned by the
+effective user with exactly mode 0700, and every pre-existing log file must
+have exactly mode 0600; special mode bits are rejected. Every existing
+ancestor must be owned by root or the effective user, including sticky
+shared parents. Before initialization or a save to another directory locks,
+reads, or mutates storage, dsprrr preflights every known target: the lock,
+journal, metadata, summary, and best-program artifact. Unsafe paths are
+rejected without repair or reads. Directories and files created for the
+current operation are enforced as owner-only. Non-symbolic regular files
+remain required. Windows uses the account's filesystem ACLs, which base R
+cannot verify as owner-only, and fails closed if stable device and file
+identifiers are unavailable."><meta property="og:description" content="R6 class for managing a collection of trials with optional persistence.
 Existing JSONL records are loaded when log_dir already contains a log.
 New trials are appended one record at a time; matching trial IDs are
 idempotent, while conflicting records with the same ID are rejected. The
 trials.jsonl journal is authoritative. metadata.json, README.md, and
 best_program.rds are independently refreshed, best-effort derived views;
 they may lag after an interruption and are rebuilt by a later successful
-save. Persistent Unix logs require an effective-user-owned directory with a
-safe parent chain and reject symbolic-link targets; Windows uses the
-account's filesystem ACLs, which base R cannot verify as owner-only, and
-fails closed if stable device and file identifiers are unavailable."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
+save. On Unix, a pre-existing private log directory must be owned by the
+effective user with exactly mode 0700, and every pre-existing log file must
+have exactly mode 0600; special mode bits are rejected. Every existing
+ancestor must be owned by root or the effective user, including sticky
+shared parents. Before initialization or a save to another directory locks,
+reads, or mutates storage, dsprrr preflights every known target: the lock,
+journal, metadata, summary, and best-program artifact. Unsafe paths are
+rejected without repair or reads. Directories and files created for the
+current operation are enforced as owner-only. Non-symbolic regular files
+remain required. Windows uses the account's filesystem ACLs, which base R
+cannot verify as owner-only, and fails closed if stable device and file
+identifiers are unavailable."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -116,10 +132,18 @@ idempotent, while conflicting records with the same ID are rejected. The
 <code>trials.jsonl</code> journal is authoritative. <code>metadata.json</code>, <code>README.md</code>, and
 <code>best_program.rds</code> are independently refreshed, best-effort derived views;
 they may lag after an interruption and are rebuilt by a later successful
-save. Persistent Unix logs require an effective-user-owned directory with a
-safe parent chain and reject symbolic-link targets; Windows uses the
-account's filesystem ACLs, which base R cannot verify as owner-only, and
-fails closed if stable device and file identifiers are unavailable.</p>
+save. On Unix, a pre-existing private log directory must be owned by the
+effective user with exactly mode <code>0700</code>, and every pre-existing log file must
+have exactly mode <code>0600</code>; special mode bits are rejected. Every existing
+ancestor must be owned by root or the effective user, including sticky
+shared parents. Before initialization or a save to another directory locks,
+reads, or mutates storage, dsprrr preflights every known target: the lock,
+journal, metadata, summary, and best-program artifact. Unsafe paths are
+rejected without repair or reads. Directories and files created for the
+current operation are enforced as owner-only. Non-symbolic regular files
+remain required. Windows uses the account's filesystem ACLs, which base R
+cannot verify as owner-only, and fails closed if stable device and file
+identifiers are unavailable.</p>
     </div>
 
 
@@ -134,7 +158,7 @@ fails closed if stable device and file identifiers are unavailable.</p>
 
 
     <dt><code>trials</code></dt>
-<dd><p>List of Trial objects.</p></dd>
+<dd><p>List of optimization trial records.</p></dd>
 
 
     <dt><code>metadata</code></dt>
@@ -190,7 +214,7 @@ program are then refreshed independently on a best-effort basis.</p><div class="
 </div><p></p><div class="section">
 <h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>trial</code></dt>
-<dd><p>A Trial object.</p></dd>
+<dd><p>A trial record created by <code><a href="create_trial.html">create_trial()</a></code>.</p></dd>
 
       <dt><code>persist</code></dt>
 <dd><p>Whether to immediately persist to disk if log_dir is set.</p></dd>
@@ -239,7 +263,8 @@ program are then refreshed independently on a best-effort basis.</p><div class="
 </dl><p></p></div>
 </div><p></p><div class="section">
 <h4 id="returns-2">Returns<a class="anchor" aria-label="anchor" href="#returns-2"></a></h4>
-<p>The best Trial object, or NULL if no completed trials.</p>
+<p>The best optimization trial record, or <code>NULL</code> if no trials have
+completed.</p>
 </div>
 
 </div>

@@ -266,7 +266,7 @@ types.</p>
 <span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span>  <span class="op">}</span>,</span>
-<span>  max_iters <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  max_iterations <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>  max_llm_calls <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  max_output_chars <span class="op">=</span> <span class="fl">10000</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -277,8 +277,8 @@ subprocess provides process isolation, not an operating-system security
 sandbox. Do not use this configuration for adversarial context or
 untrusted generated code.</p>
 <p>The factory creates one runner for the invocation. State remains
-available between RLM iterations, and dsprrr closes the runner when the
-invocation ends.</p>
+available between RLM iterations, and dsprrr shuts down the runner when
+the invocation ends.</p>
 </div>
 <div class="section level2">
 <h2 id="run-and-retain-the-evidence">Run and retain the evidence<a class="anchor" aria-label="anchor" href="#run-and-retain-the-evidence"></a>

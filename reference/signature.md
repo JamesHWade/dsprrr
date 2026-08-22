@@ -1,4 +1,4 @@
-# Create a Signature for LLM Operations
+# Create a Typed Module Signature
 
 The primary function for creating signatures. Accepts either DSPy-style
 string notation or explicit arguments. Input and output names must be
@@ -7,12 +7,14 @@ valid, unique R field names, and the two namespaces must not overlap.
 ## Usage
 
 ``` r
-Signature(inputs = list(), output_type = NULL, instructions = "")
-
 signature(x = NULL, inputs = NULL, output_type = NULL, instructions = "", ...)
 ```
 
 ## Arguments
+
+- x:
+
+  Either a string in DSPy format ("inputs -\> output") or NULL
 
 - inputs:
 
@@ -26,17 +28,15 @@ signature(x = NULL, inputs = NULL, output_type = NULL, instructions = "", ...)
 
   Optional instructions for the operation
 
-- x:
-
-  Either a string in DSPy format ("inputs -\> output") or NULL
-
 - ...:
 
   Additional arguments
 
 ## Value
 
-A Signature object
+A signature object for use with
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+and related constructors.
 
 ## Examples
 

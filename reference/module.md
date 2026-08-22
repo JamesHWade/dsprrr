@@ -14,24 +14,24 @@ interpreter-backed programs.
 module(
   signature,
   type = "predict",
-  tools = NULL,
-  max_iterations = 10L,
-  M = 3L,
-  temperature = 0.7,
-  runner = NULL,
-  max_iters = 3L,
-  extract_answer = TRUE,
+  chat = NULL,
   template = "",
   demos = list(),
   config = list(),
-  chat = NULL,
-  ...,
+  tools = NULL,
+  runner = NULL,
   interpreter_factory = NULL,
+  max_iterations = NULL,
+  max_iters = 3L,
+  extract_answer = TRUE,
+  M = 3L,
+  temperature = 0.7,
   module_src = NULL,
+  source_format = c("auto", "json", "r"),
   max_predictor_calls = 100L,
   max_tool_calls = 100L,
-  source_format = c("auto", "json", "r"),
-  require_sandbox = TRUE
+  require_sandbox = TRUE,
+  ...
 )
 ```
 
@@ -64,50 +64,11 @@ module(
 
   - `"flex"`: Experimental declarative or executable Flex program
 
-- tools:
+- chat:
 
-  Optional tools configuration:
-
-  - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef
-    objects.
-
-  - for `type = "rlm"`: named host functions or ellmer ToolDef objects.
-
-  - for executable `type = "flex"`: named host functions or ToolDef
-    objects. If provided with `type = "predict"`, automatically upgrades
-    to react.
-
-- max_iterations:
-
-  Maximum iterations for ReAct, CodeAct, or RLM modules created through
-  this generic factory (default: 10). For CodeAct it also caps tool
-  calls within one invocation; exceeding that inner budget errors.
-
-- M:
-
-  Number of reasoning chains for multichain (default: 3)
-
-- temperature:
-
-  Temperature for multichain diversity (default: 0.7)
-
-- runner:
-
-  Optional caller-owned code runner implementing `execute()` and
-  `policy()` for code execution types. It is never automatically closed.
-  For `type = "rlm"`, the policy must advertise `persistent = TRUE`; use
-  `r_code_runner(persistent = TRUE)` for the trusted callr backend.
-
-- max_iters:
-
-  Maximum code repair iterations for program_of_thought (default: 3), or
-  the DSPy 3.3-compatible alias for RLM's `max_iterations`. For RLM,
-  supply only one spelling.
-
-- extract_answer:
-
-  Logical. For program_of_thought, whether to use LLM to extract final
-  answer from execution result (default: TRUE)
+  Optional ellmer Chat object for LLM operations. If provided, the
+  module will use this Chat for all predictions unless overridden with
+  `.llm`.
 
 - template:
 
@@ -121,18 +82,26 @@ module(
 
   Optional configuration list
 
-- chat:
+- tools:
 
-  Optional ellmer Chat object for LLM operations. If provided, the
-  module will use this Chat for all predictions unless overridden with
-  `.llm`.
+  Optional tools configuration:
 
-- ...:
+  - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef
+    objects.
 
-  Additional arguments forwarded to
-  [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
-  when `type = "rlm"`. Reserved and required to be empty for
-  `type = "flex"`.
+  - for `type = "rlm"`: named host functions or ellmer ToolDef objects.
+
+  - for executable `type = "flex"`: named host functions or ToolDef
+    objects. If provided with `type = "predict"`, automatically upgrades
+    to react.
+
+- runner:
+
+  Optional caller-owned code runner implementing `execute()` and
+  `policy()` for code execution types. It is never automatically shut
+  down. For `type = "rlm"`, the policy must advertise
+  `persistent = TRUE`; use `r_code_runner(persistent = TRUE)` for the
+  trusted callr backend.
 
 - interpreter_factory:
 
@@ -143,9 +112,37 @@ module(
   every invocation is isolated. For RLM, every returned runner must
   advertise `persistent = TRUE`.
 
+- max_iterations:
+
+  Maximum iterations for ReAct, CodeAct, or RLM modules created through
+  this generic factory. Defaults to 10 for ReAct and CodeAct and 20 for
+  RLM. For CodeAct it also caps tool calls within one invocation;
+  exceeding that inner budget errors.
+
+- max_iters:
+
+  Maximum code repair iterations for program_of_thought (default: 3).
+
+- extract_answer:
+
+  Logical. For program_of_thought, whether to use LLM to extract final
+  answer from execution result (default: TRUE)
+
+- M:
+
+  Number of reasoning chains for multichain (default: 3)
+
+- temperature:
+
+  Temperature for multichain diversity (default: 0.7)
+
 - module_src:
 
   Optional complete source for `type = "flex"`.
+
+- source_format:
+
+  Flex source language: `"auto"`, `"json"`, or `"r"`.
 
 - max_predictor_calls:
 
@@ -157,14 +154,17 @@ module(
   Maximum direct host-tool calls allowed by executable Flex, or `NULL`
   for no limit.
 
-- source_format:
-
-  Flex source language: `"auto"`, `"json"`, or `"r"`.
-
 - require_sandbox:
 
   Whether executable Flex requires a runner that advertises an enforced
   sandbox.
+
+- ...:
+
+  Additional arguments forwarded to
+  [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+  when `type = "rlm"`. Reserved and required to be empty for
+  `type = "flex"`.
 
 ## Value
 

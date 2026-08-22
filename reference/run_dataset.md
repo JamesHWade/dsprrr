@@ -16,8 +16,6 @@ run_dataset(
   data,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
@@ -50,24 +48,11 @@ run_dataset(
 
   Logical whether to print verbose output
 
-- .parallel:
-
-  Logical whether to enable parallel processing
-
-- .parallel_method:
-
-  Character, either "ellmer" (default) or "mirai". "ellmer" uses
-  ellmer's
-  [`parallel_chat_structured()`](https://ellmer.tidyverse.org/reference/parallel_chat.html)
-  for native async HTTP parallelism (more efficient, single process).
-  "mirai" uses mirai for multi-process parallelism (requires
-  `.llm = NULL`).
-
 - .concurrency:
 
   Optional batch policy created by
   [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
-  Do not combine it with `.parallel` or `.parallel_method`.
+  Omission uses sequential execution.
 
 - .progress:
 
@@ -85,7 +70,8 @@ run_dataset(
 
 ## Value
 
-A tibble with the input columns plus a `result` list-column. With
+A tibble with the input columns plus a `result` list-column containing
+one named declared-output record per row. With
 `.return_format = "structured"`, the tibble also contains `.error`,
 `.metadata`, and `.chat`; `.error` is `NA` for successful rows and
 contains the LLM execution error message for failed rows.

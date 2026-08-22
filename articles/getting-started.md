@@ -13,12 +13,13 @@ library(dsprrr)
 library(ellmer)
 
 # Declare what you want
-chat_openai() |> dsp("question -> answer", question = "What is 2+2?")
+answerer <- module(signature("question -> answer"))
+run(answerer, question = "What is 2+2?", .llm = chat_openai())
 #> "4"
 ```
 
-That one-liner handles prompt construction, structured output parsing,
-and type validation. No prompt engineering required.
+The signature and module handle prompt construction, structured output
+parsing, and type validation. No prompt engineering required.
 
 ## Choose Your Path
 
@@ -29,9 +30,7 @@ other:
 
 1.  [Your First LLM
     Call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md)
-    — Make structured calls with
-    [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) (10
-    min)
+    — Build and run a typed module (10 min)
 2.  [Building a
     Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md)
     — Create reusable modules (20 min)
@@ -95,19 +94,21 @@ Here’s dsprrr in action—from simple call to optimized module:
 library(dsprrr)
 library(ellmer)
 
-# 1. Quick call
+# 1. Reusable typed module
 chat <- chat_openai()
-chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')",
-            text = "Love this product!")
+classifier <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
+  chat = chat
+)
+run(classifier, text = "Love this product!")
 #> "positive"
 
-# 2. Reusable module
-classifier <- chat |> as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
-classifier$predict(text = c("Great!", "Awful", "Meh"))
+# 2. Batch execution
+run_dataset(classifier, tibble::tibble(text = c("Great!", "Awful", "Meh")))
 #> c("positive", "negative", "neutral")
 
 # 3. Optimized module
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   text = c("Amazing!", "Terrible!", "It's okay"),
   sentiment = c("positive", "negative", "neutral")
 )

@@ -192,23 +192,27 @@ explicitly:</p>
 <span><span class="va">mod_summarize</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context -&gt; summary"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Summarize: {context}"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">rag_pipeline</span> <span class="op">&lt;-</span> <span class="va">mod_retrieve</span> <span class="op"><a href="../reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span></span>
-<span>  <span class="fu"><a href="../reference/map_inputs.html">map_inputs</a></span><span class="op">(</span><span class="va">mod_summarize</span>, documents <span class="op">=</span> <span class="st">"context"</span><span class="op">)</span></span>
+<span><span class="va">rag_pipeline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod_retrieve</span>,</span>
+<span>  <span class="fu"><a href="../reference/step.html">step</a></span><span class="op">(</span><span class="va">mod_summarize</span>, map <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>documents <span class="op">=</span> <span class="st">"context"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">rag_pipeline</span>, query <span class="op">=</span> <span class="st">"dsprrr pipelines"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="inject-static-inputs">Inject Static Inputs<a class="anchor" aria-label="anchor" href="#inject-static-inputs"></a>
 </h2>
-<p>Use <code><a href="../reference/with_inputs.html">with_inputs()</a></code> to add constants that don't come from
+<p>Pass constants through <code><a href="../reference/step.html">step()</a></code> when they do not come from
 upstream outputs:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod_answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"facts, question, tone -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">qa_pipeline</span> <span class="op">&lt;-</span> <span class="va">mod_extract</span> <span class="op"><a href="../reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span></span>
-<span>  <span class="fu"><a href="../reference/with_inputs.html">with_inputs</a></span><span class="op">(</span><span class="va">mod_answer</span>, tone <span class="op">=</span> <span class="st">"concise"</span><span class="op">)</span> <span class="op"><a href="../reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span></span>
-<span>  <span class="va">mod_format</span></span></code></pre></div>
+<span><span class="va">qa_pipeline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod_extract</span>,</span>
+<span>  <span class="fu"><a href="../reference/step.html">step</a></span><span class="op">(</span><span class="va">mod_answer</span>, tone <span class="op">=</span> <span class="st">"concise"</span><span class="op">)</span>,</span>
+<span>  <span class="va">mod_format</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="select-outputs-to-pass-forward">Select Outputs to Pass Forward<a class="anchor" aria-label="anchor" href="#select-outputs-to-pass-forward"></a>
@@ -221,8 +225,10 @@ upstream outputs:</p>
 <span><span class="va">mod_present</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"answer -&gt; response"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">pipeline_filtered</span> <span class="op">&lt;-</span> <span class="va">mod_reason</span> <span class="op"><a href="../reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span></span>
-<span>  <span class="fu"><a href="../reference/select_outputs.html">select_outputs</a></span><span class="op">(</span><span class="va">mod_present</span>, <span class="st">"answer"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">pipeline_filtered</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/step.html">step</a></span><span class="op">(</span><span class="va">mod_reason</span>, select <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
+<span>  <span class="va">mod_present</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="explicit-pipelines-with-pipeline-and-step">Explicit Pipelines with <code>pipeline()</code> and
@@ -270,9 +276,8 @@ input data:</p>
 optimize.</li>
 <li>Use <code>trace_summary()</code> and <code><a href="../reference/export_traces.html">export_traces()</a></code> to
 inspect multi-step behavior.</li>
-<li>When column names in your data frame don't match the pipeline
-inputs, rename them first or wrap the pipeline with
-<code><a href="../reference/map_inputs.html">map_inputs()</a></code> to align fields.</li>
+<li>When field names differ between steps, use the <code>map</code>
+argument to <code><a href="../reference/step.html">step()</a></code>.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

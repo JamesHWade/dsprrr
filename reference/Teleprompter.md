@@ -14,8 +14,8 @@ Teleprompter(metric = NULL, metric_threshold = NULL, max_errors = 5L)
 
 - metric:
 
-  A metric function for evaluating predictions. If NULL, uses
-  exact_match() by default.
+  Optional metric function for evaluating predictions. Subclasses that
+  evaluate candidates document whether a metric is required.
 
 - metric_threshold:
 

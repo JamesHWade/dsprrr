@@ -131,10 +131,9 @@
 
     
     
-<p>In <a href="tutorial-hello-world.html">Tutorial 1</a>, you made
-one-off LLM calls with <code><a href="../reference/dsp.html">dsp()</a></code>. But what if you need to
-classify hundreds of texts? Creating a new call each time is tedious and
-slow.</p>
+<p>In <a href="tutorial-hello-world.html">Tutorial 1</a>, you built and
+ran a typed module. Now you will use that same contract across hundreds
+of texts.</p>
 <p>In this tutorial, you’ll build a <strong>reusable module</strong>—a
 classifier you can use over and over.</p>
 <p><strong>Time</strong>: 20-25 minutes</p>
@@ -158,27 +157,22 @@ Remembers its configuration - Can be saved and reused</p>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="step-1-the-problem-with-dsp">Step 1: The Problem with <code>dsp()</code><a class="anchor" aria-label="anchor" href="#step-1-the-problem-with-dsp"></a>
+<h2 id="step-1-declare-the-classifier">Step 1: Declare the Classifier<a class="anchor" aria-label="anchor" href="#step-1-declare-the-classifier"></a>
 </h2>
-<p>In Tutorial 1, you classified sentiment like this:</p>
+<p>Declare the task once as a signature:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>, text <span class="op">=</span> <span class="st">"Great!"</span><span class="op">)</span></span>
-<span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>, text <span class="op">=</span> <span class="st">"Awful"</span><span class="op">)</span></span>
-<span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>, text <span class="op">=</span> <span class="st">"Meh"</span><span class="op">)</span></span></code></pre></div>
-<p>This works, but you’re repeating the signature every time. If you
-want to change the signature, you have to change it everywhere.</p>
+<code class="sourceCode R"><span><span class="va">sentiment_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The signature is the reusable typed contract for every call.</p>
 </div>
 <div class="section level2">
 <h2 id="step-2-create-a-reusable-module">Step 2: Create a Reusable Module<a class="anchor" aria-label="anchor" href="#step-2-create-a-reusable-module"></a>
 </h2>
-<p>The <code><a href="../reference/as_module.html">as_module()</a></code> function wraps a signature into a
-reusable object:</p>
+<p>Wrap the signature in a reusable module:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="va">chat</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
+<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sentiment_sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">classifier</span></span></code></pre></div>
 <p>Now <code>classifier</code> is an object you can use repeatedly.</p>
@@ -186,41 +180,45 @@ reusable object:</p>
 <div class="section level2">
 <h2 id="step-3-classify-single-texts">Step 3: Classify Single Texts<a class="anchor" aria-label="anchor" href="#step-3-classify-single-texts"></a>
 </h2>
-<p>Use the <code>$predict()</code> method to classify:</p>
+<p>Use <code><a href="../reference/run.html">run()</a></code> to classify:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"I absolutely loved this movie!"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"I absolutely loved this movie!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <p>Try a few more:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"This was a complete waste of time."</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"This was a complete waste of time."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"It was okay, I guess."</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"It was okay, I guess."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"The service was terrible but the food was amazing."</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">classifier</span>,</span>
+<span>  text <span class="op">=</span> <span class="st">"The service was terrible but the food was amazing."</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-batch-processing">Step 4: Batch Processing<a class="anchor" aria-label="anchor" href="#step-4-batch-processing"></a>
 </h2>
-<p>Here’s where modules shine. Process multiple texts at once by passing
-a vector:</p>
+<p>Here’s where modules shine. Process multiple texts with
+<code><a href="../reference/run_dataset.html">run_dataset()</a></code>:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">reviews</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>  <span class="st">"Best purchase I've ever made!"</span>,</span>
-<span>  <span class="st">"Broke after one day. Total garbage."</span>,</span>
-<span>  <span class="st">"Does what it says. Nothing special."</span>,</span>
-<span>  <span class="st">"Exceeded all my expectations!"</span>,</span>
-<span>  <span class="st">"Would not recommend to anyone."</span></span>
+<code class="sourceCode R"><span><span class="va">reviews</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Best purchase I've ever made!"</span>,</span>
+<span>    <span class="st">"Broke after one day. Total garbage."</span>,</span>
+<span>    <span class="st">"Does what it says. Nothing special."</span>,</span>
+<span>    <span class="st">"Exceeded all my expectations!"</span>,</span>
+<span>    <span class="st">"Would not recommend to anyone."</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="va">reviews</span><span class="op">)</span></span></code></pre></div>
-<p>All five classifications came back in a single call. Much more
-efficient than five separate calls.</p>
+<span><span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">reviews</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
+<p>All five classifications came back from one dataset operation, while
+dsprrr retained one observable provider attempt per review.</p>
 </div>
 <div class="section level2">
-<h2 id="step-5-the-full-control-approach">Step 5: The Full Control Approach<a class="anchor" aria-label="anchor" href="#step-5-the-full-control-approach"></a>
+<h2 id="step-5-add-instructions">Step 5: Add Instructions<a class="anchor" aria-label="anchor" href="#step-5-add-instructions"></a>
 </h2>
-<p><code><a href="../reference/as_module.html">as_module()</a></code> is convenient, but sometimes you need more
-control. The <code><a href="../reference/signature.html">signature()</a></code> + <code><a href="../reference/module.html">module()</a></code> approach
-gives you that:</p>
+<p>Add task-specific guidance to the signature:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Define the signature separately</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
@@ -310,12 +308,9 @@ classification.</p>
 </h2>
 <p>In this tutorial, you:</p>
 <ol style="list-style-type: decimal">
-<li>Created reusable modules with <code><a href="../reference/as_module.html">as_module()</a></code>
-</li>
-<li>Used <code>$predict()</code> for single and batch processing</li>
-<li>Built modules with full control using <code><a href="../reference/signature.html">signature()</a></code> +
-<code><a href="../reference/module.html">module()</a></code>
-</li>
+<li>Declared a reusable signature and module</li>
+<li>Used <code><a href="../reference/run.html">run()</a></code> for individual inputs</li>
+<li>Used <code><a href="../reference/run_dataset.html">run_dataset()</a></code> for batch processing</li>
 <li>Processed data frames with <code><a href="../reference/run_dataset.html">run_dataset()</a></code>
 </li>
 <li>Added input descriptions for clarity</li>
@@ -324,35 +319,9 @@ classification.</p>
 </ol>
 </div>
 <div class="section level2">
-<h2 id="when-to-use-each-approach">When to Use Each Approach<a class="anchor" aria-label="anchor" href="#when-to-use-each-approach"></a>
-</h2>
-<table class="table">
-<thead><tr class="header">
-<th>Approach</th>
-<th>Best For</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code><a href="../reference/dsp.html">dsp()</a></code></td>
-<td>Quick one-off calls, exploration</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/as_module.html">as_module()</a></code></td>
-<td>Simple reusable modules, prototyping</td>
-</tr>
-<tr class="odd">
-<td>
-<code><a href="../reference/signature.html">signature()</a></code> + <code><a href="../reference/module.html">module()</a></code>
-</td>
-<td>Production code, optimization workflows</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section level2">
 <h2 id="the-module-advantage">The Module Advantage<a class="anchor" aria-label="anchor" href="#the-module-advantage"></a>
 </h2>
-<p>Why bother with modules when <code><a href="../reference/dsp.html">dsp()</a></code> works?</p>
+<p>The same module contract scales from exploration to optimization:</p>
 <ol style="list-style-type: decimal">
 <li>
 <strong>Reusability</strong>: Define once, use everywhere</li>

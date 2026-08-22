@@ -4,23 +4,10 @@
 
 Declare typed schemas for LLM operations
 
-- [`Signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
-  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
-  : Create a Signature for LLM Operations
+- [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
+  : Create a Typed Module Signature
 - [`input()`](https://jameshwade.github.io/dsprrr/reference/input.md) :
   Create an input specification for a Signature
-- [`input_string()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
-  [`input_number()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
-  [`input_boolean()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
-  [`input_integer()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
-  [`input_enum()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
-  [`input_array()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
-  [`input_object()`](https://jameshwade.github.io/dsprrr/reference/input_helpers.md)
-  : Create typed input helpers for common cases
-- [`signature_to_json_schema()`](https://jameshwade.github.io/dsprrr/reference/signature_to_json_schema.md)
-  : Convert a Signature to JSON Schema
-- [`dsp_trainset()`](https://jameshwade.github.io/dsprrr/reference/dsp_trainset.md)
-  : Create Training Data for DSPrrr
 
 ## Signature Transforms
 
@@ -53,12 +40,7 @@ Create, run, and inspect LLM modules
 - [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
   : Control Batch Concurrency
 - [`predict(`*`<Module>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
-  [`predict(`*`<PredictModule>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
   : Predict Method for Modules (tidymodels-style)
-- [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) :
-  Declarative Structured Prediction
-- [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)
-  : Create a Module from a Chat
 - [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
   : Callable Module
 - [`module_graph()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
@@ -71,8 +53,6 @@ Create, run, and inspect LLM modules
   [`set_module_lm()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
   [`module_children()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
   : Traverse and Transform Module Graphs
-- [`get_last_trace()`](https://jameshwade.github.io/dsprrr/reference/get_last_trace.md)
-  : Get the Last DSP Trace
 
 ## Pipelines
 
@@ -84,12 +64,6 @@ Chain modules into multi-step workflows
   : Pipe Operator for Module Composition
 - [`step()`](https://jameshwade.github.io/dsprrr/reference/step.md) :
   Create a Pipeline Step with Mappings
-- [`map_inputs()`](https://jameshwade.github.io/dsprrr/reference/map_inputs.md)
-  : Map Inputs for Pipeline Steps
-- [`with_inputs()`](https://jameshwade.github.io/dsprrr/reference/with_inputs.md)
-  : Inject Static Inputs for Pipeline Steps
-- [`select_outputs()`](https://jameshwade.github.io/dsprrr/reference/select_outputs.md)
-  : Select Outputs for Pipeline Steps
 
 ## Reasoning & Ensemble Modules
 
@@ -153,9 +127,7 @@ Tool use, code execution, RAG, and recursive language models
 
 Validate outputs and retry with automatic backtracking
 
-- [`Assertion()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
-  [`AssertionSet()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
-  [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+- [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
   [`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
   [`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
   : Assertions for Output Validation
@@ -188,8 +160,6 @@ Score module outputs and measure performance
 
 - [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
   : Evaluate a DSPrrr module
-- [`evaluate_dsp()`](https://jameshwade.github.io/dsprrr/reference/evaluate_dsp.md)
-  : Evaluate a Compiled Module
 - [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md)
   : Create a Contains Metric
 - [`metric_custom()`](https://jameshwade.github.io/dsprrr/reference/metric_custom.md)
@@ -231,14 +201,11 @@ Automated prompt optimization strategies
   : KNNFewShot Teleprompter
 - [`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md)
   : BetterTogether Teleprompter
-- [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
-  [`print(`*`<Omni>`*`)`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
-  : Omni Teleprompter
+- [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) :
+  Omni Teleprompter
 - [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
-  [`print(`*`<AutoResearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
   : AutoResearch Teleprompter
 - [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
-  [`print(`*`<MetaHarness>`*`)`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
   : Meta-Harness Teleprompter
 - [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
   SIMBA Teleprompter
@@ -248,12 +215,6 @@ Automated prompt optimization strategies
   : MIPROv2 Teleprompter
 - [`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md) :
   COPRO Teleprompter
-- [`teleprompter-ensemble`](https://jameshwade.github.io/dsprrr/reference/teleprompter-ensemble.md)
-  : Ensemble Teleprompter
-- [`Ensemble()`](https://jameshwade.github.io/dsprrr/reference/Ensemble.md)
-  : Ensemble Teleprompter
-- [`ensemble_from_programs()`](https://jameshwade.github.io/dsprrr/reference/ensemble_from_programs.md)
-  : Compile Programs into an Ensemble
 
 ## Optimization
 
@@ -282,8 +243,6 @@ Inspect trials, extract best configurations, and export
   : Extract Best Parameters from a Module
 - [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md)
   : Extract Best Demos from a Compiled Module
-- [`module_demos_as_tibble()`](https://jameshwade.github.io/dsprrr/reference/module_demos_as_tibble.md)
-  : Convert module demos to a tibble
 - [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md)
   : Apply Best Configuration from One Module to Another
 - [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
@@ -301,8 +260,6 @@ Inspect trials, extract best configurations, and export
 
 Low-level building blocks for custom optimizers
 
-- [`OptimizerControl()`](https://jameshwade.github.io/dsprrr/reference/OptimizerControl.md)
-  : Optimizer Control Parameters
 - [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
   : Create Optimizer Control
 - [`eval_program()`](https://jameshwade.github.io/dsprrr/reference/eval_program.md)
@@ -311,8 +268,6 @@ Low-level building blocks for custom optimizers
   : Sample from a Dataset Deterministically
 - [`split_dataset()`](https://jameshwade.github.io/dsprrr/reference/split_dataset.md)
   : Split Dataset into Train and Validation Sets
-- [`Trial()`](https://jameshwade.github.io/dsprrr/reference/Trial.md) :
-  Trial Record
 - [`TrialLog`](https://jameshwade.github.io/dsprrr/reference/TrialLog.md)
   : Trial Log
 - [`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md)
@@ -409,26 +364,6 @@ Extract outputs, costs, and display formatted results
   : Print method for dsprrr_batch_result
 - [`print(`*`<dsprrr_cost_summary>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.md)
   : Print method for dsprrr_cost_summary
-- [`print(`*`<EvalResult>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.EvalResult.md)
-  : Print method for EvalResult
-- [`print(`*`<Trial>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.Trial.md)
-  : Print method for Trial
-- [`print(`*`<BootstrapFewShot>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShot.md)
-  : Print method for BootstrapFewShot
-- [`print(`*`<BootstrapFewShotWithRandomSearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.BootstrapFewShotWithRandomSearch.md)
-  : Print method for BootstrapFewShotWithRandomSearch
-- [`print(`*`<GEPA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.GEPA.md)
-  : Print method for GEPA
-- [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
-  [`print(`*`<AutoResearch>`*`)`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
-  : AutoResearch Teleprompter
-- [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
-  [`print(`*`<MetaHarness>`*`)`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
-  : Meta-Harness Teleprompter
-- [`print(`*`<SIMBA>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.SIMBA.md)
-  : Print method for SIMBA
-- [`print(`*`<COPRO>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.COPRO.md)
-  : Print method for COPRO
 
 ## Production & Deployment
 
@@ -485,8 +420,6 @@ Tool registration with ellmer and retrieval with ragnar
 
 - [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
   : Convert a DSPrrr Module to an ellmer Tool
-- [`register_dsprrr_tool()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_tool.md)
-  : Register a DSPrrr Module as a Tool in a Chat
 - [`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md)
   : Create a ragnar Search Tool for ReAct Modules
 - [`create_search_tool()`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md)
@@ -524,13 +457,7 @@ Interactive demonstrations and exploration tools
 
 ## Utilities
 
-Model detection, provider defaults, and helper functions
+Model detection helpers
 
 - [`is_reasoning_model()`](https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.md)
   : Check if a model is a reasoning model
-- [`provider_defaults()`](https://jameshwade.github.io/dsprrr/reference/provider_defaults.md)
-  : Get default parameters for a provider
-- [`eval_vignette()`](https://jameshwade.github.io/dsprrr/reference/eval_vignette.md)
-  : Determine if vignettes should be evaluated
-- [`has_ellmer_credentials()`](https://jameshwade.github.io/dsprrr/reference/has_ellmer_credentials.md)
-  : Check for ellmer credentials

@@ -144,13 +144,13 @@ leverage ellmer’s full capabilities.</p>
 <div class="section level2">
 <h2 id="parallel-processing">Parallel Processing<a class="anchor" aria-label="anchor" href="#parallel-processing"></a>
 </h2>
-<p>dsprrr supports two parallel processing methods for batch
-operations:</p>
+<p>dsprrr supports two concurrent backends for batch operations. Batch
+execution is sequential unless you supply
+<code><a href="../reference/concurrency_control.html">concurrency_control()</a></code>.</p>
 <div class="section level3">
-<h3 id="method-1-mirai-default">Method 1: mirai (Default)<a class="anchor" aria-label="anchor" href="#method-1-mirai-default"></a>
+<h3 id="method-1-mirai">Method 1: mirai<a class="anchor" aria-label="anchor" href="#method-1-mirai"></a>
 </h3>
-<p>The default parallel method uses mirai for multi-process
-parallelism:</p>
+<p>Use mirai for multi-process parallelism:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
@@ -158,8 +158,10 @@ parallelism:</p>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod</span>,</span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"This is terrible"</span>, <span class="st">"It's okay"</span><span class="op">)</span>,</span>
-<span>  .parallel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  .parallel_method <span class="op">=</span> <span class="st">"mirai"</span>  <span class="co"># Default</span></span>
+<span>  .concurrency <span class="op">=</span> <span class="fu"><a href="../reference/concurrency_control.html">concurrency_control</a></span><span class="op">(</span></span>
+<span>    backend <span class="op">=</span> <span class="st">"mirai"</span>,</span>
+<span>    max_active <span class="op">=</span> <span class="fl">3L</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -171,8 +173,10 @@ parallelism:</p>
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod</span>,</span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"This is terrible"</span>, <span class="st">"It's okay"</span><span class="op">)</span>,</span>
-<span>  .parallel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  .parallel_method <span class="op">=</span> <span class="st">"ellmer"</span>  <span class="co"># Uses ellmer's parallel HTTP requests</span></span>
+<span>  .concurrency <span class="op">=</span> <span class="fu"><a href="../reference/concurrency_control.html">concurrency_control</a></span><span class="op">(</span></span>
+<span>    backend <span class="op">=</span> <span class="st">"ellmer"</span>,</span>
+<span>    max_active <span class="op">=</span> <span class="fl">3L</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The ellmer method is more efficient because: - Single process (no R
 subprocess overhead) - Native async HTTP requests - Better error
@@ -204,35 +208,21 @@ workflows:</p>
 <span></span>
 <span><span class="co"># The LLM can now use the sentiment tool</span></span>
 <span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span><span class="st">"Analyze the sentiment of: 'I love this product!'"</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="registering-tools-directly">Registering Tools Directly<a class="anchor" aria-label="anchor" href="#registering-tools-directly"></a>
-</h3>
-<p>For convenience, use <code><a href="../reference/register_dsprrr_tool.html">register_dsprrr_tool()</a></code> to create
-and register in one step:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create module</span></span>
-<span><span class="va">qa_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, instructions <span class="op">=</span> <span class="st">"Answer factual questions"</span><span class="op">)</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"predict"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Register directly</span></span>
-<span><span class="fu"><a href="../reference/register_dsprrr_tool.html">register_dsprrr_tool</a></span><span class="op">(</span><span class="va">chat</span>, <span class="va">qa_mod</span>, name <span class="op">=</span> <span class="st">"knowledge_lookup"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Use the tool</span></span>
-<span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span><span class="st">"Use knowledge_lookup to find: What is the capital of France?"</span><span class="op">)</span></span></code></pre></div>
-</div>
 </div>
 <div class="section level2">
 <h2 id="leveraging-ellmers-cost-tracking">Leveraging ellmer’s Cost Tracking<a class="anchor" aria-label="anchor" href="#leveraging-ellmers-cost-tracking"></a>
 </h2>
 <p>ellmer provides robust token and cost tracking. dsprrr integrates
 with this via accessor functions:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># After running some predictions</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What is 2+2?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Get cost and token info from results using public accessors</span></span>
 <span><span class="fu"><a href="../reference/get_cost.html">get_cost</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span>    <span class="co"># Cost in dollars</span></span>
@@ -243,7 +233,7 @@ with this via accessor functions:</p>
 <div class="section level3">
 <h3 id="token-usage-from-batch-results">Token Usage from Batch Results<a class="anchor" aria-label="anchor" href="#token-usage-from-batch-results"></a>
 </h3>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run batch predictions</span></span>
 <span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, q <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Hello"</span>, <span class="st">"World"</span><span class="op">)</span>, .return_format <span class="op">=</span> <span class="st">"batch"</span><span class="op">)</span></span>
@@ -259,27 +249,25 @@ with this via accessor functions:</p>
 <div class="section level3">
 <h3 id="using-chat-objects-across-multiple-calls">Using Chat Objects Across Multiple Calls<a class="anchor" aria-label="anchor" href="#using-chat-objects-across-multiple-calls"></a>
 </h3>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a Chat and reuse it</span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># First call - establishes conversation</span></span>
-<span><span class="va">result1</span> <span class="op">&lt;-</span> <span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span>, q <span class="op">=</span> <span class="st">"What is R?"</span><span class="op">)</span></span>
+<span><span class="co"># Reuse the same runtime across calls</span></span>
+<span><span class="va">result1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, q <span class="op">=</span> <span class="st">"What is R?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Second call - same Chat, conversation continues</span></span>
-<span><span class="va">result2</span> <span class="op">&lt;-</span> <span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span>, q <span class="op">=</span> <span class="st">"What about Python?"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># The Chat remembers context from previous calls</span></span></code></pre></div>
+<span><span class="va">result2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, q <span class="op">=</span> <span class="st">"What about Python?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="default-chat-management">Default Chat Management<a class="anchor" aria-label="anchor" href="#default-chat-management"></a>
 </h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Set a default Chat for all dsp() calls</span></span>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Set a default Chat for module execution</span></span>
 <span><span class="fu"><a href="../reference/set_default_chat.html">set_default_chat</a></span><span class="op">(</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Now dsp() uses the default</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span>, q <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span>
+<span><span class="co"># run() uses the default when neither the call nor module supplies a Chat</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span><span class="op">)</span><span class="op">)</span>, q <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Check current configuration</span></span>
 <span><span class="fu"><a href="../reference/dsprrr_sitrep.html">dsprrr_sitrep</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -292,7 +280,7 @@ with this via accessor functions:</p>
 <h2 id="multimodal-support">Multimodal Support<a class="anchor" aria-label="anchor" href="#multimodal-support"></a>
 </h2>
 <p>dsprrr inherits ellmer’s multimodal capabilities:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"image, question -&gt; answer"</span><span class="op">)</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"predict"</span></span>
@@ -309,7 +297,7 @@ with this via accessor functions:</p>
 <h2 id="streaming-responses">Streaming Responses<a class="anchor" aria-label="anchor" href="#streaming-responses"></a>
 </h2>
 <p>For long-form generation, use streaming:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"topic -&gt; essay"</span><span class="op">)</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"predict"</span></span>
@@ -330,7 +318,7 @@ with this via accessor functions:</p>
 <h2 id="error-handling-and-retries">Error Handling and Retries<a class="anchor" aria-label="anchor" href="#error-handling-and-retries"></a>
 </h2>
 <p>ellmer handles retries automatically. Configure via options:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Set max retries (default is 3)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>ellmer_max_tries <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span></span>
@@ -339,7 +327,7 @@ with this via accessor functions:</p>
 <span></span>
 <span><span class="co"># dsprrr wraps errors with helpful context</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span>, q <span class="op">=</span> <span class="st">"test"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span><span class="op">)</span><span class="op">)</span>, q <span class="op">=</span> <span class="st">"test"</span><span class="op">)</span>,</span>
 <span>  error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="co"># Error includes model info, suggestions, etc.</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">e</span><span class="op">)</span></span>

@@ -183,14 +183,14 @@
 <code class="sourceCode R"><span><span class="co"># Temporarily use a different LLM for a block</span></span>
 <span><span class="va">claude</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_claude</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/with_lm.html">with_lm</a></span><span class="op">(</span><span class="va">claude</span>, <span class="op">{</span></span>
-<span>  <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"text -&gt; summary"</span>, text <span class="op">=</span> <span class="st">"Long article..."</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; summary"</span><span class="op">)</span><span class="op">)</span>, text <span class="op">=</span> <span class="st">"Long article..."</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Function-scoped LLM (auto-cleans up on exit)</span></span>
 <span><span class="va">my_analysis</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="../reference/local_lm.html">local_lm</a></span><span class="op">(</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_claude</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"data -&gt; summary"</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"data -&gt; summary"</span><span class="op">)</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -227,9 +227,9 @@ in CI, disable caching or set a job-specific
 <p>If you explicitly configure a project-local path such as
 <code>.dsprrr_cache</code>, keep it in <code>.gitignore</code>. Set
 <code>disk_private = FALSE</code> only when every cache reader and
-writer is trusted; writable shared RDS caches can be poisoned. Legacy
-project-local caches are not migrated automatically and should be
-removed or reviewed before reuse.</p>
+writer is trusted; writable shared RDS caches can be poisoned. Existing
+project-local caches must already meet the exact private-mode contract;
+remove or review them before reuse.</p>
 <hr>
 </div>
 </div>
@@ -237,6 +237,11 @@ removed or reviewed before reuse.</p>
 <h2 id="api-quick-reference">API Quick Reference<a class="anchor" aria-label="anchor" href="#api-quick-reference"></a>
 </h2>
 <table class="table">
+<colgroup>
+<col width="35%">
+<col width="32%">
+<col width="32%">
+</colgroup>
 <thead><tr class="header">
 <th>Function</th>
 <th>Purpose</th>
@@ -244,29 +249,19 @@ removed or reviewed before reuse.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code><a href="../reference/dsp.html">dsp()</a></code></td>
-<td>One-off structured LLM call</td>
-<td>Output value(s)</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/as_module.html">as_module()</a></code></td>
-<td>Create reusable module from Chat</td>
-<td>Module object</td>
-</tr>
-<tr class="odd">
 <td><code><a href="../reference/signature.html">signature()</a></code></td>
 <td>Define input/output schema</td>
-<td>Signature object</td>
+<td>Typed signature object</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/module.html">module()</a></code></td>
-<td>Create module with full control</td>
+<td>Create a reusable typed module</td>
 <td>Module object</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/run.html">run()</a></code></td>
 <td>Execute module on single input</td>
-<td>tibble with output</td>
+<td>Named output record(s)</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/run_dataset.html">run_dataset()</a></code></td>
@@ -309,9 +304,9 @@ removed or reviewed before reuse.</p>
 <td>Prompt text</td>
 </tr>
 <tr class="even">
-<td><code><a href="../reference/get_last_trace.html">get_last_trace()</a></code></td>
-<td>Get trace from last <code><a href="../reference/dsp.html">dsp()</a></code> call</td>
-<td>Trace object</td>
+<td><code><a href="../reference/export_traces.html">export_traces()</a></code></td>
+<td>Inspect a module’s execution traces</td>
+<td>Trace tibble</td>
 </tr>
 </tbody>
 </table>
@@ -484,28 +479,30 @@ removed or reviewed before reuse.</p>
 <h2 id="creating-modules">Creating Modules<a class="anchor" aria-label="anchor" href="#creating-modules"></a>
 </h2>
 <div class="section level3">
-<h3 id="quick-dsp-for-one-off-calls">Quick: <code>dsp()</code> for One-Off Calls<a class="anchor" aria-label="anchor" href="#quick-dsp-for-one-off-calls"></a>
+<h3 id="build-and-run-a-module">Build and Run a Module<a class="anchor" aria-label="anchor" href="#build-and-run-a-module"></a>
 </h3>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># With explicit Chat</span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
-<span><span class="va">chat</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">answerer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">answerer</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <p>The auto-detected form (when you have a default Chat configured):</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># With auto-detected Chat (uses configured default)</span></span>
-<span><span class="fu"><a href="../reference/dsp.html">dsp</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">answerer</span>, question <span class="op">=</span> <span class="st">"What is 2+2?"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="reusable-as_module-for-repeated-use">Reusable: <code>as_module()</code> for Repeated Use<a class="anchor" aria-label="anchor" href="#reusable-as_module-for-repeated-use"></a>
+<h3 id="reuse-the-same-module">Reuse the Same Module<a class="anchor" aria-label="anchor" href="#reuse-the-same-module"></a>
 </h3>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create from Chat</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
+<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Use repeatedly</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Love it!"</span><span class="op">)</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Hate it!"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"Love it!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"Hate it!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="full-control-signature-module">Full Control: <code>signature()</code> + <code>module()</code><a class="anchor" aria-label="anchor" href="#full-control-signature-module"></a>
@@ -598,15 +595,15 @@ removed or reviewed before reuse.</p>
 <code class="sourceCode R"><span><span class="co"># Caller-owned and reused; the backend controls state persistence</span></span>
 <span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Fresh invocation-owned runner; dsprrr closes it exactly once</span></span>
+<span><span class="co"># Fresh invocation-owned runner; dsprrr shuts it down exactly once</span></span>
 <span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Supply exactly one of <code>runner</code> and
 <code>interpreter_factory</code>. The factory is zero-argument and is
-supported by ProgramOfThought, CodeAct, and RLM. dsprrr never closes a
-directly supplied runner; persistence and reset support are
+supported by ProgramOfThought, CodeAct, and RLM. dsprrr never shuts down
+a directly supplied runner; persistence and reset support are
 backend-specific.</p>
 </div>
 <div class="section level3">
@@ -779,11 +776,12 @@ Program</a>.</p>
 <span><span class="va">result</span><span class="op">$</span><span class="va">mean_score</span></span>
 <span><span class="co">#&gt; 0.85</span></span>
 <span></span>
-<span><span class="co"># With dsp()</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate_dsp.html">evaluate_dsp</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span><span class="co"># Evaluate an inline module</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="va">testset</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
@@ -797,7 +795,7 @@ Program</a>.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Search over parameters</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
-<span>  devset <span class="op">=</span> <span class="va">train_data</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">train_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -819,8 +817,12 @@ Program</a>.</p>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Grid search teleprompter</span></span>
+<span><span class="va">variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"concise"</span>, <span class="st">"thorough"</span><span class="op">)</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Be concise"</span>, <span class="st">"Be thorough"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter</a></span><span class="op">(</span></span>
-<span>  instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Be concise"</span>, <span class="st">"Be thorough"</span><span class="op">)</span>,</span>
+<span>  variants <span class="op">=</span> <span class="va">variants</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
@@ -859,8 +861,8 @@ Program</a>.</p>
 <code class="sourceCode R"><span><span class="co"># Detailed module state</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">inspect</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Last trace from dsp()</span></span>
-<span><span class="fu"><a href="../reference/get_last_trace.html">get_last_trace</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Latest module trace</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="fu"><a href="../reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">mod</span>, include_outputs <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="traces">Traces<a class="anchor" aria-label="anchor" href="#traces"></a>
@@ -888,10 +890,11 @@ Program</a>.</p>
 </h3>
 <div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Save optimized config to pins board</span></span>
-<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">board</span>, <span class="st">"my-classifier-v1"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"my-classifier-v1"</span>, <span class="va">mod</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Restore later</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"my-classifier-v1"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">artifact</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"my-classifier-v1"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">artifact</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="vitals-integration">Vitals Integration<a class="anchor" aria-label="anchor" href="#vitals-integration"></a>
@@ -914,8 +917,8 @@ Program</a>.</p>
 <code class="sourceCode R"><span><span class="co"># Create production-ready project structure</span></span>
 <span><span class="fu"><a href="../reference/use_dsprrr_template.html">use_dsprrr_template</a></span><span class="op">(</span><span class="st">"my_project"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Validate workflow configuration</span></span>
-<span><span class="fu"><a href="../reference/validate_workflow.html">validate_workflow</a></span><span class="op">(</span><span class="st">"workflow.yml"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Validate a module and its evaluation data</span></span>
+<span><span class="fu"><a href="../reference/validate_workflow.html">validate_workflow</a></span><span class="op">(</span><span class="va">mod</span>, data <span class="op">=</span> <span class="va">test_data</span>, board <span class="op">=</span> <span class="va">board</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
 </div>
@@ -943,19 +946,19 @@ Program</a>.</p>
 <h3 id="classification">Classification<a class="anchor" aria-label="anchor" href="#classification"></a>
 </h3>
 <div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; label: enum('spam', 'not_spam')"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; label: enum('spam', 'not_spam')"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">labels</span> <span class="op">&lt;-</span> <span class="va">classifier</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="va">emails</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>text <span class="op">=</span> <span class="va">emails</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="extraction">Extraction<a class="anchor" aria-label="anchor" href="#extraction"></a>
 </h3>
 <div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">extractor</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/as_module.html">as_module</a></span><span class="op">(</span><span class="st">"text -&gt; entities: list[string], summary: string"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">extractor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; entities: list[string], summary: string"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">extractor</span><span class="op">$</span><span class="fu">predict</span><span class="op">(</span>text <span class="op">=</span> <span class="va">document</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">extractor</span>, text <span class="op">=</span> <span class="va">document</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">entities</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">summary</span></span></code></pre></div>
 </div>

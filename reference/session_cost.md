@@ -29,9 +29,10 @@ A list with:
 
 ``` r
 if (FALSE) { # \dontrun{
-# After running some dsp() calls
-dsp("question -> answer", question = "What is 2+2?")
-dsp("question -> answer", question = "What is the capital of France?")
+# After running a module a few times
+mod <- module(signature("question -> answer"))
+run(mod, question = "What is 2+2?")
+run(mod, question = "What is the capital of France?")
 
 # Get session summary
 session_cost()

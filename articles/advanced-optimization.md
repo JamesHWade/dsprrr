@@ -24,7 +24,7 @@ For basic optimization concepts, see
 | Explore several optimizers, then continue the winner | `Omni` | High |
 | Let one research agent own an experiment loop | `AutoResearch` | High |
 | Generate batches from a scored frontier | `MetaHarness` | High |
-| Combine multiple strategies | `Ensemble` | Low |
+| Combine multiple compiled programs | [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md) | Low |
 
 ### Decision Tree
 
@@ -44,7 +44,7 @@ flowchart TB
   Optimize -->|Balance quality vs cost| GEPA["GEPA"]
   Optimize -->|Unsure which optimizer will win| Omni["Omni"]
   Optimize -->|Run an agentic research loop| Agentic["AutoResearch or MetaHarness"]
-  Optimize -->|Combine multiple optimized modules| Ensemble["Ensemble"]
+  Optimize -->|Combine multiple optimized modules| Ensemble["ensemble()"]
 ```
 
 ## Dataset Sizing Guidance
@@ -100,7 +100,7 @@ library(ellmer)
 llm <- chat_openai(model = "gpt-4o-mini")
 
 # Example training data for demonstrations
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   question = c(
     "What is the capital of France?",
     "Who wrote Romeo and Juliet?",
@@ -193,8 +193,9 @@ candidates <- compiled$config$optimizer$candidate_programs
 - `num_threads`: Parallel evaluation threads
 - All `BootstrapFewShot` parameters are inherited
 
-**Tip:** Use `Ensemble` to combine the best optimized module with other
-strategies:
+**Tip:** Use
+[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md)
+to combine the best optimized module with other strategies:
 
 ``` r
 
@@ -280,8 +281,8 @@ print(history)
 
 - `breadth`: Number of instruction candidates per iteration
 - `depth`: Number of coordinate ascent iterations
-- `prompt_model`: LLM for generating instructions (can differ from task
-  LLM)
+- `prompt_model`: Optional ellmer Chat for generating instructions;
+  `NULL` uses the task Chat supplied through `.llm`
 - `init_temperature`: Temperature for instruction generation
 
 **How it works:**
@@ -306,8 +307,6 @@ tp <- MIPROv2(
   metric = metric_exact_match(field = "answer"),
   auto = "medium",           # Preset: "light", "medium", or "heavy"
   num_candidates = 10L,      # Optional: override instruction candidates
-  init_temperature = 1.0,
-  prompt_model = chat_openai(model = "gpt-4o"),
   seed = 42L
 )
 
@@ -322,7 +321,8 @@ print(compiled$demos)
 
 - `auto`: Preset level - `"light"`, `"medium"`, or `"heavy"`
 - `num_candidates`: Override instruction candidates to generate
-- `prompt_model`: LLM for generating instruction proposals
+- `task_model`: Optional ellmer Chat for task evaluation; defaults to
+  `.llm`
 - `max_bootstrapped_demos`, `max_labeled_demos`: Demo limits
 - Supports `log_dir` for detailed trial logging
 
@@ -373,6 +373,8 @@ print(compiled$demos)
 - `num_candidates`: Number of demo candidates per step
 - `max_steps`: Number of optimization iterations
 - `max_demos`: Maximum demonstrations to include
+- `prompt_model`: Optional ellmer Chat for reflection; `NULL` uses
+  SIMBA’s deterministic example-based rule fallback
 
 **How it works:**
 
@@ -432,7 +434,7 @@ tp_multi <- GEPA(
 compiled <- compile(tp_multi, qa_module, trainset, valset = valset, .llm = llm)
 
 # GEPA returns Pareto-optimal solutions for multi-objective
-pareto <- compiled$config$optimizer$pareto_frontier
+pareto <- compiled$config$optimizer$objective_pareto_front
 print(pareto)
 ```
 
@@ -623,19 +625,6 @@ reduce_best_by_metric(
 )
 ```
 
-### Ensemble via Teleprompter
-
-``` r
-
-# Ensemble teleprompter wraps existing compiled modules
-tp <- Ensemble(
-  reduce_fn = reduce_weighted_vote(),
-  weights = c(0.9, 0.85, 0.8)
-)
-
-ens <- compile(tp, programs = list(mod1, mod2, mod3))
-```
-
 ## Tracking and Logging
 
 All optimizers support logging for debugging and reproducibility.
@@ -714,7 +703,7 @@ compiled$config$optimizer$candidate_programs  # List of candidate metadata
 compiled$config$optimizer$history
 
 # For GEPA (multi-objective)
-compiled$config$optimizer$pareto_frontier
+compiled$config$optimizer$objective_pareto_front
 ```
 
 ## Resource Budgets and Checkpoints
@@ -952,7 +941,7 @@ session_cost()  # Total cost so far
 | `Omni` | Optimizer composition | High (100+) | High |
 | `AutoResearch` | Agent-owned program search | Medium (30+) | High |
 | `MetaHarness` | Frontier-driven program search | Medium (30+) | High |
-| `Ensemble` | Combines modules | N/A | Varies |
+| [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md) | Combines modules | N/A | Varies |
 
 ## Further Reading
 

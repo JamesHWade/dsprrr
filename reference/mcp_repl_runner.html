@@ -227,9 +227,9 @@ subprocess isolation.</p>
 deterministic tests. It must be a function with the mcp-repl tool contract:
 <code>repl(input, timeout_ms)</code>. Because dsprrr did not launch that function's
 server, its runner policy is deliberately marked unverified and it is
-rejected by optimizers that require an OS sandbox. Calling <code>$close()</code> makes
-the wrapper terminal but does not close that caller-managed connection.</p>
-<p>A managed runner captures and closes only the mcp-repl transport it starts.
+rejected by optimizers that require an OS sandbox. Calling <code>$shutdown()</code>
+makes the wrapper terminal but does not close that caller-managed connection.</p>
+<p>A managed runner captures and shuts down only the mcp-repl transport it starts.
 Some supported mcptools versions do not expose public per-server teardown,
 so dsprrr uses a guarded compatibility shim and fails setup if deterministic
 ownership cannot be captured. This path is tested against mcptools 1.0.1.</p>
@@ -241,7 +241,7 @@ ownership cannot be captured. This path is tested against mcptools 1.0.1.</p>
 <span class="r-in"><span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu">mcp_repl_runner</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">runner</span><span class="op">$</span><span class="fu">execute</span><span class="op">(</span><span class="st">"mean(1:10)"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">runner</span><span class="op">$</span><span class="fu">reset</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">runner</span><span class="op">$</span><span class="fu">close</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">runner</span><span class="op">$</span><span class="fu">shutdown</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

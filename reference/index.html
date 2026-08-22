@@ -98,10 +98,10 @@
 
       <dl><dt>
 
-          <code><a href="signature.html">Signature()</a></code> <code><a href="signature.html">signature()</a></code>
+          <code><a href="signature.html">signature()</a></code>
 
         </dt>
-        <dd>Create a Signature for LLM Operations</dd>
+        <dd>Create a Typed Module Signature</dd>
 
         <dt>
 
@@ -109,27 +109,6 @@
 
         </dt>
         <dd>Create an input specification for a Signature</dd>
-
-        <dt>
-
-          <code><a href="input_helpers.html">input_string()</a></code> <code><a href="input_helpers.html">input_number()</a></code> <code><a href="input_helpers.html">input_boolean()</a></code> <code><a href="input_helpers.html">input_integer()</a></code> <code><a href="input_helpers.html">input_enum()</a></code> <code><a href="input_helpers.html">input_array()</a></code> <code><a href="input_helpers.html">input_object()</a></code>
-
-        </dt>
-        <dd>Create typed input helpers for common cases</dd>
-
-        <dt>
-
-          <code><a href="signature_to_json_schema.html">signature_to_json_schema()</a></code>
-
-        </dt>
-        <dd>Convert a Signature to JSON Schema</dd>
-
-        <dt>
-
-          <code><a href="dsp_trainset.html">dsp_trainset()</a></code>
-
-        </dt>
-        <dd>Create Training Data for DSPrrr</dd>
       </dl></div><div class="section level2">
       <h2 id="signature-transforms">Signature Transforms<a class="anchor" aria-label="anchor" href="#signature-transforms"></a></h2>
 
@@ -221,24 +200,10 @@
 
         <dt>
 
-          <code><a href="predict.Module.html">predict(<i>&lt;Module&gt;</i>)</a></code> <code><a href="predict.Module.html">predict(<i>&lt;PredictModule&gt;</i>)</a></code>
+          <code><a href="predict.Module.html">predict(<i>&lt;Module&gt;</i>)</a></code>
 
         </dt>
         <dd>Predict Method for Modules (tidymodels-style)</dd>
-
-        <dt>
-
-          <code><a href="dsp.html">dsp()</a></code>
-
-        </dt>
-        <dd>Declarative Structured Prediction</dd>
-
-        <dt>
-
-          <code><a href="as_module.html">as_module()</a></code>
-
-        </dt>
-        <dd>Create a Module from a Chat</dd>
 
         <dt>
 
@@ -253,13 +218,6 @@
 
         </dt>
         <dd>Traverse and Transform Module Graphs</dd>
-
-        <dt>
-
-          <code><a href="get_last_trace.html">get_last_trace()</a></code>
-
-        </dt>
-        <dd>Get the Last DSP Trace</dd>
       </dl></div><div class="section level2">
       <h2 id="pipelines">Pipelines<a class="anchor" aria-label="anchor" href="#pipelines"></a></h2>
 
@@ -290,27 +248,6 @@
 
         </dt>
         <dd>Create a Pipeline Step with Mappings</dd>
-
-        <dt>
-
-          <code><a href="map_inputs.html">map_inputs()</a></code>
-
-        </dt>
-        <dd>Map Inputs for Pipeline Steps</dd>
-
-        <dt>
-
-          <code><a href="with_inputs.html">with_inputs()</a></code>
-
-        </dt>
-        <dd>Inject Static Inputs for Pipeline Steps</dd>
-
-        <dt>
-
-          <code><a href="select_outputs.html">select_outputs()</a></code>
-
-        </dt>
-        <dd>Select Outputs for Pipeline Steps</dd>
       </dl></div><div class="section level2">
       <h2 id="reasoning-ensemble-modules">Reasoning &amp; Ensemble Modules<a class="anchor" aria-label="anchor" href="#reasoning-ensemble-modules"></a></h2>
 
@@ -509,7 +446,7 @@
 
       <dl><dt>
 
-          <code><a href="assertions.html">Assertion()</a></code> <code><a href="assertions.html">AssertionSet()</a></code> <code><a href="assertions.html">assert_output()</a></code> <code><a href="assertions.html">suggest_output()</a></code> <code><a href="assertions.html">assertion_set()</a></code>
+          <code><a href="assertions.html">assert_output()</a></code> <code><a href="assertions.html">suggest_output()</a></code> <code><a href="assertions.html">assertion_set()</a></code>
 
         </dt>
         <dd>Assertions for Output Validation</dd>
@@ -606,13 +543,6 @@
 
         </dt>
         <dd>Evaluate a DSPrrr module</dd>
-
-        <dt>
-
-          <code><a href="evaluate_dsp.html">evaluate_dsp()</a></code>
-
-        </dt>
-        <dd>Evaluate a Compiled Module</dd>
 
         <dt>
 
@@ -737,21 +667,21 @@
 
         <dt>
 
-          <code><a href="Omni.html">Omni()</a></code> <code><a href="Omni.html">print(<i>&lt;Omni&gt;</i>)</a></code>
+          <code><a href="Omni.html">Omni()</a></code>
 
         </dt>
         <dd>Omni Teleprompter</dd>
 
         <dt>
 
-          <code><a href="AutoResearch.html">AutoResearch()</a></code> <code><a href="AutoResearch.html">print(<i>&lt;AutoResearch&gt;</i>)</a></code>
+          <code><a href="AutoResearch.html">AutoResearch()</a></code>
 
         </dt>
         <dd>AutoResearch Teleprompter</dd>
 
         <dt>
 
-          <code><a href="MetaHarness.html">MetaHarness()</a></code> <code><a href="MetaHarness.html">print(<i>&lt;MetaHarness&gt;</i>)</a></code>
+          <code><a href="MetaHarness.html">MetaHarness()</a></code>
 
         </dt>
         <dd>Meta-Harness Teleprompter</dd>
@@ -783,27 +713,6 @@
 
         </dt>
         <dd>COPRO Teleprompter</dd>
-
-        <dt>
-
-          <code><a href="teleprompter-ensemble.html">teleprompter-ensemble</a></code>
-
-        </dt>
-        <dd>Ensemble Teleprompter</dd>
-
-        <dt>
-
-          <code><a href="Ensemble.html">Ensemble()</a></code>
-
-        </dt>
-        <dd>Ensemble Teleprompter</dd>
-
-        <dt>
-
-          <code><a href="ensemble_from_programs.html">ensemble_from_programs()</a></code>
-
-        </dt>
-        <dd>Compile Programs into an Ensemble</dd>
       </dl></div><div class="section level2">
       <h2 id="optimization">Optimization<a class="anchor" aria-label="anchor" href="#optimization"></a></h2>
 
@@ -888,13 +797,6 @@
 
         <dt>
 
-          <code><a href="module_demos_as_tibble.html">module_demos_as_tibble()</a></code>
-
-        </dt>
-        <dd>Convert module demos to a tibble</dd>
-
-        <dt>
-
           <code><a href="apply_best_config.html">apply_best_config()</a></code>
 
         </dt>
@@ -946,13 +848,6 @@
 
       <dl><dt>
 
-          <code><a href="OptimizerControl.html">OptimizerControl()</a></code>
-
-        </dt>
-        <dd>Optimizer Control Parameters</dd>
-
-        <dt>
-
           <code><a href="optimizer_control.html">optimizer_control()</a></code>
 
         </dt>
@@ -978,13 +873,6 @@
 
         </dt>
         <dd>Split Dataset into Train and Validation Sets</dd>
-
-        <dt>
-
-          <code><a href="Trial.html">Trial()</a></code>
-
-        </dt>
-        <dd>Trial Record</dd>
 
         <dt>
 
@@ -1287,69 +1175,6 @@
 
         </dt>
         <dd>Print method for dsprrr_cost_summary</dd>
-
-        <dt>
-
-          <code><a href="print.EvalResult.html">print(<i>&lt;EvalResult&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Print method for EvalResult</dd>
-
-        <dt>
-
-          <code><a href="print.Trial.html">print(<i>&lt;Trial&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Print method for Trial</dd>
-
-        <dt>
-
-          <code><a href="print.BootstrapFewShot.html">print(<i>&lt;BootstrapFewShot&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Print method for BootstrapFewShot</dd>
-
-        <dt>
-
-          <code><a href="print.BootstrapFewShotWithRandomSearch.html">print(<i>&lt;BootstrapFewShotWithRandomSearch&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Print method for BootstrapFewShotWithRandomSearch</dd>
-
-        <dt>
-
-          <code><a href="print.GEPA.html">print(<i>&lt;GEPA&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Print method for GEPA</dd>
-
-        <dt>
-
-          <code><a href="AutoResearch.html">AutoResearch()</a></code> <code><a href="AutoResearch.html">print(<i>&lt;AutoResearch&gt;</i>)</a></code>
-
-        </dt>
-        <dd>AutoResearch Teleprompter</dd>
-
-        <dt>
-
-          <code><a href="MetaHarness.html">MetaHarness()</a></code> <code><a href="MetaHarness.html">print(<i>&lt;MetaHarness&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Meta-Harness Teleprompter</dd>
-
-        <dt>
-
-          <code><a href="print.SIMBA.html">print(<i>&lt;SIMBA&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Print method for SIMBA</dd>
-
-        <dt>
-
-          <code><a href="print.COPRO.html">print(<i>&lt;COPRO&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Print method for COPRO</dd>
       </dl></div><div class="section level2">
       <h2 id="production-deployment">Production &amp; Deployment<a class="anchor" aria-label="anchor" href="#production-deployment"></a></h2>
 
@@ -1499,13 +1324,6 @@
 
         <dt>
 
-          <code><a href="register_dsprrr_tool.html">register_dsprrr_tool()</a></code>
-
-        </dt>
-        <dd>Register a DSPrrr Module as a Tool in a Chat</dd>
-
-        <dt>
-
           <code><a href="ragnar_tool.html">ragnar_tool()</a></code>
 
         </dt>
@@ -1608,7 +1426,7 @@
       </dl></div><div class="section level2">
       <h2 id="utilities">Utilities<a class="anchor" aria-label="anchor" href="#utilities"></a></h2>
 
-      <div class="section-desc"><p>Model detection, provider defaults, and helper functions</p></div>
+      <div class="section-desc"><p>Model detection helpers</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1621,27 +1439,6 @@
 
         </dt>
         <dd>Check if a model is a reasoning model</dd>
-
-        <dt>
-
-          <code><a href="provider_defaults.html">provider_defaults()</a></code>
-
-        </dt>
-        <dd>Get default parameters for a provider</dd>
-
-        <dt>
-
-          <code><a href="eval_vignette.html">eval_vignette()</a></code>
-
-        </dt>
-        <dd>Determine if vignettes should be evaluated</dd>
-
-        <dt>
-
-          <code><a href="has_ellmer_credentials.html">has_ellmer_credentials()</a></code>
-
-        </dt>
-        <dd>Check for ellmer credentials</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

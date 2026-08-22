@@ -61,7 +61,7 @@ if (FALSE) { # \dontrun{
 sig <- signature("text -> sentiment")
 mod <- module(sig, type = "predict", config = list(temperature = 0.2))
 optimize_grid(mod,
-  devset = tibble::tibble(text = "sample", target = "positive"),
+  data = tibble::tibble(text = "sample", target = "positive"),
   parameters = list(temperature = c(0.1, 0.5))
 )
 module_parameters(mod)

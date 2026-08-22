@@ -11,15 +11,14 @@ labeled examples should discover a reusable implementation.
 rlm_module(
   signature,
   runner = NULL,
+  interpreter_factory = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
   max_output_chars = 10000L,
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
-  max_iters = NULL,
-  ...,
-  interpreter_factory = NULL
+  ...
 )
 ```
 
@@ -35,9 +34,17 @@ rlm_module(
 
   Optional caller-owned code runner implementing `execute()` and
   `policy()`. Its policy must declare `persistent = TRUE`. It is
-  retained, never automatically closed, and must not be shared
+  retained, never automatically shut down, and must not be shared
   concurrently. For the trusted callr backend, use
   `r_code_runner(persistent = TRUE)`.
+
+- interpreter_factory:
+
+  Optional zero-argument function returning a fresh runner with
+  `execute()`, `policy()`, optional
+  [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
+  terminal `shutdown()`. Its policy must advertise `persistent = TRUE`
+  for RLM. Supply exactly one of `runner` and `interpreter_factory`.
 
 - max_iterations:
 
@@ -74,24 +81,9 @@ rlm_module(
   safety ceiling permits at most 1,000 host-tool calls in one generated
   R step.
 
-- max_iters:
-
-  DSPy 3.3-compatible alias for `max_iterations`. Supply only one of
-  these arguments.
-
 - ...:
 
   Additional arguments passed to the module
-
-- interpreter_factory:
-
-  Optional zero-argument function returning a fresh runner with
-  `execute()`, `policy()`, optional
-  [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
-  terminal `shutdown()` or
-  [`close()`](https://rdrr.io/r/base/connections.html). Its policy must
-  advertise `persistent = TRUE` for RLM. Supply exactly one of `runner`
-  and `interpreter_factory`.
 
 ## Value
 

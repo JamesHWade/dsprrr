@@ -120,8 +120,9 @@ selects different demos for each query based on embedding similarity.</p>
 
 
 <dl><dt id="arg-metric">metric<a class="anchor" aria-label="anchor" href="#arg-metric"></a></dt>
-<dd><p>A metric function for evaluating predictions. If NULL,
-uses exact_match() by default.</p></dd>
+<dd><p>Optional metric stored with the teleprompter. KNNFewShot
+selects demonstrations by embedding similarity rather than candidate
+evaluation.</p></dd>
 
 
 <dt id="arg-metric-threshold">metric_threshold<a class="anchor" aria-label="anchor" href="#arg-metric-threshold"></a></dt>

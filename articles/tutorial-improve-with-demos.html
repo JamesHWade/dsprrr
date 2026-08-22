@@ -189,10 +189,9 @@ it?</p>
 <div class="section level2">
 <h2 id="step-2-create-training-data">Step 2: Create Training Data<a class="anchor" aria-label="anchor" href="#step-2-create-training-data"></a>
 </h2>
-<p>First, let’s create labeled examples using
-<code><a href="../reference/dsp_trainset.html">dsp_trainset()</a></code>:</p>
+<p>First, create labeled examples as an ordinary tibble:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"I was charged twice for the same item"</span>,</span>
 <span>    <span class="st">"How do I update my payment method?"</span>,</span>
@@ -220,8 +219,8 @@ it?</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">trainset</span></span></code></pre></div>
-<p>The <code><a href="../reference/dsp_trainset.html">dsp_trainset()</a></code> function creates a properly formatted
-tibble where input columns are matched with expected output columns.</p>
+<p>Input columns are matched with expected output columns during
+compilation.</p>
 </div>
 <div class="section level2">
 <h2 id="step-3-measure-baseline-accuracy">Step 3: Measure Baseline Accuracy<a class="anchor" aria-label="anchor" href="#step-3-measure-baseline-accuracy"></a>
@@ -311,7 +310,7 @@ with automatically selected demonstrations.</p>
 <p>See which examples the teleprompter chose:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># The compiled module now has demos</span></span>
-<span><span class="va">compiled</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">demos</span></span></code></pre></div>
+<span><span class="va">compiled</span><span class="op">$</span><span class="va">demos</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-8-compare-all-three-versions">Step 8: Compare All Three Versions<a class="anchor" aria-label="anchor" href="#step-8-compare-all-three-versions"></a>
@@ -380,8 +379,7 @@ the LLM or exceed context limits.</p>
 </h2>
 <p>In this tutorial, you:</p>
 <ol style="list-style-type: decimal">
-<li>Created labeled training data with <code><a href="../reference/dsp_trainset.html">dsp_trainset()</a></code>
-</li>
+<li>Created labeled training data as a tibble</li>
 <li>Measured baseline accuracy before improving</li>
 <li>Added manual demonstrations with the <code>demos</code>
 parameter</li>

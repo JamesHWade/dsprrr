@@ -59,9 +59,11 @@ When you use a reasoning model, dsprrr automatically adjusts parameters:
 chat <- chat_openai(model = "o4-mini")
 
 # dsprrr automatically uses reasoning_effort instead of temperature
-result <- chat |> dsp(
-  "problem -> solution",
-  problem = "A farmer has 17 sheep. All but 9 run away. How many are left?"
+solver <- module(signature("problem -> solution"))
+result <- run(
+  solver,
+  problem = "A farmer has 17 sheep. All but 9 run away. How many are left?",
+  .llm = chat
 )
 ```
 
@@ -72,18 +74,21 @@ Control how much “thinking” the model does with `reasoning_effort`:
 ``` r
 
 # Create a module with reasoning effort configuration
+chat <- chat_openai(model = "o3")
 mod <- module(
   signature("question -> answer"),
   type = "predict",
   config = list(
-    model = "o3",
-    provider = "openai",
     reasoning_effort = "high"  # low, medium, or high
   )
 )
 
 # Complex reasoning task
-result <- run(mod, question = "What is the 100th prime number?")
+result <- run(
+  mod,
+  question = "What is the 100th prime number?",
+  .llm = chat
+)
 ```
 
 ### Module Parameters for Reasoning Models
@@ -151,11 +156,11 @@ models:
 session_cost()
 
 # For batch processing, consider using lower reasoning effort
+chat <- chat_openai(model = "o4-mini")
 mod <- module(
   signature("text -> category"),
   type = "predict",
   config = list(
-    model = "o4-mini",
     reasoning_effort = "low"  # Minimize cost for simpler tasks
   )
 )
@@ -172,22 +177,6 @@ options(ellmer_timeout = 120)  # 2 minutes
 
 # Or use async for long-running tasks
 promise <- run_async(mod, question = complex_problem)
-```
-
-## Provider Defaults
-
-dsprrr provides sensible defaults for different providers:
-
-``` r
-
-# OpenAI defaults
-provider_defaults("openai")
-
-# Anthropic defaults
-provider_defaults("anthropic")
-
-# Google defaults
-provider_defaults("google")
 ```
 
 ## Summary

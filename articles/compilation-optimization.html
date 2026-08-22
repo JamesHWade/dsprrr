@@ -324,7 +324,7 @@ together:</p>
 <span><span class="co"># Initial optimization with coarse grid</span></span>
 <span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod</span>,</span>
-<span>  devset <span class="op">=</span> <span class="va">training_data</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">training_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span>
@@ -360,7 +360,7 @@ together:</p>
 <span><span class="co"># Continue optimization with refined grid</span></span>
 <span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod</span>,</span>
-<span>  devset <span class="op">=</span> <span class="va">training_data</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">training_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  grid <span class="op">=</span> <span class="va">fine_grid</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -536,7 +536,7 @@ training data as demonstrations:</p>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Analyze sentiment: {text}\n\nSentiment:"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Prepare training data</span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"This product is amazing! Best purchase ever!"</span>,</span>
 <span>    <span class="st">"Terrible experience. Would not recommend."</span>,</span>
@@ -595,7 +595,7 @@ find the best performing one:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Prepare QA training data</span></span>
-<span><span class="va">qa_trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">qa_trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"The R language was created by Ross Ihaka and Robert Gentleman in 1992."</span>,</span>
 <span>    <span class="st">"Python was created by Guido van Rossum and first released in 1991."</span>,</span>
@@ -667,7 +667,7 @@ optimizing your programs:</p>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Step 2: Prepare comprehensive training data</span></span>
-<span><span class="va">email_trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">email_trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  email <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Your product broke after 2 days! I want a refund immediately!"</span>,</span>
 <span>    <span class="st">"Hi, I'm wondering if you ship to Canada?"</span>,</span>
@@ -745,7 +745,7 @@ optimizing your programs:</p>
 performance:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Prepare test dataset (separate from training)</span></span>
-<span><span class="va">test_emails</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">test_emails</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  email <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"The package was damaged during shipping."</span>,</span>
 <span>    <span class="st">"Do you offer student discounts?"</span>,</span>
@@ -771,12 +771,12 @@ performance:</p>
 <span><span class="co"># Evaluate with specific metric</span></span>
 <span><span class="va">category_metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"category"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate_dsp.html">evaluate_dsp</a></span><span class="op">(</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  module <span class="op">=</span> <span class="va">optimized_grid</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">test_emails</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">category_metric</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  .progress <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Examine results</span></span>
@@ -791,12 +791,12 @@ performance:</p>
 <span>  require_all <span class="op">=</span> <span class="cn">TRUE</span> <span class="co"># All fields must match</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">full_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate_dsp.html">evaluate_dsp</a></span><span class="op">(</span></span>
+<span><span class="va">full_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  module <span class="op">=</span> <span class="va">optimized_grid</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">test_emails</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">multi_metric</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  .progress <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">full_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span> <span class="co"># Lower, as all fields must match</span></span></code></pre></div>
@@ -837,7 +837,7 @@ performance:</p>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 2. Create comprehensive training data</span></span>
-<span><span class="va">doc_trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">doc_trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  document <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Our Q3 revenue increased by 25% YoY, driven by strong product sales.</span></span>
 <span><span class="st">     Customer satisfaction scores reached an all-time high of 92%.</span></span>
@@ -916,12 +916,12 @@ performance:</p>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span>  <span class="co"># Evaluate on validation set</span></span>
-<span>  <span class="va">eval_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate_dsp.html">evaluate_dsp</a></span><span class="op">(</span></span>
+<span>  <span class="va">eval_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>    module <span class="op">=</span> <span class="va">optimized</span>,</span>
 <span>    data <span class="op">=</span> <span class="va">doc_trainset</span>, <span class="co"># In practice, use separate validation set</span></span>
 <span>    metric <span class="op">=</span> <span class="va">wrapped_metric</span>,</span>
 <span>    .llm <span class="op">=</span> <span class="va">llm</span>,</span>
-<span>    verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>    .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">results_by_k</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"k_"</span>, <span class="va">k</span><span class="op">)</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">eval_result</span><span class="op">$</span><span class="va">mean_score</span></span>
@@ -1011,7 +1011,7 @@ performance:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Evaluate on validation set</span></span>
-<span><span class="va">val_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate_dsp.html">evaluate_dsp</a></span><span class="op">(</span></span>
+<span><span class="va">val_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  module <span class="op">=</span> <span class="va">optimized_module</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">splits</span><span class="op">$</span><span class="va">val</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">wrapped_metric</span>,</span>

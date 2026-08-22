@@ -1,9 +1,8 @@
 # Default Chat Configuration
 
 Functions for managing the default ellmer Chat object used by dsprrr.
-When no Chat is explicitly provided to
-[`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) or
-[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md),
+When no Chat is explicitly provided to a module or
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) call,
 these functions determine which Chat to use.
 
 ## Details

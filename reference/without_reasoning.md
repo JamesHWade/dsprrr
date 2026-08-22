@@ -15,8 +15,8 @@ without_reasoning(sig, reasoning_field = "reasoning")
 
 - sig:
 
-  A Signature object (typically one created with
-  [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md))
+  A signature object, typically created with
+  [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md).
 
 - reasoning_field:
 
@@ -24,7 +24,7 @@ without_reasoning(sig, reasoning_field = "reasoning")
 
 ## Value
 
-A new Signature without the reasoning field
+A new signature object without the reasoning field.
 
 ## Examples
 

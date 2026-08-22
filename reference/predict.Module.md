@@ -9,10 +9,7 @@ that matches the pattern used by parsnip and other tidymodels packages.
 
 ``` r
 # S3 method for class 'Module'
-predict(object, new_data, ...)
-
-# S3 method for class 'PredictModule'
-predict(object, new_data, ...)
+predict(object, new_data, .llm = NULL, ...)
 ```
 
 ## Arguments
@@ -25,6 +22,11 @@ predict(object, new_data, ...)
 
   A data frame or tibble with columns matching the module's signature
   inputs
+
+- .llm:
+
+  Optional ellmer Chat object. When supplied, it takes precedence over
+  the Chat stored on `object` and the package default.
 
 - ...:
 

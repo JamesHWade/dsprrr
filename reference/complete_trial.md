@@ -12,7 +12,8 @@ complete_trial(trial, eval_result, compiled_artifact_ref = NULL, notes = NULL)
 
 - trial:
 
-  A Trial object.
+  A trial record created by
+  [`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md).
 
 - eval_result:
 
@@ -29,4 +30,4 @@ complete_trial(trial, eval_result, compiled_artifact_ref = NULL, notes = NULL)
 
 ## Value
 
-Updated Trial object with status "completed".
+The updated trial record with status `"completed"`.

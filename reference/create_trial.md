@@ -1,6 +1,6 @@
 # Create a Trial Record
 
-Convenience function to create a Trial record with auto-generated ID.
+Create an optimization trial record with an automatically generated ID.
 
 ## Usage
 
@@ -41,7 +41,7 @@ create_trial(
 
 ## Value
 
-A Trial object.
+An optimization trial record.
 
 ## Examples
 

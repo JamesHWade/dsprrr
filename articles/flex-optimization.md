@@ -255,7 +255,6 @@ before <- evaluate(
   holdout,
   metric = accuracy,
   .llm = llm,
-  .parallel = FALSE,
   .progress = FALSE
 )
 after <- evaluate(
@@ -263,7 +262,6 @@ after <- evaluate(
   holdout,
   metric = accuracy,
   .llm = llm,
-  .parallel = FALSE,
   .progress = FALSE
 )
 
@@ -419,7 +417,7 @@ Generated R must run in an enforced sandbox.
 [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
 isolates a subprocess but is for source you already trust; do not
 disable `require_sandbox` for optimizer-authored code. Executable Flex
-is synchronous, so evaluate it with `.parallel = FALSE`; specialized
+is synchronous, so use the default sequential execution; specialized
 token streaming is not available.
 
 ## When Flex is the wrong tool

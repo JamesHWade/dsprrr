@@ -49,10 +49,10 @@ An invocation has six observable stages.
     full source object does not.
 5.  A valid `SUBMIT(...)` ends the loop. An invalid typed submission
     becomes repairable feedback instead.
-6.  If the loop spends `max_iters` without a valid submission, a final
-    extraction pass attempts to produce the best typed answer supported
-    by the trajectory; provider or type-validation failure remains
-    terminal.
+6.  If the loop spends `max_iterations` without a valid submission, a
+    final extraction pass attempts to produce the best typed answer
+    supported by the trajectory; provider or type-validation failure
+    remains terminal.
 
 The core interface is small:
 
@@ -65,7 +65,7 @@ explorer <- rlm_module(
   interpreter_factory = function() {
     r_code_runner(timeout = 30, persistent = TRUE)
   },
-  max_iters = 10,
+  max_iterations = 10,
   max_llm_calls = 6,
   max_output_chars = 10000
 )
@@ -97,27 +97,27 @@ The recommended lifecycle is a zero-argument factory:
 explorer <- rlm_module(
   "records, question -> answer",
   interpreter_factory = function() mcp_repl_runner(),
-  max_iters = 10
+  max_iterations = 10
 )
 ```
 
 dsprrr creates one runner from the factory, uses it for that invocation,
-and closes it exactly once on success, error, or interrupt.
+and shuts it down exactly once on success, error, or interrupt.
 Factory-backed modules can create isolated runners for concurrent
 invocations.
 
 A directly supplied `runner` is caller-owned. dsprrr neither resets nor
-closes it. RLM attempts to remove staged context and invocation-private
-variables when a call ends. Inspect cleanup warnings and close or reset
-the runner if cleanup fails. No cleanup can undo arbitrary file, option,
-or network side effects from guest code. Reuse a caller-owned runner
-only sequentially and within one trust boundary:
+shuts down it. RLM attempts to remove staged context and
+invocation-private variables when a call ends. Inspect cleanup warnings
+and shut down or reset the runner if cleanup fails. No cleanup can undo
+arbitrary file, option, or network side effects from guest code. Reuse a
+caller-owned runner only sequentially and within one trust boundary:
 
 ``` r
 
 local({
   runner <- r_code_runner(timeout = 30, persistent = TRUE)
-  on.exit(runner$close(), add = TRUE)
+  on.exit(runner$shutdown(), add = TRUE)
   explorer <- rlm_module(
     "records, question -> answer",
     runner = runner
@@ -220,8 +220,8 @@ them without a JSON Schema validator would make the repair contract
 misleading. Express the output with ellmer’s explicit type constructors
 when using RLM.
 
-If `max_iters` is exhausted, fallback extraction reads the trajectory
-and attempts to return the signature fields. Provider or
+If `max_iterations` is exhausted, fallback extraction reads the
+trajectory and attempts to return the signature fields. Provider or
 output-validation failure still terminates the invocation. Treat a
 successful fallback as degraded completion: it is useful, but it is
 evidence that the exploration budget or instructions may need work.
@@ -364,7 +364,7 @@ Three budgets keep the ordinary loop finite:
 
 | Argument | Bounds |
 |----|----|
-| `max_iters` | Outer model/code/observation turns before fallback |
+| `max_iterations` | Outer model/code/observation turns before fallback |
 | `max_llm_calls` | Host-side recursive model calls; batch items count separately |
 | `max_output_chars` | Head-and-tail execution output retained per turn |
 

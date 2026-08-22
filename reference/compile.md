@@ -44,7 +44,7 @@ order
 ``` r
 if (FALSE) { # \dontrun{
 classifier <- module(signature("text -> sentiment"), type = "predict")
-trainset <- dsp_trainset(
+trainset <- data.frame(
   text = c("I love it!", "Terrible experience"),
   sentiment = c("positive", "negative")
 )

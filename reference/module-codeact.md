@@ -30,10 +30,9 @@ backend determines whether execution state persists and whether
 `interpreter_factory` is a zero-argument function that returns a fresh
 runner implementing `execute()`, `policy()`, optional
 [`start()`](https://rdrr.io/r/stats/start.html), and terminal
-`shutdown()` or [`close()`](https://rdrr.io/r/base/connections.html).
-The module owns that runner for one invocation and shuts it down exactly
-once on success, error, or interrupt. Any retained code tool becomes
-terminal after shutdown.
+`shutdown()`. The module owns that runner for one invocation and shuts
+it down exactly once on success, error, or interrupt. Any retained code
+tool becomes terminal after shutdown.
 
 [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
 supports factory-backed CodeAct in an isolated mirai process. It rejects

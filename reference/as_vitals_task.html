@@ -118,7 +118,7 @@ The solver then extracts these fields when processing each sample.</p>
 <span>  epochs <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  metrics <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  .parallel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .concurrency <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -165,8 +165,9 @@ takes a vector of scores and returns a single numeric value.</p></dd>
 <dd><p>Directory for evaluation logs. Defaults to <code><a href="https://vitals.tidyverse.org/reference/vitals_log_dir.html" class="external-link">vitals::vitals_log_dir()</a></code>.</p></dd>
 
 
-<dt id="arg--parallel">.parallel<a class="anchor" aria-label="anchor" href="#arg--parallel"></a></dt>
-<dd><p>Logical; whether to run solver in parallel. Defaults to FALSE.</p></dd>
+<dt id="arg--concurrency">.concurrency<a class="anchor" aria-label="anchor" href="#arg--concurrency"></a></dt>
+<dd><p>Optional policy created by <code><a href="concurrency_control.html">concurrency_control()</a></code>.
+Omission uses sequential execution.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

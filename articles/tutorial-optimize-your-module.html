@@ -177,7 +177,7 @@ through grid search.</p>
 <p>Create training and test data:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Training data for optimization</span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Absolutely love this product! Best purchase ever."</span>,</span>
 <span>    <span class="st">"Complete waste of money. Broke after one day."</span>,</span>
@@ -199,7 +199,7 @@ through grid search.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Held-out test data (never used for optimization)</span></span>
-<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Great value for money!"</span>,</span>
 <span>    <span class="st">"Stopped working after a week."</span>,</span>

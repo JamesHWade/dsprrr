@@ -106,15 +106,14 @@ should discover a reusable implementation.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">rlm_module</span><span class="op">(</span></span>
 <span>  <span class="va">signature</span>,</span>
 <span>  runner <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iterations <span class="op">=</span> <span class="fl">20L</span>,</span>
 <span>  max_llm_calls <span class="op">=</span> <span class="fl">50L</span>,</span>
 <span>  max_output_chars <span class="op">=</span> <span class="fl">10000L</span>,</span>
 <span>  sub_lm <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  max_iters <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  <span class="va">...</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -131,8 +130,16 @@ object output types. Opaque <code>TypeJsonSchema</code> outputs are unsupported.
 <dt id="arg-runner">runner<a class="anchor" aria-label="anchor" href="#arg-runner"></a></dt>
 <dd><p>Optional caller-owned code runner implementing <code>execute()</code> and
 <code>policy()</code>. Its policy must declare <code>persistent = TRUE</code>. It is retained,
-never automatically closed, and must not be shared concurrently. For the
+never automatically shut down, and must not be shared concurrently. For the
 trusted callr backend, use <code>r_code_runner(persistent = TRUE)</code>.</p></dd>
+
+
+<dt id="arg-interpreter-factory">interpreter_factory<a class="anchor" aria-label="anchor" href="#arg-interpreter-factory"></a></dt>
+<dd><p>Optional zero-argument function returning a fresh
+runner with <code>execute()</code>, <code>policy()</code>, optional <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code>, and idempotent
+terminal <code>shutdown()</code>. Its policy must advertise
+<code>persistent = TRUE</code> for RLM.
+Supply exactly one of <code>runner</code> and <code>interpreter_factory</code>.</p></dd>
 
 
 <dt id="arg-max-iterations">max_iterations<a class="anchor" aria-label="anchor" href="#arg-max-iterations"></a></dt>
@@ -171,21 +178,8 @@ A protocol safety ceiling permits at most 1,000 host-tool calls in one
 generated R step.</p></dd>
 
 
-<dt id="arg-max-iters">max_iters<a class="anchor" aria-label="anchor" href="#arg-max-iters"></a></dt>
-<dd><p>DSPy 3.3-compatible alias for <code>max_iterations</code>. Supply only
-one of these arguments.</p></dd>
-
-
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to the module</p></dd>
-
-
-<dt id="arg-interpreter-factory">interpreter_factory<a class="anchor" aria-label="anchor" href="#arg-interpreter-factory"></a></dt>
-<dd><p>Optional zero-argument function returning a fresh
-runner with <code>execute()</code>, <code>policy()</code>, optional <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code>, and idempotent
-terminal <code>shutdown()</code> or <code><a href="https://rdrr.io/r/base/connections.html" class="external-link">close()</a></code>. Its policy must advertise
-<code>persistent = TRUE</code> for RLM.
-Supply exactly one of <code>runner</code> and <code>interpreter_factory</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

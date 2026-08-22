@@ -37,7 +37,7 @@ all provider communication.
 | `dspy.MultiChainComparison` | [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) |  |
 | `dspy.RLM` | [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) (experimental) | Inference-time adaptive exploration over an R REPL, with optimizable action and extraction predictors, inherited or separate sub-LMs, replayed recursive values, typed submission repair, and trajectory metadata |
 | Experimental `dspy.Flex` | [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) | GEPA can optimize a bounded predictor graph or an R `forward()` program. dsprrr requires an explicit fresh interpreter for executable source rather than choosing a default sandbox |
-| `dspy.Parallel` / `Module.batch` | [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md), `run(..., .parallel = TRUE)` | Batch over a data frame; heterogeneous (module, example) fan-out is not yet a dedicated module |
+| `dspy.Parallel` / `Module.batch` | [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md), `run(..., .concurrency = concurrency_control(...))` | Batch over a data frame; heterogeneous (module, example) fan-out is not yet a dedicated module |
 | `dspy.majority` | [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md) with [`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md) | Plus [`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md), [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md) |
 | `dspy.KNN` | `KNNFewShot` teleprompter / KNN module | Bring-your-own vectorizer (e.g., `ragnar::embed_openai()`) |
 | Retrieval (custom functions) | [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md) + ragnar | First-class ragnar retriever integration |
@@ -124,7 +124,7 @@ feedback injection.
 | `GEPA` | `GEPA` | Adapted reflective optimization for instructions and complete Flex sources, with separate train/validation roles, multi-objective selection, lineage, and optional retained outputs. Cached subsample merge acceptance, fine-grained resume, and built-in experiment trackers remain different |
 | `COPRO` | `COPRO` | Equivalent (coordinate ascent over instructions) |
 | `KNNFewShot` | `KNNFewShot` | Equivalent |
-| `Ensemble` | `Ensemble` | Equivalent |
+| `Ensemble` | [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md) | Direct module constructor rather than a teleprompter |
 | `BetterTogether` | `BetterTogether` | Chains prompt optimizers via strategy strings; does **not** alternate prompt/weight optimization (no finetuning backend) |
 | `BootstrapFinetune` | — | Not implemented (planned); dsprrr currently optimizes prompts, not weights |
 | `GRPO` (RL via Arbor) | — | Not implemented |
@@ -229,9 +229,11 @@ dsprrr composes pipelines:
 
 ``` r
 
-program <- mod_retrieve %>>%
-  map_inputs(mod_answer, documents = "context") %>>%
+program <- pipeline(
+  mod_retrieve,
+  step(mod_answer, map = c(documents = "context")),
   mod_format
+)
 ```
 
 `BootstrapFewShot` compiles pipelines **jointly**, like DSPy: the
@@ -244,13 +246,13 @@ optimizers operate on single modules).
 
 | Capability | DSPy | dsprrr |
 |----|----|----|
-| LM client | `dspy.LM`; experimental typed `LMRequest -> LMResponse` migration boundary in 3.3 | Provider-neutral ellmer `Chat`; `build_module_request()` normalizes prompt/content input, but a complete package-wide invocation record is still planned |
+| LM client | `dspy.LM`; experimental typed `LMRequest -> LMResponse` migration boundary in 3.3 | Provider-neutral ellmer `Chat`; [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
 | Configuration | `dspy.configure()` / `dspy.context()` | [`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md), [`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md), [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/local_lm.md) |
 | Caching | Two-tier memory + disk | Two-tier memory + disk ([`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md)) |
 | Async | `acall`/`aforward`, `asyncify` | [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md) with promises for ordinary Predict modules and isolated background workflows for factory-backed ProgramOfThought, CodeAct, and RLM. Caller-owned interpreters and specialized streaming remain rejected rather than shared or bypassed |
 | Streaming | `streamify()` + `StreamListener` | [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md) + [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md); one-shot fallback preserves specialized `forward()` semantics, while direct token streaming is limited to ordinary Predict steps and emits status events per pipeline step |
 | Usage tracking | `track_usage` | [`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/get_tokens.md), [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/get_cost.md), [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md) |
-| Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.parallel = TRUE)` via mirai or ellmer’s native parallelism. Declarative zero/one-step Flex is supported; executable and multi-step Flex currently require sequential rows |
+| Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.concurrency = concurrency_control(...))` via mirai or ellmer’s native parallelism. Declarative zero/one-step Flex is supported; executable and multi-step Flex currently require sequential rows |
 | Saving programs | `save`/`load`; sanitized LM state and explicit unsafe-class opt-in in 3.3 | Versioned whole-program artifacts via [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md) / [`load_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md) or pins, with registry-backed runtime IDs and explicit trusted opt-in |
 | Observability | MLflow autolog, OpenTelemetry callbacks | Traces tibble, [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md), [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md); package-level OpenTelemetry spans are planned on top of ellmer |
 | Adapters (Chat/JSON/XML/TwoStep/BAML) | Yes | No adapter layer; ellmer’s `chat_structured()` handles structured output |

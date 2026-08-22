@@ -17,10 +17,10 @@ token-stream request is active; that request is rejected first.
 program_of_thought(
   signature,
   runner = NULL,
+  interpreter_factory = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
-  ...,
-  interpreter_factory = NULL
+  ...
 )
 ```
 
@@ -33,8 +33,16 @@ program_of_thought(
 - runner:
 
   Optional caller-owned code runner implementing `execute()` and
-  `policy()`. It is retained, never automatically closed, and must not
-  be shared concurrently when persistent.
+  `policy()`. It is retained, never automatically shut down, and must
+  not be shared concurrently when persistent.
+
+- interpreter_factory:
+
+  Optional zero-argument function returning a fresh runner with
+  `execute()`, `policy()`, optional
+  [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
+  terminal `shutdown()`. Supply exactly one of `runner` and
+  `interpreter_factory`.
 
 - max_iters:
 
@@ -48,15 +56,6 @@ program_of_thought(
 - ...:
 
   Additional arguments passed to the module
-
-- interpreter_factory:
-
-  Optional zero-argument function returning a fresh runner with
-  `execute()`, `policy()`, optional
-  [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
-  terminal `shutdown()` or
-  [`close()`](https://rdrr.io/r/base/connections.html). Supply exactly
-  one of `runner` and `interpreter_factory`.
 
 ## Value
 

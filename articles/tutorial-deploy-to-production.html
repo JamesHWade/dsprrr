@@ -171,7 +171,7 @@ deployment</p>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify the sentiment of this product review."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Love it!"</span>, <span class="st">"Hate it!"</span>, <span class="st">"It's okay."</span>,</span>
 <span>    <span class="st">"Amazing!"</span>, <span class="st">"Terrible!"</span>, <span class="st">"Meh."</span>,</span>
@@ -328,7 +328,7 @@ defined - Board is accessible (if provided)</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 3. Evaluate on held-out test data (same columns as the trainset)</span></span>
-<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Exceeded expectations!"</span>, <span class="st">"Broke after a week."</span>, <span class="st">"It's fine."</span><span class="op">)</span>,</span>
 <span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
@@ -380,7 +380,7 @@ defined - Board is accessible (if provided)</p>
 <span><span class="va">prod_module</span><span class="op">$</span><span class="fu">trace_summary</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Weekly: Evaluate on a fresh sample of labeled production data</span></span>
-<span><span class="va">weekly_sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">weekly_sample</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Saved me hours!"</span>, <span class="st">"Refund please."</span>, <span class="st">"Average at best."</span><span class="op">)</span>,</span>
 <span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>

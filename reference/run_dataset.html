@@ -108,8 +108,6 @@ as a non-empty call, without resolving a Chat or changing runtime state.</p>
 <span>  <span class="va">data</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  .parallel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  .parallel_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ellmer"</span>, <span class="st">"mirai"</span><span class="op">)</span>,</span>
 <span>  .concurrency <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .progress <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  .return_format <span class="op">=</span> <span class="st">"simple"</span>,</span>
@@ -142,21 +140,9 @@ as a non-empty call, without resolving a Chat or changing runtime state.</p>
 <dd><p>Logical whether to print verbose output</p></dd>
 
 
-<dt id="arg--parallel">.parallel<a class="anchor" aria-label="anchor" href="#arg--parallel"></a></dt>
-<dd><p>Logical whether to enable parallel processing</p></dd>
-
-
-<dt id="arg--parallel-method">.parallel_method<a class="anchor" aria-label="anchor" href="#arg--parallel-method"></a></dt>
-<dd><p>Character, either "ellmer" (default) or "mirai".
-"ellmer" uses ellmer's <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">parallel_chat_structured()</a></code> for native async HTTP
-parallelism (more efficient, single process).
-"mirai" uses mirai for multi-process parallelism (requires <code>.llm = NULL</code>).</p></dd>
-
-
 <dt id="arg--concurrency">.concurrency<a class="anchor" aria-label="anchor" href="#arg--concurrency"></a></dt>
 <dd><p>Optional batch policy created by
-<code><a href="concurrency_control.html">concurrency_control()</a></code>. Do not combine it with <code>.parallel</code> or
-<code>.parallel_method</code>.</p></dd>
+<code><a href="concurrency_control.html">concurrency_control()</a></code>. Omission uses sequential execution.</p></dd>
 
 
 <dt id="arg--progress">.progress<a class="anchor" aria-label="anchor" href="#arg--progress"></a></dt>
@@ -175,8 +161,9 @@ context is inherited.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A tibble with the input columns plus a <code>result</code> list-column. With
-<code>.return_format = "structured"</code>, the tibble also contains <code>.error</code>,
+    <p>A tibble with the input columns plus a <code>result</code> list-column containing
+one named declared-output record per row.
+With <code>.return_format = "structured"</code>, the tibble also contains <code>.error</code>,
 <code>.metadata</code>, and <code>.chat</code>; <code>.error</code> is <code>NA</code> for successful rows and contains
 the LLM execution error message for failed rows.</p>
     </div>

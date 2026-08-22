@@ -2,9 +2,7 @@
 
 Returns detailed information about the most recent LLM call, including
 the prompt sent, response received, and metadata like tokens and cost.
-Works with both
-[`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) calls
-and module-based calls.
+Works with module-based calls.
 
 ## Usage
 
@@ -30,7 +28,7 @@ A `dsprrr_prompt_inspection` object containing:
 
 - `timestamp`: When the call was made
 
-- `source`: Where the call originated ("dsp()" or module name)
+- `source`: The module class that originated the call
 
 - `program_artifact_id`: Exact executable program identity, when
   available
@@ -44,7 +42,8 @@ Returns `NULL` if no LLM calls have been made.
 ``` r
 if (FALSE) { # \dontrun{
 # Make an LLM call
-dsp("question -> answer", question = "What is 2+2?")
+mod <- module(signature("question -> answer"))
+run(mod, question = "What is 2+2?", .llm = ellmer::chat_openai())
 
 # Inspect what happened
 get_last_prompt()

@@ -113,7 +113,6 @@ available.</p>
 <span>  metric <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  metric_threshold <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_errors <span class="op">=</span> <span class="fl">5L</span>,</span>
-<span>  prompt_model <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  task_model <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  teacher_settings <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
@@ -122,7 +121,6 @@ available.</p>
 <span>  num_candidates <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  num_threads <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">9L</span>,</span>
-<span>  init_temperature <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  track_stats <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  log_dir <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -144,12 +142,9 @@ available.</p>
 <dd><p>Maximum number of errors allowed during optimization.</p></dd>
 
 
-<dt id="arg-prompt-model">prompt_model<a class="anchor" aria-label="anchor" href="#arg-prompt-model"></a></dt>
-<dd><p>Optional model to propose instructions.</p></dd>
-
-
 <dt id="arg-task-model">task_model<a class="anchor" aria-label="anchor" href="#arg-task-model"></a></dt>
-<dd><p>Optional model to evaluate tasks. Defaults to .llm.</p></dd>
+<dd><p>Optional ellmer Chat used to evaluate tasks. <code>NULL</code> uses
+the <code>.llm</code> supplied to <code><a href="compile.html">compile()</a></code>.</p></dd>
 
 
 <dt id="arg-teacher-settings">teacher_settings<a class="anchor" aria-label="anchor" href="#arg-teacher-settings"></a></dt>
@@ -178,10 +173,6 @@ available.</p>
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
 <dd><p>Random seed for reproducibility.</p></dd>
-
-
-<dt id="arg-init-temperature">init_temperature<a class="anchor" aria-label="anchor" href="#arg-init-temperature"></a></dt>
-<dd><p>Initial temperature for instruction proposals.</p></dd>
 
 
 <dt id="arg-track-stats">track_stats<a class="anchor" aria-label="anchor" href="#arg-track-stats"></a></dt>

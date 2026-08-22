@@ -7,8 +7,16 @@ idempotent, while conflicting records with the same ID are rejected. The
 `trials.jsonl` journal is authoritative. `metadata.json`, `README.md`,
 and `best_program.rds` are independently refreshed, best-effort derived
 views; they may lag after an interruption and are rebuilt by a later
-successful save. Persistent Unix logs require an effective-user-owned
-directory with a safe parent chain and reject symbolic-link targets;
+successful save. On Unix, a pre-existing private log directory must be
+owned by the effective user with exactly mode `0700`, and every
+pre-existing log file must have exactly mode `0600`; special mode bits
+are rejected. Every existing ancestor must be owned by root or the
+effective user, including sticky shared parents. Before initialization
+or a save to another directory locks, reads, or mutates storage, dsprrr
+preflights every known target: the lock, journal, metadata, summary, and
+best-program artifact. Unsafe paths are rejected without repair or
+reads. Directories and files created for the current operation are
+enforced as owner-only. Non-symbolic regular files remain required.
 Windows uses the account's filesystem ACLs, which base R cannot verify
 as owner-only, and fails closed if stable device and file identifiers
 are unavailable.
@@ -25,7 +33,7 @@ are unavailable.
 
 - `trials`:
 
-  List of Trial objects.
+  List of optimization trial records.
 
 - `metadata`:
 
@@ -94,7 +102,8 @@ program are then refreshed independently on a best-effort basis.
 
 - `trial`:
 
-  A Trial object.
+  A trial record created by
+  [`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md).
 
 - `persist`:
 
@@ -146,7 +155,8 @@ Get the best trial by score.
 
 #### Returns
 
-The best Trial object, or NULL if no completed trials.
+The best optimization trial record, or `NULL` if no trials have
+completed.
 
 ------------------------------------------------------------------------
 

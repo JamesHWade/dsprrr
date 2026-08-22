@@ -2,10 +2,8 @@
 
 In [Tutorial
 1](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md),
-you made one-off LLM calls with
-[`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md). But
-what if you need to classify hundreds of texts? Creating a new call each
-time is tedious and slow.
+you built and ran a typed module. Now you will use that same contract
+across hundreds of texts.
 
 In this tutorial, you’ll build a **reusable module**—a classifier you
 can use over and over.
@@ -29,33 +27,27 @@ library(dsprrr)
 library(ellmer)
 ```
 
-## Step 1: The Problem with `dsp()`
+## Step 1: Declare the Classifier
 
-In Tutorial 1, you classified sentiment like this:
+Declare the task once as a signature:
 
 ``` r
 
-chat <- chat_openai()
-chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Great!")
-chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Awful")
-chat |> dsp("text -> sentiment: enum('positive', 'negative', 'neutral')", text = "Meh")
+sentiment_sig <- signature(
+  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+)
 ```
 
-This works, but you’re repeating the signature every time. If you want
-to change the signature, you have to change it everywhere.
+The signature is the reusable typed contract for every call.
 
 ## Step 2: Create a Reusable Module
 
-The
-[`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)
-function wraps a signature into a reusable object:
+Wrap the signature in a reusable module:
 
 ``` r
 
 chat <- chat_openai()
-
-classifier <- chat |>
-  as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
+classifier <- module(sentiment_sig, type = "predict")
 
 classifier
 ```
@@ -64,52 +56,55 @@ Now `classifier` is an object you can use repeatedly.
 
 ## Step 3: Classify Single Texts
 
-Use the `$predict()` method to classify:
+Use [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) to
+classify:
 
 ``` r
 
-classifier$predict(text = "I absolutely loved this movie!")
+run(classifier, text = "I absolutely loved this movie!", .llm = chat)
 ```
 
 Try a few more:
 
 ``` r
 
-classifier$predict(text = "This was a complete waste of time.")
+run(classifier, text = "This was a complete waste of time.", .llm = chat)
 
-classifier$predict(text = "It was okay, I guess.")
+run(classifier, text = "It was okay, I guess.", .llm = chat)
 
-classifier$predict(text = "The service was terrible but the food was amazing.")
+run(
+  classifier,
+  text = "The service was terrible but the food was amazing.",
+  .llm = chat
+)
 ```
 
 ## Step 4: Batch Processing
 
-Here’s where modules shine. Process multiple texts at once by passing a
-vector:
+Here’s where modules shine. Process multiple texts with
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md):
 
 ``` r
 
-reviews <- c(
-  "Best purchase I've ever made!",
-  "Broke after one day. Total garbage.",
-  "Does what it says. Nothing special.",
-  "Exceeded all my expectations!",
-  "Would not recommend to anyone."
+reviews <- tibble::tibble(
+  text = c(
+    "Best purchase I've ever made!",
+    "Broke after one day. Total garbage.",
+    "Does what it says. Nothing special.",
+    "Exceeded all my expectations!",
+    "Would not recommend to anyone."
+  )
 )
 
-classifier$predict(text = reviews)
+run_dataset(classifier, reviews, .llm = chat)
 ```
 
-All five classifications came back in a single call. Much more efficient
-than five separate calls.
+All five classifications came back from one dataset operation, while
+dsprrr retained one observable provider attempt per review.
 
-## Step 5: The Full Control Approach
+## Step 5: Add Instructions
 
-[`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)
-is convenient, but sometimes you need more control. The
-[`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md) +
-[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
-approach gives you that:
+Add task-specific guidance to the signature:
 
 ``` r
 
@@ -221,29 +216,20 @@ This shows you how many calls were made and the token costs.
 
 In this tutorial, you:
 
-1.  Created reusable modules with
-    [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md)
-2.  Used `$predict()` for single and batch processing
-3.  Built modules with full control using
-    [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md) +
-    [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+1.  Declared a reusable signature and module
+2.  Used [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
+    for individual inputs
+3.  Used
+    [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+    for batch processing
 4.  Processed data frames with
     [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
 5.  Added input descriptions for clarity
 6.  Checked your work with `trace_summary()`
 
-## When to Use Each Approach
-
-| Approach | Best For |
-|----|----|
-| [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) | Quick one-off calls, exploration |
-| [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md) | Simple reusable modules, prototyping |
-| [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md) + [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) | Production code, optimization workflows |
-
 ## The Module Advantage
 
-Why bother with modules when
-[`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) works?
+The same module contract scales from exploration to optimization:
 
 1.  **Reusability**: Define once, use everywhere
 2.  **Efficiency**: Batch processing reduces API calls

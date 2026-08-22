@@ -155,13 +155,20 @@ learning models. This enables:</p>
 </h2>
 <p>dsprrr registers an <code>llm_predict</code> model type with
 parsnip:</p>
+<p>The engine uses the ellmer Chat configured for the prediction
+context; it does not construct providers from model-name strings. For a
+workflow spanning multiple parsnip calls, configure the default Chat
+explicitly:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create an LLM prediction model specification</span></span>
+<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/set_default_chat.html">set_default_chat</a></span><span class="op">(</span><span class="va">chat</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create an LLM prediction model specification</span></span>
 <span><span class="va">llm_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/llm_predict.html">llm_predict</a></span><span class="op">(</span></span>
 <span>  mode <span class="op">=</span> <span class="st">"classification"</span>,</span>
 <span>  signature <span class="op">=</span> <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://parsnip.tidymodels.org/reference/set_engine.html" class="external-link">set_engine</a></span><span class="op">(</span><span class="st">"dsprrr"</span>, model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://parsnip.tidymodels.org/reference/set_engine.html" class="external-link">set_engine</a></span><span class="op">(</span><span class="st">"dsprrr"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">llm_spec</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -222,7 +229,7 @@ parsnip:</p>
 <span>  signature <span class="op">=</span> <span class="st">"text -&gt; sentiment"</span>,</span>
 <span>  temperature <span class="op">=</span> <span class="fu"><a href="https://hardhat.tidymodels.org/reference/tune.html" class="external-link">tune</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://parsnip.tidymodels.org/reference/set_engine.html" class="external-link">set_engine</a></span><span class="op">(</span><span class="st">"dsprrr"</span>, model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://parsnip.tidymodels.org/reference/set_engine.html" class="external-link">set_engine</a></span><span class="op">(</span><span class="st">"dsprrr"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create resampling folds</span></span>
 <span><span class="co"># library(rsample)</span></span>

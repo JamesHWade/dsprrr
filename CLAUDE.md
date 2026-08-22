@@ -334,13 +334,17 @@ eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
 
 ### Key Test Conventions
 
+Every model boundary requires a real ellmer `Chat` R6 object. A plain
+list with a `chat_structured` element is rejected with
+`dsprrr_chat_type_error`. Use `new_test_chat()` from
+`tests/testthat/helper-chat.R`, which builds an R6 `Chat` whose methods
+you supply:
+
 ``` r
 
 # Mock LLM for deterministic testing
-mock_llm <- list(
-  chat_structured = function(prompt, type, ...) {
-    list(answer = "mocked response")
-  }
+mock_llm <- new_test_chat(
+  chat_structured = function(...) list(answer = "mocked response")
 )
 
 # Test module behavior
@@ -351,6 +355,10 @@ test_that("module returns expected output", {
   expect_s3_class(result, "tbl_df")
 })
 ```
+
+`new_test_chat()` also takes `clone`, `get_turns`, `set_turns`,
+`last_turn`, and `get_model` overrides for tests that exercise Chat
+isolation.
 
 ### VCR Cassettes (HTTP Recording)
 
@@ -467,7 +475,7 @@ stateful mocks.
 # BAD: Will fail if cache has entries from previous run
 test_that("mock returns different values", {
   call_count <- 0
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       call_count <<- call_count + 1
       paste("response", call_count)
@@ -487,7 +495,7 @@ test_that("mock returns different values", {
   local_reset_cache()
 
   call_count <- 0
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       call_count <<- call_count + 1
       paste("response", call_count)
@@ -517,12 +525,13 @@ ChainOfThought via signature transforms
 ([`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
 [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md))
 
-**Teleprompters (11):** - LabeledFewShot, BootstrapFewShot,
+**Teleprompters (10):** - LabeledFewShot, BootstrapFewShot,
 BootstrapFewShotWithRandomSearch - MIPROv2, SIMBA, GEPA, COPRO,
-KNNFewShot, Ensemble, GridSearch, BetterTogether - BootstrapFewShot
-compiles pipelines **jointly**: per-step demos are harvested from
-passing end-to-end traces (DSPy-style whole-program compilation) - GEPA
-supports feedback metrics via
+KNNFewShot, GridSearch, BetterTogether - Ensembling is a module
+(`EnsembleModule`), not a teleprompter - BootstrapFewShot compiles
+pipelines **jointly**: per-step demos are harvested from passing
+end-to-end traces (DSPy-style whole-program compilation) - GEPA supports
+feedback metrics via
 [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md):
 metrics may return `list(score = , feedback = )` and the feedback drives
 reflection - GEPA can optimize a Flex program’s complete canonical

@@ -33,9 +33,9 @@ flex(
 
 - signature:
 
-  A
-  [Signature](https://jameshwade.github.io/dsprrr/reference/signature.md)
-  object or DSPy-style signature string.
+  A signature object created by
+  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+  or a DSPy-style signature string.
 
 - module_src:
 

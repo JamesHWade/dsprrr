@@ -25,9 +25,6 @@ AutoResearch(
   log_dir = NULL,
   verbose = TRUE
 )
-
-# S3 method for class 'AutoResearch'
-print(x, ...)
 ```
 
 ## Arguments
@@ -86,14 +83,6 @@ print(x, ...)
 - verbose:
 
   Whether to report progress.
-
-- x:
-
-  An AutoResearch object.
-
-- ...:
-
-  Additional arguments.
 
 ## Value
 

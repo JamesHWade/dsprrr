@@ -14,11 +14,13 @@ leverage ellmer’s full capabilities.
 
 ## Parallel Processing
 
-dsprrr supports two parallel processing methods for batch operations:
+dsprrr supports two concurrent backends for batch operations. Batch
+execution is sequential unless you supply
+[`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
 
-### Method 1: mirai (Default)
+### Method 1: mirai
 
-The default parallel method uses mirai for multi-process parallelism:
+Use mirai for multi-process parallelism:
 
 ``` r
 
@@ -28,8 +30,10 @@ mod <- module(signature("text -> sentiment"), type = "predict")
 results <- run(
   mod,
   text = c("I love this!", "This is terrible", "It's okay"),
-  .parallel = TRUE,
-  .parallel_method = "mirai"  # Default
+  .concurrency = concurrency_control(
+    backend = "mirai",
+    max_active = 3L
+  )
 )
 ```
 
@@ -43,8 +47,10 @@ For more efficient parallelism, use ellmer’s native
 results <- run(
   mod,
   text = c("I love this!", "This is terrible", "It's okay"),
-  .parallel = TRUE,
-  .parallel_method = "ellmer"  # Uses ellmer's parallel HTTP requests
+  .concurrency = concurrency_control(
+    backend = "ellmer",
+    max_active = 3L
+  )
 )
 ```
 
@@ -80,29 +86,6 @@ chat$register_tool(sentiment_tool)
 chat$chat("Analyze the sentiment of: 'I love this product!'")
 ```
 
-### Registering Tools Directly
-
-For convenience, use
-[`register_dsprrr_tool()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_tool.md)
-to create and register in one step:
-
-``` r
-
-chat <- chat_openai()
-
-# Create module
-qa_mod <- module(
-  signature("question -> answer", instructions = "Answer factual questions"),
-  type = "predict"
-)
-
-# Register directly
-register_dsprrr_tool(chat, qa_mod, name = "knowledge_lookup")
-
-# Use the tool
-chat$chat("Use knowledge_lookup to find: What is the capital of France?")
-```
-
 ## Leveraging ellmer’s Cost Tracking
 
 ellmer provides robust token and cost tracking. dsprrr integrates with
@@ -111,7 +94,13 @@ this via accessor functions:
 ``` r
 
 # After running some predictions
-result <- dsp("question -> answer", question = "What is 2+2?")
+mod <- module(signature("question -> answer"))
+result <- run(
+  mod,
+  question = "What is 2+2?",
+  .llm = chat_openai(),
+  .return_format = "structured"
+)
 
 # Get cost and token info from results using public accessors
 get_cost(result)    # Cost in dollars
@@ -142,25 +131,23 @@ get_tokens(results)  # Total tokens for batch
 
 # Create a Chat and reuse it
 chat <- chat_openai()
+mod <- module(signature("q -> a"))
 
-# First call - establishes conversation
-result1 <- chat |> dsp("q -> a", q = "What is R?")
+# Reuse the same runtime across calls
+result1 <- run(mod, q = "What is R?", .llm = chat)
 
-# Second call - same Chat, conversation continues
-result2 <- chat |> dsp("q -> a", q = "What about Python?")
-
-# The Chat remembers context from previous calls
+result2 <- run(mod, q = "What about Python?", .llm = chat)
 ```
 
 ### Default Chat Management
 
 ``` r
 
-# Set a default Chat for all dsp() calls
+# Set a default Chat for module execution
 set_default_chat(chat_openai(model = "gpt-4o"))
 
-# Now dsp() uses the default
-result <- dsp("q -> a", q = "What is 2+2?")
+# run() uses the default when neither the call nor module supplies a Chat
+result <- run(module(signature("q -> a")), q = "What is 2+2?")
 
 # Check current configuration
 dsprrr_sitrep()
@@ -225,7 +212,7 @@ options(ellmer_timeout = 120)
 
 # dsprrr wraps errors with helpful context
 tryCatch(
-  dsp("q -> a", q = "test"),
+  run(module(signature("q -> a")), q = "test"),
   error = function(e) {
     # Error includes model info, suggestions, etc.
     print(e)

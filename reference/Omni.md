@@ -34,9 +34,6 @@ Omni(
   seed = NULL,
   verbose = TRUE
 )
-
-# S3 method for class 'Omni'
-print(x, ...)
 ```
 
 ## Arguments
@@ -93,14 +90,6 @@ print(x, ...)
 - verbose:
 
   Whether to print progress messages.
-
-- x:
-
-  An Omni object.
-
-- ...:
-
-  Additional arguments.
 
 ## Examples
 

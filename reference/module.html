@@ -115,24 +115,24 @@ interpreter-backed programs.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">module</span><span class="op">(</span></span>
 <span>  <span class="va">signature</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"predict"</span>,</span>
-<span>  tools <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">10L</span>,</span>
-<span>  M <span class="op">=</span> <span class="fl">3L</span>,</span>
-<span>  temperature <span class="op">=</span> <span class="fl">0.7</span>,</span>
-<span>  runner <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  max_iters <span class="op">=</span> <span class="fl">3L</span>,</span>
-<span>  extract_answer <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  chat <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  template <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  demos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  chat <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  <span class="va">...</span>,</span>
+<span>  tools <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  runner <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  interpreter_factory <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_iterations <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_iters <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>  extract_answer <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  M <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>  temperature <span class="op">=</span> <span class="fl">0.7</span>,</span>
 <span>  module_src <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  source_format <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"json"</span>, <span class="st">"r"</span><span class="op">)</span>,</span>
 <span>  max_predictor_calls <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>  max_tool_calls <span class="op">=</span> <span class="fl">100L</span>,</span>
-<span>  source_format <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"json"</span>, <span class="st">"r"</span><span class="op">)</span>,</span>
-<span>  require_sandbox <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  require_sandbox <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -157,44 +157,9 @@ interpreter-backed programs.</p>
 </ul></dd>
 
 
-<dt id="arg-tools">tools<a class="anchor" aria-label="anchor" href="#arg-tools"></a></dt>
-<dd><p>Optional tools configuration:</p><ul><li><p>for <code>type = "react"</code> or <code>type = "codeact"</code>: list of ellmer ToolDef objects.</p></li>
-<li><p>for <code>type = "rlm"</code>: named host functions or ellmer ToolDef objects.</p></li>
-<li><p>for executable <code>type = "flex"</code>: named host functions or ToolDef objects.
-If provided with <code>type = "predict"</code>, automatically upgrades to react.</p></li>
-</ul></dd>
-
-
-<dt id="arg-max-iterations">max_iterations<a class="anchor" aria-label="anchor" href="#arg-max-iterations"></a></dt>
-<dd><p>Maximum iterations for ReAct, CodeAct, or RLM modules
-created through this generic factory (default: 10). For CodeAct it also
-caps tool calls within one invocation; exceeding that inner budget errors.</p></dd>
-
-
-<dt id="arg-m">M<a class="anchor" aria-label="anchor" href="#arg-m"></a></dt>
-<dd><p>Number of reasoning chains for multichain (default: 3)</p></dd>
-
-
-<dt id="arg-temperature">temperature<a class="anchor" aria-label="anchor" href="#arg-temperature"></a></dt>
-<dd><p>Temperature for multichain diversity (default: 0.7)</p></dd>
-
-
-<dt id="arg-runner">runner<a class="anchor" aria-label="anchor" href="#arg-runner"></a></dt>
-<dd><p>Optional caller-owned code runner implementing <code>execute()</code> and
-<code>policy()</code> for code execution types. It is never automatically closed.
-For <code>type = "rlm"</code>, the policy must advertise <code>persistent = TRUE</code>; use
-<code>r_code_runner(persistent = TRUE)</code> for the trusted callr backend.</p></dd>
-
-
-<dt id="arg-max-iters">max_iters<a class="anchor" aria-label="anchor" href="#arg-max-iters"></a></dt>
-<dd><p>Maximum code repair iterations for program_of_thought
-(default: 3), or the DSPy 3.3-compatible alias for RLM's
-<code>max_iterations</code>. For RLM, supply only one spelling.</p></dd>
-
-
-<dt id="arg-extract-answer">extract_answer<a class="anchor" aria-label="anchor" href="#arg-extract-answer"></a></dt>
-<dd><p>Logical. For program_of_thought, whether to use LLM
-to extract final answer from execution result (default: TRUE)</p></dd>
+<dt id="arg-chat">chat<a class="anchor" aria-label="anchor" href="#arg-chat"></a></dt>
+<dd><p>Optional ellmer Chat object for LLM operations. If provided, the
+module will use this Chat for all predictions unless overridden with <code>.llm</code>.</p></dd>
 
 
 <dt id="arg-template">template<a class="anchor" aria-label="anchor" href="#arg-template"></a></dt>
@@ -209,14 +174,19 @@ to extract final answer from execution result (default: TRUE)</p></dd>
 <dd><p>Optional configuration list</p></dd>
 
 
-<dt id="arg-chat">chat<a class="anchor" aria-label="anchor" href="#arg-chat"></a></dt>
-<dd><p>Optional ellmer Chat object for LLM operations. If provided, the
-module will use this Chat for all predictions unless overridden with <code>.llm</code>.</p></dd>
+<dt id="arg-tools">tools<a class="anchor" aria-label="anchor" href="#arg-tools"></a></dt>
+<dd><p>Optional tools configuration:</p><ul><li><p>for <code>type = "react"</code> or <code>type = "codeact"</code>: list of ellmer ToolDef objects.</p></li>
+<li><p>for <code>type = "rlm"</code>: named host functions or ellmer ToolDef objects.</p></li>
+<li><p>for executable <code>type = "flex"</code>: named host functions or ToolDef objects.
+If provided with <code>type = "predict"</code>, automatically upgrades to react.</p></li>
+</ul></dd>
 
 
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments forwarded to <code><a href="rlm_module.html">rlm_module()</a></code> when
-<code>type = "rlm"</code>. Reserved and required to be empty for <code>type = "flex"</code>.</p></dd>
+<dt id="arg-runner">runner<a class="anchor" aria-label="anchor" href="#arg-runner"></a></dt>
+<dd><p>Optional caller-owned code runner implementing <code>execute()</code> and
+<code>policy()</code> for code execution types. It is never automatically shut down.
+For <code>type = "rlm"</code>, the policy must advertise <code>persistent = TRUE</code>; use
+<code>r_code_runner(persistent = TRUE)</code> for the trusted callr backend.</p></dd>
 
 
 <dt id="arg-interpreter-factory">interpreter_factory<a class="anchor" aria-label="anchor" href="#arg-interpreter-factory"></a></dt>
@@ -228,8 +198,37 @@ the factory so every invocation is isolated. For RLM, every returned
 runner must advertise <code>persistent = TRUE</code>.</p></dd>
 
 
+<dt id="arg-max-iterations">max_iterations<a class="anchor" aria-label="anchor" href="#arg-max-iterations"></a></dt>
+<dd><p>Maximum iterations for ReAct, CodeAct, or RLM modules
+created through this generic factory. Defaults to 10 for ReAct and CodeAct
+and 20 for RLM. For CodeAct it also caps tool calls within one invocation;
+exceeding that inner budget errors.</p></dd>
+
+
+<dt id="arg-max-iters">max_iters<a class="anchor" aria-label="anchor" href="#arg-max-iters"></a></dt>
+<dd><p>Maximum code repair iterations for program_of_thought
+(default: 3).</p></dd>
+
+
+<dt id="arg-extract-answer">extract_answer<a class="anchor" aria-label="anchor" href="#arg-extract-answer"></a></dt>
+<dd><p>Logical. For program_of_thought, whether to use LLM
+to extract final answer from execution result (default: TRUE)</p></dd>
+
+
+<dt id="arg-m">M<a class="anchor" aria-label="anchor" href="#arg-m"></a></dt>
+<dd><p>Number of reasoning chains for multichain (default: 3)</p></dd>
+
+
+<dt id="arg-temperature">temperature<a class="anchor" aria-label="anchor" href="#arg-temperature"></a></dt>
+<dd><p>Temperature for multichain diversity (default: 0.7)</p></dd>
+
+
 <dt id="arg-module-src">module_src<a class="anchor" aria-label="anchor" href="#arg-module-src"></a></dt>
 <dd><p>Optional complete source for <code>type = "flex"</code>.</p></dd>
+
+
+<dt id="arg-source-format">source_format<a class="anchor" aria-label="anchor" href="#arg-source-format"></a></dt>
+<dd><p>Flex source language: <code>"auto"</code>, <code>"json"</code>, or <code>"r"</code>.</p></dd>
 
 
 <dt id="arg-max-predictor-calls">max_predictor_calls<a class="anchor" aria-label="anchor" href="#arg-max-predictor-calls"></a></dt>
@@ -242,13 +241,14 @@ or <code>NULL</code> for no limit.</p></dd>
 Flex, or <code>NULL</code> for no limit.</p></dd>
 
 
-<dt id="arg-source-format">source_format<a class="anchor" aria-label="anchor" href="#arg-source-format"></a></dt>
-<dd><p>Flex source language: <code>"auto"</code>, <code>"json"</code>, or <code>"r"</code>.</p></dd>
-
-
 <dt id="arg-require-sandbox">require_sandbox<a class="anchor" aria-label="anchor" href="#arg-require-sandbox"></a></dt>
 <dd><p>Whether executable Flex requires a runner that
 advertises an enforced sandbox.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Additional arguments forwarded to <code><a href="rlm_module.html">rlm_module()</a></code> when
+<code>type = "rlm"</code>. Reserved and required to be empty for <code>type = "flex"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -266,11 +266,11 @@ stage:</p>
 <code class="sourceCode R"><span><span class="co"># Stage 1: Analyze purpose</span></span>
 <span><span class="va">analyze_purpose_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, <span class="st">"Package name"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"title"</span>, <span class="st">"Package title from DESCRIPTION"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"description_text"</span>, <span class="st">"Description from DESCRIPTION"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"readme_excerpt"</span>, <span class="st">"First 2000 chars of README"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"exported_functions"</span>, <span class="st">"Comma-separated exports"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"title"</span>, description <span class="op">=</span> <span class="st">"Package title from DESCRIPTION"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"description_text"</span>, description <span class="op">=</span> <span class="st">"Description from DESCRIPTION"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"readme_excerpt"</span>, description <span class="op">=</span> <span class="st">"First 2000 chars of README"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"exported_functions"</span>, description <span class="op">=</span> <span class="st">"Comma-separated exports"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
 <span>    purpose <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"One sentence: what problem does this solve?"</span><span class="op">)</span>,</span>
@@ -291,11 +291,11 @@ stage:</p>
 <span><span class="co"># Stage 2: Analyze structure</span></span>
 <span><span class="va">analyze_structure_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, <span class="st">"Package name"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"r_files"</span>, <span class="st">"R files in R/ directory"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"exports"</span>, <span class="st">"Exported function names"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"has_vignettes"</span>, <span class="st">"Whether package has vignettes"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"dependencies"</span>, <span class="st">"Package dependencies"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"r_files"</span>, description <span class="op">=</span> <span class="st">"R files in R/ directory"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"exports"</span>, description <span class="op">=</span> <span class="st">"Exported function names"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"has_vignettes"</span>, description <span class="op">=</span> <span class="st">"Whether package has vignettes"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"dependencies"</span>, description <span class="op">=</span> <span class="st">"Package dependencies"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
 <span>    organization <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"How is code organized? (1-2 sentences)"</span><span class="op">)</span>,</span>
@@ -316,10 +316,10 @@ stage:</p>
 <span><span class="co"># Stage 3: Generate examples</span></span>
 <span><span class="va">generate_examples_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, <span class="st">"Package name"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"purpose"</span>, <span class="st">"What the package does"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"entry_points"</span>, <span class="st">"Main functions"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"key_concepts"</span>, <span class="st">"Core concepts as JSON"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"purpose"</span>, description <span class="op">=</span> <span class="st">"What the package does"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"entry_points"</span>, description <span class="op">=</span> <span class="st">"Main functions"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"key_concepts"</span>, description <span class="op">=</span> <span class="st">"Core concepts as JSON"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
 <span>    basic <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"3-5 line minimal example"</span><span class="op">)</span>,</span>
@@ -333,16 +333,16 @@ stage:</p>
 <span><span class="co"># Stage 4: Generate final llms.txt</span></span>
 <span><span class="va">generate_llmstxt_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, <span class="st">"Package name"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"purpose"</span>, <span class="st">"Package purpose"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"target_audience"</span>, <span class="st">"Who uses this"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"key_concepts_json"</span>, <span class="st">"JSON of term/definition pairs"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"organization"</span>, <span class="st">"Code organization"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"entry_points"</span>, <span class="st">"Main functions"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"main_files_json"</span>, <span class="st">"JSON of file/purpose pairs"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"basic_example"</span>, <span class="st">"Basic usage example"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"intermediate_example"</span>, <span class="st">"Intermediate example"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"gotchas"</span>, <span class="st">"Common mistakes"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"purpose"</span>, description <span class="op">=</span> <span class="st">"Package purpose"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"target_audience"</span>, description <span class="op">=</span> <span class="st">"Who uses this"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"key_concepts_json"</span>, description <span class="op">=</span> <span class="st">"JSON of term/definition pairs"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"organization"</span>, description <span class="op">=</span> <span class="st">"Code organization"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"entry_points"</span>, description <span class="op">=</span> <span class="st">"Main functions"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"main_files_json"</span>, description <span class="op">=</span> <span class="st">"JSON of file/purpose pairs"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"basic_example"</span>, description <span class="op">=</span> <span class="st">"Basic usage example"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"intermediate_example"</span>, description <span class="op">=</span> <span class="st">"Intermediate example"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"gotchas"</span>, description <span class="op">=</span> <span class="st">"Common mistakes"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Generate llms.txt in markdown format with sections:</span></span>
@@ -836,7 +836,7 @@ the complexity while preserving access to the full
 <span>                 instructions <span class="op">=</span> <span class="st">"Answer based only on context."</span><span class="op">)</span></span>
 <span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dsp_trainset.html">dsp_trainset</a></span><span class="op">(</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"R is for statistics."</span>, <span class="st">"Python is general-purpose."</span><span class="op">)</span>,</span>
 <span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"What is R for?"</span>, <span class="st">"Describe Python."</span><span class="op">)</span>,</span>
 <span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Statistics"</span>, <span class="st">"General-purpose programming"</span><span class="op">)</span></span>
@@ -881,8 +881,6 @@ generation</li>
 <code><a href="../reference/run.html">run()</a></code>: Execute module with inputs</li>
 <li>
 <code><a href="../reference/compile.html">compile()</a></code>: Optimize with teleprompter</li>
-<li>
-<code><a href="../reference/dsp.html">dsp()</a></code>: Quick one-liner for Chat objects</li>
 </ul>
 </div>
 <div class="section level2">

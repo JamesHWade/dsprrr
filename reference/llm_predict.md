@@ -10,9 +10,7 @@ llm_predict(
   mode = "classification",
   signature = NULL,
   temperature = NULL,
-  top_p = NULL,
-  model = NULL,
-  provider = NULL
+  top_p = NULL
 )
 ```
 
@@ -35,14 +33,6 @@ llm_predict(
 
   Top-p parameter for LLM (tune-able).
 
-- model:
-
-  LLM model name (e.g., "gpt-4o-mini").
-
-- provider:
-
-  LLM provider (e.g., "openai", "anthropic").
-
 ## Value
 
 A parsnip model specification object.
@@ -59,7 +49,7 @@ llm_spec <- llm_predict(
   mode = "classification",
   signature = "text -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
-  set_engine("dsprrr", model = "gpt-4o-mini")
+  set_engine("dsprrr")
 
 # With tunable parameters
 llm_spec_tuned <- llm_predict(

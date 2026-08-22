@@ -41,10 +41,11 @@ configure_cache(
 - disk_private:
 
   Logical. Enforce private cache storage. On Unix, require effective
-  ownership and private POSIX modes for the directory and response
-  files. On Windows, use inherited ACLs and report privacy as
-  unverified. Set to `FALSE` only for an explicitly trusted shared
-  cache. Default `TRUE`.
+  ownership and exact private POSIX modes for the directory and response
+  files, plus root-or-effective ownership for every existing ancestor.
+  On Windows, use inherited ACLs and report privacy as unverified. Set
+  to `FALSE` only for an explicitly trusted shared cache. Default
+  `TRUE`.
 
 - memory_max_entries:
 
@@ -74,21 +75,22 @@ outputs. Treat persistent cache files as sensitive data.
 
 **Disk privacy**: By default, the disk cache uses the platform-specific
 per-user cache directory. On Unix, dsprrr verifies effective ownership,
-canonical path identity, a `0700` cache directory, and `0600` response
-files before serialized reads and writes. Unsafe disk caches fall back
-to memory when enabled; otherwise no cache tier remains active. On
-Windows, the per-user directory inherits the account's filesystem ACLs;
-base R cannot verify that those ACLs are owner-only. Set
-`disk_private = FALSE` only for a cache whose writers and readers are
-all trusted.
+canonical path identity, a cache directory with exactly mode `0700`, and
+response files with exactly mode `0600` before serialized reads and
+writes. Every existing ancestor must be owned by root or the effective
+user, including sticky shared parents. Unsafe disk caches fall back to
+memory when enabled; otherwise no cache tier remains active. On Windows,
+the per-user directory inherits the account's filesystem ACLs; base R
+cannot verify that those ACLs are owner-only. Set `disk_private = FALSE`
+only for a cache whose writers and readers are all trusted.
 
-Existing Unix caches that were readable but not writable by other
-accounts are tightened before reuse. Caches that were writable by
-another account, contain symbolic links or non-regular filesystem
-entries, or cannot be verified are not read; dsprrr uses memory caching
-when enabled and otherwise runs uncached. A shared writable cache could
-replace an RDS response envelope and must be treated as untrusted
-serialized input.
+Existing Unix caches must already use exactly mode `0700` for the
+directory and `0600` for every response file; special mode bits are
+rejected. Caches with different modes, untrusted ancestors, symbolic
+links, non-regular filesystem entries, or unverifiable ownership are not
+changed or read; dsprrr uses memory caching when enabled and otherwise
+runs uncached. A shared writable cache could replace an RDS response
+envelope and must be treated as untrusted serialized input.
 
 POSIX modes cannot describe every filesystem policy. dsprrr does not
 inspect extended ACLs, administrators can still access owner files, and

@@ -120,16 +120,14 @@ required. Missing <code>stdout</code>, <code>stderr</code>, <code>messages</code
 normalized to empty strings, and missing <code>duration_ms</code> is normalized to
 <code>NA</code>. A failed result must include a non-empty <code>error</code>. Its <code>error_type</code> is
 either <code>"execution"</code> for code the model may repair or <code>"interpreter"</code> for a
-terminal process/protocol failure. Legacy runners that omit <code>error_type</code> are
-treated as reporting a repairable execution failure. A successful result
-may omit <code>error</code> and <code>error_type</code>.</p>
+terminal process/protocol failure. A successful result may omit <code>error</code> and
+<code>error_type</code>.</p>
 <p>Code-executing modules accept exactly one runtime source. Passing <code>runner</code>
 retains that caller-owned object and never closes it. Passing a zero-argument
 <code>interpreter_factory</code> creates one fresh invocation-owned runner. Factory
 results may implement idempotent <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code> and must implement idempotent
-terminal <code>shutdown()</code> or its compatibility alias <code><a href="https://rdrr.io/r/base/connections.html" class="external-link">close()</a></code>. dsprrr starts a
-factory runner before use and shuts it down exactly once on success, error,
-or interrupt.</p>
+terminal <code>shutdown()</code>. dsprrr starts a factory runner before use and shuts it
+down exactly once on success, error, or interrupt.</p>
     </div>
 
     <div class="section level2">

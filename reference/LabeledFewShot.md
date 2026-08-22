@@ -23,8 +23,8 @@ LabeledFewShot(
 
 - metric:
 
-  A metric function for evaluating predictions. If NULL, uses
-  exact_match() by default.
+  Optional metric stored with the teleprompter. LabeledFewShot selects
+  labeled demonstrations without evaluating candidate programs.
 
 - metric_threshold:
 
@@ -58,7 +58,7 @@ tp@k
 if (FALSE) { # \dontrun{
 # Compile a module with few-shot demos drawn from the training set
 classifier <- module(signature("text -> sentiment"), type = "predict")
-trainset <- dsp_trainset(
+trainset <- data.frame(
   text = c("I love it!", "Terrible experience", "It's okay"),
   sentiment = c("positive", "negative", "neutral")
 )

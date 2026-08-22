@@ -369,8 +369,9 @@ outputs:</p>
 <span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">best_score</span>     <span class="co"># Score of selected result</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">all_scores</span>     <span class="co"># Scores of all attempts</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">early_stopped</span>  <span class="co"># Did we hit threshold?</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">total_tokens</span>   <span class="co"># Tokens across all attempts</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">total_cost</span>     <span class="co"># Cost across all attempts</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">total_tokens</span>   <span class="co"># Tokens across all attempts, or NA if unknown</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">cost</span>           <span class="co"># Cost across all attempts, or NA if unknown</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">provider_calls</span> <span class="co"># Provider calls across all attempts, or NA</span></span>
 <span></span>
 <span><span class="co"># For batch operations with run_dataset(), use .metadata column:</span></span>
 <span><span class="co"># batch_result$.metadata[[1]]$n_attempts</span></span></code></pre></div>
@@ -600,12 +601,13 @@ an interpreter factory or another runner with verified OS-level
 sandboxing.</p>
 <p>ProgramOfThought, CodeAct, and RLM accept exactly one execution
 binding. Pass <code>runner</code> to retain a caller-owned runner object
-that dsprrr reuses and never closes. Whether execution state persists
-depends on the backend. Serialize a stateful runner, and reset it
-between unrelated jobs when that backend supports <code>reset()</code>.
-Alternatively, pass a zero-argument <code>interpreter_factory</code>;
-dsprrr calls it once per invocation, owns the fresh runner, and closes
-it exactly once when the invocation ends, including after an error:</p>
+that dsprrr reuses and never shuts down. Whether execution state
+persists depends on the backend. Serialize a stateful runner, and reset
+it between unrelated jobs when that backend supports
+<code>reset()</code>. Alternatively, pass a zero-argument
+<code>interpreter_factory</code>; dsprrr calls it once per invocation,
+owns the fresh runner, and shuts it down exactly once when the
+invocation ends, including after an error:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
@@ -831,7 +833,7 @@ once and keeps derived values between iterations:</p>
 <span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span>  <span class="op">}</span>,</span>
-<span>  max_iters <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  max_iterations <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>  max_llm_calls <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  max_output_chars <span class="op">=</span> <span class="fl">10000</span></span>
 <span><span class="op">)</span></span>

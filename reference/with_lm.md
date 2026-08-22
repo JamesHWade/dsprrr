@@ -50,8 +50,8 @@ if (FALSE) { # \dontrun{
 # Use Claude for a specific block
 claude <- ellmer::chat_claude()
 result <- with_lm(claude, {
-  dsp("question -> answer", question = "What is 2+2?")
-  dsp("text -> summary", text = "Long article...")
+  run(module(signature("question -> answer")), question = "What is 2+2?")
+  run(module(signature("text -> summary")), text = "Long article...")
 })
 
 # Nested contexts work correctly

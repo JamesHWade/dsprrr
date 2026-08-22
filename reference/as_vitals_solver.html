@@ -7,9 +7,10 @@ For multi-input modules, the solver expects the vitals input column to
 contain nested data (list of tibbles/lists) where each element has fields
 matching the module's signature inputs. Use as_vitals_task() to
 automatically create this structure from a flat dataset.
-The solver uses ellmer's parallel processing for efficiency. For structured
-outputs, mock Chat objects are created for vitals logging compatibility
-(following the same pattern as vitals' generate_structured())."><meta property="og:description" content="Creates a function compatible with vitals Tasks that executes a DSPrrr
+Batch execution is sequential unless .concurrency requests another
+backend. For structured outputs, mock Chat objects are created for vitals
+logging compatibility (following the same pattern as vitals'
+generate_structured())."><meta property="og:description" content="Creates a function compatible with vitals Tasks that executes a DSPrrr
 module against batches of inputs. The solver uses run_dataset() internally,
 ensuring that the module's demos, templates, and input descriptions are
 properly used in prompt construction.
@@ -17,9 +18,10 @@ For multi-input modules, the solver expects the vitals input column to
 contain nested data (list of tibbles/lists) where each element has fields
 matching the module's signature inputs. Use as_vitals_task() to
 automatically create this structure from a flat dataset.
-The solver uses ellmer's parallel processing for efficiency. For structured
-outputs, mock Chat objects are created for vitals logging compatibility
-(following the same pattern as vitals' generate_structured())."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
+Batch execution is sequential unless .concurrency requests another
+backend. For structured outputs, mock Chat objects are created for vitals
+logging compatibility (following the same pattern as vitals'
+generate_structured())."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -117,14 +119,15 @@ properly used in prompt construction.</p>
 contain nested data (list of tibbles/lists) where each element has fields
 matching the module's signature inputs. Use <code><a href="as_vitals_task.html">as_vitals_task()</a></code> to
 automatically create this structure from a flat dataset.</p>
-<p>The solver uses ellmer's parallel processing for efficiency. For structured
-outputs, mock Chat objects are created for vitals logging compatibility
-(following the same pattern as vitals' <code><a href="https://vitals.tidyverse.org/reference/generate_structured.html" class="external-link">generate_structured()</a></code>).</p>
+<p>Batch execution is sequential unless <code>.concurrency</code> requests another
+backend. For structured outputs, mock Chat objects are created for vitals
+logging compatibility (following the same pattern as vitals'
+<code><a href="https://vitals.tidyverse.org/reference/generate_structured.html" class="external-link">generate_structured()</a></code>).</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">as_vitals_solver</span><span class="op">(</span><span class="va">module</span>, .llm <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">as_vitals_solver</span><span class="op">(</span><span class="va">module</span>, .llm <span class="op">=</span> <span class="cn">NULL</span>, .concurrency <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -139,6 +142,11 @@ outputs, mock Chat objects are created for vitals logging compatibility
 <dd><p>An ellmer chat object. If <code>NULL</code> (default), uses the module's
 stored chat or falls back to <code><a href="get_default_chat.html">get_default_chat()</a></code>. The chat is cloned
 for each batch invocation.</p></dd>
+
+
+<dt id="arg--concurrency">.concurrency<a class="anchor" aria-label="anchor" href="#arg--concurrency"></a></dt>
+<dd><p>Optional policy created by <code><a href="concurrency_control.html">concurrency_control()</a></code>.
+Omission uses sequential execution.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

@@ -113,9 +113,9 @@ token-stream request is active; that request is rejected first.</p>
 <span>  <span class="va">signature</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  runner <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iterations <span class="op">=</span> <span class="fl">10L</span>,</span>
-<span>  <span class="va">...</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -136,8 +136,15 @@ hyphens, and underscores.</p></dd>
 
 <dt id="arg-runner">runner<a class="anchor" aria-label="anchor" href="#arg-runner"></a></dt>
 <dd><p>Optional caller-owned code runner implementing <code>execute()</code> and
-<code>policy()</code>. It is retained, never automatically closed, and must not be
+<code>policy()</code>. It is retained, never automatically shut down, and must not be
 shared concurrently when persistent.</p></dd>
+
+
+<dt id="arg-interpreter-factory">interpreter_factory<a class="anchor" aria-label="anchor" href="#arg-interpreter-factory"></a></dt>
+<dd><p>Optional zero-argument function returning a fresh
+runner with <code>execute()</code>, <code>policy()</code>, optional <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code>, and idempotent
+terminal <code>shutdown()</code>.
+Supply exactly one of <code>runner</code> and <code>interpreter_factory</code>.</p></dd>
 
 
 <dt id="arg-max-iterations">max_iterations<a class="anchor" aria-label="anchor" href="#arg-max-iterations"></a></dt>
@@ -148,13 +155,6 @@ raises a <code>dsprrr_codeact_iteration_limit</code> error.</p></dd>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to the module</p></dd>
-
-
-<dt id="arg-interpreter-factory">interpreter_factory<a class="anchor" aria-label="anchor" href="#arg-interpreter-factory"></a></dt>
-<dd><p>Optional zero-argument function returning a fresh
-runner with <code>execute()</code>, <code>policy()</code>, optional <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code>, and idempotent
-terminal <code>shutdown()</code> or <code><a href="https://rdrr.io/r/base/connections.html" class="external-link">close()</a></code>.
-Supply exactly one of <code>runner</code> and <code>interpreter_factory</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

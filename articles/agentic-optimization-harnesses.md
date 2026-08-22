@@ -198,10 +198,8 @@ candidate.
 
 Meta-Harness creates a fresh proposer chat for each outer iteration. The
 proposer sees persisted evidence rather than relying on earlier
-conversation state. ellmer `Chat` objects are cloned and reset
-automatically. For custom adapters, pass either a cloneable object that
-implements `chat_structured()` and `clone()`, or a zero-argument factory
-that returns a new compatible proposer:
+conversation state. Pass an ellmer `Chat`; dsprrr clones and resets it
+automatically before each iteration:
 
 ``` r
 
@@ -224,15 +222,11 @@ compiled <- compile(
   runner = runner,
   objective = "Improve factual accuracy without increasing abstention errors."
 )
-
-custom_factory <- function() {
-  make_custom_proposer() # returns an object with chat_structured()
-}
 ```
 
-Pass `custom_factory` as `.agent_llm` in place of `research_chat`.
-Meta-Harness rejects a non-cloneable custom object because reusing it
-could carry hidden conversation state across iterations.
+Meta-Harness rejects non-Chat adapters and non-cloneable Chat objects
+because reusing them could carry hidden conversation state across
+iterations.
 
 Within an iteration, the proposer may request a few sandbox steps before
 it submits its batch. The outer loop then:

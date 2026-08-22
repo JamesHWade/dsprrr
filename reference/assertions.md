@@ -1,9 +1,9 @@
 # Assertions for Output Validation
 
-S7 classes and helper functions for defining output validation
-constraints with backtracking support. Hard assertions trigger retries
-when they fail, while soft suggestions log warnings but allow execution
-to continue.
+Use `assert_output()` and `suggest_output()` to define output validation
+constraints, then combine them with `assertion_set()`. Hard assertions
+trigger retries when they fail, while soft suggestions log warnings and
+allow execution to continue.
 
 Define validation constraints for module outputs. Hard assertions
 (`assert_output`) trigger retries when they fail, while soft suggestions
@@ -12,15 +12,6 @@ Define validation constraints for module outputs. Hard assertions
 ## Usage
 
 ``` r
-Assertion(
-  condition = function() NULL,
-  message = "Assertion failed",
-  field = NULL,
-  type = "assert"
-)
-
-AssertionSet(assertions = list())
-
 assert_output(condition, message = "Assertion failed", field = NULL)
 
 suggest_output(condition, message = "Suggestion not met", field = NULL)
@@ -45,25 +36,18 @@ assertion_set(...)
   Optional. The specific output field to validate. If NULL, the entire
   output is passed to the condition.
 
-- type:
-
-  For `Assertion` class: "assert" for hard assertion, "suggest" for soft
-  suggestion. Use the helper functions `assert_output()` and
-  `suggest_output()` instead of setting this directly.
-
-- assertions:
-
-  For `AssertionSet` class: A list of Assertion objects.
-
 - ...:
 
-  Assertion objects or a list of Assertion objects.
+  Output assertions created by `assert_output()` or `suggest_output()`,
+  or one list of such assertions.
 
 ## Value
 
-An Assertion object.
+An output assertion for `assertion_set()` or
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md).
 
-An AssertionSet object.
+An assertion set for
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md).
 
 ## Details
 

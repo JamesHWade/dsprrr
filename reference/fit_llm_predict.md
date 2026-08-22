@@ -6,16 +6,7 @@ with the specified configuration.
 ## Usage
 
 ``` r
-fit_llm_predict(
-  x,
-  y,
-  signature = NULL,
-  temperature = NULL,
-  top_p = NULL,
-  model = NULL,
-  provider = NULL,
-  ...
-)
+fit_llm_predict(x, y, signature = NULL, temperature = NULL, top_p = NULL)
 ```
 
 ## Arguments
@@ -39,18 +30,6 @@ fit_llm_predict(
 - top_p:
 
   Top-p parameter.
-
-- model:
-
-  LLM model name.
-
-- provider:
-
-  LLM provider.
-
-- ...:
-
-  Additional arguments.
 
 ## Value
 

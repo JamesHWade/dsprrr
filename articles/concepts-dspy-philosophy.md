@@ -108,7 +108,7 @@ metric and let the optimizer search:
 ``` r
 
 mod$optimize_grid(
-  devset = training_data,
+  data = training_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0, 0.3, 0.7))
 )

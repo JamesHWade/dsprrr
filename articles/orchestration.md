@@ -72,7 +72,7 @@ mod <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |
   module(type = "predict")
 
 # Run optimization (in practice, with real data)
-# optimize_grid(mod, devset = train_data, metric = exact_match, .llm = llm)
+# optimize_grid(mod, data = train_data, metric = metric_exact_match(), .llm = llm)
 
 # Pin the configuration
 pin_module_config(
@@ -105,13 +105,10 @@ source/runtime limits and registry-backed tools, and stores the
 graph-visible RLM `generate_action` and `extract` children with their
 tuned state.
 
-Restoration accepts the current closed schema plus validated version 3
-and 4 artifacts. Legacy manifests are checked against their original
-schema and integrity digest before migration; a childless legacy RLM
-receives fresh default children and is written as version 5 on its next
-save. Other versions are rejected. The stored signature remains
-authoritative. To change a signature, update the source program and
-write a new artifact.
+Restoration accepts only the current version 5 closed schema. Manifests
+with any other format version are rejected before module construction.
+The stored signature remains authoritative. To change a signature,
+update the source program and write a new artifact.
 
 ### Restoring a Module
 
@@ -213,7 +210,7 @@ or vitals Tasks can be pinned for tracking model performance over time:
 # Run evaluation
 eval_result <- evaluate(
   mod,
-  dataset = test_data,
+  data = test_data,
   metric = metric_exact_match(),
   .llm = llm
 )
@@ -286,13 +283,13 @@ tar_target(module_definition, {
 # 3. Optimization
 tar_target(optimized_module, {
   mod <- module_definition$clone(deep = TRUE)
-  optimize_grid(mod, devset = train_data, ...)
+  optimize_grid(mod, data = train_data, ...)
   mod
 })
 
 # 4. Evaluation
 tar_target(evaluation_results, {
-  evaluate(optimized_module, dataset = test_data, ...)
+  evaluate(optimized_module, data = test_data, ...)
 })
 
 # 5. Persistence
@@ -399,7 +396,7 @@ Before running expensive LLM operations, validate your workflow:
 # Check that everything is configured correctly
 validate_workflow(
   module = mod,
-  dataset = test_data,
+  data = test_data,
   board = board
 )
 
@@ -445,7 +442,7 @@ train_data <- read_csv("data/train.csv")
 
 optimize_grid(
   mod,
-  devset = train_data,
+  data = train_data,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(temperature = c(0, 0.3, 0.7)),
   .llm = llm
@@ -453,12 +450,12 @@ optimize_grid(
 
 # ---- Validate ----
 test_data <- read_csv("data/test.csv")
-validate_workflow(mod, dataset = test_data, board = board)
+validate_workflow(mod, data = test_data, board = board)
 
 # ---- Evaluate ----
 eval_result <- evaluate(
   mod,
-  dataset = test_data,
+  data = test_data,
   metric = metric_exact_match(field = "sentiment"),
   .llm = llm
 )
@@ -514,7 +511,7 @@ Always validate workflows, especially in production:
 
 ``` r
 
-validation <- validate_workflow(mod, dataset, board)
+validation <- validate_workflow(mod, data = dataset, board = board)
 if (!validation$valid) {
   stop("Workflow validation failed")
 }

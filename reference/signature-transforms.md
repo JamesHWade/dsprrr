@@ -8,9 +8,8 @@ reasoning.
 `with_instructions()` replaces a signature's instructions while
 preserving its input and output fields. `append_instructions()` layers
 additional instructions after the existing text, separated by a blank
-line. Both functions return a new
-[Signature](https://jameshwade.github.io/dsprrr/reference/signature.md)
-and never mutate the original.
+line. Both functions return a new signature object and never mutate the
+original.
 
 ## Usage
 
@@ -24,9 +23,9 @@ append_instructions(x, instructions)
 
 - x:
 
-  A
-  [Signature](https://jameshwade.github.io/dsprrr/reference/signature.md)
-  object or string notation such as `"question -> answer"`.
+  A signature object created by
+  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+  or string notation such as `"question -> answer"`.
 
 - instructions:
 
@@ -36,9 +35,7 @@ append_instructions(x, instructions)
 
 ## Value
 
-A new
-[Signature](https://jameshwade.github.io/dsprrr/reference/signature.md)
-object.
+A new signature object.
 
 ## Examples
 

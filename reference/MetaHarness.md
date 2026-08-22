@@ -27,9 +27,6 @@ MetaHarness(
   max_candidates_per_iteration = 4L,
   frontier_size = 8L
 )
-
-# S3 method for class 'MetaHarness'
-print(x, ...)
 ```
 
 ## Arguments
@@ -97,14 +94,6 @@ print(x, ...)
 
   Maximum scored candidates summarized to each proposer.
 
-- x:
-
-  A MetaHarness object.
-
-- ...:
-
-  Additional arguments.
-
 ## Value
 
 A `MetaHarness` teleprompter.
@@ -123,11 +112,9 @@ batch. Those analyses execute only through `runner`; with the default
 `sandbox = TRUE`, the runner must advertise an OS sandbox such as
 [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md).
 Proposer sessions are fresh by design, so each iteration must reason
-from the persisted frontier rather than hidden chat history. An ellmer
-`Chat` is cloned and reset automatically. A custom proposer must either
-provide `chat_structured()` and `clone()`, or be supplied as a
-zero-argument `.agent_llm` factory that returns a fresh compatible
-proposer on every call. Non-cloneable proposer objects are rejected.
+from the persisted frontier rather than hidden chat history. The
+proposer must be an ellmer `Chat`; it is cloned and reset automatically
+before each iteration.
 
 ## Compilation arguments
 

@@ -51,7 +51,9 @@ eval_program(
 
 - control:
 
-  An OptimizerControl object or NULL for defaults.
+  An object created by
+  [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md),
+  or `NULL` for defaults.
 
 - epochs:
 

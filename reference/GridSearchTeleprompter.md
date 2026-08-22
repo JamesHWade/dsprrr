@@ -7,8 +7,9 @@ template variants to find the best performing configuration.
 
 - metric:
 
-  A metric function for evaluating predictions. If NULL, uses
-  exact_match() by default.
+  A metric function for evaluating predictions, such as
+  [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md).
+  Required when compiling.
 
 - metric_threshold:
 
@@ -55,7 +56,7 @@ tp <- GridSearchTeleprompter(
 if (FALSE) { # \dontrun{
 # Compile picks the variant that scores best on the training set
 classifier <- module(signature("text -> sentiment"), type = "predict")
-trainset <- dsp_trainset(
+trainset <- data.frame(
   text = c("I love it!", "Terrible experience"),
   sentiment = c("positive", "negative")
 )

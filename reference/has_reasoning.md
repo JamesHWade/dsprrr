@@ -14,7 +14,8 @@ has_reasoning(sig, reasoning_field = "reasoning")
 
 - sig:
 
-  A Signature object
+  A signature object created by
+  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md).
 
 - reasoning_field:
 

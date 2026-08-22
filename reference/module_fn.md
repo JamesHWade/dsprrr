@@ -17,9 +17,9 @@ module_fn(signature, forward, chat = NULL, name = NULL, config = list())
 
 - signature:
 
-  A
-  [Signature](https://jameshwade.github.io/dsprrr/reference/signature.md)
-  object or signature string.
+  A signature object created by
+  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+  or a signature string.
 
 - forward:
 

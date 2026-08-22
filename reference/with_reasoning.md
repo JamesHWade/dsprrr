@@ -20,7 +20,9 @@ with_reasoning(
 
 - x:
 
-  A Signature object or string notation (e.g., "question -\> answer")
+  A signature object created by
+  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+  or string notation such as `"question -> answer"`.
 
 - prefix:
 
@@ -42,7 +44,7 @@ with_reasoning(
 
 ## Value
 
-A new Signature object with reasoning field added to output_type
+A new signature object with a reasoning field added to its output type.
 
 ## Details
 

@@ -59,7 +59,8 @@ dsp_configure(provider = "openai", model = "gpt-4o-mini")
 ``` r
 
 chat <- ellmer::chat_openai()
-chat |> dsp("question -> answer", question = "What is 2+2?")
+mod <- module(signature("question -> answer"))
+run(mod, question = "What is 2+2?", .llm = chat)
 ```
 
 ### “Invalid provider”
@@ -203,12 +204,18 @@ signature("question -> reasoning, answer")
 ``` r
 
 sig <- signature("context, question -> answer")
+mod <- module(sig)
 
 # Wrong - missing 'context'
-dsp(sig, question = "What is R?")
+run(mod, question = "What is R?", .llm = chat)
 
 # Correct
-dsp(sig, context = "R is a programming language.", question = "What is R?")
+run(
+  mod,
+  context = "R is a programming language.",
+  question = "What is R?",
+  .llm = chat
+)
 ```
 
 ### “Did you mean: …?” (typo in input name)
@@ -226,10 +233,11 @@ dsp(sig, context = "R is a programming language.", question = "What is R?")
 ``` r
 
 # Wrong - typo
-dsp("question -> answer", qeustion = "What is 2+2?")
+mod <- module(signature("question -> answer"))
+run(mod, qeustion = "What is 2+2?", .llm = chat)
 
 # Correct
-dsp("question -> answer", question = "What is 2+2?")
+run(mod, question = "What is 2+2?", .llm = chat)
 ```
 
 ### “Ignoring unknown input”
@@ -246,13 +254,15 @@ dsp("question -> answer", question = "What is 2+2?")
 ``` r
 
 # This warns because 'context' isn't in the signature
-dsp("question -> answer", question = "Hi", context = "extra")
+mod <- module(signature("question -> answer"))
+run(mod, question = "Hi", context = "extra", .llm = chat)
 
 # Option 1: Remove extra input
-dsp("question -> answer", question = "Hi")
+run(mod, question = "Hi", .llm = chat)
 
 # Option 2: Add to signature
-dsp("context, question -> answer", context = "extra", question = "Hi")
+context_mod <- module(signature("context, question -> answer"))
+run(context_mod, context = "extra", question = "Hi", .llm = chat)
 ```
 
 ------------------------------------------------------------------------
@@ -276,7 +286,7 @@ dsp("context, question -> answer", context = "extra", question = "Hi")
 ``` r
 
 Sys.sleep(5)
-result <- dsp("question -> answer", question = "Try again")
+result <- run(mod, question = "Try again", .llm = chat)
 ```
 
 2.  **Use a different model:**
@@ -291,8 +301,9 @@ dsp_configure(provider = "openai", model = "gpt-3.5-turbo")
 ``` r
 
 results <- list()
+mod <- module(signature("text -> result"))
 for (i in seq_len(nrow(data))) {
-  results[[i]] <- dsp("text -> result", text = data$text[i])
+  results[[i]] <- run(mod, text = data$text[i], .llm = chat)
   Sys.sleep(0.5)  # Rate limit buffer
 }
 ```
@@ -353,8 +364,10 @@ charToRaw(key)  # Check for unexpected bytes
 ``` r
 
 # Instead of a huge context, summarize first
-summary <- dsp("text -> brief_summary: string[100]", text = long_text)
-answer <- dsp("context, question -> answer", context = summary, question = q)
+summarizer <- module(signature("text -> brief_summary: string[100]"))
+answerer <- module(signature("context, question -> answer"))
+summary <- run(summarizer, text = long_text, .llm = chat)
+answer <- run(answerer, context = summary, question = q, .llm = chat)
 ```
 
 2.  **Use a faster model:**
@@ -400,10 +413,16 @@ dsp_configure(provider = "anthropic", model = "claude-3-5-sonnet-latest")
 
 # Process in chunks
 chunks <- split_text(long_doc, chunk_size = 5000)
+summarizer <- module(signature("text -> summary"))
 summaries <- lapply(chunks, function(chunk) {
-  dsp("text -> summary", text = chunk)
+  run(summarizer, text = chunk, .llm = chat)
 })
-final <- dsp("summaries -> combined", summaries = paste(summaries, collapse = "\n"))
+combiner <- module(signature("summaries -> combined"))
+final <- run(
+  combiner,
+  summaries = paste(summaries, collapse = "\n"),
+  .llm = chat
+)
 ```
 
 ### “Response parsing failed”
@@ -489,9 +508,6 @@ mod <- module("question -> answer", type = "predict")
 # Correct - create signature first
 sig <- signature("question -> answer")
 mod <- module(sig, type = "predict")
-
-# Or use as_module() which accepts strings
-mod <- as_module("question -> answer")
 ```
 
 ### “Unknown module type”
@@ -574,11 +590,11 @@ model are active - API key status
 # See the full prompt that was sent
 get_last_prompt()
 
-# Get the trace with all details
-trace <- get_last_trace()
-trace$prompt      # The prompt
-trace$output      # The raw output
-trace$model       # Which model was used
+# Get the latest module trace with prompts and outputs
+trace <- tail(
+  export_traces(mod, include_prompts = TRUE, include_outputs = TRUE),
+  1
+)
 ```
 
 ### Step 3: View History
@@ -618,12 +634,22 @@ If something complex isn’t working:
 ``` r
 
 # Start with the simplest possible signature
-dsp("q -> a", q = "test")
+mod <- module(signature("q -> a"))
+run(mod, q = "test", .llm = chat)
 
 # Then add complexity incrementally
-dsp("question -> answer", question = "test")
-dsp("question -> answer: string", question = "test")
-dsp("context, question -> answer", context = "ctx", question = "test")
+run(module(signature("question -> answer")), question = "test", .llm = chat)
+run(
+  module(signature("question -> answer: string")),
+  question = "test",
+  .llm = chat
+)
+run(
+  module(signature("context, question -> answer")),
+  context = "ctx",
+  question = "test",
+  .llm = chat
+)
 ```
 
 ### Step 6: Check for Known Issues
@@ -650,7 +676,8 @@ If you’re still stuck:
 
 ``` r
 
-?dsp
+?module
+?run
 ?signature
 vignette("getting-started", package = "dsprrr")
 vignette("cheatsheet", package = "dsprrr")

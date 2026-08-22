@@ -72,7 +72,8 @@ SIMBA(
 
 - prompt_model:
 
-  Optional LLM for rule generation (reflection).
+  Optional ellmer Chat for rule generation. If `NULL`, uses the
+  deterministic example-based rule fallback.
 
 - seed:
 

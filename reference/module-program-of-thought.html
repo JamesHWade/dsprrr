@@ -122,7 +122,7 @@ caller-owned, reused across calls, and never closed by dsprrr. The backend deter
 whether execution state persists and whether <code>reset()</code> is available;
 serialize access to stateful backends. <code>interpreter_factory</code> is a
 zero-argument function that returns a fresh runner implementing <code>execute()</code>,
-<code>policy()</code>, optional <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code>, and terminal <code>shutdown()</code> or <code><a href="https://rdrr.io/r/base/connections.html" class="external-link">close()</a></code>. The
+<code>policy()</code>, optional <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code>, and terminal <code>shutdown()</code>. The
 module owns that runner for one invocation and shuts it down exactly once on
 success, error, or interrupt.</p>
 <p><code><a href="run_async.html">run_async()</a></code> supports factory-backed ProgramOfThought in an isolated mirai

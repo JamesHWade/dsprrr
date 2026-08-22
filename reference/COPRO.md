@@ -56,8 +56,8 @@ COPRO(
 
 - prompt_model:
 
-  Optional LLM for generating instruction candidates. If NULL, uses the
-  task model (.llm) with higher temperature.
+  Optional ellmer Chat for generating instruction candidates. If `NULL`,
+  uses the task Chat supplied through `.llm`.
 
 - breadth:
 

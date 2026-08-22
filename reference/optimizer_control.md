@@ -1,6 +1,7 @@
 # Create Optimizer Control
 
-Convenience function to create an OptimizerControl object with defaults.
+Configure optimizer behavior with consistent defaults across optimizer
+types.
 
 ## Usage
 
@@ -30,11 +31,11 @@ optimizer_control(
 
 - seed:
 
-  Random seed for reproducibility. Default is NULL (no seed).
+  Random seed for reproducibility. Default is `NULL` (no seed).
 
 - max_trials:
 
-  Maximum number of trials to run. Default is NULL (unlimited).
+  Maximum number of trials to run. Default is `NULL` (unlimited).
 
 - max_errors:
 
@@ -49,33 +50,33 @@ optimizer_control(
 
 - max_metric_calls:
 
-  Maximum metric calls, or NULL for unlimited.
+  Maximum metric calls, or `NULL` for unlimited.
 
 - max_provider_calls:
 
-  Maximum verified provider calls, or NULL for unlimited. Ambiguous
+  Maximum verified provider calls, or `NULL` for unlimited. Ambiguous
   provider usage stops a run that has this cap.
 
 - max_input_tokens:
 
-  Maximum verified input tokens, or NULL for unlimited.
+  Maximum verified input tokens, or `NULL` for unlimited.
 
 - max_output_tokens:
 
-  Maximum verified output tokens, or NULL for unlimited.
+  Maximum verified output tokens, or `NULL` for unlimited.
 
 - max_total_tokens:
 
-  Maximum verified input plus output tokens, or NULL for unlimited.
+  Maximum verified input plus output tokens, or `NULL` for unlimited.
 
 - max_cost:
 
-  Maximum known provider cost in US dollars, or NULL for unlimited.
+  Maximum known provider cost in US dollars, or `NULL` for unlimited.
   Unknown cost stops a run that has this cap.
 
 - max_elapsed_seconds:
 
-  Maximum active optimizer elapsed time in seconds, or NULL for
+  Maximum active optimizer elapsed time in seconds, or `NULL` for
   unlimited. Checkpoint downtime is excluded.
 
 - num_threads:
@@ -84,11 +85,12 @@ optimizer_control(
 
 - progress:
 
-  Whether to display progress. Default is TRUE in interactive sessions.
+  Whether to display progress. Default is `TRUE` in interactive
+  sessions.
 
 - log_dir:
 
-  Directory for trial logging. Default is NULL (no logging).
+  Directory for trial logging. Default is `NULL` (no logging).
 
 - checkpoint_path:
 
@@ -105,11 +107,24 @@ optimizer_control(
 
 - verbose:
 
-  Whether to print detailed output. Default is FALSE
+  Whether to print detailed output. Default is `FALSE`.
 
 ## Value
 
-An OptimizerControl object
+An optimizer control object.
+
+## Details
+
+Finite metric, provider, token, cost, and elapsed-time limits switch
+optimizer evaluation to row-sized work units. The maximum postflight
+overshoot is one already-started evaluation row, or one already-started
+direct provider request for optimizer-side generation. Unknown provider,
+token, or cost usage stops safely when the corresponding cap is finite.
+
+BootstrapFewShot and MIPROv2 support deterministic checkpoint resume.
+GEPA, SIMBA, and COPRO currently provide the shared ledger and return
+the best partial program, but reject `resume = TRUE` until their
+fine-grained search state is supported.
 
 ## Examples
 

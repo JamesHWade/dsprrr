@@ -225,10 +225,9 @@ RAG modules include retrieval information in traces:
 # Run a query
 # result <- run(mod, question = "What is R?")
 
-# Inspect the trace
-# trace <- get_last_trace()
-# trace$retrieved_context  # What was retrieved
-# trace$query             # The query used for retrieval
+# Inspect the latest module trace
+# trace <- tail(export_traces(mod, include_outputs = TRUE), 1)
+# trace$output
 ```
 
 ## Combining RAG with Optimization

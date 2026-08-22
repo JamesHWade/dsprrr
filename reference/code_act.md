@@ -18,9 +18,9 @@ code_act(
   signature,
   tools = list(),
   runner = NULL,
+  interpreter_factory = NULL,
   max_iterations = 10L,
-  ...,
-  interpreter_factory = NULL
+  ...
 )
 ```
 
@@ -40,8 +40,16 @@ code_act(
 - runner:
 
   Optional caller-owned code runner implementing `execute()` and
-  `policy()`. It is retained, never automatically closed, and must not
-  be shared concurrently when persistent.
+  `policy()`. It is retained, never automatically shut down, and must
+  not be shared concurrently when persistent.
+
+- interpreter_factory:
+
+  Optional zero-argument function returning a fresh runner with
+  `execute()`, `policy()`, optional
+  [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
+  terminal `shutdown()`. Supply exactly one of `runner` and
+  `interpreter_factory`.
 
 - max_iterations:
 
@@ -52,15 +60,6 @@ code_act(
 - ...:
 
   Additional arguments passed to the module
-
-- interpreter_factory:
-
-  Optional zero-argument function returning a fresh runner with
-  `execute()`, `policy()`, optional
-  [`start()`](https://rdrr.io/r/stats/start.html), and idempotent
-  terminal `shutdown()` or
-  [`close()`](https://rdrr.io/r/base/connections.html). Supply exactly
-  one of `runner` and `interpreter_factory`.
 
 ## Value
 

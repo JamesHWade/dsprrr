@@ -244,7 +244,7 @@ sandbox</td>
 </td>
 <td>
 <code><a href="../reference/run_dataset.html">run_dataset()</a></code>,
-<code>run(..., .parallel = TRUE)</code>
+<code>run(..., .concurrency = concurrency_control(...))</code>
 </td>
 <td>Batch over a data frame; heterogeneous (module, example) fan-out is
 not yet a dedicated module</td>
@@ -485,8 +485,8 @@ remain different</td>
 </tr>
 <tr class="odd">
 <td><code>Ensemble</code></td>
-<td><code>Ensemble</code></td>
-<td>Equivalent</td>
+<td><code><a href="../reference/ensemble_module.html">ensemble()</a></code></td>
+<td>Direct module constructor rather than a teleprompter</td>
 </tr>
 <tr class="even">
 <td><code>BetterTogether</code></td>
@@ -689,9 +689,11 @@ reasoning field</td>
 <p>DSPy composes programs as Python classes with multiple predictors.
 dsprrr composes pipelines:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="va">mod_retrieve</span> <span class="op"><a href="../reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span></span>
-<span>  <span class="fu"><a href="../reference/map_inputs.html">map_inputs</a></span><span class="op">(</span><span class="va">mod_answer</span>, documents <span class="op">=</span> <span class="st">"context"</span><span class="op">)</span> <span class="op"><a href="../reference/grapes-greater-than-greater-than-grapes.html">%&gt;&gt;%</a></span></span>
-<span>  <span class="va">mod_format</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod_retrieve</span>,</span>
+<span>  <span class="fu"><a href="../reference/step.html">step</a></span><span class="op">(</span><span class="va">mod_answer</span>, map <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>documents <span class="op">=</span> <span class="st">"context"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="va">mod_format</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p><code>BootstrapFewShot</code> compiles pipelines
 <strong>jointly</strong>, like DSPy: the teacher pipeline runs
 end-to-end, final outputs are scored, and each step harvests
@@ -719,9 +721,9 @@ operate on single modules).</p>
 <td>
 <code>dspy.LM</code>; experimental typed
 <code>LMRequest -&gt; LMResponse</code> migration boundary in 3.3</td>
-<td>Provider-neutral ellmer <code>Chat</code>;
-<code>build_module_request()</code> normalizes prompt/content input, but
-a complete package-wide invocation record is still planned</td>
+<td>Provider-neutral ellmer <code>Chat</code>; <code><a href="../reference/run.html">run()</a></code>
+normalizes prompt and content inputs into typed requests, while a
+complete package-wide invocation record is still planned</td>
 </tr>
 <tr class="even">
 <td>Configuration</td>
@@ -772,9 +774,10 @@ status events per pipeline step</td>
 <td>Parallel evaluation</td>
 <td><code>Evaluate(num_threads = ...)</code></td>
 <td>
-<code>evaluate(.parallel = TRUE)</code> via mirai or ellmer’s native
-parallelism. Declarative zero/one-step Flex is supported; executable and
-multi-step Flex currently require sequential rows</td>
+<code>evaluate(.concurrency = concurrency_control(...))</code> via
+mirai or ellmer’s native parallelism. Declarative zero/one-step Flex is
+supported; executable and multi-step Flex currently require sequential
+rows</td>
 </tr>
 <tr class="even">
 <td>Saving programs</td>

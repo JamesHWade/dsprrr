@@ -64,26 +64,30 @@ mod_retrieve <- signature("query -> documents") |>
 mod_summarize <- signature("context -> summary") |>
   module(type = "predict", template = "Summarize: {context}")
 
-rag_pipeline <- mod_retrieve %>>%
-  map_inputs(mod_summarize, documents = "context")
+rag_pipeline <- pipeline(
+  mod_retrieve,
+  step(mod_summarize, map = c(documents = "context"))
+)
 
 result <- run(rag_pipeline, query = "dsprrr pipelines", .llm = llm)
 ```
 
 ## Inject Static Inputs
 
-Use
-[`with_inputs()`](https://jameshwade.github.io/dsprrr/reference/with_inputs.md)
-to add constants that don't come from upstream outputs:
+Pass constants through
+[`step()`](https://jameshwade.github.io/dsprrr/reference/step.md) when
+they do not come from upstream outputs:
 
 ``` r
 
 mod_answer <- signature("facts, question, tone -> answer") |>
   module(type = "predict")
 
-qa_pipeline <- mod_extract %>>%
-  with_inputs(mod_answer, tone = "concise") %>>%
+qa_pipeline <- pipeline(
+  mod_extract,
+  step(mod_answer, tone = "concise"),
   mod_format
+)
 ```
 
 ## Select Outputs to Pass Forward
@@ -98,8 +102,10 @@ mod_reason <- signature("question -> answer, reasoning") |>
 mod_present <- signature("answer -> response") |>
   module(type = "predict")
 
-pipeline_filtered <- mod_reason %>>%
-  select_outputs(mod_present, "answer")
+pipeline_filtered <- pipeline(
+  step(mod_reason, select = "answer"),
+  mod_present
+)
 ```
 
 ## Explicit Pipelines with `pipeline()` and `step()`
@@ -150,7 +156,5 @@ results$result
 - Use `trace_summary()` and
   [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md)
   to inspect multi-step behavior.
-- When column names in your data frame don't match the pipeline inputs,
-  rename them first or wrap the pipeline with
-  [`map_inputs()`](https://jameshwade.github.io/dsprrr/reference/map_inputs.md)
-  to align fields.
+- When field names differ between steps, use the `map` argument to
+  [`step()`](https://jameshwade.github.io/dsprrr/reference/step.md).

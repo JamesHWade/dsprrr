@@ -1,6 +1,6 @@
 # Read Trials from JSONL File
 
-Read Trial objects from a JSONL file.
+Read optimization trial records from a JSONL file.
 
 ## Usage
 
@@ -16,7 +16,7 @@ read_trials_jsonl(path)
 
 ## Value
 
-A list of Trial objects.
+A list of optimization trial records.
 
 ## Examples
 

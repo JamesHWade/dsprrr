@@ -122,10 +122,7 @@ candidate and alone decides what enters the frontier.</p>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  max_candidates_per_iteration <span class="op">=</span> <span class="fl">4L</span>,</span>
 <span>  frontier_size <span class="op">=</span> <span class="fl">8L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># S3 method for class 'MetaHarness'</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -197,14 +194,6 @@ proposer batch.</p></dd>
 <dt id="arg-frontier-size">frontier_size<a class="anchor" aria-label="anchor" href="#arg-frontier-size"></a></dt>
 <dd><p>Maximum scored candidates summarized to each proposer.</p></dd>
 
-
-<dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>A MetaHarness object.</p></dd>
-
-
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments.</p></dd>
-
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -223,10 +212,8 @@ Those analyses execute only through <code>runner</code>; with the default
 <code>sandbox = TRUE</code>, the runner must advertise an OS sandbox such as
 <code><a href="mcp_repl_runner.html">mcp_repl_runner()</a></code>. Proposer sessions are fresh by design, so each
 iteration must reason from the persisted frontier rather than hidden chat
-history. An ellmer <code>Chat</code> is cloned and reset automatically. A custom
-proposer must either provide <code>chat_structured()</code> and <code>clone()</code>, or be supplied
-as a zero-argument <code>.agent_llm</code> factory that returns a fresh compatible
-proposer on every call. Non-cloneable proposer objects are rejected.</p>
+history. The proposer must be an ellmer <code>Chat</code>; it is cloned and reset
+automatically before each iteration.</p>
     </div>
     <div class="section level2">
     <h2 id="compilation-arguments">Compilation arguments<a class="anchor" aria-label="anchor" href="#compilation-arguments"></a></h2>

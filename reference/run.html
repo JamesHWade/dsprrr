@@ -127,20 +127,9 @@ use <code><a href="run_dataset.html">run_dataset()</a></code> for multiple RLM i
 <dt>.verbose</dt>
 <dd><p>Logical indicating whether to print debug information</p></dd>
 
-<dt>.parallel</dt>
-<dd><p>Logical indicating whether to process batch inputs in parallel (default FALSE).</p></dd>
-
-<dt>.parallel_method</dt>
-<dd><p>Character, either "ellmer" (default) or "mirai".
-"ellmer" uses ellmer's <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">parallel_chat_structured()</a></code> for native async HTTP
-parallelism (more efficient, single process).
-"mirai" uses mirai for multi-process parallelism (requires <code>.llm = NULL</code>
-so each worker can create an independent client).</p></dd>
-
 <dt>.concurrency</dt>
 <dd><p>A validated policy created by
-<code><a href="concurrency_control.html">concurrency_control()</a></code>. When supplied, do not also pass <code>.parallel</code> or
-<code>.parallel_method</code>.</p></dd>
+<code><a href="concurrency_control.html">concurrency_control()</a></code>. Omission uses sequential execution.</p></dd>
 
 <dt>.progress</dt>
 <dd><p>Logical indicating whether to show progress bar for batch processing (default TRUE)</p></dd>
@@ -165,7 +154,9 @@ If FALSE, bypasses cache for this call only.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>For single inputs with .return_format="simple": The parsed output according to the module's signature.
+    <p>For single inputs with <code>.return_format = "simple"</code>, the parsed
+output according to the module's signature. Object-shaped outputs remain
+named records for both scalar and batch calls.
 For single inputs with .return_format="structured": A list with components:</p><ul><li><p>output: The parsed output</p></li>
 <li><p>chat: The ellmer chat object used</p></li>
 <li><p>metadata: Additional metadata (tokens used, latency, etc.)</p></li>
@@ -203,8 +194,7 @@ to bind the verified runtime references before execution.</p>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index">
-<ul><li><p><code><a href="dsp.html">dsp()</a></code> for one-shot LLM calls without creating a module</p></li>
-<li><p><code><a href="run_dataset.html">run_dataset()</a></code> for running a module on a data frame</p></li>
+<ul><li><p><code><a href="run_dataset.html">run_dataset()</a></code> for running a module on a data frame</p></li>
 <li><p><code><a href="evaluate.html">evaluate()</a></code> for running with metric evaluation</p></li>
 <li><p><code><a href="module.html">module()</a></code> for creating modules</p></li>
 </ul></div>

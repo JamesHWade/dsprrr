@@ -58,14 +58,14 @@ clear_default_chat()
 # Temporarily use a different LLM for a block
 claude <- chat_claude()
 with_lm(claude, {
-  dsp("question -> answer", question = "What is 2+2?")
-  dsp("text -> summary", text = "Long article...")
+  run(module(signature("question -> answer")), question = "What is 2+2?")
+  run(module(signature("text -> summary")), text = "Long article...")
 })
 
 # Function-scoped LLM (auto-cleans up on exit)
 my_analysis <- function(data) {
   local_lm(chat_claude())
-  dsp("data -> summary", data = data)
+  run(module(signature("data -> summary")), data = data)
 }
 ```
 
@@ -105,8 +105,8 @@ set a job-specific `DSPRRR_CACHE_PATH`.
 If you explicitly configure a project-local path such as
 `.dsprrr_cache`, keep it in `.gitignore`. Set `disk_private = FALSE`
 only when every cache reader and writer is trusted; writable shared RDS
-caches can be poisoned. Legacy project-local caches are not migrated
-automatically and should be removed or reviewed before reuse.
+caches can be poisoned. Existing project-local caches must already meet
+the exact private-mode contract; remove or review them before reuse.
 
 ------------------------------------------------------------------------
 
@@ -114,11 +114,9 @@ automatically and should be removed or reviewed before reuse.
 
 | Function | Purpose | Returns |
 |----|----|----|
-| [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) | One-off structured LLM call | Output value(s) |
-| [`as_module()`](https://jameshwade.github.io/dsprrr/reference/as_module.md) | Create reusable module from Chat | Module object |
-| [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md) | Define input/output schema | Signature object |
-| [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) | Create module with full control | Module object |
-| [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) | Execute module on single input | tibble with output |
+| [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md) | Define input/output schema | Typed signature object |
+| [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) | Create a reusable typed module | Module object |
+| [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) | Execute module on single input | Named output record(s) |
 | [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md) | Execute on data frame | tibble with outputs |
 | [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md) | Compute metrics on test data | Evaluation result |
 | [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md) | Optimize with teleprompter | Compiled module |
@@ -127,7 +125,7 @@ automatically and should be removed or reviewed before reuse.
 | [`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md) | Set cache options | Previous config |
 | [`cache_stats()`](https://jameshwade.github.io/dsprrr/reference/cache_stats.md) | View cache hit rate and size | Stats list |
 | [`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md) | Inspect last prompt sent | Prompt text |
-| [`get_last_trace()`](https://jameshwade.github.io/dsprrr/reference/get_last_trace.md) | Get trace from last [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) call | Trace object |
+| [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md) | Inspect a module’s execution traces | Trace tibble |
 
 ------------------------------------------------------------------------
 
@@ -206,13 +204,14 @@ sig <- signature(
 
 ## Creating Modules
 
-### Quick: `dsp()` for One-Off Calls
+### Build and Run a Module
 
 ``` r
 
 # With explicit Chat
 chat <- chat_openai(model = "gpt-5-mini")
-chat |> dsp("question -> answer", question = "What is 2+2?")
+answerer <- module(signature("question -> answer"))
+run(answerer, question = "What is 2+2?", .llm = chat)
 ```
 
 The auto-detected form (when you have a default Chat configured):
@@ -220,20 +219,21 @@ The auto-detected form (when you have a default Chat configured):
 ``` r
 
 # With auto-detected Chat (uses configured default)
-dsp("question -> answer", question = "What is 2+2?")
+run(answerer, question = "What is 2+2?")
 ```
 
-### Reusable: `as_module()` for Repeated Use
+### Reuse the Same Module
 
 ``` r
 
-# Create from Chat
-classifier <- chat_openai(model = "gpt-5-mini") |>
-  as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
+chat <- chat_openai(model = "gpt-5-mini")
+classifier <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+)
 
 # Use repeatedly
-classifier$predict(text = "Love it!")
-classifier$predict(text = "Hate it!")
+run(classifier, text = "Love it!", .llm = chat)
+run(classifier, text = "Hate it!", .llm = chat)
 ```
 
 ### Full Control: `signature()` + `module()`
@@ -287,7 +287,7 @@ flowchart TB
 # Caller-owned and reused; the backend controls state persistence
 pot <- program_of_thought("question -> answer", runner = runner)
 
-# Fresh invocation-owned runner; dsprrr closes it exactly once
+# Fresh invocation-owned runner; dsprrr shuts it down exactly once
 pot <- program_of_thought(
   "question -> answer",
   interpreter_factory = function() r_code_runner(timeout = 30)
@@ -296,8 +296,8 @@ pot <- program_of_thought(
 
 Supply exactly one of `runner` and `interpreter_factory`. The factory is
 zero-argument and is supported by ProgramOfThought, CodeAct, and RLM.
-dsprrr never closes a directly supplied runner; persistence and reset
-support are backend-specific.
+dsprrr never shuts down a directly supplied runner; persistence and
+reset support are backend-specific.
 
 ### Experimental Flex
 
@@ -411,11 +411,12 @@ result <- evaluate(mod, testset, metric = metric_exact_match(), .llm = llm)
 result$mean_score
 #> 0.85
 
-# With dsp()
-result <- evaluate_dsp(
-  "question -> answer",
+# Evaluate an inline module
+result <- evaluate(
+  module(signature("question -> answer")),
   testset,
-  metric = metric_exact_match()
+  metric = metric_exact_match(),
+  .llm = llm
 )
 ```
 
@@ -429,7 +430,7 @@ result <- evaluate_dsp(
 
 # Search over parameters
 mod$optimize_grid(
-  devset = train_data,
+  data = train_data,
   metric = metric_exact_match(),
   .llm = llm,
   parameters = list(
@@ -452,8 +453,12 @@ tp <- LabeledFewShot(k = 4L, metric = metric_exact_match())
 compiled <- compile(tp, mod, trainset, .llm = llm)
 
 # Grid search teleprompter
+variants <- data.frame(
+  id = c("concise", "thorough"),
+  instructions = c("Be concise", "Be thorough")
+)
 tp <- GridSearchTeleprompter(
-  instructions = c("Be concise", "Be thorough"),
+  variants = variants,
   metric = metric_exact_match()
 )
 compiled <- compile(tp, mod, trainset, .llm = llm)
@@ -494,8 +499,8 @@ clear_prompt_history()
 # Detailed module state
 mod$inspect()
 
-# Last trace from dsp()
-get_last_trace()
+# Latest module trace
+tail(export_traces(mod, include_outputs = TRUE), 1)
 ```
 
 ### Traces
@@ -524,10 +529,11 @@ clear_traces(mod)
 ``` r
 
 # Save optimized config to pins board
-pin_module_config(mod, board, "my-classifier-v1")
+pin_module_config(board, "my-classifier-v1", mod)
 
 # Restore later
-mod <- restore_module_config(board, "my-classifier-v1", .llm = llm)
+artifact <- pins::pin_read(board, "my-classifier-v1")
+mod <- restore_module_config(artifact)
 ```
 
 ### Vitals Integration
@@ -552,8 +558,8 @@ my_metric <- as_dsprrr_metric(vitals_scorer)
 # Create production-ready project structure
 use_dsprrr_template("my_project")
 
-# Validate workflow configuration
-validate_workflow("workflow.yml")
+# Validate a module and its evaluation data
+validate_workflow(mod, data = test_data, board = board)
 ```
 
 ------------------------------------------------------------------------
@@ -582,20 +588,20 @@ result <- run(mod,
 
 ``` r
 
-classifier <- chat_openai() |>
-  as_module("text -> label: enum('spam', 'not_spam')")
+classifier <- module(signature("text -> label: enum('spam', 'not_spam')"))
 
-labels <- classifier$predict(text = emails)
+labels <- run_dataset(classifier, tibble::tibble(text = emails), .llm = chat)
 ```
 
 ### Extraction
 
 ``` r
 
-extractor <- chat_openai() |>
-  as_module("text -> entities: list[string], summary: string")
+extractor <- module(
+  signature("text -> entities: list[string], summary: string")
+)
 
-result <- extractor$predict(text = document)
+result <- run(extractor, text = document, .llm = chat)
 result$entities
 result$summary
 ```

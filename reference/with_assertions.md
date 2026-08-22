@@ -25,11 +25,12 @@ with_assertions(
 
 - assertions:
 
-  List of Assertion objects (from
+  A list of assertion rules (from
   [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
   or
   [`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md))
-  or an AssertionSet
+  or the result of
+  [`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
 
 - max_retries:
 

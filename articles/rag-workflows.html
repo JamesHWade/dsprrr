@@ -353,10 +353,9 @@ LLMs:</p>
 <code class="sourceCode R"><span><span class="co"># Run a query</span></span>
 <span><span class="co"># result &lt;- run(mod, question = "What is R?")</span></span>
 <span></span>
-<span><span class="co"># Inspect the trace</span></span>
-<span><span class="co"># trace &lt;- get_last_trace()</span></span>
-<span><span class="co"># trace$retrieved_context  # What was retrieved</span></span>
-<span><span class="co"># trace$query             # The query used for retrieval</span></span></code></pre></div>
+<span><span class="co"># Inspect the latest module trace</span></span>
+<span><span class="co"># trace &lt;- tail(export_traces(mod, include_outputs = TRUE), 1)</span></span>
+<span><span class="co"># trace$output</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="combining-rag-with-optimization">Combining RAG with Optimization<a class="anchor" aria-label="anchor" href="#combining-rag-with-optimization"></a>

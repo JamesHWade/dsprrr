@@ -121,9 +121,6 @@ according to the signature. With `.return_format = "structured"`, a
 - [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
   executing modules
 
-- [`dsp()`](https://jameshwade.github.io/dsprrr/reference/dsp.md) for
-  simple one-shot LLM calls (no code execution)
-
 ## Examples
 
 ``` r
@@ -147,6 +144,6 @@ result <- rlm("sessions, question -> answer", sessions = sessions,
   question = "Where did conversion fall?",
   .llm = ellmer::chat_openai(),
   .runner = local_runner)
-local_runner$close()
+local_runner$shutdown()
 } # }
 ```

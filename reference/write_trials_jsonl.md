@@ -1,7 +1,11 @@
 # Write Trials to JSONL File
 
-Write a list of Trial objects to a JSONL (JSON Lines) file. Each trial
-is written as a single JSON object on its own line.
+Write a list of optimization trial records to a JSONL (JSON Lines) file.
+Each trial is written as a single JSON object on its own line. On Unix,
+an existing target must already be owned by the effective user with mode
+exactly `0600`, without special bits, and every existing ancestor must
+be owned by root or the effective user. Unsafe paths are rejected rather
+than repaired.
 
 ## Usage
 
@@ -13,7 +17,8 @@ write_trials_jsonl(trials, path, append = FALSE)
 
 - trials:
 
-  List of Trial objects.
+  Trial records created by
+  [`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md).
 
 - path:
 

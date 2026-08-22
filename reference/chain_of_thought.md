@@ -15,7 +15,9 @@ chain_of_thought(x, prefix = "Let's think step by step in order to", ...)
 
 - x:
 
-  A Signature object or string notation
+  A signature object created by
+  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+  or string notation.
 
 - prefix:
 
