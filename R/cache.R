@@ -429,9 +429,11 @@ print.dsprrr_cache_stats <- function(x, ...) {
   }
 
   if (isTRUE(x$degraded)) {
+    degraded_reason <- x$degraded_reason %||%
+      "the disk cache could not be trusted"
     cli::cli_bullets(c(
       "!" = "Disk caching is degraded",
-      "x" = x$degraded_reason %||% "the disk cache could not be trusted"
+      "x" = "{degraded_reason}"
     ))
   }
 
@@ -1742,7 +1744,12 @@ cache_exact_mode_reason <- function(mode, expected, what) {
 #' reported reason has to say what to run instead.
 #' @noRd
 cache_chmod_remedy <- function(mode, path) {
-  paste0("restrict it yourself, then retry: chmod ", mode, " ", path)
+  paste0(
+    "restrict it yourself, then retry: chmod ",
+    mode,
+    " ",
+    shQuote(path)
+  )
 }
 
 #' Abort a guarded operation after recording its trust failure
@@ -2560,8 +2567,8 @@ cache_disk_degrade <- function(disk_path, reason) {
   cli::cli_warn(
     c(
       "!" = "Disk caching is unavailable at {.path {disk_path}}",
-      "x" = reason,
-      "i" = fallback
+      "x" = "{reason}",
+      "i" = "{fallback}"
     ),
     class = c("dsprrr_cache_security_warning", "dsprrr_cache_warning"),
     .frequency = "once",

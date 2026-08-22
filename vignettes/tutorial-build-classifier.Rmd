@@ -128,7 +128,7 @@ reviews <- tibble::tibble(
 run_dataset(classifier, reviews, .llm = chat)
 ```
 
-All five classifications came back in a single call. Much more efficient than five separate calls.
+All five classifications came back from one dataset operation, while dsprrr retained one observable provider attempt per review.
 
 ## Step 5: Add Instructions
 

@@ -81,10 +81,11 @@ validate_trial_record <- function(
     record$status %in% c("pending", "running", "completed", "failed") &&
     is.list(record$trace_context)
   if (!isTRUE(valid)) {
+    reason <- trial_record_schema_reason(record)
     cli::cli_abort(
       c(
         "Trial record does not match the current schema",
-        "i" = trial_record_schema_reason(record)
+        "i" = "{reason}"
       ),
       class = class
     )
@@ -103,15 +104,23 @@ trial_record_schema_reason <- function(record) {
   version <- if (is.list(record)) record$schema_version else NULL
   if (is.null(version)) {
     return(paste0(
-      "It has no {.field schema_version}, so it was written by a dsprrr ",
+      "It has no schema_version, so it was written by a dsprrr ",
       "version older than record schema ",
       current,
       ". Re-run the optimization to write a current log."
     ))
   }
+  if (!is.atomic(version) || length(version) != 1L || is.na(version)) {
+    return(paste0(
+      "Its schema_version must be one non-missing scalar; this dsprrr reads ",
+      "only ",
+      current,
+      "."
+    ))
+  }
   if (!identical(version, trial_record_schema_version())) {
     return(paste0(
-      "It declares {.field schema_version} ",
+      "It declares schema_version ",
       format(version)[[1]],
       "; this dsprrr reads only ",
       current,
@@ -280,8 +289,8 @@ trial_log_trust_abort <- function(message, parent = NULL, remedy = NULL) {
   cli::cli_abort(
     c(
       "Trial log path trust verification failed",
-      "x" = message,
-      if (!is.null(remedy)) c("i" = remedy)
+      "x" = "{message}",
+      if (!is.null(remedy)) c("i" = "{remedy}")
     ),
     parent = parent,
     class = c(
@@ -298,11 +307,10 @@ trial_log_trust_abort <- function(message, parent = NULL, remedy = NULL) {
 #' @noRd
 trial_log_chmod_remedy <- function(path, mode) {
   paste0(
-    "Restrict it yourself, then retry: {.code chmod ",
+    "Restrict it yourself, then retry: chmod ",
     mode,
     " ",
-    path,
-    "}"
+    shQuote(path)
   )
 }
 

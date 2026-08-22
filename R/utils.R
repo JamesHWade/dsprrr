@@ -198,6 +198,17 @@ validate_reserved_input_names <- function(provided_names, declared_names) {
   )
 }
 
+# Validate runtime-only arguments from an unforced `...` pairlist.
+validate_runtime_dot_arguments <- function(call, allowed_names = character()) {
+  dots <- call[["..."]]
+  provided_names <- if (is.null(dots)) {
+    character()
+  } else {
+    names(dots) %||% rep("", length(dots))
+  }
+  validate_reserved_input_names(provided_names, allowed_names)
+}
+
 #' Validate call inputs against a signature
 #' @noRd
 validate_signature_inputs <- function(

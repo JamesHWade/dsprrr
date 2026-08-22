@@ -2798,3 +2798,23 @@ test_that("cache_stats() reports a degraded disk tier", {
   expect_true(stats$degraded)
   expect_equal(stats$degraded_reason, "test reason")
 })
+
+test_that("cache chmod remedies safely quote unusual paths", {
+  path <- file.path("cache dir", "tier; {private}")
+  remedy <- cache_chmod_remedy("700", path)
+
+  expect_match(remedy, shQuote(path), fixed = TRUE)
+
+  stats <- structure(
+    list(
+      enabled = TRUE,
+      hits = 0L,
+      misses = 0L,
+      hit_rate = 0,
+      degraded = TRUE,
+      degraded_reason = remedy
+    ),
+    class = "dsprrr_cache_stats"
+  )
+  expect_no_error(testthat::capture_messages(print(stats)))
+})

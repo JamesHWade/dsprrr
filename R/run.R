@@ -3860,6 +3860,10 @@ run_dataset.Module <- function(
   ...,
   .trace_context = list()
 ) {
+  validate_runtime_dot_arguments(
+    match.call(expand.dots = FALSE),
+    allowed_names = ".cache"
+  )
   trace_context_supplied <- !missing(.trace_context)
   trace_context <- trace_context_resolve(
     .trace_context,

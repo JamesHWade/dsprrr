@@ -338,3 +338,41 @@ test_that("run() rejects the removed .parallel argument", {
     class = "dsprrr_reserved_input_error"
   )
 })
+
+test_that("dataset APIs reject removed arguments before empty returns", {
+  mod <- module(signature("q -> a"))
+  empty <- data.frame(q = character())
+
+  expect_snapshot(
+    error = TRUE,
+    run_dataset(mod, empty, .parallel = TRUE)
+  )
+  expect_snapshot(
+    error = TRUE,
+    evaluate(
+      mod,
+      empty,
+      metric = function(...) 1,
+      .parallel_method = "mirai"
+    )
+  )
+})
+
+test_that("dataset runtime-name validation does not force arguments", {
+  mod <- module(signature("q -> a"))
+  empty <- data.frame(q = character())
+  forced <- FALSE
+
+  condition <- rlang::catch_cnd(run_dataset(
+    mod,
+    empty,
+    .parallel = {
+      forced <<- TRUE
+      TRUE
+    }
+  ))
+
+  expect_s3_class(condition, "dsprrr_reserved_input_error")
+  expect_identical(forced, FALSE)
+  expect_no_error(run_dataset(mod, empty, .cache = FALSE))
+})

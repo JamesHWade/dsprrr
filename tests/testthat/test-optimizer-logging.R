@@ -1312,3 +1312,28 @@ test_that("a rejected log file reports the chmod that fixes it", {
     fixed = TRUE
   )
 })
+
+test_that("invalid schema_version shapes retain the typed diagnostic", {
+  record <- trial_json_record(create_trial("X", list(k = 1)))
+  record$schema_version <- list()
+
+  condition <- rlang::catch_cnd(validate_trial_record(record))
+
+  expect_s3_class(condition, "dsprrr_trial_record_malformed")
+  expect_match(conditionMessage(condition), "schema_version", fixed = TRUE)
+  expect_snapshot(error = TRUE, validate_trial_record(record))
+})
+
+test_that("trial-log chmod remedies safely quote unusual paths", {
+  path <- file.path("trial logs", "journal; {private}")
+  remedy <- trial_log_chmod_remedy(path, "600")
+
+  expect_match(remedy, shQuote(path), fixed = TRUE)
+
+  condition <- rlang::catch_cnd(trial_log_trust_abort(
+    "test rejection",
+    remedy = remedy
+  ))
+  expect_s3_class(condition, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(condition), shQuote(path), fixed = TRUE)
+})
