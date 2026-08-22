@@ -42,7 +42,7 @@ module fields.
 }
 \examples{
 if (FALSE) {
-mod <- module(signature("text -> sentiment"), type = "predict")
+mod <- module(signature("text -> sentiment"))
 optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 
 # Get code as string
@@ -59,6 +59,7 @@ Other optimizer accessors:
 \code{\link[=best_demos]{best_demos()}},
 \code{\link[=best_params]{best_params()}},
 \code{\link[=config_diff]{config_diff()}},
+\code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
 }

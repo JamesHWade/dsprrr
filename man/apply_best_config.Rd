@@ -45,6 +45,7 @@ Other optimizer accessors:
 \code{\link[=best_params]{best_params()}},
 \code{\link[=config_diff]{config_diff()}},
 \code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
 }

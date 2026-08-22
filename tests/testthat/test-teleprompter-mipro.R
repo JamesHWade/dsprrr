@@ -1,5 +1,20 @@
 # Tests for MIPROv2 teleprompter
 
+mipro_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$miprov2,
+    list(
+      trial_history = result$trials,
+      best_config = result$best_params,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      error_count = result$budget$total_errors,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 test_that("MIPROv2 can be created with defaults", {
   tp <- MIPROv2()
   expect_s3_class(tp, "dsprrr::MIPROv2")
@@ -91,7 +106,7 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
   expect_equal(compiled$config$teleprompter, "MIPROv2")
   expect_true(length(compiled$demos) > 0)
 
-  optimizer <- compiled$config$optimizer
+  optimizer <- mipro_test_metadata(compiled)
   expect_true(length(optimizer$demo_candidates) > 0)
   expect_true(length(optimizer$instruction_candidates) > 0)
   expect_s3_class(optimizer$trial_history, "tbl_df")
@@ -219,12 +234,15 @@ test_that("MIPROv2 tunes nested predictor instructions as graph components", {
   expect_identical(compiled$generate_action$demos, action_demos)
   expect_identical(compiled$extract$demos, extract_demos)
   expect_identical(
-    compiled$config$optimizer$candidate_scope,
+    mipro_test_metadata(compiled)$candidate_scope,
     "predictor_components"
   )
-  expect_identical(compiled$config$optimizer$demo_mode, "preserved")
-  expect_identical(compiled$config$optimizer$effective_labeled_demos, 0L)
-  expect_identical(compiled$config$optimizer$effective_bootstrapped_demos, 0L)
+  expect_identical(mipro_test_metadata(compiled)$demo_mode, "preserved")
+  expect_identical(mipro_test_metadata(compiled)$effective_labeled_demos, 0L)
+  expect_identical(
+    mipro_test_metadata(compiled)$effective_bootstrapped_demos,
+    0L
+  )
 })
 
 test_that("MIPROv2 fails explicitly without nested predictor evidence", {
@@ -631,7 +649,7 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
     data.frame(question = "test", answer = "test")
   )
 
-  metadata <- compiled$config$optimizer
+  metadata <- mipro_test_metadata(compiled)
   expect_identical(metadata$budget_summary, budget_summary)
   expect_identical(metadata$stop_reason, budget_summary$stop_reason)
   expect_equal(metadata$error_count, 1L)

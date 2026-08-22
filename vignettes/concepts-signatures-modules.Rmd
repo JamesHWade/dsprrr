@@ -441,7 +441,7 @@ The optimizer:
 3. Runs each copy's `forward()` on the devset
 4. Computes metrics from (signature-defined) outputs
 5. Updates the original module with best config
-6. Records all trials in `state$trials`
+6. Records trial evidence in `optimization_result()$trials`
 
 The architecture makes this workflow clean and reliable.
 

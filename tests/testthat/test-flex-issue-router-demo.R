@@ -395,7 +395,7 @@ test_that("GEPA selects the executable Flex issue-router hybrid", {
     .llm = optimizer_chat,
     control = dsprrr:::optimizer_control(num_threads = 1L)
   )
-  optimizer_metadata <- optimized$config$optimizer
+  optimizer_metadata <- gepa_test_metadata(optimized)
 
   validate <- function(program) {
     result <- evaluate(

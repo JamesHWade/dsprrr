@@ -45,7 +45,8 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
     },
 
@@ -441,13 +442,20 @@ Module <- R6::R6Class(
           best_params,
           keep.null = TRUE
         )
-        self$state$best_score <- scores[best_idx]
-        self$state$best_params <- best_params
-        self$state$best_trial <- best_idx
-        self$state$compiled <- TRUE
         if (is.function(self$apply_optimization_params)) {
           self$apply_optimization_params(best_params)
         }
+        record_optimization_result(
+          self,
+          optimizer = "GridSearch",
+          baseline_score = scores[[1]],
+          best_score = scores[[best_idx]],
+          best_trial = best_idx,
+          best_params = best_params,
+          trials = trials_tbl,
+          stop_reason = "completed",
+          extensions = list(candidate_grid = candidate_grid)
+        )
       } else {
         cli::cli_warn(
           "No valid scores produced during optimisation; configuration left unchanged"
@@ -471,7 +479,8 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
 
       if (hard) {
@@ -673,7 +682,7 @@ Module <- R6::R6Class(
     #' Check if module is compiled/optimized
     #' @return Logical
     is_compiled = function() {
-      isTRUE(self$state$compiled)
+      !is.null(self$state$optimization_result) || isTRUE(self$state$compiled)
     },
 
     #' @description
@@ -951,7 +960,8 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
 
       artifact_copy_runtime(self, new_mod)

@@ -1,5 +1,20 @@
 # Tests for BootstrapFewShotWithRandomSearch teleprompter
 
+bootstrap_rs_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$bootstrap_few_shot_with_random_search,
+    list(
+      best_candidate = result$lineage$best_candidate,
+      best_score = result$best_score,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      error_count = result$budget$total_errors,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 test_that("BootstrapFewShotWithRandomSearch can be created with defaults", {
   tp <- BootstrapFewShotWithRandomSearch()
   expect_s3_class(tp, "dsprrr::BootstrapFewShotWithRandomSearch")
@@ -301,13 +316,15 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
   expect_equal(result$config$teleprompter, "BootstrapFewShotWithRandomSearch")
 
   # Should have optimizer info
-  expect_true("optimizer" %in% names(result$config))
-  expect_true("candidate_programs" %in% names(result$config$optimizer))
-  expect_true("best_candidate" %in% names(result$config$optimizer))
-  expect_true("best_score" %in% names(result$config$optimizer))
+  expect_s3_class(optimization_result(result), "dsprrr_optimization_result")
+  expect_true(
+    "candidate_programs" %in% names(bootstrap_rs_test_metadata(result))
+  )
+  expect_true("best_candidate" %in% names(bootstrap_rs_test_metadata(result)))
+  expect_true("best_score" %in% names(bootstrap_rs_test_metadata(result)))
 
   # Candidates should be ranked
-  candidates <- result$config$optimizer$candidate_programs
+  candidates <- bootstrap_rs_test_metadata(result)$candidate_programs
   expect_gte(length(candidates), 1)
 })
 
@@ -344,7 +361,7 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
 
   # Should have stopped early (first candidate should hit threshold)
   expect_lt(
-    result$config$optimizer$num_candidates_evaluated,
+    bootstrap_rs_test_metadata(result)$num_candidates_evaluated,
     10
   )
 })
@@ -496,14 +513,14 @@ test_that("Bootstrap random search resets its outer budget on valid candidates",
     ),
     "Failed to evaluate candidate"
   )
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_rs_test_metadata(result)$budget_summary
 
   expect_equal(budget$attempts, 3L)
   expect_equal(budget$successes, 1L)
   expect_equal(budget$total_errors, 2L)
   expect_equal(budget$consecutive_errors, 1L)
   expect_false(budget$stopped)
-  expect_identical(result$config$optimizer$best_candidate, "b")
+  expect_identical(bootstrap_rs_test_metadata(result)$best_candidate, "b")
 })
 
 test_that("Bootstrap random search honors caller resource controls", {
@@ -551,7 +568,7 @@ test_that("Bootstrap random search honors caller resource controls", {
       progress = FALSE
     )
   )
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_rs_test_metadata(result)$budget_summary
 
   expect_identical(eval_calls, 2L)
   expect_identical(budget$trials, 2L)
@@ -605,7 +622,7 @@ test_that("Bootstrap random search preserves mixed validation row outcomes", {
       y = c("first", "second")
     )
   )
-  optimizer <- result$config$optimizer
+  optimizer <- bootstrap_rs_test_metadata(result)
   budget <- optimizer$budget_summary
 
   expect_identical(eval_calls, 1L)
@@ -657,7 +674,7 @@ test_that("Bootstrap random search returns baseline when validation is blocked",
       progress = FALSE
     )
   )
-  optimizer <- result$config$optimizer
+  optimizer <- bootstrap_rs_test_metadata(result)
   budget <- optimizer$budget_summary
 
   expect_s3_class(result, "PredictModule")
@@ -692,7 +709,7 @@ test_that("Bootstrap random search preserves its best at the exact limit", {
     compile_candidate = function(config, program, ...) {
       compiled <- copy_module(program)
       compiled$config$candidate_name <- config$name
-      compiled$config$optimizer <- list(error_count = 99L)
+      compiled$config$upstream_error_count <- 99L
       compiled
     },
     eval_program = function(...) {
@@ -719,7 +736,7 @@ test_that("Bootstrap random search preserves its best at the exact limit", {
     ),
     "Failed to evaluate candidate"
   )
-  optimizer <- result$config$optimizer
+  optimizer <- bootstrap_rs_test_metadata(result)
 
   expect_equal(eval_calls, 3L)
   expect_equal(optimizer$num_candidates_evaluated, 3L)
@@ -761,7 +778,7 @@ test_that("Bootstrap random search rejects unusable evaluation scores", {
     ),
     "unusable score"
   )
-  optimizer <- result$config$optimizer
+  optimizer <- bootstrap_rs_test_metadata(result)
   candidate_scores <- vapply(
     optimizer$candidate_programs,
     function(candidate) candidate$score,
@@ -794,7 +811,7 @@ test_that("Bootstrap random search max_errors zero stops after one failure", {
         stop("candidate compilation failed")
       }
       compiled <- copy_module(program)
-      compiled$config$optimizer <- list(error_count = 99L)
+      compiled$config$upstream_error_count <- 99L
       compiled
     },
     eval_program = function(...) {
@@ -817,14 +834,14 @@ test_that("Bootstrap random search max_errors zero stops after one failure", {
     ),
     "Failed to compile candidate"
   )
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_rs_test_metadata(result)$budget_summary
 
   expect_equal(compile_calls, 2L)
   expect_equal(budget$attempts, 2L)
   expect_equal(budget$successes, 1L)
   expect_equal(budget$total_errors, 1L)
   expect_equal(budget$stop_reason$limit, 0L)
-  expect_identical(result$config$optimizer$best_candidate, "a")
+  expect_identical(bootstrap_rs_test_metadata(result)$best_candidate, "a")
 })
 
 test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {

@@ -184,10 +184,10 @@ tp <- BootstrapFewShotWithRandomSearch(
 compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 
 # Access the best score
-print(compiled$config$optimizer$best_score)
+print(optimization_result(compiled)$best_score)
 
 # Access candidate programs (list of program metadata)
-candidates <- compiled$config$optimizer$candidate_programs
+candidates <- optimization_result(compiled)$extensions$bootstrap_few_shot_with_random_search$candidate_programs
 ```
 
 **Parameters:**
@@ -265,7 +265,7 @@ compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 print(compiled$signature@instructions)
 
 # View optimization history
-history <- compiled$config$optimizer$history
+history <- optimization_result(compiled)$extensions$copro$history
 print(history)
 ```
 
@@ -414,7 +414,7 @@ tp_multi <- GEPA(
 compiled <- compile(qa_module, tp_multi, trainset, valset = valset, .llm = llm)
 
 # GEPA returns Pareto-optimal solutions for multi-objective
-pareto <- compiled$config$optimizer$objective_pareto_front
+pareto <- optimization_result(compiled)$extensions$gepa$objective_pareto_front
 print(pareto)
 ```
 
@@ -490,7 +490,7 @@ tp <- Omni(
 compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 
 # Every branch was re-scored with `metric` on the same validation rows.
-compiled$config$optimizer$candidate_programs
+optimization_result(compiled)$extensions$omni$candidate_programs
 ```
 
 Set `parallel = TRUE` to run the exploration branches with mirai. Parallel
@@ -645,20 +645,21 @@ ggplot(trials, aes(x = trial_id, y = score)) +
 ### Accessing Optimizer State
 
 ```{r optimizer-state}
-# After compilation, access optimizer metadata
-compiled$config$optimizer$name
-compiled$config$optimizer$params
-compiled$config$optimizer$best_score
-compiled$config$optimizer$trials
+# After compilation, inspect the common result
+result <- optimization_result(compiled)
+result$optimizer
+result$status
+result$best_score
+result$trials
 
 # For BootstrapFewShotWithRandomSearch
-compiled$config$optimizer$candidate_programs  # List of candidate metadata
+result$extensions$bootstrap_few_shot_with_random_search$candidate_programs
 
 # For COPRO
-compiled$config$optimizer$history
+result$extensions$copro$history
 
 # For GEPA (multi-objective)
-compiled$config$optimizer$objective_pareto_front
+result$extensions$gepa$objective_pareto_front
 ```
 
 ## Resource Budgets and Checkpoints
@@ -686,8 +687,8 @@ partial <- compile(
   control = control
 )
 
-partial$config$optimizer$budget_summary
-partial$config$optimizer$stop_reason
+optimization_result(partial)$budget
+optimization_result(partial)$stop_reason
 ```
 
 Counters are checked before each bounded work unit. Evaluation is subdivided
@@ -777,7 +778,7 @@ tp <- BootstrapFewShot(
 compiled <- compile(qa_module, tp, trainset, .llm = llm)
 
 # Check how many errors occurred
-compiled$config$optimizer$n_errors
+optimization_result(compiled)$budget$total_errors
 ```
 
 ## Performance Tips

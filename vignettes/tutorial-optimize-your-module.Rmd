@@ -147,10 +147,10 @@ Check the best configuration:
 
 ```{r best-config}
 # Best score achieved
-classifier$state$best_score
+optimization_result(classifier)$best_score
 
 # Best parameters
-classifier$state$best_params
+optimization_result(classifier)$best_params
 ```
 
 ## Step 4: The Module Remembers

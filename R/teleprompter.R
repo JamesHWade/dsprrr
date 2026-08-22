@@ -184,6 +184,7 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
     selected_rows <- sample(nrow(trainset), n_demos)
     demos_data <- trainset[selected_rows, , drop = FALSE]
   } else {
+    selected_rows <- seq_len(n_demos)
     demos_data <- trainset[seq_len(n_demos), , drop = FALSE]
   }
 
@@ -198,10 +199,15 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 
   # Update the module's demos
   optimized$demos <- demos
-  optimized$state$compiled <- TRUE
-  optimized$config$compiled <- TRUE
-  optimized$config$teleprompter <- "LabeledFewShot"
   optimized$config$compilation_k <- n_demos
+  record_optimization_result(
+    optimized,
+    optimizer = "LabeledFewShot",
+    best_params = list(k = n_demos),
+    lineage = list(selected_rows = as.integer(selected_rows)),
+    stop_reason = "completed",
+    extensions = list(sample = teleprompter@sample, seed = teleprompter@seed)
+  )
 
   optimized
 }
@@ -239,12 +245,12 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #'
 #' \dontrun{
 #' # Compile picks the variant that scores best on the training set
-#' classifier <- module(signature("text -> sentiment"), type = "predict")
+#' classifier <- module(signature("text -> sentiment"))
 #' trainset <- data.frame(
 #'   text = c("I love it!", "Terrible experience"),
 #'   sentiment = c("positive", "negative")
 #' )
-#' optimized <- compile(tp, classifier, trainset)
+#' optimized <- compile(classifier, tp, trainset)
 #' }
 #' @usage NULL
 #' @export
@@ -399,19 +405,31 @@ compile_gridsearch <- function(
     )
   )
 
-  optimized$config$compiled <- TRUE
-  optimized$config$teleprompter <- "GridSearchTeleprompter"
-  optimized$config$best_variant <- optimized$state$best_params$id %||%
-    NA_character_
-  optimized$config$best_score <- optimized$state$best_score
-  optimized$config$all_variants <- variants
-  optimized$config$all_scores <- stats::setNames(
-    optimized$state$trials$score,
+  grid_result <- optimization_result(optimized)
+  best_variant <- grid_result$best_params$id %||% NA_character_
+  all_scores <- stats::setNames(
+    grid_result$trials$score,
     vapply(
-      optimized$state$trials$parameters,
+      grid_result$trials$parameters,
       function(param) param$id %||% NA_character_,
       character(1)
     )
+  )
+  optimized$config$best_variant <- best_variant
+  optimized$config$best_score <- grid_result$best_score
+  optimized$config$all_variants <- variants
+  optimized$config$all_scores <- all_scores
+  record_optimization_result(
+    optimized,
+    optimizer = "GridSearchTeleprompter",
+    baseline_score = grid_result$baseline_score,
+    best_score = grid_result$best_score,
+    best_trial = grid_result$best_trial,
+    best_params = grid_result$best_params,
+    trials = grid_result$trials,
+    lineage = list(best_variant = best_variant),
+    stop_reason = "completed",
+    extensions = list(variants = variants, all_scores = all_scores)
   )
 
   optimized

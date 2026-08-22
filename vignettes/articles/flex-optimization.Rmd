@@ -351,9 +351,9 @@ and the exact source used for each row. GEPA also records the winning candidate
 ID and validation score:
 
 ```{r router-audit}
-optimized$config$optimizer$best_candidate_id
-optimized$config$optimizer$best_scores
-optimized$config$optimizer$per_val_instance_best_candidates
+optimization_result(optimized)$lineage$best_candidate_id
+optimization_result(optimized)$extensions$gepa$best_scores
+optimization_result(optimized)$extensions$gepa$per_val_instance_best_candidates
 ```
 
 Persist callable tools and factories by registry name rather than embedding

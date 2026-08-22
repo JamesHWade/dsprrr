@@ -27,7 +27,8 @@ NULL
 #' @examples
 #' if (FALSE) {
 #' mod <- module(signature("text -> sentiment"))
-#' optimize_grid(#'   mod,
+#' optimize_grid(
+#'   mod,
 #'   data = train_data,
 #'   metric = metric_exact_match(),
 #'   parameters = list(temperature = c(0.3, 0.7, 1.0))
@@ -46,7 +47,8 @@ best_params <- function(module, flatten = TRUE) {
     return(NULL)
   }
 
-  params <- module$state$best_params
+  result <- optimization_result(module)
+  params <- result$best_params
 
   if (is.null(params)) {
     return(NULL)
@@ -197,10 +199,13 @@ apply_best_config <- function(
     }
   }
 
-  # Mark as compiled if source was compiled
-  if (source$is_compiled()) {
-    target$state$compiled <- TRUE
-    target$state$best_score <- source$state$best_score
+  # Carry the complete result contract when the source was optimized.
+  source_result <- source$state$optimization_result
+  if (!is.null(source_result)) {
+    set_optimization_result(
+      target,
+      rlang::duplicate(source_result, shallow = FALSE)
+    )
   }
 
   invisible(target)
@@ -245,9 +250,15 @@ top_trials.Module <- function(
   objective <- match.arg(objective)
   k <- as.integer(k)
 
-  trials <- x$state$trials
+  result <- optimization_result(x)
+  trials <- result$trials %||% tibble::tibble()
+  if (!"score" %in% names(trials) && "mean_score" %in% names(trials)) {
+    trials$score <- trials$mean_score
+  }
 
-  if (!is.data.frame(trials) || nrow(trials) == 0) {
+  if (
+    !is.data.frame(trials) || nrow(trials) == 0 || !"score" %in% names(trials)
+  ) {
     cli::cli_warn("Module has no optimization trials")
     return(tibble::tibble(
       trial_id = integer(),
@@ -322,7 +333,7 @@ top_trials.TrialLog <- function(
 #'
 #' @examples
 #' if (FALSE) {
-#' mod <- module(signature("text -> sentiment"), type = "predict")
+#' mod <- module(signature("text -> sentiment"))
 #' optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 #' config_diff(mod)
 #' }
@@ -421,7 +432,7 @@ config_diff <- function(module, baseline = NULL) {
 #'
 #' @examples
 #' if (FALSE) {
-#' mod <- module(signature("text -> sentiment"), type = "predict")
+#' mod <- module(signature("text -> sentiment"))
 #' optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 #'
 #' # Get code as string
@@ -533,62 +544,70 @@ optimization_summary <- function(module) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
 
-  trials <- module$state$trials
+  result <- optimization_result(module)
+  trials <- result$trials %||% tibble::tibble()
 
   if (!is.data.frame(trials) || nrow(trials) == 0) {
     return(structure(
       list(
         n_trials = 0L,
-        best_score = NA_real_,
-        best_trial = NA_integer_,
-        best_params = NULL,
+        best_score = result$best_score %||% NA_real_,
+        best_trial = result$best_trial %||% NA_integer_,
+        best_params = result$best_params %||% list(),
         score_range = c(NA_real_, NA_real_),
         total_cost = NA_real_,
         improvement = NA_real_,
-        compiled = FALSE
+        compiled = !is.null(result)
       ),
       class = "dsprrr_optimization_summary"
     ))
   }
 
-  scores <- trials$score
+  scores <- if ("score" %in% names(trials)) {
+    trials$score
+  } else if ("mean_score" %in% names(trials)) {
+    trials$mean_score
+  } else {
+    rep(NA_real_, nrow(trials))
+  }
   valid_scores <- scores[!is.na(scores)]
 
-  # Calculate improvement (first valid score to best)
-  first_score <- valid_scores[1]
-  best_score <- module$state$best_score %||% max(valid_scores, na.rm = TRUE)
+  first_score <- result$baseline_score
+  if (is.na(first_score) && length(valid_scores) > 0L) {
+    first_score <- valid_scores[[1]]
+  }
+  best_score <- result$best_score
   improvement <- if (!is.na(first_score) && !is.na(best_score)) {
     best_score - first_score
   } else {
     NA_real_
   }
 
-  if (!"total_cost" %in% names(trials)) {
-    cli::cli_abort(
-      "Module trial state is missing the required {.field total_cost} column",
-      class = "dsprrr_optimizer_state_error"
-    )
+  total_cost <- if ("total_cost" %in% names(trials)) {
+    tryCatch(sum_cost_values(trials$total_cost), error = function(e) NA_real_)
+  } else {
+    NA_real_
   }
-  total_cost <- tryCatch(
-    sum_cost_values(trials$total_cost),
-    error = function(e) NA_real_
-  )
+  score_range <- if (length(valid_scores) > 0L) {
+    range(valid_scores)
+  } else {
+    c(NA_real_, NA_real_)
+  }
 
   structure(
     list(
       n_trials = nrow(trials),
       best_score = best_score,
-      best_trial = module$state$best_trial,
-      best_params = module$state$best_params,
-      score_range = range(valid_scores, na.rm = TRUE),
+      best_trial = result$best_trial,
+      best_params = result$best_params,
+      score_range = score_range,
       total_cost = total_cost,
       improvement = improvement,
-      compiled = module$is_compiled()
+      compiled = !is.null(result)
     ),
     class = "dsprrr_optimization_summary"
   )
 }
-
 
 #' Print method for optimization summary
 #' @param x An optimization summary object
@@ -604,7 +623,6 @@ print.dsprrr_optimization_summary <- function(x, ...) {
 
   status_icon <- if (x$compiled) cli::symbol$tick else cli::symbol$cross
   cli::cli_text("{status_icon} Compiled: {.val {x$compiled}}")
-
   cli::cli_text("{.field Trials}: {x$n_trials}")
   cli::cli_text(
     "{.field Best Score}: {round(x$best_score, 4)} (trial {x$best_trial})"
@@ -619,11 +637,9 @@ print.dsprrr_optimization_summary <- function(x, ...) {
       "{.field Improvement}: {direction}{round(x$improvement, 4)}"
     )
   }
-
   if (!is.na(x$total_cost) && x$total_cost > 0) {
     cli::cli_text("{.field Total Cost}: ${format(x$total_cost, digits = 4)}")
   }
-
   if (!is.null(x$best_params) && length(x$best_params) > 0) {
     cli::cli_text("{.field Best Parameters}:")
     for (name in names(x$best_params)) {
@@ -633,12 +649,8 @@ print.dsprrr_optimization_summary <- function(x, ...) {
       }
     }
   }
-
   invisible(x)
 }
-
-
-# ---- Helper Functions ----
 
 #' Format a value for display
 #' @noRd

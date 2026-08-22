@@ -70,7 +70,7 @@ llm <- chat_openai(model = "gpt-5-mini")
 The new `optimize_grid()` helper lets you tune a module directly without
 going through a teleprompter first. It evaluates a grid of configuration
 values (defined either as a simple named list or via tidymodels `dials`
-parameters) and records the results in `module$state$trials`.
+parameters) and records the results in `optimization_result(module)$trials`.
 
 ```{r optimize-grid-quick}
 #| cassette: true
@@ -101,8 +101,8 @@ optimize_grid(
   control = list(progress = FALSE)
 )
 
-sentiment_module$state$trials[, c("trial_id", "score", "n_evaluated")]
-sentiment_module$state$best_score
+optimization_result(sentiment_module)$trials[, c("trial_id", "score", "n_evaluated")]
+optimization_result(sentiment_module)$best_score
 ```
 
 If you do have tidymodels installed, you can also describe the search space
@@ -1059,14 +1059,15 @@ is_compiled(optimized) # TRUE
 # View selected demonstrations
 print(optimized$demos)
 
-# Check configuration
-print(optimized$config$teleprompter) # "LabeledFewShot"
-print(optimized$config$compilation_k) # 3
+# Inspect the stable optimization result
+result <- optimization_result(optimized)
+print(result$optimizer) # "LabeledFewShot"
+print(result$best_params$k) # 3
 
-# For GridSearch, see which variant won
-if (optimized$config$teleprompter == "GridSearchTeleprompter") {
-  print(optimized$config$best_variant)
-  print(optimized$config$all_scores)
+# For GridSearch, see which variant won and compare every trial
+if (result$optimizer == "GridSearchTeleprompter") {
+  print(result$best_params)
+  print(result$trials)
 }
 ```
 

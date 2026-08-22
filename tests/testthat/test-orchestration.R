@@ -46,7 +46,7 @@ test_that("pin_module_config saves correct structure", {
   config <- pins::pin_read(board, "test-module")
 
   expect_identical(config$format, "dsprrr-program")
-  expect_identical(config$format_version, 5L)
+  expect_identical(config$format_version, 6L)
   expect_named(
     config,
     c(

@@ -1,5 +1,20 @@
 # Tests for COPRO teleprompter
 
+copro_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$copro,
+    list(
+      final_score = result$best_score,
+      baseline_score = result$baseline_score,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      error_count = result$budget$total_errors,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 new_copro_prompt_chat <- function(chat) {
   new_test_chat(chat = chat)
 }
@@ -264,8 +279,14 @@ test_that("COPRO compile optimizes instructions", {
 
   expect_true(result$config$compiled)
   expect_equal(result$config$teleprompter, "COPRO")
-  expect_true(!is.null(result$config$optimizer$history))
-  expect_true(length(result$config$optimizer$history) > 0)
+  expect_true(!is.null(copro_test_metadata(result)$history))
+  expect_true(length(copro_test_metadata(result)$history) > 0)
+
+  restored <- restore_module_config(program_artifact(result))
+  expect_equal(
+    optimization_result(restored)$best_params,
+    optimization_result(result)$best_params
+  )
 })
 
 test_that("COPRO tracks instruction history when track_stats is TRUE", {
@@ -304,10 +325,10 @@ test_that("COPRO tracks instruction history when track_stats is TRUE", {
   result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   # Should have history recorded
-  expect_true(length(result$config$optimizer$history) > 0)
+  expect_true(length(copro_test_metadata(result)$history) > 0)
 
   # First entry should be the baseline
-  baseline <- result$config$optimizer$history[[1]]
+  baseline <- copro_test_metadata(result)$history[[1]]
   expect_equal(baseline$iteration, 0L)
   expect_equal(baseline$instructions, "Answer the question")
 })
@@ -347,7 +368,7 @@ test_that("COPRO does not track history when track_stats is FALSE", {
 
   result <- compile(mod, tp, trainset, .llm = mock_llm)
 
-  expect_null(result$config$optimizer$history)
+  expect_null(copro_test_metadata(result)$history)
 })
 
 test_that("COPRO print method works", {
@@ -536,7 +557,7 @@ test_that("COPRO preserves the best candidate when evaluation exhausts budget", 
     module(signature("question -> answer")),
     data.frame(question = "q", answer = "a")
   )
-  optimizer <- result$config$optimizer
+  optimizer <- copro_test_metadata(result)
 
   expect_equal(eval_calls, 3L)
   expect_equal(generation_calls, 2L)
@@ -607,7 +628,7 @@ test_that("COPRO retains partial evidence without selecting or logging it", {
       log_dir = log_dir
     )
   )
-  optimizer <- result$config$optimizer
+  optimizer <- copro_test_metadata(result)
 
   expect_equal(eval_calls, 3L)
   expect_identical(result$signature@instructions, "Baseline")

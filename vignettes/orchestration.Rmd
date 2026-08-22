@@ -99,13 +99,13 @@ Functions, tools, retrievers, runners, interpreter factories, and other runtime
 objects are not captured implicitly. Supply a named `registry` to persist
 stable IDs and pass the same registry to `restore_module_config()`. Arbitrary
 embedded runtime values require `trusted = TRUE` both when writing and
-restoring. Version 5 records exactly one of `runner` or `interpreter_factory`
+restoring. Version 6 records exactly one of `runner` or `interpreter_factory`
 for each code-executing module without invoking a factory while writing or
 restoring the artifact. It preserves Flex source/runtime limits and
 registry-backed tools, and stores the graph-visible RLM `generate_action` and
 `extract` children with their tuned state.
 
-Restoration accepts only the current version 5 closed schema. Manifests with
+Restoration accepts only the current version 6 closed schema. Manifests with
 any other format version are rejected before module construction. The stored
 signature remains authoritative. To change a signature, update the source
 program and write a new artifact.

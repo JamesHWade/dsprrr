@@ -1,5 +1,19 @@
 # Tests for SIMBA teleprompter
 
+simba_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$simba,
+    list(
+      best_score = result$best_score,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      error_count = result$budget$total_errors,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 new_simba_prompt_chat <- function(chat) {
   new_test_chat(chat = chat)
 }
@@ -256,7 +270,7 @@ test_that("SIMBA compile applies rules and demos when improved", {
   expect_equal(result$config$teleprompter, "SIMBA")
   expect_true(grepl("SIMBA_RULE", result$signature@instructions, fixed = TRUE))
   expect_true(length(result$demos) > 0)
-  expect_true("SIMBA_RULE" %in% result$config$optimizer$rules)
+  expect_true("SIMBA_RULE" %in% simba_test_metadata(result)$rules)
 })
 
 test_that("SIMBA returns empty variability diagnostics when its budget stops", {
@@ -366,7 +380,7 @@ test_that("SIMBA preserves and reports a complete baseline over a biased partial
       log_dir = log_dir
     )
   )
-  optimizer <- result$config$optimizer
+  optimizer <- simba_test_metadata(result)
 
   expect_equal(eval_calls, 5L)
   expect_identical(result$signature@instructions, "Baseline")

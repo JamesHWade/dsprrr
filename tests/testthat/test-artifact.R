@@ -120,10 +120,11 @@ expect_artifact_manifest_rejected <- function(artifact, info) {
 test_that("artifacts round-trip nested graphs and shared identity", {
   shared <- artifact_leaf()
   shared$demos <- list(list(text = "example", answer = "response"))
-  shared$state$compiled <- TRUE
-  shared$config$optimizer <- list(
-    method = "test-optimizer",
-    budget_summary = list(successes = 4L, errors = 0L)
+  dsprrr:::record_optimization_result(
+    shared,
+    optimizer = "TestOptimizer",
+    budget = list(successes = 4L, errors = 0L),
+    stop_reason = "completed"
   )
   vote <- ensemble(list(left = shared, right = shared))
   wrapped <- best_of_n(vote, N = 2L)
@@ -157,7 +158,7 @@ test_that("artifacts round-trip nested graphs and shared identity", {
   expect_identical(restored_vote$modules$left$demos, shared$demos)
   expect_identical(restored_vote$modules$left$is_compiled(), TRUE)
   expect_identical(
-    restored_vote$modules$left$config$optimizer$budget_summary$successes,
+    optimization_result(restored_vote$modules$left)$budget$successes,
     4L
   )
   expect_identical(
@@ -307,7 +308,7 @@ test_that("program artifact IDs reject malformed inputs and forged manifests", {
   )
 })
 
-test_that("pre-change v5 runtime exclusions preserve identity after restore", {
+test_that("runtime exclusions preserve identity after restore", {
   artifact <- program_artifact(artifact_leaf())
   excluded_fields <- c("traces", "cache")
   artifact$exclusions <- lapply(
@@ -639,17 +640,21 @@ test_that("credentials and runtime history are excluded recursively", {
   program$config$nested <- list(access_token = sentinel, safe = "kept")
   program$config$named <- c(api_key = sentinel, safe = "kept")
   program$config$prompt <- sentinel
-  program$config$optimizer <- list(
-    method = "safe",
-    candidate_instructions = sentinel,
-    instruction_candidates = sentinel,
-    all_generations = sentinel,
-    trial_history = sentinel,
-    stop_reason = "complete"
+  dsprrr:::record_optimization_result(
+    program,
+    optimizer = "TestOptimizer",
+    best_params = list(temperature = 0.2, credentials = sentinel),
+    trials = tibble::tibble(prompt = sentinel),
+    stop_reason = "complete",
+    extensions = list(
+      method = "safe",
+      candidate_instructions = sentinel,
+      instruction_candidates = sentinel,
+      all_generations = sentinel,
+      trial_history = sentinel
+    )
   )
-  program$state$best_params <- list(temperature = 0.2, credentials = sentinel)
   program$state$traces <- list(list(prompt = sentinel, response = sentinel))
-  program$state$trials <- tibble::tibble(prompt = sentinel)
   program$state$optimization_history <- list(response = sentinel)
 
   artifact <- program_artifact(program)
@@ -666,14 +671,16 @@ test_that("credentials and runtime history are excluded recursively", {
   expect_identical(restored$config$nested$safe, "kept")
   expect_identical(restored$config$named, c(safe = "kept"))
   expect_null(restored$config$prompt)
-  expect_identical(restored$config$optimizer$method, "safe")
-  expect_identical(restored$config$optimizer$stop_reason, "complete")
-  expect_null(restored$config$optimizer$candidate_instructions)
-  expect_null(restored$config$optimizer$instruction_candidates)
-  expect_null(restored$config$optimizer$all_generations)
-  expect_null(restored$config$optimizer$trial_history)
-  expect_identical(restored$state$best_params$temperature, 0.2)
-  expect_null(restored$state$best_params$credentials)
+  result <- optimization_result(restored)
+  details <- result$extensions$test_optimizer
+  expect_identical(details$method, "safe")
+  expect_identical(result$stop_reason, "complete")
+  expect_null(details$candidate_instructions)
+  expect_null(details$instruction_candidates)
+  expect_null(details$all_generations)
+  expect_null(details$trial_history)
+  expect_identical(result$best_params$temperature, 0.2)
+  expect_null(result$best_params$credentials)
   expect_length(restored$state$traces, 0L)
   expect_length(restored$state$trials, 0L)
   expect_setequal(
@@ -1918,26 +1925,32 @@ test_that("arbitrary runtime objects honor registry and dual trusted opt-in", {
 test_that("generated optimizer prompts and demo payloads are excluded", {
   sentinel <- "SIMBA_GENERATED_SENTINEL"
   program <- artifact_leaf()
-  program$config$optimizer <- list(
-    steps = 3L,
+  dsprrr:::record_optimization_result(
+    program,
+    optimizer = "SIMBA",
     best_score = 0.9,
-    n_rules = 1L,
-    rules = sentinel,
-    demos_added = list(list(text = sentinel, answer = sentinel))
+    stop_reason = "completed",
+    extensions = list(
+      steps = 3L,
+      n_rules = 1L,
+      rules = sentinel,
+      demos_added = list(list(text = sentinel, answer = sentinel))
+    )
   )
 
   artifact <- program_artifact(program)
   rendered <- paste(capture.output(dput(artifact)), collapse = "\n")
   exported <- export_module_code(program, include_demos = FALSE)
-  optimizer <- artifact$graph$nodes[["$"]]$config$optimizer
+  result <- artifact$graph$nodes[["$"]]$optimization$provenance
+  details <- result$extensions$simba
 
   expect_false(grepl(sentinel, rendered, fixed = TRUE))
   expect_false(grepl(sentinel, exported, fixed = TRUE))
-  expect_identical(optimizer$steps, 3L)
-  expect_identical(optimizer$best_score, 0.9)
-  expect_identical(optimizer$n_rules, 1L)
-  expect_null(optimizer$rules)
-  expect_null(optimizer$demos_added)
+  expect_identical(details$steps, 3L)
+  expect_identical(result$best_score, 0.9)
+  expect_identical(details$n_rules, 1L)
+  expect_null(details$rules)
+  expect_null(details$demos_added)
 })
 
 test_that("local files atomically replace and preserve the old target on failure", {
@@ -2352,7 +2365,7 @@ test_that("pins transports the exact graph manifest", {
   restored <- restore_module_config(artifact)
 
   expect_identical(artifact$format, "dsprrr-program")
-  expect_identical(artifact$format_version, 5L)
+  expect_identical(artifact$format_version, 6L)
   expect_identical(
     artifact$integrity,
     dsprrr:::artifact_integrity(artifact)

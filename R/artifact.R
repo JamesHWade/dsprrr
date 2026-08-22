@@ -11,7 +11,7 @@
 #' `registry` to store stable IDs, or set `trusted = TRUE` to embed them. Embedded
 #' values are restored only when `trusted = TRUE` is also supplied while loading.
 #' Registry IDs are the recommended contract for tools, custom functions,
-#' retrievers, stores, code runners, and interpreter factories. Format version 5
+#' retrievers, stores, code runners, and interpreter factories. Format version 6
 #' is the sole supported format. It records exactly one runner or factory for
 #' each code-executing module, preserves the complete Flex runtime contract, and
 #' stores graph-visible RLM action and extraction predictors. Manifests with any
@@ -86,7 +86,7 @@
 #' @name program-artifact
 NULL
 
-artifact_format_version <- function() 5L
+artifact_format_version <- function() 6L
 
 #' @rdname program-artifact
 #' @export
@@ -528,11 +528,18 @@ artifact_serialize_node <- function(
     optimization = list(
       compiled = is_module_compiled_internal(module),
       teleprompter = config$teleprompter,
-      provenance = config$optimizer,
+      provenance = artifact_sanitize_value(
+        module$state$optimization_result,
+        paste0(node_path, ".optimization.provenance"),
+        registry,
+        trusted,
+        exclusions,
+        drop_runtime_names = TRUE
+      ),
       best_score = state$best_score,
       best_trial = state$best_trial,
       best_params = state$best_params,
-      n_trials = artifact_module_n_trials(module, config)
+      n_trials = artifact_module_n_trials(module)
     ),
     provider_model = artifact_provider_model(module$chat) %||%
       artifact_detached_runtime(module)$chat,
@@ -541,18 +548,15 @@ artifact_serialize_node <- function(
   )
 }
 
-artifact_module_n_trials <- function(module, config) {
+artifact_module_n_trials <- function(module) {
+  result <- module$state$optimization_result
+  if (!is.null(result) && is.data.frame(result$trials)) {
+    return(as.integer(nrow(result$trials)))
+  }
   observed <- if (is.data.frame(module$state$trials)) {
     nrow(module$state$trials)
   } else {
     0L
-  }
-  recorded <- config$optimizer$n_trials
-  if (
-    observed == 0L &&
-      artifact_is_number_scalar(recorded, whole = TRUE, minimum = 0)
-  ) {
-    return(as.integer(recorded))
   }
   as.integer(observed)
 }
@@ -2902,15 +2906,45 @@ artifact_validate_state_and_optimization <- function(node, malformed) {
       " has optimizer metadata inconsistent with persisted state."
     ))
   }
-  if (
-    !identical(optimization$teleprompter, node$config$teleprompter) ||
-      !identical(optimization$provenance, node$config$optimizer)
-  ) {
+  if (!identical(optimization$teleprompter, node$config$teleprompter)) {
     malformed(paste0(
       "Node ",
       node$id,
       " has optimizer metadata inconsistent with persisted config."
     ))
+  }
+  provenance <- optimization$provenance
+  if (!is.null(provenance)) {
+    if (!optimization_result_record_valid(provenance)) {
+      malformed(paste0(
+        "Node ",
+        node$id,
+        " has malformed optimization result provenance."
+      ))
+    }
+    provenance_score <- if (is.na(provenance$best_score)) {
+      NULL
+    } else {
+      provenance$best_score
+    }
+    provenance_trial <- if (is.na(provenance$best_trial)) {
+      NULL
+    } else {
+      provenance$best_trial
+    }
+    if (
+      !identical(provenance$optimizer, optimization$teleprompter) ||
+        !identical(provenance_score, optimization$best_score) ||
+        !identical(provenance_trial, optimization$best_trial) ||
+        !identical(provenance$best_params, optimization$best_params) ||
+        nrow(provenance$trials) != optimization$n_trials
+    ) {
+      malformed(paste0(
+        "Node ",
+        node$id,
+        " has optimization result inconsistent with persisted metadata."
+      ))
+    }
   }
   invisible(node$state)
 }
@@ -4299,6 +4333,14 @@ artifact_restore_common <- function(module, node, registry, trusted) {
     module$state[[name]] <- state[[name]]
   }
   module$state$compiled <- isTRUE(state$compiled)
+  result <- artifact_restore_value(
+    node$optimization$provenance,
+    registry,
+    trusted
+  )
+  if (!is.null(result)) {
+    set_optimization_result(module, result)
+  }
   runtime_metadata <- list()
   if (!is.null(node$provider_model)) {
     runtime_metadata$chat <- node$provider_model

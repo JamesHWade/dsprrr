@@ -1,3 +1,20 @@
+harness_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions[[optimization_extension_key(result$optimizer)]],
+    list(
+      baseline_score = result$baseline_score,
+      best_score = result$best_score,
+      best_candidate_id = result$lineage$best_candidate_id,
+      candidates = result$trials,
+      termination = result$stop_reason,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 make_harness_task_llm <- function() {
   new_test_chat(
     chat_structured = function(prompt, type, ...) {
@@ -117,14 +134,17 @@ test_that("AutoResearch owns a persistent sandbox and experiment loop", {
 
   expect_identical(compiled$config$teleprompter, "AutoResearch")
   expect_identical(compiled$signature@instructions, "perfect")
-  expect_equal(compiled$config$optimizer$baseline_score, 0)
-  expect_equal(compiled$config$optimizer$best_score, 1)
-  expect_identical(compiled$config$optimizer$termination, "agent_finished")
-  expect_identical(compiled$config$optimizer$agent_steps, 3L)
-  expect_identical(compiled$config$optimizer$sandbox$sandboxed, TRUE)
+  expect_equal(harness_test_metadata(compiled)$baseline_score, 0)
+  expect_equal(harness_test_metadata(compiled)$best_score, 1)
+  expect_identical(
+    harness_test_metadata(compiled)$termination,
+    "agent_finished"
+  )
+  expect_identical(harness_test_metadata(compiled)$agent_steps, 3L)
+  expect_identical(harness_test_metadata(compiled)$sandbox$sandboxed, TRUE)
   expect_length(sandbox$inputs(), 1L)
 
-  candidates <- compiled$config$optimizer$candidates
+  candidates <- harness_test_metadata(compiled)$candidates
   expect_equal(nrow(candidates), 2L)
   expect_identical(candidates$selected, c(FALSE, TRUE))
   expect_match(agent$prompts()[[2L]], "sandbox")
@@ -161,10 +181,13 @@ test_that("MetaHarness evaluates a batch and controls the frontier", {
 
   expect_identical(compiled$config$teleprompter, "MetaHarness")
   expect_identical(compiled$signature@instructions, "perfect")
-  expect_identical(compiled$config$optimizer$termination, "max_iterations")
-  expect_equal(nrow(compiled$config$optimizer$candidates), 3L)
-  expect_length(compiled$config$optimizer$frontier_ids, 2L)
-  expect_identical(compiled$config$optimizer$iterations, 1L)
+  expect_identical(
+    harness_test_metadata(compiled)$termination,
+    "max_iterations"
+  )
+  expect_equal(nrow(harness_test_metadata(compiled)$candidates), 3L)
+  expect_length(harness_test_metadata(compiled)$frontier_ids, 2L)
+  expect_identical(harness_test_metadata(compiled)$iterations, 1L)
 })
 
 test_that("MetaHarness can optimize multiple pipeline components jointly", {
@@ -227,7 +250,7 @@ test_that("MetaHarness can optimize multiple pipeline components jointly", {
     components[["$/steps/2"]]$signature@instructions,
     "second-perfect"
   )
-  expect_equal(compiled$config$optimizer$best_score, 1)
+  expect_equal(harness_test_metadata(compiled)$best_score, 1)
 })
 
 test_that("agentic harnesses materialize both RLM predictor leaves", {
@@ -306,8 +329,8 @@ test_that("agentic harnesses materialize both RLM predictor leaves", {
       compiled$extract$signature@instructions,
       "EXTRACT-HARNESS"
     )
-    expect_identical(compiled$config$optimizer$baseline_score, 0)
-    expect_identical(compiled$config$optimizer$best_score, 1)
+    expect_identical(harness_test_metadata(compiled)$baseline_score, 0)
+    expect_identical(harness_test_metadata(compiled)$best_score, 1)
     expect_setequal(
       names(named_parameters(compiled, boundaries = "cross")),
       c("$/generate_action", "$/extract")
@@ -341,8 +364,8 @@ test_that("MetaHarness deduplicates candidates by canonical snapshot", {
     runner = sandbox$runner
   )
 
-  candidates <- compiled$config$optimizer$candidates
-  events <- compiled$config$optimizer$events
+  candidates <- harness_test_metadata(compiled)$candidates
+  events <- harness_test_metadata(compiled)$events
   event_types <- vapply(events, `[[`, character(1), "type")
   expect_equal(nrow(candidates), 2L)
   expect_in("candidate_duplicate", event_types)
@@ -541,14 +564,14 @@ test_that("sandbox false disables agent code execution", {
   )
 
   event_types <- vapply(
-    compiled$config$optimizer$events,
+    harness_test_metadata(compiled)$events,
     `[[`,
     character(1),
     "type"
   )
   expect_in("sandbox_rejected", event_types)
   expect_length(sandbox$inputs(), 0L)
-  expect_identical(compiled$config$optimizer$sandbox$backend, "disabled")
+  expect_identical(harness_test_metadata(compiled)$sandbox$backend, "disabled")
 })
 
 test_that("AutoResearch limits count only accepted evaluations", {
@@ -591,13 +614,16 @@ test_that("AutoResearch limits count only accepted evaluations", {
     runner = sandbox$runner
   )
 
-  events <- compiled$config$optimizer$events
+  events <- harness_test_metadata(compiled)$events
   event_types <- vapply(events, `[[`, character(1), "type")
   expect_in("candidate_rejected", event_types)
   expect_in("candidate_duplicate", event_types)
-  expect_equal(nrow(compiled$config$optimizer$candidates), 2L)
-  expect_identical(compiled$config$optimizer$iterations, 1L)
-  expect_identical(compiled$config$optimizer$termination, "max_iterations")
+  expect_equal(nrow(harness_test_metadata(compiled)$candidates), 2L)
+  expect_identical(harness_test_metadata(compiled)$iterations, 1L)
+  expect_identical(
+    harness_test_metadata(compiled)$termination,
+    "max_iterations"
+  )
   expect_identical(compiled$signature@instructions, "perfect")
 })
 
@@ -625,11 +651,11 @@ test_that("non-improving candidates never displace the baseline", {
     runner = make_harness_runner()$runner
   )
 
-  candidates <- compiled$config$optimizer$candidates
+  candidates <- harness_test_metadata(compiled)$candidates
   expect_identical(compiled$signature@instructions, "seed")
   expect_identical(candidates$selected, c(TRUE, FALSE))
   expect_identical(candidates$improved, c(TRUE, FALSE))
-  expect_equal(compiled$config$optimizer$best_score, 0)
+  expect_equal(harness_test_metadata(compiled)$best_score, 0)
 })
 
 test_that("malformed actions and runner failures stay inside the harness", {
@@ -668,13 +694,16 @@ test_that("malformed actions and runner failures stay inside the harness", {
     runner = failing_runner
   )
 
-  events <- compiled$config$optimizer$events
+  events <- harness_test_metadata(compiled)$events
   event_types <- vapply(events, `[[`, character(1), "type")
   sandbox_event <- events[[which(event_types == "sandbox")[[1L]]]]
   expect_in("invalid_action", event_types)
   expect_false(sandbox_event$success)
   expect_match(sandbox_event$output, "sandbox unavailable")
-  expect_identical(compiled$config$optimizer$termination, "agent_finished")
+  expect_identical(
+    harness_test_metadata(compiled)$termination,
+    "agent_finished"
+  )
 })
 
 test_that("MetaHarness checkpoints and resumes without repeating baseline", {
@@ -702,7 +731,7 @@ test_that("MetaHarness checkpoints and resumes without repeating baseline", {
       checkpoint_path = checkpoint
     )
   )
-  expect_equal(nrow(first$config$optimizer$candidates), 1L)
+  expect_equal(nrow(harness_test_metadata(first)$candidates), 1L)
 
   resumed <- compile(
     harness_program(),
@@ -722,7 +751,7 @@ test_that("MetaHarness checkpoints and resumes without repeating baseline", {
     )
   )
 
-  expect_identical(resumed$config$optimizer$resumed, TRUE)
-  expect_equal(nrow(resumed$config$optimizer$candidates), 2L)
+  expect_identical(harness_test_metadata(resumed)$resumed, TRUE)
+  expect_equal(nrow(harness_test_metadata(resumed)$candidates), 2L)
   expect_identical(resumed$signature@instructions, "perfect")
 })

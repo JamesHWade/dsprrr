@@ -290,7 +290,7 @@ optimize_grid(  mod,
 )
 
 # Best configuration is automatically selected
-mod$state$best_score  # 0.82
+optimization_result(mod)$best_score  # 0.82
 ```
 
 Optimization only works because metrics provide objective feedback.

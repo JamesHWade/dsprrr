@@ -27,7 +27,7 @@ First development changelog. dsprrr is experimental; the API may change.
   integration, persistence, or inspection capabilities.
 
 * Runtime contracts are current-only. Program artifacts accept format version
-  5; persisted trial records require their complete versioned schema; batch
+  6; persisted trial records require their complete versioned schema; batch
   execution accepts `.concurrency` only; code runners implement `start()`,
   `execute()`, and `shutdown()`; RLM uses `max_iterations`, `llm_query()`, and
   `llm_query_batched()`; and Predict templates interpolate documented
@@ -105,6 +105,14 @@ First development changelog. dsprrr is experimental; the API may change.
   supplied, training rows remain exclusive to discovery/reflection while
   validation rows drive selection, per-example winners, and optional retained
   outputs.
+
+* `optimization_result()` provides one read-only result contract across every
+  optimizer, including optimizer identity, completion or partial status,
+  baseline and best scores, winning parameters, trial evidence, lineage,
+  budget use, stop reason, and namespaced optimizer-specific extensions.
+  `best_params()`, `top_trials()`, and `optimization_summary()` now inspect this
+  contract rather than mutable module internals, and program artifacts preserve
+  the durable result schema and policy-safe evidence across save and restore (#131).
 
 * `program_of_thought()`, `code_act()`, and `rlm_module()` now accept an
   `interpreter_factory`: a zero-argument function that creates one fresh,

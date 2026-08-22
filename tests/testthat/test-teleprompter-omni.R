@@ -171,23 +171,25 @@ test_that("Omni explores from one seed and continues from the winner", {
 
   expect_equal(compiled$config$marker, "b-c")
   expect_equal(compiled$config$teleprompter, "Omni")
-  expect_equal(compiled$config$optimizer$exploration_winner, "b")
-  expect_equal(compiled$config$optimizer$best_phase, "continue")
+  result <- optimization_result(compiled)
+  details <- result$extensions$omni
+  expect_equal(details$exploration_winner, "b")
+  expect_equal(details$best_phase, "continue")
   expect_equal(
-    compiled$config$optimizer$best_optimizer,
+    details$best_optimizer,
     "dsprrr::OmniMarkingTeleprompter"
   )
 
-  candidates <- compiled$config$optimizer$candidate_programs
+  candidates <- details$candidate_programs
   expect_equal(
     candidates$optimizer,
     c("baseline", "a", "b", "dsprrr::OmniMarkingTeleprompter")
   )
   expect_equal(candidates$score, c(0, 0.2, 0.8, 1))
   expect_equal(which(candidates$selected), 4L)
-  expect_equal(candidates$program[[2]]$config$input_marker, "seed")
-  expect_equal(candidates$program[[3]]$config$input_marker, "seed")
-  expect_equal(candidates$program[[4]]$config$input_marker, "b")
+  expect_equal(candidates$program_config[[2]]$input_marker, "seed")
+  expect_equal(candidates$program_config[[3]]$input_marker, "seed")
+  expect_equal(candidates$program_config[[4]]$input_marker, "b")
 })
 
 test_that("Omni preserves the best program when continuation regresses", {
@@ -202,8 +204,9 @@ test_that("Omni preserves the best program when continuation regresses", {
   )
 
   expect_equal(compiled$config$marker, "b")
-  expect_equal(compiled$config$optimizer$best_phase, "explore")
-  expect_equal(compiled$config$optimizer$best_optimizer, "b")
+  details <- optimization_result(compiled)$extensions$omni
+  expect_equal(details$best_phase, "explore")
+  expect_equal(details$best_optimizer, "b")
 })
 
 test_that("Omni isolates explorer failures", {
@@ -227,13 +230,14 @@ test_that("Omni isolates explorer failures", {
     )
   )
 
+  details <- optimization_result(compiled)$extensions$omni
   expect_equal(compiled$config$marker, "b-c")
   expect_equal(
-    compiled$config$optimizer$candidate_programs$error[[2]],
+    details$candidate_programs$error[[2]],
     "intentional Omni explorer failure"
   )
   expect_equal(
-    compiled$config$optimizer$flag_compilation_error_occurred,
+    details$flag_compilation_error_occurred,
     TRUE
   )
 })
@@ -312,7 +316,7 @@ test_that("Omni supports mirai exploration without a shared chat object", {
   )
 
   expect_equal(compiled$config$marker, "b-c")
-  expect_equal(compiled$config$optimizer$parallel, TRUE)
+  expect_equal(optimization_result(compiled)$extensions$omni$parallel, TRUE)
 })
 
 test_that("Omni requires worker-visible credentials for parallel exploration", {

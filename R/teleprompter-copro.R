@@ -55,7 +55,7 @@
 #' )
 #'
 #' # Access instruction history
-#' compiled$config$optimizer$history
+#' optimization_result(compiled)$extensions$copro$history
 #' }
 COPRO <- S7::new_class(
   "COPRO",
@@ -483,27 +483,57 @@ compile_copro <- function(
     instructions = best_instructions
   )
 
-  best_program$state$compiled <- TRUE
-  best_program$config$compiled <- TRUE
-  best_program$config$teleprompter <- "COPRO"
   budget_summary <- optimizer_budget_summary(budget)
-  best_program$config$optimizer <- list(
-    breadth = teleprompter@breadth,
-    depth = teleprompter@depth,
-    init_temperature = teleprompter@init_temperature,
-    final_score = best_score,
-    best_complete = best_complete,
-    baseline_score = best_eval@mean_score,
-    baseline_complete = optimizer_budget_unit_completed(
-      budget,
-      "copro:baseline"
+  history <- instruction_history
+  history_trials <- tibble::tibble(
+    trial_id = seq_along(history),
+    iteration = vapply(history, `[[`, integer(1), "iteration"),
+    candidate = vapply(
+      history,
+      function(x) x$candidate %||% NA_integer_,
+      integer(1)
     ),
-    history = if (teleprompter@track_stats) instruction_history else NULL,
-    iterations_completed = iterations_completed,
-    error_count = budget_summary$total_errors,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(budget)
+    instructions = vapply(history, `[[`, character(1), "instructions"),
+    score = vapply(history, `[[`, numeric(1), "score"),
+    complete = vapply(history, `[[`, logical(1), "complete"),
+    is_best = vapply(history, `[[`, logical(1), "is_best")
+  )
+  best_trial <- if (nrow(history_trials) > 0L) {
+    which.max(replace(history_trials$score, is.na(history_trials$score), -Inf))
+  } else {
+    NULL
+  }
+  best_params <- if (is.null(best_trial)) {
+    list()
+  } else {
+    list(
+      iteration = history_trials$iteration[[best_trial]],
+      candidate = history_trials$candidate[[best_trial]]
+    )
+  }
+  record_optimization_result(
+    best_program,
+    optimizer = "COPRO",
+    status = if (optimizer_budget_stopped(budget)) "partial" else "completed",
+    baseline_score = best_eval@mean_score,
+    best_score = best_score,
+    best_trial = best_trial,
+    best_params = best_params,
+    trials = history_trials,
+    lineage = list(iterations_completed = iterations_completed),
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = list(
+      breadth = teleprompter@breadth,
+      depth = teleprompter@depth,
+      init_temperature = teleprompter@init_temperature,
+      best_complete = best_complete,
+      baseline_complete = optimizer_budget_unit_completed(
+        budget,
+        "copro:baseline"
+      ),
+      history = if (teleprompter@track_stats) instruction_history else NULL
+    )
   )
 
   best_program

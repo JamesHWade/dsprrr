@@ -27,7 +27,7 @@ Useful for understanding the effect of optimization on module settings.
 }
 \examples{
 if (FALSE) {
-mod <- module(signature("text -> sentiment"), type = "predict")
+mod <- module(signature("text -> sentiment"))
 optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 config_diff(mod)
 }
@@ -38,6 +38,7 @@ Other optimizer accessors:
 \code{\link[=best_demos]{best_demos()}},
 \code{\link[=best_params]{best_params()}},
 \code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
 }

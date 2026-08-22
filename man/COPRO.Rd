@@ -77,6 +77,6 @@ compiled <- compile(
 )
 
 # Access instruction history
-compiled$config$optimizer$history
+optimization_result(compiled)$extensions$copro$history
 }
 }

@@ -292,6 +292,8 @@ reference:
   - title: Optimization Results
     desc: Inspect trials, extract best configurations, and export
     contents:
+    - optimization_result
+    - print.dsprrr_optimization_result
     - optimizer-accessors
     - best_params
     - best_demos

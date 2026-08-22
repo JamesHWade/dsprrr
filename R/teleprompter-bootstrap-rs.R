@@ -64,7 +64,7 @@
 #' compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 #'
 #' # Access ranked candidates
-#' compiled$config$optimizer$candidate_programs
+#' optimization_result(compiled)$extensions$bootstrap_few_shot_with_random_search$candidate_programs
 #' }
 BootstrapFewShotWithRandomSearch <- S7::new_class(
   "BootstrapFewShotWithRandomSearch",
@@ -588,32 +588,46 @@ compile_bootstrap_rs <- function(
     }
   }
 
-  # Update program state
-  best_program$state$compiled <- TRUE
-  best_program$config$compiled <- TRUE
-  best_program$config$teleprompter <- "BootstrapFewShotWithRandomSearch"
   budget_summary <- optimizer_budget_summary(budget)
-  best_program$config$optimizer <- list(
-    num_candidates_evaluated = length(results),
-    best_candidate = if (!is.null(best_candidate)) {
-      best_candidate$name
-    } else {
-      NA_character_
-    },
-    best_score = if (is.finite(best_score)) best_score else NA_real_,
-    best_complete = !is.null(best_candidate),
-    candidate_programs = lapply(ranked_results, function(r) {
-      list(
-        name = r$name,
-        score = r$score,
-        config = r$config,
-        complete = isTRUE(r$complete)
-      )
-    }),
-    error_count = budget_summary$total_errors,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(budget)
+  candidate_programs <- lapply(ranked_results, function(r) {
+    list(
+      name = r$name,
+      score = r$score,
+      config = r$config,
+      complete = isTRUE(r$complete),
+      error = r$error_message %||% NA_character_
+    )
+  })
+  candidate_trials <- tibble::tibble(
+    trial_id = seq_along(candidate_programs),
+    name = vapply(candidate_programs, `[[`, character(1), "name"),
+    score = vapply(candidate_programs, `[[`, numeric(1), "score"),
+    parameters = lapply(candidate_programs, `[[`, "config"),
+    complete = vapply(candidate_programs, `[[`, logical(1), "complete"),
+    error = vapply(candidate_programs, `[[`, character(1), "error")
+  )
+  best_name <- if (!is.null(best_candidate)) {
+    best_candidate$name
+  } else {
+    NA_character_
+  }
+  best_trial <- match(best_name, candidate_trials$name)
+  record_optimization_result(
+    best_program,
+    optimizer = "BootstrapFewShotWithRandomSearch",
+    status = if (optimizer_budget_stopped(budget)) "partial" else "completed",
+    best_score = if (is.finite(best_score)) best_score else NULL,
+    best_trial = if (is.na(best_trial)) NULL else best_trial,
+    best_params = best_candidate %||% list(),
+    trials = candidate_trials,
+    lineage = list(best_candidate = best_name),
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = list(
+      num_candidates_evaluated = length(results),
+      best_complete = !is.null(best_candidate),
+      candidate_programs = candidate_programs
+    )
   )
 
   best_program

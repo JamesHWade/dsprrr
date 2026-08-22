@@ -157,8 +157,8 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
     control = control()
   )
   expect_equal(calls, 1L)
-  expect_true(gepa$config$optimizer$partial)
-  expect_equal(gepa$config$optimizer$budget_summary$metric_calls, 1L)
+  expect_true(identical(optimization_result(gepa)$status, "partial"))
+  expect_equal(optimization_result(gepa)$budget$metric_calls, 1L)
 
   calls <- 0L
   simba <- dsprrr:::compile_simba(
@@ -168,8 +168,8 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
     control = control()
   )
   expect_equal(calls, 1L)
-  expect_true(simba$config$optimizer$partial)
-  expect_equal(simba$config$optimizer$budget_summary$metric_calls, 1L)
+  expect_true(identical(optimization_result(simba)$status, "partial"))
+  expect_equal(optimization_result(simba)$budget$metric_calls, 1L)
 
   calls <- 0L
   copro <- dsprrr:::compile_copro(
@@ -179,8 +179,8 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
     control = control()
   )
   expect_equal(calls, 1L)
-  expect_true(copro$config$optimizer$partial)
-  expect_equal(copro$config$optimizer$budget_summary$metric_calls, 1L)
+  expect_true(identical(optimization_result(copro)$status, "partial"))
+  expect_equal(optimization_result(copro)$budget$metric_calls, 1L)
 })
 
 test_that("optimizer ledger records exact usage and bounded overshoot", {
@@ -2190,9 +2190,12 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
     )
   )
   expect_equal(resumed_counter$calls, 2L)
-  expect_equal(partial$config$optimizer$n_bootstrapped_demos, 2L)
+  expect_equal(
+    optimization_result(partial)$best_params$n_bootstrapped_demos,
+    2L
+  )
   expect_identical(
-    partial$config$optimizer$stop_reason$code,
+    optimization_result(partial)$stop_reason,
     "max_metric_calls"
   )
   expect_identical(optimizer_checkpoint_read(path)$progress$phase, "bootstrap")
@@ -2211,7 +2214,10 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
     )
   )
   expect_equal(resumed_counter$calls, 4L)
-  expect_equal(resumed$config$optimizer$n_bootstrapped_demos, 4L)
+  expect_equal(
+    optimization_result(resumed)$best_params$n_bootstrapped_demos,
+    4L
+  )
   expect_identical(optimizer_checkpoint_read(path)$progress$phase, "complete")
 
   uninterrupted_counter <- new.env(parent = emptyenv())
@@ -2226,10 +2232,10 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
   expect_equal(uninterrupted_counter$calls, 4L)
   expect_equal(resumed$demos, uninterrupted$demos)
   expect_equal(
-    resumed$config$optimizer$budget_summary$metric_calls,
-    uninterrupted$config$optimizer$budget_summary$metric_calls
+    optimization_result(resumed)$budget$metric_calls,
+    optimization_result(uninterrupted)$budget$metric_calls
   )
-  expect_equal(resumed$config$optimizer$total_attempts, 4L)
+  expect_equal(optimization_result(resumed)$budget$attempts, 4L)
 })
 
 test_that("MIPRO resumes an interrupted BO row without repeated provider calls", {
@@ -2283,10 +2289,10 @@ test_that("MIPRO resumes an interrupted BO row without repeated provider calls",
     ),
     "No candidate received full evaluation"
   )
-  expect_true(interrupted$config$optimizer$partial)
+  expect_true(identical(optimization_result(interrupted)$status, "partial"))
   expect_equal(counter$calls, 4L)
   expect_identical(
-    interrupted$config$optimizer$stop_reason$code,
+    optimization_result(interrupted)$stop_reason,
     "max_metric_calls"
   )
 
@@ -2304,7 +2310,7 @@ test_that("MIPRO resumes an interrupted BO row without repeated provider calls",
     )
   )
   expect_equal(counter$calls, 15L)
-  expect_false(resumed$config$optimizer$partial)
+  expect_false(identical(optimization_result(resumed)$status, "partial"))
 
   fresh_counter <- new.env(parent = emptyenv())
   fresh_counter$calls <- 0L
@@ -2321,12 +2327,12 @@ test_that("MIPRO resumes an interrupted BO row without repeated provider calls",
   )
   expect_equal(fresh_counter$calls, 15L)
   expect_identical(
-    resumed$config$optimizer$trial_history,
-    fresh$config$optimizer$trial_history
+    optimization_result(resumed)$trials,
+    optimization_result(fresh)$trials
   )
   expect_identical(
-    resumed$config$optimizer$best_config,
-    fresh$config$optimizer$best_config
+    optimization_result(resumed)$best_params,
+    optimization_result(fresh)$best_params
   )
   expect_identical(resumed$demos, fresh$demos)
 })
@@ -2519,5 +2525,8 @@ test_that("MIPRO replays one durable trial after failure between append and chec
     )),
     1L
   )
-  expect_false(resumed_program$config$optimizer$partial)
+  expect_false(identical(
+    optimization_result(resumed_program)$status,
+    "partial"
+  ))
 })

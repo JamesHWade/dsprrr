@@ -87,6 +87,6 @@ llm <- ellmer::chat_openai()
 compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 
 # Access ranked candidates
-compiled$config$optimizer$candidate_programs
+optimization_result(compiled)$extensions$bootstrap_few_shot_with_random_search$candidate_programs
 }
 }

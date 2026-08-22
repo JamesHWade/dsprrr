@@ -1,5 +1,19 @@
 # Tests for BootstrapFewShot teleprompter
 
+bootstrap_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$bootstrap_few_shot,
+    list(
+      total_attempts = result$budget$attempts,
+      error_count = result$budget$total_errors,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 test_that("BootstrapFewShot can be created with defaults", {
   tp <- BootstrapFewShot()
   expect_s3_class(tp, "dsprrr::BootstrapFewShot")
@@ -228,8 +242,8 @@ test_that("BootstrapFewShot compile adds labeled demos from trainset", {
   expect_equal(demo$source, "labeled")
 
   # Check optimizer info in config
-  expect_equal(result$config$optimizer$n_labeled_demos, 2)
-  expect_equal(result$config$optimizer$n_bootstrapped_demos, 0)
+  expect_equal(bootstrap_test_metadata(result)$n_labeled_demos, 2)
+  expect_equal(bootstrap_test_metadata(result)$n_bootstrapped_demos, 0)
 })
 
 test_that("BootstrapFewShot compile bootstraps demos with metric", {
@@ -286,8 +300,8 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
   expect_true(result$config$compiled)
 
   # Should have labeled + bootstrapped demos
-  n_labeled <- result$config$optimizer$n_labeled_demos
-  n_bootstrapped <- result$config$optimizer$n_bootstrapped_demos
+  n_labeled <- bootstrap_test_metadata(result)$n_labeled_demos
+  n_bootstrapped <- bootstrap_test_metadata(result)$n_bootstrapped_demos
 
   expect_equal(n_labeled, 1)
   expect_equal(n_bootstrapped, 2)
@@ -343,14 +357,14 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
   # Verify error_count is actually tracked (was a scoping bug)
-  expect_equal(result$config$optimizer$error_count, 2)
-  expect_equal(result$config$optimizer$total_attempts, 4L)
-  expect_equal(result$config$optimizer$budget_summary$successes, 2L)
+  expect_equal(bootstrap_test_metadata(result)$error_count, 2)
+  expect_equal(bootstrap_test_metadata(result)$total_attempts, 4L)
+  expect_equal(bootstrap_test_metadata(result)$budget_summary$successes, 2L)
   expect_equal(
-    result$config$optimizer$budget_summary$consecutive_errors,
+    bootstrap_test_metadata(result)$budget_summary$consecutive_errors,
     0L
   )
-  expect_false(result$config$optimizer$budget_summary$stopped)
+  expect_false(bootstrap_test_metadata(result)$budget_summary$stopped)
 })
 
 test_that("BootstrapFewShot counts metric failures by training-row attempt", {
@@ -386,14 +400,14 @@ test_that("BootstrapFewShot counts metric failures by training-row attempt", {
     ),
     "Metric evaluation failed"
   )
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_test_metadata(result)$budget_summary
 
   expect_equal(budget$attempts, 3L)
   expect_equal(budget$successes, 1L)
   expect_equal(budget$total_errors, 2L)
   expect_equal(budget$consecutive_errors, 1L)
   expect_false(budget$stopped)
-  expect_equal(result$config$optimizer$n_bootstrapped_demos, 0L)
+  expect_equal(bootstrap_test_metadata(result)$n_bootstrapped_demos, 0L)
 })
 
 test_that("BootstrapFewShot max_errors zero stops after the first attempt", {
@@ -423,14 +437,17 @@ test_that("BootstrapFewShot max_errors zero stops after the first attempt", {
     ),
     "Bootstrap attempt failed"
   )
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_test_metadata(result)$budget_summary
 
   expect_equal(teacher_calls, 1L)
   expect_equal(budget$attempts, 1L)
   expect_equal(budget$total_errors, 1L)
   expect_true(budget$stopped)
   expect_equal(budget$stop_reason$limit, 0L)
-  expect_identical(result$config$optimizer$stop_reason, budget$stop_reason)
+  expect_identical(
+    bootstrap_test_metadata(result)$stop_reason,
+    budget$stop_reason
+  )
 })
 
 test_that("BootstrapFewShot logging cannot bypass the shared metric budget", {
@@ -465,7 +482,7 @@ test_that("BootstrapFewShot logging cannot bypass the shared metric budget", {
   )
 
   trials <- read_trials_jsonl(file.path(log_dir, "trials.jsonl"))
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_test_metadata(result)$budget_summary
   expect_identical(eval_calls, 0L)
   expect_identical(budget$metric_calls, 0L)
   expect_identical(budget$trials, 0L)
@@ -540,7 +557,7 @@ test_that("BootstrapFewShot respects metric_threshold", {
   )
 
   result_high <- compile(mod, tp_high_threshold, trainset, .llm = mock_llm)
-  expect_equal(result_high$config$optimizer$n_bootstrapped_demos, 0)
+  expect_equal(bootstrap_test_metadata(result_high)$n_bootstrapped_demos, 0)
 
   # Threshold of 0.2 - demos should pass
   tp_low_threshold <- BootstrapFewShot(
@@ -551,7 +568,7 @@ test_that("BootstrapFewShot respects metric_threshold", {
   )
 
   result_low <- compile(mod, tp_low_threshold, trainset, .llm = mock_llm)
-  expect_equal(result_low$config$optimizer$n_bootstrapped_demos, 2)
+  expect_equal(bootstrap_test_metadata(result_low)$n_bootstrapped_demos, 2)
 })
 
 test_that("compile works with BootstrapFewShot", {
@@ -619,7 +636,7 @@ test_that("BootstrapFewShot harvests demos with field-aware metrics (dsprrr-s3b)
 
   result <- compile(mod, tp, trainset, .llm = mock_llm)
 
-  expect_gt(result$config$optimizer$n_bootstrapped_demos, 0)
+  expect_gt(bootstrap_test_metadata(result)$n_bootstrapped_demos, 0)
 })
 
 test_that("BootstrapFewShot supplies execution traces to trace metrics", {
@@ -646,7 +663,7 @@ test_that("BootstrapFewShot supplies execution traces to trace metrics", {
 
   compiled <- compile(mod, tp, trainset, .llm = mock_llm)
 
-  expect_gt(compiled$config$optimizer$n_bootstrapped_demos, 0L)
+  expect_gt(bootstrap_test_metadata(compiled)$n_bootstrapped_demos, 0L)
   expect_length(seen, 1L)
   expect_s3_class(seen[[1L]], "dsprrr_program_trace")
   expect_length(seen[[1L]]$events, 1L)
