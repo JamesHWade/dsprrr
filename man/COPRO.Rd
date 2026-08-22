@@ -72,7 +72,7 @@ tp <- COPRO(
 )
 
 compiled <- compile(
-  tp, qa_module, trainset,
+  qa_module, tp, trainset,
   valset = valset, .llm = task_llm
 )
 
