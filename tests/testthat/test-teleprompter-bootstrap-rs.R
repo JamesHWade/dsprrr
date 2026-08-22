@@ -94,7 +94,7 @@ test_that("BootstrapFewShotWithRandomSearch validates properties", {
 
 test_that("BootstrapFewShotWithRandomSearch requires metric", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
@@ -181,7 +181,7 @@ test_that("BootstrapFewShotWithRandomSearch rejects wrapped Flex", {
 
 test_that("BootstrapFewShotWithRandomSearch requires valset", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
@@ -199,7 +199,7 @@ test_that("BootstrapFewShotWithRandomSearch requires valset", {
 
 test_that("BootstrapFewShotWithRandomSearch handles empty trainset", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
@@ -256,7 +256,7 @@ test_that("generate_candidate_configs produces correct candidates", {
 test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
   # Use a standard module with a mock LLM that returns predictable results
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -274,19 +274,11 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
   )
 
   # Mock LLM that always returns "correct"
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          list(answer = "correct")
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(answer = "correct")
+    }
+  )
 
   # Metric that returns 1.0 for "correct"
   exact_metric <- function(pred, row) {
@@ -322,7 +314,7 @@ test_that("BootstrapFewShotWithRandomSearch compiles and selects best", {
 test_that("BootstrapFewShotWithRandomSearch early stopping works", {
   # Use a standard module with a mock LLM
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
@@ -333,19 +325,11 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
   valset <- data.frame(x = c("e", "f"), y = c("correct", "correct"))
 
   # Mock LLM that always returns "correct"
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          list(answer = "correct")
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(answer = "correct")
+    }
+  )
 
   tp <- BootstrapFewShotWithRandomSearch(
     # Always return 1.0 so early stopping triggers on first candidate
@@ -382,7 +366,7 @@ test_that("BootstrapFewShotWithRandomSearch print method works", {
 
 test_that("compile_module works with BootstrapFewShotWithRandomSearch", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Summarize"
   )
@@ -398,19 +382,11 @@ test_that("compile_module works with BootstrapFewShotWithRandomSearch", {
     summary = c("test")
   )
 
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          list(summary = "mocked")
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(summary = "mocked")
+    }
+  )
 
   tp <- BootstrapFewShotWithRandomSearch(
     metric = function(pred, exp) 0.5,
@@ -449,7 +425,7 @@ test_that("candidate configs include proper metadata", {
 test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors", {
   # Use a standard module with a mock LLM
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
@@ -460,19 +436,11 @@ test_that("BootstrapFewShotWithRandomSearch handles candidate compilation errors
   valset <- data.frame(x = c("c"), y = c("ok"))
 
   # Mock LLM that returns "ok"
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          list(answer = "ok")
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(answer = "ok")
+    }
+  )
 
   tp <- BootstrapFewShotWithRandomSearch(
     metric = function(pred, row) {
@@ -862,7 +830,7 @@ test_that("Bootstrap random search max_errors zero stops after one failure", {
 test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
   # Use a standard module with a mock LLM that always fails
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
@@ -873,13 +841,10 @@ test_that("BootstrapFewShotWithRandomSearch errors when all candidates fail", {
   valset <- data.frame(x = c("c"), y = c("ok"))
 
   # Mock LLM that always fails
-  failing_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        stop("LLM always fails")
-      }
-    ),
-    class = "Chat"
+  failing_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      stop("LLM always fails")
+    }
   )
 
   tp <- BootstrapFewShotWithRandomSearch(

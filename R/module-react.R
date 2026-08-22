@@ -49,12 +49,9 @@ ReactModule <- R6::R6Class(
         cli::cli_abort("tools must be a list of ToolDef objects")
       }
 
-      # Validate each tool is a ToolDef
+      # Validate each tool is an ellmer ToolDef
       for (i in seq_along(tools)) {
-        if (
-          !inherits(tools[[i]], "ellmer::ToolDef") &&
-            !inherits(tools[[i]], "ToolDef")
-        ) {
+        if (!inherits(tools[[i]], "ellmer::ToolDef")) {
           cli::cli_abort(c(
             "All tools must be ellmer ToolDef objects",
             "x" = "tools[[{i}]] is a {.cls {class(tools[[i]])[1]}}"
@@ -80,7 +77,7 @@ ReactModule <- R6::R6Class(
     #' @param tool An ellmer ToolDef object
     #' @return The module (invisibly), for chaining
     add_tool = function(tool) {
-      if (!inherits(tool, "ellmer::ToolDef") && !inherits(tool, "ToolDef")) {
+      if (!inherits(tool, "ellmer::ToolDef")) {
         cli::cli_abort("tool must be an ellmer ToolDef object")
       }
 

@@ -11,15 +11,7 @@ create_mock_rlm_llm <- function(
     .state <- new.env(parent = emptyenv())
     .state$call_count <- 0L
   }
-  mock <- list(
-    clone = function() {
-      create_mock_rlm_llm(
-        code_responses,
-        fallback_chat,
-        fallback_structured,
-        .state = .state
-      )
-    },
+  new_test_chat(
     chat_structured = function(prompt, type, ...) {
       type_fields <- if (
         inherits(type, "ellmer::TypeObject") &&
@@ -55,17 +47,62 @@ create_mock_rlm_llm <- function(
       fallback_chat
     }
   )
-  mock
+}
+
+as_test_rlm_chat <- function(chat) {
+  if (inherits(chat, "Chat") && R6::is.R6(chat)) {
+    return(chat)
+  }
+  chat_fn <- chat[["chat"]]
+  structured_fn <- chat[["chat_structured"]]
+  converted <- new_test_chat(
+    chat = if (is.function(chat_fn)) chat_fn else function(...) "unused",
+    chat_structured = if (is.function(structured_fn)) {
+      structured_fn
+    } else {
+      function(...) list(answer = "unused")
+    }
+  )
+  for (name in c("get_turns", "set_turns", "last_turn", "get_model")) {
+    method <- chat[[name]]
+    if (is.function(method)) {
+      override_test_chat_method(converted, name, method)
+    }
+  }
+  clone <- chat[["clone"]]
+  if (is.function(clone)) {
+    override_test_chat_method(converted, "clone", function(deep = TRUE) {
+      args <- names(formals(clone))
+      cloned <- if (any(c("deep", "...") %in% args)) {
+        clone(deep = deep)
+      } else {
+        clone()
+      }
+      as_test_rlm_chat(cloned)
+    })
+  }
+  converted
 }
 
 # ============================================================================
 # Factory Function Tests
 # ============================================================================
 
+test_that("rlm_module requires an ellmer Chat for sub_lm", {
+  expect_error(
+    rlm_module(
+      "question -> answer",
+      interpreter_factory = function() stop("not used"),
+      sub_lm = list(chat = function(prompt) "duck typed")
+    ),
+    class = "dsprrr_rlm_sub_lm_error"
+  )
+})
+
 test_that("rlm forwards structured one-shot results with an explicit runner", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   chat <- create_mock_rlm_llm(list(list(
     reasoning = "Return the result",
     code = "SUBMIT(42L)"
@@ -91,7 +128,7 @@ test_that("run treats every RLM input as one rich context object", {
   # Instrumented coverage runs can spend more than ten seconds starting the
   # persistent callr session before this rich context is staged.
   runner <- r_code_runner(timeout = 60, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   chat <- create_mock_rlm_llm(list(list(
     reasoning = "Verify the staged R objects",
     code = paste(
@@ -184,7 +221,7 @@ test_that("run_dataset batches rich contexts with one owned runner per row", {
   expect_identical(lifecycle$closed, 2L)
 })
 
-test_that("one-row factory RLM datasets keep the simple result shape", {
+test_that("one-row factory RLM datasets keep the named result record", {
   skip_if_not_installed("callr")
   module <- rlm_module(
     "question -> answer: integer",
@@ -205,31 +242,25 @@ test_that("one-row factory RLM datasets keep the simple result shape", {
     .progress = FALSE
   )
 
-  expect_identical(result$result, list(7L))
+  expect_identical(result$result, list(list(answer = 7L)))
 })
 
 test_that("run_dataset reuses a caller-owned RLM runner sequentially by row", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
-  chat_class <- R6::R6Class(
-    "RLMCallerOwnedDatasetChat",
-    public = list(
-      chat_structured = function(...) {
-        list(
-          reasoning = "Return this row",
-          code = "SUBMIT(.context$question)"
-        )
-      },
-      chat = function(...) {
-        stop("recursive queries are disabled", call. = FALSE)
-      },
-      get_model = function() "caller-owned-dataset-test"
-    ),
-    cloneable = TRUE
+  withr::defer(runner$shutdown())
+  chat <- new_test_chat(
+    chat_structured = function(...) {
+      list(
+        reasoning = "Return this row",
+        code = "SUBMIT(.context$question)"
+      )
+    },
+    chat = function(...) {
+      stop("recursive queries are disabled", call. = FALSE)
+    },
+    model = "caller-owned-dataset-test"
   )
-  chat <- chat_class$new()
-  class(chat) <- c("Chat", class(chat))
   module <- rlm_module(
     "question -> answer: string",
     runner = runner,
@@ -243,7 +274,10 @@ test_that("run_dataset reuses a caller-owned RLM runner sequentially by row", {
     .progress = FALSE
   )
 
-  expect_identical(result$result, list("first", "second"))
+  expect_identical(
+    result$result,
+    list(list(answer = "first"), list(answer = "second"))
+  )
   expect_error(
     run_dataset(
       module,
@@ -259,7 +293,7 @@ test_that("run_dataset reuses a caller-owned RLM runner sequentially by row", {
 test_that("rlm rejects conflicting execution ownership", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   expect_error(
     rlm(
@@ -326,7 +360,7 @@ test_that("rlm_module creates RLMModule", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module("question -> answer", runner = runner)
 
   expect_s3_class(rlm, "RLMModule")
@@ -337,7 +371,7 @@ test_that("rlm_module accepts string signature", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module("document, question -> answer", runner = runner)
 
   expect_equal(length(rlm$signature@inputs), 2)
@@ -378,7 +412,7 @@ test_that("rlm_module accepts Signature object", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   sig <- signature("question -> answer")
   rlm <- rlm_module(sig, runner = runner)
 
@@ -389,7 +423,7 @@ test_that("rlm_module respects max_iterations", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer: integer",
     runner = runner,
@@ -399,48 +433,11 @@ test_that("rlm_module respects max_iterations", {
   expect_equal(rlm$max_iterations, 10L)
 })
 
-test_that("rlm_module accepts the DSPy 3.3 max_iters alias", {
-  skip_if_not_installed("callr")
-  runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
-
-  rlm <- rlm_module("question -> answer", runner = runner, max_iters = 7L)
-
-  expect_identical(rlm$max_iterations, 7L)
-  expect_error(
-    rlm_module(
-      "question -> answer",
-      runner = runner,
-      max_iterations = 5L,
-      max_iters = 7L
-    ),
-    class = "dsprrr_rlm_argument_conflict"
-  )
-})
-
-test_that("rlm_module preserves pre-alias positional argument order", {
-  skip_if_not_installed("callr")
-
-  runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
-  rlm <- rlm_module(
-    "question -> answer",
-    runner,
-    7L,
-    9L,
-    1234L
-  )
-
-  expect_identical(rlm$max_iterations, 7L)
-  expect_identical(rlm$max_llm_calls, 9L)
-  expect_identical(rlm$max_output_chars, 1234L)
-})
-
 test_that("rlm_module respects max_llm_calls", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -454,7 +451,7 @@ test_that("rlm_module validates tools parameter", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   # Must be a list
   expect_error(
@@ -477,7 +474,7 @@ test_that("rlm_module validates all tools are functions", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   # Non-function in tools list
   expect_error(
@@ -504,7 +501,7 @@ test_that("rlm_module validates tool names", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   expect_error(
     rlm_module(
@@ -591,7 +588,7 @@ test_that("rlm_module validates tool names", {
 test_that("RLMModule constructor also enforces tool and signature contracts", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   expect_error(
     signature("question, question -> answer"),
@@ -614,7 +611,7 @@ test_that("rlm_module validates max_iterations bounds", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   expect_error(
     rlm_module("question -> answer", runner = runner, max_iterations = 0),
@@ -639,7 +636,7 @@ test_that("rlm_module validates max_llm_calls bounds", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   expect_error(
     rlm_module("question -> answer", runner = runner, max_llm_calls = -1),
@@ -660,7 +657,7 @@ test_that("rlm_module validates max_llm_calls bounds", {
 test_that("rlm_module validates output bounds at both construction layers", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   expect_error(
     rlm_module("question -> answer", runner = runner, max_output_chars = 0),
@@ -684,7 +681,7 @@ test_that("RLMModule has correct fields", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module("question -> answer", runner = runner)
 
   expect_true(!is.null(rlm$runner))
@@ -700,7 +697,7 @@ test_that("RLMModule get_repl_history returns list", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module("question -> answer", runner = runner)
 
   history <- rlm$get_repl_history()
@@ -713,7 +710,7 @@ test_that("RLMModule reset_copy creates fresh module", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -731,7 +728,7 @@ test_that("RLMModule print works", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module("question -> answer", runner = runner)
 
   expect_invisible(print(rlm))
@@ -745,7 +742,7 @@ test_that("RLMModule terminates on SUBMIT call", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer: integer",
     runner = runner
@@ -773,7 +770,7 @@ test_that("RLMModule terminates on SUBMIT call", {
 test_that("RLMModule rejects unexpected invocation inputs", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module("question -> answer: integer", runner = runner)
 
   expect_error(
@@ -791,7 +788,7 @@ test_that("RLMModule accepts an instruction-only zero-input signature", {
     instructions = "Return a greeting."
   )
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(sig, runner = runner)
   result <- rlm$forward(
     list(),
@@ -808,7 +805,7 @@ test_that("RLMModule SUBMIT returns correct value", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner
@@ -834,7 +831,7 @@ test_that("RLMModule SUBMIT works with complex values", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     signature(
       inputs = list(input("question")),
@@ -868,7 +865,7 @@ test_that("RLMModule strips markdown code fences before execution", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module("question -> answer: integer", runner = runner)
 
   mock_llm <- create_mock_rlm_llm(list(
@@ -890,7 +887,7 @@ test_that("RLMModule supports multi-output SUBMIT with named arguments", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer, confidence: number",
     runner = runner
@@ -916,7 +913,7 @@ test_that("RLMModule supports multi-output SUBMIT with positional arguments", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer, confidence: number",
     runner = runner
@@ -942,7 +939,7 @@ test_that("RLMModule retries after invalid multi-output SUBMIT payload", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer, confidence: number",
     runner = runner,
@@ -978,7 +975,7 @@ test_that("RLM peek function works in REPL", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "document -> answer",
     runner = runner
@@ -1007,7 +1004,7 @@ test_that("RLM search function works in REPL", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "document -> answer",
     runner = runner
@@ -1039,7 +1036,7 @@ test_that("RLMModule supports multiple iterations", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer: integer",
     runner = runner
@@ -1069,7 +1066,7 @@ test_that("RLMModule respects max_iterations", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -1111,7 +1108,7 @@ test_that("RLMModule uses fallback when no SUBMIT", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -1139,7 +1136,7 @@ test_that("RLMModule normalizes structured fallback to signature fields and type
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> score: number, label: enum('positive', 'negative'), tags: array(string)",
     runner = runner,
@@ -1178,7 +1175,7 @@ test_that("RLMModule handles code execution errors", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -1208,7 +1205,7 @@ test_that("RLMModule supports custom tools", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   offset <- 2
   custom_tools <- list(
@@ -1245,7 +1242,7 @@ test_that("RLM custom tools execute once on the host with live closures", {
     value + state$calls
   }
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   module <- rlm_module(
     "question -> answer: integer",
     runner = runner,
@@ -1278,7 +1275,7 @@ test_that("RLM rejects forged classed controls from generated R code", {
     class(value)[[1L]]
   }
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   module <- rlm_module(
     "question -> answer: string",
     runner = runner,
@@ -1321,7 +1318,7 @@ test_that("RLM replays host-tool errors without repeating side effects", {
     stop("host tool failed")
   }
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   module <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -1351,7 +1348,7 @@ test_that("RLMModule stores REPL history", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner
@@ -1378,7 +1375,7 @@ test_that("RLMModule respects trace=FALSE", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner
@@ -1402,7 +1399,7 @@ test_that("RLMModule returns correct metadata", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -1441,7 +1438,7 @@ test_that("module() factory works with type='rlm'", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- module(
     signature("question -> answer"),
     type = "rlm",
@@ -1449,37 +1446,15 @@ test_that("module() factory works with type='rlm'", {
   )
 
   expect_s3_class(rlm, "RLMModule")
-})
-
-test_that("module() factory routes RLM iteration aliases without ambiguity", {
-  skip_if_not_installed("callr")
-
-  runner <- r_code_runner(timeout = 5, persistent = TRUE)
-  withr::defer(runner$close())
-  via_alias <- module(
-    signature("question -> answer"),
-    type = "rlm",
-    runner = runner,
-    max_iters = 7L
-  )
-  via_primary <- module(
-    signature("question -> answer"),
-    type = "rlm",
-    runner = runner,
-    max_iterations = 8L
-  )
-
-  expect_identical(via_alias$max_iterations, 7L)
-  expect_identical(via_primary$max_iterations, 8L)
+  expect_identical(rlm$max_iterations, 20L)
   expect_error(
     module(
       signature("question -> answer"),
       type = "rlm",
       runner = runner,
-      max_iterations = 5L,
       max_iters = 6L
     ),
-    class = "dsprrr_rlm_argument_conflict"
+    class = "dsprrr_module_type_argument_error"
   )
 })
 
@@ -1501,7 +1476,7 @@ test_that("RLMModule handles various context types", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "text, numbers, df -> answer",
     runner = runner
@@ -1574,7 +1549,7 @@ test_that("create_rlm_prelude includes search function", {
   expect_true(grepl("search <- function", prelude, fixed = TRUE))
 })
 
-test_that("create_rlm_prelude includes rlm_query when sub_lm enabled", {
+test_that("create_rlm_prelude includes llm_query when sub_lm enabled", {
   prelude_with <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
     has_sub_lm = TRUE,
@@ -1587,10 +1562,10 @@ test_that("create_rlm_prelude includes rlm_query when sub_lm enabled", {
     custom_tools = list()
   )
 
-  # With sub_lm: should have working rlm_query
+  # With sub_lm: should have working llm_query
   expect_true(grepl("llm_query <- base::local", prelude_with, fixed = TRUE))
 
-  # Without sub_lm: should have disabled rlm_query
+  # Without sub_lm: should have disabled llm_query
   expect_true(grepl(
     "Recursive LLM queries are disabled",
     prelude_without,
@@ -1620,7 +1595,7 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   control_nonce <- "submit-shape-test"
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
@@ -1684,7 +1659,7 @@ test_that("long authenticated control frames round-trip without whitespace", {
 test_that("RLM control frames preserve long multiline unicode payloads", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   control_nonce <- "long-payload-test"
   prelude <- dsprrr:::create_rlm_prelude(
     has_sub_lm = FALSE,
@@ -1709,7 +1684,7 @@ test_that("RLM control frames preserve long multiline unicode payloads", {
 test_that("RLM control frames authenticate and fail closed", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   prelude <- dsprrr:::create_rlm_prelude(
     control_nonce = "one-invocation"
   )
@@ -1757,7 +1732,8 @@ test_that("RLM never accepts control values from failed execution", {
         list(
           success = FALSE,
           result = control_value,
-          error = "execution failed"
+          error = "execution failed",
+          error_type = "execution"
         )
       },
       policy = function() {
@@ -1786,7 +1762,7 @@ test_that("RLM never accepts control values from failed execution", {
     program <- rlm_module(
       "question -> answer",
       runner = runner,
-      sub_lm = list(chat = function(prompt) "unused")
+      sub_lm = as_test_rlm_chat(list(chat = function(prompt) "unused"))
     )
     call_counter <- new.env(parent = emptyenv())
     call_counter$count <- 0L
@@ -1862,7 +1838,7 @@ test_that("RLMModule warns when max_iterations reached without SUBMIT", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -1885,15 +1861,14 @@ test_that("RLMModule handles LLM response with missing code", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner
   )
 
   # Mock LLM that returns invalid response (missing code)
-  mock_llm <- list(
-    clone = function() mock_llm,
+  mock_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) {
       list(reasoning = "Thinking")
       # Missing 'code' field
@@ -1911,15 +1886,14 @@ test_that("RLMModule handles LLM response with non-string code", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner
   )
 
   # Mock LLM that returns code as number
-  mock_llm <- list(
-    clone = function() mock_llm,
+  mock_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) {
       list(reasoning = "Thinking", code = 123)
     },
@@ -1970,14 +1944,14 @@ test_that("is_rlm_query_request detects query requests", {
   expect_true(dsprrr:::is_rlm_query_request(request))
 })
 
-test_that("rlm_query_batch generates batch request marker", {
+test_that("llm_query_batched generates batch request marker", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   control_nonce <- "query-batch-test"
 
-  # Execute prelude in subprocess to test rlm_query_batch
+  # Execute prelude in subprocess to test llm_query_batched
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
     has_sub_lm = TRUE,
@@ -1986,7 +1960,7 @@ test_that("rlm_query_batch generates batch request marker", {
   )
 
   result <- runner$execute(
-    paste0(prelude, "\nrlm_query_batch(c('q1', 'q2'))"),
+    paste0(prelude, "\nllm_query_batched(c('q1', 'q2'))"),
     context = list()
   )
 
@@ -1997,11 +1971,11 @@ test_that("rlm_query_batch generates batch request marker", {
   expect_equal(request$queries, c("q1", "q2"))
 })
 
-test_that("rlm_query_batch preserves one-query arrays", {
+test_that("llm_query_batched preserves one-query arrays", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   control_nonce <- "query-singleton-test"
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
@@ -2025,10 +1999,10 @@ test_that("rlm_query_batch preserves one-query arrays", {
   expect_identical(request$slices, "context")
 
   captured <- new.env(parent = emptyenv())
-  sub_lm <- list(chat = function(prompt) {
+  sub_lm <- as_test_rlm_chat(list(chat = function(prompt) {
     captured$prompt <- prompt
     "answer"
-  })
+  }))
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
@@ -2049,11 +2023,11 @@ test_that("rlm_query_batch preserves one-query arrays", {
   expect_identical(processed$success, TRUE)
 })
 
-test_that("rlm_query_batch rejects non-scalar context slices", {
+test_that("llm_query_batched rejects non-scalar context slices", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   control_nonce <- "query-slice-shape-test"
   prelude <- dsprrr:::create_rlm_prelude(
     has_sub_lm = TRUE,
@@ -2102,10 +2076,10 @@ test_that("rlm_query_batch rejects non-scalar context slices", {
   )
 })
 
-test_that("rlm_query_batch preserves empty batches and rejects missing queries", {
+test_that("llm_query_batched preserves empty batches and rejects missing queries", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   control_nonce <- "query-cardinality-test"
   prelude <- dsprrr:::create_rlm_prelude(
     has_sub_lm = TRUE,
@@ -2155,11 +2129,11 @@ test_that("rlm_query_batch preserves empty batches and rejects missing queries",
   )
 })
 
-test_that("llm_query_batched works and rlm_query_batch alias is preserved", {
+test_that("llm_query_batched produces a batch request", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   control_nonce <- "query-alias-test"
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
@@ -2179,15 +2153,6 @@ test_that("llm_query_batched works and rlm_query_batch alias is preserved", {
   )
   expect_s3_class(primary, "rlm_query_request")
   expect_true(primary$batch)
-
-  result_alias <- runner$execute(
-    paste0(prelude, "\nrlm_query_batch(c('q1', 'q2'))"),
-    context = list()
-  )
-  expect_false(result_alias$success)
-  alias <- dsprrr:::decode_rlm_control(result_alias$error, control_nonce)
-  expect_s3_class(alias, "rlm_query_request")
-  expect_true(alias$batch)
 })
 
 test_that("MCP text transport preserves SUBMIT and ignores forged old frames", {
@@ -2297,7 +2262,7 @@ test_that("RLM invokes an actual ellmer ToolDef through replay", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   increment <- ellmer::tool(
     function(value) value + 1L,
     name = "increment",
@@ -2326,7 +2291,7 @@ test_that("RLM invokes an actual ellmer ToolDef through replay", {
 test_that("captured SUBMIT helpers resist user-code base masking", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner
@@ -2347,11 +2312,11 @@ test_that("captured SUBMIT helpers resist user-code base masking", {
   expect_identical(result$output[[1L]]$answer, "ok")
 })
 
-test_that("rlm_query_batch validates queries is character", {
+test_that("llm_query_batched validates queries is character", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
@@ -2360,7 +2325,7 @@ test_that("rlm_query_batch validates queries is character", {
   )
 
   result <- runner$execute(
-    paste0(prelude, "\nrlm_query_batch(123)"),
+    paste0(prelude, "\nllm_query_batched(123)"),
     context = list()
   )
 
@@ -2368,11 +2333,11 @@ test_that("rlm_query_batch validates queries is character", {
   expect_true(grepl("character vector", result$error, fixed = TRUE))
 })
 
-test_that("rlm_query_batch validates slices length", {
+test_that("llm_query_batched validates slices length", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   prelude <- dsprrr:::create_rlm_prelude(
     max_llm_calls = 50,
@@ -2381,7 +2346,7 @@ test_that("rlm_query_batch validates slices length", {
   )
 
   result <- runner$execute(
-    paste0(prelude, "\nrlm_query_batch(c('q1', 'q2'), slices = c('s1'))"),
+    paste0(prelude, "\nllm_query_batched(c('q1', 'q2'), slices = c('s1'))"),
     context = list()
   )
 
@@ -2424,7 +2389,9 @@ test_that("recursive queries count every provider assistant turn", {
     )
     chat
   }
-  sub_lm <- make_chat(list(ellmer::UserTurn("private prior turn")))
+  sub_lm <- as_test_rlm_chat(
+    make_chat(list(ellmer::UserTurn("private prior turn")))
+  )
   rlm <- rlm_module(
     "question -> answer",
     interpreter_factory = function() stop("not used"),
@@ -2450,29 +2417,30 @@ test_that("recursive queries count every provider assistant turn", {
 })
 
 test_that("recursive provider errors leave call and usage accounting unknown", {
-  turns <- list()
-  failed <- NULL
-  failed <- list(
-    clone = function(...) failed,
-    set_turns = function(value) {
-      turns <<- value
-      invisible(NULL)
-    },
-    get_turns = function(...) turns,
-    chat = function(prompt, ...) {
-      turns <<- c(
-        turns,
-        list(ellmer::AssistantTurn(
-          contents = list(ellmer::ContentText("partial")),
-          tokens = c(10L, 1L, 0L),
-          cost = 0.1
-        ))
-      )
-      error <- simpleError("provider stopped")
-      class(error) <- c("dsprrr_rlm_provider_error", class(error))
-      stop(error)
-    }
-  )
+  make_failed <- function(turns = list()) {
+    as_test_rlm_chat(list(
+      clone = function(...) make_failed(turns),
+      set_turns = function(value) {
+        turns <<- value
+        invisible(NULL)
+      },
+      get_turns = function(...) turns,
+      chat = function(prompt, ...) {
+        turns <<- c(
+          turns,
+          list(ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("partial")),
+            tokens = c(10L, 1L, 0L),
+            cost = 0.1
+          ))
+        )
+        error <- simpleError("provider stopped")
+        class(error) <- c("dsprrr_rlm_provider_error", class(error))
+        stop(error)
+      }
+    ))
+  }
+  failed <- make_failed()
   rlm <- rlm_module(
     "question -> answer",
     interpreter_factory = function() stop("not used"),
@@ -2513,7 +2481,7 @@ test_that("parallel recursive accounting uses the cleared batch baseline", {
     )
     chat
   }
-  sub_lm <- make_template(original_turns)
+  sub_lm <- as_test_rlm_chat(make_template(original_turns))
   make_result <- function(text, usage) {
     turns <- c(
       list(ellmer::UserTurn("current")),
@@ -2529,10 +2497,7 @@ test_that("parallel recursive accounting uses the cleared batch baseline", {
         )
       })
     )
-    list(
-      get_turns = function(...) turns,
-      last_turn = function(...) turns[[length(turns)]]
-    )
+    new_test_chat(turns = turns)
   }
   rlm <- rlm_module(
     "question -> answer",
@@ -2598,11 +2563,11 @@ test_that("process_rlm_query_batch uses bounded parallelism and preserves order"
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   rlm <- rlm_module(
     "question -> answer",
     runner = runner,
-    sub_lm = list(chat = function(prompt) "unused")
+    sub_lm = as_test_rlm_chat(list(chat = function(prompt) "unused"))
   )
 
   call_counter <- new.env(parent = emptyenv())
@@ -2684,14 +2649,14 @@ test_that("process_rlm_query_batch propagates parallel infrastructure failure", 
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   chat_calls <- 0L
-  sub_lm <- list(
+  sub_lm <- as_test_rlm_chat(list(
     chat = function(prompt, ...) {
       chat_calls <<- chat_calls + 1L
       paste0("ok: ", prompt)
     }
-  )
+  ))
 
   rlm <- rlm_module(
     "question -> answer",

@@ -28,17 +28,15 @@
 #' normalized to empty strings, and missing `duration_ms` is normalized to
 #' `NA`. A failed result must include a non-empty `error`. Its `error_type` is
 #' either `"execution"` for code the model may repair or `"interpreter"` for a
-#' terminal process/protocol failure. Legacy runners that omit `error_type` are
-#' treated as reporting a repairable execution failure. A successful result
-#' may omit `error` and `error_type`.
+#' terminal process/protocol failure. A successful result may omit `error` and
+#' `error_type`.
 #'
 #' Code-executing modules accept exactly one runtime source. Passing `runner`
 #' retains that caller-owned object and never closes it. Passing a zero-argument
 #' `interpreter_factory` creates one fresh invocation-owned runner. Factory
 #' results may implement idempotent `start()` and must implement idempotent
-#' terminal `shutdown()` or its compatibility alias `close()`. dsprrr starts a
-#' factory runner before use and shuts it down exactly once on success, error,
-#' or interrupt.
+#' terminal `shutdown()`. dsprrr starts a factory runner before use and shuts it
+#' down exactly once on success, error, or interrupt.
 #'
 #' @examples
 #' \dontrun{
@@ -296,7 +294,6 @@ validate_code_runner_result <- function(result) {
       )
     }
   } else {
-    error_type <- error_type %||% "execution"
     if (
       !is.character(error_type) ||
         length(error_type) != 1L ||
@@ -482,7 +479,7 @@ validate_interpreter_lifecycle_method <- function(method, name) {
     cli::cli_abort(
       c(
         "{.arg interpreter_factory} returned a runner without a callable {.code {name}()}",
-        "i" = "Invocation-owned runners must expose an idempotent terminal {.code shutdown()} or {.code close()} method."
+        "i" = "Invocation-owned runners must expose an idempotent terminal {.code shutdown()} method."
       ),
       class = "dsprrr_interpreter_factory_error"
     )
@@ -517,47 +514,22 @@ validate_interpreter_lifecycle_method <- function(method, name) {
 }
 
 
-validate_interpreter_close <- function(close) {
-  validate_interpreter_lifecycle_method(close, "close")
-}
-
-
 interpreter_cleanup_method <- function(runner, required = TRUE) {
   shutdown <- tryCatch(runner[["shutdown"]], error = function(e) NULL)
-  close <- tryCatch(runner[["close"]], error = function(e) NULL)
-  candidates <- list(shutdown = shutdown, close = close)
-  validation_errors <- list()
-  for (name in names(candidates)) {
-    method <- candidates[[name]]
-    if (!is.function(method)) {
-      next
+  if (!is.function(shutdown)) {
+    if (!isTRUE(required)) {
+      return(NULL)
     }
-    validation <- tryCatch(
-      {
-        validate_interpreter_lifecycle_method(method, name)
-        NULL
-      },
-      interrupt = function(condition) stop(condition),
-      error = function(condition) condition
-    )
-    if (is.null(validation)) {
-      return(list(fun = method, name = name))
-    }
-    validation_errors[[name]] <- validation
-  }
-  if (length(validation_errors) > 0L && isTRUE(required)) {
-    stop(validation_errors[[1L]])
-  }
-  if (isTRUE(required)) {
     cli::cli_abort(
       c(
         "{.arg interpreter_factory} returned a runner without terminal cleanup",
-        "i" = "Implement idempotent {.code shutdown()} or {.code close()}."
+        "i" = "Implement idempotent {.code shutdown()}."
       ),
       class = "dsprrr_interpreter_factory_error"
     )
   }
-  NULL
+  validate_interpreter_lifecycle_method(shutdown, "shutdown")
+  list(fun = shutdown, name = "shutdown")
 }
 
 
@@ -645,8 +617,8 @@ normalize_code_runner_binding <- function(
 }
 
 
-# Acquire one runtime interpreter. Factory-created runners must expose close()
-# because the module, rather than the caller, owns their lifecycle.
+# Acquire one runtime interpreter. Factory-created runners must expose
+# shutdown() because the module, rather than the caller, owns their lifecycle.
 acquire_code_runner <- function(runner, interpreter_factory, module_name) {
   if (is.null(runner) == is.null(interpreter_factory)) {
     cli::cli_abort(
@@ -794,7 +766,7 @@ with_code_runner_lease <- function(
   }
   if (inherits(close_error, "condition")) {
     cli::cli_abort(
-      "{module_name} could not close its invocation-owned interpreter",
+      "{module_name} could not shut down its invocation-owned interpreter",
       parent = close_error,
       class = "dsprrr_interpreter_close_error"
     )
@@ -1280,30 +1252,16 @@ RCodeRunner <- R6::R6Class(
     },
 
     #' @description
-    #' Close the runner
-    #'
-    #' Closing marks the object closed and tears down a persistent subprocess,
-    #' when present. It is safe to call more than once.
+    #' Shut down the interpreter lifecycle
     #'
     #' @return The runner, invisibly
-    close = function() {
+    shutdown = function() {
       if (self$closed) {
         return(invisible(self))
       }
       self$closed <- TRUE
       private$close_persistent_session()
       invisible(self)
-    },
-
-    #' @description
-    #' Shut down the interpreter lifecycle
-    #'
-    #' Alias for `RCodeRunner$close()` matching the common interpreter
-    #' protocol.
-    #'
-    #' @return The runner, invisibly
-    shutdown = function() {
-      self$close()
     },
 
     #' @description
@@ -2084,9 +2042,10 @@ RCodeRunner <- R6::R6Class(
       # Do not call processx/callr methods from an R garbage-collection
       # finalizer. Native process setup may be active for another session, and
       # re-entering processx teardown from GC can crash the host R process.
-      # Invocation-owned runners are closed by with_code_runner_lease(); callers
-      # that retain a runner own its explicit close(). The callr session's own
-      # processx finalizer remains responsible for abandoned resources.
+      # Invocation-owned runners are shut down by with_code_runner_lease();
+      # callers that retain a runner own its explicit shutdown. The callr
+      # session's own processx finalizer remains responsible for abandoned
+      # resources.
       invisible(NULL)
     }
   )

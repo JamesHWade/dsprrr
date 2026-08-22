@@ -16,15 +16,8 @@ use \code{\link[=run_dataset]{run_dataset()}} for multiple RLM invocations. Addi
 \describe{
 \item{.llm}{An ellmer chat object for LLM interaction (optional)}
 \item{.verbose}{Logical indicating whether to print debug information}
-\item{.parallel}{Logical indicating whether to process batch inputs in parallel (default FALSE).}
-\item{.parallel_method}{Character, either "ellmer" (default) or "mirai".
-"ellmer" uses ellmer's \code{parallel_chat_structured()} for native async HTTP
-parallelism (more efficient, single process).
-"mirai" uses mirai for multi-process parallelism (requires \code{.llm = NULL}
-so each worker can create an independent client).}
 \item{.concurrency}{A validated policy created by
-\code{\link[=concurrency_control]{concurrency_control()}}. When supplied, do not also pass \code{.parallel} or
-\code{.parallel_method}.}
+\code{\link[=concurrency_control]{concurrency_control()}}. Omission uses sequential execution.}
 \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
 \item{.return_format}{Character, either "simple" (default) or "structured".
 "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
@@ -37,7 +30,9 @@ If FALSE, bypasses cache for this call only.}
 }}
 }
 \value{
-For single inputs with .return_format="simple": The parsed output according to the module's signature.
+For single inputs with \code{.return_format = "simple"}, the parsed
+output according to the module's signature. Object-shaped outputs remain
+named records for both scalar and batch calls.
 For single inputs with .return_format="structured": A list with components:
 \itemize{
 \item output: The parsed output
@@ -112,7 +107,6 @@ options(ellmer_max_tries = 5)
 }
 \seealso{
 \itemize{
-\item \code{\link[=dsp]{dsp()}} for one-shot LLM calls without creating a module
 \item \code{\link[=run_dataset]{run_dataset()}} for running a module on a data frame
 \item \code{\link[=evaluate]{evaluate()}} for running with metric evaluation
 \item \code{\link[=module]{module()}} for creating modules

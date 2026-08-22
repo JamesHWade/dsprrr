@@ -44,19 +44,22 @@ default_disk_cache_path <- function() {
 #'
 #' **Disk privacy**: By default, the disk cache uses the platform-specific
 #' per-user cache directory. On Unix, dsprrr verifies effective ownership,
-#' canonical path identity, a `0700` cache directory, and `0600` response files
-#' before serialized reads and writes. Unsafe disk caches fall back to memory
-#' when enabled; otherwise no cache tier remains active.
+#' canonical path identity, a cache directory with exactly mode `0700`, and
+#' response files with exactly mode `0600` before serialized reads and writes.
+#' Every existing ancestor must be owned by root or the effective user,
+#' including sticky shared parents. Unsafe disk caches fall back to memory when
+#' enabled; otherwise no cache tier remains active.
 #' On Windows, the per-user directory inherits the account's filesystem ACLs;
 #' base R cannot verify that those ACLs are owner-only. Set `disk_private =
 #' FALSE` only for a cache whose writers and readers are all trusted.
 #'
-#' Existing Unix caches that were readable but not writable by other accounts
-#' are tightened before reuse. Caches that were writable by another account,
-#' contain symbolic links or non-regular filesystem entries, or cannot be
-#' verified are not read; dsprrr uses memory caching when enabled and otherwise
-#' runs uncached. A shared writable cache could replace an RDS response envelope
-#' and must be treated as untrusted serialized input.
+#' Existing Unix caches must already use exactly mode `0700` for the directory
+#' and `0600` for every response file; special mode bits are rejected. Caches
+#' with different modes, untrusted ancestors, symbolic links, non-regular
+#' filesystem entries, or unverifiable ownership are not changed or read;
+#' dsprrr uses memory caching when enabled and otherwise runs uncached. A shared
+#' writable cache could replace an RDS response envelope and must be treated as
+#' untrusted serialized input.
 #'
 #' POSIX modes cannot describe every filesystem policy. dsprrr does not inspect
 #' extended ACLs, administrators can still access owner files, and some network
@@ -85,9 +88,10 @@ default_disk_cache_path <- function() {
 #'   Defaults to `tools::R_user_dir("dsprrr", "cache")`, unless overridden by
 #'   `DSPRRR_CACHE_PATH`.
 #' @param disk_private Logical. Enforce private cache storage. On Unix, require
-#'   effective ownership and private POSIX modes for the directory and response
-#'   files. On Windows, use inherited ACLs and report privacy as unverified. Set
-#'   to `FALSE` only for an explicitly trusted shared cache. Default `TRUE`.
+#'   effective ownership and exact private POSIX modes for the directory and
+#'   response files, plus root-or-effective ownership for every existing
+#'   ancestor. On Windows, use inherited ACLs and report privacy as unverified.
+#'   Set to `FALSE` only for an explicitly trusted shared cache. Default `TRUE`.
 #' @param memory_max_entries Integer. Maximum entries in memory cache.
 #'   Default `1000L`.
 #' @param disk_max_size Numeric. Maximum disk cache size in bytes.
@@ -391,6 +395,13 @@ cache_stats <- function() {
     result$disk_entries <- .dsprrr_env$cache_disk$size()
   }
 
+  # A rejected disk tier leaves `enabled` TRUE, which on its own reads as a
+  # healthy cache. Report the degradation so the drop is visible here too.
+  if (isTRUE(.dsprrr_env$cache_degraded)) {
+    result$degraded <- TRUE
+    result$degraded_reason <- .dsprrr_env$cache_degraded_reason
+  }
+
   structure(result, class = "dsprrr_cache_stats")
 }
 
@@ -415,6 +426,15 @@ print.dsprrr_cache_stats <- function(x, ...) {
 
   if (!is.null(x$disk_entries)) {
     cli::cli_bullets(c("*" = "Disk entries: {x$disk_entries}"))
+  }
+
+  if (isTRUE(x$degraded)) {
+    degraded_reason <- x$degraded_reason %||%
+      "the disk cache could not be trusted"
+    cli::cli_bullets(c(
+      "!" = "Disk caching is degraded",
+      "x" = "{degraded_reason}"
+    ))
   }
 
   invisible(x)
@@ -1255,35 +1275,10 @@ cache_fingerprint_json <- function(fingerprint) {
 
 #' Compute Cache Key
 #'
-#' Retains the historical calling convention for internal callers and tests.
-#' Runtime requests should provide the complete `fingerprint` built by
+#' Runtime requests provide the complete fingerprint built by
 #' `cache_request_fingerprint()`.
 #' @noRd
-cache_key <- function(
-  prompt,
-  model,
-  temperature = NULL,
-  output_type,
-  rollout_id = NULL,
-  llm_id = NULL,
-  fingerprint = NULL
-) {
-  if (is.null(fingerprint)) {
-    fingerprint <- list(
-      version = cache_request_schema_version(),
-      request = cache_payload_fingerprint(prompt),
-      provider = list(
-        model = model,
-        params = cache_config_fingerprint(list(temperature = temperature)),
-        llm_id = llm_id
-      ),
-      output_schema = cache_output_schema(output_type),
-      rollout_id = cache_opaque_value(
-        if (is.null(rollout_id)) NULL else as.character(rollout_id)
-      )
-    )
-  }
-
+cache_key <- function(fingerprint) {
   digest::digest(
     cache_fingerprint_json(fingerprint),
     algo = "sha256",
@@ -1454,21 +1449,22 @@ cache_canonical_target_path <- function(path) {
   as.character(do.call(file.path, c(list(canonical_parent), as.list(missing))))
 }
 
-#' Read POSIX permission bits including the sticky bit
+#' Read all POSIX permission and special bits
 #' @noRd
 cache_path_permission_bits <- function(path) {
   info <- suppressWarnings(file.info(path, extra_cols = FALSE))
   if (nrow(info) != 1L || is.na(info$mode[[1]])) {
     return(NA_integer_)
   }
-  bitwAnd(as.integer(info$mode[[1]]), as.integer(as.octmode("1777")))
+  bitwAnd(as.integer(info$mode[[1]]), as.integer(as.octmode("7777")))
 }
 
 #' Audit whether an ancestor can replace a descendant cache path
 #'
 #' Sticky shared directories such as /tmp are safe only when the next path
-#' component belongs to the effective user. Writable non-sticky ancestors are
-#' rejected because another local account can rename or replace descendants.
+#' component belongs to root or the effective user. Writable non-sticky
+#' ancestors are rejected because another local account can rename or replace
+#' descendants.
 #' @noRd
 audit_cache_parent_chain <- function(disk_path) {
   if (!cache_private_modes_supported()) {
@@ -1494,6 +1490,13 @@ audit_cache_parent_chain <- function(disk_path) {
     return(list(ok = TRUE))
   }
 
+  effective_owner <- cache_effective_owner_id()
+  if (is.na(effective_owner)) {
+    return(list(
+      ok = FALSE,
+      reason = "the effective user ID could not be established"
+    ))
+  }
   writable_mask <- as.integer(as.octmode("0022"))
   sticky_mask <- as.integer(as.octmode("1000"))
   for (i in seq_len(length(chain) - 1L)) {
@@ -1506,6 +1509,16 @@ audit_cache_parent_chain <- function(disk_path) {
         reason = paste0("ancestor permissions could not be inspected: ", parent)
       ))
     }
+    owner <- cache_path_owner_id(parent)
+    if (is.na(owner) || !owner %in% c(0L, effective_owner)) {
+      return(list(
+        ok = FALSE,
+        reason = paste0(
+          "a cache ancestor is not owned by the effective user or root: ",
+          parent
+        )
+      ))
+    }
     if (bitwAnd(mode, writable_mask) == 0L) {
       next
     }
@@ -1515,11 +1528,13 @@ audit_cache_parent_chain <- function(disk_path) {
         reason = paste0("a non-sticky cache ancestor is writable: ", parent)
       ))
     }
-    if (!cache_paths_owned_by_effective_user(child)) {
+    child_owner <- cache_path_owner_id(child)
+    if (is.na(child_owner) || !child_owner %in% c(0L, effective_owner)) {
       return(list(
         ok = FALSE,
         reason = paste0(
-          "a sticky writable ancestor has a child not owned by the effective user: ",
+          "a sticky writable ancestor has a child not owned by the ",
+          "effective user or root: ",
           child
         )
       ))
@@ -1534,6 +1549,14 @@ audit_existing_cache_parent_capability <- function(disk_path) {
   if (!cache_private_modes_supported()) {
     return(list(ok = TRUE))
   }
+  effective_owner <- cache_effective_owner_id()
+  if (is.na(effective_owner)) {
+    return(list(
+      ok = FALSE,
+      reason = "the effective user ID could not be established"
+    ))
+  }
+  child <- disk_path
   current <- dirname(disk_path)
   writable_mask <- as.integer(as.octmode("0022"))
   sticky_mask <- as.integer(as.octmode("1000"))
@@ -1549,6 +1572,16 @@ audit_existing_cache_parent_capability <- function(disk_path) {
           )
         ))
       }
+      owner <- cache_path_owner_id(current)
+      if (is.na(owner) || !owner %in% c(0L, effective_owner)) {
+        return(list(
+          ok = FALSE,
+          reason = paste0(
+            "a cache ancestor is not owned by the effective user or root: ",
+            current
+          )
+        ))
+      }
       if (
         bitwAnd(mode, writable_mask) != 0L &&
           bitwAnd(mode, sticky_mask) == 0L
@@ -1558,11 +1591,31 @@ audit_existing_cache_parent_capability <- function(disk_path) {
           reason = paste0("a non-sticky cache ancestor is writable: ", current)
         ))
       }
+      if (
+        bitwAnd(mode, writable_mask) != 0L &&
+          (file.exists(child) || dir.exists(child))
+      ) {
+        child_owner <- cache_path_owner_id(child)
+        if (
+          is.na(child_owner) ||
+            !child_owner %in% c(0L, effective_owner)
+        ) {
+          return(list(
+            ok = FALSE,
+            reason = paste0(
+              "a sticky writable cache ancestor has a child not owned by ",
+              "the effective user or root: ",
+              child
+            )
+          ))
+        }
+      }
     }
     parent <- dirname(current)
     if (identical(parent, current)) {
       break
     }
+    child <- current
     current <- parent
   }
   list(ok = TRUE)
@@ -1651,6 +1704,54 @@ cache_record_disk_guard_failure <- function(guard, reason) {
   invisible(NULL)
 }
 
+#' Describe why a path failed an exact-mode check
+#'
+#' A setgid bit inherited from a shared parent leaves the permission triplet
+#' looking correct, so name that case rather than reporting a bare mismatch the
+#' user cannot see in the obvious places.
+#' @noRd
+cache_exact_mode_reason <- function(mode, expected, what) {
+  special <- bitwAnd(mode, as.integer(as.octmode("7000")))
+  permissions <- bitwAnd(mode, as.integer(as.octmode("0777")))
+  if (
+    special != 0L &&
+      identical(permissions, as.integer(as.octmode(expected)))
+  ) {
+    names <- c("sticky", "setgid", "setuid")[
+      bitwAnd(special, c(1L, 2L, 4L) * 512L) != 0L
+    ]
+    return(paste0(
+      "an existing private ",
+      what,
+      " carries the ",
+      paste(names, collapse = " and "),
+      " bit, which dsprrr does not accept even with owner-only permissions"
+    ))
+  }
+  paste0(
+    "an existing private ",
+    what,
+    " must have mode exactly ",
+    expected,
+    ", but it is ",
+    format(as.octmode(mode))
+  )
+}
+
+#' Build a chmod remediation hint for a rejected cache path
+#'
+#' dsprrr no longer repairs stored permissions before reusing a cache, so the
+#' reported reason has to say what to run instead.
+#' @noRd
+cache_chmod_remedy <- function(mode, path) {
+  paste0(
+    "restrict it yourself, then retry: chmod ",
+    mode,
+    " ",
+    shQuote(path)
+  )
+}
+
 #' Abort a guarded operation after recording its trust failure
 #' @noRd
 cache_abort_disk_guard <- function(guard, reason) {
@@ -1703,14 +1804,14 @@ cache_path_is_regular <- function(path) {
     identical(as.character(info$type[[1]]), "file")
 }
 
-#' Read the POSIX permission bits for one path
+#' Read all POSIX permission and special bits for one path
 #' @noRd
 cache_path_mode <- function(path) {
   info <- suppressWarnings(file.info(path, extra_cols = FALSE))
   if (nrow(info) != 1L || is.na(info$mode[[1]])) {
     return(NA_integer_)
   }
-  bitwAnd(as.integer(info$mode[[1]]), as.integer(as.octmode("0777")))
+  bitwAnd(as.integer(info$mode[[1]]), as.integer(as.octmode("7777")))
 }
 
 #' Verify one path has exactly the requested POSIX mode
@@ -1735,7 +1836,7 @@ cache_set_private_mode <- function(paths, mode) {
   all(vapply(paths, cache_mode_is, logical(1), mode = mode))
 }
 
-#' Inspect a cache directory itself before changing permissions or listing it
+#' Inspect a cache directory itself before listing it
 #' @noRd
 audit_private_cache_directory <- function(disk_path) {
   if (cache_path_is_symlink(disk_path)) {
@@ -1749,11 +1850,7 @@ audit_private_cache_directory <- function(disk_path) {
   }
 
   if (!cache_private_modes_supported()) {
-    return(list(
-      ok = TRUE,
-      needs_repair = FALSE,
-      was_overexposed = FALSE
-    ))
+    return(list(ok = TRUE))
   }
 
   effective_owner <- cache_effective_owner_id()
@@ -1789,12 +1886,18 @@ audit_private_cache_directory <- function(disk_path) {
     ))
   }
 
-  group_or_other_access <- as.integer(as.octmode("0077"))
-  list(
-    ok = TRUE,
-    needs_repair = mode != as.integer(as.octmode("0700")),
-    was_overexposed = bitwAnd(mode, group_or_other_access) != 0L
-  )
+  if (mode != as.integer(as.octmode("0700"))) {
+    return(list(
+      ok = FALSE,
+      reason = paste0(
+        cache_exact_mode_reason(mode, "0700", "cache directory"),
+        "; ",
+        cache_chmod_remedy("700", disk_path)
+      )
+    ))
+  }
+
+  list(ok = TRUE)
 }
 
 #' Enumerate a cache directory and detect silent permission failures
@@ -1887,12 +1990,7 @@ audit_private_cache_entries <- function(disk_path) {
   }
 
   if (!cache_private_modes_supported()) {
-    return(list(
-      ok = TRUE,
-      files = entries,
-      needs_repair = FALSE,
-      was_overexposed = FALSE
-    ))
+    return(list(ok = TRUE, files = entries))
   }
 
   if (!cache_paths_owned_by_effective_user(entries)) {
@@ -1911,7 +2009,6 @@ audit_private_cache_entries <- function(disk_path) {
   }
 
   group_or_other_write <- as.integer(as.octmode("0022"))
-  group_or_other_access <- as.integer(as.octmode("0077"))
   if (any(bitwAnd(modes, group_or_other_write) != 0L)) {
     return(list(
       ok = FALSE,
@@ -1922,31 +2019,43 @@ audit_private_cache_entries <- function(disk_path) {
     ))
   }
 
-  expected <- rep(as.integer(as.octmode("0600")), length(entries))
-  list(
-    ok = TRUE,
-    files = entries,
-    needs_repair = any(modes != expected),
-    was_overexposed = any(bitwAnd(modes, group_or_other_access) != 0L)
-  )
+  if (any(modes != as.integer(as.octmode("0600")))) {
+    return(list(
+      ok = FALSE,
+      reason = local({
+        offender <- which(modes != as.integer(as.octmode("0600")))[[1]]
+        paste0(
+          cache_exact_mode_reason(modes[[offender]], "0600", "cache file"),
+          "; ",
+          cache_chmod_remedy("600", entries[[offender]])
+        )
+      })
+    ))
+  }
+
+  list(ok = TRUE, files = entries)
 }
 
 #' Create one cache directory without changing parent permissions
 #' @noRd
-create_cache_directory <- function(disk_path, private = TRUE) {
+create_cache_directory <- function(
+  disk_path,
+  private = TRUE,
+  must_create = FALSE
+) {
   if (dir.exists(disk_path)) {
-    return(TRUE)
+    return(!isTRUE(must_create))
   }
   mode <- if (isTRUE(private)) "0700" else "0777"
   tryCatch(
     {
-      dir.create(
+      created <- dir.create(
         disk_path,
         recursive = TRUE,
         showWarnings = FALSE,
         mode = mode
       )
-      dir.exists(disk_path)
+      dir.exists(disk_path) && (!isTRUE(must_create) || isTRUE(created))
     },
     error = function(e) FALSE
   )
@@ -2295,6 +2404,7 @@ prepare_cache_directory <- function(disk_path, private = TRUE) {
     ))
   }
   disk_path <- canonical_target
+  directory_existed <- dir.exists(disk_path)
 
   if (!isTRUE(private)) {
     if (!create_cache_directory(disk_path, private = FALSE)) {
@@ -2311,14 +2421,10 @@ prepare_cache_directory <- function(disk_path, private = TRUE) {
     return(list(ok = TRUE, path = disk_path))
   }
 
-  directory_audit <- if (dir.exists(disk_path)) {
+  directory_audit <- if (directory_existed) {
     audit_private_cache_directory(disk_path)
   } else {
-    list(
-      ok = TRUE,
-      needs_repair = FALSE,
-      was_overexposed = FALSE
-    )
+    list(ok = TRUE)
   }
   if (!isTRUE(directory_audit$ok)) {
     return(list(
@@ -2337,27 +2443,29 @@ prepare_cache_directory <- function(disk_path, private = TRUE) {
     ))
   }
 
-  # A directory can be owner-writable but not owner-readable (for example,
-  # mode 0300). Close it to other accounts and restore owner access before
-  # enumerating; list.files() otherwise reports an indistinguishable empty
-  # result on some systems.
   if (
-    dir.exists(disk_path) &&
+    !create_cache_directory(
+      disk_path,
+      private = TRUE,
+      must_create = !directory_existed
+    )
+  ) {
+    return(list(
+      ok = FALSE,
+      path = disk_path,
+      reason = "the cache directory could not be created"
+    ))
+  }
+
+  if (
+    !directory_existed &&
       cache_private_modes_supported() &&
       !cache_set_private_mode(disk_path, "0700")
   ) {
     return(list(
       ok = FALSE,
       path = disk_path,
-      reason = "owner-only cache directory permissions could not be enforced"
-    ))
-  }
-
-  if (!create_cache_directory(disk_path, private = TRUE)) {
-    return(list(
-      ok = FALSE,
-      path = disk_path,
-      reason = "the cache directory could not be created"
+      reason = "new private cache directory permissions could not be verified"
     ))
   }
 
@@ -2369,17 +2477,6 @@ prepare_cache_directory <- function(disk_path, private = TRUE) {
       ok = FALSE,
       path = disk_path,
       reason = post_create_directory_audit$reason
-    ))
-  }
-
-  if (
-    cache_private_modes_supported() &&
-      !cache_set_private_mode(disk_path, "0700")
-  ) {
-    return(list(
-      ok = FALSE,
-      path = disk_path,
-      reason = "owner-only cache directory permissions could not be verified"
     ))
   }
 
@@ -2401,13 +2498,6 @@ prepare_cache_directory <- function(disk_path, private = TRUE) {
     ))
   }
 
-  needs_repair <- isTRUE(directory_audit$needs_repair) ||
-    isTRUE(post_create_directory_audit$needs_repair) ||
-    isTRUE(entry_audit$needs_repair)
-  was_overexposed <- isTRUE(directory_audit$was_overexposed) ||
-    isTRUE(post_create_directory_audit$was_overexposed) ||
-    isTRUE(entry_audit$was_overexposed)
-
   if (!cache_private_modes_supported()) {
     .dsprrr_env$cache_privacy_status <- "unverified_windows"
     .dsprrr_env$cache_privacy_reason <- paste0(
@@ -2416,19 +2506,16 @@ prepare_cache_directory <- function(disk_path, private = TRUE) {
     return(list(ok = TRUE, path = disk_path, trust = NULL))
   }
 
-  if (
-    !cache_set_private_mode(entry_audit$files, "0600") ||
-      !verify_private_cache_write(disk_path)
-  ) {
+  if (!verify_private_cache_write(disk_path)) {
     return(list(
       ok = FALSE,
       path = disk_path,
-      reason = "owner-only cache permissions could not be enforced and verified"
+      reason = "owner-only cache write permissions could not be verified"
     ))
   }
 
-  # The write probe and repairs mutate the directory. Repeat every audit, then
-  # bind future operations to the final canonical identity.
+  # The write probe mutates the directory. Repeat every audit, then bind future
+  # operations to the final canonical identity.
   final_directory_audit <- audit_private_cache_directory(disk_path)
   final_parent_audit <- audit_cache_parent_chain(disk_path)
   final_entry_audit <- audit_private_cache_entries(disk_path)
@@ -2452,20 +2539,6 @@ prepare_cache_directory <- function(disk_path, private = TRUE) {
   .dsprrr_env$cache_privacy_reason <- paste0(
     "effective ownership and POSIX modes were verified; extended ACLs were not checked"
   )
-  if (needs_repair && was_overexposed) {
-    cli::cli_warn(
-      c(
-        "!" = "Tightened permissions on an existing disk cache at {.path {disk_path}}",
-        "i" = "The directory is now owner-only, but prior disclosure cannot be undone."
-      ),
-      class = "dsprrr_cache_permissions_repaired",
-      .frequency = "once",
-      .frequency_id = paste0(
-        "cache-permissions-repaired-",
-        digest::digest(disk_path, serialize = FALSE)
-      )
-    )
-  }
 
   list(ok = TRUE, path = disk_path, trust = trust)
 }
@@ -2494,8 +2567,8 @@ cache_disk_degrade <- function(disk_path, reason) {
   cli::cli_warn(
     c(
       "!" = "Disk caching is unavailable at {.path {disk_path}}",
-      "x" = reason,
-      "i" = fallback
+      "x" = "{reason}",
+      "i" = "{fallback}"
     ),
     class = c("dsprrr_cache_security_warning", "dsprrr_cache_warning"),
     .frequency = "once",
@@ -2944,12 +3017,7 @@ cached_chat_structured <- function(
     return(llm$chat_structured(prompt, type = output_type, echo = "none"))
   }
 
-  key <- cache_key(
-    prompt = prompt,
-    model = "",
-    output_type = output_type,
-    fingerprint = fingerprint
-  )
+  key <- cache_key(fingerprint)
 
   # Try to get from cache
   cached_entry <- cache$get(key)

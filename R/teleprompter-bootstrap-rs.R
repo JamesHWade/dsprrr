@@ -740,11 +740,8 @@ compile_candidate <- function(
   cli::cli_abort("Unknown candidate type: {config$type}")
 }
 
-#' Print method for BootstrapFewShotWithRandomSearch
-#' @param x A BootstrapFewShotWithRandomSearch object
-#' @param ... Additional arguments (unused)
-#' @export
-print.BootstrapFewShotWithRandomSearch <- function(x, ...) {
+# Print a BootstrapFewShotWithRandomSearch object through its S7 method.
+print_bootstrap_few_shot_random_search <- function(x, ...) {
   cli::cli_h3("BootstrapFewShotWithRandomSearch Teleprompter")
 
   cli::cli_text("{.field num_candidate_programs}: {x@num_candidate_programs}")
@@ -770,4 +767,4 @@ print.BootstrapFewShotWithRandomSearch <- function(x, ...) {
 
 # Register S7 print method
 S7::method(print, BootstrapFewShotWithRandomSearch) <-
-  print.BootstrapFewShotWithRandomSearch
+  print_bootstrap_few_shot_random_search

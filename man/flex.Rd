@@ -18,7 +18,8 @@ flex(
 )
 }
 \arguments{
-\item{signature}{A \link{Signature} object or DSPy-style signature string.}
+\item{signature}{A signature object created by \code{\link[=signature]{signature()}}, or a DSPy-style
+signature string.}
 
 \item{module_src}{A complete Flex source string, or \code{NULL} for a baseline.}
 

@@ -76,9 +76,11 @@ mod <- module(signature("text -> sentiment"), type = "predict")
 # Run it
 run(mod, text = "This is great!", .llm = chat_openai())
 
-# Or convert an existing Chat
-classifier <- chat_openai() |>
-  as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
+# Or store an existing Chat on the module
+classifier <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
+  chat = chat_openai()
+)
 
 classifier$predict(text = "Terrible experience")
 ```
@@ -125,7 +127,7 @@ optimized <- compile(
 
 # Grid search over parameters
 mod$optimize_grid(
-  devset = dev_data,
+  data = dev_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0.1, 0.5, 1.0))
 )
@@ -221,7 +223,7 @@ investigator <- rlm_module(
   interpreter_factory = function() {
     r_code_runner(timeout = 30, persistent = TRUE)
   },
-  max_iters = 8,
+  max_iterations = 8,
   max_llm_calls = 0L
 )
 ```
@@ -281,7 +283,7 @@ dsprrr uses ellmer for all LLM calls. The integration is straightforward:
 | `chat_openai()` | Pass to `run(..., .llm = )` |
 | `type_string()`, `type_enum()` | Used inside signatures |
 | `tool()` | Pass to `module(..., tools = )` |
-| `chat$chat_structured()` | `dsp(chat, signature, ...)` |
+| `chat$chat_structured()` | `run(module(signature), ..., .llm = chat)` |
 
 ## Learning more
 

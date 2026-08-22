@@ -2,41 +2,39 @@ concurrency_test_chat <- function(fail_on = NULL) {
   force(fail_on)
   turns <- list()
 
-  structure(
-    list(
-      get_turns = function(...) turns,
-      set_turns = function(value) {
-        turns <<- value
-        invisible(NULL)
-      },
-      get_model = function() "concurrency-test-model",
-      chat_structured = function(prompt, ...) {
-        prompt <- as.character(prompt)
-        if (!is.null(fail_on) && grepl(fail_on, prompt, fixed = TRUE)) {
-          error <- simpleError("concurrency test provider failure")
-          class(error) <- c("concurrency_test_provider_error", class(error))
-          stop(error)
-        }
-        response <- list(answer = paste0("ok:", prompt))
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(
-              contents = list(ellmer::ContentText(prompt))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentText("ok")),
-              tokens = c(2L, 1L, 0L),
-              cost = 0.001,
-              duration = 0.01
-            )
+  chat <- new_test_chat(
+    model = "concurrency-test-model",
+    chat_structured = function(prompt, ...) {
+      prompt <- as.character(prompt)
+      if (!is.null(fail_on) && grepl(fail_on, prompt, fixed = TRUE)) {
+        error <- simpleError("concurrency test provider failure")
+        class(error) <- c("concurrency_test_provider_error", class(error))
+        stop(error)
+      }
+      response <- list(answer = paste0("ok:", prompt))
+      turns <<- c(
+        turns,
+        list(
+          ellmer::UserTurn(
+            contents = list(ellmer::ContentText(prompt))
+          ),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("ok")),
+            tokens = c(2L, 1L, 0L),
+            cost = 0.001,
+            duration = 0.01
           )
         )
-        response
-      }
-    ),
-    class = "Chat"
+      )
+      response
+    }
   )
+  override_test_chat_method(chat, "get_turns", function(...) turns)
+  override_test_chat_method(chat, "set_turns", function(value) {
+    turns <<- value
+    invisible(NULL)
+  })
+  chat
 }
 
 concurrency_test_slow_chat <- function(
@@ -47,23 +45,20 @@ concurrency_test_slow_chat <- function(
   force(delay)
   force(marker)
   force(fail_on)
-  structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        prompt <- as.character(prompt)
-        if (!is.null(fail_on) && grepl(fail_on, prompt, fixed = TRUE)) {
-          error <- simpleError("concurrency test provider failure")
-          class(error) <- c("concurrency_test_provider_error", class(error))
-          stop(error)
-        }
-        Sys.sleep(delay)
-        if (!is.null(marker)) {
-          file.create(marker)
-        }
-        list(answer = paste0("ok:", prompt))
+  new_test_chat(
+    chat_structured = function(prompt, ...) {
+      prompt <- as.character(prompt)
+      if (!is.null(fail_on) && grepl(fail_on, prompt, fixed = TRUE)) {
+        error <- simpleError("concurrency test provider failure")
+        class(error) <- c("concurrency_test_provider_error", class(error))
+        stop(error)
       }
-    ),
-    class = "Chat"
+      Sys.sleep(delay)
+      if (!is.null(marker)) {
+        file.create(marker)
+      }
+      list(answer = paste0("ok:", prompt))
+    }
   )
 }
 
@@ -130,9 +125,34 @@ test_that("concurrency_control validates every numeric limit", {
   expect_gte(after, before)
 })
 
-test_that("explicit controls conflict only with supplied legacy arguments", {
+test_that("concurrency is the only public batch control", {
   mod <- module(signature("text -> answer"), type = "predict")
   control <- concurrency_control(backend = "sequential", max_active = 3L)
+
+  legacy <- c(".parallel", ".parallel_method")
+  expect_identical(
+    intersect(legacy, names(formals(dsprrr:::run.Module))),
+    character()
+  )
+  expect_identical(
+    intersect(legacy, names(formals(dsprrr:::run_dataset.Module))),
+    character()
+  )
+  expect_identical(
+    intersect(legacy, names(formals(dsprrr:::evaluate.Module))),
+    character()
+  )
+  expect_identical(
+    intersect(legacy, names(formals(as_vitals_solver))),
+    character()
+  )
+  expect_identical(
+    intersect(legacy, names(formals(as_vitals_task))),
+    character()
+  )
+  expect_identical(intersect(legacy, names(formals(mod$run))), character())
+  expect_true(".concurrency" %in% names(formals(as_vitals_solver)))
+  expect_true(".concurrency" %in% names(formals(as_vitals_task)))
 
   result <- run(
     mod,
@@ -146,19 +166,19 @@ test_that("explicit controls conflict only with supplied legacy arguments", {
   expect_identical(result[[1]]$metadata$requested_workers, 3L)
   expect_identical(result[[1]]$metadata$effective_workers, 1L)
 
-  expect_error(
-    run(
-      mod,
-      text = c("a", "b"),
-      .llm = concurrency_test_chat(),
-      .concurrency = control,
-      .parallel = FALSE
-    ),
-    class = "dsprrr_concurrency_argument_conflict"
+  omitted <- run(
+    mod,
+    text = c("a", "b"),
+    .llm = concurrency_test_chat(),
+    .return_format = "structured",
+    .progress = FALSE,
+    .cache = FALSE
   )
+  expect_identical(omitted[[1]]$metadata$requested_backend, "sequential")
+  expect_identical(omitted[[1]]$metadata$effective_backend, "sequential")
 })
 
-test_that("run_dataset forwards explicit concurrency without legacy conflicts", {
+test_that("run_dataset forwards explicit concurrency", {
   mod <- module(signature("text -> answer"), type = "predict")
   result <- run_dataset(
     mod,
@@ -178,7 +198,7 @@ test_that("run_dataset forwards explicit concurrency without legacy conflicts", 
   expect_identical(result$.metadata[[1]]$requested_backend, "sequential")
 })
 
-test_that("evaluate forwards explicit concurrency without injecting legacy flags", {
+test_that("evaluate forwards explicit concurrency", {
   mod <- module(signature("text -> answer"), type = "predict")
   control <- concurrency_control(backend = "sequential", max_active = 3L)
   result <- evaluate(
@@ -193,17 +213,6 @@ test_that("evaluate forwards explicit concurrency without injecting legacy flags
   expect_equal(result$mean_score, 1)
   expect_identical(result$metadata[[1]]$requested_workers, 3L)
   expect_identical(result$metadata[[1]]$effective_workers, 1L)
-  expect_error(
-    evaluate(
-      mod,
-      data = data.frame(text = c("a", "b")),
-      metric = function(prediction, expected_row) 1,
-      .llm = concurrency_test_chat(),
-      .concurrency = control,
-      .parallel = FALSE
-    ),
-    class = "dsprrr_concurrency_argument_conflict"
-  )
 })
 
 test_that("auto is the only backend that falls back and records why", {
@@ -248,7 +257,7 @@ test_that("auto is the only backend that falls back and records why", {
   )
 })
 
-test_that("auto uses sequential execution for one worker and opaque Chats", {
+test_that("auto uses sequential execution for one worker and test Chats", {
   ellmer_calls <- 0L
   testthat::local_mocked_bindings(
     parallel_chat_structured = function(...) {

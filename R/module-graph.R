@@ -425,9 +425,7 @@ set_module_lm <- function(
   clone = TRUE
 ) {
   module_graph_check_program(program)
-  if (!is.null(chat) && !inherits(chat, "Chat")) {
-    cli::cli_abort("{.arg chat} must be an ellmer Chat object or NULL")
-  }
+  assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
   if (!is.logical(clone) || length(clone) != 1L || is.na(clone)) {
     cli::cli_abort("{.arg clone} must be TRUE or FALSE")
   }

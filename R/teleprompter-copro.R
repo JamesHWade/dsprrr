@@ -27,8 +27,8 @@
 #'   If NULL, uses the metric's default threshold.
 #' @param max_errors Maximum number of errors allowed during optimization.
 #'   Default is 5.
-#' @param prompt_model Optional LLM for generating instruction candidates.
-#'   If NULL, uses the task model (.llm) with higher temperature.
+#' @param prompt_model Optional ellmer Chat for generating instruction
+#'   candidates. If `NULL`, uses the task Chat supplied through `.llm`.
 #' @param breadth Number of instruction candidates to generate per iteration.
 #'   Default is 10.
 #' @param depth Number of coordinate ascent iterations. Default is 3.
@@ -68,19 +68,10 @@ COPRO <- S7::new_class(
         if (is.null(value)) {
           return(NULL)
         }
-        if (is.function(value)) {
+        if (is_ellmer_chat(value)) {
           return(NULL)
         }
-        if (inherits(value, "Chat")) {
-          return(NULL)
-        }
-        if (is.list(value) && "chat" %in% names(value)) {
-          return(NULL)
-        }
-        if (is.list(value) && "chat_structured" %in% names(value)) {
-          return(NULL)
-        }
-        "prompt_model must be NULL, a function, a Chat object, or a list with chat/chat_structured method"
+        "prompt_model must be NULL or an ellmer Chat R6 object"
       }
     ),
     breadth = S7::new_property(
@@ -650,66 +641,19 @@ generate_single_copro_candidate <- function(
     return(NULL)
   }
 
-  if (inherits(model_to_use, "Chat")) {
-    # Handle ellmer Chat objects
-    result <- tryCatch(
-      model_to_use$chat(prompt),
-      error = function(e) {
-        cli::cli_warn(
-          c(
-            "COPRO instruction generation failed",
-            "x" = conditionMessage(e)
-          ),
-          class = "dsprrr_copro_generation_warning"
-        )
-        NULL
-      }
-    )
-  } else if (is.function(model_to_use)) {
-    result <- tryCatch(
-      model_to_use(prompt),
-      error = function(e) {
-        cli::cli_warn(
-          c(
-            "COPRO instruction generation function failed",
-            "x" = conditionMessage(e)
-          ),
-          class = "dsprrr_copro_generation_warning"
-        )
-        NULL
-      }
-    )
-  } else if (is.list(model_to_use)) {
-    if ("chat" %in% names(model_to_use)) {
-      result <- tryCatch(
-        model_to_use$chat(prompt),
-        error = function(e) {
-          cli::cli_warn(
-            c(
-              "COPRO instruction generation (list$chat) failed",
-              "x" = conditionMessage(e)
-            ),
-            class = "dsprrr_copro_generation_warning"
-          )
-          NULL
-        }
+  result <- tryCatch(
+    model_to_use$chat(prompt),
+    error = function(e) {
+      cli::cli_warn(
+        c(
+          "COPRO instruction generation failed",
+          "x" = conditionMessage(e)
+        ),
+        class = "dsprrr_copro_generation_warning"
       )
-    } else if ("chat_structured" %in% names(model_to_use)) {
-      result <- tryCatch(
-        model_to_use$chat_structured(prompt, ellmer::type_string()),
-        error = function(e) {
-          cli::cli_warn(
-            c(
-              "COPRO instruction generation (chat_structured) failed",
-              "x" = conditionMessage(e)
-            ),
-            class = "dsprrr_copro_generation_warning"
-          )
-          NULL
-        }
-      )
+      NULL
     }
-  }
+  )
 
   # Clean up result
   if (!is.null(result)) {
@@ -866,11 +810,8 @@ format_copro_failed_examples <- function(
   paste(lines, collapse = "\n\n")
 }
 
-#' Print method for COPRO
-#' @param x A COPRO object
-#' @param ... Additional arguments (unused)
-#' @export
-print.COPRO <- function(x, ...) {
+# Print a COPRO object through its S7 method.
+print_copro <- function(x, ...) {
   cli::cli_h3("COPRO Teleprompter")
 
   cli::cli_text("{.field breadth}: {x@breadth}")
@@ -894,4 +835,4 @@ print.COPRO <- function(x, ...) {
 }
 
 # Register S7 print method
-S7::method(print, COPRO) <- print.COPRO
+S7::method(print, COPRO) <- print_copro

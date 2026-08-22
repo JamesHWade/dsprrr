@@ -11,15 +11,15 @@ with_instructions(x, instructions)
 append_instructions(x, instructions)
 }
 \arguments{
-\item{x}{A \link{Signature} object or string notation such as
-\code{"question -> answer"}.}
+\item{x}{A signature object created by \code{\link[=signature]{signature()}}, or string notation
+such as \code{"question -> answer"}.}
 
 \item{instructions}{A single, non-missing character string. Empty text is
 allowed when the resulting signature remains valid; for
 \code{append_instructions()} it is a no-op.}
 }
 \value{
-A new \link{Signature} object.
+A new signature object.
 }
 \description{
 Functions for transforming signatures to enable different reasoning patterns.
@@ -29,7 +29,7 @@ to include additional fields like chain-of-thought reasoning.
 \code{with_instructions()} replaces a signature's instructions while preserving
 its input and output fields. \code{append_instructions()} layers additional
 instructions after the existing text, separated by a blank line. Both
-functions return a new \link{Signature} and never mutate the original.
+functions return a new signature object and never mutate the original.
 }
 \examples{
 base <- signature(

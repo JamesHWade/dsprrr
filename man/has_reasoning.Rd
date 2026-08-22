@@ -7,7 +7,7 @@
 has_reasoning(sig, reasoning_field = "reasoning")
 }
 \arguments{
-\item{sig}{A Signature object}
+\item{sig}{A signature object created by \code{\link[=signature]{signature()}}.}
 
 \item{reasoning_field}{Character. Name of reasoning field to check for.}
 }

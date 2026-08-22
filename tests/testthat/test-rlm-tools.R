@@ -90,7 +90,7 @@ test_that("recursive queries replay as ordinary R values", {
 test_that("recursive query indices advance across replayed calls", {
   code <- paste(
     "first <- llm_query('first')",
-    "second <- rlm_query('second')",
+    "second <- llm_query('second')",
     "paste(first, second, sep = ':')",
     sep = "\n"
   )
@@ -125,7 +125,7 @@ test_that("recursive query indices advance across replayed calls", {
 
 test_that("batched recursive queries preserve singleton array shape", {
   code <- paste(
-    "answers <- rlm_query_batch('only', slices = 'context')",
+    "answers <- llm_query_batched('only', slices = 'context')",
     "list(length = length(answers), value = answers)",
     sep = "\n"
   )

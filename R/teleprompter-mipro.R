@@ -17,8 +17,8 @@
 #' available.
 #'
 #' @param metric A metric function for evaluating predictions (required).
-#' @param prompt_model Optional model to propose instructions.
-#' @param task_model Optional model to evaluate tasks. Defaults to .llm.
+#' @param task_model Optional ellmer Chat used to evaluate tasks. `NULL` uses
+#'   the `.llm` supplied to `compile()`.
 #' @param teacher_settings List of settings for the teacher model.
 #' @param max_bootstrapped_demos Maximum number of bootstrapped demonstrations.
 #' @param max_labeled_demos Maximum number of labeled demonstrations.
@@ -27,7 +27,6 @@
 #' @param num_threads Number of threads to use for evaluation.
 #' @param max_errors Maximum number of errors allowed during optimization.
 #' @param seed Random seed for reproducibility.
-#' @param init_temperature Initial temperature for instruction proposals.
 #' @param track_stats Whether to track trial history.
 #' @param log_dir Directory for trial logging.
 #' @param metric_threshold Minimum score required for acceptance.
@@ -53,8 +52,16 @@ MIPROv2 <- S7::new_class(
   "MIPROv2",
   parent = Teleprompter,
   properties = list(
-    prompt_model = S7::new_property(S7::class_any, default = NULL),
-    task_model = S7::new_property(S7::class_any, default = NULL),
+    task_model = S7::new_property(
+      S7::class_any,
+      default = NULL,
+      validator = function(value) {
+        if (!is.null(value) && !is_ellmer_chat(value)) {
+          return("task_model must be NULL or an ellmer Chat R6 object")
+        }
+        NULL
+      }
+    ),
     teacher_settings = S7::new_property(
       S7::class_any,
       default = NULL,
@@ -124,16 +131,6 @@ MIPROv2 <- S7::new_class(
       validator = function(value) {
         if (!is.null(value) && (!is.numeric(value) || length(value) != 1)) {
           return("seed must be a single numeric value or NULL")
-        }
-        NULL
-      }
-    ),
-    init_temperature = S7::new_property(
-      S7::class_numeric,
-      default = 1.0,
-      validator = function(value) {
-        if (!is.numeric(value) || length(value) != 1 || value <= 0) {
-          return("init_temperature must be a single positive numeric value")
         }
         NULL
       }
@@ -338,7 +335,6 @@ compile_mipro <- function(
         teacher_settings = teleprompter@teacher_settings,
         metric_threshold = teleprompter@metric_threshold,
         seed = teleprompter@seed,
-        init_temperature = teleprompter@init_temperature,
         candidate_scope = if (component_mode) {
           "predictor_components"
         } else {
@@ -440,14 +436,17 @@ compile_mipro <- function(
       return_state = TRUE
     )
   }
-  if (is.null(demo_result$candidates)) {
-    # Compatibility for test doubles and third-party overrides of the private
-    # helper that return the historical candidate-list shape.
-    demo_result <- list(
-      candidates = demo_result,
-      state = state$demo_generation,
-      complete = TRUE,
-      budget = budget
+  required_demo_fields <- c("candidates", "state", "complete", "budget")
+  if (
+    !is.list(demo_result) ||
+      !all(required_demo_fields %in% names(demo_result)) ||
+      !is.logical(demo_result$complete) ||
+      length(demo_result$complete) != 1L ||
+      is.na(demo_result$complete)
+  ) {
+    cli::cli_abort(
+      "Internal MIPRO demo generation returned an invalid result",
+      class = "dsprrr_mipro_internal_error"
     )
   }
   demo_candidates <- demo_result$candidates

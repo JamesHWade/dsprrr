@@ -3,19 +3,14 @@
 test_that("copy() creates independent module", {
   sig <- signature("text -> result")
 
-  mock_chat <- structure(
-    list(
-      get_model = function() "gpt-4",
-      chat_structured = function(...) list(result = "test")
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    model = "gpt-4",
+    turns = list("prior turn"),
+    chat_structured = function(...) list(result = "test")
   )
 
   mod1 <- module(sig, type = "predict", chat = mock_chat)
-  expect_warning(
-    mod2 <- mod1$copy(),
-    "Could not clone Chat"
-  )
+  mod2 <- mod1$copy()
 
   # Should be different objects
   expect_false(identical(mod1, mod2))
@@ -23,6 +18,36 @@ test_that("copy() creates independent module", {
   # Signature should be same values
   expect_equal(mod1$signature@inputs, mod2$signature@inputs)
   expect_equal(mod1$signature@instructions, mod2$signature@instructions)
+  expect_false(identical(mod1$chat, mod2$chat))
+  expect_identical(mod1$chat$get_turns(), list("prior turn"))
+  expect_identical(mod2$chat$get_turns(), list())
+})
+
+test_that("copy() fails closed when Chat cloning fails", {
+  chat <- new_test_chat()
+  override_test_chat_method(chat, "clone", function(...) stop("cannot clone"))
+  mod <- module(signature("text -> result"), chat = chat)
+
+  expect_error(
+    mod$copy(),
+    "Failed to deep-clone",
+    class = "dsprrr_chat_clone_error"
+  )
+})
+
+test_that("copy(deep = TRUE) preserves independent config and demos", {
+  mod <- module(signature("text -> result"))
+  mod$config$params <- list(temperature = 0.2)
+  mod$demos <- list(list(text = "before", result = "original"))
+
+  copied <- mod$copy(deep = TRUE)
+  copied$config$params$temperature <- 0.9
+  copied$demos[[1L]]$result <- "changed"
+
+  expect_identical(mod$config$params$temperature, 0.2)
+  expect_identical(mod$demos[[1L]]$result, "original")
+  expect_identical(copied$config$params$temperature, 0.9)
+  expect_identical(copied$demos[[1L]]$result, "changed")
 })
 
 test_that("copy() resets state", {

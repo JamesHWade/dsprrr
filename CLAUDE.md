@@ -304,12 +304,16 @@ eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
 - Integration tests often skip on CRAN (`skip_on_cran()`)
 
 ### Key Test Conventions
+
+Every model boundary requires a real ellmer `Chat` R6 object. A plain list with
+a `chat_structured` element is rejected with `dsprrr_chat_type_error`. Use
+`new_test_chat()` from `tests/testthat/helper-chat.R`, which builds an R6
+`Chat` whose methods you supply:
+
 ```r
 # Mock LLM for deterministic testing
-mock_llm <- list(
-  chat_structured = function(prompt, type, ...) {
-    list(answer = "mocked response")
-  }
+mock_llm <- new_test_chat(
+  chat_structured = function(...) list(answer = "mocked response")
 )
 
 # Test module behavior
@@ -320,6 +324,9 @@ test_that("module returns expected output", {
   expect_s3_class(result, "tbl_df")
 })
 ```
+
+`new_test_chat()` also takes `clone`, `get_turns`, `set_turns`, `last_turn`,
+and `get_model` overrides for tests that exercise Chat isolation.
 
 ### VCR Cassettes (HTTP Recording)
 
@@ -416,7 +423,7 @@ Tests that work in isolation may fail when run together if persistent disk cache
 # BAD: Will fail if cache has entries from previous run
 test_that("mock returns different values", {
   call_count <- 0
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       call_count <<- call_count + 1
       paste("response", call_count)
@@ -436,7 +443,7 @@ test_that("mock returns different values", {
   local_reset_cache()
 
   call_count <- 0
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       call_count <<- call_count + 1
       paste("response", call_count)
@@ -461,9 +468,10 @@ test_that("mock returns different values", {
 - FlexModule (bounded declarative Predict/ChainOfThought graphs via `flex()`)
 - ChainOfThought via signature transforms (`with_reasoning()`, `chain_of_thought()`)
 
-**Teleprompters (11):**
+**Teleprompters (10):**
 - LabeledFewShot, BootstrapFewShot, BootstrapFewShotWithRandomSearch
-- MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, Ensemble, GridSearch, BetterTogether
+- MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, GridSearch, BetterTogether
+- Ensembling is a module (`EnsembleModule`), not a teleprompter
 - BootstrapFewShot compiles pipelines **jointly**: per-step demos are
   harvested from passing end-to-end traces (DSPy-style whole-program compilation)
 - GEPA supports feedback metrics via `metric_with_feedback()`: metrics may

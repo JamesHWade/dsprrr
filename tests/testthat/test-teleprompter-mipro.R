@@ -22,15 +22,18 @@ test_that("MIPROv2 validates properties", {
     "positive integer"
   )
 
-  expect_error(
-    MIPROv2(init_temperature = 0),
-    "positive numeric"
-  )
+  task_model <- new_test_chat()
+  expect_identical(MIPROv2(task_model = task_model)@task_model, task_model)
+  expect_error(MIPROv2(task_model = function(...) NULL), "ellmer Chat")
+  expect_error(MIPROv2(task_model = list(chat = identity)), "ellmer Chat")
+
+  expect_error(MIPROv2(prompt_model = task_model), "unused argument")
+  expect_error(MIPROv2(init_temperature = 1), "unused argument")
 })
 
 test_that("MIPROv2 runs end-to-end with auto=light", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -49,34 +52,29 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
 
   # Create a mock LLM that returns predictable results based on input
   call_count <- 0L
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          call_count <<- call_count + 1L
-          # Extract the question from the prompt and return matching answer
-          if (grepl("2\\+2|2 \\+ 2", prompt)) {
-            list(answer = "4")
-          } else if (grepl("3\\+3|3 \\+ 3", prompt)) {
-            list(answer = "6")
-          } else if (grepl("4\\+4|4 \\+ 4", prompt)) {
-            list(answer = "8")
-          } else if (grepl("5\\+5|5 \\+ 5", prompt)) {
-            list(answer = "10")
-          } else {
-            list(answer = "unknown")
-          }
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      call_count <<- call_count + 1L
+      # Extract the question from the prompt and return matching answer
+      if (grepl("2\\+2|2 \\+ 2", prompt)) {
+        list(answer = "4")
+      } else if (grepl("3\\+3|3 \\+ 3", prompt)) {
+        list(answer = "6")
+      } else if (grepl("4\\+4|4 \\+ 4", prompt)) {
+        list(answer = "8")
+      } else if (grepl("5\\+5|5 \\+ 5", prompt)) {
+        list(answer = "10")
+      } else {
+        list(answer = "unknown")
+      }
+    }
+  )
 
   log_dir <- tempfile("mipro-log-")
-  dir.create(log_dir)
+  dir.create(log_dir, mode = "0700")
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
+  }
 
   tp <- MIPROv2(
     metric = metric_exact_match(field = "answer"),
@@ -261,7 +259,7 @@ test_that("MIPROv2 fails explicitly without nested predictor evidence", {
 
 test_that("MIPROv2 requires metric for compilation", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -594,7 +592,16 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
 
   testthat::local_mocked_bindings(
     generate_mipro_demo_candidates = function(...) {
-      list(list(id = "demo", demos = list(), params = list(id = "demo")))
+      list(
+        candidates = list(list(
+          id = "demo",
+          demos = list(),
+          params = list(id = "demo")
+        )),
+        state = NULL,
+        complete = TRUE,
+        budget = budget
+      )
     },
     generate_mipro_instruction_candidates = function(...) {
       list(list(

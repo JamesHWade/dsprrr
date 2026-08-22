@@ -6,12 +6,9 @@ create_mock_codeact_llm <- function(responses = list()) {
   tools <- list()
   turns <- list()
 
-  list(
-    clone = function() {
+  chat <- new_test_chat(
+    clone = function(deep = TRUE) {
       create_mock_codeact_llm(responses)
-    },
-    register_tool = function(tool) {
-      tools[[length(tools) + 1]] <<- tool
     },
     chat = function(prompt, ...) {
       call_count <<- call_count + 1
@@ -25,8 +22,17 @@ create_mock_codeact_llm <- function(responses = list()) {
     },
     get_turns = function() {
       turns
+    },
+    set_turns = function(value) {
+      turns <<- value
+      invisible(NULL)
     }
   )
+  chat$register_tool <- function(tool) {
+    tools[[length(tools) + 1]] <<- tool
+    invisible(NULL)
+  }
+  chat
 }
 
 # ============================================================================
@@ -140,22 +146,24 @@ test_that("CodeAct enforces tool calls inside one ellmer chat", {
     max_iterations = 2L
   )
   callback <- NULL
-  mock_llm <- NULL
-  mock_llm <- list(
-    clone = function() mock_llm,
-    register_tool = function(tool) invisible(NULL),
-    on_tool_request = function(fn) {
+  make_mock <- function() {
+    mock <- new_test_chat(
+      clone = function(deep = TRUE) make_mock(),
+      chat = function(prompt, ...) {
+        callback(list(name = "execute_r_code"))
+        callback(list(name = "execute_r_code"))
+        callback(list(name = "execute_r_code"))
+        "unreachable"
+      }
+    )
+    mock$register_tool <- function(tool) invisible(NULL)
+    mock$on_tool_request <- function(fn) {
       callback <<- fn
       function() callback <<- NULL
-    },
-    chat = function(prompt, ...) {
-      callback(list(name = "execute_r_code"))
-      callback(list(name = "execute_r_code"))
-      callback(list(name = "execute_r_code"))
-      "unreachable"
-    },
-    get_turns = function() list()
-  )
+    }
+    mock
+  }
+  mock_llm <- make_mock()
 
   expect_error(
     agent$forward(list(question = "compute"), .llm = mock_llm),
@@ -176,22 +184,30 @@ test_that("CodeAct ignores inherited tool turns from a cloned chat", {
     role = "assistant",
     contents = list(old_request)
   ))
-  mock_llm <- NULL
-  mock_llm <- list(
-    clone = function() mock_llm,
-    register_tool = function(tool) invisible(NULL),
-    chat = function(prompt, ...) {
-      turns <<- c(
-        turns,
-        list(list(
-          role = "assistant",
-          contents = list("done")
-        ))
-      )
-      "done"
-    },
-    get_turns = function() turns
-  )
+  make_mock <- function(initial_turns) {
+    local_turns <- initial_turns
+    mock <- new_test_chat(
+      clone = function(deep = TRUE) make_mock(local_turns),
+      chat = function(prompt, ...) {
+        local_turns <<- c(
+          local_turns,
+          list(list(
+            role = "assistant",
+            contents = list("done")
+          ))
+        )
+        "done"
+      },
+      get_turns = function() local_turns,
+      set_turns = function(value) {
+        local_turns <<- value
+        invisible(NULL)
+      }
+    )
+    mock$register_tool <- function(tool) invisible(NULL)
+    mock
+  }
+  mock_llm <- make_mock(turns)
 
   result <- agent$forward(list(question = "compute"), .llm = mock_llm)
 
@@ -219,6 +235,18 @@ test_that("code_act accepts tools list", {
 
   expect_equal(length(agent$tools), 1)
   expect_true("test" %in% names(agent$tools))
+})
+
+test_that("CodeAct rejects an unnamespaced ToolDef class", {
+  bare_tool <- \(x) x
+  class(bare_tool) <- c("ToolDef", "function")
+
+  condition <- rlang::catch_cnd(
+    dsprrr:::validate_codeact_tools(list(bare_tool))
+  )
+
+  expect_s3_class(condition, "dsprrr_codeact_tools_error")
+  expect_match(conditionMessage(condition), "ellmer ToolDef")
 })
 
 # ============================================================================

@@ -128,10 +128,6 @@ MultiChainComparisonModule <- R6::R6Class(
 
       start_time <- Sys.time()
       attempts <- list()
-      total_tokens <- 0
-      total_input_tokens <- 0
-      total_output_tokens <- 0
-      total_cost <- 0
       attempt_llm <- resolve_module_llm(
         self,
         .llm = .llm,
@@ -141,9 +137,10 @@ MultiChainComparisonModule <- R6::R6Class(
       # Phase 1: Generate M reasoning chains
       for (i in seq_len(self$M)) {
         # Clone chat per attempt so each chain starts with fresh state
-        iter_llm <- tryCatch(
-          attempt_llm$clone(deep = TRUE),
-          error = function(e) attempt_llm
+        iter_llm <- clone_ellmer_chat(
+          attempt_llm,
+          arg = ".llm",
+          reset_turns = TRUE
         )
 
         # Run inner module
@@ -169,20 +166,6 @@ MultiChainComparisonModule <- R6::R6Class(
           prediction <- result$output[[1]]
           metadata <- result$metadata[[1]]
 
-          # Accumulate costs
-          if (!is.null(metadata$total_tokens)) {
-            total_tokens <- total_tokens + metadata$total_tokens
-          }
-          if (!is.null(metadata$input_tokens)) {
-            total_input_tokens <- total_input_tokens + metadata$input_tokens
-          }
-          if (!is.null(metadata$output_tokens)) {
-            total_output_tokens <- total_output_tokens + metadata$output_tokens
-          }
-          if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-            total_cost <- total_cost + metadata$cost
-          }
-
           attempts <- append(
             attempts,
             list(list(
@@ -206,24 +189,14 @@ MultiChainComparisonModule <- R6::R6Class(
         .llm = .llm
       )
 
-      # Accumulate comparison step costs
       comparison_metadata <- comparison_result$metadata[[1]]
-      if (!is.null(comparison_metadata$total_tokens)) {
-        total_tokens <- total_tokens + comparison_metadata$total_tokens
-      }
-      if (!is.null(comparison_metadata$input_tokens)) {
-        total_input_tokens <- total_input_tokens +
-          comparison_metadata$input_tokens
-      }
-      if (!is.null(comparison_metadata$output_tokens)) {
-        total_output_tokens <- total_output_tokens +
-          comparison_metadata$output_tokens
-      }
-      if (
-        !is.null(comparison_metadata$cost) && !is.na(comparison_metadata$cost)
-      ) {
-        total_cost <- total_cost + comparison_metadata$cost
-      }
+      usage <- aggregate_module_usage_metadata(
+        c(
+          lapply(attempts, function(attempt) attempt$metadata),
+          list(comparison_metadata)
+        ),
+        unknown_attempt = length(attempts) < self$M
+      )
 
       end_time <- Sys.time()
       latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
@@ -239,12 +212,11 @@ MultiChainComparisonModule <- R6::R6Class(
         M = self$M,
         n_successful_attempts = length(attempts),
         n_failed_attempts = self$M - length(attempts),
-        n_llm_calls = length(attempts) + 1, # M attempts + 1 comparison
-        input_tokens = total_input_tokens,
-        output_tokens = total_output_tokens,
-        total_tokens = total_tokens,
-        cost = total_cost,
-        total_cost = total_cost,
+        provider_calls = usage$provider_calls,
+        input_tokens = usage$input_tokens,
+        output_tokens = usage$output_tokens,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
         latency_ms = latency_ms
       )
 
@@ -265,11 +237,11 @@ MultiChainComparisonModule <- R6::R6Class(
           turns = comparison_metadata$turns %||% list(),
           latency_ms = latency_ms,
           tokens = list(
-            input_tokens = total_input_tokens,
-            output_tokens = total_output_tokens,
-            total_tokens = total_tokens
+            input_tokens = usage$input_tokens,
+            output_tokens = usage$output_tokens,
+            total_tokens = usage$total_tokens
           ),
-          cost = total_cost,
+          cost = usage$cost,
           model = comparison_metadata$model
         )
         self$state$traces <- append(self$state$traces, list(trace_entry))
@@ -563,6 +535,7 @@ MultiChainComparisonModule <- R6::R6Class(
         output_tokens = token_info$output_tokens,
         total_tokens = token_info$total_tokens,
         cost = cost,
+        provider_calls = 1L,
         latency_ms = latency_ms
       )
 

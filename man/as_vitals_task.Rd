@@ -13,7 +13,7 @@ as_vitals_task(
   epochs = 1L,
   metrics = NULL,
   dir = NULL,
-  .parallel = FALSE,
+  .concurrency = NULL,
   ...
 )
 }
@@ -40,7 +40,8 @@ takes a vector of scores and returns a single numeric value.}
 
 \item{dir}{Directory for evaluation logs. Defaults to \code{vitals::vitals_log_dir()}.}
 
-\item{.parallel}{Logical; whether to run solver in parallel. Defaults to FALSE.}
+\item{.concurrency}{Optional policy created by \code{\link[=concurrency_control]{concurrency_control()}}.
+Omission uses sequential execution.}
 
 \item{...}{Additional arguments passed to \code{\link[=as_vitals_solver]{as_vitals_solver()}}.}
 }

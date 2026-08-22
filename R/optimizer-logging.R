@@ -7,19 +7,127 @@
 # - Log directory management
 
 # Normalize persisted or in-memory trial costs to one scalar representation.
-# Historical JSONL files may contain an unknown numeric value as the string
-# "NA", while missing cost fields are also unknown.
 normalize_trial_cost <- function(cost) {
-  if (is.null(cost) || length(cost) != 1L) {
+  if (is.null(cost)) {
     return(NA_real_)
   }
-
-  cost <- suppressWarnings(as.numeric(cost))
-  if (length(cost) != 1L || is.na(cost)) {
+  if (!is.numeric(cost) || length(cost) != 1L) {
+    cli::cli_abort(
+      "Trial cost must be one numeric value or NULL",
+      class = "dsprrr_trial_record_malformed"
+    )
+  }
+  if (is.na(cost)) {
     return(NA_real_)
   }
+  if (!is.finite(cost) || cost < 0) {
+    cli::cli_abort(
+      "Trial cost must be finite and non-negative",
+      class = "dsprrr_trial_record_malformed"
+    )
+  }
+  as.numeric(cost)
+}
 
-  cost
+trial_record_schema_version <- function() 1L
+
+trial_record_fields <- function() {
+  c(
+    "schema_version",
+    "trial_id",
+    "optimizer_name",
+    "params",
+    "metric_summary",
+    "cost_summary",
+    "start_time",
+    "end_time",
+    "notes",
+    "status",
+    "trace_context"
+  )
+}
+
+validate_trial_record <- function(
+  record,
+  class = "dsprrr_trial_record_malformed"
+) {
+  record_names <- names(record)
+  valid_shape <- is.list(record) &&
+    !is.null(record_names) &&
+    !anyNA(record_names) &&
+    !anyDuplicated(record_names) &&
+    setequal(record_names, trial_record_fields()) &&
+    length(record_names) == length(trial_record_fields())
+  valid_scalar <- function(value, nonempty = FALSE) {
+    is.character(value) &&
+      length(value) == 1L &&
+      !is.na(value) &&
+      (!nonempty || nzchar(value))
+  }
+  valid_time <- function(value) {
+    is.null(value) || valid_scalar(value, nonempty = TRUE)
+  }
+  valid <- valid_shape &&
+    identical(record$schema_version, trial_record_schema_version()) &&
+    valid_scalar(record$trial_id, nonempty = TRUE) &&
+    valid_scalar(record$optimizer_name, nonempty = TRUE) &&
+    is.list(record$params) &&
+    is.list(record$metric_summary) &&
+    is.list(record$cost_summary) &&
+    valid_time(record$start_time) &&
+    valid_time(record$end_time) &&
+    valid_scalar(record$notes) &&
+    valid_scalar(record$status, nonempty = TRUE) &&
+    record$status %in% c("pending", "running", "completed", "failed") &&
+    is.list(record$trace_context)
+  if (!isTRUE(valid)) {
+    reason <- trial_record_schema_reason(record)
+    cli::cli_abort(
+      c(
+        "Trial record does not match the current schema",
+        "i" = "{reason}"
+      ),
+      class = class
+    )
+  }
+  invisible(record)
+}
+
+#' Explain why a trial record failed schema validation
+#'
+#' Records written before schema versioning carry no `schema_version` at all,
+#' which is by far the most common cause. Name that case explicitly so the
+#' remedy (re-run the optimization, or keep the old dsprrr) is obvious.
+#' @noRd
+trial_record_schema_reason <- function(record) {
+  current <- format(trial_record_schema_version())
+  version <- if (is.list(record)) record$schema_version else NULL
+  if (is.null(version)) {
+    return(paste0(
+      "It has no schema_version, so it was written by a dsprrr ",
+      "version older than record schema ",
+      current,
+      ". Re-run the optimization to write a current log."
+    ))
+  }
+  if (!is.atomic(version) || length(version) != 1L || is.na(version)) {
+    return(paste0(
+      "Its schema_version must be one non-missing scalar; this dsprrr reads ",
+      "only ",
+      current,
+      "."
+    ))
+  }
+  if (!identical(version, trial_record_schema_version())) {
+    return(paste0(
+      "It declares schema_version ",
+      format(version)[[1]],
+      "; this dsprrr reads only ",
+      current,
+      "."
+    ))
+  }
+  "Its fields do not match the current record schema."
 }
 
 format_trial_cost <- function(cost) {
@@ -81,6 +189,7 @@ sum_trial_counts <- function(values) {
 
 trial_json_record <- function(trial) {
   record <- list(
+    schema_version = trial_record_schema_version(),
     trial_id = trial@trial_id,
     optimizer_name = trial@optimizer_name,
     params = trial@params,
@@ -97,11 +206,10 @@ trial_json_record <- function(trial) {
       NULL
     },
     notes = trial@notes,
-    status = trial@status
+    status = trial@status,
+    trace_context = trace_context_validate(trial@trace_context)
   )
-  if (length(trial@trace_context) > 0L) {
-    record$trace_context <- trace_context_validate(trial@trace_context)
-  }
+  validate_trial_record(record)
   record
 }
 
@@ -109,10 +217,12 @@ trial_json_line <- function(trial) {
   record <- trial_json_record(trial)
   context <- record$trace_context
   record$trace_context <- NULL
-  line <- as.character(jsonlite::toJSON(record, auto_unbox = TRUE))
-  if (is.null(context)) {
-    return(line)
-  }
+  line <- as.character(jsonlite::toJSON(
+    record,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null"
+  ))
 
   context_json <- as.character(jsonlite::toJSON(
     context,
@@ -175,17 +285,32 @@ trial_log_merge_unique <- function(existing, incoming, source = "trial log") {
   existing
 }
 
-trial_log_trust_abort <- function(message, parent = NULL) {
+trial_log_trust_abort <- function(message, parent = NULL, remedy = NULL) {
   cli::cli_abort(
     c(
       "Trial log path trust verification failed",
-      "x" = message
+      "x" = "{message}",
+      if (!is.null(remedy)) c("i" = "{remedy}")
     ),
     parent = parent,
     class = c(
       "dsprrr_trial_log_trust_error",
       "dsprrr_trial_log_io_error"
     )
+  )
+}
+
+#' Build a chmod remediation hint for a rejected log path
+#'
+#' dsprrr no longer widens or narrows stored permissions on the user's behalf,
+#' so the abort has to say what to run instead.
+#' @noRd
+trial_log_chmod_remedy <- function(path, mode) {
+  paste0(
+    "Restrict it yourself, then retry: chmod ",
+    mode,
+    " ",
+    shQuote(path)
   )
 }
 
@@ -274,6 +399,16 @@ trial_log_audit_parent_capability <- function(target) {
           )
         ))
       }
+      owner <- cache_path_owner_id(current)
+      if (is.na(owner) || !owner %in% c(0L, effective_owner)) {
+        return(list(
+          ok = FALSE,
+          reason = paste0(
+            "a trial log ancestor is not owned by the effective user or root: ",
+            current
+          )
+        ))
+      }
       if (bitwAnd(mode, writable_mask) != 0L) {
         if (bitwAnd(mode, sticky_mask) == 0L) {
           return(list(
@@ -284,28 +419,17 @@ trial_log_audit_parent_capability <- function(target) {
             )
           ))
         }
-        owner <- cache_path_owner_id(current)
-        if (
-          is.na(owner) ||
-            !owner %in% c(0L, effective_owner)
-        ) {
-          return(list(
-            ok = FALSE,
-            reason = paste0(
-              "a sticky writable trial log ancestor is not owned by ",
-              "the effective user or root: ",
-              current
-            )
-          ))
-        }
         if (file.exists(child) || dir.exists(child)) {
           child_owner <- cache_path_owner_id(child)
-          if (is.na(child_owner) || child_owner != effective_owner) {
+          if (
+            is.na(child_owner) ||
+              !child_owner %in% c(0L, effective_owner)
+          ) {
             return(list(
               ok = FALSE,
               reason = paste0(
                 "a sticky writable trial log ancestor has a child not ",
-                "owned by the effective user: ",
+                "owned by the effective user or root: ",
                 child
               )
             ))
@@ -376,6 +500,61 @@ trial_log_directory_reason <- function(trust) {
   NULL
 }
 
+trial_log_audit_directory <- function(path, private) {
+  if (cache_path_is_symlink(path)) {
+    return(list(ok = FALSE, reason = "the log directory is a symbolic link"))
+  }
+  if (!dir.exists(path)) {
+    return(list(ok = FALSE, reason = "the log path is not a directory"))
+  }
+  if (!cache_private_modes_supported()) {
+    return(list(ok = TRUE))
+  }
+
+  effective_owner <- cache_effective_owner_id()
+  owner <- cache_path_owner_id(path)
+  if (is.na(effective_owner) || is.na(owner)) {
+    return(list(
+      ok = FALSE,
+      reason = "the log directory owner could not be verified"
+    ))
+  }
+  if (!identical(owner, effective_owner)) {
+    return(list(
+      ok = FALSE,
+      reason = "the log directory is not owned by the effective user"
+    ))
+  }
+
+  mode <- cache_path_mode(path)
+  if (is.na(mode)) {
+    return(list(
+      ok = FALSE,
+      reason = "the log directory permissions could not be inspected"
+    ))
+  }
+  if (bitwAnd(mode, as.integer(as.octmode("0022"))) != 0L) {
+    return(list(
+      ok = FALSE,
+      reason = "the log directory is writable by another local account"
+    ))
+  }
+  if (
+    isTRUE(private) &&
+      !identical(mode, as.integer(as.octmode("0700")))
+  ) {
+    return(list(
+      ok = FALSE,
+      reason = paste0(
+        "a pre-existing private log directory must have mode exactly 0700"
+      ),
+      remedy = trial_log_chmod_remedy(path, "700")
+    ))
+  }
+
+  list(ok = TRUE)
+}
+
 trial_log_prepare_directory <- function(
   path,
   create = TRUE,
@@ -401,6 +580,7 @@ trial_log_prepare_directory <- function(
     }
   }
 
+  directory_created <- FALSE
   if (!dir.exists(canonical_target)) {
     if (!isTRUE(create)) {
       trial_log_trust_abort("the log directory does not exist")
@@ -421,6 +601,14 @@ trial_log_prepare_directory <- function(
         parent = parent
       )
     }
+    if (!isTRUE(created)) {
+      parent <- if (inherits(created, "condition")) created else NULL
+      trial_log_trust_abort(
+        "the log directory appeared while it was being created",
+        parent = parent
+      )
+    }
+    directory_created <- TRUE
   }
   if (cache_path_is_symlink(canonical_target)) {
     trial_log_trust_abort("the log directory became a symbolic link")
@@ -435,16 +623,20 @@ trial_log_prepare_directory <- function(
   }
 
   if (cache_private_modes_supported()) {
-    directory_audit <- audit_private_cache_directory(canonical)
-    if (!isTRUE(directory_audit$ok)) {
-      trial_log_trust_abort(directory_audit$reason)
+    if (
+      directory_created &&
+        !cache_set_private_mode(canonical, "0700")
+    ) {
+      trial_log_trust_abort(
+        "the created log directory could not be restricted to mode 0700"
+      )
     }
-    if (isTRUE(private) && isTRUE(directory_audit$needs_repair)) {
-      if (!cache_set_private_mode(canonical, "0700")) {
-        trial_log_trust_abort(
-          "the log directory could not be restricted to mode 0700"
-        )
-      }
+    directory_audit <- trial_log_audit_directory(canonical, private)
+    if (!isTRUE(directory_audit$ok)) {
+      trial_log_trust_abort(
+        directory_audit$reason,
+        remedy = directory_audit$remedy
+      )
     }
     parent_audit <- trial_log_audit_parent_capability(canonical)
     if (!isTRUE(parent_audit$ok)) {
@@ -582,24 +774,10 @@ trial_log_assert_private_file <- function(path, what, guard) {
       paste0(what, " was writable by another local account")
     )
   }
-  if (
-    !identical(prior_mode, as.integer(as.octmode("0600"))) &&
-      !cache_set_private_mode(path, "0600")
-  ) {
-    trial_log_trust_abort(
-      paste0(what, " could not be restricted to mode 0600")
-    )
-  }
   if (!identical(prior_mode, as.integer(as.octmode("0600")))) {
-    cli::cli_warn(
-      c(
-        "Restricted permissions on an existing {what}",
-        "!" = paste0(
-          "Before this repair, other local accounts may have been able ",
-          "to read {.path {path}}."
-        )
-      ),
-      class = "dsprrr_trial_log_permission_repair_warning"
+    trial_log_trust_abort(
+      paste0(what, " must have mode exactly 0600"),
+      remedy = trial_log_chmod_remedy(path, "600")
     )
   }
   identity <- trial_log_file_identity(path, guard)
@@ -607,6 +785,26 @@ trial_log_assert_private_file <- function(path, what, guard) {
     trial_log_trust_abort(identity$reason)
   }
   invisible(path)
+}
+
+trial_log_assert_existing_files <- function(guard, files) {
+  for (what in names(files)) {
+    path <- file.path(guard$path, files[[what]])
+    if (file.exists(path) || cache_path_is_symlink(path)) {
+      trial_log_assert_private_file(path, what, guard)
+    }
+  }
+  invisible(TRUE)
+}
+
+trial_log_known_files <- function() {
+  c(
+    "trial log lock" = ".trials.lock",
+    "trial log journal" = "trials.jsonl",
+    "trial log metadata" = "metadata.json",
+    "trial log summary" = "README.md",
+    "best program artifact" = "best_program.rds"
+  )
 }
 
 trial_log_identity_value <- function(
@@ -1168,27 +1366,8 @@ trial_log_read_metadata <- function(path, guard) {
   )
 }
 
-#' Trial Record
-#'
-#' @description
-#' S7 class representing a single optimization trial. Captures all metadata
-#' needed to reproduce and analyze the trial.
-#'
-#' @param trial_id Unique identifier for this trial.
-#' @param optimizer_name Name of the optimizer that produced this trial.
-#' @param params List of parameters used in this trial.
-#' @param metric_summary List with mean_score, std_error, n_evaluated, n_errors.
-#' @param cost_summary List with tokens_in, tokens_out, total_tokens, total_cost.
-#' @param start_time POSIXct timestamp when trial started.
-#' @param end_time POSIXct timestamp when trial ended.
-#' @param notes Optional character string with additional notes.
-#' @param compiled_artifact_ref Optional compiled module. The best module is
-#'   persisted with [save_program()] rather than serialized as a live R object.
-#' @param status Trial status: "pending", "running", "completed", "failed".
-#' @param trace_context A named, JSON-compatible correlation context retained
-#'   with the trial throughout its lifecycle and persistence.
-#'
-#' @export
+#' Internal optimization-trial record class
+#' @noRd
 Trial <- S7::new_class(
   "Trial",
   properties = list(
@@ -1229,7 +1408,7 @@ Trial <- S7::new_class(
 #' Create a Trial Record
 #'
 #' @description
-#' Convenience function to create a Trial record with auto-generated ID.
+#' Create an optimization trial record with an automatically generated ID.
 #'
 #' @param optimizer_name Name of the optimizer.
 #' @param params List of parameters for this trial.
@@ -1239,7 +1418,7 @@ Trial <- S7::new_class(
 #'   omitted during [compile()], the active compilation context is inherited;
 #'   supply `list()` explicitly to clear it.
 #'
-#' @return A Trial object.
+#' @return An optimization trial record.
 #' @export
 #'
 #' @examples
@@ -1282,7 +1461,7 @@ create_trial <- function(
 #' @description
 #' Mark a trial as running and record the start time.
 #'
-#' @param trial A Trial object.
+#' @param trial A trial record created by [create_trial()].
 #'
 #' @return Updated Trial object with status "running".
 #' @noRd
@@ -1310,13 +1489,13 @@ start_trial <- function(trial) {
 #' @description
 #' Mark a trial as completed with evaluation results.
 #'
-#' @param trial A Trial object.
+#' @param trial A trial record created by [create_trial()].
 #' @param eval_result An EvalResult object from eval_program().
 #' @param compiled_artifact_ref Optional compiled module to persist as the best
 #'   safe program artifact when this trial wins.
 #' @param notes Optional additional notes.
 #'
-#' @return Updated Trial object with status "completed".
+#' @return The updated trial record with status `"completed"`.
 #' @export
 complete_trial <- function(
   trial,
@@ -1621,10 +1800,18 @@ trial_log_sync_locked <- function(
 #' `trials.jsonl` journal is authoritative. `metadata.json`, `README.md`, and
 #' `best_program.rds` are independently refreshed, best-effort derived views;
 #' they may lag after an interruption and are rebuilt by a later successful
-#' save. Persistent Unix logs require an effective-user-owned directory with a
-#' safe parent chain and reject symbolic-link targets; Windows uses the
-#' account's filesystem ACLs, which base R cannot verify as owner-only, and
-#' fails closed if stable device and file identifiers are unavailable.
+#' save. On Unix, a pre-existing private log directory must be owned by the
+#' effective user with exactly mode `0700`, and every pre-existing log file must
+#' have exactly mode `0600`; special mode bits are rejected. Every existing
+#' ancestor must be owned by root or the effective user, including sticky
+#' shared parents. Before initialization or a save to another directory locks,
+#' reads, or mutates storage, dsprrr preflights every known target: the lock,
+#' journal, metadata, summary, and best-program artifact. Unsafe paths are
+#' rejected without repair or reads. Directories and files created for the
+#' current operation are enforced as owner-only. Non-symbolic regular files
+#' remain required. Windows uses the account's filesystem ACLs, which base R
+#' cannot verify as owner-only, and fails closed if stable device and file
+#' identifiers are unavailable.
 #'
 #' @export
 TrialLog <- R6::R6Class(
@@ -1636,7 +1823,7 @@ TrialLog <- R6::R6Class(
     #' @field log_dir Directory for persistence (NULL for in-memory only).
     log_dir = NULL,
 
-    #' @field trials List of Trial objects.
+    #' @field trials List of optimization trial records.
     trials = NULL,
 
     #' @field metadata Additional metadata about the optimization run.
@@ -1659,6 +1846,10 @@ TrialLog <- R6::R6Class(
         log_guard <- trial_log_prepare_directory(log_dir)
         self$log_dir <- log_guard$path
         private$log_guard <- log_guard
+        trial_log_assert_existing_files(
+          log_guard,
+          trial_log_known_files()
+        )
         restored <- trial_log_with_lock(
           self$log_dir,
           function(guard) {
@@ -1732,7 +1923,7 @@ TrialLog <- R6::R6Class(
     #' authoritative JSONL record. Derived metadata, summaries, and the best
     #' program are then refreshed independently on a best-effort basis.
     #'
-    #' @param trial A Trial object.
+    #' @param trial A trial record created by [create_trial()].
     #' @param persist Whether to immediately persist to disk if log_dir is set.
     add_trial = function(trial, persist = TRUE) {
       if (!inherits(trial, "dsprrr::Trial")) {
@@ -1916,7 +2107,8 @@ TrialLog <- R6::R6Class(
     #' Get the best trial by score.
     #'
     #' @param objective "maximize" or "minimize".
-    #' @return The best Trial object, or NULL if no completed trials.
+    #' @return The best optimization trial record, or `NULL` if no trials have
+    #'   completed.
     best_trial = function(objective = "maximize") {
       trial_log_best(self$trials, objective = objective)
     },
@@ -1952,6 +2144,10 @@ TrialLog <- R6::R6Class(
       save_guard <- trial_log_prepare_directory(
         save_dir,
         expected_trust = expected_trust
+      )
+      trial_log_assert_existing_files(
+        save_guard,
+        trial_log_known_files()
       )
       synced <- trial_log_with_lock(
         save_guard$path,
@@ -2017,10 +2213,14 @@ TrialLog <- R6::R6Class(
 #' Write Trials to JSONL File
 #'
 #' @description
-#' Write a list of Trial objects to a JSONL (JSON Lines) file.
-#' Each trial is written as a single JSON object on its own line.
+#' Write a list of optimization trial records to a JSONL (JSON Lines) file.
+#' Each trial is written as a single JSON object on its own line. On Unix, an
+#' existing target must already be owned by the effective user with mode
+#' exactly `0600`, without special bits, and every existing ancestor must be
+#' owned by root or the effective user. Unsafe paths are rejected rather than
+#' repaired.
 #'
-#' @param trials List of Trial objects.
+#' @param trials Trial records created by [create_trial()].
 #' @param path File path for the JSONL file.
 #' @param append Whether to append to existing file. Default is FALSE.
 #'
@@ -2051,6 +2251,9 @@ write_trials_jsonl <- function(trials, path, append = FALSE) {
     private = FALSE
   )
   path <- file.path(initial_guard$path, basename(absolute))
+  if (file.exists(path) || cache_path_is_symlink(path)) {
+    trial_log_assert_private_file(path, "trial log journal", initial_guard)
+  }
   trial_log_with_lock(
     directory,
     function(guard) {
@@ -2131,6 +2334,7 @@ trial_log_parse_jsonl_file <- function(path) {
       {
         data <- jsonlite::fromJSON(line)
         trace_data <- jsonlite::fromJSON(line, simplifyVector = FALSE)
+        validate_trial_record(trace_data)
 
         # Parse timestamps
         start_time <- if (is_valid_timestamp(data$start_time)) {
@@ -2145,7 +2349,7 @@ trial_log_parse_jsonl_file <- function(path) {
           NULL
         }
 
-        cost_summary <- as.list(data$cost_summary %||% list())
+        cost_summary <- as.list(data$cost_summary)
         if ("total_cost" %in% names(cost_summary)) {
           cost_summary$total_cost <- normalize_trial_cost(
             cost_summary$total_cost
@@ -2173,26 +2377,35 @@ trial_log_parse_jsonl_file <- function(path) {
         }
 
         Trial(
-          trial_id = data$trial_id %||% "",
-          optimizer_name = data$optimizer_name %||% "",
-          params = as.list(data$params %||% list()),
-          metric_summary = as.list(data$metric_summary %||% list()),
+          trial_id = data$trial_id,
+          optimizer_name = data$optimizer_name,
+          params = as.list(data$params),
+          metric_summary = as.list(data$metric_summary),
           cost_summary = cost_summary,
           start_time = start_time,
           end_time = end_time,
-          notes = data$notes %||% "",
+          notes = data$notes,
           trace_context = trace_context_validate(
-            trace_data$trace_context %||% list(),
+            trace_data$trace_context,
             arg = "trace_context"
           ),
-          status = data$status %||% "pending"
+          status = data$status
         )
       },
       error = function(e) {
+        # Only schema diagnostics are safe to echo: they name fields and the
+        # record's own version, never stored values. Any other failure could
+        # quote record content, which must not reach the console.
+        detail <- if (inherits(e, "dsprrr_trial_record_malformed")) {
+          conditionMessage(e)
+        } else {
+          NULL
+        }
         cli::cli_warn(
           c(
             "Failed to parse trial on line {i}",
-            "i" = "The record was skipped because it is invalid or unsafe."
+            "i" = "The record was skipped because it is invalid or unsafe.",
+            if (!is.null(detail)) c("x" = detail)
           ),
           class = "dsprrr_parse_warning"
         )
@@ -2202,17 +2415,31 @@ trial_log_parse_jsonl_file <- function(path) {
   })
 
   # Filter out failed parses (NULL values)
-  Filter(Negate(is.null), parsed_trials)
+  trials <- Filter(Negate(is.null), parsed_trials)
+
+  # Returning an empty list after rejecting every record is indistinguishable
+  # from reading an empty log, so a total failure has to be loud.
+  if (length(trials) == 0L && length(lines) > 0L) {
+    cli::cli_abort(
+      c(
+        "No readable trial records in {.path {path}}",
+        "x" = "All {length(lines)} record{?s} {?was/were} rejected.",
+        "i" = "See the warnings above for the reason for each record."
+      ),
+      class = "dsprrr_trial_log_unreadable"
+    )
+  }
+  trials
 }
 
 #' Read Trials from JSONL File
 #'
 #' @description
-#' Read Trial objects from a JSONL file.
+#' Read optimization trial records from a JSONL file.
 #'
 #' @param path File path for the JSONL file.
 #'
-#' @return A list of Trial objects.
+#' @return A list of optimization trial records.
 #' @export
 #'
 #' @examples
@@ -2245,11 +2472,8 @@ load_trial_log <- function(log_dir) {
   TrialLog$new(optimizer_name = "unknown", log_dir = log_dir)
 }
 
-#' Print method for Trial
-#' @param x A Trial object
-#' @param ... Additional arguments (unused)
-#' @export
-print.Trial <- function(x, ...) {
+# Print a Trial object through its S7 method.
+print_trial <- function(x, ...) {
   cli::cli_h3("Trial: {x@trial_id}")
 
   status_icon <- switch(
@@ -2281,4 +2505,4 @@ print.Trial <- function(x, ...) {
 }
 
 # Register S7 print method
-S7::method(print, Trial) <- print.Trial
+S7::method(print, Trial) <- print_trial

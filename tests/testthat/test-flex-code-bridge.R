@@ -12,6 +12,36 @@ test_that("executable Flex source is parsed without host evaluation", {
   expect_identical(touched, FALSE)
 })
 
+test_that("Flex accepts ellmer ToolDefs but rejects the bare class", {
+  current_tool <- ellmer::tool(
+    \(value) value,
+    name = "current",
+    description = "Return a value.",
+    arguments = list(value = ellmer::type_string())
+  )
+  bare_tool <- structure(
+    list(fun = \(value) value),
+    class = "ToolDef"
+  )
+
+  expect_invisible(
+    dsprrr:::flex_validate_host_tools(list(current = current_tool))
+  )
+  expect_identical(
+    dsprrr:::flex_tool_function(current_tool, "current"),
+    current_tool
+  )
+  validation_condition <- rlang::catch_cnd(
+    dsprrr:::flex_validate_host_tools(list(bare = bare_tool))
+  )
+  callable_condition <- rlang::catch_cnd(
+    dsprrr:::flex_tool_function(bare_tool, "bare")
+  )
+
+  expect_s3_class(validation_condition, "dsprrr_flex_tools_error")
+  expect_s3_class(callable_condition, "dsprrr_flex_tools_error")
+})
+
 test_that("executable Flex requires a top-level forward function", {
   expect_snapshot(
     error = TRUE,
@@ -200,7 +230,7 @@ test_that("text-only Flex runners fail explicitly before frame truncation", {
           flex_control_frame_limit = 1000L
         )
       },
-      close = function() invisible(NULL)
+      shutdown = function() invisible(NULL)
     )
   }
 
@@ -284,7 +314,7 @@ test_that("executable Flex binds control metadata to each replay step", {
           flex_control_frame_limit = 2048L
         )
       },
-      close = function() invisible(NULL)
+      shutdown = function() invisible(NULL)
     )
   }
 
@@ -347,7 +377,7 @@ test_that("executable Flex rejects control values from failed execution", {
           sandboxed = TRUE
         )
       },
-      close = function() invisible(NULL)
+      shutdown = function() invisible(NULL)
     )
   }
 
@@ -381,29 +411,24 @@ test_that("executable Flex resolves outer runtime parameters exactly once", {
   chats <- new.env(parent = emptyenv())
 
   make_chat <- function(id) {
-    chat <- structure(
-      list(
-        clone = function(...) {
-          clone_count <<- clone_count + 1L
-          make_chat(clone_count)
-        },
-        chat_structured = function(prompt, type, ...) {
-          call_ids <<- c(call_ids, id)
-          fields <- names(type@properties)
-          if (identical(fields, "draft")) {
-            return(list(draft = "checked"))
-          }
-          if (identical(fields, "answer")) {
-            return(list(answer = "final"))
-          }
-          stop("unexpected executable Flex output schema")
-        },
-        get_model = function() paste0("clone-", id),
-        get_turns = function() list(),
-        last_turn = function(...) NULL
-      ),
-      class = "Chat"
+    chat <- new_test_chat(
+      model = paste0("clone-", id),
+      chat_structured = function(prompt, type, ...) {
+        call_ids <<- c(call_ids, id)
+        fields <- names(type@properties)
+        if (identical(fields, "draft")) {
+          return(list(draft = "checked"))
+        }
+        if (identical(fields, "answer")) {
+          return(list(answer = "final"))
+        }
+        stop("unexpected executable Flex output schema")
+      }
     )
+    override_test_chat_method(chat, "clone", function(...) {
+      clone_count <<- clone_count + 1L
+      make_chat(clone_count)
+    })
     assign(as.character(id), chat, envir = chats)
     chat
   }
@@ -596,7 +621,7 @@ test_that("concurrent executable Flex fails before creating a runner", {
     run_dataset(
       program,
       data.frame(value = c("a", "b")),
-      .llm = structure(list(), class = "Chat"),
+      .llm = new_test_chat(),
       .concurrency = concurrency_control(
         backend = "ellmer",
         max_active = 2L

@@ -20,7 +20,7 @@
 #' @examples
 #' \dontrun{
 #' classifier <- module(signature("text -> sentiment"), type = "predict")
-#' trainset <- dsp_trainset(
+#' trainset <- data.frame(
 #'   text = c("I love it!", "Terrible experience"),
 #'   sentiment = c("positive", "negative")
 #' )
@@ -36,8 +36,10 @@ compile_with_trace_context <- function(
   teleprompter,
   program,
   trainset,
-  ...
+  ...,
+  .llm = NULL
 ) {
+  assert_ellmer_chat(.llm, arg = ".llm", allow_null = TRUE)
   compiler_expression <- substitute(compiler)
   compiler_name <- if (is.symbol(compiler_expression)) {
     as.character(compiler_expression)
@@ -68,7 +70,7 @@ compile_with_trace_context <- function(
 
   do.call(
     compiler_name %||% compiler,
-    c(list(teleprompter, program, trainset), dots),
+    c(list(teleprompter, program, trainset, .llm = .llm), dots),
     envir = environment(compiler) %||% parent.frame()
   )
 }
@@ -179,123 +181,4 @@ compile_module <- function(
     args$.trace_context <- .trace_context
   }
   do.call(compile, args)
-}
-
-#' Create Training Data for DSPrrr
-#'
-#' @description
-#' Helper function to create properly formatted training data for
-#' DSPrrr compilation.
-#'
-#' @param ... Named vectors or lists representing input/output pairs
-#' @param .data Optional data frame to use as base
-#'
-#' @return A data frame suitable for use as trainset
-#' @export
-#' @examples
-#' # Create training data from scratch
-#' trainset <- dsp_trainset(
-#'   text = c("Great product!", "Awful service"),
-#'   sentiment = c("positive", "negative")
-#' )
-#'
-#' # Add to existing data frame
-#' df <- data.frame(text = c("Hello", "World"))
-#' trainset <- dsp_trainset(.data = df, label = c("greeting", "other"))
-dsp_trainset <- function(..., .data = NULL) {
-  dots <- list(...)
-
-  if (length(dots) == 0 && is.null(.data)) {
-    cli::cli_abort("Must provide either data arguments or .data parameter")
-  }
-
-  # Start with .data if provided
-  if (!is.null(.data)) {
-    result <- as.data.frame(.data)
-  } else {
-    result <- data.frame(stringsAsFactors = FALSE)
-  }
-
-  # Add columns from dots
-  if (length(dots) > 0) {
-    # Check all have same length
-    lengths <- lengths(dots)
-    if (length(unique(lengths)) > 1) {
-      cli::cli_abort(c(
-        "All arguments must have the same length",
-        "i" = "Lengths: {lengths}"
-      ))
-    }
-
-    # If result is empty, create with proper number of rows
-    if (nrow(result) == 0 && length(dots) > 0) {
-      n_rows <- lengths[1]
-      result <- data.frame(
-        row.names = seq_len(n_rows),
-        stringsAsFactors = FALSE
-      )
-    }
-
-    # Add to result
-    for (name in names(dots)) {
-      result[[name]] <- dots[[name]]
-    }
-  }
-
-  # Validate result has at least one row
-  if (nrow(result) == 0) {
-    cli::cli_warn("Created empty training set")
-  }
-
-  result
-}
-
-#' Evaluate a Compiled Module
-#'
-#' @description
-#' Evaluate the performance of a compiled module on a test dataset.
-#'
-#' @param module A DSPrrr module (compiled or not)
-#' @param data Test data as a data frame or tibble.
-#' @param metric A metric function from `metric_*()` functions
-#' @param .llm Optional LLM connection for running the module
-#' @param verbose Whether to show progress
-#'
-#' @return A list with evaluation results including mean score and per-example scores
-#' @export
-#' @examples
-#' \dontrun{
-#' # Evaluate a module
-#' results <- evaluate_dsp(
-#'   module = optimized_classifier,
-#'   data = test_data,
-#'   metric = metric_exact_match(field = "sentiment"),
-#'   .llm = llm_connection
-#' )
-#'
-#' print(results$mean_score)
-#' }
-evaluate_dsp <- function(module, data, metric, .llm = NULL, verbose = TRUE) {
-  results <- evaluate(
-    module,
-    data,
-    metric,
-    .llm = .llm,
-    .parallel = FALSE,
-    .progress = verbose
-  )
-
-  if (verbose) {
-    cli::cli_alert_success(
-      "Evaluated {results$n_evaluated}/{nrow(data)} examples"
-    )
-    if (results$n_errors > 0) {
-      cli::cli_alert_warning("{results$n_errors} examples failed")
-    }
-    if (!is.na(results$mean_score)) {
-      cli::cli_alert_info("Mean score: {round(results$mean_score, 3)}")
-    }
-  }
-
-  results
 }

@@ -29,7 +29,8 @@ create_mock_module <- function(
             timestamp = Sys.time(),
             model = "mock",
             total_tokens = 10,
-            cost = 0.001
+            cost = 0.001,
+            provider_calls = 1L
           ))
         )
       },
@@ -343,7 +344,9 @@ test_that("AssertModule accumulates tokens and cost across retries", {
 
   # Should accumulate tokens from both attempts
   expect_equal(result$metadata[[1]]$total_tokens, 20) # 10 per call
-  expect_equal(result$metadata[[1]]$total_cost, 0.002) # 0.001 per call
+  expect_equal(result$metadata[[1]]$cost, 0.002) # 0.001 per call
+  expect_identical(result$metadata[[1]]$provider_calls, 2L)
+  expect_false("total_cost" %in% names(result$metadata[[1]]))
 })
 
 # Test custom feedback template
@@ -593,7 +596,8 @@ test_that("AssertModule recovers from error followed by assertion failure then s
               timestamp = Sys.time(),
               model = "mock",
               total_tokens = 10,
-              cost = 0.001
+              cost = 0.001,
+              provider_calls = 1L
             ))
           ))
         }
@@ -606,7 +610,8 @@ test_that("AssertModule recovers from error followed by assertion failure then s
             timestamp = Sys.time(),
             model = "mock",
             total_tokens = 10,
-            cost = 0.001
+            cost = 0.001,
+            provider_calls = 1L
           ))
         )
       },
@@ -640,9 +645,10 @@ test_that("AssertModule recovers from error followed by assertion failure then s
   # The first attempt threw an error, so it doesn't count in the attempt list
   expect_equal(result$metadata[[1]]$n_attempts, 2)
 
-  # Should accumulate tokens from successful attempts (2 and 3)
-  expect_equal(result$metadata[[1]]$total_tokens, 20L)
-  expect_equal(result$metadata[[1]]$total_cost, 0.002)
+  # The failed attempt may have reached the provider before throwing.
+  expect_true(is.na(result$metadata[[1]]$total_tokens))
+  expect_true(is.na(result$metadata[[1]]$cost))
+  expect_true(is.na(result$metadata[[1]]$provider_calls))
 })
 
 # Test that signature validation works

@@ -8,6 +8,92 @@
 #' @name module-ensemble
 NULL
 
+# Sum canonical child-module usage without treating missing usage as free.
+#
+# Aggregating wrappers use this after their child work completes. A swallowed
+# child failure is explicitly unknown because it may have reached the provider
+# before failing without returning metadata.
+aggregate_module_usage_metadata <- function(
+  metadata,
+  unknown_attempt = FALSE
+) {
+  if (isTRUE(unknown_attempt)) {
+    return(list(
+      input_tokens = NA_real_,
+      output_tokens = NA_real_,
+      total_tokens = NA_real_,
+      provider_calls = NA_integer_,
+      cost = NA_real_
+    ))
+  }
+
+  if (length(metadata) == 0L) {
+    return(list(
+      input_tokens = 0,
+      output_tokens = 0,
+      total_tokens = 0,
+      provider_calls = 0L,
+      cost = 0
+    ))
+  }
+
+  usage_scalar <- function(value, whole = FALSE) {
+    if (
+      is.null(value) ||
+        length(value) != 1L ||
+        !is.numeric(value) ||
+        is.na(value) ||
+        !is.finite(value) ||
+        value < 0 ||
+        (whole && value != floor(value))
+    ) {
+      return(NA_real_)
+    }
+    as.numeric(value)
+  }
+
+  usage_sum <- function(field, whole = FALSE) {
+    values <- vapply(
+      metadata,
+      function(item) usage_scalar(item[[field]], whole = whole),
+      numeric(1)
+    )
+    total <- sum(values)
+    if (anyNA(values) || !is.finite(total)) NA_real_ else total
+  }
+
+  provider_calls <- vapply(
+    metadata,
+    function(item) {
+      value <- usage_scalar(item$provider_calls, whole = TRUE)
+      if (
+        is.na(value) ||
+          value > .Machine$integer.max
+      ) {
+        return(NA_real_)
+      }
+      as.numeric(value)
+    },
+    numeric(1)
+  )
+  provider_calls <- if (
+    anyNA(provider_calls) ||
+      sum(provider_calls) > .Machine$integer.max
+  ) {
+    NA_integer_
+  } else {
+    as.integer(sum(provider_calls))
+  }
+
+  list(
+    input_tokens = usage_sum("input_tokens", whole = TRUE),
+    output_tokens = usage_sum("output_tokens", whole = TRUE),
+    total_tokens = usage_sum("total_tokens", whole = TRUE),
+    provider_calls = provider_calls,
+    cost = usage_sum("cost")
+  )
+}
+
 #' Ensemble Module Class
 #'
 #' @description
@@ -123,8 +209,6 @@ EnsembleModule <- R6::R6Class(
       chats <- list()
       individual_metadata <- list()
       successful_indices <- integer(0) # Track which modules succeeded
-      total_tokens <- 0
-      total_cost <- 0
       n_errors <- 0
 
       # Run all modules
@@ -151,14 +235,6 @@ EnsembleModule <- R6::R6Class(
 
           metadata <- result$metadata[[1]]
           individual_metadata[[length(individual_metadata) + 1]] <- metadata
-
-          # Accumulate costs
-          if (!is.null(metadata$total_tokens)) {
-            total_tokens <- total_tokens + metadata$total_tokens
-          }
-          if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-            total_cost <- total_cost + metadata$cost
-          }
         }
       }
 
@@ -196,6 +272,10 @@ EnsembleModule <- R6::R6Class(
       } else {
         NA_character_
       }
+      usage <- aggregate_module_usage_metadata(
+        individual_metadata,
+        unknown_attempt = n_errors > 0L
+      )
 
       # Create aggregated metadata
       final_metadata <- list(
@@ -204,9 +284,9 @@ EnsembleModule <- R6::R6Class(
         n_modules = length(self$modules),
         n_successful = length(outputs),
         n_errors = n_errors,
-        n_llm_calls = length(outputs),
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        provider_calls = usage$provider_calls,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
         latency_ms = latency_ms
       )
 

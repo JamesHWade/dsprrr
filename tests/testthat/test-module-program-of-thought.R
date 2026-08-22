@@ -2,27 +2,25 @@
 
 # Helper: Create a mock LLM for testing
 create_mock_pot_llm <- function(code_responses = list()) {
-  call_count <- 0
-  mock <- list(
-    clone = function() {
-      create_mock_pot_llm(code_responses)
-    },
-    chat_structured = function(prompt, type, ...) {
-      call_count <<- call_count + 1
-      if (call_count <= length(code_responses)) {
-        code_responses[[call_count]]
-      } else {
-        # Default: simple arithmetic
-        list(
-          code = "1 + 1",
-          explanation = "Simple addition"
-        )
-      }
-    },
-    chat = function(prompt, ...) {
-      "42"
-    }
+  mock <- new_test_chat(chat = function(prompt, ...) "42")
+  mock$parity_state <- list(
+    call_count = 0L,
+    code_responses = code_responses
   )
+  chat_structured <- function(prompt, type, ...) {
+    self$parity_state$call_count <- self$parity_state$call_count + 1L
+    index <- self$parity_state$call_count
+    if (index <= length(self$parity_state$code_responses)) {
+      self$parity_state$code_responses[[index]]
+    } else {
+      list(
+        code = "1 + 1",
+        explanation = "Simple addition"
+      )
+    }
+  }
+  environment(chat_structured) <- mock$.__enclos_env__
+  override_test_chat_method(mock, "chat_structured", chat_structured)
   mock
 }
 

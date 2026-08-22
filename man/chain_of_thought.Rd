@@ -7,7 +7,7 @@
 chain_of_thought(x, prefix = "Let's think step by step in order to", ...)
 }
 \arguments{
-\item{x}{A Signature object or string notation}
+\item{x}{A signature object created by \code{\link[=signature]{signature()}}, or string notation.}
 
 \item{prefix}{Character. The prefix for the reasoning field.}
 

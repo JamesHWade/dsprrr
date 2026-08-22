@@ -26,8 +26,6 @@ NULL
 #' @param signature A dsprrr signature string or Signature object.
 #' @param temperature Temperature parameter for LLM (tune-able).
 #' @param top_p Top-p parameter for LLM (tune-able).
-#' @param model LLM model name (e.g., "gpt-4o-mini").
-#' @param provider LLM provider (e.g., "openai", "anthropic").
 #'
 #' @return A parsnip model specification object.
 #'
@@ -42,7 +40,7 @@ NULL
 #'   mode = "classification",
 #'   signature = "text -> sentiment: enum('positive', 'negative', 'neutral')"
 #' ) |>
-#'   set_engine("dsprrr", model = "gpt-4o-mini")
+#'   set_engine("dsprrr")
 #'
 #' # With tunable parameters
 #' llm_spec_tuned <- llm_predict(
@@ -56,9 +54,7 @@ llm_predict <- function(
   mode = "classification",
   signature = NULL,
   temperature = NULL,
-  top_p = NULL,
-  model = NULL,
-  provider = NULL
+  top_p = NULL
 ) {
   # Check for parsnip
   rlang::check_installed("parsnip", reason = "for llm_predict()")
@@ -66,9 +62,7 @@ llm_predict <- function(
   args <- list(
     signature = rlang::enquo(signature),
     temperature = rlang::enquo(temperature),
-    top_p = rlang::enquo(top_p),
-    model = rlang::enquo(model),
-    provider = rlang::enquo(provider)
+    top_p = rlang::enquo(top_p)
   )
 
   parsnip::new_model_spec(
@@ -179,24 +173,6 @@ register_dsprrr_engine <- function() {
     has_submodel = FALSE
   )
 
-  parsnip::set_model_arg(
-    model = "llm_predict",
-    eng = "dsprrr",
-    parsnip = "model",
-    original = "model",
-    func = list(pkg = "base", fun = "character"),
-    has_submodel = FALSE
-  )
-
-  parsnip::set_model_arg(
-    model = "llm_predict",
-    eng = "dsprrr",
-    parsnip = "provider",
-    original = "provider",
-    func = list(pkg = "base", fun = "character"),
-    has_submodel = FALSE
-  )
-
   # Register fit function
   parsnip::set_fit(
     model = "llm_predict",
@@ -269,9 +245,6 @@ register_dsprrr_engine <- function() {
 #' @param signature Signature for the module.
 #' @param temperature Temperature parameter.
 #' @param top_p Top-p parameter.
-#' @param model LLM model name.
-#' @param provider LLM provider.
-#' @param ... Additional arguments.
 #'
 #' @return A fitted dsprrr module.
 #' @keywords internal
@@ -281,10 +254,7 @@ fit_llm_predict <- function(
   y,
   signature = NULL,
   temperature = NULL,
-  top_p = NULL,
-  model = NULL,
-  provider = NULL,
-  ...
+  top_p = NULL
 ) {
   # Auto-generate signature if not provided
   if (is.null(signature)) {
@@ -307,6 +277,15 @@ fit_llm_predict <- function(
     )
   }
 
+  if (is.character(signature) && length(signature) == 1L) {
+    signature <- parse_signature(signature)
+  }
+  if (!inherits(signature, "dsprrr::Signature")) {
+    cli::cli_abort(
+      "{.arg signature} must be one signature string or the result of {.fn signature}"
+    )
+  }
+
   # Build config
   config <- list()
   if (!is.null(temperature)) {
@@ -315,13 +294,6 @@ fit_llm_predict <- function(
   if (!is.null(top_p)) {
     config$top_p <- top_p
   }
-  if (!is.null(model)) {
-    config$model <- model
-  }
-  if (!is.null(provider)) {
-    config$provider <- provider
-  }
-
   # Create module
   mod <- module(
     signature = signature,

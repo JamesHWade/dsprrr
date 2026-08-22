@@ -560,6 +560,9 @@ test_that("TrialLog print and README render cost state explicitly", {
   }
 
   unknown_dir <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(unknown_dir, mode = "0700", use_umask = FALSE)
+  }
   unknown_log <- TrialLog$new("TestOptimizer", log_dir = unknown_dir)
   unknown_log$add_trial(completed_trial("unknown", NA_real_))
 
@@ -579,6 +582,9 @@ test_that("TrialLog print and README render cost state explicitly", {
   expect_true(is.na(loaded$as_tibble()$total_cost))
 
   zero_dir <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(zero_dir, mode = "0700", use_umask = FALSE)
+  }
   zero_log <- TrialLog$new("TestOptimizer", log_dir = zero_dir)
   zero_log$add_trial(completed_trial("zero", 0))
 
@@ -721,15 +727,12 @@ test_that("eval_program restores compact errors to their ordered rows", {
 
 test_that("eval_program works with mock LLM", {
   # Create a mock LLM that returns predictable responses
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) {
       # Return a simple answer
       list(a = "mocked")
     }
   )
-
-  # Make it look like a Chat object
-  class(mock_llm) <- c("Chat", class(mock_llm))
 
   sig <- signature("q -> a")
   mod <- module(sig, type = "predict")
@@ -836,11 +839,25 @@ test_that("read_trials_jsonl handles malformed JSON gracefully", {
   tmp <- tempfile(fileext = ".jsonl")
   on.exit(unlink(tmp), add = TRUE)
 
-  # Write some valid and invalid lines
+  # Write two current-schema records around one malformed line. Generate the
+  # valid fixtures through the canonical serializer so schema_version and
+  # trace_context remain part of this parser contract.
+  valid_1 <- trial_json_line(Trial(
+    trial_id = "valid_1",
+    optimizer_name = "Test",
+    status = "completed",
+    trace_context = list(source = "fixture")
+  ))
+  valid_2 <- trial_json_line(Trial(
+    trial_id = "valid_2",
+    optimizer_name = "Test",
+    status = "pending",
+    trace_context = list(source = "fixture")
+  ))
   lines <- c(
-    '{"trial_id": "valid_1", "optimizer_name": "Test", "status": "completed"}',
+    valid_1,
     'not valid json at all',
-    '{"trial_id": "valid_2", "optimizer_name": "Test", "status": "pending"}'
+    valid_2
   )
   writeLines(lines, tmp)
 

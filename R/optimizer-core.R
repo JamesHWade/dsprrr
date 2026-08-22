@@ -31,53 +31,8 @@ optimizer_limit_validator <- function(
   NULL
 }
 
-#' Optimizer Control Parameters
-#'
-#' @description
-#' S7 class for configuring optimizer behavior. Provides consistent control
-#' parameters across all optimizer types.
-#'
-#' @param seed Random seed for reproducibility. Default is NULL (no seed).
-#' @param max_trials Maximum number of trials to run. Default is NULL (unlimited).
-#' @param max_errors Non-negative integer error budget. Optimizers report total
-#'   errors while stopping on a separate consecutive-error streak; each success
-#'   resets only that streak. A positive value stops on the failure that reaches
-#'   the limit. Zero permits work to begin but stops after the first failure.
-#'   When a completed evaluation returns multiple outcomes, all are included in
-#'   the final counters even if the stop boundary was crossed partway through;
-#'   the first stop reason remains unchanged and prevents scheduling new work.
-#' @param max_metric_calls Maximum metric calls, or NULL for unlimited.
-#' @param max_provider_calls Maximum verified provider calls, or NULL for
-#'   unlimited. Ambiguous provider usage stops a run that has this cap.
-#' @param max_input_tokens Maximum verified input tokens, or NULL for unlimited.
-#' @param max_output_tokens Maximum verified output tokens, or NULL for unlimited.
-#' @param max_total_tokens Maximum verified input plus output tokens, or NULL for
-#'   unlimited.
-#' @param max_cost Maximum known provider cost in US dollars, or NULL for
-#'   unlimited. Unknown cost stops a run that has this cap.
-#' @param max_elapsed_seconds Maximum active optimizer elapsed time in seconds,
-#'   or NULL for unlimited. Checkpoint downtime is excluded.
-#' @param num_threads Number of threads for parallel evaluation. Default is 1.
-#' @param progress Whether to display progress. Default is TRUE in interactive sessions.
-#' @param log_dir Directory for trial logging. Default is NULL (no logging).
-#' @param checkpoint_path Optional optimizer checkpoint file.
-#' @param resume Whether to resume from `checkpoint_path`.
-#' @param checkpoint_registry Named runtime registry used by safe program
-#'   artifacts stored in checkpoints.
-#' @param verbose Whether to print detailed output. Default is FALSE
-#' @details
-#' Finite metric, provider, token, cost, and elapsed-time limits switch
-#' optimizer evaluation to row-sized work units. The maximum postflight
-#' overshoot is one already-started evaluation row, or one already-started
-#' direct provider request for optimizer-side generation. Unknown provider,
-#' token, or cost usage stops safely when the corresponding cap is finite.
-#'
-#' BootstrapFewShot and MIPROv2 support deterministic checkpoint resume. GEPA,
-#' SIMBA, and COPRO currently provide the shared ledger and return the best
-#' partial program, but reject `resume = TRUE` until their fine-grained search
-#' state is supported.
-#'
-#' @export
+#' Internal optimizer-control record class
+#' @noRd
 OptimizerControl <- S7::new_class(
   "OptimizerControl",
   properties = list(
@@ -240,10 +195,52 @@ OptimizerControl <- S7::new_class(
 #' Create Optimizer Control
 #'
 #' @description
-#' Convenience function to create an OptimizerControl object with defaults.
+#' Configure optimizer behavior with consistent defaults across optimizer types.
 #'
-#' @inheritParams OptimizerControl
-#' @return An OptimizerControl object
+#' @param seed Random seed for reproducibility. Default is `NULL` (no seed).
+#' @param max_trials Maximum number of trials to run. Default is `NULL`
+#'   (unlimited).
+#' @param max_errors Non-negative integer error budget. Optimizers report total
+#'   errors while stopping on a separate consecutive-error streak; each success
+#'   resets only that streak. A positive value stops on the failure that reaches
+#'   the limit. Zero permits work to begin but stops after the first failure.
+#'   When a completed evaluation returns multiple outcomes, all are included in
+#'   the final counters even if the stop boundary was crossed partway through;
+#'   the first stop reason remains unchanged and prevents scheduling new work.
+#' @param max_metric_calls Maximum metric calls, or `NULL` for unlimited.
+#' @param max_provider_calls Maximum verified provider calls, or `NULL` for
+#'   unlimited. Ambiguous provider usage stops a run that has this cap.
+#' @param max_input_tokens Maximum verified input tokens, or `NULL` for unlimited.
+#' @param max_output_tokens Maximum verified output tokens, or `NULL` for
+#'   unlimited.
+#' @param max_total_tokens Maximum verified input plus output tokens, or `NULL`
+#'   for unlimited.
+#' @param max_cost Maximum known provider cost in US dollars, or `NULL` for
+#'   unlimited. Unknown cost stops a run that has this cap.
+#' @param max_elapsed_seconds Maximum active optimizer elapsed time in seconds,
+#'   or `NULL` for unlimited. Checkpoint downtime is excluded.
+#' @param num_threads Number of threads for parallel evaluation. Default is 1.
+#' @param progress Whether to display progress. Default is `TRUE` in interactive
+#'   sessions.
+#' @param log_dir Directory for trial logging. Default is `NULL` (no logging).
+#' @param checkpoint_path Optional optimizer checkpoint file.
+#' @param resume Whether to resume from `checkpoint_path`.
+#' @param checkpoint_registry Named runtime registry used by safe program
+#'   artifacts stored in checkpoints.
+#' @param verbose Whether to print detailed output. Default is `FALSE`.
+#' @details
+#' Finite metric, provider, token, cost, and elapsed-time limits switch
+#' optimizer evaluation to row-sized work units. The maximum postflight
+#' overshoot is one already-started evaluation row, or one already-started
+#' direct provider request for optimizer-side generation. Unknown provider,
+#' token, or cost usage stops safely when the corresponding cap is finite.
+#'
+#' BootstrapFewShot and MIPROv2 support deterministic checkpoint resume. GEPA,
+#' SIMBA, and COPRO currently provide the shared ledger and return the best
+#' partial program, but reject `resume = TRUE` until their fine-grained search
+#' state is supported.
+#'
+#' @return An optimizer control object.
 #' @export
 #'
 #' @examples
@@ -355,7 +352,7 @@ optimizer_control_for_teleprompter <- function(
   if (!is.null(control)) {
     if (!inherits(control, "dsprrr::OptimizerControl")) {
       cli::cli_abort(
-        "{.arg control} must be an OptimizerControl",
+        "{.arg control} must be created by {.fn optimizer_control}",
         class = "dsprrr_optimizer_control_error"
       )
     }
@@ -466,7 +463,8 @@ EvalResult <- S7::new_class(
 #' @param dataset A data frame containing test examples.
 #' @param metric A metric function for scoring predictions.
 #' @param .llm Optional ellmer Chat object for LLM calls.
-#' @param control An OptimizerControl object or NULL for defaults.
+#' @param control An object created by [optimizer_control()], or `NULL` for
+#'   defaults.
 #' @param epochs Integer; number of times to repeat evaluation for statistical
 #'   significance. Defaults to 1L. When > 1, computes std and confidence intervals.
 #' @param ... Additional arguments passed to [evaluate()].
@@ -764,10 +762,11 @@ optimizer_usage_sum <- function(values, integer = FALSE) {
 }
 
 optimizer_metadata_provider_calls <- function(program, metadata) {
-  explicit <- metadata$provider_calls %||% metadata$n_llm_calls
-  explicit <- optimizer_usage_scalar(explicit, integer = TRUE)
-  if (!is.na(explicit)) {
-    return(explicit)
+  if ("provider_calls" %in% names(metadata)) {
+    return(optimizer_usage_scalar(
+      metadata$provider_calls,
+      integer = TRUE
+    ))
   }
 
   if (inherits(program, "FlexModule")) {
@@ -786,12 +785,11 @@ optimizer_metadata_provider_calls <- function(program, metadata) {
       step_metadata,
       function(step) {
         item <- step$metadata %||% list()
-        item_explicit <- optimizer_usage_scalar(
-          item$provider_calls %||% item$n_llm_calls,
-          integer = TRUE
-        )
-        if (!is.na(item_explicit)) {
-          return(item_explicit)
+        if ("provider_calls" %in% names(item)) {
+          return(optimizer_usage_scalar(
+            item$provider_calls,
+            integer = TRUE
+          ))
         }
         if (identical(item$cache %||% "unknown", "hit")) 0L else 1L
       },
@@ -872,7 +870,7 @@ optimizer_metadata_usage <- function(program, metadata) {
     tokens_out = tokens_out,
     total_tokens = total_tokens,
     total_cost = optimizer_usage_scalar(
-      metadata$cost %||% metadata$total_cost,
+      metadata$cost,
       integer = FALSE
     ),
     provider_calls = provider_calls
@@ -1231,7 +1229,7 @@ new_optimizer_budget <- function(control = NULL, state = NULL, clock = NULL) {
   }
   if (!inherits(control, "dsprrr::OptimizerControl")) {
     cli::cli_abort(
-      "{.arg control} must be an OptimizerControl",
+      "{.arg control} must be created by {.fn optimizer_control}",
       class = "dsprrr_optimizer_invariant_error"
     )
   }
@@ -1683,13 +1681,6 @@ record_optimizer_usage <- function(
       "Optimizer usage requires a budget and a named list",
       class = "dsprrr_optimizer_invariant_error"
     )
-  }
-
-  aliases <- c(cost = "known_cost")
-  for (alias in names(aliases)) {
-    if (alias %in% names(usage) && !aliases[[alias]] %in% names(usage)) {
-      usage[[aliases[[alias]]]] <- usage[[alias]]
-    }
   }
 
   updates <- list()
@@ -2215,7 +2206,7 @@ optimizer_budget_clear_resumable_stop <- function(budget) {
 
 # Reconcile restored counters against the *current* control before any new
 # work can start. This permits raised/removed caps while failing closed for
-# stricter caps and for unknown historical usage under a newly finite cap.
+# stricter caps and for unknown restored usage under a newly finite cap.
 optimizer_budget_reconcile_current_limits <- function(
   budget,
   stage = "checkpoint_resume"
@@ -2707,10 +2698,9 @@ optimizer_unknown_provider_usage <- function() {
   )
 }
 
-# Run one direct optimizer-side model request as a bounded work unit. A direct
+# Run one direct optimizer-side Chat request as a bounded work unit. A direct
 # request is one known provider call, but token/cost usage is only known when a
-# verified Chat turn delta exposes it. Opaque function/list adapters therefore
-# stop safely after this unit when a corresponding finite cap is active.
+# verified Chat turn delta exposes it.
 optimizer_budgeted_provider_call <- function(
   budget,
   model,
@@ -2730,6 +2720,7 @@ optimizer_budgeted_provider_call <- function(
   if (is.null(model)) {
     return(list(started = FALSE, value = NULL, condition = NULL))
   }
+  model <- assert_ellmer_chat(model, arg = "model")
   if (
     !optimizer_budget_preflight(
       budget,
@@ -2748,11 +2739,7 @@ optimizer_budgeted_provider_call <- function(
     return(list(started = FALSE, value = NULL, condition = NULL))
   }
 
-  turns_before <- if (inherits(model, "Chat")) {
-    batch_chat_turns(model)
-  } else {
-    NULL
-  }
+  turns_before <- batch_chat_turns(model)
   condition <- NULL
   value <- tryCatch(
     call(),
@@ -2761,11 +2748,7 @@ optimizer_budgeted_provider_call <- function(
       NULL
     }
   )
-  metadata <- if (inherits(model, "Chat")) {
-    chat_usage_metadata(model, turns_before = turns_before)
-  } else {
-    canonical_usage_metadata()
-  }
+  metadata <- chat_usage_metadata(model, turns_before = turns_before)
   record_optimizer_usage(
     budget,
     list(
@@ -2985,7 +2968,7 @@ optimizer_budget_requires_row_units <- function(budget) {
   !all(vapply(limits, is.null, logical(1)))
 }
 
-# Evaluate one candidate while preserving the legacy whole-evaluation path when
+# Evaluate one candidate with the whole-evaluation path when
 # no fine-grained resource cap is active. Any metric/provider/token/cost/time cap
 # switches to row units so its only postflight overshoot is one started row.
 optimizer_eval_candidate <- function(
@@ -3263,7 +3246,7 @@ optimizer_budget_summary <- function(budget) {
 #'
 #' @param trial_count Current number of trials completed.
 #' @param error_count Current number of consecutive errors.
-#' @param control OptimizerControl object with budget settings.
+#' @param control An object created by [optimizer_control()] with budget settings.
 #'
 #' @return A list with:
 #'   - `should_stop`: logical indicating if optimization should stop
@@ -3334,11 +3317,8 @@ get_input_names <- function(signature) {
   vapply(signature@inputs, function(x) x$name, character(1))
 }
 
-#' Print method for EvalResult
-#' @param x An EvalResult object
-#' @param ... Additional arguments (unused)
-#' @export
-print.EvalResult <- function(x, ...) {
+# Print an EvalResult object through its S7 method.
+print_eval_result <- function(x, ...) {
   cli::cli_h3("Evaluation Result")
 
   if (is.na(x@mean_score)) {
@@ -3386,4 +3366,4 @@ print.EvalResult <- function(x, ...) {
 }
 
 # Register S7 print method
-S7::method(print, EvalResult) <- print.EvalResult
+S7::method(print, EvalResult) <- print_eval_result

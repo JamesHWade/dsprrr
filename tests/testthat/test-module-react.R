@@ -148,6 +148,28 @@ test_that("ReactModule max_iterations is configurable", {
   )
 })
 
+ReactTestChat <- R6::R6Class(
+  "ReactTestChat",
+  inherit = TestChat,
+  public = list(
+    on_tool_request_impl = NULL,
+
+    initialize = function(..., on_tool_request = NULL) {
+      super$initialize(...)
+      self$on_tool_request_impl <- on_tool_request
+    },
+
+    register_tool = function(tool) invisible(NULL),
+
+    on_tool_request = function(callback) {
+      if (is.null(self$on_tool_request_impl)) {
+        return(function() invisible(NULL))
+      }
+      self$on_tool_request_impl(callback)
+    }
+  )
+)
+
 test_that("ReactModule forward tracks tool calls from ellmer turns", {
   turns <- list()
 
@@ -162,47 +184,43 @@ test_that("ReactModule forward tracks tool calls from ellmer turns", {
     role_turns[[length(role_turns)]]
   }
 
-  mock_llm <- structure(
-    list(
-      register_tool = function(tool) invisible(NULL),
-      get_turns = function(...) turns,
-      last_turn = last_turn,
-      chat = function(prompt, echo = "none", ...) {
-        user_turn <- ellmer::UserTurn(
-          contents = list(ellmer::ContentText(prompt))
-        )
-        first_tool_turn <- ellmer::AssistantTurn(
-          contents = list(ellmer::ContentToolRequest(
-            id = "call_1",
-            name = "lookup",
-            arguments = list(query = "alpha")
-          ))
-        )
-        second_tool_turn <- ellmer::AssistantTurn(
-          contents = list(ellmer::ContentToolRequest(
-            id = "call_2",
-            name = "summarize",
-            arguments = list(value = "beta")
-          ))
-        )
+  mock_llm <- ReactTestChat$new(
+    model = "mock-model",
+    chat = function(prompt, echo = "none", ...) {
+      user_turn <- ellmer::UserTurn(
+        contents = list(ellmer::ContentText(prompt))
+      )
+      first_tool_turn <- ellmer::AssistantTurn(
+        contents = list(ellmer::ContentToolRequest(
+          id = "call_1",
+          name = "lookup",
+          arguments = list(query = "alpha")
+        ))
+      )
+      second_tool_turn <- ellmer::AssistantTurn(
+        contents = list(ellmer::ContentToolRequest(
+          id = "call_2",
+          name = "summarize",
+          arguments = list(value = "beta")
+        ))
+      )
 
-        turns <<- c(
-          turns,
-          list(user_turn, first_tool_turn, second_tool_turn)
-        )
-        invisible(NULL)
-      },
-      chat_structured = function(prompt, type, echo = "none", ...) {
-        final_turn <- ellmer::AssistantTurn(
-          contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
-        )
-        turns <<- c(turns, list(final_turn))
-        list(answer = "done")
-      },
-      get_model = function() "mock-model"
-    ),
-    class = "Chat"
+      turns <<- c(
+        turns,
+        list(user_turn, first_tool_turn, second_tool_turn)
+      )
+      invisible(NULL)
+    },
+    chat_structured = function(prompt, type, echo = "none", ...) {
+      final_turn <- ellmer::AssistantTurn(
+        contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+      )
+      turns <<- c(turns, list(final_turn))
+      list(answer = "done")
+    }
   )
+  override_test_chat_method(mock_llm, "get_turns", function(...) turns)
+  override_test_chat_method(mock_llm, "last_turn", last_turn)
 
   sig <- signature("question -> answer")
   mod <- module(sig, type = "react")
@@ -232,37 +250,33 @@ test_that("ReactModule forward tracks tool calls from ellmer turns", {
 
 test_that("ReactModule enforces max_iterations before finalization", {
   turns <- list()
-  mock_llm <- structure(
-    list(
-      register_tool = function(tool) invisible(NULL),
-      get_turns = function(...) turns,
-      chat = function(prompt, echo = "none", ...) {
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentToolRequest(
-                id = "call_1",
-                name = "first",
-                arguments = list()
-              ))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentToolRequest(
-                id = "call_2",
-                name = "second",
-                arguments = list()
-              ))
-            )
+  mock_llm <- ReactTestChat$new(
+    chat = function(prompt, echo = "none", ...) {
+      turns <<- c(
+        turns,
+        list(
+          ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentToolRequest(
+              id = "call_1",
+              name = "first",
+              arguments = list()
+            ))
+          ),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentToolRequest(
+              id = "call_2",
+              name = "second",
+              arguments = list()
+            ))
           )
         )
-        invisible(NULL)
-      },
-      chat_structured = function(...) stop("finalization should not run")
-    ),
-    class = "Chat"
+      )
+      invisible(NULL)
+    },
+    chat_structured = function(...) stop("finalization should not run")
   )
+  override_test_chat_method(mock_llm, "get_turns", function(...) turns)
 
   mod <- module(
     signature("question -> answer"),
@@ -293,45 +307,41 @@ test_that("ReactModule iteration guard ignores tool turns from prior runs", {
     matching[[length(matching)]]
   }
 
-  mock_llm <- structure(
-    list(
-      register_tool = function(tool) invisible(NULL),
-      get_turns = function(...) turns,
-      last_turn = last_turn,
-      on_tool_request = function(callback) {
-        iteration_guard <<- callback
-        function() iteration_guard <<- NULL
-      },
-      chat = function(prompt, echo = "none", ...) {
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentToolRequest(
-                id = "new_call",
-                name = "new_tool",
-                arguments = list()
-              ))
-            )
+  mock_llm <- ReactTestChat$new(
+    model = "mock-model",
+    on_tool_request = function(callback) {
+      iteration_guard <<- callback
+      function() iteration_guard <<- NULL
+    },
+    chat = function(prompt, echo = "none", ...) {
+      turns <<- c(
+        turns,
+        list(
+          ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentToolRequest(
+              id = "new_call",
+              name = "new_tool",
+              arguments = list()
+            ))
           )
         )
-        iteration_guard(list(id = "new_call"))
-        invisible(NULL)
-      },
-      chat_structured = function(prompt, type, echo = "none", ...) {
-        turns <<- c(
-          turns,
-          list(ellmer::AssistantTurn(
-            contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
-          ))
-        )
-        list(answer = "done")
-      },
-      get_model = function() "mock-model"
-    ),
-    class = "Chat"
+      )
+      iteration_guard(list(id = "new_call"))
+      invisible(NULL)
+    },
+    chat_structured = function(prompt, type, echo = "none", ...) {
+      turns <<- c(
+        turns,
+        list(ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+        ))
+      )
+      list(answer = "done")
+    }
   )
+  override_test_chat_method(mock_llm, "get_turns", function(...) turns)
+  override_test_chat_method(mock_llm, "last_turn", last_turn)
 
   mod <- module(
     signature("question -> answer"),
@@ -420,4 +430,21 @@ test_that("ReactModule rejects non-ToolDef in add_tool", {
     mod$add_tool("not a tool"),
     "ToolDef"
   )
+})
+
+test_that("ReactModule rejects an unnamespaced ToolDef class", {
+  sig <- signature("question -> answer")
+  bare_tool <- \(x) x
+  class(bare_tool) <- c("ToolDef", "function")
+
+  constructor_condition <- rlang::catch_cnd(
+    ReactModule$new(sig, tools = list(bare_tool))
+  )
+  mod <- module(sig, type = "react")
+  add_condition <- rlang::catch_cnd(mod$add_tool(bare_tool))
+
+  expect_s3_class(constructor_condition, "rlang_error")
+  expect_match(conditionMessage(constructor_condition), "ellmer ToolDef")
+  expect_s3_class(add_condition, "rlang_error")
+  expect_match(conditionMessage(add_condition), "ellmer ToolDef")
 })

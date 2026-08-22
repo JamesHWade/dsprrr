@@ -111,7 +111,7 @@ test_that("signature() constructor handles string notation", {
 test_that("signature() constructor still handles explicit notation", {
   sig <- signature(
     inputs = list(
-      input("text", S7::class_character, "Text to analyze")
+      input("text", "string", "Text to analyze")
     ),
     output_type = ellmer::type_string(),
     instructions = "Analyze the text"

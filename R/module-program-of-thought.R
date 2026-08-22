@@ -26,7 +26,7 @@
 #' whether execution state persists and whether `reset()` is available;
 #' serialize access to stateful backends. `interpreter_factory` is a
 #' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
+#' `policy()`, optional `start()`, and terminal `shutdown()`. The
 #' module owns that runner for one invocation and shuts it down exactly once on
 #' success, error, or interrupt.
 #'
@@ -67,14 +67,14 @@ NULL
 #'
 #' @param signature A Signature object or string notation defining inputs/outputs
 #' @param runner Optional caller-owned code runner implementing `execute()` and
-#'   `policy()`. It is retained, never automatically closed, and must not be
+#'   `policy()`. It is retained, never automatically shut down, and must not be
 #'   shared concurrently when persistent.
 #' @param max_iters Maximum code generation/repair iterations (default 3)
 #' @param extract_answer Logical. If TRUE (default), use LLM to extract final
 #'   answer from execution result. If FALSE, return execution result directly.
 #' @param interpreter_factory Optional zero-argument function returning a fresh
 #'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
-#'   terminal `shutdown()` or `close()`.
+#'   terminal `shutdown()`.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param ... Additional arguments passed to the module
 #'
@@ -90,11 +90,13 @@ NULL
 program_of_thought <- function(
   signature,
   runner = NULL,
+  interpreter_factory = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
-  ...,
-  interpreter_factory = NULL
+  ...
 ) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+
   binding <- normalize_code_runner_binding(
     runner = runner,
     interpreter_factory = interpreter_factory,
@@ -224,13 +226,10 @@ ProgramOfThoughtModule <- R6::R6Class(
       }
 
       # Get LLM - need to clone for fresh conversation
-      base_llm <- .llm %||% self$chat %||% get_default_chat()
-      if (is.null(base_llm)) {
-        cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
-      }
+      base_llm <- resolve_module_llm(self, .llm = .llm)
 
       # Clone the chat for a fresh conversation
-      llm <- base_llm$clone()
+      llm <- clone_ellmer_chat(base_llm, arg = ".llm", reset_turns = TRUE)
 
       with_code_runner_lease(
         self$runner,

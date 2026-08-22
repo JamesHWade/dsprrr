@@ -91,8 +91,10 @@ best_demos <- function(module, as_tibble = FALSE) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
 
-  # PredictModule stores demos in $demos field, fall back to config$demos
-  demos <- module$demos %||% module$config$demos
+  if (!"demos" %in% names(module)) {
+    return(NULL)
+  }
+  demos <- module$demos
 
   if (is.null(demos) || length(demos) == 0) {
     return(NULL)
@@ -182,12 +184,16 @@ apply_best_config <- function(
   if (include %in% c("all", "demos")) {
     demos <- best_demos(source)
     if (!is.null(demos)) {
-      # PredictModule uses $demos field, other modules use config$demos
-      if ("demos" %in% names(target)) {
-        target$demos <- demos
-      } else {
-        target$config$demos <- demos
+      if (!"demos" %in% names(target)) {
+        cli::cli_abort(
+          c(
+            "{.arg target} does not support demonstrations",
+            "i" = "Use a Predict module when transferring {.val demos}."
+          ),
+          class = "dsprrr_demo_transfer_error"
+        )
       }
+      target$demos <- demos
     }
   }
 
@@ -557,23 +563,14 @@ optimization_summary <- function(module) {
     NA_real_
   }
 
-  # Prefer the explicit per-trial cost column. Older trial logs may only carry
-  # cost inside their evaluation objects.
+  if (!"total_cost" %in% names(trials)) {
+    cli::cli_abort(
+      "Module trial state is missing the required {.field total_cost} column",
+      class = "dsprrr_optimizer_state_error"
+    )
+  }
   total_cost <- tryCatch(
-    {
-      costs <- if ("total_cost" %in% names(trials)) {
-        trials$total_cost
-      } else {
-        vapply(
-          trials$evaluation,
-          function(e) {
-            if (is.list(e)) e$total_cost %||% NA_real_ else NA_real_
-          },
-          numeric(1)
-        )
-      }
-      sum_cost_values(costs)
-    },
+    sum_cost_values(trials$total_cost),
     error = function(e) NA_real_
   )
 

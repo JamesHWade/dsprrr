@@ -7,15 +7,14 @@
 rlm_module(
   signature,
   runner = NULL,
+  interpreter_factory = NULL,
   max_iterations = 20L,
   max_llm_calls = 50L,
   max_output_chars = 10000L,
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
-  max_iters = NULL,
-  ...,
-  interpreter_factory = NULL
+  ...
 )
 }
 \arguments{
@@ -25,8 +24,14 @@ object output types. Opaque \code{TypeJsonSchema} outputs are unsupported.}
 
 \item{runner}{Optional caller-owned code runner implementing \code{execute()} and
 \code{policy()}. Its policy must declare \code{persistent = TRUE}. It is retained,
-never automatically closed, and must not be shared concurrently. For the
+never automatically shut down, and must not be shared concurrently. For the
 trusted callr backend, use \code{r_code_runner(persistent = TRUE)}.}
+
+\item{interpreter_factory}{Optional zero-argument function returning a fresh
+runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
+terminal \code{shutdown()}. Its policy must advertise
+\code{persistent = TRUE} for RLM.
+Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 
 \item{max_iterations}{Maximum REPL iterations before fallback (default 20)}
 
@@ -52,16 +57,7 @@ constraints beyond the bridge's lossless JSON-compatible value checks.
 A protocol safety ceiling permits at most 1,000 host-tool calls in one
 generated R step.}
 
-\item{max_iters}{DSPy 3.3-compatible alias for \code{max_iterations}. Supply only
-one of these arguments.}
-
 \item{...}{Additional arguments passed to the module}
-
-\item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
-terminal \code{shutdown()} or \code{close()}. Its policy must advertise
-\code{persistent = TRUE} for RLM.
-Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 }
 \value{
 An RLMModule object

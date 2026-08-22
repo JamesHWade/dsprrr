@@ -5,8 +5,8 @@
 #' are responsible for optimizing modules by adjusting their prompts,
 #' demonstrations, or other parameters based on training data.
 #'
-#' @param metric A metric function for evaluating predictions. If NULL,
-#'   uses exact_match() by default.
+#' @param metric Optional metric function for evaluating predictions. Subclasses
+#'   that evaluate candidates document whether a metric is required.
 #' @param metric_threshold Minimum score required to be considered successful.
 #'   If NULL, uses the metric's default threshold.
 #' @param max_errors Maximum number of errors allowed during optimization.
@@ -72,8 +72,8 @@ compile_default <- function(teleprompter, program, trainset, ...) {
 #' predictors (including RLM) are rejected because root examples do not define
 #' predictor-local demonstrations.
 #'
-#' @param metric A metric function for evaluating predictions. If NULL,
-#'   uses exact_match() by default.
+#' @param metric Optional metric stored with the teleprompter. LabeledFewShot
+#'   selects labeled demonstrations without evaluating candidate programs.
 #' @param metric_threshold Minimum score required to be considered successful.
 #'   If NULL, uses the metric's default threshold.
 #' @param max_errors Maximum number of errors allowed during optimization.
@@ -90,7 +90,7 @@ compile_default <- function(teleprompter, program, trainset, ...) {
 #' \dontrun{
 #' # Compile a module with few-shot demos drawn from the training set
 #' classifier <- module(signature("text -> sentiment"), type = "predict")
-#' trainset <- dsp_trainset(
+#' trainset <- data.frame(
 #'   text = c("I love it!", "Terrible experience", "It's okay"),
 #'   sentiment = c("positive", "negative", "neutral")
 #' )
@@ -212,8 +212,8 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #' A teleprompter that performs grid search over different instruction
 #' and template variants to find the best performing configuration.
 #'
-#' @param metric A metric function for evaluating predictions. If NULL,
-#'   uses exact_match() by default.
+#' @param metric A metric function for evaluating predictions, such as
+#'   [metric_exact_match()]. Required when compiling.
 #' @param metric_threshold Minimum score required to be considered successful.
 #'   If NULL, uses the metric's default threshold.
 #' @param max_errors Maximum number of errors allowed during optimization.
@@ -240,7 +240,7 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #' \dontrun{
 #' # Compile picks the variant that scores best on the training set
 #' classifier <- module(signature("text -> sentiment"), type = "predict")
-#' trainset <- dsp_trainset(
+#' trainset <- data.frame(
 #'   text = c("I love it!", "Terrible experience"),
 #'   sentiment = c("positive", "negative")
 #' )
@@ -702,7 +702,6 @@ evaluate_module <- function(module, data, metric, .llm = NULL, ...) {
     data,
     metric,
     .llm = .llm,
-    .parallel = FALSE,
     .progress = FALSE,
     ...
   )

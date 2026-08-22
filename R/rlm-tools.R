@@ -12,7 +12,6 @@
 #' - `search(var, pattern)`: Regex search in variable
 #' - `llm_query(query, context_slice)`: Request a recursive LLM call
 #' - `llm_query_batched(queries, slices)`: Request batched LLM calls
-#' - `rlm_query()` / `rlm_query_batch()`: Backward-compatible aliases
 #'
 #' Recursive-query helpers suspend execution with a nonce-bound, schema-checked
 #' request. The main RLM process handles the request and replays the code with
@@ -544,10 +543,6 @@ llm_query_batched <- base::local({
   }
 })
 
-# Backward-compatible aliases
-rlm_query <- llm_query
-rlm_query_batch <- llm_query_batched
-
 # Note: Maximum LLM calls allowed: %d
 # Exceeding this limit will result in an error
 ',
@@ -564,9 +559,6 @@ llm_query_batched <- function(queries, slices = NULL) {
   base::stop("Recursive LLM queries are disabled. Provide sub_lm to enable.")
 }
 
-# Backward-compatible aliases
-rlm_query <- llm_query
-rlm_query_batch <- llm_query_batched
 '
   }
 

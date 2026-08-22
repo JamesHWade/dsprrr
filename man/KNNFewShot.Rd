@@ -16,8 +16,9 @@ KNNFewShot(
 )
 }
 \arguments{
-\item{metric}{A metric function for evaluating predictions. If NULL,
-uses exact_match() by default.}
+\item{metric}{Optional metric stored with the teleprompter. KNNFewShot
+selects demonstrations by embedding similarity rather than candidate
+evaluation.}
 
 \item{metric_threshold}{Minimum score required to be considered successful.
 If NULL, uses the metric's default threshold.}

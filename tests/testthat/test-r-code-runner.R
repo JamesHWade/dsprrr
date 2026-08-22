@@ -567,7 +567,7 @@ test_that("persistent RCodeRunner preserves execution state", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
 
   expect_true(runner$policy()$persistent)
   first_pid <- runner$execute("Sys.getpid()")$result
@@ -594,7 +594,7 @@ test_that("persistent RCodeRunner preserves structured output capture", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   result <- runner$execute(
     "cat('out'); cat('err', file = stderr()); message('note'); warning('careful'); 42L"
   )
@@ -611,7 +611,7 @@ test_that("persistent RCodeRunner stages base context and overlays dynamic field
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   marker <- new.env(parent = emptyenv())
   marker$count <- 0L
   large_data <- data.frame(
@@ -667,7 +667,7 @@ test_that("persistent RCodeRunner reset clears state and staged context", {
     prelude = "from_prelude <- 11L",
     persistent = TRUE
   )
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   runner$prepare_context(list(base_value = 7L))
   before <- runner$execute(
     "transient <- 9L; c(from_prelude, .context$base_value, transient)"
@@ -691,7 +691,7 @@ test_that("persistent RCodeRunner timeout terminalizes and stops its session", {
   skip_on_cran()
 
   runner <- r_code_runner(timeout = 1, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   runner$start()
   session <- runner$.__enclos_env__$private$session
   expect_true(session$is_alive())
@@ -708,15 +708,15 @@ test_that("persistent RCodeRunner timeout terminalizes and stops its session", {
     runner$execute("1 + 1"),
     class = "dsprrr_interpreter_terminal_error"
   )
-  expect_invisible(runner$close())
-  expect_invisible(runner$close())
+  expect_invisible(runner$shutdown())
+  expect_invisible(runner$shutdown())
 })
 
 test_that("persistent RCodeRunner terminalizes when its subprocess crashes", {
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   runner$start()
   session <- runner$.__enclos_env__$private$session
   crash_code <- paste0(
@@ -741,10 +741,10 @@ test_that("persistent RCodeRunner close tears down its session", {
   session <- runner$.__enclos_env__$private$session
   expect_true(session$is_alive())
 
-  expect_invisible(runner$close())
+  expect_invisible(runner$shutdown())
   expect_true(runner$closed)
   expect_false(session$is_alive())
-  expect_invisible(runner$close())
+  expect_invisible(runner$shutdown())
   expect_error(
     runner$execute("1 + 1"),
     class = "dsprrr_interpreter_closed_error"
@@ -761,7 +761,7 @@ test_that("prepare_context requires persistent mode and named fields", {
   )
 
   persistent_runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(persistent_runner$close())
+  withr::defer(persistent_runner$shutdown())
   expect_error(
     persistent_runner$prepare_context(list(1)),
     class = "dsprrr_r_code_runner_context_error"

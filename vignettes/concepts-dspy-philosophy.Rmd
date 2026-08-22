@@ -108,7 +108,7 @@ Here's the radical part: instead of hand-tuning prompts, you define a metric and
 
 ```{r}
 mod$optimize_grid(
-  devset = training_data,
+  data = training_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0, 0.3, 0.7))
 )

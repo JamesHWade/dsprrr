@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Functions for managing the default ellmer Chat object used by dsprrr.
-#' When no Chat is explicitly provided to `dsp()` or `module()`, these
+#' When no Chat is explicitly provided to a module or [run()] call, these
 #' functions determine which Chat to use.
 #'
 #' @details
@@ -30,6 +30,116 @@ NULL
 .dsprrr_env$trace_context <- list()
 .dsprrr_env$trace_program_artifact_id <- NA_character_
 .dsprrr_env$trace_program <- NULL
+
+#' Test whether a value is a current ellmer Chat
+#' @noRd
+is_ellmer_chat <- function(chat) {
+  is.environment(chat) &&
+    R6::is.R6(chat) &&
+    inherits(chat, "Chat")
+}
+
+#' Validate a current ellmer Chat
+#' @noRd
+assert_ellmer_chat <- function(chat, arg = "chat", allow_null = FALSE) {
+  if (isTRUE(allow_null) && is.null(chat)) {
+    return(chat)
+  }
+  if (!is_ellmer_chat(chat)) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} must be an ellmer Chat R6 object",
+        "x" = "Got {.cls {class(chat)[1]}}.",
+        "i" = "Create one with an {.code ellmer::chat_*()} constructor."
+      ),
+      class = "dsprrr_chat_type_error"
+    )
+  }
+  chat
+}
+
+#' Deep-clone an ellmer Chat, optionally resetting its conversation
+#' @noRd
+clone_ellmer_chat <- function(chat, arg = "chat", reset_turns = TRUE) {
+  chat <- assert_ellmer_chat(chat, arg = arg)
+  clone <- tryCatch(chat[["clone"]], error = function(e) NULL)
+  if (!is.function(clone)) {
+    cli::cli_abort(
+      c(
+        "Cannot create an independent ellmer Chat",
+        "x" = "{.arg {arg}} does not provide {.code clone()}.",
+        "i" = "Supply a current ellmer Chat R6 object."
+      ),
+      class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error")
+    )
+  }
+
+  cloned <- tryCatch(
+    clone(deep = TRUE),
+    error = function(e) {
+      cli::cli_abort(
+        "Failed to deep-clone {.arg {arg}}",
+        class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error"),
+        parent = e
+      )
+    }
+  )
+  if (
+    !is_ellmer_chat(cloned) ||
+      identical(rlang::obj_address(cloned), rlang::obj_address(chat))
+  ) {
+    cli::cli_abort(
+      c(
+        "Cannot create an independent ellmer Chat",
+        "x" = "{.code clone(deep = TRUE)} did not return a new Chat R6 object."
+      ),
+      class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error")
+    )
+  }
+
+  if (!isTRUE(reset_turns)) {
+    return(cloned)
+  }
+
+  set_turns <- tryCatch(cloned[["set_turns"]], error = function(e) NULL)
+  get_turns <- tryCatch(cloned[["get_turns"]], error = function(e) NULL)
+  if (!is.function(set_turns) || !is.function(get_turns)) {
+    cli::cli_abort(
+      c(
+        "Cannot reset the cloned ellmer Chat",
+        "x" = "The clone must provide {.code set_turns()} and {.code get_turns()}."
+      ),
+      class = c("dsprrr_chat_reset_error", "dsprrr_chat_isolation_error")
+    )
+  }
+  tryCatch(
+    set_turns(list()),
+    error = function(e) {
+      cli::cli_abort(
+        "Failed to reset the cloned ellmer Chat",
+        class = c("dsprrr_chat_reset_error", "dsprrr_chat_isolation_error"),
+        parent = e
+      )
+    }
+  )
+  turns <- tryCatch(
+    get_turns(),
+    error = function(e) {
+      cli::cli_abort(
+        "Failed to verify the cloned ellmer Chat history",
+        class = c("dsprrr_chat_reset_error", "dsprrr_chat_isolation_error"),
+        parent = e
+      )
+    }
+  )
+  if (!is.list(turns) || length(turns) != 0L) {
+    cli::cli_abort(
+      "The cloned ellmer Chat history could not be reset",
+      class = c("dsprrr_chat_reset_error", "dsprrr_chat_isolation_error")
+    )
+  }
+  cloned
+}
 
 #' Get the Default Chat
 #'
@@ -66,13 +176,7 @@ get_default_chat <- function(create = TRUE) {
   # Check options
   chat <- getOption("dsprrr.default_chat")
   if (!is.null(chat)) {
-    if (!inherits(chat, "Chat")) {
-      cli::cli_abort(c(
-        "Invalid default chat in options",
-        "x" = "{.code options(dsprrr.default_chat)} must be an ellmer Chat object",
-        "i" = "Create one with {.code ellmer::chat_openai()} or similar"
-      ))
-    }
+    assert_ellmer_chat(chat, arg = "options(dsprrr.default_chat)")
     return(chat)
   }
 
@@ -97,8 +201,11 @@ get_default_chat <- function(create = TRUE) {
       " " = "   {.code Sys.setenv(ANTHROPIC_API_KEY = 'your-key')}",
       " " = "2. Set a default Chat explicitly:",
       " " = "   {.code options(dsprrr.default_chat = ellmer::chat_openai())}",
-      " " = "3. Pass a Chat to the function:",
-      " " = "   {.code chat |> dsp('q -> a', q = 'Hello')}"
+      " " = "3. Pass a Chat to {.fn run}:",
+      " " = paste0(
+        "   {.code run(module(signature('q -> a')), q = 'Hello', ",
+        ".llm = chat)}"
+      )
     ))
   }
 
@@ -130,13 +237,7 @@ get_default_chat <- function(create = TRUE) {
 #' set_default_chat(NULL)
 #' }
 set_default_chat <- function(chat) {
-  if (!is.null(chat) && !inherits(chat, "Chat")) {
-    cli::cli_abort(c(
-      "Invalid chat object",
-      "x" = "{.arg chat} must be an ellmer Chat object or NULL",
-      "i" = "Create one with {.code ellmer::chat_openai()} or similar"
-    ))
-  }
+  assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
 
   old <- getOption("dsprrr.default_chat")
   options(dsprrr.default_chat = chat)
@@ -294,8 +395,8 @@ get_scoped_lm <- function() {
 #' # Use Claude for a specific block
 #' claude <- ellmer::chat_claude()
 #' result <- with_lm(claude, {
-#'   dsp("question -> answer", question = "What is 2+2?")
-#'   dsp("text -> summary", text = "Long article...")
+#'   run(module(signature("question -> answer")), question = "What is 2+2?")
+#'   run(module(signature("text -> summary")), text = "Long article...")
 #' })
 #'
 #' # Nested contexts work correctly
@@ -310,14 +411,7 @@ get_scoped_lm <- function() {
 #' }
 with_lm <- function(lm, code) {
   # Validate input
-
-  if (!inherits(lm, "Chat")) {
-    cli::cli_abort(c(
-      "Invalid LM object",
-      "x" = "{.arg lm} must be an ellmer Chat object",
-      "i" = "Create one with {.code ellmer::chat_openai()} or similar"
-    ))
-  }
+  assert_ellmer_chat(lm, arg = "lm")
 
   local_lm(lm)
   code
@@ -349,8 +443,11 @@ with_lm <- function(lm, code) {
 #'   local_lm(ellmer::chat_claude())
 #'
 #'   # These calls don't need .llm parameter
-#'   summary <- dsp("data -> summary", data = data)
-#'   insights <- dsp("summary -> insights", summary = summary)
+#'   summary <- run(module(signature("data -> summary")), data = data)
+#'   insights <- run(
+#'     module(signature("summary -> insights")),
+#'     summary = summary
+#'   )
 #'   insights
 #' }
 #'
@@ -359,13 +456,7 @@ with_lm <- function(lm, code) {
 #' }
 local_lm <- function(lm, .env = parent.frame()) {
   # Validate input (NULL is allowed to clear scoped LM)
-  if (!is.null(lm) && !inherits(lm, "Chat")) {
-    cli::cli_abort(c(
-      "Invalid LM object",
-      "x" = "{.arg lm} must be an ellmer Chat object or NULL",
-      "i" = "Create one with {.code ellmer::chat_openai()} or similar"
-    ))
-  }
+  assert_ellmer_chat(lm, arg = "lm", allow_null = TRUE)
 
   # Store the previous value
   old <- .dsprrr_env$scoped_lm
@@ -389,7 +480,7 @@ local_lm <- function(lm, .env = parent.frame()) {
 #' @description
 #' Configure the default LLM provider and settings for dsprrr. Similar to
 #' DSPy's `dspy.configure(lm=lm)`, this sets up a default Chat that will be
-#' used by `dsp()` and modules when no explicit Chat is provided.
+#' used by modules when no explicit Chat is provided.
 #'
 #' @param provider Character string specifying the provider. One of:
 #'   `"openai"`, `"anthropic"`, `"google"`. If `NULL` (default), auto-detects
@@ -417,8 +508,8 @@ local_lm <- function(lm, .env = parent.frame()) {
 #' dsp_configure(provider = "anthropic", model = "claude-3-5-sonnet-latest",
 #'               temperature = 0.7)
 #'
-#' # Now dsp() uses this configuration
-#' dsp("question -> answer", question = "What is 2+2?")
+#' # Now run() uses this configuration
+#' run(module(signature("question -> answer")), question = "What is 2+2?")
 #' }
 dsp_configure <- function(
   provider = NULL,
@@ -499,50 +590,17 @@ dsp_configure <- function(
 #'
 #' @noRd
 detect_provider_name <- function(chat) {
-  # Try to use get_provider() method if available (ellmer 0.4+)
-  provider_obj <- tryCatch(
-    chat$get_provider(),
+  provider_name <- tryCatch(
+    chat$get_provider()@name,
     error = function(e) NULL
   )
-
-  if (!is.null(provider_obj)) {
-    # ellmer returns an S7 Provider object with @name slot
-    provider_name <- tryCatch(
-      provider_obj@name,
-      error = function(e) NULL
-    )
-
-    if (
-      !is.null(provider_name) &&
-        is.character(provider_name) &&
-        nzchar(provider_name)
-    ) {
-      return(provider_name)
-    }
-
-    # Check provider class name as fallback
-    provider_class <- class(provider_obj)[1]
-    if (grepl("OpenAI", provider_class, fixed = TRUE)) {
-      return("OpenAI")
-    }
-    if (grepl("Claude|Anthropic", provider_class)) {
-      return("Anthropic")
-    }
-    if (grepl("Google|Gemini", provider_class)) {
-      return("Google")
-    }
-  }
-
-  # Final fallback: check chat class name
-  class_name <- class(chat)[1]
-  if (grepl("openai", class_name, ignore.case = TRUE)) {
-    return("OpenAI")
-  }
-  if (grepl("claude|anthropic", class_name, ignore.case = TRUE)) {
-    return("Anthropic")
-  }
-  if (grepl("google|gemini", class_name, ignore.case = TRUE)) {
-    return("Google")
+  if (
+    is.character(provider_name) &&
+      length(provider_name) == 1L &&
+      !is.na(provider_name) &&
+      nzchar(provider_name)
+  ) {
+    return(provider_name)
   }
 
   "Unknown"
@@ -710,15 +768,17 @@ dsprrr_sitrep <- function() {
 
   if (n_calls > 0) {
     # Aggregate stats
-    total_tokens_in <- 0L
-    total_tokens_out <- 0L
-    total_cost <- 0
-
-    for (entry in history) {
-      total_tokens_in <- total_tokens_in + (entry$tokens_in %||% 0L)
-      total_tokens_out <- total_tokens_out + (entry$tokens_out %||% 0L)
-      total_cost <- total_cost + (entry$cost %||% 0)
+    sum_history_field <- function(field) {
+      values <- vapply(
+        history,
+        function(entry) as.numeric(entry[[field]] %||% 0),
+        numeric(1)
+      )
+      if (anyNA(values)) NA_real_ else sum(values)
     }
+    total_tokens_in <- sum_history_field("tokens_in")
+    total_tokens_out <- sum_history_field("tokens_out")
+    total_cost <- sum_history_field("cost")
 
     result$total_tokens_in <- total_tokens_in
     result$total_tokens_out <- total_tokens_out
@@ -726,13 +786,17 @@ dsprrr_sitrep <- function() {
 
     cli::cli_bullets(c("*" = "LLM calls: {n_calls}"))
 
-    if (total_tokens_in > 0 || total_tokens_out > 0) {
+    if (is.na(total_tokens_in) || is.na(total_tokens_out)) {
+      cli::cli_bullets(c("*" = "Tokens: unknown"))
+    } else if (total_tokens_in > 0 || total_tokens_out > 0) {
       cli::cli_bullets(c(
         "*" = "Tokens: {format(total_tokens_in, big.mark = ',')} in / {format(total_tokens_out, big.mark = ',')} out"
       ))
     }
 
-    if (total_cost > 0) {
+    if (is.na(total_cost)) {
+      cli::cli_bullets(c("*" = "Est. cost: unknown"))
+    } else if (total_cost > 0) {
       cli::cli_bullets(c(
         "*" = "Est. cost: ${format(total_cost, digits = 2, nsmall = 2)}"
       ))
@@ -874,9 +938,10 @@ dsprrr_sitrep <- function() {
 #' @export
 #' @examples
 #' \dontrun{
-#' # After running some dsp() calls
-#' dsp("question -> answer", question = "What is 2+2?")
-#' dsp("question -> answer", question = "What is the capital of France?")
+#' # After running a module a few times
+#' mod <- module(signature("question -> answer"))
+#' run(mod, question = "What is 2+2?")
+#' run(mod, question = "What is the capital of France?")
 #'
 #' # Get session summary
 #' session_cost()
@@ -1046,8 +1111,11 @@ check_ellmer_version <- function(version) {
 
   tryCatch(
     {
-      utils::compareVersion(version, min_version) >= 0
+      comparison <- suppressWarnings(
+        utils::compareVersion(version, min_version)
+      )
+      isTRUE(comparison >= 0)
     },
-    error = function(e) TRUE # Assume OK if we can't parse
+    error = function(e) FALSE
   )
 }

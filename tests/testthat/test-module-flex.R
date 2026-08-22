@@ -54,61 +54,42 @@ flex_two_step_source <- function() {
 }
 
 flex_test_chat <- function() {
-  turns <- list()
-  prompts <- character()
-  calls <- 0L
-
-  last_turn <- function(role = c("assistant", "user"), ...) {
-    role <- match.arg(role)
-    matching <- Filter(function(turn) identical(turn@role, role), turns)
-    if (length(matching) == 0L) {
-      stop("no matching turn")
-    }
-    matching[[length(matching)]]
-  }
-
-  structure(
-    list(
-      calls = function() calls,
-      prompts = function() prompts,
-      get_turns = function(...) turns,
-      set_turns = function(value) {
-        turns <<- value
-        invisible(NULL)
-      },
-      last_turn = last_turn,
-      get_model = function() "flex-test-model",
-      chat_structured = function(prompt, type, ...) {
-        calls <<- calls + 1L
-        prompt <- as.character(prompt)
-        prompts <<- c(prompts, prompt)
-        fields <- names(type@properties)
-        response <- if (identical(fields, "draft")) {
-          list(draft = "a checked draft")
-        } else if (identical(fields, c("reasoning", "answer"))) {
-          list(reasoning = "checked", answer = "the final answer")
-        } else {
-          stop("unexpected Flex output schema")
-        }
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(
-              contents = list(ellmer::ContentText(prompt))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentText("ok")),
-              tokens = c(2L, 1L, 0L),
-              cost = 0.001,
-              duration = 0.01
-            )
+  chat <- NULL
+  chat <- new_test_chat(
+    model = "flex-test-model",
+    chat_structured = function(prompt, type, ...) {
+      chat$parity_state$calls <- chat$parity_state$calls + 1L
+      prompt <- as.character(prompt)
+      chat$parity_state$prompts <- c(chat$parity_state$prompts, prompt)
+      fields <- names(type@properties)
+      response <- if (identical(fields, "draft")) {
+        list(draft = "a checked draft")
+      } else if (identical(fields, c("reasoning", "answer"))) {
+        list(reasoning = "checked", answer = "the final answer")
+      } else {
+        stop("unexpected Flex output schema")
+      }
+      chat$turns <- c(
+        chat$turns,
+        list(
+          ellmer::UserTurn(
+            contents = list(ellmer::ContentText(prompt))
+          ),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("ok")),
+            tokens = c(2L, 1L, 0L),
+            cost = 0.001,
+            duration = 0.01
           )
         )
-        response
-      }
-    ),
-    class = "Chat"
+      )
+      response
+    }
   )
+  chat$parity_state <- list(calls = 0L, prompts = character())
+  chat$calls <- function() chat$parity_state$calls
+  chat$prompts <- function() chat$parity_state$prompts
+  chat
 }
 
 test_that("flex gives one experimental lifecycle warning per session", {
@@ -122,14 +103,16 @@ test_that("flex gives one experimental lifecycle warning per session", {
     inherits = FALSE
   )
   old <- lifecycle$warned
-  withr::defer(lifecycle$warned <- old)
+  withr::defer({
+    lifecycle$warned <- old
+  })
   lifecycle$warned <- FALSE
 
   expect_warning(
     first <- flex("question -> answer"),
     class = "dsprrr_flex_experimental_warning"
   )
-  expect_no_warning(second <- flex("question -> answer"))
+  second <- expect_no_warning(flex("question -> answer"))
   expect_s3_class(first, "FlexModule")
   expect_s3_class(second, "FlexModule")
   expect_s3_class(first, "PredictModule")
@@ -193,8 +176,8 @@ test_that("flex supports unlimited call budgets and deterministic plans", {
     .progress = FALSE
   )
   expect_identical(
-    unlist(dataset_result$result, use.names = FALSE),
-    c("first", "second")
+    dataset_result$result,
+    list(list(result = "first"), list(result = "second"))
   )
   expect_identical(default_creations, 0L)
 
@@ -222,29 +205,6 @@ test_that("flex supports unlimited call budgets and deterministic plans", {
       max_predictor_calls = 1L
     ),
     class = "dsprrr_flex_budget_error"
-  )
-})
-
-test_that("flex preserves its original positional argument order", {
-  source <- flex_test_json(
-    steps = list(),
-    outputs = list(result = "$input.value")
-  )
-
-  program <- suppressWarnings(flex(
-    "value -> result",
-    source,
-    0L,
-    list(label = "positional"),
-    NULL
-  ))
-
-  expect_identical(program$max_predictor_calls, 0L)
-  expect_identical(program$max_tool_calls, 100L)
-  expect_identical(program$config$label, "positional")
-  expect_identical(
-    program$forward(list(value = "kept"))$output[[1L]],
-    list(result = "kept")
   )
 })
 
@@ -296,15 +256,12 @@ test_that("flex requires a steps array and supports a zero-input baseline", {
   program <- flex_test_program("-> answer")
   expect_match(program$module_src, '"inputs":{}', fixed = TRUE)
   calls <- 0L
-  chat <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        calls <<- calls + 1L
-        list(answer = "ready")
-      },
-      get_model = function() "zero-input-test"
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    model = "zero-input-test",
+    chat_structured = function(prompt, type, ...) {
+      calls <<- calls + 1L
+      list(answer = "ready")
+    }
   )
   result <- program$forward(list(), .llm = chat)
 
@@ -730,12 +687,9 @@ test_that("flex rejects extra and incompatible runtime inputs exactly", {
     class = "dsprrr_flex_runtime_input_error"
   )
 
-  valid_chat <- structure(
-    list(
-      chat_structured = function(...) list(answer = "accepted"),
-      get_model = function() "nested-input-test"
-    ),
-    class = "Chat"
+  valid_chat <- new_test_chat(
+    model = "nested-input-test",
+    chat_structured = function(...) list(answer = "accepted")
   )
   nested_row <- tibble::tibble(
     payload = list(list(label = "ok", counts = c(1L, 2L)))
@@ -786,12 +740,9 @@ test_that("flex rejects extra and incompatible runtime inputs exactly", {
 
 test_that("flex validates every model output recursively and exactly", {
   malformed_chat <- function(response) {
-    structure(
-      list(
-        chat_structured = function(...) response,
-        get_model = function() "malformed-output-test"
-      ),
-      class = "Chat"
+    new_test_chat(
+      model = "malformed-output-test",
+      chat_structured = function(...) response
     )
   }
   program <- flex_test_program("question -> answer: string")
@@ -913,18 +864,15 @@ test_that("flex consistently omits ignored output properties", {
   )
   program <- flex_test_program(sig)
   expect_false(grepl("ignored", program$module_src, fixed = TRUE))
-  chat <- structure(
-    list(
-      chat_structured = function(...) {
-        list(
-          answer = "ok",
-          ignored = NULL,
-          nested = list(visible = "kept", ignored = NULL)
-        )
-      },
-      get_model = function() "ignore-output-test"
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    model = "ignore-output-test",
+    chat_structured = function(...) {
+      list(
+        answer = "ok",
+        ignored = NULL,
+        nested = list(visible = "kept", ignored = NULL)
+      )
+    }
   )
 
   result <- program$forward(list(question = "q"), .llm = chat)
@@ -940,12 +888,9 @@ test_that("flex consistently omits ignored output properties", {
   ))
   ignored_result <- only_ignored$forward(
     list(question = "q"),
-    .llm = structure(
-      list(
-        chat_structured = function(...) list(ignored = NULL),
-        get_model = function() "all-ignored-output-test"
-      ),
-      class = "Chat"
+    .llm = new_test_chat(
+      model = "all-ignored-output-test",
+      chat_structured = function(...) list(ignored = NULL)
     )
   )
   expect_identical(ignored_result$output[[1L]], setNames(list(), character()))
@@ -1058,28 +1003,24 @@ test_that("flex resolves runtime Chat parameters exactly once", {
   call_ids <- integer()
 
   make_chat <- function(id) {
-    chat <- NULL
-    chat <- structure(
-      list(
-        clone = function(...) {
-          clone_count <<- clone_count + 1L
-          make_chat(clone_count)
-        },
-        chat_structured = function(prompt, type, ...) {
-          call_ids <<- c(call_ids, id)
-          fields <- names(type@properties)
-          if (identical(fields, "draft")) {
-            return(list(draft = "a checked draft"))
-          }
-          if (identical(fields, c("reasoning", "answer"))) {
-            return(list(reasoning = "checked", answer = "final"))
-          }
-          stop("unexpected Flex output schema")
-        },
-        get_model = function() paste0("clone-", id)
-      ),
-      class = "Chat"
+    chat <- new_test_chat(
+      model = paste0("clone-", id),
+      chat_structured = function(prompt, type, ...) {
+        call_ids <<- c(call_ids, id)
+        fields <- names(type@properties)
+        if (identical(fields, "draft")) {
+          return(list(draft = "a checked draft"))
+        }
+        if (identical(fields, c("reasoning", "answer"))) {
+          return(list(reasoning = "checked", answer = "final"))
+        }
+        stop("unexpected Flex output schema")
+      }
     )
+    override_test_chat_method(chat, "clone", function(...) {
+      clone_count <<- clone_count + 1L
+      make_chat(clone_count)
+    })
     assign(as.character(id), chat, envir = clones)
     chat
   }
@@ -1201,7 +1142,7 @@ test_that("one-predictor Flex datasets use isolated native concurrency", {
   result <- run_dataset(
     program,
     dataset,
-    .llm = structure(list(), class = "Chat"),
+    .llm = new_test_chat(),
     .concurrency = concurrency_control(
       backend = "ellmer",
       max_active = 3L
@@ -1210,9 +1151,25 @@ test_that("one-predictor Flex datasets use isolated native concurrency", {
     .progress = FALSE,
     .cache = FALSE
   )
+  simple_program <- flex_test_program("question -> answer")
+  simple <- run_dataset(
+    simple_program,
+    dataset,
+    .llm = new_test_chat(),
+    .concurrency = concurrency_control(
+      backend = "ellmer",
+      max_active = 3L
+    ),
+    .progress = FALSE,
+    .cache = FALSE
+  )
 
-  expect_identical(calls, 1L)
+  expect_identical(calls, 2L)
   expect_length(observed_prompts[[1L]], 3L)
+  expect_identical(
+    simple$result,
+    lapply(paste0("answer-", 1:3), \(answer) list(answer = answer))
+  )
   expect_identical(
     vapply(result$result, `[[`, character(1), "answer"),
     paste0("answer-", 1:3)
@@ -1268,7 +1225,7 @@ test_that("concurrent Flex preserves provider error conditions", {
   result <- dsprrr:::run_flex_dataset_batch(
     program = program,
     data = data.frame(question = "q"),
-    .llm = structure(list(), class = "Chat"),
+    .llm = new_test_chat(),
     .verbose = FALSE,
     .progress = FALSE,
     .return_format = "structured",
@@ -1307,7 +1264,7 @@ test_that("multi-predictor Flex concurrency remains fail-closed", {
     run_dataset(
       program,
       data.frame(question = c("one", "two")),
-      .llm = structure(list(), class = "Chat"),
+      .llm = new_test_chat(),
       .concurrency = concurrency_control(
         backend = "ellmer",
         max_active = 2L
@@ -1324,15 +1281,12 @@ test_that("multi-predictor Flex concurrency remains fail-closed", {
 
 test_that("run preserves Flex array and object inputs as scalar values", {
   calls <- 0L
-  chat <- structure(
-    list(
-      chat_structured = function(...) {
-        calls <<- calls + 1L
-        list(answer = "accepted")
-      },
-      get_model = function() "flex-schema-input-test"
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    model = "flex-schema-input-test",
+    chat_structured = function(...) {
+      calls <<- calls + 1L
+      list(answer = "accepted")
+    }
   )
 
   array_program <- flex_test_program(Signature(

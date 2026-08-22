@@ -30,8 +30,6 @@ get_output <- function(x, ...) {
 get_output.default <- function(x, ...) {
   if (is.list(x) && "output" %in% names(x)) {
     x$output
-  } else if (is.list(x) && "predictions" %in% names(x)) {
-    x$predictions
   } else {
     x
   }

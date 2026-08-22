@@ -230,7 +230,7 @@ mod <- module(sig, type = "predict")
 # Initial optimization with coarse grid
 optimize_grid(
   mod,
-  devset = training_data,
+  data = training_data,
   metric = metric_exact_match(),
   parameters = list(
     temperature = c(0.1, 0.5, 1.0),
@@ -266,7 +266,7 @@ fine_grid <- grid_regular(params, levels = 10)
 # Continue optimization with refined grid
 optimize_grid(
   mod,
-  devset = training_data,
+  data = training_data,
   metric = metric_exact_match(),
   grid = fine_grid
 )
@@ -442,7 +442,7 @@ classifier <- signature(
   module(type = "predict", template = "Analyze sentiment: {text}\n\nSentiment:")
 
 # Prepare training data
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   text = c(
     "This product is amazing! Best purchase ever!",
     "Terrible experience. Would not recommend.",
@@ -502,7 +502,7 @@ variants <- data.frame(
 )
 
 # Prepare QA training data
-qa_trainset <- dsp_trainset(
+qa_trainset <- tibble::tibble(
   context = c(
     "The R language was created by Ross Ihaka and Robert Gentleman in 1992.",
     "Python was created by Guido van Rossum and first released in 1991.",
@@ -574,7 +574,7 @@ email_classifier <- signature(
   module(type = "predict")
 
 # Step 2: Prepare comprehensive training data
-email_trainset <- dsp_trainset(
+email_trainset <- tibble::tibble(
   email = c(
     "Your product broke after 2 days! I want a refund immediately!",
     "Hi, I'm wondering if you ship to Canada?",
@@ -653,7 +653,7 @@ Once you've optimized your module, systematically evaluate its performance:
 ```{r evaluation}
 #| cassette: true
 # Prepare test dataset (separate from training)
-test_emails <- dsp_trainset(
+test_emails <- tibble::tibble(
   email = c(
     "The package was damaged during shipping.",
     "Do you offer student discounts?",
@@ -679,12 +679,12 @@ test_emails <- dsp_trainset(
 # Evaluate with specific metric
 category_metric <- metric_exact_match(field = "category")
 
-results <- evaluate_dsp(
+results <- evaluate(
   module = optimized_grid,
   data = test_emails,
   metric = category_metric,
   .llm = llm,
-  verbose = TRUE
+  .progress = TRUE
 )
 
 # Examine results
@@ -699,12 +699,12 @@ multi_metric <- metric_field_match(
   require_all = TRUE # All fields must match
 )
 
-full_results <- evaluate_dsp(
+full_results <- evaluate(
   module = optimized_grid,
   data = test_emails,
   metric = multi_metric,
   .llm = llm,
-  verbose = TRUE
+  .progress = TRUE
 )
 
 print(full_results$mean_score) # Lower, as all fields must match
@@ -747,7 +747,7 @@ doc_analyzer <- signature(
   module(type = "predict")
 
 # 2. Create comprehensive training data
-doc_trainset <- dsp_trainset(
+doc_trainset <- tibble::tibble(
   document = c(
     "Our Q3 revenue increased by 25% YoY, driven by strong product sales.
      Customer satisfaction scores reached an all-time high of 92%.
@@ -826,12 +826,12 @@ for (k in c(1L, 2L, 3L, 4L)) {
   )
 
   # Evaluate on validation set
-  eval_result <- evaluate_dsp(
+  eval_result <- evaluate(
     module = optimized,
     data = doc_trainset, # In practice, use separate validation set
     metric = wrapped_metric,
     .llm = llm,
-    verbose = FALSE
+    .progress = FALSE
   )
 
   results_by_k[[paste0("k_", k)]] <- eval_result$mean_score
@@ -921,7 +921,7 @@ optimized_module <- compile_module(
 )
 
 # Evaluate on validation set
-val_results <- evaluate_dsp(
+val_results <- evaluate(
   module = optimized_module,
   data = splits$val,
   metric = wrapped_metric,

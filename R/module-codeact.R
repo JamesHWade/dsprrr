@@ -25,7 +25,7 @@
 #' whether execution state persists and whether `reset()` is available;
 #' serialize access to stateful backends. `interpreter_factory` is a
 #' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
+#' `policy()`, optional `start()`, and terminal `shutdown()`. The
 #' module owns that runner for one invocation and shuts it down exactly once on
 #' success, error, or interrupt. Any retained code tool becomes terminal after
 #' shutdown.
@@ -79,14 +79,14 @@ NULL
 #'   their ToolDef name. Effective names may contain only letters, numbers,
 #'   hyphens, and underscores.
 #' @param runner Optional caller-owned code runner implementing `execute()` and
-#'   `policy()`. It is retained, never automatically closed, and must not be
+#'   `policy()`. It is retained, never automatically shut down, and must not be
 #'   shared concurrently when persistent.
 #' @param max_iterations Maximum outer agent iterations and maximum tool calls
 #'   within one invocation (default 10). Exceeding the inner tool-call budget
 #'   raises a `dsprrr_codeact_iteration_limit` error.
 #' @param interpreter_factory Optional zero-argument function returning a fresh
 #'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
-#'   terminal `shutdown()` or `close()`.
+#'   terminal `shutdown()`.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
 #' @param ... Additional arguments passed to the module
 #'
@@ -107,10 +107,12 @@ code_act <- function(
   signature,
   tools = list(),
   runner = NULL,
+  interpreter_factory = NULL,
   max_iterations = 10L,
-  ...,
-  interpreter_factory = NULL
+  ...
 ) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+
   binding <- normalize_code_runner_binding(
     runner = runner,
     interpreter_factory = interpreter_factory,
@@ -172,12 +174,10 @@ validate_codeact_tools <- function(tools) {
 
   valid_tools <- vapply(
     tools,
-    function(tool) {
-      inherits(tool, "ellmer::ToolDef") || inherits(tool, "ToolDef")
-    },
+    \(tool) inherits(tool, "ellmer::ToolDef"),
     logical(1)
   )
-  if (any(!valid_tools)) {
+  if (!all(valid_tools)) {
     invalid <- which(!valid_tools)
     cli::cli_abort(
       c(
@@ -201,7 +201,7 @@ validate_codeact_tools <- function(tools) {
   intrinsic_names <- codeact_tool_names(tools)
   tool_names <- ifelse(nzchar(declared_names), declared_names, intrinsic_names)
   valid_names <- grepl("^[A-Za-z0-9_-]+$", tool_names)
-  if (any(!valid_names)) {
+  if (!all(valid_names)) {
     cli::cli_abort(
       c(
         "CodeAct tool names may contain only letters, numbers, - and _",
@@ -343,13 +343,10 @@ CodeActModule <- R6::R6Class(
       }
 
       # Get LLM - need to clone for fresh conversation
-      base_llm <- .llm %||% self$chat %||% get_default_chat()
-      if (is.null(base_llm)) {
-        cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
-      }
+      base_llm <- resolve_module_llm(self, .llm = .llm)
 
       # Clone the chat for a fresh conversation
-      llm <- base_llm$clone()
+      llm <- clone_ellmer_chat(base_llm, arg = ".llm", reset_turns = TRUE)
 
       with_code_runner_lease(
         self$runner,

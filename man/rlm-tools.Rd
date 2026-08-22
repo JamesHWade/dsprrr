@@ -15,7 +15,6 @@ The prelude defines these functions in the execution environment:
 \item \code{search(var, pattern)}: Regex search in variable
 \item \code{llm_query(query, context_slice)}: Request a recursive LLM call
 \item \code{llm_query_batched(queries, slices)}: Request batched LLM calls
-\item \code{rlm_query()} / \code{rlm_query_batch()}: Backward-compatible aliases
 }
 
 Recursive-query helpers suspend execution with a nonce-bound, schema-checked

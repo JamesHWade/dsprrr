@@ -152,6 +152,17 @@ test_that("mixed indexed traces never use unsafe positional fallback", {
   expect_length(aligned[[3L]], 0L)
 })
 
+test_that("unindexed traces are not assigned by position", {
+  events <- list(
+    list(metadata = list(), output = "first"),
+    list(metadata = list(), output = "second")
+  )
+
+  aligned <- dsprrr:::align_evaluation_trace_events(events, 2L)
+
+  expect_true(all(lengths(aligned) == 0L))
+})
+
 test_that("duplicate indexed traces stay ordered on their declared row", {
   events <- list(
     list(metadata = list(batch_index = 2L), output = "first"),
@@ -212,13 +223,10 @@ test_that("normalize_metric_result handles all return shapes", {
 test_that("evaluate collects feedback from feedback metrics", {
   local_reset_cache()
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(a = "mocked")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(a = "mocked")
+    }
   )
 
   sig <- signature("q -> a")
@@ -262,13 +270,10 @@ test_that("evaluate collects feedback from feedback metrics", {
 test_that("plain metrics produce NA feedback in evaluate", {
   local_reset_cache()
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(a = "mocked")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(a = "mocked")
+    }
   )
 
   sig <- signature("q -> a")
@@ -301,13 +306,10 @@ test_that("plain metrics produce NA feedback in evaluate", {
 test_that("eval_program propagates feedback into examples tibble", {
   local_reset_cache()
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(a = "mocked")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(a = "mocked")
+    }
   )
 
   sig <- signature("q -> a")
@@ -350,11 +352,8 @@ test_that("eval_program propagates feedback into examples tibble", {
 test_that("evaluate supplies row-level traces to metrics and optimizers", {
   local_reset_cache()
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) list(a = "mocked")
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) list(a = "mocked")
   )
   mod <- module(signature("q -> a"), type = "predict")
   dataset <- tibble::tibble(q = "Q1", a = "mocked")
@@ -414,9 +413,8 @@ test_that("evaluate supplies row-level traces to metrics and optimizers", {
 
 test_that("simple evaluation results do not expose raw traces", {
   local_reset_cache()
-  llm <- structure(
-    list(chat_structured = function(...) list(a = "mocked")),
-    class = "Chat"
+  llm <- new_test_chat(
+    chat_structured = function(...) list(a = "mocked")
   )
   mod <- module(signature("q -> a"), type = "predict")
   dataset <- tibble::tibble(q = "Q1", a = "mocked")
@@ -454,9 +452,8 @@ test_that("simple evaluation results do not expose raw traces", {
 test_that("row-budgeted optimizer metrics retain dataset row IDs", {
   local_reset_cache()
 
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, type, ...) list(a = "mocked")),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) list(a = "mocked")
   )
   mod <- module(signature("q -> a"), type = "predict")
   dataset <- tibble::tibble(

@@ -8,7 +8,6 @@ MIPROv2(
   metric = NULL,
   metric_threshold = NULL,
   max_errors = 5L,
-  prompt_model = NULL,
   task_model = NULL,
   teacher_settings = NULL,
   max_bootstrapped_demos = 4L,
@@ -17,7 +16,6 @@ MIPROv2(
   num_candidates = NULL,
   num_threads = 1L,
   seed = 9L,
-  init_temperature = 1,
   track_stats = TRUE,
   log_dir = NULL
 )
@@ -29,9 +27,8 @@ MIPROv2(
 
 \item{max_errors}{Maximum number of errors allowed during optimization.}
 
-\item{prompt_model}{Optional model to propose instructions.}
-
-\item{task_model}{Optional model to evaluate tasks. Defaults to .llm.}
+\item{task_model}{Optional ellmer Chat used to evaluate tasks. \code{NULL} uses
+the \code{.llm} supplied to \code{compile()}.}
 
 \item{teacher_settings}{List of settings for the teacher model.}
 
@@ -46,8 +43,6 @@ MIPROv2(
 \item{num_threads}{Number of threads to use for evaluation.}
 
 \item{seed}{Random seed for reproducibility.}
-
-\item{init_temperature}{Initial temperature for instruction proposals.}
 
 \item{track_stats}{Whether to track trial history.}
 

@@ -58,7 +58,7 @@ test_that("LabeledFewShot can be created and validated", {
 test_that("LabeledFewShot compile works", {
   # Create a simple module
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify text"
   )
@@ -239,7 +239,7 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
   )
 
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify style"
   )
@@ -262,10 +262,7 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
     as.numeric(pred_value == expected_row$label)
   }
 
-  mock_llm <- structure(
-    list(chat_structured = function(...) list()),
-    class = "Chat"
-  )
+  mock_llm <- new_test_chat(chat_structured = function(...) list())
 
   tp <- GridSearchTeleprompter(
     variants = variants,
@@ -288,7 +285,7 @@ test_that("GridSearchTeleprompter delegates to optimize_grid", {
 test_that("Module state management methods work", {
   # Create a compiled module with demos
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
@@ -329,7 +326,7 @@ test_that("Module state management methods work", {
 
 test_that("compile generic dispatches correctly", {
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
@@ -360,8 +357,8 @@ test_that("compile generic dispatches correctly", {
 test_that("format_trainset_as_demos handles various formats", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character),
-      input(name = "context", class = S7::class_character)
+      input(name = "text", type = "string"),
+      input(name = "context", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = ""
@@ -428,7 +425,7 @@ test_that("get_metric_field extracts field attribute from metrics", {
 
 test_that("format_trainset_as_demos uses explicit output_col parameter", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = ""
   )
@@ -455,7 +452,7 @@ test_that("format_trainset_as_demos uses explicit output_col parameter", {
 
 test_that("LabeledFewShot uses metric field for output column", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify text"
   )
@@ -490,7 +487,7 @@ test_that("LabeledFewShot uses metric field for output column", {
 
 test_that("format_trainset_as_demos extracts nested field from list column", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = ""
   )
@@ -518,7 +515,7 @@ test_that("format_trainset_as_demos extracts nested field from list column", {
 
 test_that("format_trainset_as_demos unwraps list column when field is column name", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = ""
   )
@@ -549,7 +546,7 @@ test_that("format_trainset_as_demos unwraps list column when field is column nam
 
 test_that("format_trainset_as_demos handles multiple fields", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = ""
   )
@@ -675,7 +672,7 @@ test_that("get_metric_field warns for non-function input", {
 
 test_that("format_trainset_as_demos validates output_col type", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = ""
   )

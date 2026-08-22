@@ -401,29 +401,19 @@ PredictModule <- R6::R6Class(
 
   private = list(
     # Build prompt from inputs
-    # Supports both glue-style { } and ellmer-style {{ }} delimiters
     build_prompt = function(inputs) {
       build_prompt(self, inputs)
     },
 
-    # Interpolate template with inputs, supporting both { } and {{ }} syntax
-    # Uses ellmer::interpolate() for {{ }} (ellmer-style), glue for { } (glue-style)
+    # Interpolate template inputs with the package's documented {name} syntax.
     interpolate_template = function(template, inputs) {
-      # Check for ellmer-style {{ }} syntax
-      if (grepl("\\{\\{[^}]+\\}\\}", template)) {
-        # ellmer-style - use ellmer::interpolate with !!!inputs
-        # ellmer::interpolate uses {{ }} delimiters
-        rlang::inject(ellmer::interpolate(template, !!!inputs))
-      } else {
-        # glue-style { } - current behavior for backward compatibility
-        glue::glue_data(
-          .x = inputs,
-          template,
-          .open = "{",
-          .close = "}",
-          .envir = parent.frame()
-        )
-      }
+      glue::glue_data(
+        .x = inputs,
+        template,
+        .open = "{",
+        .close = "}",
+        .envir = parent.frame()
+      )
     },
 
     # Format demonstrations for prompt
@@ -532,29 +522,8 @@ PredictModule <- R6::R6Class(
   )
 )
 
-#' Convert module demos to a tibble
-#'
-#' @description
-#' Converts the demos list from a compiled module into a tidy tibble format.
-#' Handles both flat outputs (single values) and nested outputs (named lists).
-#'
-#' @param module A Module object (typically a PredictModule with demos)
-#' @return A tibble with input columns and output column(s). For nested outputs,
-#'   output fields are flattened into separate columns.
-#'
-#' @examples
-#' \dontrun{
-#' # After compiling a module with LabeledFewShot
-#' compiled <- compile(LabeledFewShot(k = 3), module, trainset)
-#'
-#' # View demos as tibble
-#' module_demos_as_tibble(compiled)
-#'
-#' # Or use the active binding
-#' compiled$demo_table
-#' }
-#'
-#' @export
+#' Convert module demonstrations to the public demo-table representation
+#' @noRd
 module_demos_as_tibble <- function(module) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a Module object")

@@ -2,6 +2,70 @@
 
 First development changelog. dsprrr is experimental; the API may change.
 
+## Breaking changes
+
+* The public API now centers on `signature()`, `module()`, `run()`,
+  `run_dataset()`, `evaluate()`, and `compile()`. Redundant DSP-style wrappers,
+  typed-input convenience constructors, pipeline wrapper helpers, the separate
+  ensemble teleprompter, and one-line ellmer registration helpers have been
+  removed. Implementation classes such as `Signature`, `Assertion`,
+  `OptimizerControl`, and `Trial` are internal; their public constructor and
+  collection functions remain the supported interface. This reduces the
+  namespace from 188 to 161 exports and removes inert S3 registrations,
+  reducing them from 55 to 36, without removing module, optimizer,
+  integration, persistence, or inspection capabilities.
+
+* Runtime contracts are current-only. Program artifacts accept format version
+  5; persisted trial records require their complete versioned schema; batch
+  execution accepts `.concurrency` only; code runners implement `start()`,
+  `execute()`, and `shutdown()`; RLM uses `max_iterations`, `llm_query()`, and
+  `llm_query_batched()`; and Predict templates interpolate documented
+  `{field}` placeholders. Old versions and incomplete records fail closed
+  instead of being upgraded or defaulted.
+
+* `input()` is the single input-field constructor. Its `type` is either an
+  ellmer type or one of the exact labels `string`, `number`, `integer`,
+  `boolean`, `array`, and `object`; S7 classes, `class =`, synonyms, and unknown
+  type fallback are no longer accepted.
+
+* Existing private disk caches and trial logs on Unix must already use mode
+  `0700` for their directory and `0600` for their files, with no special mode
+  bits. dsprrr no longer repairs broader permissions and then reuses the stored
+  data; it fails closed before enumeration, deserialization, locking, or
+  mutation. To migrate an existing directory, run `chmod 700` on it and
+  `chmod 600` on its files; the reported reason names the exact path and
+  command. A directory that inherited a setgid bit from a shared parent is
+  rejected even though its permission triplet looks correct, and the reason
+  says so. A rejected disk cache is reported by `cache_stats()` as degraded
+  rather than silently dropping to memory-only.
+
+* Trial logs written before record schema versioning cannot be read. The
+  rejection names the missing `schema_version` rather than reporting a generic
+  parse failure, and `read_trials_jsonl()` now aborts instead of returning an
+  empty list when every record in a non-empty file is rejected. Re-run the
+  optimization to write a current log.
+
+* Undeclared dot-prefixed arguments to `run()`, `run_dataset()`, and
+  `evaluate()` are an error. Runtime arguments are formal parameters, so a
+  dot-prefixed name reaching `...` is a typo or an argument this version no
+  longer accepts; it is no longer absorbed as a signature field with a warning.
+  Calls passing the removed `.parallel` or `.parallel_method` are named
+  explicitly and pointed at `.concurrency`.
+
+* dsprrr does not expose or depend on an external Agent SDK compatibility
+  layer. The unused `signature_to_json_schema()` integration hook has been
+  removed. `as_ellmer_tool()` and `module_fn()` remain public because they are
+  native ellmer and custom-module extension points. Agentic harnesses and RLM
+  recursive queries retain separate proposer models, but `.agent_llm` and
+  `sub_lm` must now be ellmer `Chat` objects rather than factories or duck-typed
+  adapters. COPRO and SIMBA likewise accept only ellmer `Chat` prompt models.
+  MIPROv2's unused `prompt_model` and `init_temperature` properties have been
+  removed, and its effective `task_model` is now validated as an ellmer `Chat`.
+  The unused provider-capability guess table `provider_defaults()` has also
+  been removed; provider behavior belongs to the configured ellmer Chat. RAG
+  and parsnip now follow that same resolver instead of reconstructing providers
+  from `model` and `provider` strings.
+
 ## New features
 
 * `flex()` lets GEPA optimize how a module executes—not only its instructions—
@@ -33,7 +97,7 @@ First development changelog. dsprrr is experimental; the API may change.
 
 * `program_of_thought()`, `code_act()`, and `rlm_module()` now accept an
   `interpreter_factory`: a zero-argument function that creates one fresh,
-  invocation-owned code runner, which dsprrr closes exactly once when the
+  invocation-owned code runner, which dsprrr shuts down exactly once when the
   invocation ends. A directly supplied `runner` remains caller-owned and is
   reused; whether state persists or can be reset is backend-specific. Supply
   exactly one of `runner` and `interpreter_factory`. RLM now requires the
@@ -76,15 +140,11 @@ First development changelog. dsprrr is experimental; the API may change.
   RLM input as one REPL variable regardless of its R length; explicit batches
   use `run_dataset()`, with list-columns for rich per-row objects.
 
-* Program artifacts now write format version 5, including graph-visible RLM
-  action and extraction predictors with their tuned instructions, demos, and
-  optimizer state. Version 4 continues to preserve runtime factories and Flex
-  configuration; valid version 3 runner-only artifacts and earlier v4 Flex/RLM
-  shapes remain readable. dsprrr verifies their original closed schema and
-  integrity before restoration. Non-RLM manifests upgrade in memory; a legacy
-  childless RLM receives fresh default predictors and is written as a complete
-  version 5 graph the next time it is saved. Artifact construction and
-  restoration never invoke a stored factory.
+* Program artifacts use format version 5, including graph-visible RLM action
+  and extraction predictors with their tuned instructions, demos, and optimizer
+  state. Restoration requires the complete closed v5 schema and verifies its
+  integrity. Artifact construction and restoration never invoke a stored
+  factory.
 
 * `program_artifact_id()` exposes the validated SHA-256 identity already stored
   in each program artifact. Restored current-format programs retain their
@@ -134,26 +194,23 @@ First development changelog. dsprrr is experimental; the API may change.
 ## Bug fixes
 
 * DSPy 3.3 execution contracts are enforced in the R runtime: `rlm_module()`
-  accepts the `max_iters` alias, rejects duplicate, reserved, missing, and
-  ellipsis-style tool names, rejects unexpected invocation inputs, and no
-  longer stringifies arbitrary sub-LM responses. RLM submit/query control
+  rejects duplicate, reserved, missing, and ellipsis-style tool names, rejects
+  unexpected invocation inputs, and no longer stringifies arbitrary sub-LM
+  responses. RLM submit/query control
   frames now survive text-only runners through versioned, per-invocation
   nonce-bound envelopes; malformed and duplicate frames fail closed, and
   one-query batches retain their array shape. `code_act()` now limits tool
   calls executed inside ellmer's internal tool loop and protects its built-in
   runner-tool namespace. Invocation-bound decoding ignores valid stale frames
   while requiring exactly one frame for the current invocation, and `SUBMIT()`
-  rejects duplicate output names. The generic `module()` factory now routes
-  RLM's `max_iters` alias instead of silently using its `max_iterations`
-  default, and rejects supplying both spellings. CodeAct list aliases are
-  validated against ellmer's provider-neutral tool-name grammar before
-  registration. The RLM alias is appended after the pre-existing positional
-  arguments so older positional calls retain their meaning.
+  rejects duplicate output names. The generic `module()` factory uses the same
+  `max_iterations` spelling and 20-iteration RLM default. CodeAct tool names are
+  validated against ellmer's provider-neutral grammar before registration.
 
 * Code-executing modules validate runner results consistently and preserve the
   primary execution error if teardown also fails. ProgramOfThought validates
   its runner and iteration bound at both public and direct-constructor
-  boundaries. Factory-created runners must expose a zero-argument `close()`
+  boundaries. Factory-created runners must expose a zero-argument `shutdown()`
   before module work begins. RLM ignores submit/query control values from
   failed runner results instead of allowing failure payloads to terminate or
   recurse.
@@ -164,6 +221,11 @@ First development changelog. dsprrr is experimental; the API may change.
   `forward()` fallback, while matching token-stream requests are preflighted
   across pipeline steps and rejected before provider work if they would bypass
   specialized execution or runner lifecycle contracts.
+
+* Composite and retry modules report canonical `provider_calls`, token fields,
+  and `cost` metadata. Nested usage is summed when every child reports it;
+  missing child usage and swallowed child failures remain unknown so finite
+  optimizer budgets fail closed instead of accepting partial totals.
 
 * Flex no longer silently accepts BootstrapFewShot demonstrations that its
   runtime cannot consume. Predictor-call limits may be `NULL`, declarative
@@ -196,18 +258,28 @@ First development changelog. dsprrr is experimental; the API may change.
   Optimizer instruction updates now replace signatures copy-on-write instead
   of mutating a shared signature object.
 
+* `TrialLog` now requires pre-existing private Unix log directories to be mode
+  exactly `0700` and pre-existing log files to be mode exactly `0600`, with no
+  special bits. Every existing ancestor must be owned by root or the effective
+  user, including sticky parents. Initialization and save-directory overrides
+  preflight every known target, including `metadata.json`, before locking,
+  reading, or mutating. Unsafe paths fail closed without silent repair; newly
+  created storage remains owner-only.
+
 * Agentic harness seeds are constrained to R's integer range and compile calls
   restore the caller's RNG state. MCP REPL reset now treats protocol-level
   errors as failures instead of silently succeeding.
 
 * `configure_cache()` now keeps persistent response envelopes in the
   platform-specific per-user cache directory by default. Unix cache directories
-  and files are bound to their effective owner, canonical identity, and private
-  POSIX modes before every serialized read or write. Unsafe or unverifiable
-  caches fall back to memory when enabled, or leave no cache tier active;
-  extended ACL and Windows inherited-ACL boundaries are reported honestly.
-  Project-local and shared caches require an explicit path, and disabling
-  privacy enforcement requires `disk_private = FALSE` (#dsprrr-etge).
+  and files are bound to their effective owner, canonical identity, and exact
+  private POSIX modes without special bits before every serialized read or
+  write. Every existing ancestor, including a sticky parent, must be owned by
+  root or the effective user. Unsafe or unverifiable caches fall back to memory
+  when enabled, or leave no cache tier active; extended ACL and Windows
+  inherited-ACL boundaries are reported honestly. Project-local and shared
+  caches require an explicit path, and disabling privacy enforcement requires
+  `disk_private = FALSE` (#dsprrr-etge).
 
 * Empty Predict batches and zero-row datasets now return correctly shaped
   empty results without resolving a provider or changing cache, trace, or
@@ -219,12 +291,14 @@ First development changelog. dsprrr is experimental; the API may change.
   as scalar calls. Direct `PredictModule$run()` batches now use the isolated,
   observable scheduler; unsupported custom and specialized modules reject
   vectorized execution before work instead of silently sharing mutable state
-  or bypassing specialized logic. `Module$predict()` retains named output
-  records for compatibility even though simple `run()` batches simplify a
-  single-field row. Native ellmer batches retain row failures for non-object
-  outputs through an internal typed wrapper, including valid optional `NULL`
-  values, and schemas whose optional nested presence is ambiguous use isolated
-  scalar rows instead of guessing between absent and present-empty values
+  or bypassing specialized logic. `Module$predict()`, `run()`, and
+  `run_dataset()` retain named declared output records consistently across
+  scalar, batch, and Flex execution, and all batch routes isolate mutable Chat
+  state per row. Native ellmer batches retain row failures
+  for non-object outputs through an internal typed wrapper, including valid
+  optional `NULL` values, and schemas whose optional nested presence is
+  ambiguous use isolated scalar rows instead of guessing between absent and
+  present-empty values.
   (#dsprrr-bbdm).
 
 * `concurrency_control()` now gives batch execution one enforceable contract

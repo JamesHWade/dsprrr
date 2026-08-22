@@ -59,17 +59,14 @@ test_that("run_stream token-streams single string field outputs", {
   sig <- signature("question -> story")
   mod <- module(sig, type = "predict")
 
-  mock_llm <- structure(
-    list(
-      stream = function(prompt, ...) {
-        coro::generator(function() {
-          for (chunk in c("Once", " upon", " a time")) {
-            coro::yield(chunk)
-          }
-        })()
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    stream = function(prompt, ...) {
+      coro::generator(function() {
+        for (chunk in c("Once", " upon", " a time")) {
+          coro::yield(chunk)
+        }
+      })()
+    }
   )
 
   chunks <- character()
@@ -97,13 +94,10 @@ test_that("run_stream token-streams single string field outputs", {
 test_that("run_stream falls back to one-shot events for structured output", {
   local_reset_cache()
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(answer = "42", confidence = "high")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(answer = "42", confidence = "high")
+    }
   )
 
   sig <- signature("question -> answer, confidence")
@@ -146,13 +140,10 @@ test_that("run_stream falls back to one-shot events for structured output", {
 test_that("field_complete fires once per field with multiple listeners", {
   local_reset_cache()
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(answer = "42", confidence = "high")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(answer = "42", confidence = "high")
+    }
   )
 
   sig <- signature("question -> answer, confidence")
@@ -190,14 +181,11 @@ test_that("run_stream fallback execution bypasses the response cache", {
   local_reset_cache()
 
   calls <- 0
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        calls <<- calls + 1
-        list(answer = as.character(calls), confidence = "high")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      calls <<- calls + 1
+      list(answer = as.character(calls), confidence = "high")
+    }
   )
 
   sig <- signature("question -> answer, confidence")
@@ -242,7 +230,7 @@ test_that("run_stream works across pipeline steps with status events", {
   )
 
   sig1 <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_object(
       draft = ellmer::type_string(),
       notes = ellmer::type_string()
@@ -250,7 +238,7 @@ test_that("run_stream works across pipeline steps with status events", {
     instructions = "Draft"
   )
   sig2 <- Signature(
-    inputs = list(input(name = "draft", class = S7::class_character)),
+    inputs = list(input(name = "draft", type = "string")),
     output_type = ellmer::type_object(
       answer = ellmer::type_string(),
       certainty = ellmer::type_string()
@@ -318,9 +306,7 @@ test_that("run_stream preserves specialized one-shot fallback execution", {
       )
     }
   )
-  chat <- NULL
-  chat <- list(
-    clone = function(...) chat,
+  chat <- new_test_chat(
     chat_structured = function(...) {
       list(code = "42L", explanation = "constant")
     },

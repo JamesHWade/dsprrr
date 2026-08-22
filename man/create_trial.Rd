@@ -26,10 +26,10 @@ omitted during \code{\link[=compile]{compile()}}, the active compilation context
 supply \code{list()} explicitly to clear it.}
 }
 \value{
-A Trial object.
+An optimization trial record.
 }
 \description{
-Convenience function to create a Trial record with auto-generated ID.
+Create an optimization trial record with an automatically generated ID.
 }
 \examples{
 trial <- create_trial(

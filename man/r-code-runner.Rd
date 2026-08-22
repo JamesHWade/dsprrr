@@ -33,17 +33,15 @@ required. Missing \code{stdout}, \code{stderr}, \code{messages}, and \code{warni
 normalized to empty strings, and missing \code{duration_ms} is normalized to
 \code{NA}. A failed result must include a non-empty \code{error}. Its \code{error_type} is
 either \code{"execution"} for code the model may repair or \code{"interpreter"} for a
-terminal process/protocol failure. Legacy runners that omit \code{error_type} are
-treated as reporting a repairable execution failure. A successful result
-may omit \code{error} and \code{error_type}.
+terminal process/protocol failure. A successful result may omit \code{error} and
+\code{error_type}.
 
 Code-executing modules accept exactly one runtime source. Passing \code{runner}
 retains that caller-owned object and never closes it. Passing a zero-argument
 \code{interpreter_factory} creates one fresh invocation-owned runner. Factory
 results may implement idempotent \code{start()} and must implement idempotent
-terminal \code{shutdown()} or its compatibility alias \code{close()}. dsprrr starts a
-factory runner before use and shuts it down exactly once on success, error,
-or interrupt.
+terminal \code{shutdown()}. dsprrr starts a factory runner before use and shuts it
+down exactly once on success, error, or interrupt.
 }
 \examples{
 \dontrun{

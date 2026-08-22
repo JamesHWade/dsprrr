@@ -2,29 +2,23 @@
 
 test_that("as_vitals_solver returns vitals-compatible results", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Repeat"
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
   # Create a more complete mock LLM that supports the methods needed by run_dataset
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        # Extract last non-empty line as the "text" value
-        lines <- strsplit(prompt, "\n")[[1]]
-        lines <- lines[nzchar(trimws(lines))]
-        tail(lines, 1L)
-      },
-      clone = function(...) mock_llm,
-      set_turns = function(turns) invisible(NULL),
-      get_turns = function(...) list()
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      # Extract last non-empty line as the "text" value
+      lines <- strsplit(prompt, "\n")[[1]]
+      lines <- lines[nzchar(trimws(lines))]
+      tail(lines, 1L)
+    }
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
+  solver <- as_vitals_solver(mod, .llm = mock_llm)
 
   # as_vitals_solver expects nested inputs (list of tibbles/data.frames)
   # like what as_vitals_task creates
@@ -68,23 +62,17 @@ test_that("as_vitals_solver rejects non-module input", {
 
 test_that("as_vitals_solver handles single-row inputs", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
   mod <- module(signature = sig, type = "predict", template = "{text}")
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, ...) "echoed",
-      clone = function(...) mock_llm,
-      set_turns = function(turns) invisible(NULL),
-      get_turns = function(...) list()
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) "echoed"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
+  solver <- as_vitals_solver(mod, .llm = mock_llm)
   # Single nested input
   result <- solver(list(tibble::tibble(text = "single")))
 
@@ -92,28 +80,55 @@ test_that("as_vitals_solver handles single-row inputs", {
   expect_equal(result$result[[1]], "echoed")
 })
 
+test_that("as_vitals_solver requires a current Chat for solver overrides", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  solver <- as_vitals_solver(mod, .llm = new_test_chat())
+  inputs <- list(tibble::tibble(text = "hello"))
+
+  expect_error(
+    solver(inputs, solver_chat = function() new_test_chat()),
+    class = "dsprrr_chat_type_error"
+  )
+  expect_error(
+    solver(inputs, solver_chat = structure(list(), class = "Chat")),
+    class = "dsprrr_chat_type_error"
+  )
+})
+
+test_that("as_vitals_solver resets an override Chat clone without mutation", {
+  mod <- module(signature("text -> answer"), type = "predict")
+  base_chat <- new_test_chat()
+  override <- new_test_chat(
+    turns = list("prior turn"),
+    chat_structured = function(...) list(answer = "fresh")
+  )
+  solver <- as_vitals_solver(mod, .llm = base_chat)
+
+  result <- solver(
+    list(tibble::tibble(text = "hello")),
+    solver_chat = override
+  )
+
+  expect_identical(result$result, "fresh")
+  expect_identical(override$get_turns(), list("prior turn"))
+})
+
 test_that("as_vitals_solver handles multi-input modules", {
   sig <- Signature(
     inputs = list(
-      input(name = "context", class = S7::class_character),
-      input(name = "question", class = S7::class_character)
+      input(name = "context", type = "string"),
+      input(name = "question", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Answer based on context"
   )
   mod <- module(signature = sig, type = "predict")
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, ...) "answer",
-      clone = function(...) mock_llm,
-      set_turns = function(turns) invisible(NULL),
-      get_turns = function(...) list()
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) "answer"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
+  solver <- as_vitals_solver(mod, .llm = mock_llm)
 
   # Multi-input: each element is a tibble with both columns
   inputs <- list(
@@ -129,40 +144,9 @@ test_that("as_vitals_solver handles multi-input modules", {
   expect_true(all(result$result == "answer"))
 })
 
-test_that("Module vitals solver preserves NULL output and chat positions", {
-  NullVitalsModule <- R6::R6Class(
-    "NullVitalsModule",
-    inherit = dsprrr:::PredictModule,
-    public = list(
-      forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-        value <- if (identical(batch$text, "null")) NULL else "ok"
-        tibble::tibble(
-          output = list(value),
-          chat = list(NULL),
-          metadata = list(list(text = batch$text))
-        )
-      }
-    )
-  )
-  mod <- NullVitalsModule$new(signature(
-    inputs = list(input("text", ellmer::type_string())),
-    output_type = ellmer::type_string(required = FALSE)
-  ))
-  solver <- mod$as_vitals_solver(.return_format = "structured")
-
-  result <- solver(data.frame(text = c("null", "value")))
-
-  expect_identical(result$result, list(NULL, "ok"))
-  expect_identical(result$solver_chat, list(NULL, NULL))
-  expect_identical(
-    vapply(result$metadata, `[[`, character(1), "text"),
-    c("null", "value")
-  )
-})
-
 test_that("as_vitals_solver returns plain strings for enum outputs", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_enum(
       values = c("positive", "negative", "neutral")
     ),
@@ -170,17 +154,11 @@ test_that("as_vitals_solver returns plain strings for enum outputs", {
   )
   mod <- module(signature = sig, type = "predict")
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, ...) "positive",
-      clone = function(...) mock_llm,
-      set_turns = function(turns) invisible(NULL),
-      get_turns = function(...) list()
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) "positive"
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
+  solver <- as_vitals_solver(mod, .llm = mock_llm)
   result <- solver(list(tibble::tibble(text = "I love this!")))
 
   # Enum values should be returned as plain strings, not JSON-encoded
@@ -196,19 +174,13 @@ test_that("as_vitals_solver unwraps single-field enum object outputs for vitals"
   )
   mod <- module(signature = sig, type = "predict")
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, ...) {
-        list(sentiment = "positive")
-      },
-      clone = function(...) mock_llm,
-      set_turns = function(turns) invisible(NULL),
-      get_turns = function(...) list()
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      list(sentiment = "positive")
+    }
   )
 
-  solver <- as_vitals_solver(mod, .llm = mock_llm, .parallel = FALSE)
+  solver <- as_vitals_solver(mod, .llm = mock_llm)
   result <- solver(list(tibble::tibble(text = "I love this!")))
 
   # Must be unwrapped for detect_match() compatibility
@@ -615,7 +587,7 @@ test_that("as_vitals_task requires vitals package", {
   skip_if_not_installed("vitals")
 
   sig <- Signature(
-    inputs = list(input(name = "input", class = S7::class_character)),
+    inputs = list(input(name = "input", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
@@ -626,17 +598,9 @@ test_that("as_vitals_task requires vitals package", {
     target = c("hello", "world")
   )
 
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(...) list(output = "hello"),
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) list(output = "hello")
+  )
 
   task <- as_vitals_task(
     module = mod,
@@ -668,7 +632,7 @@ test_that("as_vitals_task rejects non-dataframe dataset", {
   skip_if_not_installed("vitals")
 
   sig <- Signature(
-    inputs = list(input(name = "input", class = S7::class_character)),
+    inputs = list(input(name = "input", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
@@ -689,7 +653,7 @@ test_that("as_vitals_task requires signature inputs and target columns", {
   skip_if_not_installed("vitals")
 
   sig <- Signature(
-    inputs = list(input(name = "input", class = S7::class_character)),
+    inputs = list(input(name = "input", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
@@ -728,7 +692,7 @@ test_that("as_vitals_task works with non-standard input column names", {
 
   # Module with "question" input instead of "input"
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -740,17 +704,9 @@ test_that("as_vitals_task works with non-standard input column names", {
     target = c("4", "Paris")
   )
 
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(...) list(answer = "4"),
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) list(answer = "4")
+  )
 
   task <- as_vitals_task(
     module = mod,
@@ -778,7 +734,7 @@ test_that("as_vitals_task accepts custom parameters", {
   skip_if_not_installed("vitals")
 
   sig <- Signature(
-    inputs = list(input(name = "input", class = S7::class_character)),
+    inputs = list(input(name = "input", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
@@ -789,17 +745,9 @@ test_that("as_vitals_task accepts custom parameters", {
     target = c("hello", "world")
   )
 
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(...) list(output = "hello"),
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) list(output = "hello")
+  )
 
   # Create task with custom epochs and name
   task <- as_vitals_task(
@@ -827,7 +775,7 @@ test_that("as_vitals_task uses default scorer when not provided", {
   skip_if_not_installed("vitals")
 
   sig <- Signature(
-    inputs = list(input(name = "input", class = S7::class_character)),
+    inputs = list(input(name = "input", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
@@ -838,17 +786,9 @@ test_that("as_vitals_task uses default scorer when not provided", {
     target = c("hello")
   )
 
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(...) list(output = "hello"),
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) list(output = "hello")
+  )
 
   # Should not error when scorer is NULL (uses default)
   task <- as_vitals_task(
@@ -866,8 +806,8 @@ test_that("as_vitals_task nests multi-input columns correctly", {
   # Module with multiple inputs
   sig <- Signature(
     inputs = list(
-      input(name = "context", class = S7::class_character),
-      input(name = "question", class = S7::class_character)
+      input(name = "context", type = "string"),
+      input(name = "question", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Answer based on context"
@@ -881,17 +821,9 @@ test_that("as_vitals_task nests multi-input columns correctly", {
     target = c("France", "Japan")
   )
 
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(...) list(answer = "France"),
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) list(answer = "France")
+  )
 
   task <- as_vitals_task(
     module = mod,
@@ -918,7 +850,7 @@ test_that("as_vitals_task preserves extra columns", {
   skip_if_not_installed("vitals")
 
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
@@ -932,17 +864,9 @@ test_that("as_vitals_task preserves extra columns", {
     id_col = c(1L, 2L)
   )
 
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(...) list(output = "hello"),
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) list(output = "hello")
+  )
 
   task <- as_vitals_task(
     module = mod,
@@ -1293,7 +1217,7 @@ test_that("as_vitals_samples respects input_column parameter", {
 })
 
 test_that("as_vitals_samples includes chat objects when requested", {
-  mock_chat <- structure(list(), class = "Chat")
+  mock_chat <- new_test_chat()
 
   mock_traces <- tibble::tibble(
     timestamp = Sys.time(),

@@ -2,60 +2,47 @@ trace_context_test_chat <- function(
   response = list(answer = "ok"),
   error = NULL
 ) {
-  state <- new.env(parent = emptyenv())
-  state$calls <- 0L
-  state$turns <- list()
-  state$prompts <- character()
-
-  chat <- structure(
-    list(
-      calls = function() state$calls,
-      prompts = function() state$prompts,
-      chat_structured_async = function(prompt, type, ...) {
-        state$calls <- state$calls + 1L
-        state$prompts <- c(state$prompts, as.character(prompt))
-        "async"
-      },
-      chat_structured = function(prompt, type, ...) {
-        state$calls <- state$calls + 1L
-        state$prompts <- c(state$prompts, as.character(prompt))
-        if (!is.null(error)) {
-          stop(error, call. = FALSE)
-        }
-        value <- if (is.function(response)) response(type) else response
-        state$turns <- c(
-          state$turns,
-          list(
-            ellmer::UserTurn(
-              contents = list(ellmer::ContentText(as.character(prompt)))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentText("ok")),
-              tokens = c(2L, 1L, 0L),
-              cost = 0.001,
-              duration = 0.01
-            )
+  chat <- NULL
+  chat <- new_test_chat(
+    model = "trace-context-test",
+    chat_structured = function(prompt, type, ...) {
+      chat$parity_state$calls <- chat$parity_state$calls + 1L
+      chat$parity_state$prompts <- c(
+        chat$parity_state$prompts,
+        as.character(prompt)
+      )
+      if (!is.null(error)) {
+        stop(error, call. = FALSE)
+      }
+      value <- if (is.function(response)) response(type) else response
+      chat$turns <- c(
+        chat$turns,
+        list(
+          ellmer::UserTurn(
+            contents = list(ellmer::ContentText(as.character(prompt)))
+          ),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("ok")),
+            tokens = c(2L, 1L, 0L),
+            cost = 0.001,
+            duration = 0.01
           )
         )
-        value
-      },
-      get_model = function() "trace-context-test",
-      get_turns = function(...) state$turns,
-      set_turns = function(value) {
-        state$turns <- value
-        invisible(NULL)
-      },
-      last_turn = function(role = c("assistant", "user"), ...) {
-        role <- match.arg(role)
-        matching <- Filter(
-          function(turn) identical(turn@role, role),
-          state$turns
-        )
-        if (length(matching) == 0L) NULL else matching[[length(matching)]]
-      }
-    ),
-    class = "Chat"
+      )
+      value
+    }
   )
+  chat$parity_state <- list(calls = 0L, prompts = character())
+  chat$chat_structured_async <- function(prompt, type, ...) {
+    chat$parity_state$calls <- chat$parity_state$calls + 1L
+    chat$parity_state$prompts <- c(
+      chat$parity_state$prompts,
+      as.character(prompt)
+    )
+    "async"
+  }
+  chat$calls <- function() chat$parity_state$calls
+  chat$prompts <- function() chat$parity_state$prompts
   chat
 }
 
@@ -607,8 +594,8 @@ test_that("compile scopes trace context and rejects unsafe context", {
   program <- module(signature("text -> answer"))
   trainset <- data.frame(text = "question", answer = "response")
 
-  expect_no_error(
-    compiled <- compile(
+  compiled <- expect_no_error(
+    compile(
       LabeledFewShot(k = 1L, sample = FALSE),
       program,
       trainset,
@@ -707,41 +694,40 @@ test_that("RLM trajectories retain trace context", {
   skip_if_not_installed("callr")
   context <- trace_context_fixture()
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
-  withr::defer(runner$close())
+  withr::defer(runner$shutdown())
   chat_factory <- local({
     state <- new.env(parent = emptyenv())
     state$calls <- 0L
     function() {
       turns <- list()
-      structure(
-        list(
-          clone = function(deep = FALSE) chat_factory(),
-          chat_structured = function(prompt, type, ...) {
-            state$calls <- state$calls + 1L
-            turns <<- c(
-              turns,
-              list(
-                ellmer::UserTurn(as.character(prompt)),
-                ellmer::AssistantTurn(
-                  contents = list(ellmer::ContentText("action")),
-                  tokens = c(1L, 1L, 0L),
-                  cost = 0,
-                  duration = 0
-                )
+      chat <- new_test_chat(
+        model = "trace-context-rlm",
+        chat_structured = function(prompt, type, ...) {
+          state$calls <- state$calls + 1L
+          turns <<- c(
+            turns,
+            list(
+              ellmer::UserTurn(as.character(prompt)),
+              ellmer::AssistantTurn(
+                contents = list(ellmer::ContentText("action")),
+                tokens = c(1L, 1L, 0L),
+                cost = 0,
+                duration = 0
               )
             )
-            list(reasoning = "finish", code = "SUBMIT('ok')")
-          },
-          get_turns = function(...) turns,
-          set_turns = function(value) {
-            turns <<- value
-            invisible(NULL)
-          },
-          last_turn = function(...) NULL,
-          get_model = function() "trace-context-rlm"
-        ),
-        class = "Chat"
+          )
+          list(reasoning = "finish", code = "SUBMIT('ok')")
+        }
       )
+      override_test_chat_method(chat, "clone", function(deep = FALSE) {
+        chat_factory()
+      })
+      override_test_chat_method(chat, "get_turns", function(...) turns)
+      override_test_chat_method(chat, "set_turns", function(value) {
+        turns <<- value
+        invisible(NULL)
+      })
+      chat
     }
   })
   program <- rlm_module(

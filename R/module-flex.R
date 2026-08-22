@@ -53,7 +53,8 @@
 #' one-step sources; executable and multi-step sources fail before provider
 #' work when a concurrent backend is requested.
 #'
-#' @param signature A [Signature] object or DSPy-style signature string.
+#' @param signature A signature object created by [signature()], or a DSPy-style
+#'   signature string.
 #' @param module_src A complete Flex source string, or `NULL` for a baseline.
 #' @param max_predictor_calls Maximum number of predictor invocations allowed
 #'   across the Flex bridge, or `NULL` for no limit. Declarative sources are
@@ -552,7 +553,7 @@ FlexModule <- R6::R6Class(
       ))
       if (
         length(param_names) != length(params) ||
-          any(!nzchar(param_names)) ||
+          !all(nzchar(param_names)) ||
           anyDuplicated(param_names)
       ) {
         cli::cli_abort(
@@ -746,7 +747,7 @@ flex_check_predictor_budget <- function(calls_started, max_predictor_calls) {
 
 flex_validate_runtime_input_names <- function(inputs, signature) {
   provided <- names(inputs) %||% character()
-  if (any(!nzchar(provided)) || anyDuplicated(provided)) {
+  if (!all(nzchar(provided)) || anyDuplicated(provided)) {
     cli::cli_abort(
       "Flex inputs must have unique, non-empty names",
       class = c(
@@ -1248,7 +1249,7 @@ flex_validate_object <- function(
     )
   }
   fields <- names(value) %||% character()
-  if (any(!nzchar(fields)) || anyDuplicated(fields)) {
+  if (!all(nzchar(fields)) || anyDuplicated(fields)) {
     flex_source_abort(
       "{context} must have unique, non-empty field names",
       class = "dsprrr_flex_schema_error"
@@ -1277,7 +1278,7 @@ flex_validate_named_map <- function(value, context) {
     )
   }
   fields <- names(value) %||% character()
-  if (length(fields) != length(value) || any(!nzchar(fields))) {
+  if (length(fields) != length(value) || !all(nzchar(fields))) {
     flex_source_abort(
       "{context} must be a JSON object with named fields",
       class = "dsprrr_flex_interface_error"
@@ -1491,6 +1492,55 @@ flex_reference_type <- function(reference, outer_signature, known_types) {
   known_types[[reference$name]][[reference$field]]
 }
 
+#' Convert a supported Flex type to its internal schema record
+#' @noRd
+flex_type_schema <- function(type) {
+  if (inherits(type, "ellmer::TypeIgnore")) {
+    return(NULL)
+  }
+
+  schema <- if (inherits(type, "ellmer::TypeBasic")) {
+    list(type = type@type)
+  } else if (inherits(type, "ellmer::TypeEnum")) {
+    list(type = "string", enum = type@values)
+  } else if (inherits(type, "ellmer::TypeArray")) {
+    list(type = "array", items = flex_type_schema(type@items))
+  } else if (inherits(type, "ellmer::TypeObject")) {
+    properties <- lapply(type@properties, flex_type_schema)
+    properties <- properties[!vapply(properties, is.null, logical(1))]
+    required <- names(type@properties)[
+      vapply(
+        type@properties,
+        function(property) {
+          isTRUE(property@required) &&
+            !inherits(property, "ellmer::TypeIgnore")
+        },
+        logical(1)
+      )
+    ]
+    list(
+      type = "object",
+      properties = properties,
+      required = required,
+      additionalProperties = isTRUE(type@additional_properties)
+    )
+  } else {
+    flex_source_abort(
+      c(
+        "Unsupported type in the Flex schema contract",
+        "x" = "Cannot convert {.cls {class(type)[1]}}."
+      ),
+      class = "dsprrr_flex_type_error"
+    )
+  }
+
+  description <- type@description
+  if (length(description) > 0L && nzchar(description)) {
+    schema$description <- description
+  }
+  schema
+}
+
 flex_type_assignable <- function(source, target) {
   source_required <- tryCatch(isTRUE(source@required), error = function(error) {
     TRUE
@@ -1501,8 +1551,8 @@ flex_type_assignable <- function(source, target) {
   if (target_required && !source_required) {
     return(FALSE)
   }
-  source_schema <- ellmer_type_to_json_schema(source)
-  target_schema <- ellmer_type_to_json_schema(target)
+  source_schema <- flex_type_schema(source)
+  target_schema <- flex_type_schema(target)
   flex_schema_assignable(source_schema, target_schema)
 }
 
@@ -1955,7 +2005,7 @@ flex_validate_runtime_value <- function(
       abort_value("{context} must be a named object")
     }
     fields <- names(value)
-    if (any(!nzchar(fields)) || anyDuplicated(fields)) {
+    if (!all(nzchar(fields)) || anyDuplicated(fields)) {
       abort_value("{context} must have unique, non-empty field names")
     }
     properties <- as.list(type@properties)
@@ -2025,7 +2075,7 @@ flex_validate_output_record <- function(
     )
   }
   actual <- names(value)
-  if (any(!nzchar(actual)) || anyDuplicated(actual)) {
+  if (!all(nzchar(actual)) || anyDuplicated(actual)) {
     flex_output_abort(
       "{context} must have unique, non-empty output names",
       class = class
@@ -2400,7 +2450,7 @@ run_flex_dataset_batch <- function(
     if (run_error_present(result$metadata$error)) {
       return(structure(NA, error_message = result$metadata$error))
     }
-    extract_simple_output(result$output, program$signature@output_type)
+    result$output
   })
   simple <- if (length(simple) == 1L) simple[[1L]] else simple
   if (!is.null(error_conditions)) {

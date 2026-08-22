@@ -1,7 +1,7 @@
 # Tests for default Chat management
 
 test_that("get_default_chat returns Chat from options", {
-  mock_chat <- structure(list(), class = "Chat")
+  mock_chat <- new_test_chat()
   old_opt <- options(dsprrr.default_chat = mock_chat)
   on.exit(options(old_opt))
 
@@ -15,7 +15,18 @@ test_that("get_default_chat validates options Chat", {
 
   expect_error(
     get_default_chat(),
-    "must be an ellmer Chat object"
+    "must be an ellmer Chat R6 object",
+    class = "dsprrr_chat_type_error"
+  )
+})
+
+test_that("get_default_chat rejects a class-tagged list", {
+  withr::local_options(
+    dsprrr.default_chat = structure(list(), class = "Chat")
+  )
+  expect_error(
+    get_default_chat(),
+    class = "dsprrr_chat_type_error"
   )
 })
 
@@ -74,7 +85,7 @@ test_that("get_default_chat caches auto-detected Chat", {
 })
 
 test_that("set_default_chat sets Chat in options", {
-  mock_chat <- structure(list(), class = "Chat")
+  mock_chat <- new_test_chat()
 
   old <- set_default_chat(mock_chat)
   on.exit(set_default_chat(old))
@@ -86,13 +97,14 @@ test_that("set_default_chat sets Chat in options", {
 test_that("set_default_chat validates Chat object", {
   expect_error(
     set_default_chat("not a Chat"),
-    "must be an ellmer Chat object or NULL"
+    "must be an ellmer Chat R6 object",
+    class = "dsprrr_chat_type_error"
   )
 })
 
 test_that("set_default_chat returns previous value", {
-  mock_chat1 <- structure(list(id = 1), class = "Chat")
-  mock_chat2 <- structure(list(id = 2), class = "Chat")
+  mock_chat1 <- new_test_chat(model = "one")
+  mock_chat2 <- new_test_chat(model = "two")
 
   old <- set_default_chat(mock_chat1)
   on.exit(set_default_chat(old))
@@ -115,7 +127,7 @@ test_that("set_default_chat overrides any cached value", {
   auto_chat <- get_default_chat()
 
   # Set a new default
-  mock_chat <- structure(list(id = "mock"), class = "Chat")
+  mock_chat <- new_test_chat(model = "mock")
   set_default_chat(mock_chat)
 
   # Should return the explicitly set chat, not the cached one
@@ -124,7 +136,7 @@ test_that("set_default_chat overrides any cached value", {
 })
 
 test_that("set_default_chat(NULL) clears default", {
-  mock_chat <- structure(list(), class = "Chat")
+  mock_chat <- new_test_chat()
   old <- set_default_chat(mock_chat)
   on.exit(set_default_chat(old))
 
@@ -192,10 +204,7 @@ test_that("emit_auto_detection_message respects quiet option", {
   old_opt <- options(dsprrr.quiet = TRUE)
   on.exit(options(old_opt))
 
-  mock_chat <- structure(
-    list(get_model = function() "test-model"),
-    class = "Chat"
-  )
+  mock_chat <- new_test_chat(model = "test-model")
 
   # Should not emit any message when quiet
   expect_silent(
@@ -208,10 +217,7 @@ test_that("emit_auto_detection_message shows once per session", {
   on.exit(options(old_opt))
   .dsprrr_env$auto_detect_message_shown <- FALSE
 
-  mock_chat <- structure(
-    list(get_model = function() "test-model"),
-    class = "Chat"
-  )
+  mock_chat <- new_test_chat(model = "test-model")
 
   # First call should emit message
   expect_message(
@@ -332,10 +338,15 @@ test_that("dsp_configure shows confirmation message", {
 # -- detect_provider_name tests --
 
 test_that("detect_provider_name identifies providers", {
-  openai_chat <- structure(list(), class = c("ChatOpenAI", "Chat"))
-  anthropic_chat <- structure(list(), class = c("ChatClaude", "Chat"))
-  google_chat <- structure(list(), class = c("ChatGemini", "Chat"))
-  unknown_chat <- structure(list(), class = c("ChatUnknown", "Chat"))
+  provider_chat <- function(name) {
+    new_test_chat(
+      provider = ellmer::Provider(name = name, model = "test", base_url = "")
+    )
+  }
+  openai_chat <- provider_chat("OpenAI")
+  anthropic_chat <- provider_chat("Anthropic")
+  google_chat <- provider_chat("Google")
+  unknown_chat <- provider_chat("Unknown")
 
   expect_equal(dsprrr:::detect_provider_name(openai_chat), "OpenAI")
   expect_equal(dsprrr:::detect_provider_name(anthropic_chat), "Anthropic")
@@ -392,6 +403,32 @@ test_that("dsprrr_sitrep shows API key status", {
   expect_true("OPENAI_API_KEY" %in% names(result$api_keys))
   expect_true("ANTHROPIC_API_KEY" %in% names(result$api_keys))
   expect_true("GOOGLE_API_KEY" %in% names(result$api_keys))
+})
+
+test_that("dsprrr_sitrep reports unknown session usage without guessing", {
+  clear_prompt_history()
+  on.exit(clear_prompt_history())
+  .dsprrr_env <- dsprrr:::.dsprrr_env
+  .dsprrr_env$prompt_history <- list(list(
+    model = "unknown",
+    tokens_in = NA_integer_,
+    tokens_out = NA_integer_,
+    cost = NA_real_
+  ))
+
+  result <- NULL
+  output <- capture.output(
+    {
+      result <- dsprrr_sitrep()
+    },
+    type = "message"
+  )
+
+  expect_true(is.na(result$total_tokens_in))
+  expect_true(is.na(result$total_tokens_out))
+  expect_true(is.na(result$total_cost))
+  expect_true(any(grepl("Tokens: unknown", output, fixed = TRUE)))
+  expect_true(any(grepl("Est. cost: unknown", output, fixed = TRUE)))
 })
 
 # -- session_cost tests --
@@ -478,4 +515,7 @@ test_that("ellmer compatibility matches DESCRIPTION", {
   expect_identical(dsprrr:::check_ellmer_version("0.4.0"), FALSE)
   expect_identical(dsprrr:::check_ellmer_version("0.4.1"), TRUE)
   expect_identical(dsprrr:::check_ellmer_version("1.0.0"), TRUE)
+  expect_silent(
+    expect_identical(dsprrr:::check_ellmer_version("not-a-version"), FALSE)
+  )
 })

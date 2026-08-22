@@ -13,8 +13,10 @@ pak::pak("JamesHWade/dsprrr")
 
 # Configure credentials for an ellmer-supported provider, then:
 library(dsprrr)
-dsp("question -> answer", question = "What is the capital of France?")
-#> "Paris"
+answerer <- module(signature("question -> answer"))
+run(answerer, question = "What is the capital of France?")
+#> $answer
+#> [1] "Paris"
 ```
 
 ## Compose programs with reusable primitives
@@ -94,7 +96,7 @@ function; it selects the best candidate observed within the configured budget.
 ```r
 route_sig <- signature("ticket -> urgency: enum('low', 'high')")
 router <- module(route_sig, type = "predict")
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   ticket  = c("Package lost", "Need a receipt"),
   urgency = c("high", "low")
 )
@@ -138,7 +140,7 @@ investigator <- rlm_module(
   interpreter_factory = function() {
     r_code_runner(timeout = 30, persistent = TRUE)
   },
-  max_iters = 8,
+  max_iterations = 8,
   max_llm_calls = 0L
 )
 ```
@@ -211,8 +213,10 @@ library(dsprrr)
 library(ellmer)
 
 chat <- chat_openai(model = "gpt-4o-mini")
-chat |> dsp("question -> answer", question = "What is 2+2?")
-#> "4"
+answerer <- module(signature("question -> answer"))
+run(answerer, question = "What is 2+2?", .llm = chat)
+#> $answer
+#> [1] "4"
 ```
 
   </div>
@@ -223,8 +227,10 @@ library(dsprrr)
 library(ellmer)
 
 chat <- chat_claude(model = "claude-sonnet-4-20250514")
-chat |> dsp("question -> answer", question = "What is 2+2?")
-#> "4"
+answerer <- module(signature("question -> answer"))
+run(answerer, question = "What is 2+2?", .llm = chat)
+#> $answer
+#> [1] "4"
 ```
 
   </div>
@@ -235,8 +241,10 @@ library(dsprrr)
 library(ellmer)
 
 chat <- chat_google_gemini(model = "gemini-2.0-flash")
-chat |> dsp("question -> answer", question = "What is 2+2?")
-#> "4"
+answerer <- module(signature("question -> answer"))
+run(answerer, question = "What is 2+2?", .llm = chat)
+#> $answer
+#> [1] "4"
 ```
 
   </div>
@@ -247,8 +255,10 @@ library(dsprrr)
 library(ellmer)
 
 chat <- chat_ollama(model = "llama3.2")
-chat |> dsp("question -> answer", question = "What is 2+2?")
-#> "4"
+answerer <- module(signature("question -> answer"))
+run(answerer, question = "What is 2+2?", .llm = chat)
+#> $answer
+#> [1] "4"
 ```
 
   </div>
@@ -259,8 +269,10 @@ chat |> dsp("question -> answer", question = "What is 2+2?")
 library(dsprrr)
 
 # Uses OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_API_KEY
-dsp("question -> answer", question = "What is 2+2?")
-#> "4"
+answerer <- module(signature("question -> answer"))
+run(answerer, question = "What is 2+2?")
+#> $answer
+#> [1] "4"
 ```
 
   </div>
@@ -403,7 +415,7 @@ extract <- signature(
 ) |>
   module(type = "predict")
 
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   message = c("I'm Sarah (sarah@acme.co). Meet Thursday?",
               "Hi, this is Dev—just saying hello!"),
   intent  = c("meeting", "intro")
@@ -447,7 +459,7 @@ dsprrr can automatically optimize your prompts using your data.
 
 ```r
 # Add examples automatically
-trainset <- dsp_trainset(
+trainset <- tibble::tibble(
   text = c("Great product!", "Awful experience", "It works"),
   sentiment = c("positive", "negative", "neutral")
 )
@@ -471,7 +483,7 @@ optimized$predict(text = "Amazing service!")
 ```r
 # Search over configurations
 classifier$optimize_grid(
-  devset = validation_data,
+  data = validation_data,
   metric = metric_exact_match(),
   parameters = list(
     temperature = c(0.1, 0.5, 1.0),

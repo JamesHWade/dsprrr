@@ -93,8 +93,8 @@ RAGModule <- R6::R6Class(
       # Build prompt with context
       prompt <- private$build_prompt(inputs)
 
-      # Get LLM client
-      llm <- .llm %||% self$chat %||% private$get_default_llm()
+      # Resolve the invocation Chat through the package-wide contract.
+      llm <- resolve_module_llm(self, .llm = .llm)
 
       # Record start time
       start_time <- Sys.time()
@@ -431,29 +431,6 @@ RAGModule <- R6::R6Class(
       }
 
       paste(prompt_parts, collapse = "\n")
-    },
-
-    # Get default LLM (inherited pattern from PredictModule)
-    get_default_llm = function() {
-      provider <- self$config$provider %||%
-        Sys.getenv("DSPRRR_PROVIDER", "openai")
-      provider <- switch(provider, anthropic = "claude", provider)
-
-      model_name <- self$config$model
-
-      switch(
-        provider,
-        openai = ellmer::chat_openai(model = model_name %||% "gpt-4o-mini"),
-        claude = ellmer::chat_claude(
-          model = model_name %||% "claude-sonnet-4-20250514",
-          max_tokens = self$config$max_tokens %||% 4096
-        ),
-        gemini = ellmer::chat_google_gemini(
-          model = model_name %||% "gemini-2.0-flash"
-        ),
-        ollama = ellmer::chat_ollama(model = model_name %||% "llama3.2:3b"),
-        cli::cli_abort("Unknown provider: {provider}")
-      )
     },
 
     # Call LLM with structured output

@@ -128,8 +128,7 @@ BestOfNModule <- R6::R6Class(
       first_metadata <- NULL
       first_chat <- NULL
       consecutive_failures <- 0
-      total_tokens <- 0
-      total_cost <- 0
+      n_errors <- 0L
 
       for (i in seq_len(self$N)) {
         # Run the wrapped module. rollout_id partitions the cache per attempt so
@@ -148,6 +147,7 @@ BestOfNModule <- R6::R6Class(
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1
+            n_errors <<- n_errors + 1L
             cli::cli_warn(c(
               "Attempt {i} of {self$N} failed in BestOfN",
               "x" = e$message,
@@ -181,14 +181,6 @@ BestOfNModule <- R6::R6Class(
           first_result <- prediction
           first_metadata <- metadata
           first_chat <- chat_obj
-        }
-
-        # Accumulate token counts and costs
-        if (!is.null(metadata$total_tokens)) {
-          total_tokens <- total_tokens + metadata$total_tokens
-        }
-        if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-          total_cost <- total_cost + metadata$cost
         }
 
         # Score the result
@@ -247,6 +239,11 @@ BestOfNModule <- R6::R6Class(
         # best_score stays -Inf since no valid scores
       }
 
+      usage <- aggregate_module_usage_metadata(
+        lapply(attempts, function(attempt) attempt$metadata),
+        unknown_attempt = n_errors > 0L
+      )
+
       # Create aggregated metadata
       final_metadata <- list(
         timestamp = end_time,
@@ -256,8 +253,9 @@ BestOfNModule <- R6::R6Class(
         all_scores = vapply(attempts, function(a) a$score, numeric(1)),
         early_stopped = !is.infinite(best_score) &&
           best_score >= self$threshold,
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
+        provider_calls = usage$provider_calls,
         latency_ms = latency_ms
       )
 
@@ -657,8 +655,7 @@ RefineModule <- R6::R6Class(
       first_metadata <- NULL
       first_chat <- NULL
       consecutive_failures <- 0
-      total_tokens <- 0
-      total_cost <- 0
+      n_errors <- 0L
       current_batch <- batch
       previous_feedback <- NULL
 
@@ -686,6 +683,7 @@ RefineModule <- R6::R6Class(
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1
+            n_errors <<- n_errors + 1L
             cli::cli_warn(c(
               "Attempt {i} of {self$N} failed in Refine",
               "x" = e$message,
@@ -719,14 +717,6 @@ RefineModule <- R6::R6Class(
           first_result <- prediction
           first_metadata <- metadata
           first_chat <- chat_obj
-        }
-
-        # Accumulate token counts and costs
-        if (!is.null(metadata$total_tokens)) {
-          total_tokens <- total_tokens + metadata$total_tokens
-        }
-        if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-          total_cost <- total_cost + metadata$cost
         }
 
         # Score the result
@@ -796,6 +786,11 @@ RefineModule <- R6::R6Class(
         # best_score stays -Inf since no valid scores
       }
 
+      usage <- aggregate_module_usage_metadata(
+        lapply(attempts, function(attempt) attempt$metadata),
+        unknown_attempt = n_errors > 0L
+      )
+
       # Create aggregated metadata
       final_metadata <- list(
         timestamp = end_time,
@@ -806,8 +801,9 @@ RefineModule <- R6::R6Class(
         early_stopped = !is.infinite(best_score) &&
           best_score >= self$threshold,
         feedback_count = length(feedback_history),
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
+        provider_calls = usage$provider_calls,
         latency_ms = latency_ms
       )
 

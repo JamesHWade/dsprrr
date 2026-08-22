@@ -5,7 +5,7 @@
 # Create a minimal test module
 create_test_module <- function() {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test instructions"
   )
@@ -447,38 +447,31 @@ test_that("generated targets workflow runs its core graph end to end", {
   skip_if_not_installed("jsonlite")
 
   make_mock_chat <- function() {
-    structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          sentiment <- if (
-            grepl(
-              "terrible|not recommend|worst|waste|disappointing|not worth",
-              prompt,
-              ignore.case = TRUE
-            )
-          ) {
-            "negative"
-          } else if (
-            grepl(
-              "amazing|love|exceeded|great|highly recommend",
-              prompt,
-              ignore.case = TRUE
-            )
-          ) {
-            "positive"
-          } else {
-            "neutral"
-          }
+    new_test_chat(
+      model = "deterministic-test",
+      chat_structured = function(prompt, type, ...) {
+        sentiment <- if (
+          grepl(
+            "terrible|not recommend|worst|waste|disappointing|not worth",
+            prompt,
+            ignore.case = TRUE
+          )
+        ) {
+          "negative"
+        } else if (
+          grepl(
+            "amazing|love|exceeded|great|highly recommend",
+            prompt,
+            ignore.case = TRUE
+          )
+        ) {
+          "positive"
+        } else {
+          "neutral"
+        }
 
-          list(sentiment = sentiment)
-        },
-        get_turns = function(...) list(),
-        set_turns = function(...) invisible(NULL),
-        last_turn = function(...) NULL,
-        get_model = function() "deterministic-test",
-        clone = function(deep = FALSE) make_mock_chat()
-      ),
-      class = "Chat"
+        list(sentiment = sentiment)
+      }
     )
   }
 

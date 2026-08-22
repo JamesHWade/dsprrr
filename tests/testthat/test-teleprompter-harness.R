@@ -1,5 +1,5 @@
 make_harness_task_llm <- function() {
-  list(
+  new_test_chat(
     chat_structured = function(prompt, type, ...) {
       if (grepl("perfect", prompt, fixed = TRUE)) "yes" else "no"
     }
@@ -7,21 +7,19 @@ make_harness_task_llm <- function() {
 }
 
 make_harness_agent <- function(responses) {
+  force(responses)
   index <- 0L
   prompts <- character()
-  list(
+  agent <- new_test_chat(
     chat_structured = function(prompt, type, ...) {
       index <<- index + 1L
       prompts <<- c(prompts, prompt)
       responses[[min(index, length(responses))]]
     },
-    prompts = function() prompts
+    clone = function(deep = TRUE) make_harness_agent(responses)
   )
-}
-
-make_harness_agent_factory <- function(responses) {
-  force(responses)
-  function() make_harness_agent(responses)
+  agent$prompts <- function() prompts
+  agent
 }
 
 make_harness_runner <- function(output = "[1] 2") {
@@ -135,7 +133,7 @@ test_that("AutoResearch owns a persistent sandbox and experiment loop", {
 
 test_that("MetaHarness evaluates a batch and controls the frontier", {
   sandbox <- make_harness_runner()
-  agent <- make_harness_agent_factory(list(
+  agent <- make_harness_agent(list(
     list(
       action = "propose",
       rationale = "Compare a weak and strong edit.",
@@ -180,7 +178,7 @@ test_that("MetaHarness can optimize multiple pipeline components jointly", {
     type = "predict"
   )
   program <- pipeline(first, second)
-  task_llm <- list(
+  task_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) {
       if (grepl("first-perfect", prompt, fixed = TRUE)) {
         return("useful-middle")
@@ -194,7 +192,7 @@ test_that("MetaHarness can optimize multiple pipeline components jointly", {
       "no"
     }
   )
-  agent <- make_harness_agent_factory(list(list(
+  agent <- make_harness_agent(list(list(
     action = "propose",
     rationale = "Coordinate both stages.",
     candidates = list(list(
@@ -274,13 +272,13 @@ test_that("agentic harnesses materialize both RLM predictor leaves", {
         max_candidates_per_iteration = 1L,
         verbose = FALSE
       ),
-      agent = make_harness_agent_factory(list(response))
+      agent = make_harness_agent(list(response))
     )
   )
 
   for (name in names(cases)) {
     runner <- r_code_runner(timeout = 10, persistent = TRUE)
-    withr::defer(runner$close())
+    withr::defer(runner$shutdown())
     expect_identical(runner$policy()$persistent, TRUE)
     program <- make_rlm_optimizer_program(runner)
     chat <- make_rlm_optimizer_chat()
@@ -323,7 +321,7 @@ test_that("agentic harnesses materialize both RLM predictor leaves", {
 test_that("MetaHarness deduplicates candidates by canonical snapshot", {
   sandbox <- make_harness_runner()
   proposal <- candidate_proposal("perfect")
-  agent <- make_harness_agent_factory(list(
+  agent <- make_harness_agent(list(
     list(
       action = "propose",
       rationale = "Duplicate batch.",
@@ -353,15 +351,14 @@ test_that("MetaHarness deduplicates candidates by canonical snapshot", {
   expect_in("candidate_duplicate", event_types)
 })
 
-test_that("MetaHarness clones custom proposers for every iteration", {
+test_that("MetaHarness clones its Chat proposer for every iteration", {
   calls_per_session <- integer()
-  TestProposer <- R6::R6Class(
-    "FreshMetaHarnessTestProposer",
-    public = list(
-      calls = 0L,
+  make_counting_proposer <- function() {
+    calls <- 0L
+    proposer <- new_test_chat(
       chat_structured = function(prompt, type, ...) {
-        self$calls <- as.integer(self$calls + 1L)
-        calls_per_session <<- c(calls_per_session, self$calls)
+        calls <<- as.integer(calls + 1L)
+        calls_per_session <<- c(calls_per_session, calls)
         iteration <- regmatches(
           prompt,
           regexpr('"iteration": [0-9]+', prompt)
@@ -373,13 +370,16 @@ test_that("MetaHarness clones custom proposers for every iteration", {
         }
         list(
           action = "propose",
-          rationale = "Exercise a fresh custom proposer.",
+          rationale = "Exercise a fresh Chat proposer.",
           candidates = list(candidate_proposal(instructions))
         )
-      }
+      },
+      clone = function(deep = TRUE) make_counting_proposer()
     )
-  )
-  proposer <- TestProposer$new()
+    proposer$calls <- function() calls
+    proposer
+  }
+  proposer <- make_counting_proposer()
   tp <- MetaHarness(
     metric = harness_metric,
     max_iterations = 2L,
@@ -397,16 +397,27 @@ test_that("MetaHarness clones custom proposers for every iteration", {
   )
 
   expect_identical(calls_per_session, c(1L, 1L))
-  expect_identical(proposer$calls, 0L)
+  expect_identical(proposer$calls(), 0L)
   expect_identical(compiled$signature@instructions, "perfect")
 })
 
-test_that("MetaHarness rejects custom proposers that cannot be refreshed", {
+test_that("MetaHarness rejects Chat proposers that cannot be refreshed", {
   tp <- MetaHarness(
     metric = harness_metric,
     max_iterations = 1L,
     verbose = FALSE
   )
+  uncloneable_chat <- R6::R6Class(
+    "Chat",
+    public = list(
+      chat_structured = function(...) NULL,
+      get_turns = function() list(),
+      set_turns = function(turns) invisible(NULL)
+    ),
+    cloneable = FALSE,
+    parent_env = globalenv()
+  )
+  proposer <- uncloneable_chat$new()
 
   expect_error(
     compile(
@@ -414,13 +425,26 @@ test_that("MetaHarness rejects custom proposers that cannot be refreshed", {
       harness_program(),
       harness_data(),
       .llm = make_harness_task_llm(),
-      .agent_llm = make_harness_agent(list(list(
-        action = "finish",
-        rationale = "unused"
-      ))),
+      .agent_llm = proposer,
       runner = make_harness_runner()$runner
     ),
     "requires a fresh proposer session"
+  )
+})
+
+test_that("agentic harnesses reject non-Chat proposer adapters", {
+  tp <- AutoResearch(metric = harness_metric, max_iterations = 1L)
+
+  expect_error(
+    compile(
+      tp,
+      harness_program(),
+      harness_data(),
+      .llm = make_harness_task_llm(),
+      .agent_llm = list(chat_structured = function(...) NULL),
+      runner = make_harness_runner()$runner
+    ),
+    "require an ellmer Chat proposer"
   )
 })
 
@@ -671,7 +695,7 @@ test_that("MetaHarness checkpoints and resumes without repeating baseline", {
     harness_program(),
     harness_data(),
     .llm = make_harness_task_llm(),
-    .agent_llm = make_harness_agent_factory(list(list(
+    .agent_llm = make_harness_agent(list(list(
       action = "finish",
       rationale = "unused"
     ))),
@@ -688,7 +712,7 @@ test_that("MetaHarness checkpoints and resumes without repeating baseline", {
     harness_program(),
     harness_data(),
     .llm = make_harness_task_llm(),
-    .agent_llm = make_harness_agent_factory(list(list(
+    .agent_llm = make_harness_agent(list(list(
       action = "propose",
       rationale = "Resume with one edit.",
       candidates = list(candidate_proposal("perfect"))

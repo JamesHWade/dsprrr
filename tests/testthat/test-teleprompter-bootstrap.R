@@ -71,7 +71,7 @@ test_that("BootstrapFewShot validates properties", {
 
 test_that("BootstrapFewShot requires metric for compilation", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -162,7 +162,7 @@ test_that("BootstrapFewShot rejects RLM without predictor-local evidence", {
 
 test_that("BootstrapFewShot compile returns unmodified program for empty trainset", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -180,7 +180,7 @@ test_that("BootstrapFewShot compile returns unmodified program for empty trainse
 
 test_that("BootstrapFewShot compile adds labeled demos from trainset", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
@@ -197,13 +197,10 @@ test_that("BootstrapFewShot compile adds labeled demos from trainset", {
   )
 
   # Create a mock LLM that returns predictable results
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(answer = "mocked")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(answer = "mocked")
+    }
   )
 
   # Metric that always returns 0 so no bootstrapped demos are added
@@ -237,14 +234,14 @@ test_that("BootstrapFewShot compile adds labeled demos from trainset", {
 
 test_that("BootstrapFewShot compile bootstraps demos with metric", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
   mod <- module(signature = sig, type = "predict", template = "{question}")
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) {
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
       lines <- trimws(strsplit(prompt, "\n", fixed = TRUE)[[1L]])
       question <- utils::tail(lines[nzchar(lines)], 1L)
       switch(
@@ -255,8 +252,7 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
         "What is 5+5?" = "10",
         "unknown"
       )
-    }),
-    class = "Chat"
+    }
   )
 
   trainset <- data.frame(
@@ -303,7 +299,7 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
 test_that("BootstrapFewShot handles teacher errors gracefully", {
   # Use a standard module with a mock LLM that fails intermittently
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
@@ -321,17 +317,14 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
   call_counter$max_fails <- 2
 
   # Mock LLM that fails for the first max_fails calls, then succeeds
-  failing_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        call_counter$count <- call_counter$count + 1
-        if (call_counter$count <= call_counter$max_fails) {
-          stop("Simulated failure")
-        }
-        list(answer = "success")
+  failing_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      call_counter$count <- call_counter$count + 1
+      if (call_counter$count <= call_counter$max_fails) {
+        stop("Simulated failure")
       }
-    ),
-    class = "Chat"
+      list(answer = "success")
+    }
   )
 
   tp <- BootstrapFewShot(
@@ -520,15 +513,14 @@ test_that("BootstrapFewShot print method works", {
 
 test_that("BootstrapFewShot respects metric_threshold", {
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
 
   mod <- module(signature = sig, type = "predict")
-  mock_llm <- structure(
-    list(chat_structured = function(...) "predicted"),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) "predicted"
   )
 
   trainset <- data.frame(
@@ -564,7 +556,7 @@ test_that("BootstrapFewShot respects metric_threshold", {
 
 test_that("compile_module works with BootstrapFewShot", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Summarize"
   )
@@ -575,13 +567,10 @@ test_that("compile_module works with BootstrapFewShot", {
     summary = c("greeting", "farewell")
   )
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(summary = "mocked")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(summary = "mocked")
+    }
   )
 
   tp <- BootstrapFewShot(
@@ -605,16 +594,15 @@ test_that("BootstrapFewShot harvests demos with field-aware metrics (dsprrr-s3b)
   local_reset_cache()
 
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
   mod <- module(signature = sig, type = "predict", template = "{question}")
 
   # Mock LLM always returns the correct structured answer so every row passes.
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, type, ...) list(answer = "yes")),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) list(answer = "yes")
   )
 
   trainset <- data.frame(
@@ -638,9 +626,8 @@ test_that("BootstrapFewShot supplies execution traces to trace metrics", {
   local_reset_cache()
   sig <- signature("question -> answer", instructions = "Answer")
   mod <- module(sig, type = "predict", template = "{question}")
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, type, ...) list(answer = "yes")),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) list(answer = "yes")
   )
   trainset <- data.frame(question = "q1", answer = "yes")
   seen <- list()

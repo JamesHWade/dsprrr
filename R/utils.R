@@ -14,6 +14,43 @@ compose_rollout_id <- function(rollout_id, i) {
   if (is.null(rollout_id)) as.character(i) else paste0(rollout_id, ".", i)
 }
 
+#' Reject R's partial matching for public constructor arguments
+#' @noRd
+reject_partial_argument_matches <- function(call, fn) {
+  supplied <- names(as.list(call)[-1L])
+  if (is.null(supplied)) {
+    return(invisible(NULL))
+  }
+
+  supplied <- supplied[nzchar(supplied)]
+  formal_names <- setdiff(names(formals(fn)), "...")
+  partial <- supplied[
+    !supplied %in% formal_names &
+      vapply(
+        supplied,
+        function(name) sum(startsWith(formal_names, name)) == 1L,
+        logical(1)
+      )
+  ]
+  if (length(partial) == 0L) {
+    return(invisible(NULL))
+  }
+
+  matched <- vapply(
+    partial,
+    function(name) formal_names[startsWith(formal_names, name)][[1L]],
+    character(1)
+  )
+  details <- paste0("`", partial, "` -> `", matched, "`")
+  cli::cli_abort(
+    c(
+      "Argument names must match exactly",
+      "x" = "Partial matches: {details}"
+    ),
+    class = "dsprrr_argument_name_error"
+  )
+}
+
 #' Check if object inherits from ellmer type
 #'
 #' @noRd
@@ -26,15 +63,8 @@ is_ellmer_type <- function(x) {
     inherits(x, "ellmer::TypeJsonSchema")
 }
 
-#' Determine if vignettes should be evaluated
-#'
-#' Checks for vcr cassettes or API credentials to determine
-#' if vignette code should be executed. Always returns FALSE during
-#' R CMD check to avoid cassette mismatch errors.
-#'
-#' @return Logical indicating whether to evaluate vignette code
-#' @export
-#' @keywords internal
+#' Decide whether local vignette examples can run
+#' @noRd
 eval_vignette <- function() {
   # Skip during R CMD check or CI (cassettes may not match current code)
   if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
@@ -125,6 +155,60 @@ suggest_match <- function(input, valid_options, max_distance = 3L) {
   }
 }
 
+#' Runtime arguments that were removed from the public calling contract
+#'
+#' Dot-prefixed names never reach `...` while they are formal arguments, so an
+#' undeclared dot-prefixed input is always a mistyped or removed runtime
+#' argument rather than a signature field.
+#' @noRd
+removed_runtime_arguments <- function() {
+  c(
+    ".parallel" = "Use {.arg .concurrency} with {.fn concurrency_control}.",
+    ".parallel_method" = "Use {.arg .concurrency} with {.fn concurrency_control}."
+  )
+}
+
+#' Reject undeclared dot-prefixed inputs
+#'
+#' Runtime arguments are formal parameters, so anything dot-prefixed that lands
+#' in `...` is a typo or an argument this version no longer accepts. Absorbing
+#' it as a template field would silently change behaviour, so fail closed.
+#' @noRd
+validate_reserved_input_names <- function(provided_names, declared_names) {
+  dotted <- setdiff(
+    grep("^\\.", provided_names, value = TRUE),
+    declared_names
+  )
+  if (length(dotted) == 0L) {
+    return(invisible(NULL))
+  }
+
+  removed <- removed_runtime_arguments()
+  hints <- unname(removed[intersect(dotted, names(removed))])
+  cli::cli_abort(
+    c(
+      "Unknown dot-prefixed argument{?s}: {.arg {dotted}}",
+      "x" = "These are not treated as signature fields.",
+      rlang::set_names(hints, rep("i", length(hints)))
+    ),
+    class = c(
+      "dsprrr_reserved_input_error",
+      "dsprrr_input_validation_error"
+    )
+  )
+}
+
+# Validate runtime-only arguments from an unforced `...` pairlist.
+validate_runtime_dot_arguments <- function(call, allowed_names = character()) {
+  dots <- call[["..."]]
+  provided_names <- if (is.null(dots)) {
+    character()
+  } else {
+    names(dots) %||% rep("", length(dots))
+  }
+  validate_reserved_input_names(provided_names, allowed_names)
+}
+
 #' Validate call inputs against a signature
 #' @noRd
 validate_signature_inputs <- function(
@@ -139,11 +223,17 @@ validate_signature_inputs <- function(
   extra <- match.arg(extra)
   type <- match.arg(type)
 
+  declared_names <- if (length(sig@inputs) == 0) {
+    character()
+  } else {
+    vapply(sig@inputs, function(x) x$name, character(1))
+  }
+  validate_reserved_input_names(names(inputs) %||% character(), declared_names)
+
   if (length(sig@inputs) == 0) {
     return(invisible(NULL))
   }
 
-  declared_names <- vapply(sig@inputs, function(x) x$name, character(1))
   required <- vapply(
     sig@inputs,
     function(x) tryCatch(isTRUE(x$type@required), error = function(e) TRUE),
@@ -366,42 +456,6 @@ is_reasoning_model <- function(model_name) {
   any(vapply(reasoning_patterns, function(p) grepl(p, model_lower), logical(1)))
 }
 
-#' Get default parameters for a provider
-#'
-#' Returns sensible default parameter values and capability flags
-#' for different LLM providers.
-#'
-#' @param provider Character string identifying the provider
-#'   (e.g., "openai", "anthropic", "google").
-#' @return A named list with default values and capabilities.
-#' @export
-#' @examples
-#' provider_defaults("openai")
-#' provider_defaults("anthropic")
-provider_defaults <- function(provider) {
-  defaults <- list(
-    openai = list(
-      temperature = 0.7,
-      supports_json_schema = TRUE,
-      supports_reasoning = TRUE
-    ),
-    anthropic = list(
-      temperature = 1.0,
-      supports_json_schema = TRUE,
-      supports_extended_thinking = TRUE
-    ),
-    google = list(
-      temperature = 0.7,
-      supports_json_schema = TRUE
-    ),
-    ollama = list(
-      temperature = 0.7,
-      supports_json_schema = FALSE
-    )
-  )
-  defaults[[tolower(provider)]] %||% list(temperature = 0.7)
-}
-
 #' Render an ellmer Turn as plain text
 #' @noRd
 render_turn_text <- function(turn) {
@@ -565,7 +619,6 @@ trace_tokens <- function(trace) {
 #' @noRd
 trace_cost <- function(trace) {
   trace$cost %||%
-    trace$total_cost %||%
     tryCatch(trace$assistant_turn@cost, error = function(e) NA_real_)
 }
 

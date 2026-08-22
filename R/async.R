@@ -134,9 +134,7 @@ assert_factory_interpreter_async_supported <- function(module, operation) {
 run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
   rlang::check_installed("promises", reason = "for asynchronous execution")
   llm <- .llm %||% module$chat %||% get_default_chat()
-  if (is.null(llm)) {
-    cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
-  }
+  llm <- assert_ellmer_chat(llm, arg = ".llm")
 
   namespace_path <- getNamespaceInfo(asNamespace("dsprrr"), "path")
   worker <- function(module, inputs, llm, namespace_path) {

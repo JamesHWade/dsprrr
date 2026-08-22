@@ -9,7 +9,7 @@ lhs \%>>\% rhs
 \arguments{
 \item{lhs}{A Module or PipelineModule}
 
-\item{rhs}{A Module, PipelineModule, or module with mapping (via \code{map_inputs()})}
+\item{rhs}{A Module or PipelineModule.}
 }
 \value{
 A PipelineModule combining both modules
@@ -27,9 +27,5 @@ qa_pipeline <- mod_parse \%>>\% mod_answer \%>>\% mod_format
 # Run the pipeline
 result <- run(qa_pipeline, text = "What is 2+2?", .llm = llm)
 
-# With explicit mapping when names don't match
-rag_pipeline <- mod_retrieve \%>>\%
-  map_inputs(mod_answer, documents = "context") \%>>\%
-  mod_summarize
 }
 }
