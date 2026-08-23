@@ -427,8 +427,10 @@ Module <- R6::R6Class(
         evaluation = evaluations,
         timestamp = timestamps
       )
+      durable_trials <- trials_tbl
+      durable_trials$evaluation <- NULL
 
-      self$state$trials <- trials_tbl
+      self$state$trials <- durable_trials
       self$state$optimization_history <- append(
         self$state$optimization_history,
         list(trials_tbl)
@@ -452,7 +454,7 @@ Module <- R6::R6Class(
           best_score = scores[[best_idx]],
           best_trial = best_idx,
           best_params = best_params,
-          trials = trials_tbl,
+          trials = durable_trials,
           stop_reason = "completed",
           extensions = list(candidate_grid = candidate_grid)
         )

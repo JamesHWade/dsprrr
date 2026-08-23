@@ -22,7 +22,11 @@ discrete_bo_initial_stats <- function(candidates) {
 }
 
 discrete_bo_best_state <- function() {
-  list(score = -Inf, candidate_index = NA_integer_)
+  list(
+    score = -Inf,
+    candidate_index = NA_integer_,
+    trial_index = NA_integer_
+  )
 }
 
 discrete_bo_checkpoint_trial_record <- function(trial) {
@@ -492,13 +496,15 @@ run_discrete_bo <- function(
       if (!is.na(score) && score > best_any$score) {
         best_any <- list(
           score = score,
-          candidate_index = as.integer(candidate_idx)
+          candidate_index = as.integer(candidate_idx),
+          trial_index = as.integer(trial_idx)
         )
       }
       if (eval_type == "full" && !is.na(score) && score > best_full$score) {
         best_full <- list(
           score = score,
-          candidate_index = as.integer(candidate_idx)
+          candidate_index = as.integer(candidate_idx),
+          trial_index = as.integer(trial_idx)
         )
       }
       active_trial$result_applied <- TRUE
@@ -558,9 +564,11 @@ run_discrete_bo <- function(
   }
 
   trial_history_tbl <- discrete_bo_history_table(trial_history, track_stats)
-  best_candidate <- discrete_bo_candidate(candidates, best_full)
+  selected_state <- best_full
+  best_candidate <- discrete_bo_candidate(candidates, selected_state)
   if (is.null(best_candidate)) {
-    best_candidate <- discrete_bo_candidate(candidates, best_any)
+    selected_state <- best_any
+    best_candidate <- discrete_bo_candidate(candidates, selected_state)
     if (!is.null(best_candidate)) {
       cli::cli_warn(
         c(
@@ -584,6 +592,19 @@ run_discrete_bo <- function(
   budget_summary <- optimizer_budget_summary(budget)
   list(
     best_candidate = best_candidate,
+    best_score = if (is.finite(selected_state$score)) {
+      selected_state$score
+    } else {
+      NA_real_
+    },
+    best_trial = if (
+      is.null(selected_state$trial_index) ||
+        is.na(selected_state$trial_index)
+    ) {
+      NULL
+    } else {
+      selected_state$trial_index
+    },
     trial_history = trial_history_tbl,
     candidate_stats = stats,
     budget_summary = budget_summary,

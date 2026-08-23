@@ -247,21 +247,8 @@ mipro_finalize_program <- function(
   budget_summary <- bo_result$budget_summary
   trials <- bo_result$trial_history %||% tibble::tibble()
   best_candidate <- bo_result$best_candidate
-  best_score <- if (nrow(trials) > 0L) {
-    scores <- trials$mean_score
-    if (all(is.na(scores))) NA_real_ else max(scores, na.rm = TRUE)
-  } else {
-    NA_real_
-  }
-  best_trial <- if (
-    nrow(trials) > 0L &&
-      !is.null(best_candidate$id) &&
-      best_candidate$id %in% trials$candidate_id
-  ) {
-    which(trials$candidate_id == best_candidate$id)[[1]]
-  } else {
-    NULL
-  }
+  best_score <- bo_result$best_score %||% NA_real_
+  best_trial <- bo_result$best_trial
   details <- list(
     auto = settings$auto,
     planned_trials = settings$trials,

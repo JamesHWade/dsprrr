@@ -261,3 +261,26 @@ test_that("module_trials() warns and returns an inspectable summary when all tri
   expect_true(is.na(summary$best_score))
   expect_true(is.na(summary$best_trial))
 })
+
+test_that("optimize_grid keeps runtime evaluations out of durable trials", {
+  mod <- module(signature("question -> answer"))
+  data <- data.frame(question = "Ready?", answer = "yes")
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) list(answer = "yes")
+  )
+
+  optimize_grid(
+    mod,
+    data = data,
+    metric = metric_exact_match(field = "answer"),
+    grid = data.frame(temperature = c(0.1, 0.2)),
+    .llm = mock_llm,
+    control = list(progress = FALSE, parallel = FALSE)
+  )
+
+  expect_true("evaluation" %in% names(mod$state$optimization_history[[1L]]))
+  expect_false("evaluation" %in% names(mod$state$trials))
+  artifact <- program_artifact(mod)
+  restored <- restore_module_config(artifact)
+  expect_equal(optimization_result(restored), optimization_result(mod))
+})

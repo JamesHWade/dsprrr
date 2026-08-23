@@ -294,6 +294,7 @@ compile_bootstrap_rs <- function(
   best_candidate <- NULL
   best_program <- NULL
   partial_program <- copy_module(program)
+  threshold_reached <- FALSE
 
   for (i in seq_along(candidates)) {
     if (optimizer_budget_stopped(budget)) {
@@ -536,6 +537,22 @@ compile_bootstrap_rs <- function(
         !is.na(score) &&
         score >= teleprompter@stop_at_score
     ) {
+      optimizer_budget_set_stop(
+        budget,
+        optimizer_budget_reason(
+          code = "stop_at_score",
+          stage = "bootstrap_rs_validation",
+          resource = "score",
+          limit = teleprompter@stop_at_score,
+          observed = score,
+          unit_id = validation_unit_id,
+          message = sprintf(
+            "Reached target score (%s)",
+            format(teleprompter@stop_at_score)
+          )
+        )
+      )
+      threshold_reached <- TRUE
       cli::cli_alert_success(
         "Early stop: reached target score {teleprompter@stop_at_score}"
       )
@@ -615,7 +632,11 @@ compile_bootstrap_rs <- function(
   record_optimization_result(
     best_program,
     optimizer = "BootstrapFewShotWithRandomSearch",
-    status = if (optimizer_budget_stopped(budget)) "partial" else "completed",
+    status = if (optimizer_budget_stopped(budget) && !threshold_reached) {
+      "partial"
+    } else {
+      "completed"
+    },
     best_score = if (is.finite(best_score)) best_score else NULL,
     best_trial = if (is.na(best_trial)) NULL else best_trial,
     best_params = best_candidate %||% list(),

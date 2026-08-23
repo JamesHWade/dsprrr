@@ -364,6 +364,16 @@ test_that("BootstrapFewShotWithRandomSearch early stopping works", {
     bootstrap_rs_test_metadata(result)$num_candidates_evaluated,
     10
   )
+  optimization <- optimization_result(result)
+  expect_identical(optimization$status, "completed")
+  expect_identical(optimization$stop_reason, "stop_at_score")
+  expect_s3_class(
+    optimization$budget$stop_reason,
+    "dsprrr_optimizer_stop_reason"
+  )
+  expect_identical(optimization$budget$stop_reason$code, "stop_at_score")
+  expect_equal(optimization$budget$stop_reason$limit, 0.9)
+  expect_equal(optimization$budget$stop_reason$observed, 1)
 })
 
 test_that("BootstrapFewShotWithRandomSearch print method works", {

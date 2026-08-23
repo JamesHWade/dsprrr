@@ -724,3 +724,40 @@ test_that("run_discrete_bo UCB explores untried candidates first", {
   # First 3 trials should visit all candidates (exploration)
   expect_true(all(c("a", "b", "c") %in% visited[1:3]))
 })
+
+test_that("MIPRO records the full-evaluation selection outcome", {
+  candidates <- list(list(
+    id = "candidate",
+    params = list(style = "selected")
+  ))
+  result <- dsprrr:::run_discrete_bo(
+    candidates = candidates,
+    eval_fn = function(candidate, eval_type, trial_idx) {
+      dsprrr:::EvalResult(
+        mean_score = if (eval_type == "full") 0.8 else 0.99,
+        n_evaluated = 1L,
+        n_errors = 0L
+      )
+    },
+    control = dsprrr:::optimizer_control(),
+    max_trials = 2L,
+    minibatch_size = 1L,
+    full_eval_every = 2L
+  )
+
+  expect_equal(result$best_score, 0.8)
+  expect_identical(result$best_trial, 2L)
+  expect_gt(max(result$trial_history$mean_score), result$best_score)
+
+  compiled <- dsprrr:::mipro_finalize_program(
+    module(signature("question -> answer")),
+    settings = list(auto = "light", trials = 2L, full_eval_every = 2L),
+    minibatch_size = 1L,
+    demo_candidates = list(),
+    instruction_candidates = list(),
+    bo_result = result
+  )
+  optimization <- optimization_result(compiled)
+  expect_equal(optimization$best_score, 0.8)
+  expect_identical(optimization$best_trial, 2L)
+})
