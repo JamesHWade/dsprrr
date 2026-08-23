@@ -24,7 +24,8 @@ minimization) score during optimization.
 \examples{
 if (FALSE) {
 mod <- module(signature("text -> sentiment"))
-optimize_grid(#'   mod,
+optimize_grid(
+  mod,
   data = train_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0.3, 0.7, 1.0))
