@@ -126,12 +126,14 @@ test_that("BootstrapFewShot compiles pipelines jointly with per-step demos", {
     seed = 42L
   )
 
-  compiled <- compile(tp, p, trainset)
+  compiled <- compile(p, tp, trainset)
 
   expect_true(inherits(compiled, "PipelineModule"))
   expect_true(compiled$config$compiled)
-  expect_equal(compiled$config$teleprompter, "BootstrapFewShot")
-  expect_true(compiled$config$optimizer$joint_pipeline)
+  expect_equal(optimization_result(compiled)$optimizer, "BootstrapFewShot")
+  expect_true(
+    optimization_result(compiled)$extensions$bootstrap_few_shot$joint_pipeline
+  )
 
   # Every demo-capable step received bootstrapped demos from passing traces
   demos1 <- compiled$steps[[1]]@module$demos
@@ -199,16 +201,19 @@ test_that("joint pipeline compilation respects metric threshold", {
     seed = 42L
   )
 
-  compiled <- compile(tp, p, trainset)
+  compiled <- compile(p, tp, trainset)
 
   expect_true(compiled$config$compiled)
   expect_length(compiled$steps[[1]]@module$demos, 0)
   expect_length(compiled$steps[[2]]@module$demos, 0)
-  expect_equal(compiled$config$optimizer$n_bootstrapped_demos, 0L)
-  expect_equal(compiled$config$optimizer$total_attempts, 4L)
-  expect_equal(compiled$config$optimizer$error_count, 0L)
-  expect_equal(compiled$config$optimizer$budget_summary$successes, 4L)
-  expect_false(compiled$config$optimizer$budget_summary$stopped)
+  expect_equal(
+    optimization_result(compiled)$best_params$n_bootstrapped_demos,
+    0L
+  )
+  expect_equal(optimization_result(compiled)$budget$attempts, 4L)
+  expect_equal(optimization_result(compiled)$budget$total_errors, 0L)
+  expect_equal(optimization_result(compiled)$budget$successes, 4L)
+  expect_false(optimization_result(compiled)$budget$stopped)
 })
 
 test_that("joint pipeline compilation skips labeled demos when fields absent", {
@@ -224,9 +229,9 @@ test_that("joint pipeline compilation skips labeled demos when fields absent", {
     seed = 42L
   )
 
-  compiled <- compile(tp, p, trainset)
+  compiled <- compile(p, tp, trainset)
 
-  expect_equal(compiled$config$optimizer$n_labeled_demos, 0L)
+  expect_equal(optimization_result(compiled)$best_params$n_labeled_demos, 0L)
   # All trainset rows remained available for bootstrapping
   expect_length(compiled$steps[[2]]@module$demos, 1)
   expect_equal(compiled$steps[[2]]@module$demos[[1]]$source, "bootstrapped")
@@ -243,7 +248,7 @@ test_that("joint pipeline compilation works with built-in field-aware metrics", 
     seed = 42L
   )
 
-  compiled <- compile(tp, p, trainset)
+  compiled <- compile(p, tp, trainset)
 
   expect_length(compiled$steps[[1]]@module$demos, 2)
   expect_length(compiled$steps[[2]]@module$demos, 2)
@@ -261,9 +266,9 @@ test_that("joint pipeline compilation does not accumulate teacher traces", {
     seed = 42L
   )
 
-  compiled <- compile(tp, p, trainset)
+  compiled <- compile(p, tp, trainset)
 
-  expect_equal(compiled$config$optimizer$total_attempts, 4L)
+  expect_equal(optimization_result(compiled)$budget$attempts, 4L)
   # Traces are cleared after each bootstrap attempt, so neither the original
   # pipeline nor the compiled student retains them
   expect_length(p$state$traces, 0)
@@ -294,7 +299,7 @@ test_that("joint pipeline compilation works with feedback metrics", {
     seed = 42L
   )
 
-  compiled <- compile(tp, p, trainset)
+  compiled <- compile(p, tp, trainset)
 
   expect_length(compiled$steps[[1]]@module$demos, 2)
   expect_equal(compiled$steps[[1]]@module$demos[[1]]$score, 1)

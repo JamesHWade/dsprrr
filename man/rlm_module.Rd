@@ -14,6 +14,10 @@ rlm_module(
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
+  config = list(),
+  chat = NULL,
+  generate_action = NULL,
+  extract = NULL,
   ...
 )
 }
@@ -57,7 +61,15 @@ constraints beyond the bridge's lossless JSON-compatible value checks.
 A protocol safety ceiling permits at most 1,000 host-tool calls in one
 generated R step.}
 
-\item{...}{Additional arguments passed to the module}
+\item{config}{Optional prediction configuration.}
+
+\item{chat}{Optional ellmer Chat object.}
+
+\item{generate_action}{Optional advanced action predictor.}
+
+\item{extract}{Optional advanced extraction predictor.}
+
+\item{...}{Must be empty.}
 }
 \value{
 An RLMModule object

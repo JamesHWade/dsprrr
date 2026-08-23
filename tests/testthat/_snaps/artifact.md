@@ -80,7 +80,7 @@
     Condition
       Error in `artifact_validate_manifest()`:
       ! Unsupported dsprrr program artifact version
-      x Got version 999; this package supports version 5.
+      x Got version 999; this package supports version 6.
 
 ---
 

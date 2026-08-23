@@ -44,7 +44,7 @@ artifact_runtime_rehash <- function(artifact) {
   artifact
 }
 
-test_that("current v5 interpreter factories round-trip without being invoked", {
+test_that("current v6 interpreter factories round-trip without being invoked", {
   calls <- 0L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
@@ -54,7 +54,7 @@ test_that("current v5 interpreter factories round-trip without being invoked", {
 
   for (program in artifact_runtime_modules(interpreter_factory)) {
     artifact <- program_artifact(program, registry = registry)
-    expect_identical(artifact$format_version, 5L)
+    expect_identical(artifact$format_version, 6L)
     fields <- artifact$graph$nodes[["$"]]$fields
     expect_null(fields$runner)
     expect_identical(
@@ -84,7 +84,7 @@ test_that("current v5 interpreter factories round-trip without being invoked", {
   }
 })
 
-test_that("v5 RLM predictor children preserve tuned state", {
+test_that("v6 RLM predictor children preserve tuned state", {
   calls <- 0L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
@@ -151,7 +151,7 @@ test_that("v5 RLM predictor children preserve tuned state", {
   )
 })
 
-test_that("v5 RLM artifacts reject partial predictor child schemas", {
+test_that("v6 RLM artifacts reject partial predictor child schemas", {
   interpreter_factory <- function(.unused = NULL) artifact_runtime_runner()
   registry <- list(interpreter_factory = interpreter_factory)
   program <- dsprrr:::RLMModule$new(
@@ -169,7 +169,7 @@ test_that("v5 RLM artifacts reject partial predictor child schemas", {
   )
 })
 
-test_that("v5 interpreter factories support explicit trusted embedding", {
+test_that("v6 interpreter factories support explicit trusted embedding", {
   calls <- 0L
   interpreter_factory <- function(.unused = NULL) {
     calls <<- calls + 1L
@@ -191,7 +191,7 @@ test_that("v5 interpreter factories support explicit trusted embedding", {
   expect_identical(calls, 0L)
 })
 
-test_that("v5 runtime bindings enforce exact XOR", {
+test_that("v6 runtime bindings enforce exact XOR", {
   runner <- artifact_runtime_runner()
   factory <- function(.unused = NULL) artifact_runtime_runner()
   registry <- list(runner = runner, factory = factory)
@@ -228,7 +228,7 @@ test_that("v5 runtime bindings enforce exact XOR", {
   )
 })
 
-test_that("Flex modules keep their resource-free codec in v5", {
+test_that("Flex modules keep their resource-free codec in v6", {
   program <- suppressWarnings(
     dsprrr:::FlexModule$new(
       signature = signature("question -> answer"),
@@ -242,7 +242,7 @@ test_that("Flex modules keep their resource-free codec in v5", {
   fields <- artifact$graph$nodes[["$"]]$fields
   restored <- restore_module_config(artifact)
 
-  expect_identical(artifact$format_version, 5L)
+  expect_identical(artifact$format_version, 6L)
   expect_named(
     fields,
     c(
@@ -380,7 +380,7 @@ test_that("executable Flex runtime dependencies round-trip through a registry", 
   expect_identical(calls, 0L)
 })
 
-test_that("v5 Flex artifacts require the complete field schema", {
+test_that("v6 Flex artifacts require the complete field schema", {
   program <- suppressWarnings(flex("question -> answer"))
   artifact <- program_artifact(program)
   fields <- artifact$graph$nodes[["$"]]$fields

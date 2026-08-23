@@ -2,41 +2,36 @@
 % Please edit documentation in R/compile.R
 \name{compile}
 \alias{compile}
-\title{Compile S7 Generic and Methods}
+\title{Compile a program}
 \usage{
-compile(teleprompter, program, ...)
+compile(program, teleprompter, ...)
 }
 \arguments{
-\item{teleprompter}{A Teleprompter object}
+\item{program}{A dsprrr module or compositional program to optimize.}
 
-\item{program}{A module to optimize}
+\item{teleprompter}{A Teleprompter defining the optimization strategy.}
 
-\item{...}{Additional arguments including \code{trainset} (training data) and
-optional \code{.trace_context}, a named JSON-compatible list propagated to
-evaluations, optimizer trials, and execution traces.}
+\item{...}{Additional arguments. The first is normally \code{trainset}, a data
+frame. Optimizers may also accept \code{valset}, \code{.llm}, and
+\code{.trace_context}.}
 }
 \value{
-An optimized module
+An optimized program.
 }
 \description{
-Generic method for compiling/optimizing a module using a teleprompter.
-}
-\details{
-This file defines the compile generic and its methods for optimizing
-DSPrrr modules using teleprompters.
-Compile Generic
+Optimize a dsprrr program with a teleprompter. This is the single
+user-facing compilation entry point and is ordered for the native pipe:
+\code{program |> compile(teleprompter, trainset)}.
 }
 \examples{
 \dontrun{
-classifier <- module(signature("text -> sentiment"), type = "predict")
+classifier <- module(signature("text -> sentiment"))
 trainset <- data.frame(
   text = c("I love it!", "Terrible experience"),
   sentiment = c("positive", "negative")
 )
-optimized <- compile(LabeledFewShot(k = 2L), classifier, trainset)
+
+optimized <- classifier |>
+  compile(LabeledFewShot(k = 2L), trainset)
 }
-}
-\seealso{
-\code{\link[=compile_module]{compile_module()}} for the pipe-friendly wrapper with
-validation and friendlier argument order
 }

@@ -126,7 +126,7 @@ test_that("concurrency_control validates every numeric limit", {
 })
 
 test_that("concurrency is the only public batch control", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   control <- concurrency_control(backend = "sequential", max_active = 3L)
 
   legacy <- c(".parallel", ".parallel_method")
@@ -179,7 +179,7 @@ test_that("concurrency is the only public batch control", {
 })
 
 test_that("run_dataset forwards explicit concurrency", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   result <- run_dataset(
     mod,
     data.frame(text = c("a", "b")),
@@ -199,7 +199,7 @@ test_that("run_dataset forwards explicit concurrency", {
 })
 
 test_that("evaluate forwards explicit concurrency", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   control <- concurrency_control(backend = "sequential", max_active = 3L)
   result <- evaluate(
     mod,
@@ -222,7 +222,7 @@ test_that("auto is the only backend that falls back and records why", {
     },
     .package = "dsprrr"
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   chat <- concurrency_test_chat()
   result <- run(
     mod,
@@ -266,7 +266,7 @@ test_that("auto uses sequential execution for one worker and test Chats", {
     },
     .package = "ellmer"
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   one <- run(
     mod,
@@ -311,7 +311,7 @@ test_that("ellmer rejects unenforceable timeouts before provider work", {
     },
     .package = "ellmer"
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   expect_error(
     run(
       mod,
@@ -351,7 +351,7 @@ test_that("ellmer receives the exact requested max_active for N one and two", {
   )
 
   for (workers in 1:2) {
-    mod <- module(signature("text -> answer"), type = "predict")
+    mod <- module(signature("text -> answer"))
     run(
       mod,
       text = c("a", "b", "c"),
@@ -392,7 +392,7 @@ test_that("ellmer error budgets stop later bounded waves", {
     },
     .package = "ellmer"
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   expect_warning(
     result <- run(
       mod,
@@ -433,7 +433,7 @@ test_that("specialized Predict batches reject controls before topology work", {
     },
     .package = "dsprrr"
   )
-  mod <- module(signature("question -> answer"), type = "react")
+  mod <- react(signature("question -> answer"))
   expect_error(
     run(
       mod,
@@ -488,7 +488,7 @@ test_that("mirai enforces actual peak concurrency for N one and two", {
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
 
   run_with <- function(workers) {
-    mod <- module(signature("text -> answer"), type = "predict")
+    mod <- module(signature("text -> answer"))
     mod$chat <- concurrency_test_slow_chat(delay = 1)
     run(
       mod,
@@ -527,7 +527,7 @@ test_that("mirai preserves the user-owned default topology", {
     before <- mirai::status()$connections
   }
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_chat()
   run(
     mod,
@@ -625,7 +625,7 @@ test_that("expired mirai batch deadlines launch no worker tasks", {
     .package = "mirai"
   )
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_chat()
   expect_warning(
     result <- run(
@@ -687,7 +687,7 @@ test_that("mirai refuses to claim an occupied named profile", {
     .package = "dsprrr"
   )
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_chat()
   expect_error(
     run(
@@ -731,7 +731,7 @@ test_that("unexpected scheduler aborts drain owned profiles observably", {
     .package = "mirai"
   )
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_chat()
   warnings <- list()
   error <- tryCatch(
@@ -777,7 +777,7 @@ test_that("mirai cleanup completes before warnings become errors", {
     .package = "dsprrr"
   )
   withr::local_options(list(warn = 2L))
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_slow_chat(delay = 0.01, fail_on = "FAIL")
 
   expect_error(
@@ -802,7 +802,7 @@ test_that("mirai task timeouts halt work before return", {
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
   marker <- withr::local_tempfile()
   unlink(marker)
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_slow_chat(delay = 0.25, marker = marker)
 
   expect_warning(
@@ -842,7 +842,7 @@ test_that("mirai total timeouts cancel active and quarantine queued work", {
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
   marker <- withr::local_tempfile()
   unlink(marker)
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_slow_chat(delay = 0.25, marker = marker)
 
   expect_warning(
@@ -878,7 +878,7 @@ test_that("mirai error budgets cancel active work and preserve row order", {
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
   marker <- withr::local_tempfile()
   unlink(marker)
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_slow_chat(
     fail_on = "FAIL",
     delay = 0.35,
@@ -933,7 +933,7 @@ test_that("mirai cancel false drains active work and quarantines queued rows", {
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
   marker <- withr::local_tempfile()
   unlink(marker)
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$chat <- concurrency_test_slow_chat(
     fail_on = "FAIL",
     delay = 0.12,

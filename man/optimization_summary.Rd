@@ -27,7 +27,7 @@ Combines information from trials, best parameters, and cost tracking.
 }
 \examples{
 if (FALSE) {
-mod$optimize_grid(data, metric, parameters)
+optimize_grid(mod, data, metric, parameters)
 summary <- optimization_summary(mod)
 print(summary)
 }
@@ -39,6 +39,7 @@ Other optimizer accessors:
 \code{\link[=best_params]{best_params()}},
 \code{\link[=config_diff]{config_diff()}},
 \code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=top_trials]{top_trials()}}
 }
 \concept{optimizer accessors}

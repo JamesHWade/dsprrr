@@ -71,7 +71,7 @@ single module)
 \examples{
 \dontrun{
 sig <- signature("question -> answer")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 run_stream(
   mod,

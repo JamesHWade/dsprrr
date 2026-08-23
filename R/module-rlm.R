@@ -109,7 +109,11 @@ NULL
 #'   constraints beyond the bridge's lossless JSON-compatible value checks.
 #'   A protocol safety ceiling permits at most 1,000 host-tool calls in one
 #'   generated R step.
-#' @param ... Additional arguments passed to the module
+#' @param config Optional prediction configuration.
+#' @param chat Optional ellmer Chat object.
+#' @param generate_action Optional advanced action predictor.
+#' @param extract Optional advanced extraction predictor.
+#' @param ... Must be empty.
 #'
 #' @return An RLMModule object
 #'
@@ -137,9 +141,14 @@ rlm_module <- function(
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
+  config = list(),
+  chat = NULL,
+  generate_action = NULL,
+  extract = NULL,
   ...
 ) {
   reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments("rlm_module", ...)
 
   binding <- normalize_code_runner_binding(
     runner = runner,
@@ -188,7 +197,7 @@ rlm_module <- function(
 
   validate_rlm_tools(tools)
 
-  RLMModule$new(
+  mod <- RLMModule$new(
     signature = signature,
     runner = binding$runner,
     interpreter_factory = binding$interpreter_factory,
@@ -198,8 +207,12 @@ rlm_module <- function(
     sub_lm = sub_lm,
     verbose = verbose,
     tools = tools,
-    ...
+    config = config,
+    chat = chat,
+    generate_action = generate_action,
+    extract = extract
   )
+  stamp_module_kind(mod, "rlm")
 }
 
 

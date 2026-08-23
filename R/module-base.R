@@ -45,7 +45,8 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
     },
 
@@ -273,56 +274,6 @@ Module <- R6::R6Class(
     },
 
     #' @description
-    #' Predict using the module
-    #'
-    #' Convenience method that delegates to `run()`. Provides a familiar interface
-    #' for users coming from tidymodels or other prediction frameworks.
-    #'
-    #' @param ... Named inputs matching the signature
-    #' @param .llm Optional ellmer chat object (uses stored chat if not provided)
-    #' @return The declared output record, or a list of output records for a
-    #'   batch. Single-field object outputs retain their field name.
-    predict = function(..., .llm = NULL) {
-      result <- self$run(
-        ...,
-        .llm = .llm,
-        .return_format = "structured"
-      )
-      if (inherits(result, "dsprrr_batch_result")) {
-        return(lapply(result, `[[`, "output"))
-      }
-      result$output
-    },
-
-    #' @description
-    #' Optimize the module using development data
-    #' @param data Development data as a data frame or tibble
-    #' @param objective Metric or metric set
-    #' @param control Optimization control parameters
-    #' @return Updated module (self)
-    optimize = function(
-      data,
-      metric = metric_exact_match(),
-      grid = NULL,
-      parameters = NULL,
-      objective = c("maximize", "minimize"),
-      .llm = NULL,
-      control = list(),
-      ...
-    ) {
-      self$optimize_grid(
-        data = data,
-        metric = metric,
-        grid = grid,
-        parameters = parameters,
-        objective = objective,
-        .llm = .llm,
-        control = control,
-        ...
-      )
-    },
-
-    #' @description
     #' Run grid search optimisation for the module
     #' @param data Development data as data frame or tibble
     #' @param metric Metric function applied per example
@@ -476,8 +427,10 @@ Module <- R6::R6Class(
         evaluation = evaluations,
         timestamp = timestamps
       )
+      durable_trials <- trials_tbl
+      durable_trials$evaluation <- NULL
 
-      self$state$trials <- trials_tbl
+      self$state$trials <- durable_trials
       self$state$optimization_history <- append(
         self$state$optimization_history,
         list(trials_tbl)
@@ -491,13 +444,20 @@ Module <- R6::R6Class(
           best_params,
           keep.null = TRUE
         )
-        self$state$best_score <- scores[best_idx]
-        self$state$best_params <- best_params
-        self$state$best_trial <- best_idx
-        self$state$compiled <- TRUE
         if (is.function(self$apply_optimization_params)) {
           self$apply_optimization_params(best_params)
         }
+        record_optimization_result(
+          self,
+          optimizer = "GridSearch",
+          baseline_score = scores[[1]],
+          best_score = scores[[best_idx]],
+          best_trial = best_idx,
+          best_params = best_params,
+          trials = durable_trials,
+          stop_reason = "completed",
+          extensions = list(candidate_grid = candidate_grid)
+        )
       } else {
         cli::cli_warn(
           "No valid scores produced during optimisation; configuration left unchanged"
@@ -521,7 +481,8 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
 
       if (hard) {
@@ -723,7 +684,7 @@ Module <- R6::R6Class(
     #' Check if module is compiled/optimized
     #' @return Logical
     is_compiled = function() {
-      isTRUE(self$state$compiled)
+      !is.null(self$state$optimization_result) || isTRUE(self$state$compiled)
     },
 
     #' @description
@@ -1001,7 +962,8 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
 
       artifact_copy_runtime(self, new_mod)
@@ -1526,7 +1488,7 @@ run_factory_interpreter_batch <- function(
 #' \dontrun{
 #' # Create a module
 #' mod <- signature("text -> sentiment") |>
-#'   module(type = "predict", chat = chat_openai())
+#'   module( chat = chat_openai())
 #'
 #' # Use predict() like parsnip models
 #' new_data <- tibble::tibble(text = c("Great!", "Terrible"))

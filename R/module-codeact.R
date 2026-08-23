@@ -88,7 +88,9 @@ NULL
 #'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
 #'   terminal `shutdown()`.
 #'   Supply exactly one of `runner` and `interpreter_factory`.
-#' @param ... Additional arguments passed to the module
+#' @param config Optional prediction configuration.
+#' @param chat Optional ellmer Chat object.
+#' @param ... Must be empty.
 #'
 #' @return A CodeActModule object
 #'
@@ -109,9 +111,12 @@ code_act <- function(
   runner = NULL,
   interpreter_factory = NULL,
   max_iterations = 10L,
+  config = list(),
+  chat = NULL,
   ...
 ) {
   reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments("code_act", ...)
 
   binding <- normalize_code_runner_binding(
     runner = runner,
@@ -134,14 +139,16 @@ code_act <- function(
 
   max_iterations <- normalize_codeact_iterations(max_iterations)
 
-  CodeActModule$new(
+  mod <- CodeActModule$new(
     signature = signature,
     tools = tools,
     runner = binding$runner,
     interpreter_factory = binding$interpreter_factory,
     max_iterations = max_iterations,
-    ...
+    config = config,
+    chat = chat
   )
+  stamp_module_kind(mod, "codeact")
 }
 
 normalize_codeact_iterations <- function(value) {

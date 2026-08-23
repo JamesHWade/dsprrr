@@ -48,8 +48,8 @@
 #'   default_strategy = "p -> g -> p"
 #' )
 #'
-#' compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
-#' compiled$config$optimizer$candidate_programs
+#' compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
+#' optimization_result(compiled)$extensions$better_together$candidate_programs
 #' }
 BetterTogether <- S7::new_class(
   "BetterTogether",
@@ -387,19 +387,35 @@ compile_better_together <- function(
     candidates[[length(candidates)]]
   }
 
+  candidate_programs <- better_together_candidates_tbl(sorted_candidates)
+  candidate_trials <- candidate_programs
+  candidate_trials$program_config <- lapply(
+    candidate_programs$program,
+    function(candidate) candidate$config
+  )
+  candidate_trials$program <- NULL
+  best_trial <- match(
+    best_candidate$strategy,
+    candidate_trials$strategy
+  )
   best_program <- copy_module(best_candidate$program)
-  best_program$state$compiled <- TRUE
-  best_program$state$best_score <- best_candidate$score
-  best_program$state$best_params <- list(strategy = best_candidate$strategy)
-  best_program$config$compiled <- TRUE
-  best_program$config$teleprompter <- "BetterTogether"
   best_program$config$best_score <- best_candidate$score
   best_program$config$best_strategy <- best_candidate$strategy
-  best_program$config$optimizer <- list(
-    name = "BetterTogether",
-    strategy = strategy,
-    candidate_programs = better_together_candidates_tbl(sorted_candidates),
-    flag_compilation_error_occurred = compilation_error
+  record_optimization_result(
+    best_program,
+    optimizer = "BetterTogether",
+    baseline_score = baseline_score,
+    best_score = best_candidate$score,
+    best_trial = best_trial,
+    best_params = list(strategy = best_candidate$strategy),
+    trials = candidate_trials,
+    lineage = list(selected_strategy = best_candidate$strategy),
+    stop_reason = "completed",
+    extensions = list(
+      strategy = strategy,
+      candidate_programs = candidate_trials,
+      flag_compilation_error_occurred = compilation_error
+    )
   )
 
   best_program

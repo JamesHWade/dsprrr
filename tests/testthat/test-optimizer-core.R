@@ -659,7 +659,7 @@ test_that("eval_program validates inputs", {
   )
 
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   expect_error(
     eval_program(mod, "not a dataframe", identity),
@@ -674,7 +674,7 @@ test_that("eval_program validates inputs", {
 
 test_that("eval_program handles empty dataset", {
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   result <- eval_program(
     mod,
@@ -707,7 +707,7 @@ test_that("eval_program restores compact errors to their ordered rows", {
   )
 
   result <- eval_program(
-    module(signature("x -> y"), type = "predict"),
+    module(signature("x -> y")),
     data.frame(x = c("a", "b"), y = c("a", "b")),
     metric = function(...) 1,
     control = optimizer_control(progress = FALSE)
@@ -735,7 +735,7 @@ test_that("eval_program works with mock LLM", {
   )
 
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   dataset <- tibble::tibble(
     q = c("Q1", "Q2"),

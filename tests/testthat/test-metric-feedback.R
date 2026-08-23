@@ -230,7 +230,7 @@ test_that("evaluate collects feedback from feedback metrics", {
   )
 
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   skip_if_not(
     tryCatch(
@@ -277,7 +277,7 @@ test_that("plain metrics produce NA feedback in evaluate", {
   )
 
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   skip_if_not(
     tryCatch(
@@ -313,7 +313,7 @@ test_that("eval_program propagates feedback into examples tibble", {
   )
 
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   skip_if_not(
     tryCatch(
@@ -355,7 +355,7 @@ test_that("evaluate supplies row-level traces to metrics and optimizers", {
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) list(a = "mocked")
   )
-  mod <- module(signature("q -> a"), type = "predict")
+  mod <- module(signature("q -> a"))
   dataset <- tibble::tibble(q = "Q1", a = "mocked")
   seen <- list()
   metric <- metric_with_trace(
@@ -416,7 +416,7 @@ test_that("simple evaluation results do not expose raw traces", {
   llm <- new_test_chat(
     chat_structured = function(...) list(a = "mocked")
   )
-  mod <- module(signature("q -> a"), type = "predict")
+  mod <- module(signature("q -> a"))
   dataset <- tibble::tibble(q = "Q1", a = "mocked")
   metric <- metric_with_trace(function(prediction, expected, program_trace) {
     as.numeric(length(program_trace$events) > 0L)
@@ -455,7 +455,7 @@ test_that("row-budgeted optimizer metrics retain dataset row IDs", {
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) list(a = "mocked")
   )
-  mod <- module(signature("q -> a"), type = "predict")
+  mod <- module(signature("q -> a"))
   dataset <- tibble::tibble(
     q = c("Q1", "Q2"),
     a = c("mocked", "mocked")
@@ -497,7 +497,7 @@ test_that("row-budgeted optimizer metrics retain dataset row IDs", {
 })
 
 test_that("evaluate validates internal trace row mappings", {
-  mod <- module(signature("q -> a"), type = "predict")
+  mod <- module(signature("q -> a"))
   dataset <- tibble::tibble(q = c("Q1", "Q2"), a = c("A1", "A2"))
 
   expect_error(

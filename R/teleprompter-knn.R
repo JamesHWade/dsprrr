@@ -60,7 +60,7 @@
 #' )
 #'
 #' # Compile a module
-#' compiled <- compile(tp, my_module, trainset, .llm = llm)
+#' compiled <- compile(my_module, tp, trainset, .llm = llm)
 #'
 #' # Now queries will get dynamically selected demos
 #' run(compiled, question = "What is 2+2?", .llm = llm)
@@ -204,12 +204,16 @@ compile_knn <- function(teleprompter, program, trainset, .llm = NULL, ...) {
     merge_demos = teleprompter@merge_demos
   )
 
-  # Mark as compiled
-  knn_module$state$compiled <- TRUE
-  knn_module$config$compiled <- TRUE
-  knn_module$config$teleprompter <- "KNNFewShot"
   knn_module$config$compilation_k <- teleprompter@k
   knn_module$config$n_train_examples <- nrow(trainset)
+  record_optimization_result(
+    knn_module,
+    optimizer = "KNNFewShot",
+    best_params = list(k = teleprompter@k),
+    lineage = list(n_train_examples = nrow(trainset)),
+    stop_reason = "completed",
+    extensions = list(merge_demos = teleprompter@merge_demos)
+  )
 
   knn_module
 }

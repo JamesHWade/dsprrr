@@ -8,17 +8,10 @@ create_test_module <- function(compiled = FALSE, with_demos = FALSE) {
     instructions = "Test instructions"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   if (compiled) {
-    # Set up a compiled state manually
-    mod$config$temperature <- 0.5
-    mod$config$prompt_style <- "concise"
-    mod$state$compiled <- TRUE
-    mod$state$best_score <- 0.85
-    mod$state$best_trial <- 2L
-    mod$state$best_params <- list(temperature = 0.5, prompt_style = "concise")
-    mod$state$trials <- tibble::tibble(
+    trials <- tibble::tibble(
       trial_id = 1:3,
       parameters = list(
         list(temperature = 0.3),
@@ -32,6 +25,18 @@ create_test_module <- function(compiled = FALSE, with_demos = FALSE) {
       evaluation = list(list(), list(), list()),
       timestamp = rep(Sys.time(), 3)
     )
+    record_optimization_result(
+      mod,
+      optimizer = "TestSearch",
+      baseline_score = 0.6,
+      best_score = 0.85,
+      best_trial = 2L,
+      best_params = list(temperature = 0.5, prompt_style = "concise"),
+      trials = trials,
+      stop_reason = "completed"
+    )
+    mod$config$temperature <- 0.5
+    mod$config$prompt_style <- "concise"
   }
 
   if (with_demos) {
@@ -43,6 +48,23 @@ create_test_module <- function(compiled = FALSE, with_demos = FALSE) {
   }
 
   mod
+}
+
+replace_test_trials <- function(module, trials) {
+  result <- optimization_result(module)
+  record_optimization_result(
+    module,
+    optimizer = result$optimizer,
+    status = result$status,
+    baseline_score = result$baseline_score,
+    best_score = result$best_score,
+    best_trial = result$best_trial,
+    best_params = result$best_params,
+    trials = trials,
+    lineage = result$lineage,
+    budget = result$budget,
+    stop_reason = if (is.na(result$stop_reason)) NULL else result$stop_reason
+  )
 }
 
 
@@ -69,7 +91,15 @@ test_that("best_params returns best parameters for compiled module", {
 test_that("best_params flattens parameters correctly", {
   mod <- create_test_module(compiled = TRUE)
   # Simulate nested list structure
-  mod$state$best_params <- list(temperature = list(0.5), style = "verbose")
+  current <- optimization_result(mod)
+  record_optimization_result(
+    mod,
+    optimizer = current$optimizer,
+    best_score = current$best_score,
+    best_trial = current$best_trial,
+    best_params = list(temperature = list(0.5), style = "verbose"),
+    trials = current$trials
+  )
 
   params <- best_params(mod, flatten = TRUE)
   expect_equal(params$temperature, 0.5)
@@ -315,21 +345,23 @@ test_that("optimization_summary calculates improvement", {
 
 test_that("optimization_summary preserves known and unknown trial costs", {
   mod <- create_test_module(compiled = TRUE)
-  mod$state$trials$total_cost <- c(0.01, 0.02, 0.03)
+  trials <- optimization_result(mod)$trials
+  trials$total_cost <- c(0.01, 0.02, 0.03)
+  replace_test_trials(mod, trials)
   expect_equal(optimization_summary(mod)$total_cost, 0.06)
 
-  mod$state$trials$total_cost[[2]] <- NA_real_
+  trials$total_cost[[2]] <- NA_real_
+  replace_test_trials(mod, trials)
   expect_true(is.na(optimization_summary(mod)$total_cost))
 })
 
-test_that("optimization_summary requires the current trial schema", {
+test_that("optimization_summary tolerates trials without cost data", {
   mod <- create_test_module(compiled = TRUE)
-  mod$state$trials$total_cost <- NULL
+  trials <- optimization_result(mod)$trials
+  trials$total_cost <- NULL
+  replace_test_trials(mod, trials)
 
-  expect_error(
-    optimization_summary(mod),
-    class = "dsprrr_optimizer_state_error"
-  )
+  expect_true(is.na(optimization_summary(mod)$total_cost))
 })
 
 test_that("optimization_summary print works", {

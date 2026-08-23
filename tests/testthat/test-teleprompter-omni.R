@@ -7,9 +7,9 @@ OmniMarkingTeleprompter <- S7::new_class(
   )
 )
 
-S7::method(compile, list(OmniMarkingTeleprompter, S7::class_any)) <- function(
-  teleprompter,
+S7::method(compile, list(S7::class_any, OmniMarkingTeleprompter)) <- function(
   program,
+  teleprompter,
   trainset,
   ...
 ) {
@@ -32,9 +32,9 @@ OmniFailingTeleprompter <- S7::new_class(
   parent = Teleprompter
 )
 
-S7::method(compile, list(OmniFailingTeleprompter, S7::class_any)) <- function(
-  teleprompter,
+S7::method(compile, list(S7::class_any, OmniFailingTeleprompter)) <- function(
   program,
+  teleprompter,
   trainset,
   ...
 ) {
@@ -49,9 +49,9 @@ OmniWorkerLlmTeleprompter <- S7::new_class(
   )
 )
 
-S7::method(compile, list(OmniWorkerLlmTeleprompter, S7::class_any)) <- function(
-  teleprompter,
+S7::method(compile, list(S7::class_any, OmniWorkerLlmTeleprompter)) <- function(
   program,
+  teleprompter,
   trainset,
   .llm = NULL,
   ...
@@ -163,31 +163,33 @@ test_that("Omni validates its optimizer surface", {
 
 test_that("Omni explores from one seed and continues from the winner", {
   compiled <- compile(
-    make_omni(),
     make_omni_mock_module(),
+    make_omni(),
     omni_trainset,
     valset = omni_valset
   )
 
   expect_equal(compiled$config$marker, "b-c")
   expect_equal(compiled$config$teleprompter, "Omni")
-  expect_equal(compiled$config$optimizer$exploration_winner, "b")
-  expect_equal(compiled$config$optimizer$best_phase, "continue")
+  result <- optimization_result(compiled)
+  details <- result$extensions$omni
+  expect_equal(details$exploration_winner, "b")
+  expect_equal(details$best_phase, "continue")
   expect_equal(
-    compiled$config$optimizer$best_optimizer,
+    details$best_optimizer,
     "dsprrr::OmniMarkingTeleprompter"
   )
 
-  candidates <- compiled$config$optimizer$candidate_programs
+  candidates <- details$candidate_programs
   expect_equal(
     candidates$optimizer,
     c("baseline", "a", "b", "dsprrr::OmniMarkingTeleprompter")
   )
   expect_equal(candidates$score, c(0, 0.2, 0.8, 1))
   expect_equal(which(candidates$selected), 4L)
-  expect_equal(candidates$program[[2]]$config$input_marker, "seed")
-  expect_equal(candidates$program[[3]]$config$input_marker, "seed")
-  expect_equal(candidates$program[[4]]$config$input_marker, "b")
+  expect_equal(candidates$program_config[[2]]$input_marker, "seed")
+  expect_equal(candidates$program_config[[3]]$input_marker, "seed")
+  expect_equal(candidates$program_config[[4]]$input_marker, "b")
 })
 
 test_that("Omni preserves the best program when continuation regresses", {
@@ -195,15 +197,16 @@ test_that("Omni preserves the best program when continuation regresses", {
     continuation = OmniMarkingTeleprompter(marker = "bad")
   )
   compiled <- compile(
-    tp,
     make_omni_mock_module(),
+    tp,
     omni_trainset,
     valset = omni_valset
   )
 
   expect_equal(compiled$config$marker, "b")
-  expect_equal(compiled$config$optimizer$best_phase, "explore")
-  expect_equal(compiled$config$optimizer$best_optimizer, "b")
+  details <- optimization_result(compiled)$extensions$omni
+  expect_equal(details$best_phase, "explore")
+  expect_equal(details$best_optimizer, "b")
 })
 
 test_that("Omni isolates explorer failures", {
@@ -220,20 +223,21 @@ test_that("Omni isolates explorer failures", {
   compiled <- NULL
   expect_snapshot(
     compiled <- compile(
-      tp,
       make_omni_mock_module(),
+      tp,
       omni_trainset,
       valset = omni_valset
     )
   )
 
+  details <- optimization_result(compiled)$extensions$omni
   expect_equal(compiled$config$marker, "b-c")
   expect_equal(
-    compiled$config$optimizer$candidate_programs$error[[2]],
+    details$candidate_programs$error[[2]],
     "intentional Omni explorer failure"
   )
   expect_equal(
-    compiled$config$optimizer$flag_compilation_error_occurred,
+    details$flag_compilation_error_occurred,
     TRUE
   )
 })
@@ -242,8 +246,8 @@ test_that("Omni requires comparison data", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(),
       make_omni_mock_module(),
+      make_omni(),
       data.frame(x = "only-row", target = "unused")
     )
   )
@@ -253,8 +257,8 @@ test_that("Omni validates per-optimizer compile arguments", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(),
       make_omni_mock_module(),
+      make_omni(),
       omni_trainset,
       valset = omni_valset,
       explorer_compile_args = list(
@@ -266,8 +270,8 @@ test_that("Omni validates per-optimizer compile arguments", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(),
       make_omni_mock_module(),
+      make_omni(),
       omni_trainset,
       valset = omni_valset,
       continuation_compile_args = list(trainset = omni_trainset)
@@ -277,8 +281,8 @@ test_that("Omni validates per-optimizer compile arguments", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(),
       make_omni_mock_module(),
+      make_omni(),
       omni_trainset,
       valset = omni_valset,
       continuation_compile_args = list(TRUE)
@@ -305,14 +309,14 @@ test_that("Omni supports mirai exploration without a shared chat object", {
     verbose = FALSE
   )
   compiled <- compile(
-    tp,
     make_omni_mock_module(),
+    tp,
     omni_trainset,
     valset = omni_valset
   )
 
   expect_equal(compiled$config$marker, "b-c")
-  expect_equal(compiled$config$optimizer$parallel, TRUE)
+  expect_equal(optimization_result(compiled)$extensions$omni$parallel, TRUE)
 })
 
 test_that("Omni requires worker-visible credentials for parallel exploration", {
@@ -325,8 +329,8 @@ test_that("Omni requires worker-visible credentials for parallel exploration", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(parallel = TRUE),
       make_omni_mock_module(),
+      make_omni(parallel = TRUE),
       omni_trainset,
       valset = omni_valset
     )
@@ -337,8 +341,8 @@ test_that("Omni rejects non-Chat .llm before parallel policy", {
   expect_snapshot(
     error = TRUE,
     compile(
-      make_omni(parallel = TRUE),
       make_omni_mock_module(),
+      make_omni(parallel = TRUE),
       omni_trainset,
       valset = omni_valset,
       .llm = list(provider = "not-serializable")

@@ -9,7 +9,7 @@ test_that("copy() creates independent module", {
     chat_structured = function(...) list(result = "test")
   )
 
-  mod1 <- module(sig, type = "predict", chat = mock_chat)
+  mod1 <- module(sig, chat = mock_chat)
   mod2 <- mod1$copy()
 
   # Should be different objects
@@ -52,7 +52,7 @@ test_that("copy(deep = TRUE) preserves independent config and demos", {
 
 test_that("copy() resets state", {
   sig <- signature("text -> result")
-  mod1 <- module(sig, type = "predict")
+  mod1 <- module(sig)
 
   # Add some state
   mod1$state$traces <- list(list(test = TRUE))
@@ -69,7 +69,7 @@ test_that("copy() resets state", {
 
 test_that("copy() copies config with deep=TRUE", {
   sig <- signature("text -> result")
-  mod1 <- module(sig, type = "predict")
+  mod1 <- module(sig)
   mod1$config$temperature <- 0.5
   mod1$config$max_tokens <- 1000
 
@@ -81,7 +81,7 @@ test_that("copy() copies config with deep=TRUE", {
 
 test_that("copy() with deep=FALSE still copies config values", {
   sig <- signature("text -> result")
-  mod1 <- module(sig, type = "predict")
+  mod1 <- module(sig)
   mod1$config$temperature <- 0.5
 
   mod2 <- mod1$copy(deep = FALSE)
@@ -97,7 +97,7 @@ test_that("copy() with deep=FALSE still copies config values", {
 
 test_that("PredictModule copy preserves template", {
   sig <- signature("text -> result")
-  mod1 <- module(sig, type = "predict", template = "Custom: {text}")
+  mod1 <- module(sig, template = "Custom: {text}")
 
   mod2 <- mod1$copy()
 
@@ -122,9 +122,8 @@ test_that("ReactModule copy preserves tools and max_iterations", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("text -> result")
-  mod1 <- module(
+  mod1 <- react(
     sig,
-    type = "react",
     tools = list(test_tool),
     max_iterations = 15L
   )

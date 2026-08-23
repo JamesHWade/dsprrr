@@ -78,6 +78,7 @@
 #' @param max_tool_calls Maximum number of direct host-tool calls allowed in one
 #'   executable invocation, or `NULL` for no limit. Defaults to 100.
 #'
+#' @param ... Must be empty. Flex accepts only its documented arguments.
 #' @return An experimental `FlexModule`.
 #' @export
 #'
@@ -98,8 +99,15 @@ flex <- function(
   interpreter_factory = NULL,
   source_format = c("auto", "json", "r"),
   require_sandbox = TRUE,
-  max_tool_calls = 100L
+  max_tool_calls = 100L,
+  ...
 ) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments(
+    "flex",
+    ...,
+    hint = "Use program_of_thought(), code_act(), or rlm_module() for runner-based programs."
+  )
   flex_warn_experimental()
 
   sig <- if (is.character(signature)) {
@@ -156,7 +164,7 @@ flex <- function(
     )
   }
 
-  FlexModule$new(
+  mod <- FlexModule$new(
     signature = sig,
     module_src = module_src,
     tools = tools,
@@ -168,6 +176,7 @@ flex <- function(
     config = config,
     chat = chat
   )
+  stamp_module_kind(mod, "flex")
 }
 
 .flex_lifecycle <- new.env(parent = emptyenv())
@@ -382,9 +391,9 @@ FlexModule <- R6::R6Class(
         # A new module is deliberately constructed for every step and every
         # invocation. No demonstrations, traces, or mutable module state leak
         # between predictor calls.
-        predictor <- module(
+        predictor <- construct_module_kind(
+          kind = step$primitive,
           signature = step$signature,
-          type = step$primitive,
           config = predictor_config
         )
         result <- tryCatch(
@@ -2327,9 +2336,9 @@ run_flex_dataset_batch <- function(
       )
     })
     llm <- resolve_module_llm(program, .llm = .llm)
-    predictor <- module(
+    predictor <- construct_module_kind(
+      kind = step$primitive,
       signature = step$signature,
-      type = step$primitive,
       config = flex_predictor_config(program$config),
       chat = llm
     )

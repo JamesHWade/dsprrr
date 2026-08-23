@@ -40,7 +40,7 @@
 # Omni isolates explorer failures
 
     Code
-      compiled <- compile(tp, make_omni_mock_module(), omni_trainset, valset = omni_valset)
+      compiled <- compile(make_omni_mock_module(), tp, omni_trainset, valset = omni_valset)
     Condition
       Warning:
       Omni explorer broken failed; continuing with other candidates
@@ -49,7 +49,7 @@
 # Omni requires comparison data
 
     Code
-      compile(make_omni(), make_omni_mock_module(), data.frame(x = "only-row",
+      compile(make_omni_mock_module(), make_omni(), data.frame(x = "only-row",
         target = "unused"))
     Condition
       Error in `compile_omni()`:
@@ -59,7 +59,7 @@
 # Omni validates per-optimizer compile arguments
 
     Code
-      compile(make_omni(), make_omni_mock_module(), omni_trainset, valset = omni_valset,
+      compile(make_omni_mock_module(), make_omni(), omni_trainset, valset = omni_valset,
       explorer_compile_args = list(missing = list(extra = TRUE)))
     Condition
       Error in `validate_omni_explorer_args()`:
@@ -70,7 +70,7 @@
 ---
 
     Code
-      compile(make_omni(), make_omni_mock_module(), omni_trainset, valset = omni_valset,
+      compile(make_omni_mock_module(), make_omni(), omni_trainset, valset = omni_valset,
       continuation_compile_args = list(trainset = omni_trainset))
     Condition
       Error in `validate_omni_step_args()`:
@@ -80,7 +80,7 @@
 ---
 
     Code
-      compile(make_omni(), make_omni_mock_module(), omni_trainset, valset = omni_valset,
+      compile(make_omni_mock_module(), make_omni(), omni_trainset, valset = omni_valset,
       continuation_compile_args = list(TRUE))
     Condition
       Error in `validate_omni_step_args()`:
@@ -89,7 +89,7 @@
 # Omni requires worker-visible credentials for parallel exploration
 
     Code
-      compile(make_omni(parallel = TRUE), make_omni_mock_module(), omni_trainset,
+      compile(make_omni_mock_module(), make_omni(parallel = TRUE), omni_trainset,
       valset = omni_valset)
     Condition
       Error in `compile_omni()`:
@@ -100,7 +100,7 @@
 # Omni rejects non-Chat .llm before parallel policy
 
     Code
-      compile(make_omni(parallel = TRUE), make_omni_mock_module(), omni_trainset,
+      compile(make_omni_mock_module(), make_omni(parallel = TRUE), omni_trainset,
       valset = omni_valset, .llm = list(provider = "not-serializable"))
     Condition
       Error in `assert_ellmer_chat()`:

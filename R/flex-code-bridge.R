@@ -711,8 +711,8 @@ flex_code_predictor <- function(
   )
   args <- c(
     list(
+      kind = type,
       signature = signature,
-      type = type,
       config = flex_predictor_config(config),
       chat = NULL
     ),
@@ -733,7 +733,7 @@ flex_code_predictor <- function(
   if (primitive %in% c("program_of_thought", "codeact", "rlm")) {
     args$interpreter_factory <- interpreter_factory
   }
-  do.call(module, args)
+  do.call(construct_module_kind, args)
 }
 
 flex_code_execute_request <- function(

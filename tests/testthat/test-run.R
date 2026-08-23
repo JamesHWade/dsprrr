@@ -9,7 +9,7 @@ test_that("run.PredictModule warns about input type mismatches", {
     inputs = list(input("count", "integer")),
     output_type = ellmer::type_object(answer = ellmer::type_string())
   )
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
   mock_chat <- new_test_chat(
     chat_structured = function(...) list(answer = "ok"),
     model = "mock-model",
@@ -37,7 +37,6 @@ test_that("run validates required inputs", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "{text} -> {language}"
   )
 
@@ -88,7 +87,6 @@ test_that("build_prompt creates proper prompt", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}\nSentiment:"
   )
 
@@ -116,7 +114,6 @@ test_that("build_prompt includes demonstrations", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}",
     demos = demos
   )
@@ -195,7 +192,7 @@ test_that("get_default_llm returns ellmer chat object", {
     inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string()
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Test with module that has no stored chat - should auto-detect
 
@@ -275,7 +272,6 @@ test_that("module config rejects Chat fields", {
   expect_error(
     module(
       signature("text -> result"),
-      type = "predict",
       config = list(provider = "openai", model = "gpt-4o-mini")
     ),
     class = "dsprrr_module_config_error"
@@ -293,7 +289,6 @@ test_that("batch processing works with multiple inputs", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "{text}"
   )
 
@@ -330,7 +325,6 @@ test_that("structured return format includes metadata", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "{text}"
   )
 
@@ -371,7 +365,6 @@ test_that("run_dataset processes data frames", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "{text}"
   )
 
@@ -412,7 +405,6 @@ test_that("module as function interface works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "{text}"
   )
 
@@ -440,7 +432,6 @@ test_that("batch processing handles errors gracefully", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "{text}"
   )
 
@@ -473,7 +464,7 @@ test_that("batch processing handles errors gracefully", {
 })
 
 test_that("structured datasets expose row-level LLM errors", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) {
       if (grepl("explode", prompt, fixed = TRUE)) {
@@ -528,7 +519,7 @@ test_that("ellmer parallel preserves successes around a failed request", {
     .package = "ellmer"
   )
 
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mock_llm <- new_test_chat()
   result <- dsprrr:::run_batch_ellmer_parallel(
     module = mod,
@@ -582,8 +573,7 @@ test_that("ellmer parallel preserves outputs named like telemetry", {
   )
 
   mod <- module(
-    signature("text -> cost: number, input_tokens: integer"),
-    type = "predict"
+    signature("text -> cost: number, input_tokens: integer")
   )
   result <- dsprrr:::run_batch_ellmer_parallel(
     module = mod,
@@ -608,7 +598,7 @@ test_that("explicit mirai rejects a custom llm", {
     inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string()
   )
-  module <- module(signature = sig, type = "predict", template = "{text}")
+  module <- module(signature = sig, template = "{text}")
 
   mock_llm <- new_test_chat(chat_structured = function(prompt, ...) "ok")
 
@@ -632,7 +622,7 @@ test_that("run does NOT warn about mirai when ellmer parallel with custom llm", 
     inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string()
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   mock_llm <- new_test_chat(chat_structured = function(prompt, ...) "ok")
 
@@ -688,7 +678,7 @@ test_that("explicit ellmer fails closed when unavailable", {
     output_type = ellmer::type_string()
   )
 
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   mock_llm <- new_test_chat(chat_structured = function(prompt, ...) "ok")
 
@@ -715,7 +705,7 @@ test_that("process_batch_item returns correct format for simple mode", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) "response"
@@ -739,7 +729,7 @@ test_that("process_batch_item returns correct format for structured mode", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   turns <- list()
   mock_llm <- new_test_chat(
@@ -910,7 +900,7 @@ test_that("run_batch_sequential processes all items", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) "response"
@@ -982,7 +972,6 @@ test_that("structured batches synthesize history when a Chat records no delta", 
   )
   mod <- module(
     signature("text -> answer"),
-    type = "predict",
     template = "{text}"
   )
 
@@ -1017,7 +1006,7 @@ test_that("public batch run rejects class-tagged lists before work", {
     ),
     class = "Chat"
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   expect_error(
     run(
@@ -1045,7 +1034,7 @@ test_that("public batch run reports typed clone failures before work", {
     "clone",
     function(...) stop("cannot clone")
   )
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
 
   expect_error(
     run(
@@ -1065,7 +1054,7 @@ test_that("run_batch_sequential handles errors per item", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) {
@@ -1111,7 +1100,7 @@ test_that("parallel execution works with mock factory", {
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   # Configure module to use a testable Chat
   mod$chat <- new_test_chat(
@@ -1144,7 +1133,7 @@ test_that("run with .show_prompt=TRUE shows prompt preview", {
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict", template = "Question: {q}")
+  mod <- module(signature = sig, template = "Question: {q}")
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) "answer"
@@ -1164,7 +1153,7 @@ test_that("run with .show_prompt defaults to FALSE", {
     output_type = ellmer::type_string()
   )
 
-  mod <- module(signature = sig, type = "predict", template = "{q}")
+  mod <- module(signature = sig, template = "{q}")
 
   mock_llm <- new_test_chat(
     chat_structured = function(prompt, ...) "answer"
@@ -1189,13 +1178,13 @@ test_that("get_total_cost returns 0 for module with no traces", {
     output_type = ellmer::type_string()
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   expect_equal(mod$get_total_cost(), 0)
 })
 
 test_that("get_total_cost preserves unknown trace cost", {
-  mod <- module(signature("text -> answer"), type = "predict")
+  mod <- module(signature("text -> answer"))
   mod$state$traces <- list(list(cost = NA_real_))
 
   expect_true(is.na(mod$get_total_cost()))
@@ -1207,7 +1196,7 @@ test_that("get_cost_summary returns empty tibble for module with no traces", {
     output_type = ellmer::type_string()
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   result <- mod$get_cost_summary()
 
@@ -1228,7 +1217,6 @@ test_that("batch run with structured format returns dsprrr_batch_result class", 
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "{text}"
   )
 
@@ -1262,7 +1250,6 @@ test_that("dsprrr_batch_result print method handles many items", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "{text}"
   )
 

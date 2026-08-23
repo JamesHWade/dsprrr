@@ -187,8 +187,8 @@ harness_common_properties <- function() {
 #'   max_iterations = 12L
 #' )
 #' compiled <- compile(
-#'   research,
 #'   program,
+#'   research,
 #'   trainset,
 #'   valset = valset,
 #'   .llm = task_chat,
@@ -254,8 +254,8 @@ AutoResearch <- S7::new_class(
 #'   max_candidates_per_iteration = 4L
 #' )
 #' compiled <- compile(
-#'   harness,
 #'   program,
+#'   harness,
 #'   trainset,
 #'   valset = valset,
 #'   .agent_llm = proposer_chat,
@@ -1864,35 +1864,42 @@ harness_finalize <- function(setup, state, best_program, name) {
   }
 
   optimized <- copy_module(best_program)
-  optimized$state$compiled <- TRUE
-  optimized$state$best_score <- state$best_score
-  optimized$state$best_params <- list(candidate_id = state$best_id)
-  optimized$config$compiled <- TRUE
-  optimized$config$teleprompter <- name
   optimized$config$best_score <- state$best_score
-  optimized$config$optimizer <- list(
-    name = name,
+  best_trial <- which(candidates$selected)
+  best_trial <- if (length(best_trial) > 0L) best_trial[[1]] else NULL
+  details <- list(
     implementation = "dsprrr-agentic-harness-v1",
     inspiration = list(
       gepa_omni = "https://github.com/gepa-ai/gepa",
       autoresearch = "https://github.com/karpathy/autoresearch",
       meta_harness = "https://arxiv.org/abs/2603.28052"
     ),
-    baseline_score = state$baseline_score,
-    best_score = state$best_score,
-    best_candidate_id = state$best_id,
     frontier_ids = state$frontier_ids,
-    candidates = candidates,
     events = state$events,
     iterations = state$iteration,
     agent_steps = state$agent_steps,
     termination = termination,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(setup$budget),
     sandbox = runner_policy,
     checkpoint_path = setup$control@checkpoint_path,
     resumed = setup$checkpoint$resumed
+  )
+  record_optimization_result(
+    optimized,
+    optimizer = name,
+    status = if (optimizer_budget_stopped(setup$budget)) {
+      "partial"
+    } else {
+      "completed"
+    },
+    baseline_score = state$baseline_score,
+    best_score = state$best_score,
+    best_trial = best_trial,
+    best_params = list(candidate_id = state$best_id),
+    trials = candidates,
+    lineage = list(best_candidate_id = state$best_id),
+    budget = budget_summary,
+    stop_reason = termination,
+    extensions = details
   )
 
   harness_checkpoint(

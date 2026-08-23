@@ -4,6 +4,17 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Breaking changes
 
+* `module()` now constructs only standard prediction modules. Tool use and
+  other advanced execution semantics use explicit constructors such as
+  `react()`, `chain_of_thought()`, `program_of_thought()`, `code_act()`,
+  `rlm_module()`, and `flex()`; advanced arguments passed to `module()` fail
+  with a typed, actionable error instead of silently changing module type.
+  `compile(program, teleprompter, trainset)` is the only compilation entry point;
+  `compile_module()` and the shallow R6 `$predict()` and `$optimize()` aliases
+  have been removed. `stats::predict()` remains for data-frame interoperability,
+  `module_fn()` remains the custom-module extension seam, and the functional
+  `optimize_grid()` interface remains primary.
+
 * The public API now centers on `signature()`, `module()`, `run()`,
   `run_dataset()`, `evaluate()`, and `compile()`. Redundant DSP-style wrappers,
   typed-input convenience constructors, pipeline wrapper helpers, the separate
@@ -16,7 +27,7 @@ First development changelog. dsprrr is experimental; the API may change.
   integration, persistence, or inspection capabilities.
 
 * Runtime contracts are current-only. Program artifacts accept format version
-  5; persisted trial records require their complete versioned schema; batch
+  6; persisted trial records require their complete versioned schema; batch
   execution accepts `.concurrency` only; code runners implement `start()`,
   `execute()`, and `shutdown()`; RLM uses `max_iterations`, `llm_query()`, and
   `llm_query_batched()`; and Predict templates interpolate documented
@@ -94,6 +105,14 @@ First development changelog. dsprrr is experimental; the API may change.
   supplied, training rows remain exclusive to discovery/reflection while
   validation rows drive selection, per-example winners, and optional retained
   outputs.
+
+* `optimization_result()` provides one read-only result contract across every
+  optimizer, including optimizer identity, completion or partial status,
+  baseline and best scores, winning parameters, trial evidence, lineage,
+  budget use, stop reason, and namespaced optimizer-specific extensions.
+  `best_params()`, `top_trials()`, and `optimization_summary()` now inspect this
+  contract rather than mutable module internals, and program artifacts preserve
+  the durable result schema and policy-safe evidence across save and restore (#131).
 
 * `program_of_thought()`, `code_act()`, and `rlm_module()` now accept an
   `interpreter_factory`: a zero-argument function that creates one fresh,
@@ -291,8 +310,8 @@ First development changelog. dsprrr is experimental; the API may change.
   as scalar calls. Direct `PredictModule$run()` batches now use the isolated,
   observable scheduler; unsupported custom and specialized modules reject
   vectorized execution before work instead of silently sharing mutable state
-  or bypassing specialized logic. `Module$predict()`, `run()`, and
-  `run_dataset()` retain named declared output records consistently across
+  or bypassing specialized logic. `run()` and `run_dataset()` retain named
+  declared output records consistently across
   scalar, batch, and Flex execution, and all batch routes isolate mutable Chat
   state per row. Native ellmer batches retain row failures
   for non-object outputs through an internal typed wrapper, including valid

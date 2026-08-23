@@ -87,7 +87,7 @@ test_that("multi_chain_comparison accepts custom inner module", {
 
 test_that("module factory creates MultiChainComparisonModule with type='multichain'", {
   sig <- signature("question -> answer")
-  mcc <- module(sig, type = "multichain", M = 4)
+  mcc <- multi_chain_comparison(sig, M = 4)
 
   expect_s3_class(mcc, "MultiChainComparisonModule")
   expect_equal(mcc$M, 4L)

@@ -14,7 +14,8 @@ flex(
   interpreter_factory = NULL,
   source_format = c("auto", "json", "r"),
   require_sandbox = TRUE,
-  max_tool_calls = 100L
+  max_tool_calls = 100L,
+  ...
 )
 }
 \arguments{
@@ -51,6 +52,8 @@ otherwise untrusted source.}
 
 \item{max_tool_calls}{Maximum number of direct host-tool calls allowed in one
 executable invocation, or \code{NULL} for no limit. Defaults to 100.}
+
+\item{...}{Must be empty. Flex accepts only its documented arguments.}
 }
 \value{
 An experimental \code{FlexModule}.

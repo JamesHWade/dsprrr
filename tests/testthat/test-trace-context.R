@@ -596,8 +596,8 @@ test_that("compile scopes trace context and rejects unsafe context", {
 
   compiled <- expect_no_error(
     compile(
-      LabeledFewShot(k = 1L, sample = FALSE),
       program,
+      LabeledFewShot(k = 1L, sample = FALSE),
       trainset,
       .trace_context = context
     )
@@ -607,8 +607,8 @@ test_that("compile scopes trace context and rejects unsafe context", {
 
   expect_error(
     compile(
-      LabeledFewShot(k = 1L),
       program,
+      LabeledFewShot(k = 1L),
       trainset,
       .trace_context = list(access_token = "never")
     ),

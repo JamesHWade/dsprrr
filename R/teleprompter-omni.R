@@ -63,8 +63,8 @@
 #'   )
 #' )
 #'
-#' compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
-#' compiled$config$optimizer$candidate_programs
+#' compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
+#' optimization_result(compiled)$extensions$omni$candidate_programs
 #' }
 Omni <- S7::new_class(
   "Omni",
@@ -437,28 +437,40 @@ compile_omni <- function(
     candidates,
     selected_id = best_candidate$id
   )
+  candidate_trials <- candidate_programs
+  candidate_trials$program_config <- lapply(
+    candidate_programs$program,
+    function(candidate) candidate$config
+  )
+  candidate_trials$program <- NULL
+  best_trial <- which(candidate_trials$selected)[[1]]
   compilation_error <- !all(is.na(candidate_programs$error))
 
   best_program <- copy_module(best_candidate$program)
-  best_program$state$compiled <- TRUE
-  best_program$state$best_score <- best_candidate$score
-  best_program$state$best_params <- list(
-    phase = best_candidate$phase,
-    optimizer = best_candidate$optimizer
-  )
-  best_program$config$compiled <- TRUE
-  best_program$config$teleprompter <- "Omni"
   best_program$config$best_score <- best_candidate$score
-  best_program$config$optimizer <- list(
-    name = "Omni",
-    explorers = explorer_names,
-    continuation = continuation_name,
-    exploration_winner = exploration_winner$optimizer,
-    best_phase = best_candidate$phase,
-    best_optimizer = best_candidate$optimizer,
-    candidate_programs = candidate_programs,
-    parallel = isTRUE(parallel),
-    flag_compilation_error_occurred = compilation_error
+  record_optimization_result(
+    best_program,
+    optimizer = "Omni",
+    baseline_score = baseline_score,
+    best_score = best_candidate$score,
+    best_trial = best_trial,
+    best_params = list(
+      phase = best_candidate$phase,
+      optimizer = best_candidate$optimizer
+    ),
+    trials = candidate_trials,
+    lineage = list(selected_id = best_candidate$id),
+    stop_reason = "completed",
+    extensions = list(
+      explorers = explorer_names,
+      continuation = continuation_name,
+      exploration_winner = exploration_winner$optimizer,
+      best_phase = best_candidate$phase,
+      best_optimizer = best_candidate$optimizer,
+      candidate_programs = candidate_trials,
+      parallel = isTRUE(parallel),
+      flag_compilation_error_occurred = compilation_error
+    )
   )
 
   best_program

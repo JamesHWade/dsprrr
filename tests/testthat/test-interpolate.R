@@ -10,7 +10,6 @@ test_that("glue-style { } interpolation works", {
   sig <- signature("name, age -> result")
   mod <- module(
     sig,
-    type = "predict",
     template = "Hello {name}, you are {age} years old",
     chat = mock_chat
   )
@@ -33,7 +32,6 @@ test_that("double-brace placeholders are rejected before provider work", {
   )
   mod <- module(
     signature("name -> result"),
-    type = "predict",
     template = "Hello {{name}}",
     chat = mock_chat
   )
@@ -55,7 +53,6 @@ test_that("template without braces still works", {
   sig <- signature("text -> result")
   mod <- module(
     sig,
-    type = "predict",
     template = "Analyze the following text",
     chat = mock_chat
   )
@@ -73,7 +70,7 @@ test_that("empty template uses auto-generated format", {
   )
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict", template = "", chat = mock_chat)
+  mod <- module(sig, template = "", chat = mock_chat)
 
   result <- run(mod, question = "What is 2+2?")
 

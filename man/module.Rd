@@ -2,162 +2,57 @@
 % Please edit documentation in R/module.R
 \name{module}
 \alias{module}
-\title{Create an LLM Module}
+\title{Create a prediction module}
 \usage{
 module(
   signature,
-  type = "predict",
   chat = NULL,
   template = "",
   demos = list(),
   config = list(),
-  tools = NULL,
-  runner = NULL,
-  interpreter_factory = NULL,
-  max_iterations = NULL,
-  max_iters = 3L,
-  extract_answer = TRUE,
-  M = 3L,
-  temperature = 0.7,
-  module_src = NULL,
-  source_format = c("auto", "json", "r"),
-  max_predictor_calls = 100L,
-  max_tool_calls = 100L,
-  require_sandbox = TRUE,
   ...
 )
 }
 \arguments{
-\item{signature}{A Signature object defining the module's interface}
+\item{signature}{A Signature object defining the module interface.}
 
-\item{type}{Character string specifying the module type:
-\itemize{
-\item \code{"predict"} (default): Standard prediction module
-\item \code{"react"}: ReAct-style module with tool support
-\item \code{"chain_of_thought"}: Adds step-by-step reasoning to the signature
-\item \code{"multichain"}: MultiChainComparison module for ensemble reasoning
-\item \code{"program_of_thought"}: Code execution module (requires a runtime source)
-\item \code{"codeact"}: Hybrid agent with tools + code execution (requires a runtime source)
-\item \code{"rlm"}: Recursive Language Model for REPL-based context exploration
-(requires a runtime source)
-\item \code{"flex"}: Experimental declarative or executable Flex program
-}}
+\item{chat}{Optional ellmer Chat object. When supplied, \code{\link[=run]{run()}} uses it unless
+an explicit \code{.llm} is provided.}
 
-\item{chat}{Optional ellmer Chat object for LLM operations. If provided, the
-module will use this Chat for all predictions unless overridden with \code{.llm}.}
+\item{template}{Optional glue template for prompt generation.}
 
-\item{template}{Optional glue template for prompt generation}
+\item{demos}{Optional list of demonstration examples.}
 
-\item{demos}{Optional list of demonstration examples}
+\item{config}{Optional prediction configuration. Model parameters such as
+temperature belong here, for example \code{config = list(temperature = 0.2)}.}
 
-\item{config}{Optional configuration list}
-
-\item{tools}{Optional tools configuration:
-\itemize{
-\item for \code{type = "react"} or \code{type = "codeact"}: list of ellmer ToolDef objects.
-\item for \code{type = "rlm"}: named host functions or ellmer ToolDef objects.
-\item for executable \code{type = "flex"}: named host functions or ToolDef objects.
-If provided with \code{type = "predict"}, automatically upgrades to react.
-}}
-
-\item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()} for code execution types. It is never automatically shut down.
-For \code{type = "rlm"}, the policy must advertise \code{persistent = TRUE}; use
-\code{r_code_runner(persistent = TRUE)} for the trusted callr backend.}
-
-\item{interpreter_factory}{Optional zero-argument factory for
-program-of-thought, CodeAct, RLM, and executable Flex modules. It creates
-one fresh runner per invocation. Supply exactly one of \code{runner} and
-\code{interpreter_factory} for ordinary code-executing types; Flex accepts only
-the factory so every invocation is isolated. For RLM, every returned
-runner must advertise \code{persistent = TRUE}.}
-
-\item{max_iterations}{Maximum iterations for ReAct, CodeAct, or RLM modules
-created through this generic factory. Defaults to 10 for ReAct and CodeAct
-and 20 for RLM. For CodeAct it also caps tool calls within one invocation;
-exceeding that inner budget errors.}
-
-\item{max_iters}{Maximum code repair iterations for program_of_thought
-(default: 3).}
-
-\item{extract_answer}{Logical. For program_of_thought, whether to use LLM
-to extract final answer from execution result (default: TRUE)}
-
-\item{M}{Number of reasoning chains for multichain (default: 3)}
-
-\item{temperature}{Temperature for multichain diversity (default: 0.7)}
-
-\item{module_src}{Optional complete source for \code{type = "flex"}.}
-
-\item{source_format}{Flex source language: \code{"auto"}, \code{"json"}, or \code{"r"}.}
-
-\item{max_predictor_calls}{Maximum bridged predictor calls allowed by Flex,
-or \code{NULL} for no limit.}
-
-\item{max_tool_calls}{Maximum direct host-tool calls allowed by executable
-Flex, or \code{NULL} for no limit.}
-
-\item{require_sandbox}{Whether executable Flex requires a runner that
-advertises an enforced sandbox.}
-
-\item{...}{Additional arguments forwarded to \code{\link[=rlm_module]{rlm_module()}} when
-\code{type = "rlm"}. Reserved and required to be empty for \code{type = "flex"}.}
+\item{...}{Must be empty. Use a dedicated constructor for advanced module
+behavior.}
 }
 \value{
-A module object (R6) that can be executed with \code{run()}
+A PredictModule executed with \code{\link[=run]{run()}}.
 }
 \description{
-The primary function for creating executable LLM modules. Supports
-"predict" for standard structured prediction, "react" for ReAct-style
-tool-using modules, "chain_of_thought" for step-by-step reasoning,
-"multichain" for multi-chain comparison, "program_of_thought" for code
-execution, "codeact" for tools plus code, "rlm" for adaptive R-object
-investigation, and experimental "flex" for declarative or
-interpreter-backed programs.
+Create a standard structured-prediction module. This is the primary
+constructor in the dsprrr journey:
+\code{\link[=signature]{signature()}} -> \code{module()} -> \code{\link[=run]{run()}} -> \code{\link[=evaluate]{evaluate()}} -> \code{\link[=compile]{compile()}}.
+
+Agentic, reasoning, and code-executing programs use explicit constructors
+such as \code{\link[=react]{react()}}, \code{\link[=chain_of_thought]{chain_of_thought()}}, \code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}}, \code{\link[=code_act]{code_act()}}, \code{\link[=rlm_module]{rlm_module()}}, and \code{\link[=flex]{flex()}}. Keeping
+those choices in the function name prevents configuration from silently
+changing the kind of program being built.
 }
 \examples{
-# Create a simple prediction module
 classifier <- signature("text -> sentiment") |>
-  module(type = "predict", template = "Analyze: {text}")
+  module(template = "Analyze: {text}")
 
-# With demonstrations
-qa <- signature("context, question -> answer") |>
-  module(
-    type = "predict",
-    demos = list(
-      list(
-        inputs = list(context = "...", question = "..."),
-        output = "..."
-      )
-    )
-  )
-
-# Create a multichain comparison module
-mcc <- signature("question -> answer") |>
-  module(type = "multichain", M = 5, temperature = 0.8)
+configured <- signature("question -> answer") |>
+  module(config = list(temperature = 0.2))
 
 \dontrun{
-# Execute the module (requires an llm object)
 llm <- ellmer::chat_openai()
-result <- classifier |> run(text = "Great package!", .llm = llm)
-
-# Or create module with Chat attached
-classifier <- signature("text -> sentiment") |>
-  module(type = "predict", chat = ellmer::chat_openai())
-result <- classifier |> run(text = "Great package!")  # No .llm needed
-
-# Create a ReAct module with tools
-search_fn <- function(query) paste("Result for", query)
-search_tool <- ellmer::tool(
-  search_fn,
-  description = "Search for information",
-  arguments = list(query = ellmer::type_string())
-)
-agent <- signature("question -> answer") |>
-  module(
-    type = "react",
-    tools = list(search_tool),
-    chat = ellmer::chat_openai()
-  )
+result <- classifier |>
+  run(text = "Great package!", .llm = llm)
 }
 }

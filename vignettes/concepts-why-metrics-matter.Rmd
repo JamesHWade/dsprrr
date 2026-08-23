@@ -225,7 +225,7 @@ base_sig <- signature(
   "question -> answer",
   instructions = "Answer the question directly."
 )
-mod_v1 <- module(base_sig, type = "predict")
+mod_v1 <- module(base_sig)
 
 baseline <- evaluate(mod_v1, eval_data, metric_exact_match())
 baseline$mean_score  # 0.65
@@ -241,7 +241,7 @@ Every change gets measured:
 # Try layered instructions without mutating the baseline signature
 concise_sig <- append_instructions(base_sig, "Use at most five words.")
 
-mod_v2 <- module(concise_sig, type = "predict")
+mod_v2 <- module(concise_sig)
 v2_result <- evaluate(mod_v2, eval_data, metric_exact_match())
 v2_result$mean_score  # 0.70 - better!
 
@@ -280,7 +280,7 @@ length(repeated$epoch_traces) # 3
 Let the computer search for you:
 
 ```{r}
-mod$optimize_grid(
+optimize_grid(  mod,
   data = train_data,
   metric = metric_exact_match(),
   parameters = list(
@@ -290,7 +290,7 @@ mod$optimize_grid(
 )
 
 # Best configuration is automatically selected
-mod$state$best_score  # 0.82
+optimization_result(mod)$best_score  # 0.82
 ```
 
 Optimization only works because metrics provide objective feedback.
@@ -377,11 +377,11 @@ If you optimize against your test set, you're measuring how well you overfit, no
 
 ```{r}
 # WRONG: Evaluate on the same data used for optimization
-mod$optimize_grid(data, metric)
+optimize_grid(mod, data, metric)
 evaluate(mod, data, metric)  # Overfit score!
 
 # RIGHT: Use held-out test data
-mod$optimize_grid(trainset, metric)
+optimize_grid(mod, trainset, metric)
 evaluate(mod, testset, metric)  # Honest score
 ```
 

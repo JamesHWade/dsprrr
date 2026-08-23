@@ -31,8 +31,8 @@ optimization results to a fresh module instance.
 \examples{
 if (FALSE) {
 # Transfer optimization from one module to another
-optimized <- mod$optimize_grid(data, metric, parameters)
-new_mod <- module(signature, type = "predict")
+optimized <- optimize_grid(mod, data, metric, parameters)
+new_mod <- module(signature)
 apply_best_config(optimized, new_mod)
 
 # Create a fresh copy with the optimized config
@@ -45,6 +45,7 @@ Other optimizer accessors:
 \code{\link[=best_params]{best_params()}},
 \code{\link[=config_diff]{config_diff()}},
 \code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
 }

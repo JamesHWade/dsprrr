@@ -67,7 +67,7 @@
 #' qa_module <- module(signature("question -> answer"))
 #' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
 #' llm <- ellmer::chat_openai()
-#' compiled <- compile(tp, qa_module, trainset, .llm = llm)
+#' compiled <- compile(qa_module, tp, trainset, .llm = llm)
 #' }
 BootstrapFewShot <- S7::new_class(
   "BootstrapFewShot",
@@ -161,6 +161,46 @@ bootstrap_budget_eval_result <- function(budget) {
     token_usage_unknown = token_usage_unknown,
     total_latency_ms = summary$elapsed_seconds * 1000,
     trace_context = current_trace_context()
+  )
+}
+
+bootstrap_record_result <- function(student, details, budget, trial_log) {
+  budget_summary <- optimizer_budget_summary(budget)
+  trials <- if (is.null(trial_log)) {
+    tibble::tibble()
+  } else {
+    trial_log$as_tibble()
+  }
+  scores <- if ("mean_score" %in% names(trials)) {
+    trials$mean_score
+  } else if ("score" %in% names(trials)) {
+    trials$score
+  } else {
+    numeric()
+  }
+  valid_scores <- which(!is.na(scores))
+  best_trial <- if (length(valid_scores) > 0L) {
+    valid_scores[[which.max(scores[valid_scores])]]
+  } else {
+    NULL
+  }
+  best_score <- if (is.null(best_trial)) NULL else scores[[best_trial]]
+  best_params <- list(
+    n_labeled_demos = details$n_labeled_demos,
+    n_bootstrapped_demos = details$n_bootstrapped_demos
+  )
+
+  record_optimization_result(
+    student,
+    optimizer = "BootstrapFewShot",
+    status = if (optimizer_budget_stopped(budget)) "partial" else "completed",
+    best_score = best_score,
+    best_trial = best_trial,
+    best_params = best_params,
+    trials = trials,
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = details
   )
 }
 
@@ -718,23 +758,15 @@ compile_bootstrap <- function(
   final_demos <- c(labeled_demos, bootstrapped_demos)
   student$demos <- final_demos
 
-  # Update student state
-  student$state$compiled <- TRUE
-  student$config$compiled <- TRUE
-  student$config$teleprompter <- "BootstrapFewShot"
   budget_summary <- optimizer_budget_summary(budget)
-  student$config$optimizer <- list(
+  details <- list(
     n_labeled_demos = length(labeled_demos),
     n_bootstrapped_demos = length(bootstrapped_demos),
-    total_attempts = budget_summary$attempts,
-    error_count = budget_summary$total_errors,
     max_rounds = teleprompter@max_rounds,
     rounds_completed = min(
       teleprompter@max_rounds,
       ceiling(budget_summary$attempts / max(1, length(bootstrap_indices)))
-    ),
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason
+    )
   )
 
   # Log trial if logging enabled
@@ -756,12 +788,8 @@ compile_bootstrap <- function(
       stage = "bootstrap_log_validation",
       unit_id = paste0(.checkpoint_namespace, ":log-validation")
     )
-    budget_summary <- optimizer_budget_summary(budget)
-    student$config$optimizer$total_attempts <- budget_summary$attempts
-    student$config$optimizer$error_count <- budget_summary$total_errors
-    student$config$optimizer$budget_summary <- budget_summary
-    student$config$optimizer$stop_reason <- budget_summary$stop_reason
   }
+  bootstrap_record_result(student, details, budget, trial_log)
 
   expected_units <- unlist(lapply(
     seq_len(teleprompter@max_rounds),
@@ -1372,11 +1400,7 @@ compile_bootstrap_pipeline <- function(
     student_module$demos <- c(labeled_demos[[key]], demos_i)
   }
 
-  student$state$compiled <- TRUE
-  student$config$compiled <- TRUE
-  student$config$teleprompter <- "BootstrapFewShot"
-  budget_summary <- optimizer_budget_summary(budget)
-  student$config$optimizer <- list(
+  details <- list(
     joint_pipeline = TRUE,
     n_steps = n_steps,
     demo_steps = demo_steps,
@@ -1388,11 +1412,7 @@ compile_bootstrap_pipeline <- function(
       }),
       as.character(demo_steps)
     ),
-    total_attempts = budget_summary$attempts,
-    error_count = budget_summary$total_errors,
-    max_rounds = teleprompter@max_rounds,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason
+    max_rounds = teleprompter@max_rounds
   )
 
   if (!is.null(trial_log)) {
@@ -1414,12 +1434,8 @@ compile_bootstrap_pipeline <- function(
       stage = "bootstrap_pipeline_log_validation",
       unit_id = paste0(.checkpoint_namespace, ":log-validation")
     )
-    budget_summary <- optimizer_budget_summary(budget)
-    student$config$optimizer$total_attempts <- budget_summary$attempts
-    student$config$optimizer$error_count <- budget_summary$total_errors
-    student$config$optimizer$budget_summary <- budget_summary
-    student$config$optimizer$stop_reason <- budget_summary$stop_reason
   }
+  bootstrap_record_result(student, details, budget, trial_log)
 
   expected_units <- unlist(lapply(
     seq_len(teleprompter@max_rounds),

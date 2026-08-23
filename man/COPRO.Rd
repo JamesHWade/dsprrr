@@ -72,11 +72,11 @@ tp <- COPRO(
 )
 
 compiled <- compile(
-  tp, qa_module, trainset,
+  qa_module, tp, trainset,
   valset = valset, .llm = task_llm
 )
 
 # Access instruction history
-compiled$config$optimizer$history
+optimization_result(compiled)$extensions$copro$history
 }
 }

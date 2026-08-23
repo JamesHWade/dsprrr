@@ -10,6 +10,8 @@ program_of_thought(
   interpreter_factory = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
+  config = list(),
+  chat = NULL,
   ...
 )
 }
@@ -30,7 +32,11 @@ Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 \item{extract_answer}{Logical. If TRUE (default), use LLM to extract final
 answer from execution result. If FALSE, return execution result directly.}
 
-\item{...}{Additional arguments passed to the module}
+\item{config}{Optional prediction configuration.}
+
+\item{chat}{Optional ellmer Chat object.}
+
+\item{...}{Must be empty.}
 }
 \value{
 A ProgramOfThoughtModule object

@@ -10,6 +10,8 @@ code_act(
   runner = NULL,
   interpreter_factory = NULL,
   max_iterations = 10L,
+  config = list(),
+  chat = NULL,
   ...
 )
 }
@@ -34,7 +36,11 @@ Supply exactly one of \code{runner} and \code{interpreter_factory}.}
 within one invocation (default 10). Exceeding the inner tool-call budget
 raises a \code{dsprrr_codeact_iteration_limit} error.}
 
-\item{...}{Additional arguments passed to the module}
+\item{config}{Optional prediction configuration.}
+
+\item{chat}{Optional ellmer Chat object.}
+
+\item{...}{Must be empty.}
 }
 \value{
 A CodeActModule object

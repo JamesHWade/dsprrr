@@ -1,5 +1,20 @@
 # Tests for MIPROv2 teleprompter
 
+mipro_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$miprov2,
+    list(
+      trial_history = result$trials,
+      best_config = result$best_params,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      error_count = result$budget$total_errors,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 test_that("MIPROv2 can be created with defaults", {
   tp <- MIPROv2()
   expect_s3_class(tp, "dsprrr::MIPROv2")
@@ -38,7 +53,7 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
     instructions = "Answer the question"
   )
 
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   trainset <- data.frame(
     question = c(
@@ -85,13 +100,13 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
     log_dir = log_dir
   )
 
-  compiled <- compile(tp, mod, trainset, valset = trainset, .llm = mock_llm)
+  compiled <- compile(mod, tp, trainset, valset = trainset, .llm = mock_llm)
 
   expect_true(compiled$config$compiled)
   expect_equal(compiled$config$teleprompter, "MIPROv2")
   expect_true(length(compiled$demos) > 0)
 
-  optimizer <- compiled$config$optimizer
+  optimizer <- mipro_test_metadata(compiled)
   expect_true(length(optimizer$demo_candidates) > 0)
   expect_true(length(optimizer$instruction_candidates) > 0)
   expect_s3_class(optimizer$trial_history, "tbl_df")
@@ -180,6 +195,7 @@ test_that("MIPROv2 tunes nested predictor instructions as graph components", {
   )
 
   compiled <- compile(
+    program,
     MIPROv2(
       metric = function(...) 1,
       auto = NULL,
@@ -187,7 +203,6 @@ test_that("MIPROv2 tunes nested predictor instructions as graph components", {
       max_bootstrapped_demos = 0L,
       seed = 41L
     ),
-    program,
     trainset
   )
 
@@ -219,12 +234,15 @@ test_that("MIPROv2 tunes nested predictor instructions as graph components", {
   expect_identical(compiled$generate_action$demos, action_demos)
   expect_identical(compiled$extract$demos, extract_demos)
   expect_identical(
-    compiled$config$optimizer$candidate_scope,
+    mipro_test_metadata(compiled)$candidate_scope,
     "predictor_components"
   )
-  expect_identical(compiled$config$optimizer$demo_mode, "preserved")
-  expect_identical(compiled$config$optimizer$effective_labeled_demos, 0L)
-  expect_identical(compiled$config$optimizer$effective_bootstrapped_demos, 0L)
+  expect_identical(mipro_test_metadata(compiled)$demo_mode, "preserved")
+  expect_identical(mipro_test_metadata(compiled)$effective_labeled_demos, 0L)
+  expect_identical(
+    mipro_test_metadata(compiled)$effective_bootstrapped_demos,
+    0L
+  )
 })
 
 test_that("MIPROv2 fails explicitly without nested predictor evidence", {
@@ -246,11 +264,11 @@ test_that("MIPROv2 fails explicitly without nested predictor evidence", {
 
   expect_error(
     compile(
+      program,
       MIPROv2(
         metric = function(...) 1,
         max_bootstrapped_demos = 1L
       ),
-      program,
       trainset
     ),
     class = "dsprrr_mipro_graph_bootstrap_unsupported"
@@ -264,12 +282,12 @@ test_that("MIPROv2 requires metric for compilation", {
     instructions = "Answer the question"
   )
 
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
   trainset <- data.frame(question = "test", answer = "test")
 
   tp <- MIPROv2(metric = NULL)
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "requires a metric"
   )
 })
@@ -623,7 +641,7 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
     .package = "dsprrr"
   )
 
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   teleprompter <- MIPROv2(metric = function(...) 1)
   compiled <- dsprrr:::compile_mipro(
     teleprompter,
@@ -631,7 +649,7 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
     data.frame(question = "test", answer = "test")
   )
 
-  metadata <- compiled$config$optimizer
+  metadata <- mipro_test_metadata(compiled)
   expect_identical(metadata$budget_summary, budget_summary)
   expect_identical(metadata$stop_reason, budget_summary$stop_reason)
   expect_equal(metadata$error_count, 1L)
@@ -653,7 +671,7 @@ test_that("MIPROv2 propagates num_threads into optimizer control", {
     .package = "dsprrr"
   )
 
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   teleprompter <- MIPROv2(
     metric = function(...) 1,
     num_threads = 3L
@@ -705,4 +723,41 @@ test_that("run_discrete_bo UCB explores untried candidates first", {
 
   # First 3 trials should visit all candidates (exploration)
   expect_true(all(c("a", "b", "c") %in% visited[1:3]))
+})
+
+test_that("MIPRO records the full-evaluation selection outcome", {
+  candidates <- list(list(
+    id = "candidate",
+    params = list(style = "selected")
+  ))
+  result <- dsprrr:::run_discrete_bo(
+    candidates = candidates,
+    eval_fn = function(candidate, eval_type, trial_idx) {
+      dsprrr:::EvalResult(
+        mean_score = if (eval_type == "full") 0.8 else 0.99,
+        n_evaluated = 1L,
+        n_errors = 0L
+      )
+    },
+    control = dsprrr:::optimizer_control(),
+    max_trials = 2L,
+    minibatch_size = 1L,
+    full_eval_every = 2L
+  )
+
+  expect_equal(result$best_score, 0.8)
+  expect_identical(result$best_trial, 2L)
+  expect_gt(max(result$trial_history$mean_score), result$best_score)
+
+  compiled <- dsprrr:::mipro_finalize_program(
+    module(signature("question -> answer")),
+    settings = list(auto = "light", trials = 2L, full_eval_every = 2L),
+    minibatch_size = 1L,
+    demo_candidates = list(),
+    instruction_candidates = list(),
+    bo_result = result
+  )
+  optimization <- optimization_result(compiled)
+  expect_equal(optimization$best_score, 0.8)
+  expect_identical(optimization$best_trial, 2L)
 })

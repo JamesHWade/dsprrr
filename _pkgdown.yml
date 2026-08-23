@@ -166,51 +166,39 @@ articles:
 #               Optimize → Configure → Deploy → Integrate
 
 reference:
-  - title: Signatures & Inputs
-    desc: Declare typed schemas for LLM operations
+  - title: Primary journey
+    desc: Define, run, evaluate, and improve a program
     contents:
     - signature
     - input
-
-  - title: Signature Transforms
-    desc: Add reasoning, chain-of-thought, and other prompt-level behaviors
-    contents:
-    - signature-transforms
-    - with_instructions
-    - append_instructions
-    - with_reasoning
-    - without_reasoning
-    - has_reasoning
-    - chain_of_thought
-
-  - title: Modules
-    desc: Create, run, and inspect LLM modules
-    contents:
     - module
-    - flex
     - run
     - run_dataset
-    - concurrency_control
-    - predict.Module
-    - module_fn
-    - module-graph
+    - evaluate
+    - compile
+    - optimize_grid
 
-  - title: Pipelines
-    desc: Chain modules into multi-step workflows
+  - title: Advanced program constructors
+    desc: Choose these when execution semantics differ from standard prediction
     contents:
-    - pipeline
-    - "%>>%"
-    - step
-
-  - title: Reasoning & Ensemble Modules
-    desc: Combine and refine outputs for improved accuracy
-    contents:
+    - react
+    - module-react
+    - chain_of_thought
+    - multi_chain_comparison
+    - module-multichain
+    - program_of_thought
+    - module-program-of-thought
+    - code_act
+    - module-codeact
+    - rlm_module
+    - rlm
+    - module-rlm
+    - flex
+    - rag_module
     - module-wrapper
     - best_of_n
     - refine
     - as_reward_fn
-    - module-multichain
-    - multi_chain_comparison
     - module-ensemble
     - ensemble_module
     - ensemble
@@ -219,21 +207,38 @@ reference:
     - reduce_first
     - reduce_best_by_metric
 
-  - title: Agentic Modules
-    desc: Tool use, code execution, RAG, and recursive language models
+  - title: Extension and interoperability seams
+    desc: Integrate custom modules and R ecosystem generics
     contents:
-    - module-react
-    - rag_module
+    - module_fn
+    - as_ellmer_tool
+    - predict.Module
     - r_code_runner
     - r-code-runner
     - mcp_repl_runner
-    - program_of_thought
-    - module-program-of-thought
-    - code_act
-    - module-codeact
-    - rlm_module
-    - rlm
-    - module-rlm
+
+  - title: Signature transforms
+    desc: Derive a new signature without changing execution semantics
+    contents:
+    - signature-transforms
+    - with_instructions
+    - append_instructions
+    - with_reasoning
+    - without_reasoning
+    - has_reasoning
+
+  - title: Execution and inspection
+    desc: Batch policy, graphs, and module metadata
+    contents:
+    - concurrency_control
+    - module-graph
+
+  - title: Pipelines
+    desc: Chain modules into multi-step workflows
+    contents:
+    - pipeline
+    - "%>>%"
+    - step
 
   - title: Assertions
     desc: Validate outputs and retry with automatic backtracking
@@ -254,10 +259,9 @@ reference:
     - assert_not_empty
     - assert_range
 
-  - title: Evaluation & Metrics
-    desc: Score module outputs and measure performance
+  - title: Metrics
+    desc: Score program outputs with explicit objectives
     contents:
-    - evaluate
     - starts_with("metric_")
 
   - title: Teleprompters
@@ -278,12 +282,9 @@ reference:
     - MIPROv2
     - COPRO
 
-  - title: Optimization
-    desc: Compile modules and tune parameters
+  - title: Optimization inspection
+    desc: Inspect parameters, trials, and metrics attached to programs
     contents:
-    - optimize_grid
-    - compile
-    - compile_module
     - module_parameters
     - module_trials
     - module_metrics
@@ -291,6 +292,8 @@ reference:
   - title: Optimization Results
     desc: Inspect trials, extract best configurations, and export
     contents:
+    - optimization_result
+    - print.dsprrr_optimization_result
     - optimizer-accessors
     - best_params
     - best_demos
@@ -396,9 +399,8 @@ reference:
     - metric_detect_pattern
 
   - title: ellmer & RAG
-    desc: Tool registration with ellmer and retrieval with ragnar
+    desc: Retrieval helpers built on ragnar and ellmer tools
     contents:
-    - as_ellmer_tool
     - ragnar_tool
     - create_search_tool
     - print.ragnar_tool

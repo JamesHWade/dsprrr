@@ -50,8 +50,7 @@ copy_ellmer_type <- function(type) {
 #' \dontrun{
 #' # Create a sentiment analysis module
 #' sentiment_mod <- module(
-#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-#'   type = "predict"
+#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 #' )
 #'
 #' # Convert to ellmer tool

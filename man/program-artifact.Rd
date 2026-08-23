@@ -73,7 +73,7 @@ Callables and runtime objects are never captured implicitly. Supply a named
 \code{registry} to store stable IDs, or set \code{trusted = TRUE} to embed them. Embedded
 values are restored only when \code{trusted = TRUE} is also supplied while loading.
 Registry IDs are the recommended contract for tools, custom functions,
-retrievers, stores, code runners, and interpreter factories. Format version 5
+retrievers, stores, code runners, and interpreter factories. Format version 6
 is the sole supported format. It records exactly one runner or factory for
 each code-executing module, preserves the complete Flex runtime contract, and
 stores graph-visible RLM action and extraction predictors. Manifests with any

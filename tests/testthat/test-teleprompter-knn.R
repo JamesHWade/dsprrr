@@ -89,7 +89,7 @@ test_that("KNNFewShot compile creates KNNFewShotModule", {
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Create training data
   trainset <- data.frame(
@@ -105,7 +105,7 @@ test_that("KNNFewShot compile creates KNNFewShotModule", {
 
   # Compile with KNNFewShot
   tp <- KNNFewShot(k = 2L, vectorizer = fake_vectorizer)
-  optimized <- compile(tp, mod, trainset)
+  optimized <- compile(mod, tp, trainset)
 
   expect_s3_class(optimized, "KNNFewShotModule")
   expect_true(inherits(optimized, "Module"))
@@ -120,7 +120,7 @@ test_that("KNNFewShot compile validates inputs", {
 
   # Must be a Module
   expect_error(
-    compile(tp, "not a module", data.frame(x = 1)),
+    compile("not a module", tp, data.frame(x = 1)),
     "only supports Module objects"
   )
 
@@ -129,16 +129,16 @@ test_that("KNNFewShot compile validates inputs", {
     inputs = list(input(name = "x")),
     output_type = ellmer::type_string()
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
   expect_error(
-    compile(tp, mod, list(x = 1)),
+    compile(mod, tp, list(x = 1)),
     "trainset must be a data frame"
   )
 
   # Empty trainset returns unmodified
   empty_trainset <- data.frame(x = character(), answer = character())
   expect_warning(
-    result <- compile(tp, mod, empty_trainset),
+    result <- compile(mod, tp, empty_trainset),
     "Empty trainset"
   )
 })
@@ -149,7 +149,7 @@ test_that("KNNFewShot selects demos dynamically at runtime", {
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Training data with varied questions
   trainset <- data.frame(
@@ -164,7 +164,7 @@ test_that("KNNFewShot selects demos dynamically at runtime", {
   )
 
   tp <- KNNFewShot(k = 2L, vectorizer = fake_vectorizer)
-  compiled <- compile(tp, mod, trainset)
+  compiled <- compile(mod, tp, trainset)
 
   # Run with a math question - should get math demos
   result1 <- compiled$forward(
@@ -198,7 +198,7 @@ test_that("KNNFewShot selects demos dynamically at runtime", {
 
 test_that("KNNFewShot exposes one fresh trace event per evaluation", {
   local_reset_cache()
-  mod <- module(signature("question -> answer"), type = "predict")
+  mod <- module(signature("question -> answer"))
   llm <- new_test_chat(
     chat_structured = function(...) list(answer = "yes")
   )
@@ -207,8 +207,8 @@ test_that("KNNFewShot exposes one fresh trace event per evaluation", {
     answer = c("yes", "yes")
   )
   compiled <- compile(
-    KNNFewShot(k = 1L, vectorizer = fake_vectorizer),
     mod,
+    KNNFewShot(k = 1L, vectorizer = fake_vectorizer),
     trainset
   )
   observed <- list()
@@ -259,7 +259,7 @@ test_that("KNNFewShot works with batch inputs", {
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("Q1", "Q2", "Q3"),
@@ -268,7 +268,7 @@ test_that("KNNFewShot works with batch inputs", {
   )
 
   tp <- KNNFewShot(k = 2L, vectorizer = fake_vectorizer)
-  compiled <- compile(tp, mod, trainset)
+  compiled <- compile(mod, tp, trainset)
 
   # Batch input as data frame
   batch <- data.frame(
@@ -294,7 +294,7 @@ test_that("KNNFewShot with custom input_text function", {
     output_type = ellmer::type_string(),
     instructions = "Answer based on context"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     context = c("The sky is blue.", "Grass is green."),
@@ -313,7 +313,7 @@ test_that("KNNFewShot with custom input_text function", {
     vectorizer = fake_vectorizer,
     input_text = custom_input_text
   )
-  compiled <- compile(tp, mod, trainset)
+  compiled <- compile(mod, tp, trainset)
 
   result <- compiled$forward(
     list(context = "The sun is yellow.", question = "What color is sun?"),
@@ -331,7 +331,7 @@ test_that("KNNFewShot merge_demos preserves original demos", {
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Add initial demos to module
   mod$demos <- list(
@@ -349,7 +349,7 @@ test_that("KNNFewShot merge_demos preserves original demos", {
 
   # With merge_demos = TRUE
   tp <- KNNFewShot(k = 1L, vectorizer = fake_vectorizer, merge_demos = TRUE)
-  compiled <- compile(tp, mod, trainset)
+  compiled <- compile(mod, tp, trainset)
 
   result <- compiled$forward(
     list(question = "Test Q"),
@@ -367,7 +367,7 @@ test_that("KNNFewShotModule can be deep copied", {
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("Q1", "Q2"),
@@ -376,7 +376,7 @@ test_that("KNNFewShotModule can be deep copied", {
   )
 
   tp <- KNNFewShot(k = 1L, vectorizer = fake_vectorizer)
-  compiled <- compile(tp, mod, trainset)
+  compiled <- compile(mod, tp, trainset)
 
   # Run once to populate state
   compiled$forward(list(question = "Test"), .llm = mock_llm)
@@ -399,7 +399,7 @@ test_that("KNNFewShotModule reset clears selection history", {
     output_type = ellmer::type_string(),
     instructions = "Answer"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("Q1", "Q2"),
@@ -408,7 +408,7 @@ test_that("KNNFewShotModule reset clears selection history", {
   )
 
   tp <- KNNFewShot(k = 1L, vectorizer = fake_vectorizer)
-  compiled <- compile(tp, mod, trainset)
+  compiled <- compile(mod, tp, trainset)
 
   # Run a few times
   compiled$forward(list(question = "Test1"), .llm = mock_llm)
@@ -484,7 +484,7 @@ test_that("KNNFewShot handles vectorizer dimension mismatches", {
     inputs = list(input(name = "question")),
     output_type = ellmer::type_string()
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("Q1", "Q2", "Q3"),
@@ -495,7 +495,7 @@ test_that("KNNFewShot handles vectorizer dimension mismatches", {
   tp <- KNNFewShot(k = 2L, vectorizer = bad_vectorizer)
 
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "wrong number of embeddings"
   )
 })

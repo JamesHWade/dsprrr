@@ -4,14 +4,30 @@
 \alias{chain_of_thought}
 \title{Create a Chain-of-Thought Module}
 \usage{
-chain_of_thought(x, prefix = "Let's think step by step in order to", ...)
+chain_of_thought(
+  x,
+  prefix = "Let's think step by step in order to",
+  chat = NULL,
+  template = "",
+  demos = list(),
+  config = list(),
+  ...
+)
 }
 \arguments{
 \item{x}{A signature object created by \code{\link[=signature]{signature()}}, or string notation.}
 
 \item{prefix}{Character. The prefix for the reasoning field.}
 
-\item{...}{Additional arguments passed to \code{module()}}
+\item{chat}{Optional ellmer Chat object.}
+
+\item{template}{Optional glue template.}
+
+\item{demos}{Optional demonstration examples.}
+
+\item{config}{Optional prediction configuration.}
+
+\item{...}{Must be empty.}
 }
 \value{
 A PredictModule with reasoning enabled

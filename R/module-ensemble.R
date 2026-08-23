@@ -449,9 +449,9 @@ EnsembleModule <- R6::R6Class(
 #' @examples
 #' # Create multiple compiled modules
 #' sig <- signature("question -> answer")
-#' mod1 <- module(sig, type = "predict")
-#' mod2 <- module(sig, type = "predict")
-#' mod3 <- module(sig, type = "predict")
+#' mod1 <- module(sig)
+#' mod2 <- module(sig)
+#' mod3 <- module(sig)
 #'
 #' # Combine with majority voting
 #' ens <- ensemble(list(mod1, mod2, mod3))

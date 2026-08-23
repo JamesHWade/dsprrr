@@ -37,9 +37,8 @@ store <- ragnar_store_create(
 search_tool <- ragnar_tool(store, k = 3)
 
 # Use with ReAct module
-react_mod <- module(
+react_mod <- react(
   signature("question -> answer"),
-  type = "react",
   tools = list(search_tool)
 )
 

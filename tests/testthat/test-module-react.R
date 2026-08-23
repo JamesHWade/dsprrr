@@ -6,46 +6,34 @@ test_that("ReactModule class exists", {
 
 test_that("ReactModule inherits from PredictModule", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_s3_class(mod, "ReactModule")
   expect_s3_class(mod, "PredictModule")
   expect_s3_class(mod, "Module")
 })
 
-test_that("module() creates ReactModule for type='react'", {
+test_that("react() creates a ReactModule", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_s3_class(mod, "ReactModule")
 })
 
-test_that("module() auto-upgrades to ReactModule when tools provided", {
-  skip_if_not_installed("ellmer")
-
-  test_fn <- function(x) x
-  test_tool <- tryCatch(
-    ellmer::tool(
-      test_fn,
-      name = "test",
-      description = "Test tool",
-      arguments = list(x = ellmer::type_string())
-    ),
-    error = function(e) NULL
-  )
-
-  skip_if(is.null(test_tool), "Could not create test tool")
-
+test_that("module() never changes into ReAct when tools are supplied", {
   sig <- signature("question -> answer")
-  # type="predict" but tools provided -> should upgrade to react
-  mod <- module(sig, type = "predict", tools = list(test_tool))
 
-  expect_s3_class(mod, "ReactModule")
+  expect_snapshot(
+    module(sig, tools = list()),
+    error = TRUE
+  )
+  condition <- rlang::catch_cnd(module(sig, tools = list()))
+  expect_s3_class(condition, "dsprrr_module_argument_error")
 })
 
 test_that("ReactModule initializes with empty tools", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_length(mod$tools, 0)
   expect_equal(mod$list_tools(), character(0))
@@ -68,7 +56,7 @@ test_that("ReactModule accepts tools in constructor", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react", tools = list(test_tool))
+  mod <- react(sig, tools = list(test_tool))
 
   expect_length(mod$tools, 1)
   expect_equal(mod$list_tools(), "my_tool")
@@ -91,7 +79,7 @@ test_that("ReactModule add_tool works", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_length(mod$tools, 0)
 
@@ -118,7 +106,7 @@ test_that("ReactModule remove_tool works", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react", tools = list(test_tool))
+  mod <- react(sig, tools = list(test_tool))
 
   expect_length(mod$tools, 1)
 
@@ -129,7 +117,7 @@ test_that("ReactModule remove_tool works", {
 
 test_that("ReactModule remove_tool warns for non-existent tool", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_warning(
     mod$remove_tool("nonexistent"),
@@ -139,11 +127,11 @@ test_that("ReactModule remove_tool warns for non-existent tool", {
 
 test_that("ReactModule max_iterations is configurable", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react", max_iterations = 20L)
+  mod <- react(sig, max_iterations = 20L)
 
   expect_equal(mod$max_iterations, 20L)
   expect_error(
-    module(sig, type = "react", max_iterations = 0L),
+    react(sig, max_iterations = 0L),
     "positive integer"
   )
 })
@@ -223,7 +211,7 @@ test_that("ReactModule forward tracks tool calls from ellmer turns", {
   override_test_chat_method(mock_llm, "last_turn", last_turn)
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   result <- mod$forward(list(question = "test"), .llm = mock_llm, trace = TRUE)
   metadata <- result$metadata[[1]]
@@ -278,9 +266,8 @@ test_that("ReactModule enforces max_iterations before finalization", {
   )
   override_test_chat_method(mock_llm, "get_turns", function(...) turns)
 
-  mod <- module(
+  mod <- react(
     signature("question -> answer"),
-    type = "react",
     max_iterations = 1L
   )
   expect_error(
@@ -343,9 +330,8 @@ test_that("ReactModule iteration guard ignores tool turns from prior runs", {
   override_test_chat_method(mock_llm, "get_turns", function(...) turns)
   override_test_chat_method(mock_llm, "last_turn", last_turn)
 
-  mod <- module(
+  mod <- react(
     signature("question -> answer"),
-    type = "react",
     max_iterations = 1L
   )
   result <- mod$forward(list(question = "test"), .llm = mock_llm)
@@ -372,7 +358,7 @@ test_that("ReactModule print includes tool info", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react", tools = list(test_tool))
+  mod <- react(sig, tools = list(test_tool))
 
   # Capture output including cli output
   output <- capture.output(print(mod), type = "message")
@@ -406,7 +392,7 @@ test_that("ReactModule add_tool returns self invisibly", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   # Should be chainable
   result <- mod$add_tool(test_tool)
@@ -424,7 +410,7 @@ test_that("ReactModule rejects non-ToolDef in constructor", {
 
 test_that("ReactModule rejects non-ToolDef in add_tool", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_error(
     mod$add_tool("not a tool"),
@@ -440,7 +426,7 @@ test_that("ReactModule rejects an unnamespaced ToolDef class", {
   constructor_condition <- rlang::catch_cnd(
     ReactModule$new(sig, tools = list(bare_tool))
   )
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
   add_condition <- rlang::catch_cnd(mod$add_tool(bare_tool))
 
   expect_s3_class(constructor_condition, "rlang_error")

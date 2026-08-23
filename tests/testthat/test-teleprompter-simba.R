@@ -1,5 +1,19 @@
 # Tests for SIMBA teleprompter
 
+simba_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$simba,
+    list(
+      best_score = result$best_score,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      error_count = result$budget$total_errors,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 new_simba_prompt_chat <- function(chat) {
   new_test_chat(chat = chat)
 }
@@ -85,7 +99,7 @@ test_that("SIMBA requires metric for compilation", {
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("What is 2+2?", "What is 3+3?"),
@@ -94,7 +108,7 @@ test_that("SIMBA requires metric for compilation", {
 
   tp <- SIMBA()
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "requires a metric"
   )
 })
@@ -105,13 +119,13 @@ test_that("SIMBA compile returns unmodified program for empty trainset", {
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   empty_trainset <- data.frame(question = character(), answer = character())
   tp <- SIMBA(metric = function(pred, exp) 1.0)
 
   expect_warning(
-    result <- compile(tp, mod, empty_trainset),
+    result <- compile(mod, tp, empty_trainset),
     "Empty trainset"
   )
   expect_identical(result, mod)
@@ -222,7 +236,7 @@ test_that("SIMBA compile applies rules and demos when improved", {
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("What is 2+2?", "What is 3+3?"),
@@ -250,19 +264,18 @@ test_that("SIMBA compile applies rules and demos when improved", {
     seed = 1L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_true(result$config$compiled)
   expect_equal(result$config$teleprompter, "SIMBA")
   expect_true(grepl("SIMBA_RULE", result$signature@instructions, fixed = TRUE))
   expect_true(length(result$demos) > 0)
-  expect_true("SIMBA_RULE" %in% result$config$optimizer$rules)
+  expect_true("SIMBA_RULE" %in% simba_test_metadata(result)$rules)
 })
 
 test_that("SIMBA returns empty variability diagnostics when its budget stops", {
   program <- module(
-    signature("question -> answer", instructions = "Baseline"),
-    type = "predict"
+    signature("question -> answer", instructions = "Baseline")
   )
   minibatch <- data.frame(
     question = c("q1", "q2"),
@@ -356,8 +369,7 @@ test_that("SIMBA preserves and reports a complete baseline over a biased partial
       seed = 1L
     ),
     module(
-      signature("question -> answer", instructions = "Baseline"),
-      type = "predict"
+      signature("question -> answer", instructions = "Baseline")
     ),
     data.frame(
       question = c("q1", "q2"),
@@ -368,7 +380,7 @@ test_that("SIMBA preserves and reports a complete baseline over a biased partial
       log_dir = log_dir
     )
   )
-  optimizer <- result$config$optimizer
+  optimizer <- simba_test_metadata(result)
 
   expect_equal(eval_calls, 5L)
   expect_identical(result$signature@instructions, "Baseline")

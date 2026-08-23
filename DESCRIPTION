@@ -102,6 +102,7 @@ Collate:
     'module-rlm.R'
     'module-wrapper.R'
     'module.R'
+    'optimization-result.R'
     'optimize.R'
     'optimizer-accessors.R'
     'optimizer-checkpoint.R'

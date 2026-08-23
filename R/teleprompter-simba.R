@@ -58,7 +58,7 @@
 #'   seed = 0L
 #' )
 #'
-#' compiled <- compile(tp, qa_module, trainset, .llm = llm)
+#' compiled <- compile(qa_module, tp, trainset, .llm = llm)
 #' }
 SIMBA <- S7::new_class(
   "SIMBA",
@@ -237,6 +237,14 @@ compile_simba <- function(
   )
   best_score <- best_eval@mean_score
   best_complete <- optimizer_budget_unit_completed(budget, "simba:baseline")
+  trial_records <- list(tibble::tibble(
+    trial_id = 1L,
+    step = 0L,
+    score = best_score,
+    complete = best_complete,
+    rule = NA_character_,
+    demos_added = 0L
+  ))
 
   rules <- character()
   added_demos <- list()
@@ -342,6 +350,14 @@ compile_simba <- function(
       budget,
       candidate_unit_id
     )
+    trial_records[[length(trial_records) + 1L]] <- tibble::tibble(
+      trial_id = length(trial_records) + 1L,
+      step = step,
+      score = score,
+      complete = candidate_complete,
+      rule = rule_text %||% NA_character_,
+      demos_added = length(new_demos)
+    )
 
     improved <- candidate_complete &&
       !is.na(score) &&
@@ -379,20 +395,33 @@ compile_simba <- function(
     }
   }
 
-  best_program$state$compiled <- TRUE
-  best_program$config$compiled <- TRUE
-  best_program$config$teleprompter <- "SIMBA"
   budget_summary <- optimizer_budget_summary(budget)
-  best_program$config$optimizer <- list(
-    steps = teleprompter@max_steps,
+  trials <- do.call(rbind, trial_records)
+  best_trial <- if (nrow(trials) > 0L) {
+    which.max(replace(trials$score, is.na(trials$score), -Inf))
+  } else {
+    NULL
+  }
+  record_optimization_result(
+    best_program,
+    optimizer = "SIMBA",
+    status = if (optimizer_budget_stopped(budget)) "partial" else "completed",
+    baseline_score = best_eval@mean_score,
     best_score = best_score,
-    best_complete = best_complete,
-    rules = rules,
-    demos_added = added_demos,
-    error_count = budget_summary$total_errors,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(budget)
+    best_trial = best_trial,
+    best_params = list(
+      rules_added = length(rules),
+      demos_added = length(added_demos)
+    ),
+    trials = trials,
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = list(
+      steps = teleprompter@max_steps,
+      best_complete = best_complete,
+      rules = rules,
+      demos = added_demos
+    )
   )
 
   best_program

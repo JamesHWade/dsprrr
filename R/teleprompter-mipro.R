@@ -46,7 +46,7 @@
 #' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
 #' valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 #' llm <- ellmer::chat_openai()
-#' compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+#' compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 #' }
 MIPROv2 <- S7::new_class(
   "MIPROv2",
@@ -228,6 +228,12 @@ mipro_apply_candidate <- function(program, candidate) {
   compiled
 }
 
+mipro_result_best_params <- function(candidate) {
+  params <- candidate$params %||% list()
+  params$instructions <- NULL
+  params
+}
+
 mipro_finalize_program <- function(
   compiled,
   settings,
@@ -235,15 +241,17 @@ mipro_finalize_program <- function(
   demo_candidates,
   instruction_candidates,
   bo_result,
-  partial = FALSE
+  partial = FALSE,
+  component_mode = FALSE
 ) {
-  compiled$state$compiled <- TRUE
-  compiled$config$compiled <- TRUE
-  compiled$config$teleprompter <- "MIPROv2"
   budget_summary <- bo_result$budget_summary
-  compiled$config$optimizer <- list(
+  trials <- bo_result$trial_history %||% tibble::tibble()
+  best_candidate <- bo_result$best_candidate
+  best_score <- bo_result$best_score %||% NA_real_
+  best_trial <- bo_result$best_trial
+  details <- list(
     auto = settings$auto,
-    trials = settings$trials,
+    planned_trials = settings$trials,
     minibatch_size = minibatch_size,
     full_eval_every = settings$full_eval_every,
     demo_candidates = lapply(demo_candidates, function(x) x$params),
@@ -251,12 +259,27 @@ mipro_finalize_program <- function(
       instruction_candidates,
       function(x) x$params
     ),
-    trial_history = bo_result$trial_history %||% tibble::tibble(),
-    best_config = bo_result$best_candidate$params %||% NULL,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    error_count = budget_summary$total_errors,
-    partial = isTRUE(partial)
+    candidate_scope = if (component_mode) {
+      "predictor_components"
+    } else {
+      "root_program"
+    },
+    demo_mode = if (component_mode) "preserved" else "optimized",
+    effective_labeled_demos = if (component_mode) 0L else NULL,
+    effective_bootstrapped_demos = if (component_mode) 0L else NULL
+  )
+  record_optimization_result(
+    compiled,
+    optimizer = "MIPROv2",
+    status = if (isTRUE(partial)) "partial" else "completed",
+    best_score = best_score,
+    best_trial = best_trial,
+    best_params = mipro_result_best_params(best_candidate),
+    trials = trials,
+    lineage = list(best_candidate_id = best_candidate$id %||% NULL),
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = details
   )
   compiled
 }
@@ -466,14 +489,9 @@ compile_mipro <- function(
       demo_candidates,
       list(),
       partial_result,
-      partial = TRUE
+      partial = TRUE,
+      component_mode = component_mode
     )
-    if (component_mode) {
-      partial$config$optimizer$candidate_scope <- "predictor_components"
-      partial$config$optimizer$demo_mode <- "preserved"
-      partial$config$optimizer$effective_labeled_demos <- 0L
-      partial$config$optimizer$effective_bootstrapped_demos <- 0L
-    }
     write_checkpoint("demo_candidates", partial)
     return(partial)
   }
@@ -605,14 +623,9 @@ compile_mipro <- function(
     demo_candidates,
     instruction_candidates,
     bo_result,
-    partial = !isTRUE(bo_result$complete)
+    partial = !isTRUE(bo_result$complete),
+    component_mode = component_mode
   )
-  if (component_mode) {
-    compiled$config$optimizer$candidate_scope <- "predictor_components"
-    compiled$config$optimizer$demo_mode <- "preserved"
-    compiled$config$optimizer$effective_labeled_demos <- 0L
-    compiled$config$optimizer$effective_bootstrapped_demos <- 0L
-  }
   write_checkpoint(
     if (isTRUE(bo_result$complete)) "complete" else "discrete_bo",
     compiled
