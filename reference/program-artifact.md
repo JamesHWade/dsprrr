@@ -12,7 +12,7 @@ named `registry` to store stable IDs, or set `trusted = TRUE` to embed
 them. Embedded values are restored only when `trusted = TRUE` is also
 supplied while loading. Registry IDs are the recommended contract for
 tools, custom functions, retrievers, stores, code runners, and
-interpreter factories. Format version 5 is the sole supported format. It
+interpreter factories. Format version 6 is the sole supported format. It
 records exactly one runner or factory for each code-executing module,
 preserves the complete Flex runtime contract, and stores graph-visible
 RLM action and extraction predictors. Manifests with any other format
@@ -118,7 +118,7 @@ artifact <- program_artifact(mod)
 restored <- restore_module_config(artifact)
 #> ✔ Restored program artifact
 #> ℹ Root module: <PredictModule>
-#> ℹ Artifact version: 5
+#> ℹ Artifact version: 6
 
 path <- tempfile(fileext = ".rds")
 save_program(mod, path)

@@ -1,17 +1,99 @@
 # Package index
 
-## Signatures & Inputs
+## Primary journey
 
-Declare typed schemas for LLM operations
+Define, run, evaluate, and improve a program
 
 - [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
   : Create a Typed Module Signature
 - [`input()`](https://jameshwade.github.io/dsprrr/reference/input.md) :
   Create an input specification for a Signature
+- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  : Create a prediction module
+- [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) :
+  Execute an LLM Module
+- [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+  : Execute Module on Data
+- [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+  : Evaluate a DSPrrr module
+- [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+  : Compile a program
+- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+  : Grid Search Optimisation
 
-## Signature Transforms
+## Advanced program constructors
 
-Add reasoning, chain-of-thought, and other prompt-level behaviors
+Choose these when execution semantics differ from standard prediction
+
+- [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md) :
+  Create a ReAct module
+- [`module-react`](https://jameshwade.github.io/dsprrr/reference/module-react.md)
+  : ReAct Module
+- [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+  : Create a Chain-of-Thought Module
+- [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md)
+  : Create a MultiChainComparison Module
+- [`module-multichain`](https://jameshwade.github.io/dsprrr/reference/module-multichain.md)
+  : MultiChainComparison Module
+- [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
+  : Create a Program of Thought Module
+- [`module-program-of-thought`](https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.md)
+  : Program of Thought Module
+- [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
+  : Create a CodeAct Module
+- [`module-codeact`](https://jameshwade.github.io/dsprrr/reference/module-codeact.md)
+  : CodeAct Module
+- [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+  : Create a Recursive Language Model (RLM) Module
+- [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) : Run
+  a Recursive Language Model in one call
+- [`module-rlm`](https://jameshwade.github.io/dsprrr/reference/module-rlm.md)
+  : Recursive Language Model (RLM) Module
+- [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) :
+  Optimize a Module's Implementation with Flex
+- [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md)
+  : Create a RAG Module
+- [`module-wrapper`](https://jameshwade.github.io/dsprrr/reference/module-wrapper.md)
+  : Wrapper Modules for Advanced Reasoning Patterns
+- [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md)
+  : Create a BestOfN Wrapper Module
+- [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md)
+  : Create a Refine Wrapper Module
+- [`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md)
+  : Convert a Metric to a Reward Function
+- [`module-ensemble`](https://jameshwade.github.io/dsprrr/reference/module-ensemble.md)
+  : Ensemble Module for Combining Multiple Modules
+- [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md)
+  : Create an Ensemble Module
+- [`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md)
+  : Majority Vote Reducer
+- [`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md)
+  : Weighted Vote Reducer
+- [`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md)
+  : First Successful Output Reducer
+- [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
+  : Best by Metric Reducer
+
+## Extension and interoperability seams
+
+Integrate custom modules and R ecosystem generics
+
+- [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+  : Callable Module
+- [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
+  : Convert a DSPrrr Module to an ellmer Tool
+- [`predict(`*`<Module>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
+  : Predict Method for Modules (tidymodels-style)
+- [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
+  : Create an R Code Runner
+- [`r-code-runner`](https://jameshwade.github.io/dsprrr/reference/r-code-runner.md)
+  : R Code Execution Backend
+- [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+  : Posit mcp-repl Code Runner
+
+## Signature transforms
+
+Derive a new signature without changing execution semantics
 
 - [`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
   [`append_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
@@ -22,27 +104,13 @@ Add reasoning, chain-of-thought, and other prompt-level behaviors
   : Remove Chain-of-Thought from a Signature
 - [`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md)
   : Check if a Signature has Chain-of-Thought
-- [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
-  : Create a Chain-of-Thought Module
 
-## Modules
+## Execution and inspection
 
-Create, run, and inspect LLM modules
+Batch policy, graphs, and module metadata
 
-- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
-  : Create an LLM Module
-- [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) :
-  Optimize a Module's Implementation with Flex
-- [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) :
-  Execute an LLM Module
-- [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-  : Execute Module on Data
 - [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
   : Control Batch Concurrency
-- [`predict(`*`<Module>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
-  : Predict Method for Modules (tidymodels-style)
-- [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
-  : Callable Module
 - [`module_graph()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
   [`named_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
   [`named_parameters()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
@@ -64,64 +132,6 @@ Chain modules into multi-step workflows
   : Pipe Operator for Module Composition
 - [`step()`](https://jameshwade.github.io/dsprrr/reference/step.md) :
   Create a Pipeline Step with Mappings
-
-## Reasoning & Ensemble Modules
-
-Combine and refine outputs for improved accuracy
-
-- [`module-wrapper`](https://jameshwade.github.io/dsprrr/reference/module-wrapper.md)
-  : Wrapper Modules for Advanced Reasoning Patterns
-- [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md)
-  : Create a BestOfN Wrapper Module
-- [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md)
-  : Create a Refine Wrapper Module
-- [`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md)
-  : Convert a Metric to a Reward Function
-- [`module-multichain`](https://jameshwade.github.io/dsprrr/reference/module-multichain.md)
-  : MultiChainComparison Module
-- [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md)
-  : Create a MultiChainComparison Module
-- [`module-ensemble`](https://jameshwade.github.io/dsprrr/reference/module-ensemble.md)
-  : Ensemble Module for Combining Multiple Modules
-- [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md)
-  : Create an Ensemble Module
-- [`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md)
-  : Majority Vote Reducer
-- [`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md)
-  : Weighted Vote Reducer
-- [`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md)
-  : First Successful Output Reducer
-- [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
-  : Best by Metric Reducer
-
-## Agentic Modules
-
-Tool use, code execution, RAG, and recursive language models
-
-- [`module-react`](https://jameshwade.github.io/dsprrr/reference/module-react.md)
-  : ReAct Module
-- [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md)
-  : Create a RAG Module
-- [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
-  : Create an R Code Runner
-- [`r-code-runner`](https://jameshwade.github.io/dsprrr/reference/r-code-runner.md)
-  : R Code Execution Backend
-- [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
-  : Posit mcp-repl Code Runner
-- [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
-  : Create a Program of Thought Module
-- [`module-program-of-thought`](https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.md)
-  : Program of Thought Module
-- [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
-  : Create a CodeAct Module
-- [`module-codeact`](https://jameshwade.github.io/dsprrr/reference/module-codeact.md)
-  : CodeAct Module
-- [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
-  : Create a Recursive Language Model (RLM) Module
-- [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) : Run
-  a Recursive Language Model in one call
-- [`module-rlm`](https://jameshwade.github.io/dsprrr/reference/module-rlm.md)
-  : Recursive Language Model (RLM) Module
 
 ## Assertions
 
@@ -154,12 +164,10 @@ Validate outputs and retry with automatic backtracking
 - [`assert_range()`](https://jameshwade.github.io/dsprrr/reference/assert_range.md)
   : Assert Numeric Value in Range
 
-## Evaluation & Metrics
+## Metrics
 
-Score module outputs and measure performance
+Score program outputs with explicit objectives
 
-- [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
-  : Evaluate a DSPrrr module
 - [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md)
   : Create a Contains Metric
 - [`metric_custom()`](https://jameshwade.github.io/dsprrr/reference/metric_custom.md)
@@ -216,16 +224,10 @@ Automated prompt optimization strategies
 - [`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md) :
   COPRO Teleprompter
 
-## Optimization
+## Optimization inspection
 
-Compile modules and tune parameters
+Inspect parameters, trials, and metrics attached to programs
 
-- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
-  : Grid Search Optimisation
-- [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-  : Compile S7 Generic and Methods
-- [`compile_module()`](https://jameshwade.github.io/dsprrr/reference/compile_module.md)
-  : Compile a DSPrrr Program
 - [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)
   : Suggest tidymodels parameters for a module
 - [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
@@ -237,6 +239,9 @@ Compile modules and tune parameters
 
 Inspect trials, extract best configurations, and export
 
+- [`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
+  [`print(`*`<dsprrr_optimization_result>`*`)`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
+  : Inspect an Optimization Result
 - [`optimizer-accessors`](https://jameshwade.github.io/dsprrr/reference/optimizer-accessors.md)
   : Optimizer Convenience Functions
 - [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md)
@@ -416,10 +421,8 @@ Bridge to the vitals evaluation framework
 
 ## ellmer & RAG
 
-Tool registration with ellmer and retrieval with ragnar
+Retrieval helpers built on ragnar and ellmer tools
 
-- [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
-  : Convert a DSPrrr Module to an ellmer Tool
 - [`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md)
   : Create a ragnar Search Tool for ReAct Modules
 - [`create_search_tool()`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md)

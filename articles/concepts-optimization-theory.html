@@ -274,7 +274,7 @@ DSPy). Each teleprompter implements a different search strategy.</p>
 <p>Just add k examples from your training set as demonstrations:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p><strong>How it works</strong>:</p>
 <ol style="list-style-type: decimal">
 <li>Sample k examples from training data</li>
@@ -297,7 +297,7 @@ ones:</p>
 <span> max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
 <span> max_labeled_demos <span class="op">=</span> <span class="fl">8L</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p><strong>How it works</strong>:</p>
 <ol style="list-style-type: decimal">
 <li>Start with labeled examples as initial demos</li>
@@ -331,7 +331,7 @@ learn its own format</p>
 <span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span> variants <span class="op">=</span> <span class="va">variants</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p><strong>How it works</strong>:</p>
 <ol style="list-style-type: decimal">
 <li>Define a grid of parameter configurations</li>
@@ -354,7 +354,7 @@ miss optimal combinations not in grid</p>
 <span> num_candidate_programs <span class="op">=</span> <span class="fl">8L</span>,</span>
 <span> max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p><strong>How it works</strong>:</p>
 <ol style="list-style-type: decimal">
 <li>Generate multiple demo configurations via bootstrapping</li>
@@ -376,7 +376,7 @@ compute budget for more trials</p>
 <span> max_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
 <span> embed_fn <span class="op">=</span> <span class="fu">embed_openai</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p><strong>How it works</strong>:</p>
 <ol style="list-style-type: decimal">
 <li>Embed all training examples</li>
@@ -401,7 +401,7 @@ input space</p>
 <span> k <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span> embed_fn <span class="op">=</span> <span class="fu">embed_openai</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p><strong>How it works</strong>:</p>
 <ol style="list-style-type: decimal">
 <li>At compile time: embed all training examples</li>
@@ -425,7 +425,7 @@ at inference</p>
 <span> breadth <span class="op">=</span> <span class="fl">5L</span>,</span>
 <span> depth <span class="op">=</span> <span class="fl">3L</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p><strong>How it works</strong>:</p>
 <ol style="list-style-type: decimal">
 <li>Generate breadth instruction candidates</li>
@@ -450,7 +450,7 @@ automatically-generated instructions</p>
 <span> num_candidates <span class="op">=</span> <span class="fl">10L</span>,</span>
 <span> init_temperature <span class="op">=</span> <span class="fl">1.4</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p>Uses Bayesian optimization to jointly search instruction and demo
 combinations. The most general-purpose optimizer when you have compute
 budget for state-of-the-art results.</p>
@@ -466,7 +466,7 @@ selection to retain candidates that are useful across objectives:</p>
 <span> population_size <span class="op">=</span> <span class="fl">20L</span>,</span>
 <span> generations <span class="op">=</span> <span class="fl">10L</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 <p>GEPA reflects on failed examples, proposes revised instructions,
 evaluates them, and keeps a Pareto frontier across metrics. For ordinary
 modules this is reflective prompt evolution: optional crossover combines
@@ -640,7 +640,7 @@ touched during optimization)</li>
 <span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">[</span><span class="va">test_idx</span>, <span class="op">]</span></span>
 <span></span>
 <span><span class="co"># Optimize</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span><span class="op">)</span></span>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Final evaluation</span></span>
 <span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">compiled</span>, <span class="va">testset</span>, <span class="va">metric</span><span class="op">)</span></span></code></pre></div>

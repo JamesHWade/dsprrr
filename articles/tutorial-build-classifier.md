@@ -47,7 +47,7 @@ Wrap the signature in a reusable module:
 ``` r
 
 chat <- chat_openai()
-classifier <- module(sentiment_sig, type = "predict")
+classifier <- module(sentiment_sig)
 
 classifier
 ```
@@ -121,7 +121,7 @@ Now create a module from the signature:
 
 ``` r
 
-classifier2 <- module(sig, type = "predict")
+classifier2 <- module(sig)
 
 classifier2
 ```
@@ -190,7 +190,7 @@ sig <- signature(
   instructions = "Classify the customer sentiment."
 )
 
-detailed_classifier <- module(sig, type = "predict")
+detailed_classifier <- module(sig)
 
 run(
   detailed_classifier,

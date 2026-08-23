@@ -355,7 +355,7 @@ answer? What edge cases matter?</p>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Answer the question directly."</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">mod_v1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">base_sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">mod_v1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">base_sig</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v1</span>, <span class="va">eval_data</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">baseline</span><span class="op">$</span><span class="va">mean_score</span>  <span class="co"># 0.65</span></span></code></pre></div>
@@ -369,7 +369,7 @@ answer? What edge cases matter?</p>
 <code class="sourceCode R"><span><span class="co"># Try layered instructions without mutating the baseline signature</span></span>
 <span><span class="va">concise_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature-transforms.html">append_instructions</a></span><span class="op">(</span><span class="va">base_sig</span>, <span class="st">"Use at most five words."</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">mod_v2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">concise_sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">mod_v2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">concise_sig</span><span class="op">)</span></span>
 <span><span class="va">v2_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v2</span>, <span class="va">eval_data</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">v2_result</span><span class="op">$</span><span class="va">mean_score</span>  <span class="co"># 0.70 - better!</span></span>
 <span></span>
@@ -404,7 +404,7 @@ alongside the epoch-level score summaries:</p>
 </h3>
 <p>Let the computer search for you:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">mod</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">train_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -414,7 +414,7 @@ alongside the epoch-level score summaries:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Best configuration is automatically selected</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_score</span>  <span class="co"># 0.82</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span><span class="op">$</span><span class="va">best_score</span>  <span class="co"># 0.82</span></span></code></pre></div>
 <p>Optimization only works because metrics provide objective
 feedback.</p>
 </div>
@@ -532,11 +532,11 @@ overfit, not how well you’ll generalize.</p>
 </h3>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># WRONG: Evaluate on the same data used for optimization</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span><span class="va">data</span>, <span class="va">metric</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">data</span>, <span class="va">metric</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">data</span>, <span class="va">metric</span><span class="op">)</span>  <span class="co"># Overfit score!</span></span>
 <span></span>
 <span><span class="co"># RIGHT: Use held-out test data</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span><span class="va">trainset</span>, <span class="va">metric</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">trainset</span>, <span class="va">metric</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">testset</span>, <span class="va">metric</span><span class="op">)</span>  <span class="co"># Honest score</span></span></code></pre></div>
 </div>
 <div class="section level3">

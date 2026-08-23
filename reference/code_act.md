@@ -20,6 +20,8 @@ code_act(
   runner = NULL,
   interpreter_factory = NULL,
   max_iterations = 10L,
+  config = list(),
+  chat = NULL,
   ...
 )
 ```
@@ -57,9 +59,17 @@ code_act(
   invocation (default 10). Exceeding the inner tool-call budget raises a
   `dsprrr_codeact_iteration_limit` error.
 
+- config:
+
+  Optional prediction configuration.
+
+- chat:
+
+  Optional ellmer Chat object.
+
 - ...:
 
-  Additional arguments passed to the module
+  Must be empty.
 
 ## Value
 

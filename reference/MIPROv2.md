@@ -98,6 +98,6 @@ qa_module <- module(signature("question -> answer"))
 trainset <- data.frame(question = "Capital of France?", answer = "Paris")
 valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 llm <- ellmer::chat_openai()
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 } # }
 ```

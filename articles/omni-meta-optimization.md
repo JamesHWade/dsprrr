@@ -92,8 +92,8 @@ omni <- Omni(
 )
 
 compiled <- compile(
-  omni,
   qa_module,
+  omni,
   trainset,
   valset = valset,
   .llm = llm
@@ -110,8 +110,8 @@ name. Arguments cannot replace Omni’s core `program`, `trainset`,
 ``` r
 
 compiled <- compile(
-  omni,
   qa_module,
+  omni,
   trainset,
   valset = valset,
   .llm = llm,
@@ -181,7 +181,7 @@ the continuation:
 
 ``` r
 
-candidates <- compiled$config$optimizer$candidate_programs
+candidates <- optimization_result(compiled)$extensions$omni$candidate_programs
 candidates[, c("phase", "optimizer", "score", "selected", "error")]
 ```
 
@@ -190,12 +190,12 @@ for deeper inspection:
 
 ``` r
 
-winner <- candidates$program[[which(candidates$selected)]]
-winner$config
+winner <- candidates$program_config[[which(candidates$selected)]]
+winner
 
-compiled$config$optimizer$exploration_winner
-compiled$config$optimizer$best_phase
-compiled$config$optimizer$best_optimizer
+optimization_result(compiled)$extensions$omni$exploration_winner
+optimization_result(compiled)$extensions$omni$best_phase
+optimization_result(compiled)$extensions$omni$best_optimizer
 ```
 
 An explorer failure is recorded in `error` and does not stop the other
@@ -220,8 +220,8 @@ omni_parallel <- Omni(
 )
 
 compiled <- compile(
-  omni_parallel,
   qa_module,
+  omni_parallel,
   trainset,
   valset = valset,
   .llm = NULL

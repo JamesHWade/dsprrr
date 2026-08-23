@@ -33,6 +33,7 @@ Other optimizer accessors:
 [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md),
 [`config_diff()`](https://jameshwade.github.io/dsprrr/reference/config_diff.md),
 [`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md),
+[`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md),
 [`optimization_summary()`](https://jameshwade.github.io/dsprrr/reference/optimization_summary.md),
 [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
 
@@ -41,7 +42,7 @@ Other optimizer accessors:
 ``` r
 if (FALSE) {
 tp <- LabeledFewShot(k = 4L)
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 demos <- best_demos(compiled)
 }
 ```

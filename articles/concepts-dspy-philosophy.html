@@ -203,7 +203,7 @@ signature stays the same.</p>
 </h3>
 <p>A module wraps a signature with executable logic:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Modules are:</p>
 <ul>
 <li>
@@ -231,7 +231,7 @@ results travel with the module.</p>
 <p>Here’s the radical part: instead of hand-tuning prompts, you define a
 metric and let the optimizer search:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">mod</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">training_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span><span class="op">)</span></span>
@@ -296,9 +296,9 @@ objects. Once you define a signature, it doesn’t change. This enables
 optimization—you can swap prompts while keeping the interface
 stable.</p>
 <p><strong>R6 for Modules</strong>: Stateful execution context. Modules
-accumulate traces, store optimized configurations, and provide an
-object-oriented API (<code>$predict()</code>,
-<code>$optimize_grid()</code>).</p>
+accumulate traces and store optimized configurations; user workflows
+stay in the functional <code><a href="../reference/run.html">run()</a></code> and
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> API.</p>
 <p><strong>ellmer Integration</strong>: dsprrr builds on ellmer’s chat
 infrastructure. You get the same <code><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai()</a></code>,
 <code><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic()</a></code> objects, with structured outputs handled

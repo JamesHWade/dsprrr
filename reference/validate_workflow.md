@@ -41,7 +41,7 @@ Other orchestration:
 
 ``` r
 if (FALSE) { # \dontrun{
-mod <- signature("text -> sentiment") |> module(type = "predict")
+mod <- signature("text -> sentiment") |> module()
 validate_workflow(mod, data = test_data)
 } # }
 ```

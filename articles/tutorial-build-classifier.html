@@ -172,7 +172,7 @@ Remembers its configuration - Can be saved and reused</p>
 <p>Wrap the signature in a reusable module:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sentiment_sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sentiment_sig</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">classifier</span></span></code></pre></div>
 <p>Now <code>classifier</code> is an object you can use repeatedly.</p>
@@ -229,7 +229,7 @@ dsprrr retained one observable provider attempt per review.</p>
 <span><span class="va">sig</span></span></code></pre></div>
 <p>Now create a module from the signature:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">classifier2</span></span></code></pre></div>
 </div>
@@ -286,7 +286,7 @@ classification.</p>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify the customer sentiment."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">detailed_classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">detailed_classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">detailed_classifier</span>,</span>

@@ -25,7 +25,8 @@ flex(
   interpreter_factory = NULL,
   source_format = c("auto", "json", "r"),
   require_sandbox = TRUE,
-  max_tool_calls = 100L
+  max_tool_calls = 100L,
+  ...
 )
 ```
 
@@ -84,6 +85,10 @@ flex(
 
   Maximum number of direct host-tool calls allowed in one executable
   invocation, or `NULL` for no limit. Defaults to 100.
+
+- ...:
+
+  Must be empty. Flex accepts only its documented arguments.
 
 ## Value
 

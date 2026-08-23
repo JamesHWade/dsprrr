@@ -44,7 +44,7 @@ column is named according to the signature's output field.
 if (FALSE) { # \dontrun{
 # Create a module
 mod <- signature("text -> sentiment") |>
-  module(type = "predict", chat = chat_openai())
+  module( chat = chat_openai())
 
 # Use predict() like parsnip models
 new_data <- tibble::tibble(text = c("Great!", "Terrible"))

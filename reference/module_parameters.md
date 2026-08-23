@@ -59,8 +59,9 @@ when no tunables are discovered.
 ``` r
 if (FALSE) { # \dontrun{
 sig <- signature("text -> sentiment")
-mod <- module(sig, type = "predict", config = list(temperature = 0.2))
-optimize_grid(mod,
+mod <- module(sig, config = list(temperature = 0.2))
+optimize_grid(
+  mod,
   data = tibble::tibble(text = "sample", target = "positive"),
   parameters = list(temperature = c(0.1, 0.5))
 )

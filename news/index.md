@@ -6,6 +6,28 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ### Breaking changes
 
+- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  now constructs only standard prediction modules. Tool use and other
+  advanced execution semantics use explicit constructors such as
+  [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+  [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md),
+  [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md),
+  [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md),
+  [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md),
+  and [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md);
+  advanced arguments passed to
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  fail with a typed, actionable error instead of silently changing
+  module type. `compile(program, teleprompter, trainset)` is the only
+  compilation entry point; `compile_module()` and the shallow R6
+  `$predict()` and `$optimize()` aliases have been removed.
+  [`stats::predict()`](https://rdrr.io/r/stats/predict.html) remains for
+  data-frame interoperability,
+  [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+  remains the custom-module extension seam, and the functional
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+  interface remains primary.
+
 - The public API now centers on
   [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
   [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md),
@@ -25,7 +47,7 @@ First development changelog. dsprrr is experimental; the API may change.
   persistence, or inspection capabilities.
 
 - Runtime contracts are current-only. Program artifacts accept format
-  version 5; persisted trial records require their complete versioned
+  version 6; persisted trial records require their complete versioned
   schema; batch execution accepts `.concurrency` only; code runners
   implement [`start()`](https://rdrr.io/r/stats/start.html),
   `execute()`, and `shutdown()`; RLM uses `max_iterations`,
@@ -121,6 +143,20 @@ First development changelog. dsprrr is experimental; the API may change.
   count attempted merges. When a validation set is supplied, training
   rows remain exclusive to discovery/reflection while validation rows
   drive selection, per-example winners, and optional retained outputs.
+
+- [`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
+  provides one read-only result contract across every optimizer,
+  including optimizer identity, completion or partial status, baseline
+  and best scores, winning parameters, trial evidence, lineage, budget
+  use, stop reason, and namespaced optimizer-specific extensions.
+  [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md),
+  [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md),
+  and
+  [`optimization_summary()`](https://jameshwade.github.io/dsprrr/reference/optimization_summary.md)
+  now inspect this contract rather than mutable module internals, and
+  program artifacts preserve the durable result schema and policy-safe
+  evidence across save and restore
+  ([\#131](https://github.com/JamesHWade/dsprrr/issues/131)).
 
 - [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md),
   [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md),
@@ -368,8 +404,8 @@ First development changelog. dsprrr is experimental; the API may change.
   `PredictModule$run()` batches now use the isolated, observable
   scheduler; unsupported custom and specialized modules reject
   vectorized execution before work instead of silently sharing mutable
-  state or bypassing specialized logic. `Module$predict()`,
-  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md), and
+  state or bypassing specialized logic.
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) and
   [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
   retain named declared output records consistently across scalar,
   batch, and Flex execution, and all batch routes isolate mutable Chat

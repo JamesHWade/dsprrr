@@ -155,6 +155,7 @@ code export rejects registry and embedded runtime references.</p></dd>
 <code><a href="best_demos.html">best_demos()</a></code>,
 <code><a href="best_params.html">best_params()</a></code>,
 <code><a href="config_diff.html">config_diff()</a></code>,
+<code><a href="optimization_result.html">optimization_result()</a></code>,
 <code><a href="optimization_summary.html">optimization_summary()</a></code>,
 <code><a href="top_trials.html">top_trials()</a></code></p></div>
     </div>
@@ -162,8 +163,8 @@ code export rejects registry and embedded runtime references.</p></dd>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="module.html">module</a></span><span class="op">(</span><span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span><span class="va">data</span>, <span class="va">metric</span>, parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">1.0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="module.html">module</a></span><span class="op">(</span><span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="optimize_grid.html">optimize_grid</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">data</span>, <span class="va">metric</span>, parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">1.0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Get code as string</span></span></span>
 <span class="r-in"><span><span class="va">code</span> <span class="op">&lt;-</span> <span class="fu">export_module_code</span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span></span>

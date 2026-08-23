@@ -110,7 +110,7 @@ tp <- Omni(
   )
 )
 
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
-compiled$config$optimizer$candidate_programs
+compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
+optimization_result(compiled)$extensions$omni$candidate_programs
 } # }
 ```

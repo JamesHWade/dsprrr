@@ -115,6 +115,8 @@ matching token-stream request is active; that request is rejected first.</p>
 <span>  interpreter_factory <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iters <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  extract_answer <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  chat <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -149,8 +151,16 @@ Supply exactly one of <code>runner</code> and <code>interpreter_factory</code>.<
 answer from execution result. If FALSE, return execution result directly.</p></dd>
 
 
+<dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>
+<dd><p>Optional prediction configuration.</p></dd>
+
+
+<dt id="arg-chat">chat<a class="anchor" aria-label="anchor" href="#arg-chat"></a></dt>
+<dd><p>Optional ellmer Chat object.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments passed to the module</p></dd>
+<dd><p>Must be empty.</p></dd>
 
 </dl></div>
     <div class="section level2">

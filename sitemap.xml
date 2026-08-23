@@ -91,7 +91,6 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/clear_traces.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/code_act.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/compile.html</loc></url>
-<url><loc>https://jameshwade.github.io/dsprrr/reference/compile_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/complete_trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/concurrency_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/config_diff.html</loc></url>
@@ -152,6 +151,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_parameters.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/module_trials.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/optimization_result.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/optimization_summary.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/optimize_grid.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/optimizer-accessors.html</loc></url>
@@ -178,6 +178,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/r_code_runner.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/rag_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/ragnar_tool.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/react.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/reasoning_effort.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.html</loc></url>

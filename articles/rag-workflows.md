@@ -128,9 +128,8 @@ For agentic workflows, create search tools that can be called by LLMs:
 # )
 
 # Use with a ReAct module
-# react_mod <- module(
-#   signature = "question -> answer",
-#   type = "react",
+# react_mod <- react(
+#   "question -> answer",
 #   tools = list(search_tool)
 # )
 

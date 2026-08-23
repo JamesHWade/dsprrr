@@ -126,13 +126,14 @@ Combines information from trials, best parameters, and cost tracking.</p>
 <code><a href="best_params.html">best_params()</a></code>,
 <code><a href="config_diff.html">config_diff()</a></code>,
 <code><a href="export_module_code.html">export_module_code()</a></code>,
+<code><a href="optimization_result.html">optimization_result()</a></code>,
 <code><a href="top_trials.html">top_trials()</a></code></p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span><span class="va">mod</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span><span class="va">data</span>, <span class="va">metric</span>, <span class="va">parameters</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="optimize_grid.html">optimize_grid</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">data</span>, <span class="va">metric</span>, <span class="va">parameters</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu">optimization_summary</span><span class="op">(</span><span class="va">mod</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>

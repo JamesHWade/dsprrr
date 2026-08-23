@@ -18,6 +18,10 @@ rlm_module(
   sub_lm = NULL,
   verbose = FALSE,
   tools = list(),
+  config = list(),
+  chat = NULL,
+  generate_action = NULL,
+  extract = NULL,
   ...
 )
 ```
@@ -81,9 +85,25 @@ rlm_module(
   safety ceiling permits at most 1,000 host-tool calls in one generated
   R step.
 
+- config:
+
+  Optional prediction configuration.
+
+- chat:
+
+  Optional ellmer Chat object.
+
+- generate_action:
+
+  Optional advanced action predictor.
+
+- extract:
+
+  Optional advanced extraction predictor.
+
 - ...:
 
-  Additional arguments passed to the module
+  Must be empty.
 
 ## Value
 

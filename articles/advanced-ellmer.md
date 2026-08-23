@@ -24,7 +24,7 @@ Use mirai for multi-process parallelism:
 
 ``` r
 
-mod <- module(signature("text -> sentiment"), type = "predict")
+mod <- module(signature("text -> sentiment"))
 
 # Process multiple items in parallel using mirai
 results <- run(
@@ -67,9 +67,7 @@ workflows:
 
 # Create a sentiment analysis module
 sentiment_mod <- module(
-  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-  type = "predict"
-)
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"))
 
 # Convert to an ellmer tool
 sentiment_tool <- as_ellmer_tool(
@@ -115,7 +113,7 @@ session_cost()
 ``` r
 
 # Run batch predictions
-mod <- module(signature("q -> a"), type = "predict")
+mod <- module(signature("q -> a"))
 results <- run(mod, q = c("Hello", "World"), .return_format = "batch")
 
 # Get aggregated cost and tokens from batch
@@ -163,9 +161,7 @@ dsprrr inherits ellmer’s multimodal capabilities:
 ``` r
 
 mod <- module(
-  signature("image, question -> answer"),
-  type = "predict"
-)
+  signature("image, question -> answer"))
 
 # Pass an image via ellmer Content objects
 result <- run(
@@ -182,9 +178,7 @@ For long-form generation, use streaming:
 ``` r
 
 mod <- module(
-  signature("topic -> essay"),
-  type = "predict"
-)
+  signature("topic -> essay"))
 
 # Stream with callback - pass named arguments directly
 mod$stream(

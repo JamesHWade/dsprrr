@@ -91,8 +91,8 @@ qa_module <- signature("question -> answer") |>
 
 # Optimize with few-shot examples from training set
 optimized <- compile(
-  LabeledFewShot(k = 2L),
   qa_module,
+  LabeledFewShot(k = 2L),
   trainset = trainset
 )
 
@@ -147,7 +147,7 @@ Best for open-ended questions where multiple phrasings are correct:
 ``` r
 
 explainer <- signature("topic -> explanation") |>
-  module(type = "chain_of_thought")
+  chain_of_thought()
 
 task <- as_vitals_task(
   module = explainer,
@@ -266,7 +266,7 @@ sig <- signature("question -> answer")
 basic <- module(sig)
 
 # Variant 2: Chain-of-thought reasoning
-cot <- module(sig, type = "chain_of_thought")
+cot <- chain_of_thought(sig)
 
 # Test dataset
 test_data <- tibble(

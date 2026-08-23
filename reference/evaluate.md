@@ -134,9 +134,7 @@ When `.return_format = "simple"`:
 ``` r
 if (FALSE) { # \dontrun{
 classifier <- module(
-  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-  type = "predict"
-)
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"))
 
 testset <- data.frame(
   text = c("I love it!", "Awful.", "It's fine."),

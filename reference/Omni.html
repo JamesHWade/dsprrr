@@ -219,8 +219,8 @@ reproducible splitting, sequential exploration, and mirai worker streams.</p></d
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">compiled</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">candidate_programs</span></span></span>
+<span class="r-in"><span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">omni</span><span class="op">$</span><span class="va">candidate_programs</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

@@ -87,7 +87,7 @@ df <- tibble::tibble(
 
 llm <- ellmer::chat_openai()
 results <- signature("text -> sentiment") |>
-  module(type = "predict") |>
+  module() |>
   run_dataset(df, .llm = llm)
 } # }
 ```

@@ -58,10 +58,10 @@ sig <- signature(
 )
 
 # Direct completion
-classify <- module(sig, type = "predict")
+classify <- module(sig)
 
 # Add step-by-step reasoning
-classify <- module(sig, type = "chain_of_thought")
+classify <- chain_of_thought(sig)
 
 # Add a tool-use loop
 lookup_tool <- ellmer::tool(
@@ -69,7 +69,7 @@ lookup_tool <- ellmer::tool(
   description = "Look up support policy details",
   arguments = list(query = ellmer::type_string())
 )
-classify <- module(sig, type = "react", tools = list(lookup_tool))
+classify <- react(sig, tools = list(lookup_tool))
 ```
 
 ### Optimizers
@@ -84,14 +84,14 @@ configured budget.
 ``` r
 
 route_sig <- signature("ticket -> urgency: enum('low', 'high')")
-router <- module(route_sig, type = "predict")
+router <- module(route_sig)
 trainset <- tibble::tibble(
   ticket  = c("Package lost", "Need a receipt"),
   urgency = c("high", "low")
 )
 
 tp <- GEPA(metric = metric_exact_match(field = "urgency"))
-optimized <- compile(tp, router, trainset)
+optimized <- compile(router, tp, trainset)
 
 board <- pins::board_temp()
 pin_module_config(board, "ticket-router-v2", optimized)
@@ -267,7 +267,7 @@ Signatures define a task and enforce typed outputs.
 extract <- signature(
   "message -> name: string, email: string,
    intent: enum('meeting', 'intro', 'follow-up')"
-) |> module(type = "predict")
+) |> module()
 
 result <- run(
   extract,
@@ -302,7 +302,7 @@ search <- ellmer::tool(
 )
 
 agent <- signature("question -> answer") |>
-  module(type = "react", tools = list(search))
+  react(tools = list(search))
 
 answer <- run(
   agent,
@@ -322,10 +322,10 @@ Compose modules into a pipeline with `%>>%`—outputs flow to inputs.
 
 # Pull a claim, then verify it against the source
 find <- signature("article -> claim: string, source: string") |>
-  module(type = "chain_of_thought")
+  chain_of_thought()
 
 verify <- signature("claim, source -> verdict") |>
-  module(type = "chain_of_thought")
+  chain_of_thought()
 
 factcheck <- find %>>% verify
 
@@ -343,7 +343,7 @@ Name an image input in the signature and pass an ellmer content object.
 ``` r
 
 analyze <- signature("image, question -> answer") |>
-  module(type = "predict")
+  module()
 
 run(
   analyze,
@@ -366,7 +366,7 @@ Optimizers improve a program against a metric—no prompt rewriting.
 extract <- signature(
   "message -> intent: enum('meeting', 'intro')"
 ) |>
-  module(type = "predict")
+  module()
 
 trainset <- tibble::tibble(
   message = c("I'm Sarah (sarah@acme.co). Meet Thursday?",
@@ -375,8 +375,8 @@ trainset <- tibble::tibble(
 )
 
 optimized <- compile(
-  GEPA(metric = metric_exact_match(field = "intent")),
   extract,
+  GEPA(metric = metric_exact_match(field = "intent")),
   trainset
 )
 
@@ -405,13 +405,13 @@ trainset <- tibble::tibble(
 )
 
 optimized <- compile(
-  LabeledFewShot(k = 3),
   classifier,
+  LabeledFewShot(k = 3),
   trainset
 )
 
 # Now includes 3 examples in every prompt
-optimized$predict(text = "Amazing service!")
+run(optimized, text = "Amazing service!", .llm = chat_openai())
 #> "positive"
 ```
 
@@ -453,8 +453,8 @@ harness <- MetaHarness(
 )
 
 optimized <- compile(
-  harness,
   classifier,
+  harness,
   trainset,
   valset = validation_data,
   .llm = task_chat,

@@ -43,7 +43,7 @@ Add more outputs with commas:
 
 sig <- signature("text -> sentiment, confidence: number")
 
-extractor <- module(sig, type = "predict")
+extractor <- module(sig)
 
 run(extractor, text = "This product is absolutely fantastic!", .llm = chat)
 ```
@@ -69,7 +69,7 @@ sig <- signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral'), stars: int, summary: string"
 )
 
-analyzer <- module(sig, type = "predict")
+analyzer <- module(sig)
 
 result <- run(
   analyzer,
@@ -100,7 +100,7 @@ sig <- signature(
   instructions = "Analyze the news article."
 )
 
-article_analyzer <- module(sig, type = "predict")
+article_analyzer <- module(sig)
 ```
 
 Test it with a news snippet:
@@ -137,7 +137,7 @@ sig <- signature(
   instructions = "Extract named entities from the text."
 )
 
-entity_extractor <- module(sig, type = "predict")
+entity_extractor <- module(sig)
 ```
 
 Test with a news article:
@@ -189,7 +189,7 @@ sig <- signature(
   instructions = "Parse the email and extract key information."
 )
 
-email_parser <- module(sig, type = "predict")
+email_parser <- module(sig)
 ```
 
 Test with an email:
@@ -251,7 +251,7 @@ sig <- signature(
   instructions = "Triage the email for inbox management."
 )
 
-triage <- module(sig, type = "predict")
+triage <- module(sig)
 ```
 
 Process a batch of emails:
@@ -289,7 +289,7 @@ sig <- signature(
   instructions = "Extract date information if present. Set date to empty string if no date."
 )
 
-date_extractor <- module(sig, type = "predict")
+date_extractor <- module(sig)
 
 run(date_extractor, text = "Let's meet next Tuesday", .llm = chat)
 run(date_extractor, text = "Great weather today!", .llm = chat)

@@ -242,12 +242,11 @@ run(classifier, text = "Hate it!", .llm = chat)
 
 # For optimization and complex configurations
 sig <- signature("context, question -> answer")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 # With custom template
 mod <- module(
   sig,
-  type = "predict",
   template = "Context:\n{context}\n\nQuestion: {question}"
 )
 ```
@@ -333,7 +332,7 @@ Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md).
 result <- run(mod, question = "What is R?", .llm = chat_openai())
 
 # Using predict method
-result <- mod$predict(question = "What is R?")
+result <- run(mod, question = "What is R?")
 ```
 
 ### Batch Processing
@@ -341,7 +340,7 @@ result <- mod$predict(question = "What is R?")
 ``` r
 
 # Vector inputs
-results <- mod$predict(text = c("Great!", "Awful!", "Meh"))
+results <- run(mod, text = c("Great!", "Awful!", "Meh"))
 
 # Data frame
 new_data <- data.frame(text = c("A", "B", "C"))
@@ -429,7 +428,7 @@ result <- evaluate(
 ``` r
 
 # Search over parameters
-mod$optimize_grid(
+optimize_grid(  mod,
   data = train_data,
   metric = metric_exact_match(),
   .llm = llm,
@@ -450,7 +449,7 @@ module_metrics(mod)
 
 # Few-shot learning
 tp <- LabeledFewShot(k = 4L, metric = metric_exact_match())
-compiled <- compile(tp, mod, trainset, .llm = llm)
+compiled <- compile(mod, tp, trainset, .llm = llm)
 
 # Grid search teleprompter
 variants <- data.frame(
@@ -461,7 +460,7 @@ tp <- GridSearchTeleprompter(
   variants = variants,
   metric = metric_exact_match()
 )
-compiled <- compile(tp, mod, trainset, .llm = llm)
+compiled <- compile(mod, tp, trainset, .llm = llm)
 ```
 
 ------------------------------------------------------------------------
@@ -574,7 +573,7 @@ sig <- signature(
   "context, question -> answer",
   instructions = "Answer based only on the provided context."
 )
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 # Use with retrieved context
 result <- run(mod,

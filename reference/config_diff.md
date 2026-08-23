@@ -39,6 +39,7 @@ Other optimizer accessors:
 [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md),
 [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md),
 [`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md),
+[`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md),
 [`optimization_summary()`](https://jameshwade.github.io/dsprrr/reference/optimization_summary.md),
 [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
 
@@ -46,8 +47,8 @@ Other optimizer accessors:
 
 ``` r
 if (FALSE) {
-mod <- module(signature("text -> sentiment"), type = "predict")
-mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
+mod <- module(signature("text -> sentiment"))
+optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
 config_diff(mod)
 }
 ```

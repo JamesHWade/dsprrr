@@ -77,7 +77,6 @@ Control how much “thinking” the model does with `reasoning_effort`:
 chat <- chat_openai(model = "o3")
 mod <- module(
   signature("question -> answer"),
-  type = "predict",
   config = list(
     reasoning_effort = "high"  # low, medium, or high
   )
@@ -101,7 +100,7 @@ type:
 ``` r
 
 sig <- signature("text -> analysis")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 # Traditional model parameters
 params_traditional <- module_parameters(mod, model = "gpt-4o")
@@ -159,7 +158,6 @@ session_cost()
 chat <- chat_openai(model = "o4-mini")
 mod <- module(
   signature("text -> category"),
-  type = "predict",
   config = list(
     reasoning_effort = "low"  # Minimize cost for simpler tasks
   )

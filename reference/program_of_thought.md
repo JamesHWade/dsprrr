@@ -20,6 +20,8 @@ program_of_thought(
   interpreter_factory = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
+  config = list(),
+  chat = NULL,
   ...
 )
 ```
@@ -53,9 +55,17 @@ program_of_thought(
   Logical. If TRUE (default), use LLM to extract final answer from
   execution result. If FALSE, return execution result directly.
 
+- config:
+
+  Optional prediction configuration.
+
+- chat:
+
+  Optional ellmer Chat object.
+
 - ...:
 
-  Additional arguments passed to the module
+  Must be empty.
 
 ## Value
 

@@ -6,10 +6,12 @@ and observations before producing a final structured answer.
 
 ## Details
 
-Create a ReAct module with `module(type = "react", tools = list(...))`.
-If you pass `tools` with `type = "predict"`, the module automatically
-upgrades to `react`. ellmer executes the tool-calling loop internally;
-dsprrr preserves its native turn history and tool-call IDs, enforces
+Create a ReAct module explicitly with
+`react(signature, tools = list(...))`. Passing tools to
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) is
+an error, so configuration never silently changes prediction into
+agency. ellmer executes the tool-calling loop internally; dsprrr
+preserves its native turn history and tool-call IDs, enforces
 `max_iterations`, and then produces a structured output based on the
 module signature. Multiple tool calls in one assistant turn count as one
 iteration.
@@ -40,9 +42,8 @@ search_tool <- ellmer::tool(
   arguments = list(query = ellmer::type_string())
 )
 
-agent <- module(
+agent <- react(
   signature("question -> answer"),
-  type = "react",
   tools = list(search_tool),
   max_iterations = 8L
 )

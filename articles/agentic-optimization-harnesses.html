@@ -290,8 +290,8 @@ That separates task traces, model choice, and cost attribution.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">research</span>,</span>
 <span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="va">research</span>,</span>
 <span>  <span class="va">trainset</span>,</span>
 <span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
@@ -343,8 +343,8 @@ resets it automatically before each iteration:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">harness</span>,</span>
 <span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="va">harness</span>,</span>
 <span>  <span class="va">trainset</span>,</span>
 <span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
@@ -406,8 +406,8 @@ errors:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">harness</span>,</span>
 <span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="va">harness</span>,</span>
 <span>  <span class="va">trainset</span>,</span>
 <span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
@@ -419,9 +419,9 @@ errors:</p>
 cannot report verified usage. A stopped run returns its best partial
 program and a typed stop reason:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">compiled</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">budget_summary</span></span>
-<span><span class="va">compiled</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">stop_reason</span></span>
-<span><span class="va">compiled</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">partial</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">budget</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">stop_reason</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">status</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="resume-and-audit-a-run">Resume and Audit a Run<a class="anchor" aria-label="anchor" href="#resume-and-audit-a-run"></a>
@@ -431,8 +431,8 @@ program, data, metric, and harness configuration; resource limits may be
 raised:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">resumed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">harness</span>,</span>
 <span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="va">harness</span>,</span>
 <span>  <span class="va">trainset</span>,</span>
 <span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
@@ -447,7 +447,7 @@ raised:</p>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The candidate ledger is attached to the returned module:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">candidates</span> <span class="op">&lt;-</span> <span class="va">resumed</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">candidates</span></span>
+<code class="sourceCode R"><span><span class="va">candidates</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">resumed</span><span class="op">)</span><span class="op">$</span><span class="va">trials</span></span>
 <span><span class="va">candidates</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"id"</span>,</span>
 <span>  <span class="st">"parent_id"</span>,</span>
@@ -462,9 +462,9 @@ raised:</p>
 <span><span class="va">candidates</span><span class="op">$</span><span class="va">snapshot</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">candidates</span><span class="op">$</span><span class="va">feedback</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
 <span></span>
-<span><span class="va">resumed</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">frontier_ids</span></span>
-<span><span class="va">resumed</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">events</span></span>
-<span><span class="va">resumed</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">termination</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">resumed</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">meta_harness</span><span class="op">$</span><span class="va">frontier_ids</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">resumed</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">meta_harness</span><span class="op">$</span><span class="va">events</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">resumed</span><span class="op">)</span><span class="op">$</span><span class="va">stop_reason</span></span></code></pre></div>
 <p>With <code>log_dir</code> in the teleprompter or
 <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code>, evaluations are also written through
 <code>TrialLog</code>.</p>
@@ -491,8 +491,8 @@ per-step argument lists:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">omni</span>,</span>
 <span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="va">omni</span>,</span>
 <span>  <span class="va">trainset</span>,</span>
 <span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>

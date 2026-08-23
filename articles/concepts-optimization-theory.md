@@ -133,7 +133,7 @@ Just add k examples from your training set as demonstrations:
 ``` r
 
 tp <- LabeledFewShot(k = 4L)
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 **How it works**:
@@ -159,7 +159,7 @@ tp <- BootstrapFewShot(
  max_bootstrapped_demos = 4L,
  max_labeled_demos = 8L
 )
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 **How it works**:
@@ -197,7 +197,7 @@ tp <- GridSearchTeleprompter(
  metric = metric_exact_match(),
  variants = variants
 )
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 **How it works**:
@@ -223,7 +223,7 @@ tp <- BootstrapFewShotWithRandomSearch(
  num_candidate_programs = 8L,
  max_bootstrapped_demos = 4L
 )
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 **How it works**:
@@ -248,7 +248,7 @@ tp <- SIMBA(
  max_demos = 4L,
  embed_fn = embed_openai()
 )
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 **How it works**:
@@ -276,7 +276,7 @@ tp <- KNNFewShot(
  k = 3L,
  embed_fn = embed_openai()
 )
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 **How it works**:
@@ -304,7 +304,7 @@ tp <- COPRO(
  breadth = 5L,
  depth = 3L
 )
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 **How it works**:
@@ -333,7 +333,7 @@ tp <- MIPROv2(
  num_candidates = 10L,
  init_temperature = 1.4
 )
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 Uses Bayesian optimization to jointly search instruction and demo
@@ -352,7 +352,7 @@ tp <- GEPA(
  population_size = 20L,
  generations = 10L
 )
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 GEPA reflects on failed examples, proposes revised instructions,
@@ -479,7 +479,7 @@ valset <- data[val_idx, ]
 testset <- data[test_idx, ]
 
 # Optimize
-compiled <- compile(tp, mod, trainset, valset = valset)
+compiled <- compile(mod, tp, trainset, valset = valset)
 
 # Final evaluation
 evaluate(compiled, testset, metric)

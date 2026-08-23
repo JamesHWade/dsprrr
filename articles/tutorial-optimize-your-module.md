@@ -46,7 +46,7 @@ sig <- signature(
   instructions = "Classify the sentiment of this product review."
 )
 
-classifier <- module(sig, type = "predict")
+classifier <- module(sig)
 ```
 
 Create training and test data:
@@ -94,7 +94,7 @@ more creative. Let’s find the best value:
 
 ``` r
 
-classifier$optimize_grid(
+optimize_grid(  classifier,
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
@@ -127,10 +127,10 @@ Check the best configuration:
 ``` r
 
 # Best score achieved
-classifier$state$best_score
+optimization_result(classifier)$best_score
 
 # Best parameters
-classifier$state$best_params
+optimization_result(classifier)$best_params
 ```
 
 ## Step 4: The Module Remembers
@@ -151,9 +151,9 @@ Instructions matter a lot. Let’s test different phrasings:
 ``` r
 
 # Reset to try different parameters
-classifier2 <- module(sig, type = "predict")
+classifier2 <- module(sig)
 
-classifier2$optimize_grid(
+optimize_grid(  classifier2,
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
@@ -178,9 +178,9 @@ Search over multiple parameters at once:
 
 ``` r
 
-classifier3 <- module(sig, type = "predict")
+classifier3 <- module(sig)
 
-classifier3$optimize_grid(
+optimize_grid(  classifier3,
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
@@ -217,8 +217,8 @@ teleprompter <- GridSearchTeleprompter(
   k = 2L  # Number of few-shot examples to include
 )
 
-optimized <- compile_module(
-  program = module(sig, type = "predict"),
+optimized <- compile(
+  program = module(sig),
   teleprompter = teleprompter,
   trainset = trainset,
   .llm = chat
@@ -248,7 +248,7 @@ Compare to baseline:
 
 ``` r
 
-baseline <- module(sig, type = "predict")
+baseline <- module(sig)
 
 baseline_results <- evaluate(
   baseline,

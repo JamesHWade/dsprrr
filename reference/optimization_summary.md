@@ -41,13 +41,14 @@ Other optimizer accessors:
 [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md),
 [`config_diff()`](https://jameshwade.github.io/dsprrr/reference/config_diff.md),
 [`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md),
+[`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md),
 [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
 
 ## Examples
 
 ``` r
 if (FALSE) {
-mod$optimize_grid(data, metric, parameters)
+optimize_grid(mod, data, metric, parameters)
 summary <- optimization_summary(mod)
 print(summary)
 }

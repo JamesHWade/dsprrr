@@ -207,12 +207,12 @@ Default is TRUE.</p></dd>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="compile.html">compile</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">tp</span>, <span class="va">qa_module</span>, <span class="va">trainset</span>,</span></span>
+<span class="r-in"><span>  <span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>,</span></span>
 <span class="r-in"><span>  valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">task_llm</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Access instruction history</span></span></span>
-<span class="r-in"><span><span class="va">compiled</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">history</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">copro</span><span class="op">$</span><span class="va">history</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

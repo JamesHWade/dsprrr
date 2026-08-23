@@ -131,7 +131,8 @@ default.</p>
 <span>  interpreter_factory <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  source_format <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"json"</span>, <span class="st">"r"</span><span class="op">)</span>,</span>
 <span>  require_sandbox <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  max_tool_calls <span class="op">=</span> <span class="fl">100L</span></span>
+<span>  max_tool_calls <span class="op">=</span> <span class="fl">100L</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -191,6 +192,10 @@ otherwise untrusted source.</p></dd>
 <dt id="arg-max-tool-calls">max_tool_calls<a class="anchor" aria-label="anchor" href="#arg-max-tool-calls"></a></dt>
 <dd><p>Maximum number of direct host-tool calls allowed in one
 executable invocation, or <code>NULL</code> for no limit. Defaults to 100.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Must be empty. Flex accepts only its documented arguments.</p></dd>
 
 </dl></div>
     <div class="section level2">

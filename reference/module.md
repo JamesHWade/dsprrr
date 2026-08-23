@@ -1,36 +1,35 @@
-# Create an LLM Module
+# Create a prediction module
 
-The primary function for creating executable LLM modules. Supports
-"predict" for standard structured prediction, "react" for ReAct-style
-tool-using modules, "chain_of_thought" for step-by-step reasoning,
-"multichain" for multi-chain comparison, "program_of_thought" for code
-execution, "codeact" for tools plus code, "rlm" for adaptive R-object
-investigation, and experimental "flex" for declarative or
-interpreter-backed programs.
+Create a standard structured-prediction module. This is the primary
+constructor in the dsprrr journey:
+[`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
+-\> `module()` -\>
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) -\>
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+-\>
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
+
+Agentic, reasoning, and code-executing programs use explicit
+constructors such as
+[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md),
+[`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md),
+[`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md),
+[`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md),
+[`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md),
+and [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md).
+Keeping those choices in the function name prevents configuration from
+silently changing the kind of program being built.
 
 ## Usage
 
 ``` r
 module(
   signature,
-  type = "predict",
   chat = NULL,
   template = "",
   demos = list(),
   config = list(),
-  tools = NULL,
-  runner = NULL,
-  interpreter_factory = NULL,
-  max_iterations = NULL,
-  max_iters = 3L,
-  extract_answer = TRUE,
-  M = 3L,
-  temperature = 0.7,
-  module_src = NULL,
-  source_format = c("auto", "json", "r"),
-  max_predictor_calls = 100L,
-  max_tool_calls = 100L,
-  require_sandbox = TRUE,
   ...
 )
 ```
@@ -39,183 +38,50 @@ module(
 
 - signature:
 
-  A Signature object defining the module's interface
-
-- type:
-
-  Character string specifying the module type:
-
-  - `"predict"` (default): Standard prediction module
-
-  - `"react"`: ReAct-style module with tool support
-
-  - `"chain_of_thought"`: Adds step-by-step reasoning to the signature
-
-  - `"multichain"`: MultiChainComparison module for ensemble reasoning
-
-  - `"program_of_thought"`: Code execution module (requires a runtime
-    source)
-
-  - `"codeact"`: Hybrid agent with tools + code execution (requires a
-    runtime source)
-
-  - `"rlm"`: Recursive Language Model for REPL-based context exploration
-    (requires a runtime source)
-
-  - `"flex"`: Experimental declarative or executable Flex program
+  A Signature object defining the module interface.
 
 - chat:
 
-  Optional ellmer Chat object for LLM operations. If provided, the
-  module will use this Chat for all predictions unless overridden with
-  `.llm`.
+  Optional ellmer Chat object. When supplied,
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) uses
+  it unless an explicit `.llm` is provided.
 
 - template:
 
-  Optional glue template for prompt generation
+  Optional glue template for prompt generation.
 
 - demos:
 
-  Optional list of demonstration examples
+  Optional list of demonstration examples.
 
 - config:
 
-  Optional configuration list
-
-- tools:
-
-  Optional tools configuration:
-
-  - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef
-    objects.
-
-  - for `type = "rlm"`: named host functions or ellmer ToolDef objects.
-
-  - for executable `type = "flex"`: named host functions or ToolDef
-    objects. If provided with `type = "predict"`, automatically upgrades
-    to react.
-
-- runner:
-
-  Optional caller-owned code runner implementing `execute()` and
-  `policy()` for code execution types. It is never automatically shut
-  down. For `type = "rlm"`, the policy must advertise
-  `persistent = TRUE`; use `r_code_runner(persistent = TRUE)` for the
-  trusted callr backend.
-
-- interpreter_factory:
-
-  Optional zero-argument factory for program-of-thought, CodeAct, RLM,
-  and executable Flex modules. It creates one fresh runner per
-  invocation. Supply exactly one of `runner` and `interpreter_factory`
-  for ordinary code-executing types; Flex accepts only the factory so
-  every invocation is isolated. For RLM, every returned runner must
-  advertise `persistent = TRUE`.
-
-- max_iterations:
-
-  Maximum iterations for ReAct, CodeAct, or RLM modules created through
-  this generic factory. Defaults to 10 for ReAct and CodeAct and 20 for
-  RLM. For CodeAct it also caps tool calls within one invocation;
-  exceeding that inner budget errors.
-
-- max_iters:
-
-  Maximum code repair iterations for program_of_thought (default: 3).
-
-- extract_answer:
-
-  Logical. For program_of_thought, whether to use LLM to extract final
-  answer from execution result (default: TRUE)
-
-- M:
-
-  Number of reasoning chains for multichain (default: 3)
-
-- temperature:
-
-  Temperature for multichain diversity (default: 0.7)
-
-- module_src:
-
-  Optional complete source for `type = "flex"`.
-
-- source_format:
-
-  Flex source language: `"auto"`, `"json"`, or `"r"`.
-
-- max_predictor_calls:
-
-  Maximum bridged predictor calls allowed by Flex, or `NULL` for no
-  limit.
-
-- max_tool_calls:
-
-  Maximum direct host-tool calls allowed by executable Flex, or `NULL`
-  for no limit.
-
-- require_sandbox:
-
-  Whether executable Flex requires a runner that advertises an enforced
-  sandbox.
+  Optional prediction configuration. Model parameters such as
+  temperature belong here, for example
+  `config = list(temperature = 0.2)`.
 
 - ...:
 
-  Additional arguments forwarded to
-  [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
-  when `type = "rlm"`. Reserved and required to be empty for
-  `type = "flex"`.
+  Must be empty. Use a dedicated constructor for advanced module
+  behavior.
 
 ## Value
 
-A module object (R6) that can be executed with
-[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
+A PredictModule executed with
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md).
 
 ## Examples
 
 ``` r
-# Create a simple prediction module
 classifier <- signature("text -> sentiment") |>
-  module(type = "predict", template = "Analyze: {text}")
+  module(template = "Analyze: {text}")
 
-# With demonstrations
-qa <- signature("context, question -> answer") |>
-  module(
-    type = "predict",
-    demos = list(
-      list(
-        inputs = list(context = "...", question = "..."),
-        output = "..."
-      )
-    )
-  )
-
-# Create a multichain comparison module
-mcc <- signature("question -> answer") |>
-  module(type = "multichain", M = 5, temperature = 0.8)
+configured <- signature("question -> answer") |>
+  module(config = list(temperature = 0.2))
 
 if (FALSE) { # \dontrun{
-# Execute the module (requires an llm object)
 llm <- ellmer::chat_openai()
-result <- classifier |> run(text = "Great package!", .llm = llm)
-
-# Or create module with Chat attached
-classifier <- signature("text -> sentiment") |>
-  module(type = "predict", chat = ellmer::chat_openai())
-result <- classifier |> run(text = "Great package!")  # No .llm needed
-
-# Create a ReAct module with tools
-search_fn <- function(query) paste("Result for", query)
-search_tool <- ellmer::tool(
-  search_fn,
-  description = "Search for information",
-  arguments = list(query = ellmer::type_string())
-)
-agent <- signature("question -> answer") |>
-  module(
-    type = "react",
-    tools = list(search_tool),
-    chat = ellmer::chat_openai()
-  )
+result <- classifier |>
+  run(text = "Great package!", .llm = llm)
 } # }
 ```

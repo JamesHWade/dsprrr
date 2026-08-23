@@ -92,7 +92,7 @@ if (FALSE) { # \dontrun{
 board <- pins::board_folder("pins")
 
 mod <- signature("text -> sentiment") |>
-  module(type = "predict") |>
+  module() |>
   optimize_grid(data = devset, metric = metric_exact_match())
 
 pin_module_config(board, "sentiment-classifier-v1", mod,

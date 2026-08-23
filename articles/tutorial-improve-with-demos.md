@@ -46,7 +46,7 @@ sig <- signature(
   instructions = "Classify the customer support ticket."
 )
 
-classifier <- module(sig, type = "predict")
+classifier <- module(sig)
 ```
 
 Test it:
@@ -132,7 +132,6 @@ The simplest way to improve: show the LLM examples. Add them via the
 
 classifier_with_demos <- module(
   sig,
-  type = "predict",
   demos = list(
     list(
       inputs = list(ticket = "I was charged twice for the same item"),
@@ -189,7 +188,7 @@ automatically selects good examples from your training data:
 teleprompter <- LabeledFewShot(k = 3L)
 
 # Compile the module with the teleprompter
-compiled <- compile_module(
+compiled <- compile(
   program = classifier,
   teleprompter = teleprompter,
   trainset = trainset
@@ -197,7 +196,7 @@ compiled <- compile_module(
 ```
 
 The
-[`compile_module()`](https://jameshwade.github.io/dsprrr/reference/compile_module.md)
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 function takes your module, a teleprompter strategy, and training data.
 It returns an improved module with automatically selected
 demonstrations.
@@ -268,7 +267,7 @@ results <- list()
 
 for (k in c(1L, 2L, 3L, 4L, 5L)) {
   tp <- LabeledFewShot(k = k)
-  compiled_k <- compile_module(classifier, tp, trainset)
+  compiled_k <- compile(classifier, tp, trainset)
 
   eval_k <- evaluate(compiled_k, trainset, metric = metric, .llm = chat)
 
@@ -293,7 +292,7 @@ In this tutorial, you:
 3.  Added manual demonstrations with the `demos` parameter
 4.  Used `LabeledFewShot` for automatic demo selection
 5.  Compiled modules with
-    [`compile_module()`](https://jameshwade.github.io/dsprrr/reference/compile_module.md)
+    [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 6.  Evaluated with
     [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md)
 7.  Experimented with different numbers of examples

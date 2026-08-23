@@ -32,7 +32,7 @@ The new
 helper lets you tune a module directly without going through a
 teleprompter first. It evaluates a grid of configuration values (defined
 either as a simple named list or via tidymodels `dials` parameters) and
-records the results in `module$state$trials`.
+records the results in `optimization_result(module)$trials`.
 
 ``` r
 
@@ -42,7 +42,6 @@ sig_quick <- signature("review -> sentiment: string",
 
 sentiment_module <- module(
   signature = sig_quick,
-  type = "predict",
   template = "Review: {review}\nSentiment:"
 )
 
@@ -64,8 +63,8 @@ optimize_grid(
   control = list(progress = FALSE)
 )
 
-sentiment_module$state$trials[, c("trial_id", "score", "n_evaluated")]
-sentiment_module$state$best_score
+optimization_result(sentiment_module)$trials[, c("trial_id", "score", "n_evaluated")]
+optimization_result(sentiment_module)$best_score
 ```
 
 If you do have tidymodels installed, you can also describe the search
@@ -196,7 +195,7 @@ library(ggplot2)
 
 # 1. Create and optimize module
 sig <- signature("text -> label: enum('spam', 'ham')")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 # Initial optimization with coarse grid
 optimize_grid(
@@ -420,7 +419,7 @@ training data as demonstrations:
 classifier <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
-  module(type = "predict", template = "Analyze sentiment: {text}\n\nSentiment:")
+  module( template = "Analyze sentiment: {text}\n\nSentiment:")
 
 # Prepare training data
 trainset <- tibble::tibble(
@@ -444,7 +443,7 @@ teleprompter <- LabeledFewShot(
 )
 
 # Compile the module
-optimized_classifier <- compile_module(
+optimized_classifier <- compile(
   program = classifier,
   teleprompter = teleprompter,
   trainset = trainset
@@ -469,7 +468,7 @@ find the best performing one:
 
 # Create base QA module
 qa_module <- signature("context, question -> answer") |>
-  module(type = "predict")
+  module()
 
 # Define instruction variants to test
 variants <- data.frame(
@@ -512,7 +511,7 @@ grid_teleprompter <- GridSearchTeleprompter(
 )
 
 # Compile with grid search
-optimized_qa <- compile_module(
+optimized_qa <- compile(
   program = qa_module,
   teleprompter = grid_teleprompter,
   trainset = qa_trainset,
@@ -536,7 +535,7 @@ answer <- optimized_qa |>
 ## Part 3: The Compilation Process
 
 The
-[`compile_module()`](https://jameshwade.github.io/dsprrr/reference/compile_module.md)
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 function is the main interface for optimizing your programs:
 
 ``` r
@@ -555,7 +554,7 @@ email_classifier <- signature(
   ),
   instructions = "Classify customer emails by category and priority."
 ) |>
-  module(type = "predict")
+  module()
 
 # Step 2: Prepare comprehensive training data
 email_trainset <- tibble::tibble(
@@ -589,7 +588,7 @@ email_trainset <- tibble::tibble(
 # Option A: Simple few-shot learning
 simple_optimizer <- LabeledFewShot(k = 3L)
 
-optimized_simple <- compile_module(
+optimized_simple <- compile(
   program = email_classifier,
   teleprompter = simple_optimizer,
   trainset = email_trainset
@@ -613,7 +612,7 @@ grid_optimizer <- GridSearchTeleprompter(
   verbose = TRUE
 )
 
-optimized_grid <- compile_module(
+optimized_grid <- compile(
   program = email_classifier,
   teleprompter = grid_optimizer,
   trainset = email_trainset,
@@ -729,7 +728,7 @@ doc_analyzer <- signature(
   ),
   instructions = "Analyze documents for key information and provide recommendations."
 ) |>
-  module(type = "predict")
+  module()
 
 # 2. Create comprehensive training data
 doc_trainset <- tibble::tibble(
@@ -804,7 +803,7 @@ results_by_k <- list()
 for (k in c(1L, 2L, 3L, 4L)) {
   teleprompter <- LabeledFewShot(k = k, seed = 42L)
 
-  optimized <- compile_module(
+  optimized <- compile(
     program = doc_analyzer,
     teleprompter = teleprompter,
     trainset = doc_trainset
@@ -846,7 +845,7 @@ grid_optimizer <- GridSearchTeleprompter(
   verbose = TRUE
 )
 
-best_analyzer <- compile_module(
+best_analyzer <- compile(
   program = doc_analyzer,
   teleprompter = grid_optimizer,
   trainset = doc_trainset,
@@ -900,7 +899,7 @@ optimizer <- GridSearchTeleprompter(
   verbose = FALSE
 )
 
-optimized_module <- compile_module(
+optimized_module <- compile(
   program = doc_analyzer,
   teleprompter = optimizer,
   trainset = splits$train
@@ -924,7 +923,7 @@ Optimize in stages for complex tasks:
 ``` r
 
 # Stage 1: Optimize for accuracy
-stage1_module <- compile_module(
+stage1_module <- compile(
   program = doc_analyzer,
   teleprompter = LabeledFewShot(k = 3),
   trainset = doc_trainset
@@ -941,7 +940,7 @@ stage2_variants <- data.frame(
   stringsAsFactors = FALSE
 )
 
-stage2_module <- compile_module(
+stage2_module <- compile(
   program = stage1_module, # Start from stage 1
   teleprompter = GridSearchTeleprompter(
     variants = stage2_variants,
@@ -962,14 +961,14 @@ Combine multiple optimized modules:
 modules <- list()
 
 # Version 1: Optimized for sentiment
-modules$sentiment <- compile_module(
+modules$sentiment <- compile(
   program = doc_analyzer,
   teleprompter = LabeledFewShot(k = 4),
   trainset = doc_trainset
 )
 
 # Version 2: Optimized for facts
-modules$facts <- compile_module(
+modules$facts <- compile(
   program = doc_analyzer,
   teleprompter = GridSearchTeleprompter(
     variants = data.frame(
@@ -1039,7 +1038,7 @@ DiverseFewShot <- S7::new_class(
 ``` r
 
 # Inspect what the compiler did
-optimized <- compile_module(
+optimized <- compile(
   program = classifier,
   teleprompter = LabeledFewShot(k = 3),
   trainset = trainset
@@ -1051,14 +1050,15 @@ is_compiled(optimized) # TRUE
 # View selected demonstrations
 print(optimized$demos)
 
-# Check configuration
-print(optimized$config$teleprompter) # "LabeledFewShot"
-print(optimized$config$compilation_k) # 3
+# Inspect the stable optimization result
+result <- optimization_result(optimized)
+print(result$optimizer) # "LabeledFewShot"
+print(result$best_params$k) # 3
 
-# For GridSearch, see which variant won
-if (optimized$config$teleprompter == "GridSearchTeleprompter") {
-  print(optimized$config$best_variant)
-  print(optimized$config$all_scores)
+# For GridSearch, see which variant won and compare every trial
+if (result$optimizer == "GridSearchTeleprompter") {
+  print(result$best_params)
+  print(result$trials)
 }
 ```
 
@@ -1184,7 +1184,7 @@ coarse_variants <- data.frame(
   stringsAsFactors = FALSE
 )
 
-coarse_result <- compile_module(
+coarse_result <- compile(
   program = module,
   teleprompter = GridSearchTeleprompter(
     variants = coarse_variants,
@@ -1219,7 +1219,7 @@ if (best_style == "brief") {
   )
 }
 
-fine_result <- compile_module(
+fine_result <- compile(
   program = module,
   teleprompter = GridSearchTeleprompter(
     variants = fine_variants,

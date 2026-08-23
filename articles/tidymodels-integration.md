@@ -154,9 +154,7 @@ optimization:
 
 # Create module directly
 mod <- module(
-  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-  type = "predict"
-)
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"))
 
 # Use module_parameters() to get dials-compatible parameters
 params <- module_parameters(mod)

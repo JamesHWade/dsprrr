@@ -208,11 +208,11 @@ Chat to a function expecting one.</p>
 <p><strong>Solution:</strong></p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Wrong - passing a string</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span>, chat <span class="op">=</span> <span class="st">"openai"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, chat <span class="op">=</span> <span class="st">"openai"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Correct - pass an actual Chat object</span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span>, chat <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, chat <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
 </div>
@@ -555,11 +555,11 @@ request.</p>
 <p><strong>Solution:</strong></p>
 <div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Wrong - passing a string directly to module()</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Correct - create signature first</span></span>
 <span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="unknown-module-type">“Unknown module type”<a class="anchor" aria-label="anchor" href="#unknown-module-type"></a>
@@ -569,8 +569,8 @@ request.</p>
 ℹ Available types: predict, react</code></pre>
 <p><strong>Solution:</strong> Use a supported module type:</p>
 <div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>  <span class="co"># Standard text generation</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"react"</span><span class="op">)</span>    <span class="co"># Tool-calling agent</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>  <span class="co"># Standard text generation</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react.html">react</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>    <span class="co"># Tool-calling agent</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="devset-must-contain-at-least-one-row">“devset must contain at least one row”<a class="anchor" aria-label="anchor" href="#devset-must-contain-at-least-one-row"></a>
@@ -600,7 +600,7 @@ request.</p>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, question <span class="op">=</span> <span class="st">"Hi"</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Option 2: Store Chat in module</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span>, chat <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, chat <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Option 3: Configure default</span></span>
 <span><span class="fu"><a href="../reference/dsp_configure.html">dsp_configure</a></span><span class="op">(</span>provider <span class="op">=</span> <span class="st">"openai"</span><span class="op">)</span></span>
@@ -652,7 +652,7 @@ and model are active - API key status</p>
 <span><span class="va">sig</span>  <span class="co"># Should print without error</span></span>
 <span></span>
 <span><span class="co"># 2. Test the module creates correctly</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span><span class="va">mod</span>  <span class="co"># Should print module info</span></span>
 <span></span>
 <span><span class="co"># 3. Test a simple call</span></span>

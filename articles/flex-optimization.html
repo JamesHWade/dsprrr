@@ -349,6 +349,7 @@ the first run deliberately small and bounded:</p>
 <code class="sourceCode R"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">baseline</span>,</span>
 <span>  <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
 <span>    metric <span class="op">=</span> <span class="va">route_metric</span>,</span>
 <span>    metric_threshold <span class="op">=</span> <span class="fl">0.95</span>,</span>
@@ -359,7 +360,6 @@ the first run deliberately small and bounded:</p>
 <span>    track_best_outputs <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>    verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  <span class="va">baseline</span>,</span>
 <span>  trainset <span class="op">=</span> <span class="va">train</span>,</span>
 <span>  valset <span class="op">=</span> <span class="va">validation</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
@@ -489,9 +489,9 @@ predictor calls, tool calls, tokens, and the exact source used for each
 row. GEPA also records the winning candidate ID and validation
 score:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">optimized</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">best_candidate_id</span></span>
-<span><span class="va">optimized</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">best_scores</span></span>
-<span><span class="va">optimized</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">optimizer</span><span class="op">$</span><span class="va">per_val_instance_best_candidates</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">lineage</span><span class="op">$</span><span class="va">best_candidate_id</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">gepa</span><span class="op">$</span><span class="va">best_scores</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">gepa</span><span class="op">$</span><span class="va">per_val_instance_best_candidates</span></span></code></pre></div>
 <p>Persist callable tools and factories by registry name rather than
 embedding them in the artifact:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">

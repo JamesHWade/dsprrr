@@ -103,6 +103,8 @@ M reasoning chains and synthesizes the best answer.</p>
 <span>  M <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  temperature <span class="op">=</span> <span class="fl">0.7</span>,</span>
 <span>  comparison_template <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  chat <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -132,8 +134,16 @@ a ChainOfThought module from the signature.</p></dd>
 <dd><p>Optional custom template for comparison prompt</p></dd>
 
 
+<dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>
+<dd><p>Optional prediction configuration.</p></dd>
+
+
+<dt id="arg-chat">chat<a class="anchor" aria-label="anchor" href="#arg-chat"></a></dt>
+<dd><p>Optional ellmer Chat object.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments passed to module constructor</p></dd>
+<dd><p>Must be empty.</p></dd>
 
 </dl></div>
     <div class="section level2">

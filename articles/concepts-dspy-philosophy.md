@@ -79,7 +79,7 @@ A module wraps a signature with executable logic:
 
 ``` r
 
-mod <- module(signature("text -> sentiment"), type = "predict")
+mod <- module(signature("text -> sentiment"))
 ```
 
 Modules are:
@@ -107,7 +107,7 @@ metric and let the optimizer search:
 
 ``` r
 
-mod$optimize_grid(
+optimize_grid(  mod,
   data = training_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0, 0.3, 0.7))
@@ -180,8 +180,11 @@ define a signature, it doesn’t change. This enables optimization—you can
 swap prompts while keeping the interface stable.
 
 **R6 for Modules**: Stateful execution context. Modules accumulate
-traces, store optimized configurations, and provide an object-oriented
-API (`$predict()`, `$optimize_grid()`).
+traces and store optimized configurations; user workflows stay in the
+functional
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) and
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+API.
 
 **ellmer Integration**: dsprrr builds on ellmer’s chat infrastructure.
 You get the same

@@ -56,7 +56,7 @@ Consider what happens during optimization:
 
 ``` r
 
-mod$optimize_grid(
+optimize_grid(  mod,
   data = train_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0, 0.3, 0.7))
@@ -185,8 +185,8 @@ A module **references** a signature but doesn’t own it:
 ``` r
 
 sig <- signature("question -> answer")
-mod1 <- module(sig, type = "predict")
-mod2 <- module(sig, type = "predict")
+mod1 <- module(sig)
+mod2 <- module(sig)
 
 # Both modules share the same signature
 identical(mod1$signature, mod2$signature)  # TRUE
@@ -204,10 +204,10 @@ configurations:
 sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 # Same interface, different implementations
-fast_classifier <- module(sig, type = "predict")
+fast_classifier <- module(sig)
 fast_classifier$config$temperature <- 0
 
-careful_classifier <- module(sig, type = "predict")
+careful_classifier <- module(sig)
 careful_classifier$config$temperature <- 0.7
 ```
 
@@ -251,7 +251,7 @@ teleprompter optimization:
 mod$is_compiled()
 #> [1] FALSE
 
-mod$optimize_grid(data = devset, metric = metric_exact_match())
+optimize_grid(mod, data = devset, metric = metric_exact_match())
 
 mod$is_compiled()
 #> [1] TRUE
@@ -284,23 +284,25 @@ forward = function(batch, .llm = NULL, trace = TRUE, ...) {
 }
 ```
 
-The `forward()` method is the core execution path. Everything else
-([`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
-[`predict()`](https://rdrr.io/r/stats/predict.html),
-[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md))
-eventually calls `forward()`.
+The `forward()` method is the core execution path. The primary execution
+functions,
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) and
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
+eventually call `forward()`.
+[`stats::predict()`](https://rdrr.io/r/stats/predict.html) is retained
+only as a data-frame interoperability method.
 
-## Module Types
+## Program Constructors
 
-dsprrr provides specialized module types via the `type` parameter:
+The constructor names make execution semantics explicit:
 
 ``` r
 
-module(sig, type = "predict")      # Basic text generation
-module(sig, type = "react")        # ReAct-style agents with tools
-module(sig, type = "best_of_n")    # Ensemble with reward function
-module(sig, type = "refine")       # Iterative refinement
-module(sig, type = "multichain")   # Multi-path reasoning
+module(sig)                              # Standard prediction
+react(sig)                               # ReAct agent with tools
+best_of_n(module(sig), N = 3)            # Reward-based selection
+refine(module(sig), N = 3)               # Iterative refinement
+multi_chain_comparison(sig)              # Multi-path reasoning
 ```
 
 Each type is an R6 subclass that extends the base Module:
@@ -370,7 +372,7 @@ handles this:
 
 ``` r
 
-original <- module(sig, type = "predict")
+original <- module(sig)
 original$config$temperature <- 0.5
 original$state$traces <- list(trace1, trace2)
 
@@ -468,7 +470,7 @@ When you call
 
 ``` r
 
-mod$optimize_grid(
+optimize_grid(  mod,
   data = train_data,
   metric = metric_exact_match(),
   parameters = list(temperature = c(0, 0.3, 0.7))
@@ -482,7 +484,7 @@ The optimizer:
 3.  Runs each copy’s `forward()` on the devset
 4.  Computes metrics from (signature-defined) outputs
 5.  Updates the original module with best config
-6.  Records all trials in `state$trials`
+6.  Records trial evidence in `optimization_result()$trials`
 
 The architecture makes this workflow clean and reliable.
 

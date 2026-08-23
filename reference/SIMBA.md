@@ -107,6 +107,6 @@ tp <- SIMBA(
   seed = 0L
 )
 
-compiled <- compile(tp, qa_module, trainset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, .llm = llm)
 } # }
 ```

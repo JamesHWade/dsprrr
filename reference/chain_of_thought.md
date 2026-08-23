@@ -8,7 +8,15 @@ on a signature and then creating a module from it.
 ## Usage
 
 ``` r
-chain_of_thought(x, prefix = "Let's think step by step in order to", ...)
+chain_of_thought(
+  x,
+  prefix = "Let's think step by step in order to",
+  chat = NULL,
+  template = "",
+  demos = list(),
+  config = list(),
+  ...
+)
 ```
 
 ## Arguments
@@ -23,10 +31,25 @@ chain_of_thought(x, prefix = "Let's think step by step in order to", ...)
 
   Character. The prefix for the reasoning field.
 
+- chat:
+
+  Optional ellmer Chat object.
+
+- template:
+
+  Optional glue template.
+
+- demos:
+
+  Optional demonstration examples.
+
+- config:
+
+  Optional prediction configuration.
+
 - ...:
 
-  Additional arguments passed to
-  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  Must be empty.
 
 ## Value
 

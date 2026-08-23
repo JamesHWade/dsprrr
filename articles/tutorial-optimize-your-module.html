@@ -173,7 +173,7 @@ through grid search.</p>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify the sentiment of this product review."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span></code></pre></div>
 <p>Create training and test data:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Training data for optimization</span></span>
@@ -215,7 +215,7 @@ through grid search.</p>
 <p>Temperature controls randomness. Lower = more deterministic, higher =
 more creative. Let’s find the best value:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">classifier</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -238,10 +238,10 @@ more creative. Let’s find the best value:</p>
 <p>Check the best configuration:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Best score achieved</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_score</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span><span class="op">$</span><span class="va">best_score</span></span>
 <span></span>
 <span><span class="co"># Best parameters</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">best_params</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span><span class="op">$</span><span class="va">best_params</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-the-module-remembers">Step 4: The Module Remembers<a class="anchor" aria-label="anchor" href="#step-4-the-module-remembers"></a>
@@ -258,9 +258,9 @@ configuration:</p>
 <p>Instructions matter a lot. Let’s test different phrasings:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Reset to try different parameters</span></span>
-<span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier2</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
+<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">classifier2</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -283,9 +283,9 @@ instructions.</p>
 </h2>
 <p>Search over multiple parameters at once:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">classifier3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier3</span><span class="op">$</span><span class="fu">optimize_grid</span><span class="op">(</span></span>
+<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">classifier3</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -320,8 +320,8 @@ explicit variants:</p>
 <span>  k <span class="op">=</span> <span class="fl">2L</span>  <span class="co"># Number of few-shot examples to include</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_module.html">compile_module</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span>,</span>
+<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  program <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>,</span>
 <span>  teleprompter <span class="op">=</span> <span class="va">teleprompter</span>,</span>
 <span>  trainset <span class="op">=</span> <span class="va">trainset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
@@ -345,7 +345,7 @@ selection.</p>
 <span><span class="va">test_results</span></span></code></pre></div>
 <p>Compare to baseline:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">baseline_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">baseline</span>,</span>

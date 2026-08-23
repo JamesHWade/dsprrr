@@ -159,8 +159,8 @@ research <- AutoResearch(
 )
 
 compiled <- compile(
-  research,
   qa_program,
+  research,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -213,8 +213,8 @@ harness <- MetaHarness(
 )
 
 compiled <- compile(
-  harness,
   qa_program,
+  harness,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -283,8 +283,8 @@ control <- optimizer_control(
 )
 
 compiled <- compile(
-  harness,
   qa_program,
+  harness,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -300,9 +300,9 @@ program and a typed stop reason:
 
 ``` r
 
-compiled$config$optimizer$budget_summary
-compiled$config$optimizer$stop_reason
-compiled$config$optimizer$partial
+optimization_result(compiled)$budget
+optimization_result(compiled)$stop_reason
+optimization_result(compiled)$status
 ```
 
 ## Resume and Audit a Run
@@ -314,8 +314,8 @@ raised:
 ``` r
 
 resumed <- compile(
-  harness,
   qa_program,
+  harness,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -334,7 +334,7 @@ The candidate ledger is attached to the returned module:
 
 ``` r
 
-candidates <- resumed$config$optimizer$candidates
+candidates <- optimization_result(resumed)$trials
 candidates[, c(
   "id",
   "parent_id",
@@ -349,9 +349,9 @@ candidates[, c(
 candidates$snapshot[[1]]
 candidates$feedback[[1]]
 
-resumed$config$optimizer$frontier_ids
-resumed$config$optimizer$events
-resumed$config$optimizer$termination
+optimization_result(resumed)$extensions$meta_harness$frontier_ids
+optimization_result(resumed)$extensions$meta_harness$events
+optimization_result(resumed)$stop_reason
 ```
 
 With `log_dir` in the teleprompter or
@@ -382,8 +382,8 @@ omni <- Omni(
 )
 
 compiled <- compile(
-  omni,
   qa_program,
+  omni,
   trainset,
   valset = valset,
   .llm = task_chat,

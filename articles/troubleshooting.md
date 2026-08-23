@@ -93,11 +93,11 @@ expecting one.
 ``` r
 
 # Wrong - passing a string
-mod <- module(sig, type = "predict", chat = "openai")
+mod <- module(sig, chat = "openai")
 
 # Correct - pass an actual Chat object
 chat <- ellmer::chat_openai()
-mod <- module(sig, type = "predict", chat = chat)
+mod <- module(sig, chat = chat)
 ```
 
 ------------------------------------------------------------------------
@@ -503,11 +503,11 @@ filters. Consider the context and framing of your request.
 ``` r
 
 # Wrong - passing a string directly to module()
-mod <- module("question -> answer", type = "predict")
+mod <- module("question -> answer")
 
 # Correct - create signature first
 sig <- signature("question -> answer")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 ```
 
 ### “Unknown module type”
@@ -521,8 +521,8 @@ mod <- module(sig, type = "predict")
 
 ``` r
 
-mod <- module(sig, type = "predict")  # Standard text generation
-mod <- module(sig, type = "react")    # Tool-calling agent
+mod <- module(sig)  # Standard text generation
+mod <- react(sig)    # Tool-calling agent
 ```
 
 ### “devset must contain at least one row”
@@ -560,7 +560,7 @@ if (nrow(devset) == 0) {
 result <- run(mod, question = "Hi", .llm = chat_openai())
 
 # Option 2: Store Chat in module
-mod <- module(sig, type = "predict", chat = chat_openai())
+mod <- module(sig, chat = chat_openai())
 
 # Option 3: Configure default
 dsp_configure(provider = "openai")
@@ -617,7 +617,7 @@ sig <- signature("question -> answer")
 sig  # Should print without error
 
 # 2. Test the module creates correctly
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 mod  # Should print module info
 
 # 3. Test a simple call

@@ -384,9 +384,8 @@ factory:
 
 ``` r
 
-mcc <- module(
+mcc <- multi_chain_comparison(
   signature("context, question -> answer"),
-  type = "multichain",
   M = 5,
   temperature = 0.8
 )
@@ -894,7 +893,7 @@ task-level demos to incompatible `state -> ...` predictors.
 
 # Grid search over wrapper parameters
 wrapper <- best_of_n(qa, N = 3)
-wrapper$optimize_grid(
+optimize_grid(  wrapper,
   data = dev_data,
   metric = metric_exact_match(),
   parameters = list(
@@ -905,7 +904,7 @@ wrapper$optimize_grid(
 
 # Teleprompter compilation
 tp <- LabeledFewShot(k = 4)
-compiled <- compile(tp, wrapper, trainset)
+compiled <- compile(wrapper, tp, trainset)
 ```
 
 ## Performance Considerations

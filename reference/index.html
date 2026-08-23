@@ -87,9 +87,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="signatures-inputs">Signatures &amp; Inputs<a class="anchor" aria-label="anchor" href="#signatures-inputs"></a></h2>
+      <h2 id="primary-journey">Primary journey<a class="anchor" aria-label="anchor" href="#primary-journey"></a></h2>
 
-      <div class="section-desc"><p>Declare typed schemas for LLM operations</p></div>
+      <div class="section-desc"><p>Define, run, evaluate, and improve a program</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -109,73 +109,13 @@
 
         </dt>
         <dd>Create an input specification for a Signature</dd>
-      </dl></div><div class="section level2">
-      <h2 id="signature-transforms">Signature Transforms<a class="anchor" aria-label="anchor" href="#signature-transforms"></a></h2>
-
-      <div class="section-desc"><p>Add reasoning, chain-of-thought, and other prompt-level behaviors</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="signature-transforms.html">with_instructions()</a></code> <code><a href="signature-transforms.html">append_instructions()</a></code>
-
-        </dt>
-        <dd>Signature Transforms for Advanced Reasoning Modules</dd>
 
         <dt>
-
-          <code><a href="with_reasoning.html">with_reasoning()</a></code>
-
-        </dt>
-        <dd>Add Chain-of-Thought Reasoning to a Signature</dd>
-
-        <dt>
-
-          <code><a href="without_reasoning.html">without_reasoning()</a></code>
-
-        </dt>
-        <dd>Remove Chain-of-Thought from a Signature</dd>
-
-        <dt>
-
-          <code><a href="has_reasoning.html">has_reasoning()</a></code>
-
-        </dt>
-        <dd>Check if a Signature has Chain-of-Thought</dd>
-
-        <dt>
-
-          <code><a href="chain_of_thought.html">chain_of_thought()</a></code>
-
-        </dt>
-        <dd>Create a Chain-of-Thought Module</dd>
-      </dl></div><div class="section level2">
-      <h2 id="modules">Modules<a class="anchor" aria-label="anchor" href="#modules"></a></h2>
-
-      <div class="section-desc"><p>Create, run, and inspect LLM modules</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
 
           <code><a href="module.html">module()</a></code>
 
         </dt>
-        <dd>Create an LLM Module</dd>
-
-        <dt>
-
-          <code><a href="flex.html">flex()</a></code>
-
-        </dt>
-        <dd>Optimize a Module's Implementation with Flex</dd>
+        <dd>Create a prediction module</dd>
 
         <dt>
 
@@ -193,35 +133,28 @@
 
         <dt>
 
-          <code><a href="concurrency_control.html">concurrency_control()</a></code>
+          <code><a href="evaluate.html">evaluate()</a></code>
 
         </dt>
-        <dd>Control Batch Concurrency</dd>
+        <dd>Evaluate a DSPrrr module</dd>
 
         <dt>
 
-          <code><a href="predict.Module.html">predict(<i>&lt;Module&gt;</i>)</a></code>
+          <code><a href="compile.html">compile()</a></code>
 
         </dt>
-        <dd>Predict Method for Modules (tidymodels-style)</dd>
+        <dd>Compile a program</dd>
 
         <dt>
 
-          <code><a href="module_fn.html">module_fn()</a></code>
+          <code><a href="optimize_grid.html">optimize_grid()</a></code>
 
         </dt>
-        <dd>Callable Module</dd>
-
-        <dt>
-
-          <code><a href="module-graph.html">module_graph()</a></code> <code><a href="module-graph.html">named_modules()</a></code> <code><a href="module-graph.html">named_parameters()</a></code> <code><a href="module-graph.html">map_modules()</a></code> <code><a href="module-graph.html">replace_module()</a></code> <code><a href="module-graph.html">freeze_modules()</a></code> <code><a href="module-graph.html">is_module_frozen()</a></code> <code><a href="module-graph.html">set_module_lm()</a></code> <code><a href="module-graph.html">module_children()</a></code>
-
-        </dt>
-        <dd>Traverse and Transform Module Graphs</dd>
+        <dd>Grid Search Optimisation</dd>
       </dl></div><div class="section level2">
-      <h2 id="pipelines">Pipelines<a class="anchor" aria-label="anchor" href="#pipelines"></a></h2>
+      <h2 id="advanced-program-constructors">Advanced program constructors<a class="anchor" aria-label="anchor" href="#advanced-program-constructors"></a></h2>
 
-      <div class="section-desc"><p>Chain modules into multi-step workflows</p></div>
+      <div class="section-desc"><p>Choose these when execution semantics differ from standard prediction</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -230,68 +163,24 @@
 
       <dl><dt>
 
-          <code><a href="pipeline.html">pipeline()</a></code>
+          <code><a href="react.html">react()</a></code>
 
         </dt>
-        <dd>Pipeline Module for Sequential Module Composition</dd>
+        <dd>Create a ReAct module</dd>
 
         <dt>
 
-          <code><a href="grapes-greater-than-greater-than-grapes.html">`%&gt;&gt;%`</a></code>
+          <code><a href="module-react.html">module-react</a></code>
 
         </dt>
-        <dd>Pipe Operator for Module Composition</dd>
+        <dd>ReAct Module</dd>
 
         <dt>
 
-          <code><a href="step.html">step()</a></code>
+          <code><a href="chain_of_thought.html">chain_of_thought()</a></code>
 
         </dt>
-        <dd>Create a Pipeline Step with Mappings</dd>
-      </dl></div><div class="section level2">
-      <h2 id="reasoning-ensemble-modules">Reasoning &amp; Ensemble Modules<a class="anchor" aria-label="anchor" href="#reasoning-ensemble-modules"></a></h2>
-
-      <div class="section-desc"><p>Combine and refine outputs for improved accuracy</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="module-wrapper.html">module-wrapper</a></code>
-
-        </dt>
-        <dd>Wrapper Modules for Advanced Reasoning Patterns</dd>
-
-        <dt>
-
-          <code><a href="best_of_n.html">best_of_n()</a></code>
-
-        </dt>
-        <dd>Create a BestOfN Wrapper Module</dd>
-
-        <dt>
-
-          <code><a href="refine.html">refine()</a></code>
-
-        </dt>
-        <dd>Create a Refine Wrapper Module</dd>
-
-        <dt>
-
-          <code><a href="as_reward_fn.html">as_reward_fn()</a></code>
-
-        </dt>
-        <dd>Convert a Metric to a Reward Function</dd>
-
-        <dt>
-
-          <code><a href="module-multichain.html">module-multichain</a></code>
-
-        </dt>
-        <dd>MultiChainComparison Module</dd>
+        <dd>Create a Chain-of-Thought Module</dd>
 
         <dt>
 
@@ -302,89 +191,10 @@
 
         <dt>
 
-          <code><a href="module-ensemble.html">module-ensemble</a></code>
+          <code><a href="module-multichain.html">module-multichain</a></code>
 
         </dt>
-        <dd>Ensemble Module for Combining Multiple Modules</dd>
-
-        <dt>
-
-          <code><a href="ensemble_module.html">ensemble()</a></code>
-
-        </dt>
-        <dd>Create an Ensemble Module</dd>
-
-        <dt>
-
-          <code><a href="reduce_majority.html">reduce_majority()</a></code>
-
-        </dt>
-        <dd>Majority Vote Reducer</dd>
-
-        <dt>
-
-          <code><a href="reduce_weighted_vote.html">reduce_weighted_vote()</a></code>
-
-        </dt>
-        <dd>Weighted Vote Reducer</dd>
-
-        <dt>
-
-          <code><a href="reduce_first.html">reduce_first()</a></code>
-
-        </dt>
-        <dd>First Successful Output Reducer</dd>
-
-        <dt>
-
-          <code><a href="reduce_best_by_metric.html">reduce_best_by_metric()</a></code>
-
-        </dt>
-        <dd>Best by Metric Reducer</dd>
-      </dl></div><div class="section level2">
-      <h2 id="agentic-modules">Agentic Modules<a class="anchor" aria-label="anchor" href="#agentic-modules"></a></h2>
-
-      <div class="section-desc"><p>Tool use, code execution, RAG, and recursive language models</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="module-react.html">module-react</a></code>
-
-        </dt>
-        <dd>ReAct Module</dd>
-
-        <dt>
-
-          <code><a href="rag_module.html">rag_module()</a></code>
-
-        </dt>
-        <dd>Create a RAG Module</dd>
-
-        <dt>
-
-          <code><a href="r_code_runner.html">r_code_runner()</a></code>
-
-        </dt>
-        <dd>Create an R Code Runner</dd>
-
-        <dt>
-
-          <code><a href="r-code-runner.html">r-code-runner</a></code>
-
-        </dt>
-        <dd>R Code Execution Backend</dd>
-
-        <dt>
-
-          <code><a href="mcp_repl_runner.html">mcp_repl_runner()</a></code>
-
-        </dt>
-        <dd>Posit mcp-repl Code Runner</dd>
+        <dd>MultiChainComparison Module</dd>
 
         <dt>
 
@@ -434,6 +244,231 @@
 
         </dt>
         <dd>Recursive Language Model (RLM) Module</dd>
+
+        <dt>
+
+          <code><a href="flex.html">flex()</a></code>
+
+        </dt>
+        <dd>Optimize a Module's Implementation with Flex</dd>
+
+        <dt>
+
+          <code><a href="rag_module.html">rag_module()</a></code>
+
+        </dt>
+        <dd>Create a RAG Module</dd>
+
+        <dt>
+
+          <code><a href="module-wrapper.html">module-wrapper</a></code>
+
+        </dt>
+        <dd>Wrapper Modules for Advanced Reasoning Patterns</dd>
+
+        <dt>
+
+          <code><a href="best_of_n.html">best_of_n()</a></code>
+
+        </dt>
+        <dd>Create a BestOfN Wrapper Module</dd>
+
+        <dt>
+
+          <code><a href="refine.html">refine()</a></code>
+
+        </dt>
+        <dd>Create a Refine Wrapper Module</dd>
+
+        <dt>
+
+          <code><a href="as_reward_fn.html">as_reward_fn()</a></code>
+
+        </dt>
+        <dd>Convert a Metric to a Reward Function</dd>
+
+        <dt>
+
+          <code><a href="module-ensemble.html">module-ensemble</a></code>
+
+        </dt>
+        <dd>Ensemble Module for Combining Multiple Modules</dd>
+
+        <dt>
+
+          <code><a href="ensemble_module.html">ensemble()</a></code>
+
+        </dt>
+        <dd>Create an Ensemble Module</dd>
+
+        <dt>
+
+          <code><a href="reduce_majority.html">reduce_majority()</a></code>
+
+        </dt>
+        <dd>Majority Vote Reducer</dd>
+
+        <dt>
+
+          <code><a href="reduce_weighted_vote.html">reduce_weighted_vote()</a></code>
+
+        </dt>
+        <dd>Weighted Vote Reducer</dd>
+
+        <dt>
+
+          <code><a href="reduce_first.html">reduce_first()</a></code>
+
+        </dt>
+        <dd>First Successful Output Reducer</dd>
+
+        <dt>
+
+          <code><a href="reduce_best_by_metric.html">reduce_best_by_metric()</a></code>
+
+        </dt>
+        <dd>Best by Metric Reducer</dd>
+      </dl></div><div class="section level2">
+      <h2 id="extension-and-interoperability-seams">Extension and interoperability seams<a class="anchor" aria-label="anchor" href="#extension-and-interoperability-seams"></a></h2>
+
+      <div class="section-desc"><p>Integrate custom modules and R ecosystem generics</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="module_fn.html">module_fn()</a></code>
+
+        </dt>
+        <dd>Callable Module</dd>
+
+        <dt>
+
+          <code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>
+
+        </dt>
+        <dd>Convert a DSPrrr Module to an ellmer Tool</dd>
+
+        <dt>
+
+          <code><a href="predict.Module.html">predict(<i>&lt;Module&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Predict Method for Modules (tidymodels-style)</dd>
+
+        <dt>
+
+          <code><a href="r_code_runner.html">r_code_runner()</a></code>
+
+        </dt>
+        <dd>Create an R Code Runner</dd>
+
+        <dt>
+
+          <code><a href="r-code-runner.html">r-code-runner</a></code>
+
+        </dt>
+        <dd>R Code Execution Backend</dd>
+
+        <dt>
+
+          <code><a href="mcp_repl_runner.html">mcp_repl_runner()</a></code>
+
+        </dt>
+        <dd>Posit mcp-repl Code Runner</dd>
+      </dl></div><div class="section level2">
+      <h2 id="signature-transforms">Signature transforms<a class="anchor" aria-label="anchor" href="#signature-transforms"></a></h2>
+
+      <div class="section-desc"><p>Derive a new signature without changing execution semantics</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="signature-transforms.html">with_instructions()</a></code> <code><a href="signature-transforms.html">append_instructions()</a></code>
+
+        </dt>
+        <dd>Signature Transforms for Advanced Reasoning Modules</dd>
+
+        <dt>
+
+          <code><a href="with_reasoning.html">with_reasoning()</a></code>
+
+        </dt>
+        <dd>Add Chain-of-Thought Reasoning to a Signature</dd>
+
+        <dt>
+
+          <code><a href="without_reasoning.html">without_reasoning()</a></code>
+
+        </dt>
+        <dd>Remove Chain-of-Thought from a Signature</dd>
+
+        <dt>
+
+          <code><a href="has_reasoning.html">has_reasoning()</a></code>
+
+        </dt>
+        <dd>Check if a Signature has Chain-of-Thought</dd>
+      </dl></div><div class="section level2">
+      <h2 id="execution-and-inspection">Execution and inspection<a class="anchor" aria-label="anchor" href="#execution-and-inspection"></a></h2>
+
+      <div class="section-desc"><p>Batch policy, graphs, and module metadata</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="concurrency_control.html">concurrency_control()</a></code>
+
+        </dt>
+        <dd>Control Batch Concurrency</dd>
+
+        <dt>
+
+          <code><a href="module-graph.html">module_graph()</a></code> <code><a href="module-graph.html">named_modules()</a></code> <code><a href="module-graph.html">named_parameters()</a></code> <code><a href="module-graph.html">map_modules()</a></code> <code><a href="module-graph.html">replace_module()</a></code> <code><a href="module-graph.html">freeze_modules()</a></code> <code><a href="module-graph.html">is_module_frozen()</a></code> <code><a href="module-graph.html">set_module_lm()</a></code> <code><a href="module-graph.html">module_children()</a></code>
+
+        </dt>
+        <dd>Traverse and Transform Module Graphs</dd>
+      </dl></div><div class="section level2">
+      <h2 id="pipelines">Pipelines<a class="anchor" aria-label="anchor" href="#pipelines"></a></h2>
+
+      <div class="section-desc"><p>Chain modules into multi-step workflows</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="pipeline.html">pipeline()</a></code>
+
+        </dt>
+        <dd>Pipeline Module for Sequential Module Composition</dd>
+
+        <dt>
+
+          <code><a href="grapes-greater-than-greater-than-grapes.html">`%&gt;&gt;%`</a></code>
+
+        </dt>
+        <dd>Pipe Operator for Module Composition</dd>
+
+        <dt>
+
+          <code><a href="step.html">step()</a></code>
+
+        </dt>
+        <dd>Create a Pipeline Step with Mappings</dd>
       </dl></div><div class="section level2">
       <h2 id="assertions">Assertions<a class="anchor" aria-label="anchor" href="#assertions"></a></h2>
 
@@ -528,9 +563,9 @@
         </dt>
         <dd>Assert Numeric Value in Range</dd>
       </dl></div><div class="section level2">
-      <h2 id="evaluation-metrics">Evaluation &amp; Metrics<a class="anchor" aria-label="anchor" href="#evaluation-metrics"></a></h2>
+      <h2 id="metrics">Metrics<a class="anchor" aria-label="anchor" href="#metrics"></a></h2>
 
-      <div class="section-desc"><p>Score module outputs and measure performance</p></div>
+      <div class="section-desc"><p>Score program outputs with explicit objectives</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -538,13 +573,6 @@
 
 
       <dl><dt>
-
-          <code><a href="evaluate.html">evaluate()</a></code>
-
-        </dt>
-        <dd>Evaluate a DSPrrr module</dd>
-
-        <dt>
 
           <code><a href="metric_contains.html">metric_contains()</a></code>
 
@@ -714,9 +742,9 @@
         </dt>
         <dd>COPRO Teleprompter</dd>
       </dl></div><div class="section level2">
-      <h2 id="optimization">Optimization<a class="anchor" aria-label="anchor" href="#optimization"></a></h2>
+      <h2 id="optimization-inspection">Optimization inspection<a class="anchor" aria-label="anchor" href="#optimization-inspection"></a></h2>
 
-      <div class="section-desc"><p>Compile modules and tune parameters</p></div>
+      <div class="section-desc"><p>Inspect parameters, trials, and metrics attached to programs</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -724,27 +752,6 @@
 
 
       <dl><dt>
-
-          <code><a href="optimize_grid.html">optimize_grid()</a></code>
-
-        </dt>
-        <dd>Grid Search Optimisation</dd>
-
-        <dt>
-
-          <code><a href="compile.html">compile()</a></code>
-
-        </dt>
-        <dd>Compile S7 Generic and Methods</dd>
-
-        <dt>
-
-          <code><a href="compile_module.html">compile_module()</a></code>
-
-        </dt>
-        <dd>Compile a DSPrrr Program</dd>
-
-        <dt>
 
           <code><a href="module_parameters.html">module_parameters()</a></code>
 
@@ -775,6 +782,13 @@
 
 
       <dl><dt>
+
+          <code><a href="optimization_result.html">optimization_result()</a></code> <code><a href="optimization_result.html">print(<i>&lt;dsprrr_optimization_result&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Inspect an Optimization Result</dd>
+
+        <dt>
 
           <code><a href="optimizer-accessors.html">optimizer-accessors</a></code>
 
@@ -1308,7 +1322,7 @@
       </dl></div><div class="section level2">
       <h2 id="ellmer-rag">ellmer &amp; RAG<a class="anchor" aria-label="anchor" href="#ellmer-rag"></a></h2>
 
-      <div class="section-desc"><p>Tool registration with ellmer and retrieval with ragnar</p></div>
+      <div class="section-desc"><p>Retrieval helpers built on ragnar and ellmer tools</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -1316,13 +1330,6 @@
 
 
       <dl><dt>
-
-          <code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>
-
-        </dt>
-        <dd>Convert a DSPrrr Module to an ellmer Tool</dd>
-
-        <dt>
 
           <code><a href="ragnar_tool.html">ragnar_tool()</a></code>
 

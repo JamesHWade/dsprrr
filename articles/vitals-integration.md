@@ -36,7 +36,7 @@ modules can now work directly with vitals:
 sentiment_module <- signature(
   "input -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
-  module(type = "predict")
+  module()
 
 # Create vitals task with dsprrr's helper
 task <- Task$new(
@@ -119,7 +119,7 @@ qa_module <- signature(
   ),
   instructions = "Answer the question based on the context"
 ) |>
-  module(type = "predict")
+  module()
 
 # 2. Prepare dataset
 qa_dataset <- tibble(

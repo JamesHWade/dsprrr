@@ -170,7 +170,7 @@ all provider communication.</p>
 <tbody>
 <tr class="odd">
 <td><code>dspy.Predict</code></td>
-<td><code>module(sig, type = "predict")</code></td>
+<td><code>module(sig)</code></td>
 <td>Core predictor</td>
 </tr>
 <tr class="even">
@@ -184,7 +184,7 @@ all provider communication.</p>
 <td>
 <code>dspy.ReAct</code> / experimental <code>ReActV2</code>
 </td>
-<td><code>module(sig, type = "react")</code></td>
+<td><code>react(sig)</code></td>
 <td>Native ellmer turn history, tool-call IDs, parallel calls per
 assistant turn, enforced iteration limit, then structured finalization;
 behaviorally aligned, not a port of the Python class</td>
@@ -574,7 +574,7 @@ feedback</em>. dsprrr supports the same protocol:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, generations <span class="op">=</span> <span class="fl">5L</span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">tp</span>, <span class="va">mod</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
 <p>The feedback for failed examples is injected into GEPA’s reflection
 prompt, so the reflection LLM learns <em>why</em> outputs failed, not
 just that they did.</p>

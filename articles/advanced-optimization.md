@@ -119,9 +119,7 @@ trainset <- tibble::tibble(
 
 # Base module to optimize
 qa_module <- module(
-  signature("question -> answer"),
-  type = "predict"
-)
+  signature("question -> answer"))
 ```
 
 ## BootstrapFewShot
@@ -143,7 +141,7 @@ tp <- BootstrapFewShot(
   seed = 42L
 )
 
-compiled <- compile(tp, qa_module, trainset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, .llm = llm)
 
 # Check what demos were bootstrapped
 print(compiled$demos)
@@ -178,13 +176,13 @@ tp <- BootstrapFewShotWithRandomSearch(
   seed = 42L
 )
 
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 
 # Access the best score
-print(compiled$config$optimizer$best_score)
+print(optimization_result(compiled)$best_score)
 
 # Access candidate programs (list of program metadata)
-candidates <- compiled$config$optimizer$candidate_programs
+candidates <- optimization_result(compiled)$extensions$bootstrap_few_shot_with_random_search$candidate_programs
 ```
 
 **Parameters:**
@@ -200,9 +198,9 @@ to combine the best optimized module with other strategies:
 ``` r
 
 # Compile with different strategies and ensemble them
-mod1 <- compile(BootstrapFewShotWithRandomSearch(), qa_module, trainset, valset = valset, .llm = llm)
-mod2 <- compile(COPRO(), qa_module, trainset, valset = valset, .llm = llm)
-mod3 <- compile(LabeledFewShot(k = 3L), qa_module, trainset, .llm = llm)
+mod1 <- compile(qa_module, BootstrapFewShotWithRandomSearch(), trainset, valset = valset, .llm = llm)
+mod2 <- compile(qa_module, COPRO(), trainset, valset = valset, .llm = llm)
+mod3 <- compile(qa_module, LabeledFewShot(k = 3L), trainset, .llm = llm)
 
 # Ensemble with weights from validation scores
 ens <- ensemble(
@@ -231,7 +229,7 @@ tp <- KNNFewShot(
   cache_embeddings = TRUE  # Cache embeddings for efficiency
 )
 
-compiled <- compile(tp, qa_module, trainset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, .llm = llm)
 
 # Each query now gets personalized demos based on similarity
 result <- run(compiled, question = "What is DNA made of?", .llm = llm)
@@ -267,13 +265,13 @@ tp <- COPRO(
   seed = 42L
 )
 
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 
 # Check the optimized instructions
 print(compiled$signature@instructions)
 
 # View optimization history
-history <- compiled$config$optimizer$history
+history <- optimization_result(compiled)$extensions$copro$history
 print(history)
 ```
 
@@ -310,7 +308,7 @@ tp <- MIPROv2(
   seed = 42L
 )
 
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 
 # MIPROv2 optimizes both instructions and demos
 print(compiled$signature@instructions)
@@ -361,7 +359,7 @@ tp <- SIMBA(
   seed = 42L
 )
 
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 
 # SIMBA iteratively improves on hard examples
 print(compiled$demos)
@@ -431,10 +429,10 @@ tp_multi <- GEPA(
   seed = 42L
 )
 
-compiled <- compile(tp_multi, qa_module, trainset, valset = valset, .llm = llm)
+compiled <- compile(qa_module, tp_multi, trainset, valset = valset, .llm = llm)
 
 # GEPA returns Pareto-optimal solutions for multi-objective
-pareto <- compiled$config$optimizer$objective_pareto_front
+pareto <- optimization_result(compiled)$extensions$gepa$objective_pareto_front
 print(pareto)
 ```
 
@@ -513,10 +511,10 @@ tp <- Omni(
   seed = 42
 )
 
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
 
 # Every branch was re-scored with `metric` on the same validation rows.
-compiled$config$optimizer$candidate_programs
+optimization_result(compiled)$extensions$omni$candidate_programs
 ```
 
 Set `parallel = TRUE` to run the exploration branches with mirai.
@@ -557,8 +555,8 @@ tp <- MetaHarness(
 )
 
 compiled <- compile(
-  tp,
   qa_module,
+  tp,
   trainset,
   valset = valset,
   .llm = task_chat,
@@ -585,9 +583,9 @@ strategies.
 ``` r
 
 # First, compile modules with different strategies
-mod_bootstrap <- compile(BootstrapFewShot(), qa_module, trainset, .llm = llm)
-mod_copro <- compile(COPRO(), qa_module, trainset, valset = valset, .llm = llm)
-mod_knn <- compile(KNNFewShot(k = 3L), qa_module, trainset, .llm = llm)
+mod_bootstrap <- compile(qa_module, BootstrapFewShot(), trainset, .llm = llm)
+mod_copro <- compile(qa_module, COPRO(), trainset, valset = valset, .llm = llm)
+mod_knn <- compile(qa_module, KNNFewShot(k = 3L), trainset, .llm = llm)
 
 # Combine with ensemble
 ens <- ensemble(
@@ -640,7 +638,7 @@ tp <- BootstrapFewShotWithRandomSearch(
   seed = 42L
 )
 
-compiled <- compile(tp, qa_module, trainset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, .llm = llm)
 
 # Log directory contains:
 # - trials.jsonl: Authoritative append-only trial journal
@@ -690,20 +688,21 @@ ggplot(trials, aes(x = trial_id, y = score)) +
 
 ``` r
 
-# After compilation, access optimizer metadata
-compiled$config$optimizer$name
-compiled$config$optimizer$params
-compiled$config$optimizer$best_score
-compiled$config$optimizer$trials
+# After compilation, inspect the common result
+result <- optimization_result(compiled)
+result$optimizer
+result$status
+result$best_score
+result$trials
 
 # For BootstrapFewShotWithRandomSearch
-compiled$config$optimizer$candidate_programs  # List of candidate metadata
+result$extensions$bootstrap_few_shot_with_random_search$candidate_programs
 
 # For COPRO
-compiled$config$optimizer$history
+result$extensions$copro$history
 
 # For GEPA (multi-objective)
-compiled$config$optimizer$objective_pareto_front
+result$extensions$gepa$objective_pareto_front
 ```
 
 ## Resource Budgets and Checkpoints
@@ -728,15 +727,15 @@ control <- optimizer_control(
 )
 
 partial <- compile(
-  BootstrapFewShot(metric = metric_exact_match(field = "answer")),
   qa_module,
+  BootstrapFewShot(metric = metric_exact_match(field = "answer")),
   trainset,
   .llm = llm,
   control = control
 )
 
-partial$config$optimizer$budget_summary
-partial$config$optimizer$stop_reason
+optimization_result(partial)$budget
+optimization_result(partial)$stop_reason
 ```
 
 Counters are checked before each bounded work unit. Evaluation is
@@ -776,8 +775,8 @@ keeping the original program, data, metric, and search settings:
 ``` r
 
 resumed <- compile(
-  BootstrapFewShot(metric = metric_exact_match(field = "answer")),
   qa_module,
+  BootstrapFewShot(metric = metric_exact_match(field = "answer")),
   trainset,
   .llm = llm,
   control = optimizer_control(
@@ -810,8 +809,8 @@ tp <- BootstrapFewShot(
 )
 
 # Same seed = same results
-compiled1 <- compile(tp, qa_module, trainset, .llm = llm)
-compiled2 <- compile(tp, qa_module, trainset, .llm = llm)
+compiled1 <- compile(qa_module, tp, trainset, .llm = llm)
+compiled2 <- compile(qa_module, tp, trainset, .llm = llm)
 
 # Demos will be identical
 identical(compiled1$demos, compiled2$demos)  # TRUE
@@ -829,10 +828,10 @@ tp <- BootstrapFewShot(
 )
 
 # Compilation continues despite some failed examples
-compiled <- compile(tp, qa_module, trainset, .llm = llm)
+compiled <- compile(qa_module, tp, trainset, .llm = llm)
 
 # Check how many errors occurred
-compiled$config$optimizer$n_errors
+optimization_result(compiled)$budget$total_errors
 ```
 
 ## Performance Tips
@@ -842,7 +841,7 @@ compiled$config$optimizer$n_errors
 ``` r
 
 # Step 1: Try LabeledFewShot first
-simple <- compile(LabeledFewShot(k = 3L), qa_module, trainset, .llm = llm)
+simple <- compile(qa_module, LabeledFewShot(k = 3L), trainset, .llm = llm)
 simple_score <- evaluate(simple, valset, metric_exact_match(), .llm = llm)$mean_score
 
 best_module <- simple
@@ -851,8 +850,8 @@ best_score <- simple_score
 # Step 2: If not good enough, try bootstrapping
 if (best_score < 0.8) {
   bootstrap <- compile(
-    BootstrapFewShot(metric = metric_exact_match()),
-    qa_module, trainset, .llm = llm
+    qa_module,
+    BootstrapFewShot(metric = metric_exact_match()), trainset, .llm = llm
   )
   bootstrap_score <- evaluate(bootstrap, valset, metric_exact_match(), .llm = llm)$mean_score
   if (bootstrap_score > best_score) {
@@ -864,8 +863,8 @@ if (best_score < 0.8) {
 # Step 3: If still not good enough, try COPRO
 if (best_score < 0.85) {
   copro <- compile(
-    COPRO(metric = metric_exact_match()),
-    qa_module, trainset, valset = valset, .llm = llm
+    qa_module,
+    COPRO(metric = metric_exact_match()), trainset, valset = valset, .llm = llm
   )
   copro_score <- evaluate(copro, valset, metric_exact_match(), .llm = llm)$mean_score
   if (copro_score > best_score) {

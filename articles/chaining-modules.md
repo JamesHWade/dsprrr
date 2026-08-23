@@ -25,13 +25,13 @@ library(dsprrr)
 library(ellmer)
 
 mod_extract <- signature("document -> facts") |>
-  module(type = "predict", template = "Extract key facts: {document}")
+  module( template = "Extract key facts: {document}")
 
 mod_answer <- signature("facts, question -> answer") |>
-  module(type = "predict", template = "Use facts: {facts}\nQ: {question}")
+  module( template = "Use facts: {facts}\nQ: {question}")
 
 mod_format <- signature("answer -> response") |>
-  module(type = "predict", template = "Format: {answer}")
+  module( template = "Format: {answer}")
 ```
 
 ## Simple Chaining with `%>>%`
@@ -59,10 +59,10 @@ explicitly:
 ``` r
 
 mod_retrieve <- signature("query -> documents") |>
-  module(type = "predict", template = "Retrieve docs for: {query}")
+  module( template = "Retrieve docs for: {query}")
 
 mod_summarize <- signature("context -> summary") |>
-  module(type = "predict", template = "Summarize: {context}")
+  module( template = "Summarize: {context}")
 
 rag_pipeline <- pipeline(
   mod_retrieve,
@@ -81,7 +81,7 @@ they do not come from upstream outputs:
 ``` r
 
 mod_answer <- signature("facts, question, tone -> answer") |>
-  module(type = "predict")
+  module()
 
 qa_pipeline <- pipeline(
   mod_extract,
@@ -97,10 +97,10 @@ Keep only specific fields from a structured output:
 ``` r
 
 mod_reason <- signature("question -> answer, reasoning") |>
-  module(type = "chain_of_thought")
+  chain_of_thought()
 
 mod_present <- signature("answer -> response") |>
-  module(type = "predict")
+  module()
 
 pipeline_filtered <- pipeline(
   step(mod_reason, select = "answer"),

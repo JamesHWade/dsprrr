@@ -212,6 +212,7 @@ deliberately small and bounded:
 llm <- ellmer::chat_openai(model = "gpt-5-mini")
 
 optimized <- compile(
+  baseline,
   GEPA(
     metric = route_metric,
     metric_threshold = 0.95,
@@ -222,7 +223,6 @@ optimized <- compile(
     track_best_outputs = TRUE,
     verbose = FALSE
   ),
-  baseline,
   trainset = train,
   valset = validation,
   .llm = llm,
@@ -350,9 +350,9 @@ the winning candidate ID and validation score:
 
 ``` r
 
-optimized$config$optimizer$best_candidate_id
-optimized$config$optimizer$best_scores
-optimized$config$optimizer$per_val_instance_best_candidates
+optimization_result(optimized)$lineage$best_candidate_id
+optimization_result(optimized)$extensions$gepa$best_scores
+optimization_result(optimized)$extensions$gepa$per_val_instance_best_candidates
 ```
 
 Persist callable tools and factories by registry name rather than

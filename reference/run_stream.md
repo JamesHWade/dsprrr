@@ -88,7 +88,7 @@ event:
 ``` r
 if (FALSE) { # \dontrun{
 sig <- signature("question -> answer")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 run_stream(
   mod,

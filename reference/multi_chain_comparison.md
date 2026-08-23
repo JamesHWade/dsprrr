@@ -12,6 +12,8 @@ multi_chain_comparison(
   M = 3L,
   temperature = 0.7,
   comparison_template = NULL,
+  config = list(),
+  chat = NULL,
   ...
 )
 ```
@@ -39,9 +41,17 @@ multi_chain_comparison(
 
   Optional custom template for comparison prompt
 
+- config:
+
+  Optional prediction configuration.
+
+- chat:
+
+  Optional ellmer Chat object.
+
 - ...:
 
-  Additional arguments passed to module constructor
+  Must be empty.
 
 ## Value
 

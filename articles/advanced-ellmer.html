@@ -152,7 +152,7 @@ execution is sequential unless you supply
 </h3>
 <p>Use mirai for multi-process parallelism:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Process multiple items in parallel using mirai</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
@@ -191,9 +191,7 @@ workflows:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a sentiment analysis module</span></span>
 <span><span class="va">sentiment_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"predict"</span></span>
-<span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Convert to an ellmer tool</span></span>
 <span><span class="va">sentiment_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_ellmer_tool.html">as_ellmer_tool</a></span><span class="op">(</span></span>
@@ -235,7 +233,7 @@ with this via accessor functions:</p>
 </h3>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run batch predictions</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"q -&gt; a"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, q <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Hello"</span>, <span class="st">"World"</span><span class="op">)</span>, .return_format <span class="op">=</span> <span class="st">"batch"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Get aggregated cost and tokens from batch</span></span>
@@ -282,9 +280,7 @@ with this via accessor functions:</p>
 <p>dsprrr inherits ellmer’s multimodal capabilities:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"image, question -&gt; answer"</span><span class="op">)</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"predict"</span></span>
-<span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"image, question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Pass an image via ellmer Content objects</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
@@ -299,9 +295,7 @@ with this via accessor functions:</p>
 <p>For long-form generation, use streaming:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"topic -&gt; essay"</span><span class="op">)</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"predict"</span></span>
-<span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"topic -&gt; essay"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Stream with callback - pass named arguments directly</span></span>
 <span><span class="va">mod</span><span class="op">$</span><span class="fu">stream</span><span class="op">(</span></span>

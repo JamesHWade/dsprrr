@@ -55,8 +55,8 @@ trainset <- tibble::tibble(
 )
 
 # Optimize
-classifier <- compile_module(
-  program = module(sig, type = "predict"),
+classifier <- compile(
+  program = module(sig),
   teleprompter = LabeledFewShot(k = 3L),
   trainset = trainset
 )
@@ -117,7 +117,7 @@ Pins automatically version your saves:
 ``` r
 
 # Make some changes
-improved <- compile_module(
+improved <- compile(
   program = restored,
   teleprompter = LabeledFewShot(k = 4L),  # Try more examples
   trainset = trainset
@@ -206,15 +206,15 @@ Here’s a complete production workflow:
 
 # === DEVELOPMENT ===
 # 1. Build and optimize
-dev_module <- module(sig, type = "predict")
-dev_module$optimize_grid(
+dev_module <- module(sig)
+optimize_grid(  dev_module,
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(temperature = c(0, 0.3, 0.7))
 )
 
 # 2. Compile with best settings + demos
-optimized <- compile_module(
+optimized <- compile(
   program = dev_module,
   teleprompter = LabeledFewShot(k = 3L),
   trainset = trainset

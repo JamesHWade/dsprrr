@@ -238,7 +238,8 @@ action_sig <- signature(
 
 ### Create Modules
 
-Each signature becomes a module. We use `type = "chain_of_thought"`
+Each signature becomes a module. We use
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md),
 which adds a “reasoning” field to the output—the model explains its
 thinking before giving the final answer. This improves output quality,
 especially for complex decisions like whether an action should succeed.
@@ -247,9 +248,9 @@ especially for complex decisions like whether an action should succeed.
 
 create_modules <- function(llm) {
   list(
-    scene = module(scene_sig, type = "chain_of_thought"),
-    dialogue = module(dialogue_sig, type = "chain_of_thought"),
-    action = module(action_sig, type = "chain_of_thought"),
+    scene = chain_of_thought(scene_sig),
+    dialogue = chain_of_thought(dialogue_sig),
+    action = chain_of_thought(action_sig),
     llm = llm
   )
 }

@@ -157,13 +157,13 @@ module.</p>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mod_extract</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"document -&gt; facts"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Extract key facts: {document}"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span> template <span class="op">=</span> <span class="st">"Extract key facts: {document}"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mod_answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"facts, question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Use facts: {facts}\nQ: {question}"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span> template <span class="op">=</span> <span class="st">"Use facts: {facts}\nQ: {question}"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mod_format</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"answer -&gt; response"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Format: {answer}"</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span> template <span class="op">=</span> <span class="st">"Format: {answer}"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="simple-chaining-with">Simple Chaining with <code>%&gt;&gt;%</code><a class="anchor" aria-label="anchor" href="#simple-chaining-with"></a>
@@ -187,10 +187,10 @@ module.</p>
 explicitly:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod_retrieve</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"query -&gt; documents"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Retrieve docs for: {query}"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span> template <span class="op">=</span> <span class="st">"Retrieve docs for: {query}"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mod_summarize</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context -&gt; summary"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span>, template <span class="op">=</span> <span class="st">"Summarize: {context}"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span> template <span class="op">=</span> <span class="st">"Summarize: {context}"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">rag_pipeline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod_retrieve</span>,</span>
@@ -206,7 +206,7 @@ explicitly:</p>
 upstream outputs:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod_answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"facts, question, tone -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">qa_pipeline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod_extract</span>,</span>
@@ -220,10 +220,10 @@ upstream outputs:</p>
 <p>Keep only specific fields from a structured output:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mod_reason</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer, reasoning"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"chain_of_thought"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mod_present</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"answer -&gt; response"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">pipeline_filtered</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/step.html">step</a></span><span class="op">(</span><span class="va">mod_reason</span>, select <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>

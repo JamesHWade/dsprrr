@@ -111,7 +111,7 @@ When `epochs > 1`, additional fields:
 ``` r
 if (FALSE) { # \dontrun{
 sig <- signature("question -> answer")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 dataset <- tibble::tibble(
   question = c("What is 2+2?", "What is 3+3?"),

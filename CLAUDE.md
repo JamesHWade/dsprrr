@@ -241,7 +241,7 @@ if module has been optimized
 
 ``` r
 
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 result <- run(mod, question = "What is 2+2?", .llm = llm)
 ```
 
@@ -258,7 +258,7 @@ optimization
 | `run_dataset(module, dataset, ...)` | Batch execute on data frame |
 | `evaluate(module, dataset, metric)` | Compute metrics on dataset |
 | `optimize_grid(module, devset, metric)` | Grid search optimization |
-| `compile(teleprompter, module, trainset)` | Teleprompter-based optimization |
+| `compile(module, teleprompter, trainset)` | Teleprompter-based optimization |
 
 ### Teleprompters (S7)
 
@@ -269,7 +269,7 @@ Search over instruction/template variants
 ``` r
 
 tp <- LabeledFewShot(k = 4L, metric = metric_exact_match())
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 ### Vitals Integration
@@ -289,7 +289,7 @@ metrics
 sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 # 2. Create module
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 # 3. Run with LLM
 llm <- ellmer::chat_openai()
@@ -350,7 +350,7 @@ mock_llm <- new_test_chat(
 # Test module behavior
 test_that("module returns expected output", {
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
   result <- mod$forward(list(q = "test"), .llm = mock_llm)
   expect_s3_class(result, "tbl_df")
 })

@@ -57,11 +57,11 @@ tp@k
 
 if (FALSE) { # \dontrun{
 # Compile a module with few-shot demos drawn from the training set
-classifier <- module(signature("text -> sentiment"), type = "predict")
+classifier <- module(signature("text -> sentiment"))
 trainset <- data.frame(
   text = c("I love it!", "Terrible experience", "It's okay"),
   sentiment = c("positive", "negative", "neutral")
 )
-optimized <- compile(tp, classifier, trainset)
+optimized <- compile(classifier, tp, trainset)
 } # }
 ```

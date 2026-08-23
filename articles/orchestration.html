@@ -218,7 +218,7 @@ providers (S3, Azure, GCS), or Posit Connect:</p>
 <span></span>
 <span><span class="co"># Create and optimize a module</span></span>
 <span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Run optimization (in practice, with real data)</span></span>
 <span><span class="co"># optimize_grid(mod, data = train_data, metric = metric_exact_match(), .llm = llm)</span></span>
@@ -251,13 +251,13 @@ other runtime objects are not captured implicitly. Supply a named
 <code>registry</code> to persist stable IDs and pass the same registry
 to <code><a href="../reference/restore_module_config.html">restore_module_config()</a></code>. Arbitrary embedded runtime
 values require <code>trusted = TRUE</code> both when writing and
-restoring. Version 5 records exactly one of <code>runner</code> or
+restoring. Version 6 records exactly one of <code>runner</code> or
 <code>interpreter_factory</code> for each code-executing module without
 invoking a factory while writing or restoring the artifact. It preserves
 Flex source/runtime limits and registry-backed tools, and stores the
 graph-visible RLM <code>generate_action</code> and <code>extract</code>
 children with their tuned state.</p>
-<p>Restoration accepts only the current version 5 closed schema.
+<p>Restoration accepts only the current version 6 closed schema.
 Manifests with any other format version are rejected before module
 construction. The stored signature remains authoritative. To change a
 signature, update the source program and write a new artifact.</p>
@@ -417,7 +417,7 @@ a powerful framework for:</p>
 <span><span class="co"># 2. Module Definition</span></span>
 <span><span class="fu">tar_target</span><span class="op">(</span><span class="va">module_definition</span>, <span class="op">{</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 3. Optimization</span></span>
@@ -560,7 +560,7 @@ template generates professional experiment reports:</p>
 <span>  <span class="st">"feedback -&gt; sentiment: enum('positive', 'negative', 'neutral'), issues: array(string)"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Analyze customer feedback. Identify sentiment and extract specific issues mentioned."</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"predict"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># ---- Optimize ----</span></span>
 <span><span class="va">train_data</span> <span class="op">&lt;-</span> <span class="fu">read_csv</span><span class="op">(</span><span class="st">"data/train.csv"</span><span class="op">)</span></span>
