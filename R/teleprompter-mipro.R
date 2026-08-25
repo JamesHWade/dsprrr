@@ -31,6 +31,7 @@
 #' @param log_dir Directory for trial logging.
 #' @param metric_threshold Minimum score required for acceptance.
 #'
+#' @return A `MIPROv2` teleprompter object.
 #' @export
 #'
 #' @examples

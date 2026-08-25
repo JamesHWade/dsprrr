@@ -40,6 +40,9 @@ the training set. Default is 16.}
 
 \item{log_dir}{Directory for trial logging. Default is NULL.}
 }
+\value{
+A \code{BootstrapFewShot} teleprompter object.
+}
 \description{
 A teleprompter that bootstraps demonstrations by having a teacher model
 generate predictions on training examples and selecting successful ones

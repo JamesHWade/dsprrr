@@ -48,6 +48,9 @@ the \code{.llm} supplied to \code{compile()}.}
 
 \item{log_dir}{Directory for trial logging.}
 }
+\value{
+A \code{MIPROv2} teleprompter object.
+}
 \description{
 MIPROv2 jointly optimizes instructions and few-shot demonstrations using
 a discrete Bayesian optimization loop with minibatch evaluation for a root

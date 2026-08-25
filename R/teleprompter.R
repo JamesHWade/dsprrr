@@ -12,6 +12,10 @@
 #' @param max_errors Maximum number of errors allowed during optimization.
 #'   Default is 5.
 #'
+#' @return A `Teleprompter` optimization strategy object.
+#' @examples
+#' Teleprompter()
+#'
 #' @export
 Teleprompter <- S7::new_class(
   "Teleprompter",
@@ -82,6 +86,7 @@ compile_default <- function(teleprompter, program, trainset, ...) {
 #' @param sample Whether to randomly sample examples. Default is TRUE.
 #' @param seed Random seed for reproducibility. Default is 123.
 #'
+#' @return A `LabeledFewShot` teleprompter object.
 #' @examples
 #' # A teleprompter that adds 2 labeled training examples as demonstrations
 #' tp <- LabeledFewShot(k = 2L, seed = 42L)
@@ -232,6 +237,7 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #'   grid search. Default is 50.
 #' @param verbose Whether to print progress messages. Default is TRUE.
 #'
+#' @return A `GridSearchTeleprompter` object.
 #' @examples
 #' # Search over two instruction variants
 #' variants <- data.frame(

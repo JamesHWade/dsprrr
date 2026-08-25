@@ -36,6 +36,12 @@ history and token costs.
 ## Installation
 
 ``` r
+install.packages("dsprrr")
+```
+
+You can install the development version from GitHub with:
+
+``` r
 # install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
 ```

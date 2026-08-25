@@ -40,6 +40,9 @@ Default is TRUE.}
 \item{merge_demos}{If TRUE, merge KNN-selected demos with any existing demos
 on the module. Default is FALSE (replace).}
 }
+\value{
+A \code{KNNFewShot} teleprompter object.
+}
 \description{
 A teleprompter that uses k-nearest neighbor retrieval to dynamically select
 demonstrations at runtime based on similarity to the input query. Unlike

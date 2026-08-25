@@ -248,6 +248,11 @@ register_dsprrr_engine <- function() {
 #'
 #' @return A fitted dsprrr module.
 #' @keywords internal
+#' @examples
+#' fit_llm_predict(
+#'   data.frame(text = c("helpful", "unhelpful")),
+#'   factor(c("positive", "negative"))
+#' )
 #' @export
 fit_llm_predict <- function(
   x,
@@ -318,6 +323,15 @@ fit_llm_predict <- function(
 #'
 #' @return A tibble with .pred_class column.
 #' @keywords internal
+#' @examples
+#' \dontrun{
+#' set_default_chat(ellmer::chat_openai())
+#' fit <- fit_llm_predict(
+#'   data.frame(text = c("helpful", "unhelpful")),
+#'   factor(c("positive", "negative"))
+#' )
+#' predict_llm_class(fit, data.frame(text = "clear and useful"))
+#' }
 #' @export
 predict_llm_class <- function(object, new_data, ...) {
   # Validate inputs
@@ -395,6 +409,15 @@ predict_llm_class <- function(object, new_data, ...) {
 #'
 #' @return A tibble with .pred column.
 #' @keywords internal
+#' @examples
+#' \dontrun{
+#' set_default_chat(ellmer::chat_openai())
+#' fit <- fit_llm_predict(
+#'   data.frame(text = c("short", "much longer")),
+#'   c(1, 2)
+#' )
+#' predict_llm_numeric(fit, data.frame(text = "medium length"))
+#' }
 #' @export
 predict_llm_numeric <- function(object, new_data, ...) {
   # Validate inputs

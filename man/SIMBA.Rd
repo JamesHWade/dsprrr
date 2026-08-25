@@ -42,6 +42,9 @@ uses the deterministic example-based rule fallback.}
 
 \item{log_dir}{Directory for trial logging. Default is NULL.}
 }
+\value{
+A \code{SIMBA} teleprompter object.
+}
 \description{
 SIMBA (self-improving via hard example mining) iteratively samples
 mini-batches, identifies high-variability examples, and generates

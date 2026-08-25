@@ -77,6 +77,7 @@
 #' @param track_best_outputs Whether to retain each validation row's
 #'   highest-scoring output. Requires `track_stats = TRUE`.
 #'
+#' @return A `GEPA` teleprompter object.
 #' @examples
 #' # A small GEPA run: 6 candidates evolved over 2 generations
 #' tp <- GEPA(

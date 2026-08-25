@@ -45,6 +45,7 @@
 #'   reproducible splitting, sequential exploration, and mirai worker streams.
 #' @param verbose Whether to print progress messages.
 #'
+#' @return An `Omni` teleprompter object.
 #' @export
 #' @examples
 #' \dontrun{

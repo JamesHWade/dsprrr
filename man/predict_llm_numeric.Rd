@@ -19,4 +19,14 @@ A tibble with .pred column.
 \description{
 Internal function for numeric predictions with llm_predict models.
 }
+\examples{
+\dontrun{
+set_default_chat(ellmer::chat_openai())
+fit <- fit_llm_predict(
+  data.frame(text = c("short", "much longer")),
+  c(1, 2)
+)
+predict_llm_numeric(fit, data.frame(text = "medium length"))
+}
+}
 \keyword{internal}

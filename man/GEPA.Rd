@@ -66,6 +66,9 @@ separate merge-attempt cap.}
 \item{track_best_outputs}{Whether to retain each validation row's
 highest-scoring output. Requires \code{track_stats = TRUE}.}
 }
+\value{
+A \code{GEPA} teleprompter object.
+}
 \description{
 Reflective optimizer for instructions and complete Flex source components,
 using row-level failures and metric feedback to propose improved candidates.

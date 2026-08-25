@@ -52,6 +52,7 @@
 #' @param seed Random seed for reproducibility. Default is NULL.
 #' @param log_dir Directory for trial logging. Default is NULL.
 #'
+#' @return A `BootstrapFewShot` teleprompter object.
 #' @export
 #'
 #' @examples

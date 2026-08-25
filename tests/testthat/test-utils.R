@@ -88,6 +88,21 @@ test_that("has_ellmer_credentials detects multiple keys", {
   expect_true(dsprrr:::has_ellmer_credentials())
 })
 
+test_that("non-interactive vignette builds require explicit opt-in", {
+  withr::local_envvar(c(
+    CI = "",
+    `_R_CHECK_PACKAGE_NAME_` = "",
+    OPENAI_API_KEY = "test-key",
+    DSPRRR_VIGNETTES_EVAL = "",
+    VITALS_SHOULD_EVAL = ""
+  ))
+
+  expect_identical(dsprrr:::eval_vignette(), interactive())
+
+  withr::local_envvar(DSPRRR_VIGNETTES_EVAL = "true")
+  expect_identical(dsprrr:::eval_vignette(), TRUE)
+})
+
 # --- null coalescing operator tests ---
 
 test_that("null coalescing operator works correctly", {

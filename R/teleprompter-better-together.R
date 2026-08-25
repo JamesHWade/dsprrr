@@ -34,6 +34,7 @@
 #' @param seed Optional random seed for reproducible splitting and shuffling.
 #' @param verbose Whether to print progress messages.
 #'
+#' @return A `BetterTogether` teleprompter object.
 #' @export
 #' @examples
 #' \dontrun{

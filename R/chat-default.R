@@ -629,27 +629,27 @@ detect_provider_name <- function(chat) {
 #' \dontrun{
 #' dsprrr_sitrep()
 #' #> dsprrr configuration
-#' #> ────────────────────────────────────────────────────────
+#' #> --------------------------------------------------------
 #' #>
-#' #> ── Packages ──
-#' #> ✔ ellmer 0.2.0 (OK)
-#' #> ✔ dsprrr 0.1.0
+#' #> -- Packages --
+#' #> [OK] ellmer 0.2.0
+#' #> [OK] dsprrr 0.1.0
 #' #>
-#' #> ── Default Chat ──
-#' #> ✔ OpenAI (gpt-4o-mini)
+#' #> -- Default Chat --
+#' #> [OK] OpenAI (gpt-4o-mini)
 #' #>   Source: Auto-detected from OPENAI_API_KEY
 #' #>
-#' #> ── API Keys ──
-#' #> ✔ OPENAI_API_KEY
-#' #> ✔ ANTHROPIC_API_KEY
-#' #> ✖ GOOGLE_API_KEY
+#' #> -- API Keys --
+#' #> [OK] OPENAI_API_KEY
+#' #> [OK] ANTHROPIC_API_KEY
+#' #> [missing] GOOGLE_API_KEY
 #' #>
-#' #> ── Session State ──
+#' #> -- Session State --
 #' #> • Prompt history: 12 / 100 entries
 #' #> • LLM calls: 15
 #' #> • Tokens: 2,450 in / 890 out
 #' #>
-#' #> ── Options ──
+#' #> -- Options --
 #' #> • dsprrr.verbose: TRUE
 #' #> • dsprrr.quiet: FALSE
 #' }

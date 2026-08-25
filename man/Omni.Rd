@@ -47,6 +47,9 @@ reproducible splitting, sequential exploration, and mirai worker streams.}
 
 \item{verbose}{Whether to print progress messages.}
 }
+\value{
+An \code{Omni} teleprompter object.
+}
 \description{
 A meta-teleprompter that explores several optimization strategies from the
 same seed program, compares their outputs with one shared validation metric,

@@ -16,8 +16,15 @@ If NULL, uses the metric's default threshold.}
 \item{max_errors}{Maximum number of errors allowed during optimization.
 Default is 5.}
 }
+\value{
+A \code{Teleprompter} optimization strategy object.
+}
 \description{
 Base S7 class for optimization strategies (teleprompters). Teleprompters
 are responsible for optimizing modules by adjusting their prompts,
 demonstrations, or other parameters based on training data.
+}
+\examples{
+Teleprompter()
+
 }

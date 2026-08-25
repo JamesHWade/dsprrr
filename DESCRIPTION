@@ -1,18 +1,19 @@
 Package: dsprrr
-Title: Declarative Self-Improving Language Programs for R
+Title: Declarative Self-Improving Language Programs
 Version: 0.0.0.9000
 Authors@R: c(
-    person("James", "Wade", , "github@jameshwade.com", role = c("aut", "cre"),
+    person("James", "Wade", , "github@jameshwade.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-9740-1905")),
     person("Anatoliy", "Sokolov", , "ansokolov@dow.com", role = "aut")
   )
-Description: Build principled, test-driven, and optimizable applications
-    using Large Language Models (LLMs) in R. Based on the DSPy framework
-    from Stanford NLP, 'dsprrr' moves beyond simple prompt engineering to
-    a structured programming model where LLM workflows are treated as
-    programs that can be systematically improved. Features include
-    declarative signatures, composable modules, automatic prompt
-    optimization, and deep integration with the tidyverse ecosystem.
+Description: Build declarative, test-driven, and optimizable applications
+    with large language models (LLMs). Implements ideas from the 'DSPy'
+    framework described by Khattab et al. (2023)
+    <doi:10.48550/arXiv.2310.03714> through typed signatures, composable
+    modules, evaluation, and data-driven prompt optimization. Integrates with
+    'ellmer' for model access and supports tracing, persistence, caching, and
+    asynchronous execution. Designed for systematic improvement of
+    language-model workflows in 'R'.
 License: MIT + file LICENSE
 VignetteBuilder: knitr
 Config/testthat/edition: 3

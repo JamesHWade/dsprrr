@@ -74,6 +74,15 @@ eval_vignette <- function() {
     return(FALSE)
   }
 
+  # Source-package builds run non-interactively and must stay offline even
+  # when the developer's environment contains API keys or unrelated
+  # cassettes. Opt in explicitly when recording or refreshing vignettes.
+  force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
+    identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+  if (!interactive() && !force_eval) {
+    return(FALSE)
+  }
+
   name <- tools::file_path_sans_ext(knitr::current_input())
 
   # Check if vcr cassettes exist for this vignette

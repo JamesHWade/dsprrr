@@ -26,6 +26,15 @@
 #'
 #' @return A function accepting a list of input objects and returning a list
 #'   with components `result`, `solver_chat`, and optionally `solver_metadata`.
+#' @examples
+#' chat <- ellmer::chat_openai(
+#'   credentials = function() "example-key",
+#'   echo = "none"
+#' )
+#' solver <- as_vitals_solver(
+#'   module(signature("question -> answer")),
+#'   .llm = chat
+#' )
 #' @export
 as_vitals_solver <- function(
   module,
@@ -161,6 +170,14 @@ as_vitals_solver <- function(
 #' @return A metric function with signature `function(prediction, expected_row)`
 #'   returning numeric values in `[0, 1]` or `NA` when the scorer output cannot
 #'   be interpreted.
+#' @examples
+#' exact_match <- function(samples) {
+#'   tibble::tibble(
+#'     score = as.numeric(samples$result[[1]] == samples$target[[1]])
+#'   )
+#' }
+#' metric <- as_dsprrr_metric(exact_match)
+#' metric("yes", data.frame(input = "Continue?", target = "yes"))
 #' @export
 as_dsprrr_metric <- function(
   vitals_scorer,

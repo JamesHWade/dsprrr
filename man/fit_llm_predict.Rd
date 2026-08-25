@@ -24,4 +24,10 @@ A fitted dsprrr module.
 Internal function to fit an llm_predict model. Creates a dsprrr module
 with the specified configuration.
 }
+\examples{
+fit_llm_predict(
+  data.frame(text = c("helpful", "unhelpful")),
+  factor(c("positive", "negative"))
+)
+}
 \keyword{internal}
