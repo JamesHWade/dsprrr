@@ -26,6 +26,13 @@
 #' @param ... Additional arguments forwarded to [evaluate()].
 #'
 #' @return The optimised module (modified in place, invisibly).
+#' @examples
+#' \dontrun{
+#' program <- module(signature("question -> answer"))
+#' data <- data.frame(question = "2 + 2?", answer = "4")
+#' grid <- data.frame(temperature = c(0, 0.5))
+#' optimize_grid(program, data, metric_exact_match(), grid = grid)
+#' }
 #' @export
 optimize_grid <- function(module, ...) {
   UseMethod("optimize_grid")

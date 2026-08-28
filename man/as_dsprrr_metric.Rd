@@ -33,3 +33,12 @@ Converts a vitals scorer function into a per-example metric compatible with
 DSPrrr compilation and evaluation. The scorer is invoked on a single-row
 tibble constructed from the prediction and the expected row.
 }
+\examples{
+exact_match <- function(samples) {
+  tibble::tibble(
+    score = as.numeric(samples$result[[1]] == samples$target[[1]])
+  )
+}
+metric <- as_dsprrr_metric(exact_match)
+metric("yes", data.frame(input = "Continue?", target = "yes"))
+}

@@ -1496,6 +1496,15 @@ start_trial <- function(trial) {
 #' @param notes Optional additional notes.
 #'
 #' @return The updated trial record with status `"completed"`.
+#' @examples
+#' \dontrun{
+#' program <- module(signature("question -> answer"))
+#' data <- data.frame(question = "2 + 2?", answer = "4")
+#' chat <- ellmer::chat_openai()
+#' result <- eval_program(program, data, metric_exact_match(), .llm = chat)
+#' trial <- create_trial("example")
+#' complete_trial(trial, result)
+#' }
 #' @export
 complete_trial <- function(
   trial,

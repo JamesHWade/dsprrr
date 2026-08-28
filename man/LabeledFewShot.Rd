@@ -29,6 +29,9 @@ Default is 5.}
 
 \item{seed}{Random seed for reproducibility. Default is 123.}
 }
+\value{
+A \code{LabeledFewShot} teleprompter object.
+}
 \description{
 A simple teleprompter that adds labeled examples from the training set
 as demonstrations to the module. This is the simplest form of few-shot

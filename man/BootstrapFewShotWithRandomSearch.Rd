@@ -52,6 +52,9 @@ If NULL, defaults to \code{list(temperature = 0.7)}.}
 
 \item{log_dir}{Directory for trial logging. Default is NULL.}
 }
+\value{
+A \code{BootstrapFewShotWithRandomSearch} teleprompter object.
+}
 \description{
 A teleprompter that extends BootstrapFewShot with random search over
 multiple candidate programs. It generates several candidate configurations

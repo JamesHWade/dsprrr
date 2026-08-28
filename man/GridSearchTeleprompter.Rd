@@ -24,6 +24,9 @@ grid search. Default is 50.}
 
 \item{verbose}{Whether to print progress messages. Default is TRUE.}
 }
+\value{
+A \code{GridSearchTeleprompter} object.
+}
 \description{
 A teleprompter that performs grid search over different instruction
 and template variants to find the best performing configuration.

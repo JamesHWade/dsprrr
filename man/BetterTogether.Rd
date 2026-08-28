@@ -43,6 +43,9 @@ each optimizer step.}
 
 \item{verbose}{Whether to print progress messages.}
 }
+\value{
+A \code{BetterTogether} teleprompter object.
+}
 \description{
 A meta-teleprompter that runs multiple optimization strategies in sequence.
 This mirrors DSPy's \code{BetterTogether} optimizer surface for composing prompt

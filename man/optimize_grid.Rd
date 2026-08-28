@@ -56,3 +56,11 @@ Optimise a DSPrrr module over a grid of candidate configurations. Accepts
 either an explicit \code{grid} data frame or a set of parameter definitions that
 can be expanded into a grid (named lists or tidymodels parameter sets).
 }
+\examples{
+\dontrun{
+program <- module(signature("question -> answer"))
+data <- data.frame(question = "2 + 2?", answer = "4")
+grid <- data.frame(temperature = c(0, 0.5))
+optimize_grid(program, data, metric_exact_match(), grid = grid)
+}
+}

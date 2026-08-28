@@ -38,6 +38,7 @@
 #' @param seed Random seed for reproducibility. Default is 0.
 #' @param log_dir Directory for trial logging. Default is NULL.
 #'
+#' @return A `COPRO` teleprompter object.
 #' @export
 #'
 #' @examples

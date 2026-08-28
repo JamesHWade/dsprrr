@@ -38,3 +38,13 @@ backend. For structured outputs, mock Chat objects are created for vitals
 logging compatibility (following the same pattern as vitals'
 \code{generate_structured()}).
 }
+\examples{
+chat <- ellmer::chat_openai(
+  credentials = function() "example-key",
+  echo = "none"
+)
+solver <- as_vitals_solver(
+  module(signature("question -> answer")),
+  .llm = chat
+)
+}

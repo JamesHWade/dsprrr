@@ -263,4 +263,4 @@ Key RAG integration features:
 5. **Tracing**: Full visibility into retrieved context
 6. **Optimization**: Tune retrieval parameters like k
 
-For more on ragnar, see the [ragnar documentation](https://tidyverse.github.io/ragnar/).
+For more on ragnar, see the [ragnar documentation](https://ragnar.tidyverse.org/).

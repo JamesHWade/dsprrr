@@ -44,6 +44,7 @@
 #' @param merge_demos If TRUE, merge KNN-selected demos with any existing demos
 #'   on the module. Default is FALSE (replace).
 #'
+#' @return A `KNNFewShot` teleprompter object.
 #' @examples
 #' \dontrun{
 #' # Create a simple vectorizer (in practice, use ragnar::embed_openai or similar)

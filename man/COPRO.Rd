@@ -43,6 +43,9 @@ Default is TRUE.}
 
 \item{log_dir}{Directory for trial logging. Default is NULL.}
 }
+\value{
+A \code{COPRO} teleprompter object.
+}
 \description{
 COPRO (Coordinate Prompt Optimization) automatically refines module
 instructions using coordinate ascent. At each iteration, it generates
