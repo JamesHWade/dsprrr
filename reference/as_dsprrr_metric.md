@@ -41,3 +41,16 @@ as_dsprrr_metric(
 A metric function with signature `function(prediction, expected_row)`
 returning numeric values in `[0, 1]` or `NA` when the scorer output
 cannot be interpreted.
+
+## Examples
+
+``` r
+exact_match <- function(samples) {
+  tibble::tibble(
+    score = as.numeric(samples$result[[1]] == samples$target[[1]])
+  )
+}
+metric <- as_dsprrr_metric(exact_match)
+metric("yes", data.frame(input = "Continue?", target = "yes"))
+#> [1] 1
+```

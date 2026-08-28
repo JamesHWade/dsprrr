@@ -31,3 +31,16 @@ complete_trial(trial, eval_result, compiled_artifact_ref = NULL, notes = NULL)
 ## Value
 
 The updated trial record with status `"completed"`.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+program <- module(signature("question -> answer"))
+data <- data.frame(question = "2 + 2?", answer = "4")
+chat <- ellmer::chat_openai()
+result <- eval_program(program, data, metric_exact_match(), .llm = chat)
+trial <- create_trial("example")
+complete_trial(trial, result)
+} # }
+```

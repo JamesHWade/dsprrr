@@ -74,6 +74,10 @@ BootstrapFewShot(
 
   Directory for trial logging. Default is NULL.
 
+## Value
+
+A `BootstrapFewShot` teleprompter object.
+
 ## Details
 
 ### Joint pipeline compilation

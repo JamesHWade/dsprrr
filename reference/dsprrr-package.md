@@ -1,12 +1,14 @@
-# dsprrr: Declarative Self-Improving Language Programs for R
+# dsprrr: Declarative Self-Improving Language Programs
 
-Build principled, test-driven, and optimizable applications using Large
-Language Models (LLMs) in R. Based on the DSPy framework from Stanford
-NLP, 'dsprrr' moves beyond simple prompt engineering to a structured
-programming model where LLM workflows are treated as programs that can
-be systematically improved. Features include declarative signatures,
-composable modules, automatic prompt optimization, and deep integration
-with the tidyverse ecosystem.
+Build declarative, test-driven, and optimizable applications with large
+language models (LLMs). Implements ideas from the 'DSPy' framework
+described by Khattab et al. (2023)
+[doi:10.48550/arXiv.2310.03714](https://doi.org/10.48550/arXiv.2310.03714)
+through typed signatures, composable modules, evaluation, and
+data-driven prompt optimization. Integrates with 'ellmer' for model
+access and supports tracing, persistence, caching, and asynchronous
+execution. Designed for systematic improvement of language-model
+workflows in 'R'.
 
 ## See also
 
@@ -21,11 +23,11 @@ Useful links:
 ## Author
 
 **Maintainer**: James Wade <github@jameshwade.com>
-([ORCID](https://orcid.org/0000-0002-9740-1905))
+([ORCID](https://orcid.org/0000-0002-9740-1905)) \[copyright holder\]
 
 Authors:
 
 - James Wade <github@jameshwade.com>
-  ([ORCID](https://orcid.org/0000-0002-9740-1905))
+  ([ORCID](https://orcid.org/0000-0002-9740-1905)) \[copyright holder\]
 
 - Anatoliy Sokolov <ansokolov@dow.com>

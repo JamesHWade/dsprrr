@@ -47,6 +47,10 @@ LabeledFewShot(
 
   Random seed for reproducibility. Default is 123.
 
+## Value
+
+A `LabeledFewShot` teleprompter object.
+
 ## Examples
 
 ``` r

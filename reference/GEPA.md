@@ -104,6 +104,10 @@ GEPA(
   Whether to retain each validation row's highest-scoring output.
   Requires `track_stats = TRUE`.
 
+## Value
+
+A `GEPA` teleprompter object.
+
 ## Details
 
 ### Feedback metrics

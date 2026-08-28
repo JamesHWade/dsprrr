@@ -91,6 +91,10 @@ BootstrapFewShotWithRandomSearch(
 
   Directory for trial logging. Default is NULL.
 
+## Value
+
+A `BootstrapFewShotWithRandomSearch` teleprompter object.
+
 ## Examples
 
 ``` r

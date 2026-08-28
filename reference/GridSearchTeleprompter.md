@@ -40,6 +40,10 @@ template variants to find the best performing configuration.
 
   Whether to print progress messages. Default is TRUE.
 
+## Value
+
+A `GridSearchTeleprompter` object.
+
 ## Examples
 
 ``` r

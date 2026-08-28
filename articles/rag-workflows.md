@@ -266,4 +266,4 @@ Key RAG integration features:
 6.  **Optimization**: Tune retrieval parameters like k
 
 For more on ragnar, see the [ragnar
-documentation](https://tidyverse.github.io/ragnar/).
+documentation](https://ragnar.tidyverse.org/).

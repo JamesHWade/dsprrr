@@ -78,6 +78,10 @@ BetterTogether(
 
   Whether to print progress messages.
 
+## Value
+
+A `BetterTogether` teleprompter object.
+
 ## Examples
 
 ``` r

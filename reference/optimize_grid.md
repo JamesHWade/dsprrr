@@ -80,3 +80,14 @@ optimize_grid(
 ## Value
 
 The optimised module (modified in place, invisibly).
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+program <- module(signature("question -> answer"))
+data <- data.frame(question = "2 + 2?", answer = "4")
+grid <- data.frame(temperature = c(0, 0.5))
+optimize_grid(program, data, metric_exact_match(), grid = grid)
+} # }
+```

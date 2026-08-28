@@ -34,3 +34,27 @@ fit_llm_predict(x, y, signature = NULL, temperature = NULL, top_p = NULL)
 ## Value
 
 A fitted dsprrr module.
+
+## Examples
+
+``` r
+fit_llm_predict(
+  data.frame(text = c("helpful", "unhelpful")),
+  factor(c("positive", "negative"))
+)
+#> 
+#> ── PredictModule ──
+#> 
+#> ── Signature 
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs 
+#> • text: "string" - Input: text
+#> 
+#> ── Output 
+#> Type: "object(output: enum(positive, negative))"
+#> 
+#> ── Instructions 
+#> Given the fields `text`, produce the fields `output`.
+```

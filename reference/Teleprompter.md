@@ -25,3 +25,17 @@ Teleprompter(metric = NULL, metric_threshold = NULL, max_errors = 5L)
 - max_errors:
 
   Maximum number of errors allowed during optimization. Default is 5.
+
+## Value
+
+A `Teleprompter` optimization strategy object.
+
+## Examples
+
+``` r
+Teleprompter()
+#> <dsprrr::Teleprompter>
+#>  @ metric          : NULL
+#>  @ metric_threshold: NULL
+#>  @ max_errors      : int 5
+```

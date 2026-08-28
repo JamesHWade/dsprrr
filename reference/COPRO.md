@@ -84,6 +84,10 @@ COPRO(
 
   Directory for trial logging. Default is NULL.
 
+## Value
+
+A `COPRO` teleprompter object.
+
 ## Examples
 
 ``` r

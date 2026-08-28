@@ -52,3 +52,17 @@ as_vitals_solver(module, .llm = NULL, .concurrency = NULL, ...)
 
 A function accepting a list of input objects and returning a list with
 components `result`, `solver_chat`, and optionally `solver_metadata`.
+
+## Examples
+
+``` r
+chat <- ellmer::chat_openai(
+  credentials = function() "example-key",
+  echo = "none"
+)
+#> Using model = "gpt-5.4".
+solver <- as_vitals_solver(
+  module(signature("question -> answer")),
+  .llm = chat
+)
+```

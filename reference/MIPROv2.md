@@ -83,6 +83,10 @@ MIPROv2(
 
   Directory for trial logging.
 
+## Value
+
+A `MIPROv2` teleprompter object.
+
 ## Examples
 
 ``` r

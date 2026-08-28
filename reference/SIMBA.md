@@ -83,6 +83,10 @@ SIMBA(
 
   Directory for trial logging. Default is NULL.
 
+## Value
+
+A `SIMBA` teleprompter object.
+
 ## Details
 
 ### Differences from DSPy's SIMBA

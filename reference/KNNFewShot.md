@@ -63,6 +63,10 @@ KNNFewShot(
   If TRUE, merge KNN-selected demos with any existing demos on the
   module. Default is FALSE (replace).
 
+## Value
+
+A `KNNFewShot` teleprompter object.
+
 ## Details
 
 KNNFewShot works by:

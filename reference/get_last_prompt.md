@@ -47,15 +47,15 @@ run(mod, question = "What is 2+2?", .llm = ellmer::chat_openai())
 
 # Inspect what happened
 get_last_prompt()
-#> ─── Last Prompt ───────────────────────────────────
+#> --- Last Prompt -----------------------------------
 #> System: Given the fields `question`, produce the fields `answer`.
 #>
 #> User: question: What is 2+2?
 #>
-#> ─── Response ──────────────────────────────────────
+#> --- Response --------------------------------------
 #> Assistant: {"answer": "4"}
 #>
-#> ─── Metadata ──────────────────────────────────────
+#> --- Metadata --------------------------------------
 #> Model: gpt-4o-mini | Tokens: 45 in, 12 out | Cost: $0.0001
 } # }
 ```

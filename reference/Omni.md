@@ -91,6 +91,10 @@ Omni(
 
   Whether to print progress messages.
 
+## Value
+
+An `Omni` teleprompter object.
+
 ## Examples
 
 ``` r
