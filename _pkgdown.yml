@@ -61,6 +61,8 @@ navbar:
           href: articles/rag-workflows.html
         - text: "Chaining Modules"
           href: articles/chaining-modules.html
+        - text: "Calibrated Decisions"
+          href: articles/calibrated-decisions.html
         - text: "Deploy to Production"
           href: articles/orchestration.html
         - text: "---"
@@ -135,6 +137,7 @@ articles:
     - vitals-recipes
     - rag-workflows
     - chaining-modules
+    - calibrated-decisions
     - orchestration
     - vitals-integration
     - tidymodels-integration
@@ -226,6 +229,17 @@ reference:
     - with_reasoning
     - without_reasoning
     - has_reasoning
+
+  - title: Calibrated decisions
+    desc: >
+      Experimental probability-evidence outputs (DSPy 3.4 decision types),
+      decoded locally with tunable thresholds, cuts, and weights
+    contents:
+    - decision_types
+    - with_decisions
+    - decision_settings
+    - decision_evidence
+    - ReAnchor
 
   - title: Execution and inspection
     desc: Batch policy, graphs, and module metadata

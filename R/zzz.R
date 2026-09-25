@@ -233,6 +233,22 @@
     )
   }
 
+  S7::method(compile, list(S7::class_any, ReAnchor)) <- function(
+    program,
+    teleprompter,
+    trainset,
+    ...
+  ) {
+    abort_if_fn_module(program)
+    compile_with_trace_context(
+      compile_reanchor,
+      program,
+      teleprompter,
+      trainset,
+      ...
+    )
+  }
+
   S7::method(compile, list(S7::class_any, Teleprompter)) <- function(
     program,
     teleprompter,

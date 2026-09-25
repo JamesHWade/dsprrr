@@ -85,11 +85,19 @@ run_async <- function(module, ..., .llm = NULL, .trace_context = list()) {
   request <- build_module_request(module, inputs)
   llm <- resolve_module_llm(module, .llm = .llm)
 
-  # Use ellmer's async method
+  # Use ellmer's async method. Decision fields request evidence and are
+  # decoded when the promise resolves.
+  decisions <- module_decisions(module)
   result <- llm$chat_structured_async(
     request$payload,
-    type = module$signature@output_type
+    type = decision_request_type(module$signature@output_type, decisions)
   )
+  if (length(decisions) > 0L) {
+    rlang::check_installed("promises", reason = "for asynchronous execution")
+    result <- promises::then(result, function(response) {
+      decision_decode_response(response, decisions)$output
+    })
+  }
   attr(result, "dsprrr_trace_context") <- invocation_trace_fields
   result
 }
@@ -542,6 +550,7 @@ stream_module_step <- function(
 
   if (can_stream) {
     assert_direct_provider_async_supported(module, "run_stream")
+    assert_decisions_supported(module, "token streaming")
     field <- streamable$field
     emit_stream_status(
       on_status,

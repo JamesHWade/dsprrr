@@ -1267,18 +1267,21 @@ process_batch_item <- function(
     invisible(NULL)
   }
 
-  response <- tryCatch(
-    call_llm_request(
-      llm = llm,
-      request = request,
-      output_type = module$signature@output_type,
-      .cache = .cache,
-      .observer = cache_observer
-    ),
+  decoded <- tryCatch(
+    module_structured_call(module, function(output_type) {
+      call_llm_request(
+        llm = llm,
+        request = request,
+        output_type = output_type,
+        .cache = .cache,
+        .observer = cache_observer
+      )
+    }),
     error = function(e) e
   )
   ended_at <- Sys.time()
-  error <- if (inherits(response, "condition")) response else NULL
+  error <- if (inherits(decoded, "condition")) decoded else NULL
+  response <- if (is.null(error)) decoded$output else decoded
   usage <- if (is.null(error)) {
     chat_usage_metadata(llm, turns_before = turns_before)
   } else {
@@ -1296,6 +1299,9 @@ process_batch_item <- function(
     batch_index = index,
     cache = cache_state$status
   )
+  if (is.null(error) && !is.null(decoded$decisions)) {
+    metadata$decisions <- decoded$decisions
+  }
 
   if (!is.null(error)) {
     return(create_error_result(
@@ -1887,6 +1893,12 @@ run_batch <- function(
     return(empty_batch_result(.return_format))
   }
   .concurrency <- ellmer_parallel_schema_runtime(module, .concurrency)
+  if (!identical(.concurrency$effective_backend, "sequential")) {
+    assert_decisions_supported(
+      module,
+      paste0("the ", .concurrency$effective_backend, " batch backend")
+    )
+  }
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
 
   # The backend is fully normalized before any Chat or topology is resolved.

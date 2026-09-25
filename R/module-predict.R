@@ -91,12 +91,16 @@ PredictModule <- R6::R6Class(
       start_time <- Sys.time()
 
       # Make LLM call (pass inputs for multimodal support)
+      decisions <- module_decisions(self)
       result <- tryCatch(
         {
           private$call_llm(
             llm = llm,
             request = request,
-            output_type = self$signature@output_type,
+            output_type = decision_request_type(
+              self$signature@output_type,
+              decisions
+            ),
             .cache = .cache,
             rollout_id = rollout_id,
             .observer = cache_observer
@@ -110,6 +114,10 @@ PredictModule <- R6::R6Class(
           )
         }
       )
+      # Decision fields are decoded after the cache, so their numeric
+      # settings reinterpret cached evidence without new provider calls.
+      decoded <- decision_decode_response(result, decisions)
+      result <- decoded$output
 
       # Calculate metrics
       end_time <- Sys.time()
@@ -216,6 +224,9 @@ PredictModule <- R6::R6Class(
         cache = cache_state$status,
         provider_calls = provider_calls
       )
+      if (!is.null(decoded$decisions)) {
+        metadata$decisions <- decoded$decisions
+      }
 
       # Record trace if requested - store ellmer turns directly
       if (trace) {
