@@ -522,7 +522,7 @@ validate_workflow <- function(module, data = NULL, board = NULL) {
   # Check data compatibility
   if (!is.null(data) && inherits(module, "Module")) {
     required_cols <- vapply(
-      module$signature@inputs,
+      caller_input_specs(module),
       function(x) x$name,
       character(1)
     )

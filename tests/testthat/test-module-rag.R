@@ -121,7 +121,7 @@ test_that("assertion and ensemble wrappers inherit supplied inputs", {
   )
 })
 
-test_that("pipelines, tools and vitals tasks leave supplied inputs to the module", {
+test_that("pipelines, tools, workflows and vitals tasks leave supplied inputs to the module", {
   local_reset_cache()
   llm <- new_test_chat(chat_structured = function(...) list(answer = "Paris"))
   rag <- rag_module(
@@ -141,8 +141,11 @@ test_that("pipelines, tools and vitals tasks leave supplied inputs to the module
   tool <- as_ellmer_tool(rag, .llm = llm)
   expect_named(tool@arguments@properties, "question")
 
-  skip_if_not_installed("vitals")
   data <- tibble::tibble(question = "Capital?", target = "Paris")
+  workflow <- validate_workflow(rag, data = data)
+  expect_true(workflow$checks$data$passed)
+
+  skip_if_not_installed("vitals")
   expect_no_error(
     as_vitals_task(rag, data, scorer = vitals::detect_includes(), .llm = llm)
   )
