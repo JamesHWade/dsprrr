@@ -42,6 +42,36 @@ test_that("wrappers inherit the inputs a RAG module supplies", {
   expect_equal(wrapped$supplied_inputs(), "relevant_context")
 })
 
+test_that("run() on a Predict subclass skips inputs the module supplies", {
+  local_reset_cache()
+  prompts <- character()
+  llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      prompts <<- c(prompts, prompt)
+      list(answer = "Paris")
+    }
+  )
+  SupplyingPredict <- R6::R6Class(
+    "SupplyingPredict",
+    inherit = dsprrr:::PredictModule,
+    public = list(
+      supplied_inputs = function() "relevant_context",
+      forward = function(batch, ...) {
+        batch$relevant_context <- "Paris is the capital of France."
+        super$forward(batch, ...)
+      }
+    )
+  )
+  mod <- SupplyingPredict$new(
+    signature = signature("question, relevant_context -> answer")
+  )
+
+  result <- run(mod, question = "Capital of France?", .llm = llm)
+
+  expect_equal(result$answer, "Paris")
+  expect_match(prompts[[1]], "Paris is the capital of France.", fixed = TRUE)
+})
+
 test_that("run_dataset() and evaluate() need no column for supplied inputs", {
   local_reset_cache()
   llm <- new_test_chat(chat_structured = function(...) list(answer = "Paris"))

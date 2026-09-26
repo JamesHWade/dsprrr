@@ -492,7 +492,8 @@ run.PredictModule <- function(
     missing = if (inherits(module, "FlexModule")) "ignore" else "error",
     extra = if (inherits(module, "FlexModule")) "error" else "warn",
     type = if (inherits(module, "FlexModule")) "error" else "warn",
-    context = "inputs"
+    context = "inputs",
+    supplied = module$supplied_inputs()
   )
 
   input_contract <- module_input_contract(module, inputs)
