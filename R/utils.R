@@ -91,9 +91,14 @@ eval_vignette <- function() {
   }
 
   if (should_eval) {
-    # Keep ellmer's streaming echo and the one-time cache notice out of the
-    # rendered page.
-    options(ellmer_echo = "none")
+    # Keep console chatter out of the rendered page: ellmer's streaming echo,
+    # progress bars, masking notices from library(), and the one-time cache
+    # notice.
+    options(
+      ellmer_echo = "none",
+      cli.progress_show_after = Inf,
+      conflicts.policy = list(warn = FALSE)
+    )
     .dsprrr_env$cache_first_hit_shown <- TRUE
   }
   should_eval
