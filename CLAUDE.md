@@ -468,9 +468,11 @@ test_that("mock returns different values", {
 - FlexModule (bounded declarative Predict/ChainOfThought graphs via `flex()`)
 - ChainOfThought via signature transforms (`with_reasoning()`, `chain_of_thought()`)
 
-**Teleprompters (10):**
+**Teleprompters (11):**
 - LabeledFewShot, BootstrapFewShot, BootstrapFewShotWithRandomSearch
 - MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, GridSearch, BetterTogether
+- ReAnchor (experimental, DSPy 3.4): fits decision thresholds/cuts/weights
+  from recorded evidence; single Predict modules only
 - Ensembling is a module (`EnsembleModule`), not a teleprompter
 - BootstrapFewShot compiles pipelines **jointly**: per-step demos are
   harvested from passing end-to-end traces (DSPy-style whole-program compilation)
@@ -489,6 +491,10 @@ test_that("mock returns different values", {
 - Two-tier caching (memory + disk): `configure_cache()`, `clear_cache()`, `cache_stats()`
 - LM configuration: `dsp_configure()`, `with_lm()`, `local_lm()`
 - Async support: `run_async()`, `stream_async()` with promises
+- Experimental calibrated decisions (`R/decision.R`): `with_decisions()`
+  swaps boolean/enum fields for probability-evidence schemas at request time
+  and decodes after the cache (in `PredictModule$forward()` and
+  `process_batch_item()`); settings live in `config$decisions`
 - Streaming listeners: `run_stream()` + `stream_listener()` (per-field
   callbacks, pipeline status events)
 - vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)

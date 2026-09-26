@@ -2,7 +2,6 @@ TestChat <- R6::R6Class(
   "Chat",
   public = list(
     turns = NULL,
-    model = NULL,
     parity_state = NULL,
     chat_impl = NULL,
     chat_structured_impl = NULL,
@@ -14,19 +13,17 @@ TestChat <- R6::R6Class(
       stream = function(...) character(),
       turns = list(),
       model = "test-model",
-      provider = NULL
+      provider = NULL,
+      extra_args = list()
     ) {
       self$chat_impl <- chat
       self$chat_structured_impl <- chat_structured
       self$stream_impl <- stream
       self$turns <- turns
-      self$model <- model
+      # ellmer >= 0.5.0 keeps model details and request args on a Model.
+      private$model <- ellmer::Model(name = model, extra_args = extra_args)
       private$provider <- if (is.null(provider)) {
-        ellmer::Provider(
-          name = "test",
-          model = model,
-          base_url = ""
-        )
+        ellmer::Provider(name = "test", base_url = "")
       } else {
         provider
       }
@@ -61,15 +58,20 @@ TestChat <- R6::R6Class(
     },
 
     get_model = function() {
-      self$model
+      private$model@name
     },
 
     get_provider = function() {
       private$provider
+    },
+
+    get_model_object = function() {
+      private$model
     }
   ),
   private = list(
-    provider = NULL
+    provider = NULL,
+    model = NULL
   ),
   lock_objects = FALSE,
   parent_env = globalenv()

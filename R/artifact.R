@@ -951,14 +951,14 @@ artifact_provider_model <- function(chat) {
   provider_props <- if (is.null(provider)) {
     NULL
   } else {
-    tryCatch(S7::props(provider), error = function(e) NULL)
+    tryCatch(ellmer_provider_props(provider), error = function(e) NULL)
   }
 
   if (is.list(provider_props)) {
     provider_class <- scalar_text(class(provider)[1L])
     provider_name <- scalar_text(provider_props$name)
     base_url <- scalar_text(provider_props$base_url)
-    model <- scalar_text(provider_props$model) %||% get_model()
+    model <- get_model()
 
     # Provider properties also contain credential closures, headers, and
     # account-specific arguments. Persist only this closed, credential-free

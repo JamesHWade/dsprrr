@@ -381,7 +381,7 @@ optimizer_checkpoint_runtime_identity <- function(
       NULL
     }
     provider_props <- if (!is.null(provider)) {
-      tryCatch(S7::props(provider), error = function(e) NULL)
+      tryCatch(ellmer_provider_props(provider), error = function(e) NULL)
     } else {
       NULL
     }
@@ -395,8 +395,7 @@ optimizer_checkpoint_runtime_identity <- function(
       provider_class <- class(provider)[[1L]] %||% NULL
       provider_name <- provider_props$name %||% NULL
       base_url <- provider_props$base_url %||% NULL
-      model <- provider_props$model %||%
-        tryCatch(value$get_model(), error = function(e) NULL)
+      model <- tryCatch(value$get_model(), error = function(e) NULL)
       if (
         scalar_text(provider_class) &&
           scalar_text(provider_name) &&

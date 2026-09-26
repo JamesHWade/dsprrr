@@ -703,13 +703,7 @@ apply_chat_params <- function(chat, params) {
 
   provider <- tryCatch(
     cloned$.__enclos_env__$private$provider,
-    error = function(e) {
-      cli::cli_abort(
-        "Cannot access the cloned Chat provider",
-        class = "dsprrr_chat_params_error",
-        parent = e
-      )
-    }
+    error = function(e) NULL
   )
   if (is.null(provider)) {
     cli::cli_abort(
@@ -718,27 +712,36 @@ apply_chat_params <- function(chat, params) {
     )
   }
 
-  existing_args <- tryCatch(
-    provider@extra_args,
+  # ellmer >= 0.5.0 sends request arguments from the Chat's Model object.
+  model <- tryCatch(
+    cloned$.__enclos_env__$private$model,
     error = function(e) {
       cli::cli_abort(
-        "Cannot read runtime parameters from the cloned Chat provider",
+        "Cannot access the cloned Chat model",
         class = "dsprrr_chat_params_error",
         parent = e
       )
     }
   )
-  if (is.null(existing_args)) {
-    existing_args <- list()
+  if (!inherits(model, "ellmer::Model")) {
+    cli::cli_abort(
+      "Cannot apply runtime parameters because the cloned Chat has no model",
+      class = "dsprrr_chat_params_error"
+    )
   }
 
+  existing_args <- model@extra_args %||% list()
   for (name in names(params)) {
     existing_args[[name]] <- params[[name]]
   }
 
   tryCatch(
     {
-      cloned$.__enclos_env__$private$provider@extra_args <- existing_args
+      model@extra_args <- existing_args
+      private <- cloned$.__enclos_env__$private
+      private$model <- model
+      # Keep the Provider's attached Model in sync, as Chat$set_model() does.
+      attr(private$provider, ".model") <- model
     },
     error = function(e) {
       param_names <- paste(names(params), collapse = ", ")
@@ -1267,18 +1270,21 @@ process_batch_item <- function(
     invisible(NULL)
   }
 
-  response <- tryCatch(
-    call_llm_request(
-      llm = llm,
-      request = request,
-      output_type = module$signature@output_type,
-      .cache = .cache,
-      .observer = cache_observer
-    ),
+  decoded <- tryCatch(
+    module_structured_call(module, function(output_type) {
+      call_llm_request(
+        llm = llm,
+        request = request,
+        output_type = output_type,
+        .cache = .cache,
+        .observer = cache_observer
+      )
+    }),
     error = function(e) e
   )
   ended_at <- Sys.time()
-  error <- if (inherits(response, "condition")) response else NULL
+  error <- if (inherits(decoded, "condition")) decoded else NULL
+  response <- if (is.null(error)) decoded$output else decoded
   usage <- if (is.null(error)) {
     chat_usage_metadata(llm, turns_before = turns_before)
   } else {
@@ -1296,6 +1302,9 @@ process_batch_item <- function(
     batch_index = index,
     cache = cache_state$status
   )
+  if (is.null(error) && !is.null(decoded$decisions)) {
+    metadata$decisions <- decoded$decisions
+  }
 
   if (!is.null(error)) {
     return(create_error_result(
@@ -1401,16 +1410,17 @@ completed_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
 #'   AssistantTurn representing the exchange
 #' @noRd
 mock_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
-  provider <- if (cache_is_trusted_ellmer_chat(chat)) {
+  trusted <- cache_is_trusted_ellmer_chat(chat)
+  provider <- if (trusted) {
     chat$get_provider()
   } else {
-    ellmer::Provider(
-      name = "dsprrr",
-      model = "synthetic-batch-history",
-      base_url = ""
-    )
+    ellmer::Provider(name = "dsprrr", base_url = "")
   }
-  mock <- utils::getFromNamespace("Chat", "ellmer")$new(provider = provider)
+  model <- if (trusted) ellmer_chat_model(chat) else NULL
+  mock <- utils::getFromNamespace("Chat", "ellmer")$new(
+    provider = provider,
+    model = model %||% ellmer::Model(name = "synthetic-batch-history")
+  )
 
   prompt_contents <- if (
     is.list(prompt) &&
@@ -1887,6 +1897,12 @@ run_batch <- function(
     return(empty_batch_result(.return_format))
   }
   .concurrency <- ellmer_parallel_schema_runtime(module, .concurrency)
+  if (!identical(.concurrency$effective_backend, "sequential")) {
+    assert_decisions_supported(
+      module,
+      paste0("the ", .concurrency$effective_backend, " batch backend")
+    )
+  }
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
 
   # The backend is fully normalized before any Chat or topology is resolved.
