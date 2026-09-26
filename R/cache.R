@@ -2918,6 +2918,28 @@ is_cache_envelope <- function(x) {
     all(c("result", "turn_delta") %in% names(x))
 }
 
+#' Call `Chat$chat_structured()` with a prompt of one or more parts
+#'
+#' ellmer takes each prompt part (text or a content object such as an image)
+#' as a separate argument, so a multimodal payload list is spliced in.
+#' @noRd
+chat_structured_parts <- function(llm, prompt, output_type) {
+  do.call(
+    llm$chat_structured,
+    c(prompt_parts(prompt), list(type = output_type, echo = "none"))
+  )
+}
+
+#' Split a prompt payload into the parts ellmer expects
+#' @noRd
+prompt_parts <- function(prompt) {
+  if (is.list(prompt) && !S7::S7_inherits(prompt)) {
+    unname(prompt)
+  } else {
+    list(prompt)
+  }
+}
+
 #' Cached LLM Call
 #'
 #' @description
@@ -2967,13 +2989,13 @@ cached_chat_structured <- function(
   # If caching disabled (globally or per-call), make direct call
   if (!use_cache) {
     observe("bypass", "disabled")
-    return(llm$chat_structured(prompt, type = output_type, echo = "none"))
+    return(chat_structured_parts(llm, prompt, output_type))
   }
 
   cache <- get_cache()
   if (is.null(cache)) {
     observe("bypass", "unavailable")
-    return(llm$chat_structured(prompt, type = output_type, echo = "none"))
+    return(chat_structured_parts(llm, prompt, output_type))
   }
   disk_guard <- .dsprrr_env$cache_disk_guard
   rollout_id <- scoped_rollout_id(rollout_id)
@@ -2992,7 +3014,7 @@ cached_chat_structured <- function(
   if (inherits(fingerprint, "condition")) {
     if (inherits(fingerprint, "dsprrr_cache_untrusted_chat")) {
       observe("bypass", "untrusted_chat")
-      return(llm$chat_structured(prompt, type = output_type, echo = "none"))
+      return(chat_structured_parts(llm, prompt, output_type))
     }
     if (inherits(fingerprint, "dsprrr_cache_tools_error")) {
       cli::cli_warn(
@@ -3020,7 +3042,7 @@ cached_chat_structured <- function(
       "fingerprint_unavailable"
     }
     observe("bypass", reason)
-    return(llm$chat_structured(prompt, type = output_type, echo = "none"))
+    return(chat_structured_parts(llm, prompt, output_type))
   }
 
   key <- cache_key(fingerprint)
@@ -3032,7 +3054,7 @@ cached_chat_structured <- function(
   if (disk_guard_failed) {
     cache_report_disk_guard_failure(disk_guard)
     observe("bypass", "disk_trust_failed")
-    return(llm$chat_structured(prompt, type = output_type, echo = "none"))
+    return(chat_structured_parts(llm, prompt, output_type))
   }
 
   if (
@@ -3068,10 +3090,10 @@ cached_chat_structured <- function(
       .frequency = "once",
       .frequency_id = "cache-turn-replay-unavailable"
     )
-    return(llm$chat_structured(prompt, type = output_type, echo = "none"))
+    return(chat_structured_parts(llm, prompt, output_type))
   }
 
-  result <- llm$chat_structured(prompt, type = output_type, echo = "none")
+  result <- chat_structured_parts(llm, prompt, output_type)
   turn_delta <- tryCatch(
     cache_turn_delta(llm, before),
     error = function(e) e

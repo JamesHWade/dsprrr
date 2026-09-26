@@ -277,6 +277,11 @@ First development changelog. dsprrr is experimental; the API may change.
   epoch 1 from the response cache, so `score_std` and `ci_95` collapsed to 0
   unless `.cache = FALSE` was set.
 
+* Image and other content inputs work in single `run()` calls, sequential
+  batches and `run_async()`. The prompt parts were passed to ellmer as one
+  list argument, which ellmer 0.5.0 rejects; only batches on the ellmer
+  backend worked.
+
 * Runtime parameters set on a module (`config$params`, `optimize_grid()`
   grids, `reasoning_effort()`) now go through ellmer's standard `params`, so
   ellmer sends them in each provider's format. `reasoning_effort` used to be

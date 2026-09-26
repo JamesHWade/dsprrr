@@ -1458,3 +1458,64 @@ test_that("run_dataset accepts omitted and provided optional inputs", {
   )
   expect_identical(seen, list("<missing>", "<missing>", "first", "second"))
 })
+
+test_that("image inputs reach the provider on a single run() call", {
+  local_reset_cache()
+  bodies <- list()
+  local_mocked_bindings(
+    req_perform = function(req) {
+      bodies[[length(bodies) + 1L]] <<- req$body$data
+      body <- list(
+        id = "resp_1",
+        object = "response",
+        created_at = 1L,
+        status = "completed",
+        model = "gpt-6-luna",
+        output = list(list(
+          id = "msg_1",
+          type = "message",
+          status = "completed",
+          role = "assistant",
+          content = list(list(
+            type = "output_text",
+            annotations = list(),
+            logprobs = list(),
+            text = '{"merchant":"Cafe","total":4.5}'
+          ))
+        )),
+        usage = list(
+          input_tokens = 5L,
+          input_tokens_details = list(cached_tokens = 0L),
+          output_tokens = 2L,
+          output_tokens_details = list(reasoning_tokens = 0L),
+          total_tokens = 7L
+        ),
+        service_tier = "default",
+        metadata = list()
+      )
+      getFromNamespace("response", "httr2")(
+        headers = list(`content-type` = "application/json"),
+        body = charToRaw(jsonlite::toJSON(
+          body,
+          auto_unbox = TRUE,
+          null = "null"
+        ))
+      )
+    },
+    .package = "ellmer"
+  )
+  chat <- suppressWarnings(
+    ellmer::chat_openai(api_key = "dummy-key", model = "gpt-6-luna")
+  )
+  reader <- module(signature("receipt -> merchant: str, total: float"))
+  image <- ellmer::content_image_url("https://example.com/receipt.jpg")
+
+  result <- run(reader, receipt = image, .llm = chat, .cache = FALSE)
+
+  expect_equal(result$total, 4.5)
+  types <- unlist(lapply(bodies[[1]]$input, function(item) {
+    vapply(item$content, function(part) part$type, character(1))
+  }))
+  expect_true("input_image" %in% types)
+  expect_true("input_text" %in% types)
+})

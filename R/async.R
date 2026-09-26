@@ -88,9 +88,14 @@ run_async <- function(module, ..., .llm = NULL, .trace_context = list()) {
   # Use ellmer's async method. Decision fields request evidence and are
   # decoded when the promise resolves.
   decisions <- module_decisions(module)
-  result <- llm$chat_structured_async(
-    request$payload,
-    type = decision_request_type(module$signature@output_type, decisions)
+  result <- do.call(
+    llm$chat_structured_async,
+    c(
+      prompt_parts(request$payload),
+      list(
+        type = decision_request_type(module$signature@output_type, decisions)
+      )
+    )
   )
   if (length(decisions) > 0L) {
     rlang::check_installed("promises", reason = "for asynchronous execution")
