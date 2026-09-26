@@ -16,8 +16,9 @@ ragnar_tool(store, k = 5L, name = "search_knowledge", description = NULL)
 \item{description}{Tool description for the LLM.}
 }
 \value{
-A function suitable for use with ReAct modules or
-\code{ellmer::Chat$register_tool()}.
+An ellmer tool definition (see \code{\link[ellmer:tool]{ellmer::tool()}}) for \code{react()}
+modules or \code{Chat$register_tool()}. It can also be called directly with a
+query string.
 }
 \description{
 Creates an ellmer-compatible tool that searches a ragnar document store.
@@ -29,9 +30,13 @@ objects for agentic document retrieval.
 # Create a ragnar store from documents
 library(ragnar)
 store <- ragnar_store_create(
-  documents = my_docs,
-  embedding_fn = embed_openai()
+  embed = \\(x) embed_openai(x, model = "text-embedding-3-small")
 )
+for (i in seq_along(my_docs)) {
+  doc <- MarkdownDocument(my_docs[[i]], origin = paste0("doc-", i))
+  ragnar_store_insert(store, markdown_chunk(doc))
+}
+ragnar_store_build_index(store)
 
 # Create a search tool
 search_tool <- ragnar_tool(store, k = 3)

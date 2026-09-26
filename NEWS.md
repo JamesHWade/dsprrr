@@ -246,6 +246,31 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Bug fixes
 
+* `metric_exact_match()` and `metric_f1()` now work without `field` in
+  `evaluate()`, `optimize_grid()`, and `compile()`. Those functions pass the
+  whole data row as `expected`, so every row used to fail with "Metric must
+  return a single logical or numeric score" (and `metric_f1()` scored against
+  every column). The metric now compares the one prediction field that is also
+  a data column, and asks for `field` when that is ambiguous. This also fixes
+  `optimize_grid()`'s default metric.
+
+* `refine()` and `rag_module()` programs now run through `run()`. Input
+  validation used to demand the `feedback` and `relevant_context` fields the
+  modules fill in themselves. When a refined module declares `feedback`, the
+  first attempt receives "No feedback yet.".
+
+* ragnar integration matches ragnar's API: retrieval passes `top_k`,
+  `ragnar_tool()` returns an ellmer tool definition that `react()` and
+  `Chat$register_tool()` accept, and `create_search_tool()` builds its store
+  with `ragnar_store_create(embed = )`, `markdown_chunk()`, and
+  `ragnar_store_insert()`.
+
+* `optimize_grid()`'s `instructions_suffix` parameter appends to the module's
+  instructions instead of replacing them.
+
+* `export_traces()` and `pin_trace()` leave out prompts and responses unless
+  `include_prompts` or `include_outputs` is `TRUE`, as documented.
+
 * DSPy 3.3 execution contracts are enforced in the R runtime: `rlm_module()`
   rejects duplicate, reserved, missing, and ellipsis-style tool names, rejects
   unexpected invocation inputs, and no longer stringifies arbitrary sub-LM

@@ -67,6 +67,13 @@ RAGModule <- R6::R6Class(
     },
 
     #' @description
+    #' The context field is filled in by retrieval, so callers never pass it.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      self$context_format
+    },
+
+    #' @description
     #' Execute the module with given inputs
     #' @param batch Named list or data frame of inputs
     #' @param .llm Optional ellmer chat object
@@ -321,7 +328,11 @@ RAGModule <- R6::R6Class(
         # Use ragnar store retrieval
         docs <- tryCatch(
           {
-            results <- ragnar::ragnar_retrieve(self$store, query, k = self$k)
+            results <- ragnar::ragnar_retrieve(
+              self$store,
+              query,
+              top_k = self$k
+            )
             # Extract text content from results
             if (is.data.frame(results) && "text" %in% names(results)) {
               results$text

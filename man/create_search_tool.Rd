@@ -17,8 +17,9 @@ create_search_tool(
 \item{documents}{Character vector of documents, or a data frame with a
 'text' or 'content' column.}
 
-\item{embedding_fn}{Embedding function from ragnar (e.g.,
-\code{ragnar::embed_openai()}).}
+\item{embedding_fn}{Embedding function passed to
+\code{ragnar::ragnar_store_create()} as \code{embed}, e.g.
+\verb{\\(x) ragnar::embed_openai(x, model = "text-embedding-3-small")}.}
 
 \item{k}{Number of documents to retrieve per search (default 5).}
 
@@ -29,7 +30,7 @@ create_search_tool(
 \item{...}{Additional arguments passed to \code{ragnar::ragnar_store_create()}.}
 }
 \value{
-A search tool function.
+An ellmer tool definition, as returned by \code{\link[=ragnar_tool]{ragnar_tool()}}.
 }
 \description{
 Convenience function that creates a ragnar store from documents and wraps
@@ -46,7 +47,7 @@ docs <- c(
 
 search_tool <- create_search_tool(
   documents = docs,
-  embedding_fn = ragnar::embed_openai(),
+  embedding_fn = \\(x) ragnar::embed_openai(x, model = "text-embedding-3-small"),
   k = 2
 )
 

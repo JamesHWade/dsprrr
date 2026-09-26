@@ -7,7 +7,10 @@
 metric_f1(field = NULL, normalize = TRUE)
 }
 \arguments{
-\item{field}{Optional field name to extract from structured outputs}
+\item{field}{Name of the output field to compare. \code{evaluate()},
+\code{optimize_grid()} and \code{compile()} pass the whole data row as \code{expected};
+when \code{field} is \code{NULL}, the metric compares the one prediction field that
+is also a column of that row, and errors if there is not exactly one.}
 
 \item{normalize}{Logical, whether to normalize text before tokenization}
 }

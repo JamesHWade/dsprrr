@@ -62,6 +62,14 @@ Module <- R6::R6Class(
     },
 
     #' @description
+    #' Names of signature inputs the module fills in itself (for example the
+    #' retrieved context of a RAG module), so callers need not supply them.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      character()
+    },
+
+    #' @description
     #' Run the module with inputs
     #'
     #' This method provides a convenient interface for executing modules directly.
@@ -144,7 +152,8 @@ Module <- R6::R6Class(
         missing = if (inherits(self, "FlexModule")) "ignore" else "error",
         extra = if (inherits(self, "FlexModule")) "error" else "warn",
         type = if (inherits(self, "FlexModule")) "error" else "warn",
-        context = "inputs"
+        context = "inputs",
+        supplied = self$supplied_inputs()
       )
 
       input_contract <- module_input_contract(self, inputs)

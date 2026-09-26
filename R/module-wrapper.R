@@ -95,6 +95,13 @@ BestOfNModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs the wrapped module fills in itself.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      self$module$supplied_inputs()
+    },
+
+    #' @description
     #' Execute the module N times and return best result
     #'
     #' @param batch Named list or data frame of inputs
@@ -621,6 +628,14 @@ RefineModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs filled in by the wrapper or the wrapped module. The feedback
+    #' field is supplied by Refine, so callers never pass it.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      union(super$supplied_inputs(), self$feedback_field)
+    },
+
+    #' @description
     #' Execute the module with iterative refinement
     #'
     #' @param batch Named list or data frame of inputs
@@ -658,6 +673,24 @@ RefineModule <- R6::R6Class(
       n_errors <- 0L
       current_batch <- batch
       previous_feedback <- NULL
+
+      # A wrapped module that declares the feedback field needs a value on the
+      # first attempt too, before any feedback exists.
+      wrapped_inputs <- vapply(
+        self$module$signature@inputs,
+        function(x) x$name,
+        character(1)
+      )
+      if (
+        self$feedback_field %in%
+          wrapped_inputs &&
+          is.null(current_batch[[self$feedback_field]])
+      ) {
+        current_batch <- private$inject_feedback(
+          current_batch,
+          "No feedback yet."
+        )
+      }
 
       for (i in seq_len(self$N)) {
         # Inject feedback from previous attempt (if any)

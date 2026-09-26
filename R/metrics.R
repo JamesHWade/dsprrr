@@ -5,7 +5,10 @@
 #' predicted and expected values. Can optionally extract a specific field
 #' from structured outputs.
 #'
-#' @param field Optional field name to extract from structured outputs
+#' @param field Name of the output field to compare. `evaluate()`,
+#'   `optimize_grid()` and `compile()` pass the whole data row as `expected`;
+#'   when `field` is `NULL`, the metric compares the one prediction field that
+#'   is also a column of that row, and errors if there is not exactly one.
 #' @param ignore_case Logical, whether to ignore case when comparing
 #' @param normalize Logical, whether to normalize whitespace
 #'
@@ -24,21 +27,23 @@
 #' # Case insensitive matching
 #' metric <- metric_exact_match(ignore_case = TRUE)
 #' metric("Hello", "hello")  # TRUE
+#'
+#' # evaluate() passes the whole data row as `expected`; the shared field
+#' # (here `sentiment`) is compared
+#' metric <- metric_exact_match()
+#' row <- data.frame(text = "Great!", sentiment = "positive")
+#' metric(list(sentiment = "positive"), row)  # TRUE
 metric_exact_match <- function(
   field = NULL,
   ignore_case = FALSE,
   normalize = TRUE
 ) {
   fn <- function(prediction, expected) {
-    # Extract field if specified
-    if (!is.null(field)) {
-      prediction <- extract_field(prediction, field)
-      expected <- extract_field(expected, field)
-    }
+    values <- metric_values(prediction, expected, field)
 
     # Convert to character for comparison
-    pred_str <- as.character(prediction)
-    exp_str <- as.character(expected)
+    pred_str <- as.character(values$prediction)
+    exp_str <- as.character(values$expected)
 
     # Normalize whitespace if requested
     if (normalize) {
@@ -66,7 +71,7 @@ metric_exact_match <- function(
 #' Creates a metric function that calculates the F1 score between predicted
 #' and expected text based on token overlap.
 #'
-#' @param field Optional field name to extract from structured outputs
+#' @inheritParams metric_exact_match
 #' @param normalize Logical, whether to normalize text before tokenization
 #'
 #' @return A function with signature function(prediction, expected) -> numeric
@@ -84,15 +89,11 @@ metric_exact_match <- function(
 #' )
 metric_f1 <- function(field = NULL, normalize = TRUE) {
   fn <- function(prediction, expected) {
-    # Extract field if specified
-    if (!is.null(field)) {
-      prediction <- extract_field(prediction, field)
-      expected <- extract_field(expected, field)
-    }
+    values <- metric_values(prediction, expected, field)
 
     # Convert to character
-    pred_str <- as.character(prediction)
-    exp_str <- as.character(expected)
+    pred_str <- as.character(values$prediction)
+    exp_str <- as.character(values$expected)
 
     # Normalize if requested
     if (normalize) {
@@ -342,6 +343,57 @@ extract_field <- function(x, field) {
       class = "dsprrr_metric_field_error"
     )
   }
+}
+
+#' Resolve the values a field-aware metric compares
+#'
+#' `evaluate()`, `optimize_grid()`, `compile()` and `eval_program()` pass the
+#' whole data row as `expected`. With no explicit `field`, compare the single
+#' prediction field that is also a column of that row. Values that are not a
+#' data row (direct calls such as `metric("a", "a")`) are compared as given.
+#' @noRd
+metric_values <- function(prediction, expected, field = NULL) {
+  if (is.null(field) && is.data.frame(expected)) {
+    field <- infer_metric_field(prediction, expected)
+  }
+  if (is.null(field)) {
+    return(list(prediction = prediction, expected = expected))
+  }
+  list(
+    prediction = extract_field(prediction, field),
+    expected = extract_field(expected, field)
+  )
+}
+
+#' @noRd
+infer_metric_field <- function(prediction, expected) {
+  shared <- if (is.list(prediction) && !is.null(names(prediction))) {
+    intersect(names(prediction), names(expected))
+  } else {
+    character()
+  }
+  if (length(shared) == 1) {
+    return(shared)
+  }
+  hint <- "Pass {.arg field} to name the column that holds the expected answer."
+  if (length(shared) > 1) {
+    cli::cli_abort(
+      c(
+        "Can't tell which field this metric should compare.",
+        "i" = "The prediction and the data share {.field {shared}}.",
+        "i" = hint
+      ),
+      class = "dsprrr_metric_field_error"
+    )
+  }
+  cli::cli_abort(
+    c(
+      "Can't tell which field this metric should compare.",
+      "i" = "No prediction field matches a column of the data ({.field {names(expected)}}).",
+      "i" = hint
+    ),
+    class = "dsprrr_metric_field_error"
+  )
 }
 
 #' Normalize whitespace in text

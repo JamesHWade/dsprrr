@@ -231,7 +231,8 @@ validate_signature_inputs <- function(
   missing = c("error", "warn", "ignore"),
   extra = c("warn", "error", "ignore"),
   type = c("warn", "error", "ignore"),
-  context = "inputs"
+  context = "inputs",
+  supplied = character()
 ) {
   missing <- match.arg(missing)
   extra <- match.arg(extra)
@@ -253,7 +254,8 @@ validate_signature_inputs <- function(
     function(x) tryCatch(isTRUE(x$type@required), error = function(e) TRUE),
     logical(1)
   )
-  required_names <- declared_names[required]
+  # Inputs the module fills in itself are never required from the caller.
+  required_names <- setdiff(declared_names[required], supplied)
   provided_names <- names(inputs) %||% character()
 
   missing_names <- setdiff(required_names, provided_names)
