@@ -14,6 +14,32 @@ compose_rollout_id <- function(rollout_id, i) {
   if (is.null(rollout_id)) as.character(i) else paste0(rollout_id, ".", i)
 }
 
+#' Evaluate code with an extra cache partition
+#'
+#' Responses cached inside `code` are keyed by `scope` as well, so repeated
+#' evaluation epochs get fresh responses instead of replaying the first epoch.
+#' `NULL` leaves the current partition unchanged.
+#' @noRd
+with_rollout_scope <- function(scope, code) {
+  old <- .dsprrr_env$rollout_scope
+  if (!is.null(scope)) {
+    .dsprrr_env$rollout_scope <- compose_rollout_id(old, scope)
+  }
+  on.exit(.dsprrr_env$rollout_scope <- old, add = TRUE)
+  force(code)
+}
+
+#' Combine the active rollout scope with a call's own rollout id
+#' @noRd
+scoped_rollout_id <- function(rollout_id) {
+  scope <- .dsprrr_env$rollout_scope
+  if (is.null(scope)) {
+    rollout_id
+  } else {
+    compose_rollout_id(scope, rollout_id %||% "")
+  }
+}
+
 #' Reject R's partial matching for public constructor arguments
 #' @noRd
 reject_partial_argument_matches <- function(call, fn) {

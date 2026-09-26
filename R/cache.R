@@ -2976,6 +2976,7 @@ cached_chat_structured <- function(
     return(llm$chat_structured(prompt, type = output_type, echo = "none"))
   }
   disk_guard <- .dsprrr_env$cache_disk_guard
+  rollout_id <- scoped_rollout_id(rollout_id)
 
   fingerprint <- tryCatch(
     cache_request_fingerprint(

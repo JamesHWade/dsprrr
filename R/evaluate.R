@@ -428,52 +428,58 @@ evaluate.Module <- function(
       cli::cli_alert_info("Running epoch {epoch}/{epochs}")
     }
 
-    # Execute module with error handling
+    # Execute module with error handling. Epochs after the first use their own
+    # cache partition, so they sample fresh responses instead of replaying
+    # epoch 1 from the cache.
     trace_count_before <- evaluation_trace_cursor(module)
-    evaluated <- tryCatch(
-      {
-        evaluated <- do.call(
-          run_dataset,
-          c(
-            list(
-              module = module,
-              data = data,
-              .llm = .llm,
-              .concurrency = .concurrency,
-              .progress = .progress && epochs == 1,
-              .return_format = "structured"
-            ),
-            list(...)
+    epoch_scope <- if (epoch > 1) paste0("epoch-", epoch) else NULL
+    evaluated <- with_rollout_scope(
+      epoch_scope,
+      tryCatch(
+        {
+          evaluated <- do.call(
+            run_dataset,
+            c(
+              list(
+                module = module,
+                data = data,
+                .llm = .llm,
+                .concurrency = .concurrency,
+                .progress = .progress && epochs == 1,
+                .return_format = "structured"
+              ),
+              list(...)
+            )
           )
-        )
-        if (isTRUE(.propagate_provider_errors)) {
-          conditions <- attr(
-            evaluated,
-            "dsprrr_error_conditions",
-            exact = TRUE
-          ) %||%
-            list()
-          for (condition in conditions) {
-            provider_condition <- run_provider_error_condition(condition)
-            if (!is.null(provider_condition)) {
-              stop(provider_condition)
+          if (isTRUE(.propagate_provider_errors)) {
+            conditions <- attr(
+              evaluated,
+              "dsprrr_error_conditions",
+              exact = TRUE
+            ) %||%
+              list()
+            for (condition in conditions) {
+              provider_condition <- run_provider_error_condition(condition)
+              if (!is.null(provider_condition)) {
+                stop(provider_condition)
+              }
             }
           }
+          evaluated
+        },
+        error = function(e) {
+          provider_condition <- run_provider_error_condition(e)
+          if (!is.null(provider_condition)) {
+            stop(provider_condition)
+          }
+          cli::cli_abort(c(
+            "Epoch {epoch}/{epochs} failed during module execution",
+            "x" = conditionMessage(e),
+            "i" = "Successfully completed {epoch - 1} epoch(s) before failure",
+            "i" = "Consider reducing dataset size or using sequential execution"
+          ))
         }
-        evaluated
-      },
-      error = function(e) {
-        provider_condition <- run_provider_error_condition(e)
-        if (!is.null(provider_condition)) {
-          stop(provider_condition)
-        }
-        cli::cli_abort(c(
-          "Epoch {epoch}/{epochs} failed during module execution",
-          "x" = conditionMessage(e),
-          "i" = "Successfully completed {epoch - 1} epoch(s) before failure",
-          "i" = "Consider reducing dataset size or using sequential execution"
-        ))
-      }
+      )
     )
 
     predictions <- evaluated$result

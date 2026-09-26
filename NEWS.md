@@ -272,6 +272,11 @@ First development changelog. dsprrr is experimental; the API may change.
   inspections, costs and optimizer objects printed as raw lists. The S7 print
   methods are now registered in `.onLoad()`.
 
+* `evaluate(epochs = )` samples fresh responses in every epoch. Epochs after
+  the first now use their own cache partition; previously they replayed
+  epoch 1 from the response cache, so `score_std` and `ci_95` collapsed to 0
+  unless `.cache = FALSE` was set.
+
 * `dsp_configure()` applies `temperature` to the chat (through
   `ellmer::params()`) instead of only recording it, and honors `model` and
   `api_key` when it detects the provider from environment variables.
