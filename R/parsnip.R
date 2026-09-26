@@ -1,55 +1,54 @@
-#' parsnip Integration for DSPrrr
+#' parsnip integration
 #'
-#' @description
-#' Provides tidymodels/parsnip integration for dsprrr modules, enabling
-#' LLM-based prediction within the tidymodels ecosystem.
-#'
-#' @details
-#' This integration allows dsprrr modules to be used as parsnip model
-#' specifications, making them compatible with tidymodels workflows including
-#' `tune::tune_grid()`, `workflows::workflow()`, and `rsample` resampling.
-#'
-#' The integration registers a "dsprrr" engine for text classification and
-#' generation tasks.
+#' Registers an `llm_predict` model with a "dsprrr" engine; see
+#' [llm_predict()].
 #'
 #' @name parsnip-integration
-#' @keywords internal
+#' @noRd
 NULL
 
-#' LLM Prediction Model Specification
+#' LLM model specification for parsnip
 #'
 #' @description
-#' Creates a parsnip model specification for LLM-based prediction using dsprrr.
+#' `llm_predict()` creates a parsnip model specification whose "dsprrr"
+#' engine predicts with a dsprrr module, for classification or regression on
+#' text columns. `temperature` and `top_p` can be marked for tuning with
+#' `tune()`; see [temperature()] and [top_p()].
 #'
-#' @param mode Model mode, typically "classification" or "regression" (for text
-#'   tasks, classification is most common).
-#' @param signature A dsprrr signature string or Signature object.
-#' @param temperature Temperature parameter for LLM (tune-able).
-#' @param top_p Top-p parameter for LLM (tune-able).
+#' @details
+#' The engine is registered automatically when parsnip is loaded (see
+#' [register_dsprrr_engine()]). Fitting builds a Predict module from the
+#' predictor columns and the outcome: an enum output with the outcome's levels
+#' for classification, or a number for regression, unless you give a
+#' `signature`. Prediction runs the module on the new data with the default
+#' chat (see [dsp_configure()]); a fitted model makes no model calls until
+#' it predicts.
 #'
-#' @return A parsnip model specification object.
+#' Known issue: the engine is registered without parsnip's encoding
+#' information, so `parsnip::fit()` and `parsnip::fit_xy()` currently fail
+#' with "no applicable method for 'filter'". Until that is fixed, the
+#' specification cannot be fitted through parsnip, workflows or tune.
+#'
+#' @param mode `"classification"` (the default) or `"regression"`.
+#' @param signature Optional signature string or [signature()] object for the
+#'   module. `NULL` derives one from the data when fitting.
+#' @param temperature Sampling temperature for the module, or `tune()`.
+#' @param top_p Nucleus sampling parameter for the module, or `tune()`.
+#'
+#' @return A parsnip model specification of class `llm_predict`.
 #'
 #' @export
-#' @examples
-#' \dontrun{
-#' library(parsnip)
-#' library(tune)
-#'
-#' # Create LLM model spec
-#' llm_spec <- llm_predict(
+#' @family integrations
+#' @examplesIf rlang::is_installed("parsnip")
+#' spec <- llm_predict(
 #'   mode = "classification",
 #'   signature = "text -> sentiment: enum('positive', 'negative', 'neutral')"
 #' ) |>
-#'   set_engine("dsprrr")
+#'   parsnip::set_engine("dsprrr")
+#' spec
 #'
-#' # With tunable parameters
-#' llm_spec_tuned <- llm_predict(
-#'   mode = "classification",
-#'   signature = "text -> sentiment",
-#'   temperature = tune()
-#' ) |>
-#'   set_engine("dsprrr")
-#' }
+#' # Mark a parameter for tuning
+#' llm_predict(signature = "text -> sentiment", temperature = parsnip::tune())
 llm_predict <- function(
   mode = "classification",
   signature = NULL,
@@ -103,20 +102,21 @@ print.llm_predict <- function(x, ...) {
   invisible(x)
 }
 
-#' Register dsprrr Engine with parsnip
+#' Register the dsprrr engine with parsnip
 #'
 #' @description
-#' Registers the dsprrr engine for use with llm_predict model specifications.
-#' This function is called automatically when the package loads if parsnip
-#' is available.
+#' `register_dsprrr_engine()` registers the `llm_predict` model and its
+#' "dsprrr" engine with parsnip. dsprrr calls it automatically when parsnip
+#' is loaded, so you rarely need it. It does nothing when parsnip is not
+#' installed or the model is already registered.
 #'
-#' @return NULL (invisibly), called for side effects.
+#' @return `NULL`, invisibly.
 #'
 #' @export
-#' @examples
-#' \dontrun{
+#' @family integrations
+#' @examplesIf rlang::is_installed("parsnip")
 #' register_dsprrr_engine()
-#' }
+#' parsnip::show_engines("llm_predict")
 register_dsprrr_engine <- function() {
   if (!rlang::is_installed("parsnip")) {
     return(invisible(NULL))
@@ -234,25 +234,47 @@ register_dsprrr_engine <- function() {
   invisible(NULL)
 }
 
-#' Fit LLM Predict Model
+#' Engine functions behind llm_predict()
 #'
 #' @description
-#' Internal function to fit an llm_predict model. Creates a dsprrr module
-#' with the specified configuration.
+#' These functions implement the "dsprrr" engine of [llm_predict()]. parsnip
+#' calls them; they are exported for that purpose, not for direct use.
 #'
-#' @param x Training data predictors (data frame).
-#' @param y Training data outcomes.
-#' @param signature Signature for the module.
-#' @param temperature Temperature parameter.
-#' @param top_p Top-p parameter.
+#' * `fit_llm_predict()` builds a Predict module from the predictors `x` and
+#'   outcome `y`. Without a `signature`, the inputs are the columns of `x` and
+#'   the output is an enum of the outcome's levels (factor or character `y`)
+#'   or a number.
+#' * `predict_llm_class()` runs the module on `new_data` with the default chat
+#'   and returns a tibble with a `.pred_class` factor column.
+#' * `predict_llm_numeric()` does the same and returns a `.pred` column;
+#'   outputs that cannot be converted to numbers become `NA` with a warning.
 #'
-#' @return A fitted dsprrr module.
+#' @param x Data frame of predictors.
+#' @param y Outcome vector.
+#' @param signature Optional signature string or [signature()] object.
+#' @param temperature,top_p Optional sampling settings stored in the module's
+#'   config.
+#' @param object A module returned by `fit_llm_predict()`.
+#' @param new_data Data frame with the predictor columns.
+#' @param ... Unused.
+#'
+#' @return `fit_llm_predict()` returns a Predict module. The predict functions
+#'   return a tibble with one row per row of `new_data`.
 #' @keywords internal
 #' @examples
 #' fit_llm_predict(
 #'   data.frame(text = c("helpful", "unhelpful")),
 #'   factor(c("positive", "negative"))
 #' )
+#'
+#' \dontrun{
+#' set_default_chat(ellmer::chat_openai(model = "gpt-6-luna"))
+#' fit <- fit_llm_predict(
+#'   data.frame(text = c("helpful", "unhelpful")),
+#'   factor(c("positive", "negative"))
+#' )
+#' predict_llm_class(fit, data.frame(text = "clear and useful"))
+#' }
 #' @export
 fit_llm_predict <- function(
   x,
@@ -312,26 +334,7 @@ fit_llm_predict <- function(
   mod
 }
 
-#' Predict Class Labels with LLM
-#'
-#' @description
-#' Internal function for class predictions with llm_predict models.
-#'
-#' @param object A fitted dsprrr module.
-#' @param new_data New data for prediction.
-#' @param ... Additional arguments.
-#'
-#' @return A tibble with .pred_class column.
-#' @keywords internal
-#' @examples
-#' \dontrun{
-#' set_default_chat(ellmer::chat_openai())
-#' fit <- fit_llm_predict(
-#'   data.frame(text = c("helpful", "unhelpful")),
-#'   factor(c("positive", "negative"))
-#' )
-#' predict_llm_class(fit, data.frame(text = "clear and useful"))
-#' }
+#' @rdname fit_llm_predict
 #' @export
 predict_llm_class <- function(object, new_data, ...) {
   # Validate inputs
@@ -398,26 +401,7 @@ predict_llm_class <- function(object, new_data, ...) {
   tibble::tibble(.pred_class = factor(preds))
 }
 
-#' Predict Numeric Values with LLM
-#'
-#' @description
-#' Internal function for numeric predictions with llm_predict models.
-#'
-#' @param object A fitted dsprrr module.
-#' @param new_data New data for prediction.
-#' @param ... Additional arguments.
-#'
-#' @return A tibble with .pred column.
-#' @keywords internal
-#' @examples
-#' \dontrun{
-#' set_default_chat(ellmer::chat_openai())
-#' fit <- fit_llm_predict(
-#'   data.frame(text = c("short", "much longer")),
-#'   c(1, 2)
-#' )
-#' predict_llm_numeric(fit, data.frame(text = "medium length"))
-#' }
+#' @rdname fit_llm_predict
 #' @export
 predict_llm_numeric <- function(object, new_data, ...) {
   # Validate inputs
@@ -499,17 +483,15 @@ predict_llm_numeric <- function(object, new_data, ...) {
   tibble::tibble(.pred = preds)
 }
 
-#' tunable Method for llm_predict
+#' tunable() method for llm_predict
 #'
-#' @description
-#' Returns information about tunable parameters for llm_predict models.
-#' This method is only available when the tune package is loaded.
+#' Describes `temperature` and `top_p` as the tunable parameters of
+#' [llm_predict()] specifications for the tune package.
 #'
-#' @param x An llm_predict model specification.
-#' @param ... Additional arguments (unused).
-#'
-#' @return A tibble describing tunable parameters.
-#' @keywords internal
+#' @param x An `llm_predict` model specification.
+#' @param ... Unused.
+#' @return A tibble describing the tunable parameters.
+#' @noRd
 tunable_llm_predict <- function(x, ...) {
   tibble::tibble(
     name = c("temperature", "top_p"),
@@ -523,21 +505,25 @@ tunable_llm_predict <- function(x, ...) {
   )
 }
 
-#' Temperature Parameter for dials
+#' Temperature parameter for dials
 #'
 #' @description
-#' Creates a dials parameter object for LLM temperature.
+#' `temperature()` creates a dials parameter for a model's sampling
+#' temperature, for tuning [llm_predict()] specifications or building grids
+#' for [optimize_grid()]. Reasoning models restrict it: gpt-6-luna, for
+#' example, accepts `temperature` only when its reasoning effort is `"none"`.
 #'
-#' @param range Range of temperature values (default c(0, 1)).
-#' @param trans Transformation (default NULL for identity).
+#' @param range Range of values (default `c(0, 1)`).
+#' @param trans Optional transformation from the scales package; `NULL` (the
+#'   default) means none.
 #'
-#' @return A dials parameter object.
+#' @return A dials quantitative parameter.
 #' @export
-#' @examples
-#' \dontrun{
+#' @family integrations
+#' @examplesIf rlang::is_installed("dials")
 #' temperature()
 #' temperature(range = c(0.1, 0.9))
-#' }
+#' dials::grid_regular(temperature(), levels = 3)
 temperature <- function(range = c(0, 1), trans = NULL) {
   rlang::check_installed("dials", reason = "for temperature()")
 
@@ -551,21 +537,23 @@ temperature <- function(range = c(0, 1), trans = NULL) {
   )
 }
 
-#' Top-p Parameter for dials
+#' Top-p parameter for dials
 #'
 #' @description
-#' Creates a dials parameter object for LLM top-p (nucleus sampling).
+#' `top_p()` creates a dials parameter for nucleus sampling (the share of
+#' probability mass the model samples from), for tuning [llm_predict()]
+#' specifications or building grids for [optimize_grid()]. Like
+#' [temperature()], it applies to gpt-6-luna only when its reasoning effort is
+#' `"none"`.
 #'
-#' @param range Range of top-p values (default c(0, 1)).
-#' @param trans Transformation (default NULL for identity).
+#' @inheritParams temperature
 #'
-#' @return A dials parameter object.
+#' @return A dials quantitative parameter.
 #' @export
-#' @examples
-#' \dontrun{
+#' @family integrations
+#' @examplesIf rlang::is_installed("dials")
 #' top_p()
 #' top_p(range = c(0.5, 1))
-#' }
 top_p <- function(range = c(0, 1), trans = NULL) {
   rlang::check_installed("dials", reason = "for top_p()")
 
@@ -579,18 +567,20 @@ top_p <- function(range = c(0, 1), trans = NULL) {
   )
 }
 
-#' Reasoning Effort Parameter for dials
+#' Reasoning effort parameter for dials
 #'
 #' @description
-#' Creates a dials parameter object for reasoning model effort level.
-#' Used with reasoning models like OpenAI o1/o3/o4-mini and GPT-5.
+#' `reasoning_effort()` creates a dials parameter for the reasoning effort of
+#' reasoning models such as gpt-6-luna, with the values `"low"`, `"medium"`
+#' and `"high"`. Use it instead of [temperature()] when tuning a reasoning
+#' model.
 #'
-#' @return A dials qualitative parameter object.
+#' @return A dials qualitative parameter.
 #' @export
-#' @examples
-#' \dontrun{
+#' @family integrations
+#' @examplesIf rlang::is_installed("dials")
 #' reasoning_effort()
-#' }
+#' dials::grid_regular(reasoning_effort())
 reasoning_effort <- function() {
   rlang::check_installed("dials", reason = "for reasoning_effort()")
 

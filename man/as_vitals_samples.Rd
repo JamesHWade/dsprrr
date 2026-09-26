@@ -2,45 +2,70 @@
 % Please edit documentation in R/vitals.R
 \name{as_vitals_samples}
 \alias{as_vitals_samples}
-\title{Convert dsprrr traces to vitals samples format}
+\title{Convert dsprrr traces to vitals samples}
 \usage{
 as_vitals_samples(traces, input_column = NULL, include_chats = FALSE)
 }
 \arguments{
-\item{traces}{A traces tibble from \code{\link[=export_traces]{export_traces()}} or module \verb{$get_traces()}.}
+\item{traces}{A traces data frame, such as \code{\link[=export_traces]{export_traces()}} output. Export
+with \code{include_prompts = TRUE} and \code{include_outputs = TRUE}; otherwise
+\code{input} and \code{result} are empty.}
 
-\item{input_column}{Column name containing the input prompts. If \code{NULL},
-attempts to extract from the prompt field.}
+\item{input_column}{Name of the column to use as \code{input}. \code{NULL} (the
+default) uses \code{prompt}.}
 
-\item{include_chats}{Logical; if \code{TRUE} and solver_chat column exists,
-include chat objects. Defaults to \code{FALSE}.}
+\item{include_chats}{Whether to keep a \code{solver_chat} column when \code{traces}
+has one (default \code{FALSE}).}
 }
 \value{
-A tibble with columns matching vitals samples format:
-\itemize{
-\item \code{id}: Unique identifier for each trace
-\item \code{input}: Input prompt text
-\item \code{result}: Model output
-\item \code{solver_metadata}: List column with trace metadata (latency, tokens, cost)
-\item \code{model}: Model name used
-\item \code{epoch}: Always 1 (dsprrr doesn't use epochs)
-}
+A tibble with columns \code{id} (\code{"trace_0001"}, ...), \code{input},
+\code{result} (list-column from the \code{output} column), \code{solver_metadata}
+(list-column with latency, tokens, cost and timestamp), \code{model} and
+\code{epoch} (always 1).
 }
 \description{
-Converts dsprrr module traces to a tibble format compatible with vitals
-\code{Task$get_samples()} output. This enables viewing dsprrr traces in
-vitals' Inspect viewer or combining with vitals samples using \code{vitals_bind()}.
+\code{as_vitals_samples()} reshapes a traces data frame into the samples format
+that a vitals \code{Task}'s \verb{$get_samples()} returns, for example to combine
+dsprrr runs with vitals results using \code{vitals::vitals_bind()}.
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}} converts the other way.
 }
 \examples{
-\dontrun{
-# Export traces from a module and convert
-traces <- export_traces(my_module, include_outputs = TRUE)
-samples <- as_vitals_samples(traces)
-
-# Use with vitals_bind for combined analysis
-vitals::vitals_bind(
-  task1 = task1,
-  dsprrr = samples
+traces <- tibble::tibble(
+  prompt = c("question: What is 2+2?", "question: Capital of France?"),
+  output = list(list(answer = "4"), list(answer = "Paris")),
+  model = "gpt-6-luna",
+  latency_ms = c(820, 640),
+  input_tokens = c(52L, 55L),
+  output_tokens = c(6L, 7L),
+  cost = c(0.0001, 0.0001)
 )
+as_vitals_samples(traces)
+
+\dontrun{
+samples <- as_vitals_samples(
+  export_traces(classifier, include_prompts = TRUE, include_outputs = TRUE)
+)
+vitals::vitals_bind(dsprrr = samples)
 }
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
+}
+\concept{integrations}

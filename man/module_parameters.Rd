@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimize.R
 \name{module_parameters}
 \alias{module_parameters}
-\title{Suggest tidymodels parameters for a module}
+\title{Build a tidymodels parameter set for a module}
 \usage{
 module_parameters(
   module,
@@ -12,46 +12,68 @@ module_parameters(
 )
 }
 \arguments{
-\item{module}{A DSPrrr module (created with \code{\link[=module]{module()}}).}
+\item{module}{A module, such as one created with \code{\link[=module]{module()}}.}
 
-\item{model}{Optional model name string. When provided, parameters are
-filtered based on model capabilities (e.g., reasoning models exclude
-\code{temperature}/\code{top_p} and include \code{reasoning_effort}).}
+\item{model}{Optional model name, such as \code{"gpt-6-luna"}. For a reasoning
+model, \code{temperature} and \code{top_p} are replaced by \code{reasoning_effort}.}
 
-\item{include}{Optional character vector restricting which parameters are
-returned. Defaults to all parameters discovered in the module configuration
-and optimisation trials.}
+\item{include}{Optional character vector of parameter names to keep.}
 
-\item{exclude}{Character vector of parameter names to ignore. Defaults to
-internal bookkeeping fields such as \code{id} and \code{instructions}.}
+\item{exclude}{Character vector of parameter names to drop when \code{include} is
+\code{NULL}. The default drops \code{id}, \code{instructions} and \code{instructions_suffix}.}
 }
 \value{
-A \code{\link[dials:parameters]{dials::parameters}} object describing the candidate tunables.
-Returns an empty parameter set when no tunables are discovered.
+A \code{dials::parameters()} object, empty when nothing tunable is found.
 }
 \description{
-Construct a \code{dials::parameters()} set from the information available on a
-module. Numeric parameters (e.g., \code{temperature}, \code{top_p}) derive their ranges
-from observed optimisation trials (if present) or fall back to sensible
-defaults. Qualitative parameters (e.g., \code{prompt_style}) are converted to
-value sets.
+\code{module_parameters()} returns a \code{dials::parameters()} set describing values
+of a module that can be tuned. Pass it to \code{\link[=optimize_grid]{optimize_grid()}} as \code{parameters}
+to search a regular or random grid over those values.
+}
+\details{
+Candidate parameters come from:
+\itemize{
+\item single values in \code{module$config} and \code{module$config$params};
+\item the parameters of trials recorded by \code{\link[=optimize_grid]{optimize_grid()}};
+\item enum inputs of the signature, as \verb{input_<name>} with the enum levels;
+\item runtime settings with default ranges: \code{temperature} and \code{top_p} in
+\verb{[0, 1]}, \code{frequency_penalty} and \code{presence_penalty} in \verb{[-2, 2]}, and
+\code{max_output_tokens} in \verb{[32, 4096]}.
+}
 
-For reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series), \code{temperature} and
-\code{top_p} are automatically excluded since these models don't support them.
-Instead, \code{reasoning_effort} is included as a tunable parameter.
+Numeric values become quantitative parameters spanning the observed range
+(plus or minus 0.1 around a single value); character and logical values
+become qualitative parameters. For a reasoning model (see
+\code{\link[=is_reasoning_model]{is_reasoning_model()}}), \code{temperature} and \code{top_p} are dropped and
+\code{reasoning_effort} (\code{"low"}, \code{"medium"}, \code{"high"}) is added.
+
+Only runtime settings, \code{instructions}, \code{instructions_suffix} and \code{template}
+change what \code{\link[=optimize_grid]{optimize_grid()}} sends to the model. Other parameters, such as
+\verb{input_<name>} or internal config fields like \code{.module_kind}, are stored in
+the module's config without effect, so use \code{include} to keep the ones you
+mean to tune.
 }
 \examples{
-\dontrun{
-sig <- signature("text -> sentiment")
-mod <- module(sig, config = list(temperature = 0.2))
-optimize_grid(
-  mod,
-  data = tibble::tibble(text = "sample", target = "positive"),
-  parameters = list(temperature = c(0.1, 0.5))
+\dontshow{if (rlang::is_installed("dials")) withAutoprint(\{ # examplesIf}
+mod <- module(
+  signature("text -> sentiment"),
+  config = list(temperature = 0.2)
 )
-module_parameters(mod)
+module_parameters(mod, include = c("temperature", "top_p"))
 
-# For reasoning models, temperature is excluded
-module_parameters(mod, model = "o3")
+# Reasoning models tune reasoning_effort instead of temperature
+module_parameters(
+  mod,
+  model = "gpt-6-luna",
+  include = c("temperature", "reasoning_effort")
+)
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other grid search:
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=module_metrics]{module_metrics()}},
+\code{\link[=module_trials]{module_trials()}},
+\code{\link[=optimize_grid]{optimize_grid()}}
 }
+\concept{grid search}

@@ -1,82 +1,84 @@
-#' Posit mcp-repl Code Runner
+#' Run R code in an operating-system sandbox with mcp-repl
 #'
 #' @description
-#' Creates a dsprrr code runner backed by Posit's
-#' [`mcp-repl`](https://github.com/posit-dev/mcp-repl) MCP server.
-#' `mcp-repl` keeps a long-lived R session and enforces its sandbox with
-#' operating-system primitives. This makes it suitable for code proposed by an
-#' optimizer or language model.
+#' `mcp_repl_runner()` creates a code runner backed by Posit's
+#' [`mcp-repl`](https://github.com/posit-dev/mcp-repl) MCP server. `mcp-repl`
+#' keeps a long-lived R session and enforces a sandbox with operating-system
+#' primitives, so it is suitable for code written by a model or an optimizer.
+#' Use it with [rlm_module()], [code_act()], [program_of_thought()] and the
+#' agentic optimizers [AutoResearch()] and [MetaHarness()].
 #'
-#' For nonce-bound RLM submit/query traffic, dsprrr caps each encoded control
-#' frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
-#' If mcp-repl nevertheless returns a file-preview or active-pager marker (for
-#' example because user code printed a large value first), the runner fails the
-#' iteration instead of accepting an unverifiable partial control frame. These
-#' markers are plain text in the upstream protocol, so detection is necessarily
-#' conservative and can only fail closed; dsprrr never follows a disclosed
-#' sandbox file path from the host process.
-#'
-#' Executable Flex decodes one bounded current-step frame from raw output before
-#' display truncation. It may also recover that frame from a plain file preview.
-#' The frame remains untrusted and is still subject to Flex's host-side request,
-#' budget, and output validation. Ambiguous previews, pagers, bundles, and MCP
-#' errors fail closed. Host-generated requests that exceed the wire bound are
-#' compressed before transport and rejected before sending if they still do not
-#' fit.
+#' It needs the suggested mcptools package (1.0.1 or later) and the external
+#' `mcp-repl` executable.
 #'
 #' @details
-#' By default, `mcp_repl_runner()` starts `mcp-repl` through
-#' [mcptools::mcp_tools()] with:
+#' ## Sandbox
 #'
-#' - the R interpreter;
-#' - the `workspace-write` sandbox;
-#' - network access disabled by the sandbox; and
-#' - oversized output written to sandbox-visible files.
+#' By default, the runner starts `mcp-repl` through `mcptools::mcp_tools()`
+#' with the R interpreter and the `workspace-write` sandbox: network access is
+#' disabled, writes are allowed inside the workspace, and oversized output is
+#' written to files the sandbox can see. `sandbox = "off"` is not accepted,
+#' because this runner promises an enforced sandbox; use [r_code_runner()] for
+#' trusted input without a sandbox.
 #'
-#' The sandbox is deliberately on by default. It disables network access but
-#' the `workspace-write` policy still permits mutation inside allowed workspace
-#' paths. Setting `sandbox = "off"` is rejected because this runner advertises
-#' an enforced sandbox. Use [r_code_runner()] explicitly for trusted-input-only
-#' subprocess isolation.
+#' ## Your own connection
 #'
-#' Supplying `repl` is useful for an externally managed MCP connection and for
-#' deterministic tests. It must be a function with the mcp-repl tool contract:
-#' `repl(input, timeout_ms)`. Because dsprrr did not launch that function's
-#' server, its runner policy is deliberately marked unverified and it is
-#' rejected by optimizers that require an OS sandbox. Calling `$shutdown()`
-#' makes the wrapper terminal but does not close that caller-managed connection.
+#' `repl` accepts a function with the mcp-repl tool contract,
+#' `repl(input, timeout_ms)`, for an MCP connection you manage or for tests.
+#' Because dsprrr did not start that server, it cannot vouch for the sandbox:
+#' the runner is marked unverified and optimizers that require a sandbox
+#' reject it. `$shutdown()` then ends the runner but leaves your connection
+#' open. A runner that dsprrr starts shuts down only the transport it started.
 #'
-#' A managed runner captures and shuts down only the mcp-repl transport it starts.
-#' Some supported mcptools versions do not expose public per-server teardown,
-#' so dsprrr uses a guarded compatibility shim and fails setup if deterministic
-#' ownership cannot be captured. This path is tested against mcptools 1.0.1.
+#' ## Output limits
 #'
-#' @param repl Optional function implementing the mcp-repl `repl` tool.
-#' @param command Path or command name for the `mcp-repl` executable.
-#' @param interpreter Interpreter passed to mcp-repl. Currently only `"r"` is
-#'   supported by this runner.
-#' @param sandbox mcp-repl sandbox policy. Defaults to `"workspace-write"`.
-#'   `"inherit-codex"` is rejected because [mcptools::mcp_tools()] does not
-#'   currently propagate the required Codex sandbox metadata.
-#' @param timeout Maximum execution time in seconds.
-#' @param max_output_chars Maximum number of output characters returned to the
-#'   optimizer.
-#' @param oversized_output mcp-repl oversized-output mode. RLM previews fail
-#'   closed. Executable Flex accepts only one bounded current-step frame in a
-#'   plain file preview. dsprrr attempts to reset active pager state before
-#'   returning a failure.
-#' @param extra_args Reserved for future vetted mcp-repl options. It must be
-#'   empty because arbitrary server flags can weaken the managed sandbox policy.
+#' RLM exchanges control messages with the guest session, capped at 3,000
+#' bytes each so they stay below mcp-repl's inline-output limit. If mcp-repl
+#' still replies with a file preview or a pager (for example because the code
+#' printed a large value first), the iteration fails rather than accepting a
+#' partial message; dsprrr never follows a file path reported by the sandbox.
+#' Executable Flex programs read one bounded message per step and can recover
+#' it from a plain file preview; anything ambiguous fails. Host requests that
+#' are too large are compressed and, if still too large, rejected before
+#' sending.
 #'
-#' @return An `McpReplRunner` implementing the dsprrr code-runner protocol.
+#' @param repl Optional function implementing the mcp-repl `repl` tool; see
+#'   Details.
+#' @param command Path or name of the `mcp-repl` executable.
+#' @param interpreter Interpreter passed to mcp-repl. Only `"r"` is
+#'   supported.
+#' @param sandbox Sandbox policy, `"workspace-write"` (the default).
+#'   `"inherit-codex"` is rejected because `mcptools::mcp_tools()` does not
+#'   pass on the Codex sandbox metadata it needs.
+#' @param timeout Maximum execution time per call, in seconds (default 30).
+#' @param max_output_chars Maximum number of output characters returned per
+#'   call (default `100000L`).
+#' @param oversized_output mcp-repl's mode for oversized output (default
+#'   `"files"`). RLM rejects file previews; executable Flex accepts one bounded
+#'   message in a plain file preview. dsprrr tries to reset an active pager
+#'   before reporting a failure.
+#' @param extra_args Reserved for future vetted mcp-repl options and must be
+#'   empty, because arbitrary server flags could weaken the sandbox.
+#'
+#' @return An `McpReplRunner` object implementing the runner interface
+#'   described in [r_code_runner()]: `$execute()`, `$policy()`, `$reset()`
+#'   and `$shutdown()`.
 #'
 #' @export
+#' @family code execution
 #' @examples
 #' \dontrun{
 #' runner <- mcp_repl_runner()
-#' runner$execute("mean(1:10)")
+#' runner$policy()$sandboxed
+#' runner$execute("mean(1:10)")$result
 #' runner$reset()
 #' runner$shutdown()
+#'
+#' # Give each RLM call a fresh sandboxed session
+#' analyst <- rlm_module(
+#'   "document, question -> answer",
+#'   interpreter_factory = function() mcp_repl_runner(timeout = 30)
+#' )
 #' }
 mcp_repl_runner <- function(
   repl = NULL,

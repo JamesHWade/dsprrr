@@ -11,7 +11,7 @@
 \alias{is_module_frozen}
 \alias{set_module_lm}
 \alias{module_children}
-\title{Traverse and Transform Module Graphs}
+\title{Inspect and transform nested programs}
 \usage{
 module_graph(
   program,
@@ -95,16 +95,16 @@ the same R6 object.}
 
 \item{frozen}{Logical; \code{TRUE} freezes and \code{FALSE} unfreezes.}
 
-\item{module}{A dsprrr \code{Module} object.}
+\item{module}{A \code{Module} object.}
 
 \item{chat}{An ellmer \code{Chat} object, or \code{NULL} to clear stored Chats.}
 
-\item{clone}{Whether to give each module an independent deep clone of
-\code{chat}. The default avoids sharing mutable conversation history.}
+\item{clone}{Whether to give each module its own deep clone of \code{chat}
+(default \code{TRUE}), so that modules do not share conversation history.}
 }
 \value{
 \itemize{
-\item \code{module_graph()} returns a tibble with one row per graph occurrence.
+\item \code{module_graph()} returns a tibble with one row per module occurrence.
 \item \code{named_modules()} and \code{named_parameters()} return named lists.
 \item \code{map_modules()} and \code{replace_module()} return the resulting root module.
 \item \code{freeze_modules()} and \code{set_module_lm()} return \code{program} invisibly.
@@ -113,43 +113,68 @@ the same R6 object.}
 }
 }
 \description{
-Module graphs provide one cycle-safe protocol for inspecting and transforming
-nested dsprrr programs. Built-in adapters understand pipelines, wrappers,
-ensembles, and multi-chain modules. Custom \code{Module} subclasses can opt in by
-implementing two public methods:
+These functions list, inspect and rewrite the modules inside a composed
+program, such as a pipeline, ensemble or wrapper:
 \itemize{
-\item \code{graph_children()} returns a list whose leaves are child \code{Module} objects.
-Lists can be nested and can be named or unnamed.
-\item \code{set_graph_children(children)} replaces that complete child structure and
-returns the program invisibly. This method is required only for replacement
-and mapping operations; read-only traversal needs only \code{graph_children()}.
+\item \code{module_graph()} returns one row per module occurrence.
+\item \code{named_modules()} returns the modules by path.
+\item \code{named_parameters()} returns the tunable leaf modules by path: modules
+without children that optimizers can change, such as Predict modules.
+\item \code{map_modules()} applies a function to every module and swaps in the
+results.
+\item \code{replace_module()} replaces the module at one path.
+\item \code{freeze_modules()} and \code{is_module_frozen()} mark modules that rewrites
+should leave alone, and check the mark.
+\item \code{set_module_lm()} stores a chat on every module.
+\item \code{module_children()} returns the direct children of one module.
+}
+}
+\details{
+\subsection{Paths}{
+
+Paths look like JSON pointers. \code{"$"} is the root, named list elements use
+their names, and unnamed or ambiguously named elements use one-based
+positions, as in \code{"$/steps/first"}. \code{/} and \code{~} in names are escaped as
+\code{~1} and \code{~0}.
 }
 
-A custom module can additionally implement \code{graph_is_parameter()} and return
-\code{TRUE} or \code{FALSE} to control whether \code{\link[=named_parameters]{named_parameters()}} includes it.
+\subsection{Boundaries}{
 
-Paths use a JSON-pointer-like form. \code{"$"} is the root, named list elements
-use their names, and unnamed or ambiguously named lists use one-based numeric
-positions. \code{/} and \code{~} in names are escaped as \code{~1} and \code{~0}.
+With \code{boundaries = "respect"}, compiled and frozen modules are listed as
+boundary nodes, but neither they nor their descendants are changed. A shared
+module reachable through any protected path is protected everywhere.
+\code{map_modules()} visits each module object once, children before parents,
+and rewires every reference to the same replacement. \code{replace_module()}
+replaces one path by default; \code{shared = "all"} replaces every reference to
+the same object. Mapping can traverse cycles, but replacing a module that
+is part of a cycle is rejected; use \code{replace_module()} on one path to break
+the cycle first.
+}
 
-With \code{boundaries = "respect"}, compiled and frozen modules are included as
-boundary nodes but neither they nor their descendants are mutated. A shared
-module reachable through any protected path is protected at every alias.
-Mapping visits each R6 identity once in post-order and rewires all aliases to
-the same replacement. \code{\link[=replace_module]{replace_module()}} defaults to replacing one path and
-can opt into identity-wide replacement with \code{shared = "all"}. Mapping can
-safely traverse cycles, but replacing a module that participates in a cycle
-is rejected; use path-specific \code{\link[=replace_module]{replace_module()}} to break a cycle edge.
+\subsection{Custom modules}{
 
-This is primarily useful when implementing or testing a custom module graph
-adapter. Custom modules should normally implement \code{graph_children()} rather
-than call this function from that method.
+Built-in adapters understand pipelines, wrappers, ensembles and
+multi-chain modules. A custom \code{Module} subclass can join the graph by
+implementing two public methods:
+\itemize{
+\item \code{graph_children()} returns a list, possibly nested and named or unnamed,
+whose leaves are the child \code{Module} objects.
+\item \code{set_graph_children(children)} replaces the whole child structure and
+returns the module invisibly. Only replacement and mapping need it.
+}
+
+It can also implement \code{graph_is_parameter()}, returning \code{TRUE} or \code{FALSE},
+to control whether \code{named_parameters()} includes it. \code{module_children()}
+reports what these methods declare, which helps when writing or testing an
+adapter; call it from outside \code{graph_children()}, not inside it.
+}
 }
 \examples{
 first <- module(signature("text -> answer"))
 second <- module(signature("answer -> summary"))
 program <- pipeline(first = first, second = second)
 
+module_graph(program)
 names(named_modules(program))
 names(named_parameters(program))
 
@@ -162,3 +187,18 @@ freeze_modules(program, "$/steps/first")
 is_module_frozen(first)
 
 }
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
+}
+\concept{composition}

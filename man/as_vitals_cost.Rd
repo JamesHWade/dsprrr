@@ -2,51 +2,77 @@
 % Please edit documentation in R/vitals.R
 \name{as_vitals_cost}
 \alias{as_vitals_cost}
-\title{Convert dsprrr cost data to vitals format}
+\title{Report dsprrr costs in the vitals format}
 \usage{
 as_vitals_cost(x, source = "solver", ...)
 }
 \arguments{
-\item{x}{A dsprrr cost object. Can be:
+\item{x}{One of:
 \itemize{
-\item A \code{dsprrr_cost_summary} (from \code{\link[=get_cost]{get_cost()}})
-\item A \code{dsprrr_session_cost} (from \code{\link[=session_cost]{session_cost()}})
-\item A tibble of traces (from \code{\link[=export_traces]{export_traces()}})
-\item A \code{dsprrr_evaluation} result (from \code{\link[=evaluate]{evaluate()}})
+\item a session summary from \code{\link[=session_cost]{session_cost()}} (one row per model);
+\item a traces data frame, such as \code{\link[=export_traces]{export_traces()}} output, with \code{model},
+\code{input_tokens}, \code{output_tokens} and \code{cost} columns (one row per model);
+\item a cost summary from \code{\link[=get_cost]{get_cost()}} or an \code{\link[=evaluate]{evaluate()}} result (a single
+row with the total price, and model and token counts unknown). This
+currently fails when the total cost is unknown, for example for a
+model without price data.
 }}
 
-\item{source}{Character string identifying the source of costs.
-Defaults to \code{"solver"} to match vitals convention.}
+\item{source}{Label for the \code{source} column (default \code{"solver"}, the
+vitals convention; vitals also uses \code{"scorer"}).}
 
-\item{...}{Additional arguments (currently unused).}
+\item{...}{Unused.}
 }
 \value{
-A tibble with columns matching vitals cost format:
-\itemize{
-\item \code{source}: Character, either "solver" or "scorer"
-\item \code{provider}: Character, the API provider name
-\item \code{model}: Character, the model name
-\item \code{input}: Integer, input token count
-\item \code{output}: Integer, output token count
-\item \code{price}: Character, formatted cost string (e.g., "$0.01")
-}
+A tibble with columns \code{source}, \code{provider} (guessed from the model
+name), \code{model}, \code{input} and \code{output} (token counts), and \code{price} (text
+such as \code{"$0.01"}).
 }
 \description{
-Converts dsprrr cost summaries, trace data, or session costs into a
-tibble matching the format returned by vitals \link[vitals:Task]{vitals::Task}\verb{$get_cost()}.
-This enables consistent cost reporting across dsprrr and vitals workflows.
+\code{as_vitals_cost()} converts dsprrr cost information into the tibble that a
+vitals \code{Task}'s \verb{$get_cost()} method returns, so costs from both packages
+can be reported together.
 }
 \examples{
-\dontrun{
-# From session cost
+traces <- data.frame(
+  model = c("gpt-6-luna", "gpt-6-luna", "claude-sonnet-4-5"),
+  input_tokens = c(12000L, 8000L, 20000L),
+  output_tokens = c(3000L, 2500L, 6000L),
+  cost = c(0.21, 0.15, 0.42)
+)
+as_vitals_cost(traces)
+
+# Nothing has run in this session yet
 as_vitals_cost(session_cost())
 
-# From evaluation result
-eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
-as_vitals_cost(eval_result)
-
-# From module traces
-traces <- export_traces(my_module)
-as_vitals_cost(traces)
+\dontrun{
+result <- evaluate(
+  classifier,
+  testset,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+as_vitals_cost(result)
 }
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
+}
+\concept{integrations}

@@ -1,37 +1,50 @@
-#' Inspect an Optimization Result
+#' Inspect what an optimizer did
 #'
-#' `optimization_result()` is the stable, read-only boundary for learning what
-#' an optimizer did. Every dsprrr teleprompter reports the same core fields;
-#' optimizer-specific evidence lives under a namespaced `extensions` entry.
+#' `optimization_result()` reports what [compile()] or [optimize_grid()] did to
+#' a program: the optimizer, the baseline and best scores, the winning
+#' parameters, every trial, and why the search stopped. All optimizers report
+#' the same core fields; optimizer-specific details live under `extensions`,
+#' keyed by the optimizer's name in snake case (for example
+#' `extensions$gepa` or `extensions$better_together`).
 #'
-#' @param program A dsprrr module returned by [compile()] or [optimize_grid()].
+#' @param program A module returned by [compile()] or modified by
+#'   [optimize_grid()].
 #'
-#' @return A `dsprrr_optimization_result` with fields:
-#'   * `version`: Result schema version.
-#'   * `optimizer`: Optimizer identity.
-#'   * `status`: Either `"completed"` or `"partial"`.
-#'   * `baseline_score`, `best_score`, and `best_trial`: Comparable outcome
-#'     measures when the optimizer evaluates candidates.
-#'   * `best_params`: Winning parameter values.
-#'   * `trials`: Trial-level evidence as a tibble.
-#'   * `lineage`: How the winning candidate was derived.
-#'   * `budget`: Planned and consumed optimization budget.
-#'   * `stop_reason`: Why the optimizer stopped.
-#'   * `extensions`: Optimizer-specific evidence, namespaced by optimizer.
+#' @return A `dsprrr_optimization_result` list with fields:
+#'   * `version`: result schema version.
+#'   * `optimizer`: the optimizer's name.
+#'   * `status`: `"completed"`, or `"partial"` when a budget stopped the run.
+#'   * `baseline_score`, `best_score` and `best_trial`: outcome measures, `NA`
+#'     for optimizers that score nothing.
+#'   * `best_params`: the winning parameter values.
+#'   * `trials`: trial-level results as a tibble.
+#'   * `lineage`: how the winning candidate was derived.
+#'   * `budget`: the budget used, for optimizers run under
+#'     [optimizer_control()].
+#'   * `stop_reason`: why the optimizer stopped.
+#'   * `extensions`: optimizer-specific details.
 #'
-#' Returns `NULL` when `program` has not been optimized.
+#'   Returns `NULL` when `program` has not been optimized. `print()` shows a
+#'   short summary and returns `x` invisibly.
 #'
 #' @export
-#' @family optimizer accessors
+#' @family optimization results
 #'
 #' @examples
-#' if (FALSE) {
-#' optimized <- compile(program, GEPA(metric = metric), trainset)
-#' result <- optimization_result(optimized)
-#' result$best_score
-#' result$trials
-#' result$extensions$gepa
-#' }
+#' classifier <- module(signature("text -> sentiment"))
+#' trainset <- data.frame(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#' compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+#'
+#' result <- optimization_result(compiled)
+#' result
+#' result$best_params
+#' result$extensions$labeled_few_shot
+#'
+#' # Not optimized
+#' optimization_result(classifier)
 optimization_result <- function(program) {
   assert_optimization_program(program)
   result <- program$state$optimization_result

@@ -4,23 +4,38 @@
 # Uses a teacher model to generate demonstrations from training examples,
 # selecting those that pass a metric threshold.
 
-#' BootstrapFewShot Teleprompter
+#' BootstrapFewShot: keep the program's own successful outputs as demos
 #'
 #' @include teleprompter.R optimizer-core.R
 #'
 #' @description
-#' A teleprompter that bootstraps demonstrations by having a teacher model
-#' generate predictions on training examples and selecting successful ones
-#' as demonstrations. This is DSPy's foundational optimization approach.
-#'
-#' The optimizer:
-#' 1. Starts with optional labeled demonstrations from the training set
-#' 2. Uses a teacher model to generate predictions on remaining examples
-#' 3. Evaluates predictions using the provided metric
-#' 4. Selects top-scoring predictions as bootstrapped demonstrations
-#' 5. Optionally runs multiple rounds, updating the teacher with new demos
+#' `BootstrapFewShot()` runs the program on training rows, scores each output
+#' with `metric`, and keeps the outputs that pass as few-shot demonstrations.
+#' Labeled training rows can be added as demonstrations too. This is DSPy's
+#' basic demonstration optimizer and a building block of
+#' [BootstrapFewShotWithRandomSearch()] and [MIPROv2()].
 #'
 #' @details
+#' Compilation works through the training rows in their original order:
+#'
+#' 1. The first `max_labeled_demos` rows become labeled demonstrations, copied
+#'    from the data.
+#' 2. A copy of the program (the teacher) runs on each remaining row, using
+#'    the demonstrations collected so far. An output that passes the metric
+#'    becomes a demonstration. This stops once `max_bootstrapped_demos` are
+#'    collected.
+#' 3. With `max_rounds` above `1L`, step 2 repeats over the same rows until
+#'    enough demonstrations are collected.
+#'
+#' The compiled copy gets the labeled demonstrations followed by the
+#' bootstrapped ones. Rows used as labeled demonstrations are never
+#' bootstrapped, so with the default `max_labeled_demos = 16L` a training set of
+#' 16 rows or fewer yields labeled demonstrations only and makes no model
+#' calls. Set `max_labeled_demos = 0L` to bootstrap from every row.
+#'
+#' The teacher runs with the `.llm` passed to [compile()], or with the chat the
+#' program would otherwise use.
+#'
 #' ## Joint pipeline compilation
 #'
 #' When `program` is a pipeline (built with [pipeline()] or [`%>>%`]),
@@ -37,38 +52,60 @@
 #' not match its children's `state -> ...` signatures. Use GEPA for these
 #' programs, or instruction-only MIPROv2 for an RLM graph.
 #'
-#' @param metric A metric function for evaluating predictions (required).
-#' @param metric_threshold Minimum score for a demo to be accepted.
-#'   If NULL, accepts any successful prediction. Default is NULL.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
-#' @param max_bootstrapped_demos Maximum number of bootstrapped demonstrations
-#'   to include. Default is 4.
-#' @param max_labeled_demos Maximum number of labeled demonstrations from
-#'   the training set. Default is 16.
-#' @param max_rounds Number of bootstrap rounds to perform. Default is 1.
-#' @param teacher_settings List of settings for the teacher model, such as
-#'   `temperature` or `model`. If NULL, defaults to `list(temperature = 0.7)`.
-#' @param seed Random seed for reproducibility. Default is NULL.
-#' @param log_dir Directory for trial logging. Default is NULL.
+#' @param metric A metric function (required). Use a field-aware metric such
+#'   as `metric_exact_match(field = "answer")`: like [evaluate()], it receives
+#'   the whole training row as `expected`, and its `field` names the column
+#'   that supplies labeled demonstrations. A metric without a `field` receives
+#'   only the bare value of the label column, which is the first column named
+#'   `output`, `label`, `answer`, `response`, `result` or `y`, or else the
+#'   first non-input column.
+#' @param metric_threshold Minimum score for a bootstrapped output to become a
+#'   demonstration. `NULL` (the default) keeps any output that scores above 0.
+#' @param max_errors Integer; stop after this many consecutive failed attempts
+#'   when [compile()] gets no `control` (default `5L`).
+#' @param max_bootstrapped_demos Integer maximum number of bootstrapped
+#'   demonstrations (default `4L`).
+#' @param max_labeled_demos Integer number of leading training rows used as
+#'   labeled demonstrations (default `16L`). See Details.
+#' @param max_rounds Integer number of passes over the remaining rows
+#'   (default `1L`).
+#' @param teacher_settings A list of settings meant for the teacher, such as
+#'   `list(temperature = 0.7)`. It is currently not applied: the teacher runs
+#'   with the same chat and settings as the program.
+#' @param seed Recorded with the run, but it does not currently change the
+#'   result: the training rows are used in their original order. Shuffle the
+#'   training set yourself to vary which rows are used.
+#' @param log_dir Directory for a [TrialLog] of the run, or `NULL` (the
+#'   default) for none. When `valset` is passed to [compile()], the compiled
+#'   program is scored on it for the log.
 #'
-#' @return A `BootstrapFewShot` teleprompter object.
+#' @return A `BootstrapFewShot` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' # Create a BootstrapFewShot teleprompter
 #' tp <- BootstrapFewShot(
 #'   metric = metric_exact_match(field = "answer"),
-#'   max_bootstrapped_demos = 4L,
-#'   max_labeled_demos = 8L
+#'   max_bootstrapped_demos = 2L,
+#'   max_labeled_demos = 0L
 #' )
+#' tp
 #'
-#' # Compile a module
-#' qa_module <- module(signature("question -> answer"))
-#' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
-#' llm <- ellmer::chat_openai()
-#' compiled <- compile(qa_module, tp, trainset, .llm = llm)
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c(
+#'     "Capital of France?", "Capital of Japan?", "Capital of Peru?"
+#'   ),
+#'   answer = c("Paris", "Tokyo", "Lima")
+#' )
+#' compiled <- compile(
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' best_demos(compiled, as_tibble = TRUE)
 #' }
 BootstrapFewShot <- S7::new_class(
   "BootstrapFewShot",

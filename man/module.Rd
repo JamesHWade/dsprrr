@@ -79,9 +79,14 @@ run(
 \seealso{
 Other program constructors:
 \code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
 \code{\link[=module_fn]{module_fn()}},
 \code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
 \code{\link[=rag_module]{rag_module()}},
-\code{\link[=react]{react()}}
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
 }
 \concept{program constructors}

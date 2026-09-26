@@ -2,7 +2,7 @@
 % Please edit documentation in R/parsnip.R
 \name{llm_predict}
 \alias{llm_predict}
-\title{LLM Prediction Model Specification}
+\title{LLM model specification for parsnip}
 \usage{
 llm_predict(
   mode = "classification",
@@ -12,39 +12,69 @@ llm_predict(
 )
 }
 \arguments{
-\item{mode}{Model mode, typically "classification" or "regression" (for text
-tasks, classification is most common).}
+\item{mode}{\code{"classification"} (the default) or \code{"regression"}.}
 
-\item{signature}{A dsprrr signature string or Signature object.}
+\item{signature}{Optional signature string or \code{\link[=signature]{signature()}} object for the
+module. \code{NULL} derives one from the data when fitting.}
 
-\item{temperature}{Temperature parameter for LLM (tune-able).}
+\item{temperature}{Sampling temperature for the module, or \code{tune()}.}
 
-\item{top_p}{Top-p parameter for LLM (tune-able).}
+\item{top_p}{Nucleus sampling parameter for the module, or \code{tune()}.}
 }
 \value{
-A parsnip model specification object.
+A parsnip model specification of class \code{llm_predict}.
 }
 \description{
-Creates a parsnip model specification for LLM-based prediction using dsprrr.
+\code{llm_predict()} creates a parsnip model specification whose "dsprrr"
+engine predicts with a dsprrr module, for classification or regression on
+text columns. \code{temperature} and \code{top_p} can be marked for tuning with
+\code{tune()}; see \code{\link[=temperature]{temperature()}} and \code{\link[=top_p]{top_p()}}.
+}
+\details{
+The engine is registered automatically when parsnip is loaded (see
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}}). Fitting builds a Predict module from the
+predictor columns and the outcome: an enum output with the outcome's levels
+for classification, or a number for regression, unless you give a
+\code{signature}. Prediction runs the module on the new data with the default
+chat (see \code{\link[=dsp_configure]{dsp_configure()}}); a fitted model makes no model calls until
+it predicts.
+
+Known issue: the engine is registered without parsnip's encoding
+information, so \code{parsnip::fit()} and \code{parsnip::fit_xy()} currently fail
+with "no applicable method for 'filter'". Until that is fixed, the
+specification cannot be fitted through parsnip, workflows or tune.
 }
 \examples{
-\dontrun{
-library(parsnip)
-library(tune)
-
-# Create LLM model spec
-llm_spec <- llm_predict(
+\dontshow{if (rlang::is_installed("parsnip")) withAutoprint(\{ # examplesIf}
+spec <- llm_predict(
   mode = "classification",
   signature = "text -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
-  set_engine("dsprrr")
+  parsnip::set_engine("dsprrr")
+spec
 
-# With tunable parameters
-llm_spec_tuned <- llm_predict(
-  mode = "classification",
-  signature = "text -> sentiment",
-  temperature = tune()
-) |>
-  set_engine("dsprrr")
+# Mark a parameter for tuning
+llm_predict(signature = "text -> sentiment", temperature = parsnip::tune())
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
 }
+\concept{integrations}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/teleprompter-harness.R
 \name{AutoResearch}
 \alias{AutoResearch}
-\title{AutoResearch Teleprompter}
+\title{AutoResearch: let an agent run optimization experiments}
 \usage{
 AutoResearch(
   metric = NULL,
@@ -21,90 +21,117 @@ AutoResearch(
 )
 }
 \arguments{
-\item{metric}{Metric used to evaluate candidates.}
+\item{metric}{A metric function (required) used to evaluate candidates.}
 
-\item{metric_threshold}{Optional success threshold inherited from
-\link{Teleprompter}.}
+\item{metric_threshold}{Accepted for consistency with the other optimizers
+(see \code{\link[=Teleprompter]{Teleprompter()}}); not used.}
 
-\item{max_errors}{Consecutive optimizer error budget.}
+\item{max_errors}{Integer; stop after this many consecutive failed
+evaluations when \code{\link[=compile]{compile()}} gets no \code{control} (default \code{5L}).}
 
-\item{max_iterations}{Maximum evaluated experiments after the baseline.}
+\item{max_iterations}{Integer maximum number of evaluated experiments after
+the baseline (default \code{20L}).}
 
-\item{patience}{Stop after this many evaluated experiments without
-improvement.}
+\item{patience}{Integer; stop after this many evaluated experiments without
+improvement (default \code{6L}).}
 
-\item{target_score}{Optional score at which optimization stops.}
+\item{target_score}{Optional score at which the search stops.}
 
-\item{max_context_examples}{Maximum training examples exposed to the
-research agent.}
+\item{max_context_examples}{Integer maximum number of training rows shown to
+the agent (default \code{20L}).}
 
-\item{max_feedback_examples}{Maximum failed examples returned after each
-evaluation.}
+\item{max_feedback_examples}{Integer maximum number of failed rows returned
+after each evaluation (default \code{8L}).}
 
-\item{max_agent_steps}{Maximum consecutive sandbox or invalid actions before
-the harness requires evaluation progress.}
+\item{max_agent_steps}{Integer maximum number of consecutive sandbox or
+invalid actions before the agent must submit a candidate (default \code{4L}).}
 
-\item{sandbox}{Whether an OS-sandboxed runner is required. Defaults to TRUE.}
+\item{sandbox}{If \code{TRUE} (the default), \code{\link[=compile]{compile()}} requires a \code{runner}
+that advertises an OS sandbox. If \code{FALSE}, the agent cannot run code and
+\code{runner} is ignored.}
 
-\item{seed}{Optional random seed.}
+\item{seed}{Optional whole-number random seed.}
 
-\item{log_dir}{Optional directory for a durable \link{TrialLog}.}
+\item{log_dir}{Directory for a durable \link{TrialLog}, or \code{NULL} (the default).}
 
-\item{verbose}{Whether to report progress.}
+\item{verbose}{Whether to report progress (default \code{TRUE}).}
 }
 \value{
-An \code{AutoResearch} teleprompter.
+An \code{AutoResearch} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-Runs a persistent research agent that owns an explicit
-hypothesize-sandbox-evaluate-keep-or-revert loop. The agent can branch from
-any prior candidate, inspect structured per-example feedback, request
-sandboxed R experiments, and decide when to finish. dsprrr retains control of
-budgets, evaluation, checkpointing, and final best-candidate selection.
+\code{AutoResearch()} hands the search to a research agent. In a loop, the agent
+forms a hypothesis, may test ideas in sandboxed R code, proposes an edit to
+the program, and sees how the edit scores; it keeps or reverts edits and
+decides when to stop. dsprrr keeps control of budgets, evaluation,
+checkpoints and the choice of the final program.
 }
 \details{
 \code{AutoResearch()} is inspired by Andrej Karpathy's
 \href{https://github.com/karpathy/autoresearch}{\code{autoresearch}} and the
 AutoResearch engine in the
-\href{https://github.com/gepa-ai/gepa}{GEPA optimize-anything project}.
-This is an R-native implementation for dsprrr \code{Module} graphs, not a port of
-either command-line harness.
+\href{https://github.com/gepa-ai/gepa}{GEPA optimize-anything project}. It is an
+R implementation for dsprrr programs, not a port of either command-line
+tool.
 
-Candidates are complete, validated snapshots of every optimizable leaf
-module. A single experiment can therefore change instructions and templates
-across multiple pipeline components jointly. Candidate evaluation always
-runs in the host process through dsprrr's optimizer ledger. Only exploratory
-R code is sent to \code{runner}; with the default \code{sandbox = TRUE}, \code{runner} must
-advertise an operating-system sandbox such as \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}.
+A candidate is a validated snapshot of every optimizable module in the
+program, so one experiment can change instructions and templates across
+several pipeline steps at once. The agent can branch from any earlier
+candidate and sees per-example feedback. Candidates are always evaluated in
+the host R process. Only the agent's exploratory R code goes to \code{runner},
+which must advertise an operating-system sandbox, such as
+\code{\link[=mcp_repl_runner]{mcp_repl_runner()}}, unless \code{sandbox = FALSE}.
 }
 \section{Compilation arguments}{
 
-In addition to the standard \code{\link[=compile]{compile()}} arguments, this teleprompter accepts
-\code{.agent_llm} for the research agent, \code{runner} for sandboxed analysis,
-\code{control} for optimizer budgets and checkpointing, and \code{objective} for
-multi-objective selection. Named arguments in \code{...}, such as \code{.cache}, are
-forwarded to candidate evaluation.
+Besides the standard \code{\link[=compile]{compile()}} arguments, this optimizer accepts
+\code{.agent_llm} (the agent's Chat; defaults to \code{.llm}), \code{runner} (for sandboxed
+analysis), \code{control} (an \code{\link[=optimizer_control]{optimizer_control()}} object for budgets and
+checkpoints) and \code{objective} (a text description of what to optimize for).
+Other named arguments, such as \code{.cache}, are passed to candidate
+evaluation.
 }
 
 \examples{
-\dontrun{
 research <- AutoResearch(
   metric = metric_exact_match(field = "answer"),
   max_iterations = 12L
 )
+research
+
+\dontrun{
 compiled <- compile(
   program,
   research,
   trainset,
   valset = valset,
-  .llm = task_chat,
-  .agent_llm = research_chat,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .agent_llm = ellmer::chat_anthropic(model = "claude-sonnet-4-5"),
   runner = mcp_repl_runner(),
   control = optimizer_control(
     max_trials = 13L,
     max_cost = 5,
-    checkpoint_path = "autoresearch.rds"
+    checkpoint_path = file.path(tempdir(), "autoresearch.rds")
   )
 )
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

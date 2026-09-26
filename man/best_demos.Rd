@@ -2,34 +2,39 @@
 % Please edit documentation in R/optimizer-accessors.R
 \name{best_demos}
 \alias{best_demos}
-\title{Extract Best Demos from a Compiled Module}
+\title{Demonstrations attached to a module}
 \usage{
 best_demos(module, as_tibble = FALSE)
 }
 \arguments{
-\item{module}{A DSPrrr module that has been compiled with demos.}
+\item{module}{A module.}
 
-\item{as_tibble}{Logical; if TRUE, return demos as a tibble.
-If FALSE (default), return as a list.}
+\item{as_tibble}{If \code{TRUE}, return a tibble with one row per demonstration
+and one column per input and output field. If \code{FALSE} (the default),
+return the list of demonstrations as stored.}
 }
 \value{
-A list or tibble of demonstration examples, or NULL if
-the module has no demos.
+A list or tibble of demonstrations, or \code{NULL} when the module has
+none.
 }
 \description{
-Get the few-shot demonstration examples from a compiled module.
-Returns the demos that were selected during optimization (e.g., by
-LabeledFewShot or BootstrapFewShot teleprompters).
+\code{best_demos()} returns the few-shot demonstrations a module currently
+carries, such as those chosen by \code{\link[=LabeledFewShot]{LabeledFewShot()}} or \code{\link[=BootstrapFewShot]{BootstrapFewShot()}}.
 }
 \examples{
-if (FALSE) {
-tp <- LabeledFewShot(k = 4L)
-compiled <- compile(mod, tp, trainset)
-demos <- best_demos(compiled)
-}
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+best_demos(compiled, as_tibble = TRUE)
+
+# An uncompiled module has none
+best_demos(classifier)
 }
 \seealso{
-Other optimizer accessors:
+Other optimization results:
 \code{\link[=apply_best_config]{apply_best_config()}},
 \code{\link[=best_params]{best_params()}},
 \code{\link[=config_diff]{config_diff()}},
@@ -38,4 +43,4 @@ Other optimizer accessors:
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
 }
-\concept{optimizer accessors}
+\concept{optimization results}

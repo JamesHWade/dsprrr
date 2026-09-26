@@ -45,6 +45,7 @@ Other composition:
 \code{\link[=as_reward_fn]{as_reward_fn()}},
 \code{\link[=best_of_n]{best_of_n()}},
 \code{\link[=ensemble]{ensemble()}},
+\code{\link{module-graph}},
 \code{\link[=pipeline]{pipeline()}},
 \code{\link[=reduce_first]{reduce_first()}},
 \code{\link[=reduce_majority]{reduce_majority()}},

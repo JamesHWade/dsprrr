@@ -2,7 +2,7 @@
 % Please edit documentation in R/teleprompter-copro.R
 \name{COPRO}
 \alias{COPRO}
-\title{COPRO Teleprompter}
+\title{COPRO: refine instructions by coordinate ascent}
 \usage{
 COPRO(
   metric = NULL,
@@ -18,68 +18,109 @@ COPRO(
 )
 }
 \arguments{
-\item{metric}{A metric function for evaluating predictions (required).}
+\item{metric}{A metric function (required), such as
+\code{metric_exact_match(field = "answer")}.}
 
-\item{metric_threshold}{Minimum score required to be considered successful.
-If NULL, uses the metric's default threshold.}
+\item{metric_threshold}{Accepted for consistency with the other optimizers
+(see \code{\link[=Teleprompter]{Teleprompter()}}). COPRO prints it but does not use it: its failure
+cutoff is fixed at 0.5.}
 
-\item{max_errors}{Maximum number of errors allowed during optimization.
-Default is 5.}
+\item{max_errors}{Integer; stop after this many consecutive failed
+evaluations when \code{\link[=compile]{compile()}} gets no \code{control} (default \code{5L}).}
 
-\item{prompt_model}{Optional ellmer Chat for generating instruction
-candidates. If \code{NULL}, uses the task Chat supplied through \code{.llm}.}
+\item{prompt_model}{Optional ellmer Chat that writes the rewrites. \code{NULL}
+(the default) uses the \code{.llm} passed to \code{\link[=compile]{compile()}}. COPRO calls its
+\verb{$chat()} method directly, so its conversation history grows during the
+run.}
 
-\item{breadth}{Number of instruction candidates to generate per iteration.
-Default is 10.}
+\item{breadth}{Integer number of rewrites requested per round (default
+\code{10L}).}
 
-\item{depth}{Number of coordinate ascent iterations. Default is 3.}
+\item{depth}{Integer number of rounds (default \code{3L}).}
 
-\item{init_temperature}{Temperature for instruction generation. Default is 1.4.}
+\item{init_temperature}{Intended sampling temperature for the rewrites
+(default \code{1.4}). It is currently not applied: requests use the prompt
+model's own settings.}
 
-\item{track_stats}{Whether to track instruction history and scores.
-Default is TRUE.}
+\item{track_stats}{Whether to record every scored instruction in the
+optimization result (default \code{TRUE}).}
 
-\item{seed}{Random seed for reproducibility. Default is 0.}
+\item{seed}{Seed for the failure scan's row sample (default \code{0L}), or
+\code{NULL}.}
 
-\item{log_dir}{Directory for trial logging. Default is NULL.}
+\item{log_dir}{Directory for a \link{TrialLog} with one trial per scored
+rewrite, or \code{NULL} (the default).}
 }
 \value{
-A \code{COPRO} teleprompter object.
+A \code{COPRO} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-COPRO (Coordinate Prompt Optimization) automatically refines module
-instructions using coordinate ascent. At each iteration, it generates
-multiple candidate instruction variants and selects the best performing
-one as the baseline for the next iteration.
-
-The optimizer:
+\code{COPRO()} (coordinate prompt optimization) asks a model to rewrite the
+program's instructions, scores each rewrite, and continues from the best
+one. It changes instructions only, never demonstrations.
+}
+\details{
+Before the search, COPRO scores up to 20 random training rows and keeps the
+rows scoring below 0.5 as failures; up to three of them are shown in every
+rewrite request. Then, for each of \code{depth} rounds:
 \enumerate{
-\item Starts with current module instructions as baseline
-\item For each depth iteration:
-\itemize{
-\item Generates \code{breadth} candidate instruction variants using the prompt_model
-\item Evaluates each candidate on the validation set
-\item Selects the best performing instruction
-\item Uses the best as baseline for the next iteration
+\item \code{breadth} rewrites of the current best instructions are requested from
+\code{prompt_model} (or from \code{.llm} when \code{prompt_model} is \code{NULL}), and
+duplicates are dropped.
+\item Each rewrite is scored on \code{valset} (or \code{trainset}).
+\item The best rewrite becomes the new starting point if it beats the current
+score.
 }
-\item Returns module with optimized instructions
-}
+
+With \code{track_stats = TRUE} (the default), every scored instruction is listed
+in \code{optimization_result(compiled)$trials} and in
+\code{optimization_result(compiled)$extensions$copro$history}.
 }
 \examples{
-\dontrun{
 tp <- COPRO(
   metric = metric_exact_match(field = "answer"),
-  prompt_model = ellmer::chat_openai(),
-  breadth = 10L,
-  depth = 3L
+  breadth = 4L,
+  depth = 2L
 )
+tp
 
+\dontrun{
+qa <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+  answer = c("Paris", "Lima", "N'Djamena")
+)
+tp <- COPRO(
+  metric = metric_exact_match(field = "answer"),
+  prompt_model = ellmer::chat_openai(model = "gpt-6-luna"),
+  breadth = 4L,
+  depth = 2L
+)
 compiled <- compile(
-  qa_module, tp, trainset,
-  valset = valset, .llm = task_llm
+  qa,
+  tp,
+  trainset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
-
-# Access instruction history
-optimization_result(compiled)$extensions$copro$history
+optimization_result(compiled)$trials
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

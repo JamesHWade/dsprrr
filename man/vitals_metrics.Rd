@@ -7,7 +7,7 @@
 \alias{metric_detect_match}
 \alias{metric_detect_includes}
 \alias{metric_detect_pattern}
-\title{Pre-built Vitals-backed Metrics}
+\title{Metrics built on vitals scorers}
 \usage{
 metric_model_graded_qa(
   template = NULL,
@@ -56,60 +56,117 @@ metric_detect_pattern(
 )
 }
 \arguments{
-\item{template}{Grading template (glue string with \code{input}, \code{answer},
-\code{criterion}, \code{instructions} substitutions)}
+\item{template}{Grading prompt template, a glue string with \code{input},
+\code{answer}, \code{criterion} and \code{instructions} fields. \code{NULL} uses the vitals
+default.}
 
-\item{instructions}{Grading instructions}
+\item{instructions}{Grading instructions. \code{NULL} uses the vitals default.}
 
-\item{grade_pattern}{Regex pattern to extract grade from judge response}
+\item{grade_pattern}{Regular expression that extracts the grade from the
+grader's reply.}
 
-\item{partial_credit}{Whether to allow partial credit}
+\item{partial_credit}{Whether the grader may award partial credit (0.5).}
 
-\item{scorer_chat}{An ellmer chat for grading (e.g., \code{ellmer::chat_openai()})}
+\item{scorer_chat}{The ellmer Chat that grades, such as
+\code{ellmer::chat_openai(model = "gpt-6-luna")}. Required; see Details.}
 
-\item{input_column}{Column name for input in vitals sample}
+\item{input_column, target_column, result_column}{Column names passed to
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}}. Keep the defaults for vitals scorers.}
 
-\item{target_column}{Column name for target in vitals sample}
+\item{location}{Where to look for the target in the result: \code{"end"} (the
+default), \code{"begin"}, \code{"any"} or \code{"exact"}.}
 
-\item{result_column}{Column name for result in vitals sample}
+\item{case_sensitive}{Whether matching is case-sensitive (default \code{FALSE}).}
 
-\item{location}{Where to look for the target in the result: "end", "begin",
-"any", or "exact"}
+\item{pattern}{Regular expression with capture groups, such as
+\code{"([0-9]+)"}. The captured text is compared with the target.}
 
-\item{case_sensitive}{Whether matching is case-sensitive}
-
-\item{pattern}{Regex pattern with capture groups. The captured groups are
-extracted from the result and checked against the target. Use parentheses
-to define capture groups, e.g., \code{"([0-9]+)"} to extract numbers.}
-
-\item{all}{Whether all captured groups must match the target (TRUE) or
-just one (FALSE, default).}
+\item{all}{Whether every captured group must match the target (\code{TRUE}) or
+at least one (\code{FALSE}, the default).}
 }
 \value{
-A metric function with signature \verb{function(prediction, expected_row)}
+A metric function \verb{function(prediction, expected_row)}.
 }
 \description{
-These functions wrap common vitals scorers for direct use as dsprrr metrics,
-eliminating the need to manually call \code{as_dsprrr_metric()}.
+These functions wrap vitals scorers with \code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}} so they can
+be used directly as dsprrr metrics:
+\itemize{
+\item \code{metric_model_graded_qa()} and \code{metric_model_graded_fact()} ask a model to
+grade the answer against the target.
+\item \code{metric_detect_match()}, \code{metric_detect_includes()} and
+\code{metric_detect_pattern()} compare strings without a model.
+}
+}
+\details{
+The underlying vitals scorers read the expected answer from a \code{target}
+column, and the graded metrics also show the grader the question from an
+\code{input} column. Add those columns to your data, for example
+\code{transform(data, input = question, target = answer)}, and keep the default
+column arguments; see \code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}}.
+
+The graded metrics need \code{scorer_chat}: outside a vitals \code{Task}, there is no
+solver chat for vitals to fall back on.
 }
 \examples{
-\dontrun{
-# Model-graded QA metric
-metric <- metric_model_graded_qa(scorer_chat = ellmer::chat_openai())
-score <- metric("Paris", data.frame(target = "Paris"))
+\dontshow{if (rlang::is_installed("vitals")) withAutoprint(\{ # examplesIf}
+# String comparisons need no model
+ends_with_answer <- metric_detect_match(location = "end")
+ends_with_answer("The answer is Paris", data.frame(target = "Paris"))
 
-# With custom grading chat
-metric <- metric_model_graded_fact(
-  scorer_chat = ellmer::chat_claude(),
+mentions <- metric_detect_includes()
+mentions("Paris is the capital", data.frame(target = "Paris"))
+
+number <- metric_detect_pattern("([0-9]+)")
+number("The total is 42", data.frame(target = "42"))
+
+\dontrun{
+# Model-graded metrics call scorer_chat once per example
+graded <- metric_model_graded_qa(
+  scorer_chat = ellmer::chat_openai(model = "gpt-6-luna")
+)
+graded(
+  "Paris",
+  data.frame(input = "What is the capital of France?", target = "Paris")
+)
+
+fact <- metric_model_graded_fact(
+  scorer_chat = ellmer::chat_anthropic(model = "claude-sonnet-4-5"),
   partial_credit = TRUE
 )
 }
-\dontrun{
-# String detection metrics
-metric <- metric_detect_match(location = "end")
-metric("The answer is Paris", data.frame(target = "Paris"))  # 1
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}}
 
-metric <- metric_detect_includes()
-metric("Paris is the capital", data.frame(target = "Paris"))  # 1
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}}
 }
-}
+\concept{integrations}
+\concept{metrics}

@@ -2,20 +2,43 @@
 % Please edit documentation in R/parsnip.R
 \name{register_dsprrr_engine}
 \alias{register_dsprrr_engine}
-\title{Register dsprrr Engine with parsnip}
+\title{Register the dsprrr engine with parsnip}
 \usage{
 register_dsprrr_engine()
 }
 \value{
-NULL (invisibly), called for side effects.
+\code{NULL}, invisibly.
 }
 \description{
-Registers the dsprrr engine for use with llm_predict model specifications.
-This function is called automatically when the package loads if parsnip
-is available.
+\code{register_dsprrr_engine()} registers the \code{llm_predict} model and its
+"dsprrr" engine with parsnip. dsprrr calls it automatically when parsnip
+is loaded, so you rarely need it. It does nothing when parsnip is not
+installed or the model is already registered.
 }
 \examples{
-\dontrun{
+\dontshow{if (rlang::is_installed("parsnip")) withAutoprint(\{ # examplesIf}
 register_dsprrr_engine()
+parsnip::show_engines("llm_predict")
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
 }
+\concept{integrations}

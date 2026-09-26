@@ -12,24 +12,24 @@
 #' @details
 #' Compilation runs in four steps.
 #'
-#' 1. **Baseline.** The module runs on `trainset` as given, and the metric
-#'    scores each row.
-#' 2. **Evidence.** Every compatible output is switched to evidence decoding.
+#' 1. Baseline: the module runs on `trainset` as given, and the metric scores
+#'    each row.
+#' 2. Evidence: every compatible output is switched to evidence decoding.
 #'    That includes fields already configured with [with_decisions()], plus
 #'    described `type_boolean()` and `type_enum()` outputs, which become
 #'    [decision_bool()] and [decision_choice()] decisions. The module runs
 #'    once more and records the probabilities behind each decision.
-#' 3. **Fitting.** Every setting is searched locally against that recorded
-#'    evidence, so the search makes **no further provider calls**. A setting
-#'    anywhere between two neighbouring observed values makes the same
+#' 3. Fitting: every setting is searched locally against that recorded
+#'    evidence, so the search makes no further provider calls. A setting
+#'    anywhere between two neighboring observed values makes the same
 #'    decisions, so the candidates are the midpoints of those gaps: between
 #'    P(TRUE) values for a threshold, between mean level indexes for a cut, and
 #'    between the points where an option's pick flips for a weight (on a log
 #'    scale). At most `max_candidates` gaps are tried per step, thinned to
 #'    evenly spaced quantiles. Among equal scores, the candidate in the widest
 #'    gap wins.
-#' 4. **Acceptance.** A new setting replaces the current one only if it scores
-#'    strictly better *and* passes a fold check. The check splits `trainset`
+#' 4. Acceptance: a new setting replaces the current one only if it scores
+#'    strictly better and passes a fold check. The check splits `trainset`
 #'    into up to `folds` parts. For each part, it picks a setting on the other
 #'    parts and scores that pick on the held-out part. The combined held-out
 #'    score must beat the current setting's. The fully fitted module must pass
@@ -52,19 +52,23 @@
 #' [decision_settings()] to see the resulting settings.
 #'
 #' @param metric A metric function `function(prediction, expected_row)`, such
-#'   as [metric_exact_match()]. Required.
+#'   as `metric_exact_match(field = "match")`. Required.
 #' @param fields Optional character vector naming the output fields to
 #'   calibrate. `NULL` (the default) calibrates every compatible field.
-#' @param folds Maximum number of folds for the held-out acceptance check.
-#' @param max_candidates Maximum number of candidate settings tried per search
-#'   step.
+#' @param folds Integer maximum number of folds for the held-out acceptance
+#'   check (default `5L`, at least `2L`).
+#' @param max_candidates Integer maximum number of candidate settings tried
+#'   per search step (default `40L`, at least `3L`).
 #' @param metric_threshold,max_errors Inherited teleprompter settings. They are
 #'   not used by `ReAnchor`.
 #'
-#' @return A `ReAnchor` teleprompter for use with [compile()].
-#' @seealso [with_decisions()], [decision_settings()], [decision_evidence()]
+#' @return A `ReAnchor` object to pass to [compile()].
+#' @family teleprompters
+#' @family decisions
 #' @export
 #' @examples
+#' ReAnchor(metric = metric_exact_match(field = "match"), folds = 3L)
+#'
 #' \dontrun{
 #' sig <- signature(
 #'   inputs = list(input("pair", description = "Two product listings")),
@@ -79,7 +83,7 @@
 #'   ReAnchor(metric = metric_exact_match(field = "match")),
 #'   trainset,
 #'   valset = valset,
-#'   .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #' )
 #' decision_settings(tuned)
 #' optimization_result(tuned)$extensions$re_anchor

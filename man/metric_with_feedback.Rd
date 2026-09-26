@@ -47,6 +47,7 @@ graded(list(answer = "5"), row)
 }
 \seealso{
 Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
 \code{\link[=evaluate]{evaluate()}},
 \code{\link[=metric_contains]{metric_contains()}},
 \code{\link[=metric_custom]{metric_custom()}},
@@ -54,6 +55,7 @@ Other metrics:
 \code{\link[=metric_f1]{metric_f1()}},
 \code{\link[=metric_field_match]{metric_field_match()}},
 \code{\link[=metric_threshold]{metric_threshold()}},
-\code{\link[=metric_with_trace]{metric_with_trace()}}
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
 }
 \concept{metrics}

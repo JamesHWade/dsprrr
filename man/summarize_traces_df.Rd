@@ -7,33 +7,53 @@
 summarize_traces_df(traces)
 }
 \arguments{
-\item{traces}{A traces tibble (from \code{\link[=export_traces]{export_traces()}}, \code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
-or module \verb{$get_traces()}).}
+\item{traces}{A traces data frame with \code{input_tokens}, \code{output_tokens},
+\code{total_tokens}, \code{latency_ms}, \code{cost} and, optionally, \code{model} columns.}
 }
 \value{
-A list with:
-\itemize{
-\item \code{n_traces}: Number of traces
-\item \code{total_tokens}: Total tokens used across all traces
-\item \code{total_input_tokens}: Total input tokens
-\item \code{total_output_tokens}: Total output tokens
-\item \code{total_cost}: Total cost in USD
-\item \code{total_latency_ms}: Sum of latencies
-\item \code{avg_latency_ms}: Average latency per request
-\item \code{avg_tokens_per_request}: Average tokens per request
-\item \code{model_usage}: Data frame with per-model breakdown
-}
+A \code{dsprrr_trace_summary} list with \code{n_traces}, \code{total_tokens},
+\code{total_input_tokens}, \code{total_output_tokens}, \code{total_cost},
+\code{total_latency_ms}, \code{avg_latency_ms}, \code{avg_tokens_per_request},
+\code{token_breakdown} (input, output and their ratio) and \code{model_usage} (a
+data frame of requests per model).
 }
 \description{
-Provides summary statistics for a traces data frame. This is a standalone
-version of \code{\link[=summarize_traces]{summarize_traces()}} that works on a data frame rather than
-requiring a Module object. Useful for analyzing converted vitals samples.
+\code{summarize_traces_df()} totals tokens, cost and latency over a traces data
+frame. It is the data frame version of \code{\link[=summarize_traces]{summarize_traces()}}, which takes a
+module; use it for traces exported with \code{\link[=export_traces]{export_traces()}} or converted from
+vitals with \code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}}.
 }
 \examples{
-\dontrun{
-# Analyze traces from vitals samples
-traces <- as_dsprrr_traces(task$get_samples())
+traces <- data.frame(
+  model = c("gpt-6-luna", "gpt-6-luna"),
+  input_tokens = c(52L, 55L),
+  output_tokens = c(6L, 7L),
+  total_tokens = c(58L, 62L),
+  latency_ms = c(820, 640),
+  cost = c(0.0001, 0.0001)
+)
 summary <- summarize_traces_df(traces)
-print(summary)
+summary$total_tokens
+summary$model_usage
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
 }
+\concept{integrations}

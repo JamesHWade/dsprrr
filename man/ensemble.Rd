@@ -71,6 +71,7 @@ run(ensemble(voters, reduce_fn = unanimous), text = "Not bad at all")
 Other composition:
 \code{\link[=as_reward_fn]{as_reward_fn()}},
 \code{\link[=best_of_n]{best_of_n()}},
+\code{\link{module-graph}},
 \code{\link[=pipeline]{pipeline()}},
 \code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
 \code{\link[=reduce_first]{reduce_first()}},

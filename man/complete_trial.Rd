@@ -2,33 +2,53 @@
 % Please edit documentation in R/optimizer-logging.R
 \name{complete_trial}
 \alias{complete_trial}
-\title{Complete a Trial}
+\title{Record evaluation results on a trial}
 \usage{
 complete_trial(trial, eval_result, compiled_artifact_ref = NULL, notes = NULL)
 }
 \arguments{
-\item{trial}{A trial record created by \code{\link[=create_trial]{create_trial()}}.}
+\item{trial}{A trial record from \code{\link[=create_trial]{create_trial()}}.}
 
-\item{eval_result}{An EvalResult object from eval_program().}
+\item{eval_result}{The \code{EvalResult} returned by \code{\link[=eval_program]{eval_program()}}.}
 
-\item{compiled_artifact_ref}{Optional compiled module to persist as the best
-safe program artifact when this trial wins.}
+\item{compiled_artifact_ref}{Optional compiled program. When this trial is
+the best one in a \link{TrialLog} with a \code{log_dir}, the log saves the program
+as \code{best_program.rds}.}
 
-\item{notes}{Optional additional notes.}
+\item{notes}{Optional note that replaces the trial's note.}
 }
 \value{
-The updated trial record with status \code{"completed"}.
+The updated trial record, with status \code{"completed"}.
 }
 \description{
-Mark a trial as completed with evaluation results.
+\code{complete_trial()} copies the scores, token use, cost and timing of an
+evaluation from \code{\link[=eval_program]{eval_program()}} into a trial record and marks it
+\code{"completed"}.
 }
 \examples{
 \dontrun{
 program <- module(signature("question -> answer"))
 data <- data.frame(question = "2 + 2?", answer = "4")
-chat <- ellmer::chat_openai()
-result <- eval_program(program, data, metric_exact_match(), .llm = chat)
-trial <- create_trial("example")
-complete_trial(trial, result)
+result <- eval_program(
+  program,
+  data,
+  metric_exact_match(field = "answer"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+trial <- create_trial("my-search", params = list(variant = "baseline"))
+complete_trial(trial, result, compiled_artifact_ref = program)
 }
 }
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=split_dataset]{split_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
+}
+\concept{optimizer building blocks}

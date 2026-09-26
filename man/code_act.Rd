@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-codeact.R
 \name{code_act}
 \alias{code_act}
-\title{Create a CodeAct Module}
+\title{Create a CodeAct agent that calls tools and runs R code}
 \usage{
 code_act(
   signature,
@@ -16,51 +16,102 @@ code_act(
 )
 }
 \arguments{
-\item{signature}{A Signature object or string notation defining inputs/outputs}
+\item{signature}{A \code{\link[=signature]{signature()}} object or a signature string such as
+\code{"question -> answer"}.}
 
-\item{tools}{List of ellmer ToolDef objects for the agent to use. Non-empty
-list element names become the registered tool names; unnamed elements keep
-their ToolDef name. Effective names may contain only letters, numbers,
-hyphens, and underscores.}
+\item{tools}{A list of ellmer tools created with \code{\link[ellmer:tool]{ellmer::tool()}}. Non-empty
+list names become the tool names; unnamed elements keep their own names.
+Names may contain only letters, numbers, hyphens and underscores.}
 
-\item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()}. It is retained, never automatically shut down, and must not be
-shared concurrently when persistent.}
+\item{runner}{A code runner you own, such as \code{\link[=r_code_runner]{r_code_runner()}}. It is
+reused across calls and never shut down by dsprrr.}
 
-\item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
-terminal \code{shutdown()}.
-Supply exactly one of \code{runner} and \code{interpreter_factory}.}
+\item{interpreter_factory}{A function with no arguments that returns a fresh
+runner for each call. Supply exactly one of \code{runner} and
+\code{interpreter_factory}.}
 
-\item{max_iterations}{Maximum outer agent iterations and maximum tool calls
-within one invocation (default 10). Exceeding the inner tool-call budget
+\item{max_iterations}{Integer maximum number of agent steps, and of tool
+calls within one call (default \code{10L}). Exceeding the tool-call limit
 raises a \code{dsprrr_codeact_iteration_limit} error.}
 
-\item{config}{Optional prediction configuration.}
+\item{config}{Optional module configuration, such as runtime settings.}
 
-\item{chat}{Optional ellmer Chat object.}
+\item{chat}{Optional ellmer Chat stored on the module.}
 
 \item{...}{Must be empty.}
 }
 \value{
-A CodeActModule object
+A CodeAct module.
 }
 \description{
-Factory function to create a CodeActModule that can use both tools and
-R code execution to solve problems.
-Use \code{\link[=run]{run()}} to execute it. \code{\link[=run_async]{run_async()}} supports factory-backed modules;
-async streaming and module \verb{$stream()} reject CodeAct. \code{\link[=run_stream]{run_stream()}}
-preserves the synchronous \code{forward()} fallback unless a matching
-token-stream request is active; that request is rejected first.
+\code{code_act()} creates an agent module that works on a task step by step. In
+each step the model either calls one of your tools or writes R code, which
+\code{runner} executes; it sees the result and continues until it can give the
+final answer. Use it when a task needs both external tools and computation.
+Run it with \code{\link[=run]{run()}}.
+}
+\details{
+CodeAct extends the ReAct pattern of \code{\link[=react]{react()}} with a built-in
+\code{execute_r_code} tool. The name \code{execute_r_code} is reserved.
+
+Code runs only through the runtime you supply, as either \code{runner} or
+\code{interpreter_factory}; see \code{\link[=r_code_runner]{r_code_runner()}} for how each is owned and shut
+down. \code{\link[=r_code_runner]{r_code_runner()}} runs code in a separate process with your
+permissions and is not a sandbox. For untrusted input, use a sandboxed
+runner such as \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}; \code{runner$policy()} shows what a runner
+enforces. A stateful \code{runner} must not be used by two calls at the same
+time.
+
+\code{\link[=run_async]{run_async()}} supports CodeAct with an \code{interpreter_factory}, in a separate
+mirai process, but rejects a caller-owned \code{runner}. Token streaming with
+\code{\link[=stream_async]{stream_async()}} or the module's \verb{$stream()} method is unavailable, because
+it would bypass code execution. \code{\link[=run_stream]{run_stream()}} runs the module as one
+non-streaming call and rejects requests for token streaming.
 }
 \examples{
-\dontrun{
-runner <- r_code_runner(timeout = 30)
+\dontshow{if (rlang::is_installed("callr")) withAutoprint(\{ # examplesIf}
+search_tool <- ellmer::tool(
+  function(query) paste("No results for", query),
+  description = "Search the product catalog",
+  arguments = list(query = ellmer::type_string("Search terms")),
+  name = "search"
+)
+
 agent <- code_act(
   "question -> answer",
-  tools = list(),
-  runner = runner
+  tools = list(search = search_tool),
+  runner = r_code_runner(timeout = 30)
 )
-result <- run(agent, question = "Calculate 2^10", .llm = llm)
+agent
+
+\dontrun{
+run(
+  agent,
+  question = "What is 10\% of 2,450?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 }
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+
+Other code execution:
+\code{\link[=mcp_repl_runner]{mcp_repl_runner()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=r_code_runner]{r_code_runner()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{code execution}
+\concept{program constructors}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/r-code-runner.R
 \name{r_code_runner}
 \alias{r_code_runner}
-\title{Create an R Code Runner}
+\title{Run R code in a separate process}
 \usage{
 r_code_runner(
   timeout = 30,
@@ -13,35 +13,100 @@ r_code_runner(
 )
 }
 \arguments{
-\item{timeout}{Numeric. Maximum execution time in seconds. Default 30.}
+\item{timeout}{Maximum execution time per call, in seconds (default 30).}
 
-\item{max_output_chars}{Integer. Maximum characters for stdout/stderr.
-Output exceeding this limit is truncated. Default 100000 (100KB).}
+\item{max_output_chars}{Maximum number of characters kept from \code{stdout} and
+\code{stderr}; longer output is truncated (default \code{100000L}).}
 
-\item{allowed_packages}{Character vector. Packages that may be loaded.
-This is defense-in-depth only; not a security boundary.
+\item{allowed_packages}{Packages the code may load (default \code{base}, \code{stats},
+\code{utils} and \code{methods}). This check is a convenience, not a security
+boundary.}
 
-Default: c("base", "stats", "utils", "methods").}
+\item{prelude}{Character vector of R code run before each call's code, for
+example to set options.}
 
-\item{prelude}{Character vector. R code to run before user code.
-Useful for setting options or loading common utilities.}
-
-\item{persistent}{Logical. Whether to reuse one callr session and execution
-environment across calls to \code{execute()}. This preserves variables and
-supports staging a base context with \code{prepare_context()}. Default \code{FALSE}
-preserves one fresh subprocess per execution.}
+\item{persistent}{Whether to reuse one R session, and its variables, across
+calls to \code{execute()} (default \code{FALSE}, a fresh process per call).}
 }
 \value{
-An RCodeRunner R6 object
+An \code{RCodeRunner} R6 object.
 }
 \description{
-Factory function to create a trusted-input-only RCodeRunner instance.
+\code{r_code_runner()} creates a runner that executes R code in a separate R
+process with \href{https://callr.r-lib.org/}{callr}, with a timeout and captured
+output. Code-writing modules such as \code{\link[=program_of_thought]{program_of_thought()}}, \code{\link[=code_act]{code_act()}}
+and \code{\link[=rlm_module]{rlm_module()}} use a runner to execute the code the model writes.
+
+The runner is for trusted input only. The child process has the same file,
+network, environment and operating-system permissions as your R session;
+the package allow-list and pattern checks are not a security boundary. For
+untrusted input, use a sandboxed runner such as \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}.
+}
+\details{
+\subsection{Using a runner}{
+
+\code{runner$execute(code, context = list())} runs \code{code} and returns a list
+with \code{success}, \code{result} (the value of the last expression), \code{stdout},
+\code{stderr}, \code{messages}, \code{warnings}, \code{error}, \code{error_type}, \code{retryable} and
+\code{duration_ms}. Errors and timeouts are returned in \code{error} rather than
+thrown. Values in \code{context} are available to the code as \code{.context}.
+\code{runner$policy()} describes the trust boundary, and \code{runner$shutdown()}
+stops a persistent session.
+
+With \code{persistent = TRUE}, one R session is reused, so variables survive
+between calls. \code{runner$prepare_context(context)} stages large objects once
+for later calls, and \code{runner$reset()} clears the session.
+}
+
+\subsection{Writing your own runner}{
+
+Code-executing modules accept any object with \code{execute(code, context = list())} and \code{policy()} methods. \code{policy()} returns a named list with at
+least \code{backend} (character), \code{trust} (character) and \code{sandboxed} (logical).
+\code{execute()} returns a named list with at least \code{success} and \code{result};
+missing \code{stdout}, \code{stderr}, \code{messages} and \code{warnings} become empty strings
+and a missing \code{duration_ms} becomes \code{NA}. A failed result needs a non-empty
+\code{error} and an \code{error_type} of \code{"execution"} (code the model may fix) or
+\code{"interpreter"} (a process or protocol failure that ends the run).
+
+Modules take exactly one of \code{runner} or \code{interpreter_factory}. A \code{runner}
+belongs to you: it is reused across calls and never shut down by dsprrr. An
+\code{interpreter_factory} is a function with no arguments that returns a fresh
+runner; dsprrr starts it (calling \code{start()} when the runner has one) and
+calls its \code{shutdown()} method exactly once when the call ends, whether it
+succeeds, fails or is interrupted.
+}
 }
 \examples{
-\dontrun{
+\dontshow{if (rlang::is_installed("callr")) withAutoprint(\{ # examplesIf}
 runner <- r_code_runner(timeout = 10)
+runner
+
 result <- runner$execute("sqrt(16)")
+result$success
 result$result
-# [1] 4
+
+# Pass data in through `.context`
+runner$execute(
+  "mean(.context$data$mpg)",
+  context = list(data = mtcars)
+)$result
+
+# Errors are returned, not thrown
+runner$execute("stop('boom')")$error
+
+# A persistent runner keeps variables between calls
+session <- r_code_runner(persistent = TRUE)
+invisible(session$execute("x <- 21"))
+session$execute("x * 2")$result
+session$shutdown()
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other code execution:
+\code{\link[=code_act]{code_act()}},
+\code{\link[=mcp_repl_runner]{mcp_repl_runner()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
 }
+\concept{code execution}

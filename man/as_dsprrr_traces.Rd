@@ -2,48 +2,68 @@
 % Please edit documentation in R/vitals.R
 \name{as_dsprrr_traces}
 \alias{as_dsprrr_traces}
-\title{Convert vitals samples to dsprrr traces format}
+\title{Convert vitals samples to dsprrr traces}
 \usage{
 as_dsprrr_traces(samples, include_prompts = TRUE, include_outputs = TRUE)
 }
 \arguments{
-\item{samples}{A tibble from \code{Task$get_samples()} or \code{vitals_bind()}.}
+\item{samples}{A samples tibble.}
 
-\item{include_prompts}{Logical; whether to extract prompts from input column.
-Defaults to \code{TRUE}.}
+\item{include_prompts}{Whether to add a \code{prompt} column from \code{input}
+(default \code{TRUE}).}
 
-\item{include_outputs}{Logical; whether to extract outputs from result column.
-Defaults to \code{TRUE}.}
+\item{include_outputs}{Whether to add an \code{output} list-column from \code{result}
+(default \code{TRUE}).}
 }
 \value{
-A tibble with dsprrr trace columns:
-\itemize{
-\item \code{timestamp}: Extracted from metadata or set to current time
-\item \code{latency_ms}: Extracted from metadata or NA
-\item \code{input_tokens}: Extracted from metadata or NA
-\item \code{output_tokens}: Extracted from metadata or NA
-\item \code{total_tokens}: Calculated or extracted from metadata
-\item \code{cost}: Extracted from metadata or NA
-\item \code{model}: Model name if available
-\item \code{prompt_length}: Character length of prompt
-\item \code{prompt}: Input text (if include_prompts = TRUE)
-\item \code{output}: Result (if include_outputs = TRUE)
-}
+A tibble with columns \code{timestamp}, \code{latency_ms}, \code{input_tokens},
+\code{output_tokens}, \code{total_tokens}, \code{cost}, \code{model} and \code{prompt_length},
+plus \code{prompt} and \code{output} when requested.
 }
 \description{
-Converts vitals samples tibble (from \code{Task$get_samples()} or \code{vitals_bind()})
-to dsprrr traces format for use with dsprrr analysis functions like
-\code{\link[=summarize_traces]{summarize_traces()}}.
+\code{as_dsprrr_traces()} reshapes vitals samples (from a \code{Task}'s
+\verb{$get_samples()} or from \code{\link[=as_vitals_samples]{as_vitals_samples()}}) into the traces format, so
+that \code{\link[=summarize_traces_df]{summarize_traces_df()}} and other trace tools can analyze them.
+}
+\details{
+Latency, token counts, cost and timestamp are read from the
+\code{solver_metadata} (or \code{metadata}) list-column; missing values are \code{NA} and
+missing timestamps are set to the current time.
 }
 \examples{
+samples <- as_vitals_samples(tibble::tibble(
+  prompt = "question: What is 2+2?",
+  output = list(list(answer = "4")),
+  model = "gpt-6-luna",
+  input_tokens = 52L,
+  output_tokens = 6L,
+  cost = 0.0001
+))
+as_dsprrr_traces(samples)
+
 \dontrun{
-# Get samples from a vitals task
-samples <- task$get_samples()
-
-# Convert to dsprrr traces format
-traces <- as_dsprrr_traces(samples)
-
-# Use dsprrr analysis functions
-summary <- summarize_traces_df(traces)
+traces <- as_dsprrr_traces(tsk$get_samples())
+summarize_traces_df(traces)
 }
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
+}
+\concept{integrations}

@@ -2,38 +2,56 @@
 % Please edit documentation in R/optimizer-accessors.R
 \name{optimization_summary}
 \alias{optimization_summary}
-\title{Get Optimization Summary}
+\alias{print.dsprrr_optimization_summary}
+\title{Summarize an optimization result}
 \usage{
 optimization_summary(module)
+
+\method{print}{dsprrr_optimization_summary}(x, ...)
 }
 \arguments{
-\item{module}{A DSPrrr module with optimization history.}
+\item{module}{A module returned by \code{\link[=compile]{compile()}} or modified by
+\code{\link[=optimize_grid]{optimize_grid()}}.}
+
+\item{x}{A \code{dsprrr_optimization_summary} object.}
+
+\item{...}{Unused.}
 }
 \value{
-A list with:
-\itemize{
-\item \code{n_trials}: Number of trials evaluated
-\item \code{best_score}: Best score achieved
-\item \code{best_trial}: ID of the best trial
-\item \code{best_params}: Best parameter configuration
-\item \code{score_range}: Min and max scores across trials
-\item \code{total_cost}: Total cost of optimization (if tracked)
-\item \code{improvement}: Score improvement from first to best trial
-}
+A \code{dsprrr_optimization_summary} list with \code{n_trials},
+\code{best_score}, \code{best_trial}, \code{best_params}, \code{score_range} (minimum and
+maximum trial scores), \code{total_cost} (when trials record it),
+\code{improvement} (best score minus the baseline or first score) and
+\code{compiled}. \code{print()} shows it and returns it invisibly.
 }
 \description{
-Get a concise summary of optimization results for a module.
-Combines information from trials, best parameters, and cost tracking.
+\code{optimization_summary()} condenses \code{\link[=optimization_result]{optimization_result()}} into the numbers
+most often reported: the number of trials, the best score and parameters,
+the score range, the total cost and the improvement over the baseline.
 }
 \examples{
-if (FALSE) {
-optimize_grid(mod, data, metric, parameters)
-summary <- optimization_summary(mod)
-print(summary)
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+optimization_summary(compiled)$best_params
+
+\dontrun{
+# After a search with several trials, printing gives an overview
+optimize_grid(
+  classifier,
+  data = trainset,
+  metric = metric_exact_match(field = "sentiment"),
+  grid = data.frame(reasoning_effort = c("none", "low")),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+optimization_summary(classifier)
 }
 }
 \seealso{
-Other optimizer accessors:
+Other optimization results:
 \code{\link[=apply_best_config]{apply_best_config()}},
 \code{\link[=best_demos]{best_demos()}},
 \code{\link[=best_params]{best_params()}},
@@ -42,4 +60,4 @@ Other optimizer accessors:
 \code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=top_trials]{top_trials()}}
 }
-\concept{optimizer accessors}
+\concept{optimization results}

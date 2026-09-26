@@ -3,60 +3,86 @@
 # Coordinate Prompt Optimization - iteratively generates and refines
 # instructions using coordinate ascent.
 
-#' COPRO Teleprompter
+#' COPRO: refine instructions by coordinate ascent
 #'
 #' @include teleprompter.R optimizer-core.R optimizer-logging.R
 #'
 #' @description
-#' COPRO (Coordinate Prompt Optimization) automatically refines module
-#' instructions using coordinate ascent. At each iteration, it generates
-#' multiple candidate instruction variants and selects the best performing
-#' one as the baseline for the next iteration.
+#' `COPRO()` (coordinate prompt optimization) asks a model to rewrite the
+#' program's instructions, scores each rewrite, and continues from the best
+#' one. It changes instructions only, never demonstrations.
 #'
-#' The optimizer:
-#' 1. Starts with current module instructions as baseline
-#' 2. For each depth iteration:
-#'    - Generates `breadth` candidate instruction variants using the prompt_model
-#'    - Evaluates each candidate on the validation set
-#'    - Selects the best performing instruction
-#'    - Uses the best as baseline for the next iteration
-#' 3. Returns module with optimized instructions
+#' @details
+#' Before the search, COPRO scores up to 20 random training rows and keeps the
+#' rows scoring below 0.5 as failures; up to three of them are shown in every
+#' rewrite request. Then, for each of `depth` rounds:
 #'
-#' @param metric A metric function for evaluating predictions (required).
-#' @param metric_threshold Minimum score required to be considered successful.
-#'   If NULL, uses the metric's default threshold.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
-#' @param prompt_model Optional ellmer Chat for generating instruction
-#'   candidates. If `NULL`, uses the task Chat supplied through `.llm`.
-#' @param breadth Number of instruction candidates to generate per iteration.
-#'   Default is 10.
-#' @param depth Number of coordinate ascent iterations. Default is 3.
-#' @param init_temperature Temperature for instruction generation. Default is 1.4.
-#' @param track_stats Whether to track instruction history and scores.
-#'   Default is TRUE.
-#' @param seed Random seed for reproducibility. Default is 0.
-#' @param log_dir Directory for trial logging. Default is NULL.
+#' 1. `breadth` rewrites of the current best instructions are requested from
+#'    `prompt_model` (or from `.llm` when `prompt_model` is `NULL`), and
+#'    duplicates are dropped.
+#' 2. Each rewrite is scored on `valset` (or `trainset`).
+#' 3. The best rewrite becomes the new starting point if it beats the current
+#'    score.
 #'
-#' @return A `COPRO` teleprompter object.
+#' With `track_stats = TRUE` (the default), every scored instruction is listed
+#' in `optimization_result(compiled)$trials` and in
+#' `optimization_result(compiled)$extensions$copro$history`.
+#'
+#' @param metric A metric function (required), such as
+#'   `metric_exact_match(field = "answer")`.
+#' @param metric_threshold Accepted for consistency with the other optimizers
+#'   (see [Teleprompter()]). COPRO prints it but does not use it: its failure
+#'   cutoff is fixed at 0.5.
+#' @param max_errors Integer; stop after this many consecutive failed
+#'   evaluations when [compile()] gets no `control` (default `5L`).
+#' @param prompt_model Optional ellmer Chat that writes the rewrites. `NULL`
+#'   (the default) uses the `.llm` passed to [compile()]. COPRO calls its
+#'   `$chat()` method directly, so its conversation history grows during the
+#'   run.
+#' @param breadth Integer number of rewrites requested per round (default
+#'   `10L`).
+#' @param depth Integer number of rounds (default `3L`).
+#' @param init_temperature Intended sampling temperature for the rewrites
+#'   (default `1.4`). It is currently not applied: requests use the prompt
+#'   model's own settings.
+#' @param track_stats Whether to record every scored instruction in the
+#'   optimization result (default `TRUE`).
+#' @param seed Seed for the failure scan's row sample (default `0L`), or
+#'   `NULL`.
+#' @param log_dir Directory for a [TrialLog] with one trial per scored
+#'   rewrite, or `NULL` (the default).
+#'
+#' @return A `COPRO` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #'
 #' @examples
-#' \dontrun{
 #' tp <- COPRO(
 #'   metric = metric_exact_match(field = "answer"),
-#'   prompt_model = ellmer::chat_openai(),
-#'   breadth = 10L,
-#'   depth = 3L
+#'   breadth = 4L,
+#'   depth = 2L
 #' )
+#' tp
 #'
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+#'   answer = c("Paris", "Lima", "N'Djamena")
+#' )
+#' tp <- COPRO(
+#'   metric = metric_exact_match(field = "answer"),
+#'   prompt_model = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   breadth = 4L,
+#'   depth = 2L
+#' )
 #' compiled <- compile(
-#'   qa_module, tp, trainset,
-#'   valset = valset, .llm = task_llm
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #' )
-#'
-#' # Access instruction history
-#' optimization_result(compiled)$extensions$copro$history
+#' optimization_result(compiled)$trials
 #' }
 COPRO <- S7::new_class(
   "COPRO",

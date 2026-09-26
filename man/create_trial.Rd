@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimizer-logging.R
 \name{create_trial}
 \alias{create_trial}
-\title{Create a Trial Record}
+\title{Create an optimization trial record}
 \usage{
 create_trial(
   optimizer_name,
@@ -15,25 +15,44 @@ create_trial(
 \arguments{
 \item{optimizer_name}{Name of the optimizer.}
 
-\item{params}{List of parameters for this trial.}
+\item{params}{Named list of the parameters tried.}
 
-\item{trial_id}{Optional trial ID. If NULL, auto-generated.}
+\item{trial_id}{Optional trial ID. \code{NULL} (the default) generates one from
+the time and a random suffix.}
 
-\item{notes}{Optional notes.}
+\item{notes}{Optional note.}
 
-\item{trace_context}{A named, JSON-compatible correlation context. When
-omitted during \code{\link[=compile]{compile()}}, the active compilation context is inherited;
-supply \code{list()} explicitly to clear it.}
+\item{trace_context}{A named, JSON-compatible list of correlation fields.
+When omitted inside \code{\link[=compile]{compile()}}, the compilation's context is used;
+supply \code{list()} to clear it.}
 }
 \value{
-An optimization trial record.
+A trial record (a \code{Trial} S7 object) with status \code{"pending"}.
 }
 \description{
-Create an optimization trial record with an automatically generated ID.
+\code{create_trial()} starts a record of one optimizer trial: which optimizer
+ran and with which parameters. Record the evaluation with
+\code{\link[=complete_trial]{complete_trial()}} and collect records in a \link{TrialLog}. You need these only
+when writing your own optimizer; the built-in optimizers create trials
+themselves.
 }
 \examples{
 trial <- create_trial(
-  optimizer_name = "BootstrapFewShot",
-  params = list(max_demos = 4, temperature = 0.7)
+  optimizer_name = "my-search",
+  params = list(max_bootstrapped_demos = 4L, instructions = "Be brief.")
 )
+trial
 }
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=split_dataset]{split_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
+}
+\concept{optimizer building blocks}

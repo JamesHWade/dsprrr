@@ -138,6 +138,7 @@ Other execution:
 \code{\link[=stream_listener]{stream_listener()}}
 
 Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
 \code{\link[=metric_contains]{metric_contains()}},
 \code{\link[=metric_custom]{metric_custom()}},
 \code{\link[=metric_exact_match]{metric_exact_match()}},
@@ -145,7 +146,8 @@ Other metrics:
 \code{\link[=metric_field_match]{metric_field_match()}},
 \code{\link[=metric_threshold]{metric_threshold()}},
 \code{\link[=metric_with_feedback]{metric_with_feedback()}},
-\code{\link[=metric_with_trace]{metric_with_trace()}}
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
 }
 \concept{execution}
 \concept{metrics}

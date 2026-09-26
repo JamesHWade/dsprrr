@@ -2,7 +2,7 @@
 % Please edit documentation in R/teleprompter-better-together.R
 \name{BetterTogether}
 \alias{BetterTogether}
-\title{BetterTogether Teleprompter}
+\title{BetterTogether: run several optimizers in sequence}
 \usage{
 BetterTogether(
   metric = NULL,
@@ -18,60 +18,117 @@ BetterTogether(
 )
 }
 \arguments{
-\item{metric}{Metric function used to score candidate programs.}
+\item{metric}{A metric function (required) used to score every candidate
+on the validation set, such as \code{metric_exact_match(field = "answer")}.}
 
-\item{optimizers}{Named list of \link{Teleprompter} objects. If omitted, dsprrr
-defaults to \code{p = BootstrapFewShotWithRandomSearch(metric = metric)}.}
+\item{optimizers}{Named list of optimizer objects, such as
+\code{list(p = BootstrapFewShotWithRandomSearch(metric = metric))}.}
 
-\item{...}{Named \link{Teleprompter} objects, used as strategy keys. These are
-combined with \code{optimizers}.}
+\item{...}{Further named optimizer objects, combined with \code{optimizers}.}
 
-\item{metric_threshold}{Minimum score required to be considered successful.}
+\item{metric_threshold}{Accepted for consistency with the other optimizers
+(see \code{\link[=Teleprompter]{Teleprompter()}}); \code{BetterTogether()} does not use it.}
 
-\item{max_errors}{Maximum number of errors allowed during evaluation.}
+\item{max_errors}{Does not stop the run; set \code{max_errors} on each wrapped
+optimizer instead.}
 
-\item{default_strategy}{Strategy to use when \code{compile()} does not receive
-\code{strategy}. Defaults to \code{"p"}.}
+\item{default_strategy}{Strategy used when \code{\link[=compile]{compile()}} gets no \code{strategy}
+(default \code{"p"}): optimizer names joined by \verb{->}.}
 
-\item{valset_ratio}{Fraction of \code{trainset} to hold out as validation when
-\code{valset} is not supplied. Set to \code{0} to skip validation.}
+\item{valset_ratio}{Share of \code{trainset} held out for validation when no
+\code{valset} is given (default \code{0.1}). \code{0} skips validation.}
 
-\item{shuffle_trainset_between_steps}{Whether to shuffle training rows before
-each optimizer step.}
+\item{shuffle_trainset_between_steps}{Whether to shuffle the training rows
+before each step (default \code{TRUE}).}
 
-\item{seed}{Optional random seed for reproducible splitting and shuffling.}
+\item{seed}{Optional seed for the validation split and the shuffles.}
 
-\item{verbose}{Whether to print progress messages.}
+\item{verbose}{Whether to print progress messages (default \code{TRUE}).}
 }
 \value{
-A \code{BetterTogether} teleprompter object.
+A \code{BetterTogether} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-A meta-teleprompter that runs multiple optimization strategies in sequence.
-This mirrors DSPy's \code{BetterTogether} optimizer surface for composing prompt
-optimizers and future weight optimizers with a strategy string such as
-\code{"p -> g -> p"}.
+\code{BetterTogether()} chains optimizers. A strategy string such as
+\code{"p -> g -> p"} runs the optimizer named \code{p}, then \code{g} on its result, then
+\code{p} again. Every intermediate program is scored on a validation set and the
+best one is returned. It mirrors DSPy's \code{BetterTogether}.
+}
+\details{
+Name the optimizers in \code{optimizers} or as named arguments in \code{...}; the
+strategy refers to those names. Without any, \code{BetterTogether()} uses
+\code{p = BootstrapFewShotWithRandomSearch(metric = metric)}.
 
-\code{BetterTogether()} accepts optimizers either through the named \code{optimizers}
-list or as named arguments in \code{...}. Strategy steps refer to those names.
-Each intermediate program is evaluated on \code{valset} when available; the best
-scored program is returned. Without a validation set, the latest program in
-the strategy is returned.
+\code{\link[=compile]{compile()}} accepts extra arguments for this optimizer: \code{strategy}
+(overrides \code{default_strategy}), \code{optimizer_compile_args} (a list, named by
+optimizer, of further arguments for that optimizer's \code{\link[=compile]{compile()}} call), and
+\code{valset_ratio}, \code{shuffle_trainset_between_steps} and \code{seed}, which override
+the values stored here.
+
+The validation set is \code{valset} when given. Otherwise \code{floor(valset_ratio * nrow(trainset))} rows are held out, which is none for fewer than 10 rows at
+the default ratio. Each step receives the remaining training rows and the
+validation set. The original program is scored as well, so the result can
+be the unchanged program. Without a validation set, the last program in the
+strategy is returned. A step that fails raises a warning and ends the run
+with the best program so far; the default \code{p} optimizer fails this way when
+there is no validation set.
+
+The scored candidates are stored in
+\code{optimization_result(compiled)$extensions$better_together$candidate_programs}.
 }
 \examples{
-\dontrun{
 metric <- metric_exact_match(field = "answer")
 
 tp <- BetterTogether(
   metric = metric,
-  optimizers = list(
-    p = BootstrapFewShotWithRandomSearch(metric = metric),
-    g = GEPA(metric = metric, population_size = 4L, generations = 2L)
-  ),
+  p = BootstrapFewShotWithRandomSearch(metric = metric),
+  g = GEPA(metric = metric, population_size = 4L, generations = 2L),
   default_strategy = "p -> g -> p"
 )
+tp
 
-compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
+\dontrun{
+qa <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+  answer = c("Paris", "Lima", "N'Djamena")
+)
+valset <- data.frame(
+  question = c("Capital of Japan?", "Capital of Kenya?"),
+  answer = c("Tokyo", "Nairobi")
+)
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
+
+compiled <- compile(qa, tp, trainset, valset = valset, .llm = llm)
 optimization_result(compiled)$extensions$better_together$candidate_programs
+
+# Try another strategy without building a new optimizer
+compiled_g <- compile(
+  qa,
+  tp,
+  trainset,
+  valset = valset,
+  .llm = llm,
+  strategy = "g"
+)
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

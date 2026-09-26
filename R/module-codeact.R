@@ -1,109 +1,83 @@
-#' CodeAct Module
+#' CodeAct module
 #'
 #' @description
-#' A hybrid agent module that combines tool calling with R code execution.
-#' The model can choose between calling registered tools or generating R code
-#' to solve problems. This enables flexible agentic workflows that leverage
-#' both external tools and computational capabilities.
-#'
-#' @details
-#' CodeAct extends the ReAct pattern by adding an `execute_r_code` tool that
-#' allows the agent to write and run R code. The execution flow is:
-#'
-#' 1. Agent receives the task and available tools (including code execution)
-#' 2. Agent iteratively calls tools or executes code until it has enough info
-#' 3. Agent produces final structured answer
-#'
-#' Security: Code execution requires explicit opt-in via `runner` or
-#' `interpreter_factory`.
-#' The built-in runner uses a separate process but is NOT a security sandbox.
-#' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
-#' runner backed by OS-level sandboxing.
-#'
-#' Runner lifecycle: supply exactly one runtime source. `runner` is
-#' caller-owned, reused across calls, and never closed by dsprrr. The backend determines
-#' whether execution state persists and whether `reset()` is available;
-#' serialize access to stateful backends. `interpreter_factory` is a
-#' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, optional `start()`, and terminal `shutdown()`. The
-#' module owns that runner for one invocation and shuts it down exactly once on
-#' success, error, or interrupt. Any retained code tool becomes terminal after
-#' shutdown.
-#'
-#' [run_async()] supports factory-backed CodeAct in an isolated mirai process.
-#' It rejects caller-owned runners. [stream_async()] and a module's `$stream()`
-#' method remain unavailable because streaming would bypass execution. The
-#' [run_stream()] one-shot `forward()` fallback remains available.
-#'
-#' @examples
-#' \dontrun{
-#' # Create a runner for code execution
-#' runner <- r_code_runner(timeout = 30)
-#'
-#' # Create a CodeAct agent with custom tools
-#' search_tool <- ellmer::tool(
-#'   function(query) "Search results...",
-#'   description = "Search for information"
-#' )
-#'
-#' agent <- code_act(
-#'   signature = "question -> answer",
-#'   tools = list(search = search_tool),
-#'   runner = runner
-#' )
-#'
-#' # The agent can now search AND compute
-#' result <- run(agent,
-#'   question = "What is 10% of France's population?",
-#'   .llm = llm
-#' )
-#' }
+#' A tool-calling agent that can also write and run R code. Documented with
+#' [code_act()].
 #'
 #' @name module-codeact
+#' @noRd
 NULL
 
-
-#' Create a CodeAct Module
+#' Create a CodeAct agent that calls tools and runs R code
 #'
 #' @description
-#' Factory function to create a CodeActModule that can use both tools and
-#' R code execution to solve problems.
-#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
-#' async streaming and module `$stream()` reject CodeAct. [run_stream()]
-#' preserves the synchronous `forward()` fallback unless a matching
-#' token-stream request is active; that request is rejected first.
+#' `code_act()` creates an agent module that works on a task step by step. In
+#' each step the model either calls one of your tools or writes R code, which
+#' `runner` executes; it sees the result and continues until it can give the
+#' final answer. Use it when a task needs both external tools and computation.
+#' Run it with [run()].
 #'
-#' @param signature A Signature object or string notation defining inputs/outputs
-#' @param tools List of ellmer ToolDef objects for the agent to use. Non-empty
-#'   list element names become the registered tool names; unnamed elements keep
-#'   their ToolDef name. Effective names may contain only letters, numbers,
-#'   hyphens, and underscores.
-#' @param runner Optional caller-owned code runner implementing `execute()` and
-#'   `policy()`. It is retained, never automatically shut down, and must not be
-#'   shared concurrently when persistent.
-#' @param max_iterations Maximum outer agent iterations and maximum tool calls
-#'   within one invocation (default 10). Exceeding the inner tool-call budget
+#' @details
+#' CodeAct extends the ReAct pattern of [react()] with a built-in
+#' `execute_r_code` tool. The name `execute_r_code` is reserved.
+#'
+#' Code runs only through the runtime you supply, as either `runner` or
+#' `interpreter_factory`; see [r_code_runner()] for how each is owned and shut
+#' down. [r_code_runner()] runs code in a separate process with your
+#' permissions and is not a sandbox. For untrusted input, use a sandboxed
+#' runner such as [mcp_repl_runner()]; `runner$policy()` shows what a runner
+#' enforces. A stateful `runner` must not be used by two calls at the same
+#' time.
+#'
+#' [run_async()] supports CodeAct with an `interpreter_factory`, in a separate
+#' mirai process, but rejects a caller-owned `runner`. Token streaming with
+#' [stream_async()] or the module's `$stream()` method is unavailable, because
+#' it would bypass code execution. [run_stream()] runs the module as one
+#' non-streaming call and rejects requests for token streaming.
+#'
+#' @param signature A [signature()] object or a signature string such as
+#'   `"question -> answer"`.
+#' @param tools A list of ellmer tools created with [ellmer::tool()]. Non-empty
+#'   list names become the tool names; unnamed elements keep their own names.
+#'   Names may contain only letters, numbers, hyphens and underscores.
+#' @param runner A code runner you own, such as [r_code_runner()]. It is
+#'   reused across calls and never shut down by dsprrr.
+#' @param max_iterations Integer maximum number of agent steps, and of tool
+#'   calls within one call (default `10L`). Exceeding the tool-call limit
 #'   raises a `dsprrr_codeact_iteration_limit` error.
-#' @param interpreter_factory Optional zero-argument function returning a fresh
-#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
-#'   terminal `shutdown()`.
-#'   Supply exactly one of `runner` and `interpreter_factory`.
-#' @param config Optional prediction configuration.
-#' @param chat Optional ellmer Chat object.
+#' @param interpreter_factory A function with no arguments that returns a fresh
+#'   runner for each call. Supply exactly one of `runner` and
+#'   `interpreter_factory`.
+#' @param config Optional module configuration, such as runtime settings.
+#' @param chat Optional ellmer Chat stored on the module.
 #' @param ... Must be empty.
 #'
-#' @return A CodeActModule object
+#' @return A CodeAct module.
 #'
 #' @export
-#' @examples
-#' \dontrun{
-#' runner <- r_code_runner(timeout = 30)
+#' @family program constructors
+#' @family code execution
+#' @examplesIf rlang::is_installed("callr")
+#' search_tool <- ellmer::tool(
+#'   function(query) paste("No results for", query),
+#'   description = "Search the product catalog",
+#'   arguments = list(query = ellmer::type_string("Search terms")),
+#'   name = "search"
+#' )
+#'
 #' agent <- code_act(
 #'   "question -> answer",
-#'   tools = list(),
-#'   runner = runner
+#'   tools = list(search = search_tool),
+#'   runner = r_code_runner(timeout = 30)
 #' )
-#' result <- run(agent, question = "Calculate 2^10", .llm = llm)
+#' agent
+#'
+#' \dontrun{
+#' run(
+#'   agent,
+#'   question = "What is 10% of 2,450?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #' }
 code_act <- function(
   signature,

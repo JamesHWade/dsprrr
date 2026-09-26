@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimizer-core.R
 \name{optimizer_control}
 \alias{optimizer_control}
-\title{Create Optimizer Control}
+\title{Budgets and settings for an optimizer run}
 \usage{
 optimizer_control(
   seed = NULL,
@@ -25,76 +25,106 @@ optimizer_control(
 )
 }
 \arguments{
-\item{seed}{Random seed for reproducibility. Default is \code{NULL} (no seed).}
+\item{seed}{Random seed, or \code{NULL} (the default). Currently only
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}} reads it, in place of its own \code{seed};
+the other optimizers use their own \code{seed} argument.}
 
-\item{max_trials}{Maximum number of trials to run. Default is \code{NULL}
-(unlimited).}
+\item{max_trials}{Maximum number of trials (candidate evaluations), or
+\code{NULL} (the default) for no limit.}
 
-\item{max_errors}{Non-negative integer error budget. Optimizers report total
-errors while stopping on a separate consecutive-error streak; each success
-resets only that streak. A positive value stops on the failure that reaches
-the limit. Zero permits work to begin but stops after the first failure.
-When a completed evaluation returns multiple outcomes, all are included in
-the final counters even if the stop boundary was crossed partway through;
-the first stop reason remains unchanged and prevents scheduling new work.}
+\item{max_errors}{Non-negative integer (default \code{5L}). The run stops once
+this many evaluations have failed in a row; each success resets the
+count, while the total number of errors is still reported. With \code{0L}, the
+first failure stops the run. Outcomes of an evaluation that had already
+started are all counted.}
 
-\item{max_metric_calls}{Maximum metric calls, or \code{NULL} for unlimited.}
+\item{max_metric_calls}{Maximum number of metric calls, or \code{NULL} for no
+limit.}
 
-\item{max_provider_calls}{Maximum verified provider calls, or \code{NULL} for
-unlimited. Ambiguous provider usage stops a run that has this cap.}
+\item{max_provider_calls}{Maximum number of verified provider calls, or
+\code{NULL} for no limit.}
 
-\item{max_input_tokens}{Maximum verified input tokens, or \code{NULL} for unlimited.}
+\item{max_input_tokens, max_output_tokens, max_total_tokens}{Maximum verified
+input, output, or input plus output tokens, or \code{NULL} for no limit.}
 
-\item{max_output_tokens}{Maximum verified output tokens, or \code{NULL} for
-unlimited.}
+\item{max_cost}{Maximum known provider cost in US dollars, or \code{NULL} for no
+limit.}
 
-\item{max_total_tokens}{Maximum verified input plus output tokens, or \code{NULL}
-for unlimited.}
+\item{max_elapsed_seconds}{Maximum active run time in seconds, or \code{NULL} for
+no limit. Time between a checkpoint and its resume is not counted.}
 
-\item{max_cost}{Maximum known provider cost in US dollars, or \code{NULL} for
-unlimited. Unknown cost stops a run that has this cap.}
+\item{num_threads}{Integer number of rows evaluated at the same time
+(default \code{1L}).}
 
-\item{max_elapsed_seconds}{Maximum active optimizer elapsed time in seconds,
-or \code{NULL} for unlimited. Checkpoint downtime is excluded.}
+\item{progress}{Whether to show progress bars. \code{NA} (the default) means
+\code{interactive()}.}
 
-\item{num_threads}{Number of threads for parallel evaluation. Default is 1.}
+\item{log_dir}{Directory for a \link{TrialLog} of the run, or \code{NULL} (the
+default). \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} ignores it and uses its own \code{log_dir}.}
 
-\item{progress}{Whether to display progress. Default is \code{TRUE} in interactive
-sessions.}
+\item{checkpoint_path}{Optional file for optimizer checkpoints.}
 
-\item{log_dir}{Directory for trial logging. Default is \code{NULL} (no logging).}
+\item{resume}{Whether to resume from \code{checkpoint_path} (default \code{FALSE}).}
 
-\item{checkpoint_path}{Optional optimizer checkpoint file.}
+\item{checkpoint_registry}{Named runtime registry used to save and restore
+the programs stored in checkpoints; see \code{\link[=program_artifact]{program_artifact()}}.}
 
-\item{resume}{Whether to resume from \code{checkpoint_path}.}
-
-\item{checkpoint_registry}{Named runtime registry used by safe program
-artifacts stored in checkpoints.}
-
-\item{verbose}{Whether to print detailed output. Default is \code{FALSE}.}
+\item{verbose}{Currently unused.}
 }
 \value{
-An optimizer control object.
+An \code{OptimizerControl} object to pass to \code{\link[=compile]{compile()}} as \code{control}.
 }
 \description{
-Configure optimizer behavior with consistent defaults across optimizer types.
+\code{optimizer_control()} collects the limits and options for one optimizer
+run: error, trial, call, token, cost and time budgets, concurrency, trial
+logging and checkpoints. Pass it to \code{\link[=compile]{compile()}} as \code{control}. It replaces
+the control that the optimizer would otherwise build from its own
+\code{max_errors}, \code{num_threads} and \code{log_dir} settings.
+
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}}, \code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}}, \code{\link[=COPRO]{COPRO()}},
+\code{\link[=MIPROv2]{MIPROv2()}}, \code{\link[=SIMBA]{SIMBA()}}, \code{\link[=GEPA]{GEPA()}}, \code{\link[=AutoResearch]{AutoResearch()}} and \code{\link[=MetaHarness]{MetaHarness()}} use
+\code{control}; the other optimizers ignore it.
 }
 \details{
-Finite metric, provider, token, cost, and elapsed-time limits switch
-optimizer evaluation to row-sized work units. The maximum postflight
-overshoot is one already-started evaluation row, or one already-started
-direct provider request for optimizer-side generation. Unknown provider,
-token, or cost usage stops safely when the corresponding cap is finite.
+When a budget stops a run, the optimizer returns the best program found so
+far and marks its \code{\link[=optimization_result]{optimization_result()}} as \code{"partial"}.
 
-BootstrapFewShot and MIPROv2 support deterministic checkpoint resume. GEPA,
-SIMBA, and COPRO currently provide the shared ledger and return the best
-partial program, but reject \code{resume = TRUE} until their fine-grained search
-state is supported.
+Finite metric, provider, token, cost and elapsed-time limits make the
+optimizer evaluate one row at a time, so a run overshoots a limit by at most
+one evaluation row that had already started (or one direct provider request
+made by the optimizer itself). When a cap is finite and a provider does not
+report its usage, tokens or cost, the run stops rather than guess.
+
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}} and \code{\link[=MIPROv2]{MIPROv2()}} can resume from a checkpoint. \code{\link[=GEPA]{GEPA()}},
+\code{\link[=SIMBA]{SIMBA()}} and \code{\link[=COPRO]{COPRO()}} respect the budgets and return the best partial
+program, but reject \code{resume = TRUE}.
 }
 \examples{
-# Default control
-ctrl <- optimizer_control()
+optimizer_control()
 
-# With specific settings
-ctrl <- optimizer_control(seed = 42L, max_trials = 100L, log_dir = "logs/")
+# Stop after 50 trials or US$2 of known cost, whichever comes first
+ctrl <- optimizer_control(max_trials = 50L, max_cost = 2)
+
+\dontrun{
+compiled <- compile(
+  program,
+  MIPROv2(metric = metric_exact_match(field = "answer")),
+  trainset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  control = ctrl
+)
 }
+}
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=split_dataset]{split_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
+}
+\concept{optimizer building blocks}

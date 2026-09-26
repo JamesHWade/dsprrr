@@ -1,65 +1,96 @@
 # SIMBA Teleprompter
 #
-# Self-improving optimization via hard example mining.
+# Stochastic introspective mini-batch ascent, adapted to dsprrr.
 
-#' SIMBA Teleprompter
+#' SIMBA: stochastic introspective mini-batch ascent
 #'
 #' @include teleprompter.R optimizer-core.R optimizer-logging.R
 #'
 #' @description
-#' SIMBA (self-improving via hard example mining) iteratively samples
-#' mini-batches, identifies high-variability examples, and generates
-#' improvement rules or demonstrations to improve performance.
-#'
-#' The optimizer:
-#' 1. Evaluates baseline performance on the training set (or validation set).
-#' 2. Repeats for up to `max_steps`:
-#'    - Samples a mini-batch
-#'    - Runs multiple candidates to measure variability
-#'    - Identifies hard examples
-#'    - Generates a rule and/or adds demos
-#'    - Evaluates improvement and keeps changes if better
+#' `SIMBA()` finds the training rows the program struggles with, turns them
+#' into an instruction rule and demonstrations, and keeps the change when the
+#' program's score improves. Each step works on a random mini-batch, which is
+#' where the name (stochastic introspective mini-batch ascent) comes from.
 #'
 #' @details
+#' The program is first scored on `valset` (or `trainset`). Each of up to
+#' `max_steps` steps then:
+#'
+#' 1. Samples `bsize` rows of `trainset` and runs the current program on them
+#'    `num_candidates` times.
+#' 2. Rates each row's difficulty as one minus its mean score plus the share
+#'    of runs that disagree with the most common output, and takes the
+#'    hardest rows (at most `max_demos`).
+#' 3. Asks `prompt_model` for a rule based on those rows and appends it to the
+#'    instructions. Without `prompt_model`, the rule is the first hard row
+#'    written out, as in `SIMBA rule: question: ..., expected: ...`.
+#' 4. Adds the hard rows as demonstrations, keeping the latest `max_demos`.
+#' 5. Scores the changed program and keeps it only if the score improves.
+#'
+#' The search stops at the first step that does not improve the score. With
+#' dsprrr's response cache on (the default), the repeated runs in step 1
+#' return the same cached output, so difficulty reduces to one minus the mean
+#' score; call `configure_cache(enable = FALSE)` to measure disagreement.
+#'
 #' ## Differences from DSPy's SIMBA
 #'
-#' This is an adapted implementation: it mines hard (high-variability)
-#' examples and asks an LLM to generate improvement rules, but it does not
-#' reproduce every detail of DSPy's stochastic introspective mini-batch
-#' ascent (e.g., trajectory-level introspection across candidate programs).
-#' Expect qualitatively similar behavior, not identical results.
+#' This is an adapted implementation. It mines hard examples and asks a model
+#' for improvement rules, but it does not reproduce every detail of DSPy's
+#' SIMBA, such as introspection over trajectories of several candidate
+#' programs. Expect similar behavior, not identical results.
 #'
-#' @param metric A metric function for evaluating predictions (required).
-#' @param metric_threshold Minimum score required to be considered successful.
-#'   If NULL, uses the metric's default threshold.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
-#' @param bsize Mini-batch size for hard example mining. Default is 32.
-#' @param num_candidates Number of candidate runs per example to measure
-#'   variability. Default is 6.
-#' @param max_steps Maximum number of optimization steps. Default is 8.
-#' @param max_demos Maximum number of demonstrations to keep. Default is 4.
-#' @param prompt_model Optional ellmer Chat for rule generation. If `NULL`,
-#'   uses the deterministic example-based rule fallback.
-#' @param seed Random seed for reproducibility. Default is 0.
-#' @param log_dir Directory for trial logging. Default is NULL.
+#' @param metric A metric function (required), such as
+#'   `metric_exact_match(field = "answer")`. Its `field` also names the column
+#'   that supplies the demonstrations' outputs.
+#' @param metric_threshold Accepted for consistency with the other optimizers
+#'   (see [Teleprompter()]). SIMBA prints it but does not use it.
+#' @param max_errors Integer; stop after this many consecutive failed
+#'   evaluations when [compile()] gets no `control` (default `5L`).
+#' @param bsize Integer mini-batch size (default `32L`, capped at the number
+#'   of training rows).
+#' @param num_candidates Integer number of runs per mini-batch (default `6L`).
+#' @param max_steps Integer maximum number of steps (default `8L`).
+#' @param max_demos Integer maximum number of demonstrations kept, and of hard
+#'   rows taken per step (default `4L`).
+#' @param prompt_model Optional ellmer Chat that writes the rules. SIMBA calls
+#'   its `$chat()` method directly, so its conversation history grows during
+#'   the run. `NULL` (the default) uses the fixed rule described in Details.
+#' @param seed Seed for the mini-batch samples (default `0L`), or `NULL`.
+#' @param log_dir Directory for a [TrialLog] with one trial per kept step, or
+#'   `NULL` (the default).
 #'
-#' @return A `SIMBA` teleprompter object.
+#' @return A `SIMBA` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #'
 #' @examples
-#' \dontrun{
 #' tp <- SIMBA(
 #'   metric = metric_exact_match(field = "answer"),
-#'   bsize = 32L,
-#'   num_candidates = 6L,
-#'   max_steps = 8L,
-#'   max_demos = 4L,
-#'   prompt_model = ellmer::chat_openai(),
-#'   seed = 0L
+#'   bsize = 8L,
+#'   num_candidates = 4L,
+#'   max_steps = 4L,
+#'   max_demos = 2L
 #' )
+#' tp
 #'
-#' compiled <- compile(qa_module, tp, trainset, .llm = llm)
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+#'   answer = c("Paris", "Lima", "N'Djamena")
+#' )
+#' tp <- SIMBA(
+#'   metric = metric_exact_match(field = "answer"),
+#'   bsize = 8L,
+#'   prompt_model = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' compiled <- compile(
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' optimization_result(compiled)$extensions$simba$rules
 #' }
 SIMBA <- S7::new_class(
   "SIMBA",

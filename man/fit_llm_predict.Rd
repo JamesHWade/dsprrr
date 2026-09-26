@@ -2,32 +2,63 @@
 % Please edit documentation in R/parsnip.R
 \name{fit_llm_predict}
 \alias{fit_llm_predict}
-\title{Fit LLM Predict Model}
+\alias{predict_llm_class}
+\alias{predict_llm_numeric}
+\title{Engine functions behind llm_predict()}
 \usage{
 fit_llm_predict(x, y, signature = NULL, temperature = NULL, top_p = NULL)
+
+predict_llm_class(object, new_data, ...)
+
+predict_llm_numeric(object, new_data, ...)
 }
 \arguments{
-\item{x}{Training data predictors (data frame).}
+\item{x}{Data frame of predictors.}
 
-\item{y}{Training data outcomes.}
+\item{y}{Outcome vector.}
 
-\item{signature}{Signature for the module.}
+\item{signature}{Optional signature string or \code{\link[=signature]{signature()}} object.}
 
-\item{temperature}{Temperature parameter.}
+\item{temperature, top_p}{Optional sampling settings stored in the module's
+config.}
 
-\item{top_p}{Top-p parameter.}
+\item{object}{A module returned by \code{fit_llm_predict()}.}
+
+\item{new_data}{Data frame with the predictor columns.}
+
+\item{...}{Unused.}
 }
 \value{
-A fitted dsprrr module.
+\code{fit_llm_predict()} returns a Predict module. The predict functions
+return a tibble with one row per row of \code{new_data}.
 }
 \description{
-Internal function to fit an llm_predict model. Creates a dsprrr module
-with the specified configuration.
+These functions implement the "dsprrr" engine of \code{\link[=llm_predict]{llm_predict()}}. parsnip
+calls them; they are exported for that purpose, not for direct use.
+\itemize{
+\item \code{fit_llm_predict()} builds a Predict module from the predictors \code{x} and
+outcome \code{y}. Without a \code{signature}, the inputs are the columns of \code{x} and
+the output is an enum of the outcome's levels (factor or character \code{y})
+or a number.
+\item \code{predict_llm_class()} runs the module on \code{new_data} with the default chat
+and returns a tibble with a \code{.pred_class} factor column.
+\item \code{predict_llm_numeric()} does the same and returns a \code{.pred} column;
+outputs that cannot be converted to numbers become \code{NA} with a warning.
+}
 }
 \examples{
 fit_llm_predict(
   data.frame(text = c("helpful", "unhelpful")),
   factor(c("positive", "negative"))
 )
+
+\dontrun{
+set_default_chat(ellmer::chat_openai(model = "gpt-6-luna"))
+fit <- fit_llm_predict(
+  data.frame(text = c("helpful", "unhelpful")),
+  factor(c("positive", "negative"))
+)
+predict_llm_class(fit, data.frame(text = "clear and useful"))
+}
 }
 \keyword{internal}

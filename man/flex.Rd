@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-flex.R
 \name{flex}
 \alias{flex}
-\title{Optimize a Module's Implementation with Flex}
+\title{Flex: a module whose implementation can be optimized}
 \usage{
 flex(
   signature,
@@ -24,10 +24,10 @@ signature string.}
 
 \item{module_src}{A complete Flex source string, or \code{NULL} for a baseline.}
 
-\item{max_predictor_calls}{Maximum number of predictor invocations allowed
-across the Flex bridge, or \code{NULL} for no limit. Declarative sources are
-also checked against this bound before they are installed. Configure
-separate limits for work performed inside agentic predictors.}
+\item{max_predictor_calls}{Maximum number of predictor calls per run
+(default \code{100L}), or \code{NULL} for no limit. Declarative sources are checked
+against it before they are installed. Agentic predictors, such as \code{ReAct},
+have their own limits for the work they do internally.}
 
 \item{config}{Optional module configuration passed to each fresh predictor.}
 
@@ -37,85 +37,111 @@ time.}
 \item{tools}{Named host functions or ellmer ToolDef objects exposed only to
 executable Flex source.}
 
-\item{interpreter_factory}{Zero-argument factory returning a fresh code
-runner for every executable Flex invocation. Required when
-\code{source_format = "r"}; not accepted for declarative JSON.}
+\item{interpreter_factory}{A function with no arguments that returns a
+fresh code runner for every run of executable source, such as
+\code{function() mcp_repl_runner()}. Required for R source; not accepted for
+JSON source.}
 
-\item{source_format}{Source language: \code{"json"}, \code{"r"}, or \code{"auto"}.
-Auto selects R when tools or a factory are supplied, or when a non-\code{NULL}
-source does not look like JSON. It selects JSON for JSON-looking source and
-for the default \code{NULL} baseline.}
+\item{source_format}{Source language: \code{"auto"} (the default), \code{"json"} or
+\code{"r"}. \code{"auto"} selects R when tools or a factory are supplied, or when a
+non-\code{NULL} source does not look like JSON; otherwise it selects JSON.}
 
 \item{require_sandbox}{Whether executable mode must reject runners that do
 not advertise an enforced sandbox. Keep the default for generated or
 otherwise untrusted source.}
 
-\item{max_tool_calls}{Maximum number of direct host-tool calls allowed in one
-executable invocation, or \code{NULL} for no limit. Defaults to 100.}
+\item{max_tool_calls}{Maximum number of direct host-tool calls per run of
+executable source (default \code{100L}), or \code{NULL} for no limit.}
 
-\item{...}{Must be empty. Flex accepts only its documented arguments.}
+\item{...}{Must be empty.}
 }
 \value{
-An experimental \code{FlexModule}.
+A Flex module.
 }
 \description{
-\code{flex()} creates an experimental module whose implementation can be
-optimized. Use it when the best number, order, or kind of model and tool
-calls is unknown. If the program shape is already clear, use a regular
-module or an explicit pipeline instead.
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 
-The default \code{source_format = "json"} represents a bounded predictor graph as
-data. Opt-in \code{source_format = "r"} accepts a complete R \code{forward()} program
-for tasks that need control flow, deterministic computation, dynamic
-predictors, or named host tools. Executable source runs only in a fresh
-runner returned by \code{interpreter_factory} and requires an enforced sandbox by
-default.
+\code{flex()} creates a module whose whole implementation, not just its
+instructions, can be rewritten by an optimizer. Use it when the best number,
+order or kind of model and tool calls is unknown. If the shape of the
+program is already clear, use a regular module or an explicit pipeline.
+\code{\link[=GEPA]{GEPA()}} optimizes the Flex source; most other optimizers only tune
+instructions or demonstrations inside a fixed module.
+
+The implementation is a source string. Declarative JSON source describes a
+bounded graph of predictor steps as data. Executable R source contains a
+complete \code{forward()} program, for tasks that need control flow,
+computation, predictors created on the fly, or named host tools; it runs
+only in a fresh runner from \code{interpreter_factory}, which must provide an
+enforced sandbox by default. With the default \code{source_format = "auto"},
+the baseline and JSON-looking sources are treated as JSON, and a factory,
+tools, or source that does not look like JSON select R.
 }
 \details{
-Most teleprompters optimize instructions or demonstrations inside a fixed
-module. \link{GEPA} can also search each Flex module's complete \code{module_src}.
-Invalid candidates remain auditable but cannot replace the active program.
+\subsection{JSON sources}{
 
-Version 1 sources contain \code{schema_version}, an ordered \code{steps} array, and an
-\code{outputs} object. Each step has a safe, unique \code{name}, a \code{primitive} of
-\code{"predict"} or \code{"chain_of_thought"}, a \code{signature} (\code{"$outer"} or DSPy
-string notation), an optional \code{instructions} string, and an \code{inputs} object.
-Input references use \code{"$input.<name>"} or
-\code{"$step.<earlier-step>.<field>"}. \code{outputs} maps every outer output field to
-one of the same reference forms. Sources are type checked before binding.
-Flex v1 supports string, number, integer, boolean, enum, array, and non-empty
-object signature types. Opaque \code{TypeJsonSchema} values and empty objects are
-rejected because their interfaces cannot be checked safely by this compiler.
+Version 1 sources contain \code{schema_version}, an ordered \code{steps} array and an
+\code{outputs} object. Each step has a unique \code{name}, a \code{primitive} of
+\code{"predict"} or \code{"chain_of_thought"}, a \code{signature} (\code{"$outer"} or a
+signature string), an optional \code{instructions} string and an \code{inputs}
+object. Inputs refer to \code{"$input.<name>"} or
+\code{"$step.<earlier-step>.<field>"}, and \code{outputs} maps every output field to
+one of those references. Sources are type checked before they are used.
+Supported field types are string, number, integer, boolean, enum, array and
+non-empty object; opaque \code{TypeJsonSchema} values and empty objects are
+rejected because their interfaces cannot be checked.
+}
 
-Executable sources receive a small guest DSL: \code{Predict},
+\subsection{R sources}{
+
+Executable sources can use a small set of constructors: \code{Predict},
 \code{ChainOfThought}, \code{ReAct}, \code{ReActV2}, \code{RLM}, \code{CodeAct},
-\code{ProgramOfThought}, \code{Prediction}, \code{Tool}, and explicitly supplied named
-tools. Predictor and tool calls cross a versioned JSON boundary and run on
-the host; optimizer-authored source is never evaluated by the host R session.
-Guest bindings have a separate lexical environment from bridge state.
-Supplied tools are privileged host capabilities even though generated source
-runs in a sandbox.
+\code{ProgramOfThought}, \code{Prediction}, \code{Tool}, and the named \code{tools} you supply.
+Predictor and tool calls cross a versioned JSON boundary and run in the
+host; source written by an optimizer is never evaluated in your R session.
+The tools you supply run with your permissions, even though the source runs
+in a sandbox. After each call across the boundary, the source runs again
+from the start with the recorded responses replayed, so keep its own
+computation free of side effects and its loops bounded.
+}
 
-After each bridged request, executable source runs again from the beginning
-with recorded host responses replayed. Keep guest-side computation pure and
-loops bounded because guest side effects can repeat.
+\subsection{Baseline and binding}{
 
-When \code{module_src} is \code{NULL}, the baseline is one \code{Predict} call (or one
-\code{RLM} call when executable mode has tools). \verb{$bind()} and
-\verb{$apply_optimization_params()} validate new source transactionally, so an
-invalid candidate cannot replace the active implementation. The source is
-available through the read-only \verb{$module_src} active binding.
+With \code{module_src = NULL}, the baseline is one \code{Predict} call (or one \code{RLM}
+call for executable mode with tools). \verb{$bind()} and
+\verb{$apply_optimization_params()} validate new source before installing it,
+so an invalid candidate cannot replace the working implementation. The
+current source is available as \verb{$module_src}.
 
-Token streaming remains unsupported because Flex creates predictors at run
-time. Dataset concurrency is currently available for declarative zero- and
-one-step sources; executable and multi-step sources fail before provider
-work when a concurrent backend is requested.
+Token streaming is unsupported, because Flex creates predictors at run
+time. \code{\link[=run_dataset]{run_dataset()}} concurrency works for declarative sources with zero
+or one step; executable and multi-step sources fail before any provider
+call when a concurrent backend is requested.
+}
 }
 \examples{
 program <- flex("question -> answer")
-program$module_src
+cat(program$module_src)
 
 \dontrun{
-result <- run(program, question = "Why is the sky blue?", .llm = llm)
+run(
+  program,
+  question = "Why is the sky blue?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 }
 }
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{program constructors}

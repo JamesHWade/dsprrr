@@ -2,34 +2,50 @@
 % Please edit documentation in R/optimizer-logging.R
 \name{write_trials_jsonl}
 \alias{write_trials_jsonl}
-\title{Write Trials to JSONL File}
+\title{Write trial records to a JSON Lines file}
 \usage{
 write_trials_jsonl(trials, path, append = FALSE)
 }
 \arguments{
-\item{trials}{Trial records created by \code{\link[=create_trial]{create_trial()}}.}
+\item{trials}{A list of trial records from \code{\link[=create_trial]{create_trial()}} or
+\code{\link[=complete_trial]{complete_trial()}}.}
 
-\item{path}{File path for the JSONL file.}
+\item{path}{Path of the file to write.}
 
-\item{append}{Whether to append to existing file. Default is FALSE.}
+\item{append}{Whether to append to an existing file (default \code{FALSE}).}
 }
 \value{
-Invisibly returns the path.
+\code{path}, invisibly.
 }
 \description{
-Write a list of optimization trial records to a JSONL (JSON Lines) file.
-Each trial is written as a single JSON object on its own line. On Unix, an
-existing target must already be owned by the effective user with mode
-exactly \code{0600}, without special bits, and every existing ancestor must be
-owned by root or the effective user. Unsafe paths are rejected rather than
-repaired.
+\code{write_trials_jsonl()} writes trial records to a JSON Lines file, one JSON
+object per trial and line. \code{\link[=read_trials_jsonl]{read_trials_jsonl()}} reads them back.
+}
+\details{
+The file follows the permission rules described in \link{TrialLog}: on Unix, an
+existing file must be owned by the current user with mode \code{0600}, and every
+existing parent directory must be owned by root or the current user. Unsafe
+paths are rejected rather than repaired. The directory must already exist.
 }
 \examples{
-\dontrun{
 trials <- list(
-  create_trial("BootstrapFewShot", list(k = 4)),
-  create_trial("BootstrapFewShot", list(k = 8))
+  create_trial("my-search", params = list(k = 2L)),
+  create_trial("my-search", params = list(k = 4L))
 )
-write_trials_jsonl(trials, "trials.jsonl")
+path <- tempfile(fileext = ".jsonl")
+write_trials_jsonl(trials, path)
+readLines(path, n = 1)
 }
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=split_dataset]{split_dataset()}}
 }
+\concept{optimizer building blocks}
