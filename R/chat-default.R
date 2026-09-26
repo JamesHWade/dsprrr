@@ -1086,7 +1086,7 @@ print.dsprrr_session_cost <- function(x, ...) {
     "*" = "Total: {format(x$total_tokens, big.mark = ',')} tokens"
   ))
 
-  if (x$cost > 0) {
+  if (isTRUE(x$cost > 0)) {
     cli::cli_bullets(c(
       "*" = "Est. cost: ${format(x$cost, digits = 4, nsmall = 4)}"
     ))

@@ -277,6 +277,11 @@ First development changelog. dsprrr is experimental; the API may change.
   epoch 1 from the response cache, so `score_std` and `ci_95` collapsed to 0
   unless `.cache = FALSE` was set.
 
+* `optimize_grid(parameters = )` no longer leaves `expand.grid()`'s
+  `out.attrs` attribute on `best_params`, which made `save_program()` and
+  `pin_module_config()` fail on grid-searched modules. Printing
+  `session_cost()` no longer errors when the cost is unknown.
+
 * `dsp_configure()` applies `temperature` to the chat (through
   `ellmer::params()`) instead of only recording it, and honors `model` and
   `api_key` when it detects the provider from environment variables.

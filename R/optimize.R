@@ -173,6 +173,9 @@ expand_grid_from_list <- function(parameters) {
     expand.grid,
     c(parameters, list(stringsAsFactors = FALSE))
   )
+  # expand.grid() records its inputs in "out.attrs"; drop it so best_params
+  # stay plain values that save_program() and pins can persist.
+  attr(grid, "out.attrs") <- NULL
 
   tibble::as_tibble(grid)
 }

@@ -309,3 +309,23 @@ test_that("instructions_suffix appends to the base instructions without stacking
   mod$apply_optimization_params(list(instructions_suffix = "Short."))
   expect_identical(mod$signature@instructions, "Classify the text. Short.")
 })
+
+test_that("optimize_grid() best_params can be saved", {
+  local_reset_cache()
+  llm <- new_test_chat(chat_structured = function(...) list(answer = "4"))
+  mod <- module(signature("question -> answer"))
+  data <- tibble::tibble(question = c("2+2?", "3+1?"), answer = c("4", "4"))
+
+  optimize_grid(
+    mod,
+    data,
+    metric = metric_exact_match(field = "answer"),
+    parameters = list(instructions_suffix = c("Be brief.", "Show work.")),
+    .llm = llm,
+    .cache = FALSE
+  )
+
+  expect_null(attr(mod$state$best_params, "out.attrs"))
+  path <- withr::local_tempfile(fileext = ".rds")
+  expect_no_error(save_program(mod, path))
+})

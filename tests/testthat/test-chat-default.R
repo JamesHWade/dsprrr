@@ -562,3 +562,18 @@ test_that("dsp_configure applies arguments when detecting the provider", {
   expect_equal(ellmer_chat_model(chat)@params$temperature, 0)
   expect_equal(.dsprrr_env$config$provider, "anthropic")
 })
+
+test_that("session_cost print handles an unknown cost", {
+  x <- structure(
+    list(
+      n_calls = 2L,
+      tokens_in = 10,
+      tokens_out = 5,
+      total_tokens = 15,
+      cost = NA_real_,
+      by_model = data.frame(model = "m", n_calls = 2L, cost = NA_real_)
+    ),
+    class = "dsprrr_session_cost"
+  )
+  expect_no_error(capture.output(print(x), type = "message"))
+})
