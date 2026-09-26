@@ -4,6 +4,13 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Breaking changes
 
+* dsprrr now requires ellmer >= 0.5.0. Runtime parameters such as
+  `temperature` are applied to the Chat's `Model` object, where ellmer 0.5.0
+  keeps request arguments. Provider inspection (cache keys, program artifacts,
+  and optimizer checkpoints) no longer reads the deprecated `Provider@model`,
+  `@params`, and `@extra_args` properties, so no deprecation warnings are
+  raised. Cache keys still include the model's params and extra arguments.
+
 * `module()` now constructs only standard prediction modules. Tool use and
   other advanced execution semantics use explicit constructors such as
   `react()`, `chain_of_thought()`, `program_of_thought()`, `code_act()`,

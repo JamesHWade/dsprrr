@@ -223,14 +223,8 @@ test_that("resolve_module_llm rejects class-tagged list adapters", {
 })
 
 test_that("runtime Chat parameters are isolated on an independent clone", {
-  provider <- ellmer::Provider(
-    name = "test",
-    model = "test-model",
-    base_url = "",
-    extra_args = list(existing = TRUE)
-  )
   chat <- new_test_chat(
-    provider = provider,
+    extra_args = list(existing = TRUE),
     turns = list("prior turn")
   )
 
@@ -241,9 +235,9 @@ test_that("runtime Chat parameters are isolated on an independent clone", {
 
   expect_false(identical(configured, chat))
   expect_identical(configured$get_turns(), list("prior turn"))
-  expect_identical(chat$get_provider()@extra_args, list(existing = TRUE))
+  expect_identical(chat$get_model_object()@extra_args, list(existing = TRUE))
   expect_identical(
-    configured$get_provider()@extra_args,
+    configured$get_model_object()@extra_args,
     list(existing = TRUE, temperature = 0.2)
   )
 })
@@ -930,12 +924,11 @@ test_that("run_batch_sequential processes all items", {
 })
 
 test_that("batch branches preserve exact ellmer history independently", {
-  provider <- ellmer::Provider(
-    name = "test",
-    model = "batch-branch-test",
-    base_url = ""
+  provider <- ellmer::Provider(name = "test", base_url = "")
+  chat <- utils::getFromNamespace("Chat", "ellmer")$new(
+    provider = provider,
+    model = ellmer::Model(name = "batch-branch-test")
   )
-  chat <- utils::getFromNamespace("Chat", "ellmer")$new(provider = provider)
   starting_history <- list(
     ellmer::UserTurn(contents = list(ellmer::ContentText("prior"))),
     ellmer::AssistantTurn(contents = list(ellmer::ContentText("context")))

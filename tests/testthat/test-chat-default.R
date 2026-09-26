@@ -340,7 +340,7 @@ test_that("dsp_configure shows confirmation message", {
 test_that("detect_provider_name identifies providers", {
   provider_chat <- function(name) {
     new_test_chat(
-      provider = ellmer::Provider(name = name, model = "test", base_url = "")
+      provider = ellmer::Provider(name = name, base_url = "")
     )
   }
   openai_chat <- provider_chat("OpenAI")
@@ -512,8 +512,8 @@ test_that("session_cost print method works", {
 })
 
 test_that("ellmer compatibility matches DESCRIPTION", {
-  expect_identical(dsprrr:::check_ellmer_version("0.4.0"), FALSE)
-  expect_identical(dsprrr:::check_ellmer_version("0.4.1"), TRUE)
+  expect_identical(dsprrr:::check_ellmer_version("0.4.1"), FALSE)
+  expect_identical(dsprrr:::check_ellmer_version("0.5.0"), TRUE)
   expect_identical(dsprrr:::check_ellmer_version("1.0.0"), TRUE)
   expect_silent(
     expect_identical(dsprrr:::check_ellmer_version("not-a-version"), FALSE)

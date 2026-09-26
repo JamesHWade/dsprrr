@@ -994,7 +994,7 @@ test_that("untrusted destructive setters are never invoked during replay", {
   unsafe <- structure(
     list(
       get_provider = function() provider,
-      get_model = function() provider@model,
+      get_model = function() "model-a",
       get_tools = function() list(),
       get_system_prompt = function() NULL,
       get_turns = function(...) state$turns,
@@ -2817,4 +2817,29 @@ test_that("cache chmod remedies safely quote unusual paths", {
     class = "dsprrr_cache_stats"
   )
   expect_no_error(testthat::capture_messages(print(stats)))
+})
+
+test_that("provider fingerprints include Model params without deprecated props", {
+  chat <- ellmer::chat_openai(
+    credentials = function() "dummy-key",
+    model = "model-a"
+  )
+  cold <- dsprrr:::apply_chat_params(chat, list(temperature = 0))
+  warm <- dsprrr:::apply_chat_params(chat, list(temperature = 1))
+
+  expect_no_warning(
+    cold_fingerprint <- dsprrr:::cache_provider_fingerprint(cold)
+  )
+  warm_fingerprint <- dsprrr:::cache_provider_fingerprint(warm)
+
+  expect_identical(cold_fingerprint$model, "model-a")
+  expect_false(identical(cold_fingerprint$config, warm_fingerprint$config))
+  expect_identical(
+    cold_fingerprint,
+    dsprrr:::cache_provider_fingerprint(
+      dsprrr:::apply_chat_params(chat, list(temperature = 0))
+    )
+  )
+  expect_identical(cold$get_model_object()@extra_args$temperature, 0)
+  expect_null(chat$get_model_object()@extra_args$temperature)
 })

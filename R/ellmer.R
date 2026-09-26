@@ -366,3 +366,27 @@ structure_ellmer_tool_error <- function(err, tool_name) {
     class = c("dsprrr_tool_observation", "list")
   )
 }
+
+#' Provider properties that ellmer 0.5.0 moved to the Model object
+#'
+#' Reading them through the Provider is deprecated and returns a stale copy,
+#' so provider inspection skips them and reads the Chat's Model instead.
+#' @noRd
+ellmer_deprecated_provider_props <- c("model", "params", "extra_args")
+
+#' Inspect a Provider without touching deprecated forwarding properties
+#' @noRd
+ellmer_provider_props <- function(provider) {
+  names <- setdiff(S7::prop_names(provider), ellmer_deprecated_provider_props)
+  stats::setNames(
+    lapply(names, function(name) S7::prop(provider, name)),
+    names
+  )
+}
+
+#' The Model object carrying a Chat's name, params, and extra args
+#' @noRd
+ellmer_chat_model <- function(chat) {
+  model <- tryCatch(chat$get_model_object(), error = function(e) NULL)
+  if (inherits(model, "ellmer::Model")) model else NULL
+}

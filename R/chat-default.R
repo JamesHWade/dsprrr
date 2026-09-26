@@ -1107,7 +1107,7 @@ check_ellmer_version <- function(version) {
   }
 
   # Keep this aligned with the minimum declared in DESCRIPTION.
-  min_version <- "0.4.1"
+  min_version <- "0.5.0"
 
   tryCatch(
     {

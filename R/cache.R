@@ -1157,7 +1157,7 @@ cache_provider_fingerprint <- function(llm, llm_id = NULL) {
 
   if (!is.null(provider)) {
     props <- tryCatch(
-      S7::props(provider),
+      ellmer_provider_props(provider),
       error = function(e) {
         cli::cli_abort(
           "Cannot inspect provider {.cls {class(provider)[1]}}",
@@ -1167,11 +1167,16 @@ cache_provider_fingerprint <- function(llm, llm_id = NULL) {
       }
     )
     provider_name <- props$name %||% class(provider)[[1]]
-    model <- props$model %||% cache_chat_get(llm, "get_model", default = NULL)
+    model <- cache_chat_get(llm, "get_model", default = NULL)
+    # Runtime params such as temperature live on the Model object.
+    model_object <- ellmer_chat_model(llm)
+    if (!is.null(model_object)) {
+      props$params <- model_object@params
+      props$extra_args <- model_object@extra_args
+    }
     account_partition <- cache_account_partition(props)
     props <- props[!vapply(names(props), cache_is_secret_name, logical(1))]
     props$name <- NULL
-    props$model <- NULL
 
     return(list(
       kind = "ellmer_provider",
