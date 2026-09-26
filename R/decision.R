@@ -117,7 +117,7 @@ new_decision_spec <- function(kind, ..., criteria = NULL, description = NULL) {
 
 #' @export
 print.dsprrr_decision_spec <- function(x, ...) {
-  cli::cli_text("{.cls dsprrr_decision_spec} {.val {x$kind}} decision")
+  cat("<dsprrr_decision_spec> ", x$kind, " decision\n", sep = "")
   for (name in intersect(c("threshold", "cuts", "weights"), names(x))) {
     value <- x[[name]]
     shown <- if (is.null(names(value))) {
@@ -125,7 +125,7 @@ print.dsprrr_decision_spec <- function(x, ...) {
     } else {
       paste0(names(value), " = ", format(value))
     }
-    cli::cli_text("{name}: {paste(shown, collapse = ', ')}")
+    cat(name, ": ", paste(shown, collapse = ", "), "\n", sep = "")
   }
   invisible(x)
 }

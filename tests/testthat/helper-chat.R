@@ -22,11 +22,7 @@ TestChat <- R6::R6Class(
       self$turns <- turns
       self$model <- model
       private$provider <- if (is.null(provider)) {
-        ellmer::Provider(
-          name = "test",
-          model = model,
-          base_url = ""
-        )
+        new_test_provider(model)
       } else {
         provider
       }
@@ -74,6 +70,16 @@ TestChat <- R6::R6Class(
   lock_objects = FALSE,
   parent_env = globalenv()
 )
+
+# ellmer 0.5.0 moved model details off Provider and deprecated
+# `Provider(model)`; earlier releases still require it.
+new_test_provider <- function(model = "test-model") {
+  args <- list(name = "test", base_url = "")
+  if (utils::packageVersion("ellmer") < "0.5.0") {
+    args$model <- model
+  }
+  do.call(ellmer::Provider, args)
+}
 
 new_test_chat <- function(
   ...,
