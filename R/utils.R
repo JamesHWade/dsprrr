@@ -63,40 +63,40 @@ is_ellmer_type <- function(x) {
     inherits(x, "ellmer::TypeJsonSchema")
 }
 
-#' Decide whether local vignette examples can run
+#' Decide whether a vignette's LLM examples run
+#'
+#' Articles with recorded provider responses (vcr cassettes in `_vcr/`) replay
+#' them, so the pkgdown site shows real output. On CI that is the only way code
+#' runs: pkgdown site builds replay cassettes, and every other build (including
+#' `R CMD build` and `R CMD check`) stays offline. Locally, an interactive
+#' session or `DSPRRR_VIGNETTES_EVAL=true` also runs examples live when
+#' provider credentials are available, which is how cassettes are recorded.
 #' @noRd
 eval_vignette <- function() {
-  # Skip during R CMD check or CI (cassettes may not match current code)
   if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
-    return(FALSE)
-  }
-  if (nzchar(Sys.getenv("CI"))) {
-    return(FALSE)
-  }
-
-  # Source-package builds run non-interactively and must stay offline even
-  # when the developer's environment contains API keys or unrelated
-  # cassettes. Opt in explicitly when recording or refreshing vignettes.
-  force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
-    identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
-  if (!interactive() && !force_eval) {
     return(FALSE)
   }
 
   name <- tools::file_path_sans_ext(knitr::current_input())
-
-  # Check if vcr cassettes exist for this vignette
-  cassettes <- dir("_vcr", pattern = paste0(name, "*"))
+  cassettes <- dir("_vcr", pattern = paste0("^", name, "-.*\\.yml$"))
   has_cassette <- length(cassettes) > 0
 
-  # Check if API keys are available
-  has_key <- has_ellmer_credentials()
+  if (nzchar(Sys.getenv("CI"))) {
+    should_eval <- has_cassette && identical(Sys.getenv("IN_PKGDOWN"), "true")
+  } else {
+    force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
+      identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+    should_eval <- (interactive() || force_eval) &&
+      (has_cassette || has_ellmer_credentials())
+  }
 
-  # Suppress echo for cleaner vignettes
-  options(ellmer_echo = "none")
-
-  # Evaluate if we have keys OR cassettes
-  has_key || has_cassette
+  if (should_eval) {
+    # Keep ellmer's streaming echo and the one-time cache notice out of the
+    # rendered page.
+    options(ellmer_echo = "none")
+    .dsprrr_env$cache_first_hit_shown <- TRUE
+  }
+  should_eval
 }
 
 #' Check for ellmer credentials

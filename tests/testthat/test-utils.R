@@ -103,6 +103,37 @@ test_that("non-interactive vignette builds require explicit opt-in", {
   expect_identical(dsprrr:::eval_vignette(), TRUE)
 })
 
+test_that("CI replays cassettes only for pkgdown site builds", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "_vcr"))
+  writeLines("http_interactions: []", file.path(dir, "_vcr", "demo-chunk.yml"))
+  withr::local_dir(dir)
+  local_mocked_bindings(
+    current_input = function(...) "demo.Rmd",
+    .package = "knitr"
+  )
+  withr::local_envvar(c(
+    CI = "true",
+    `_R_CHECK_PACKAGE_NAME_` = "",
+    OPENAI_API_KEY = "test-key",
+    IN_PKGDOWN = "true"
+  ))
+
+  expect_true(dsprrr:::eval_vignette())
+
+  # R CMD build and R CMD check on CI stay offline.
+  withr::local_envvar(IN_PKGDOWN = "")
+  expect_false(dsprrr:::eval_vignette())
+
+  # Without cassettes, CI never calls a provider, even with credentials.
+  withr::local_envvar(IN_PKGDOWN = "true")
+  local_mocked_bindings(
+    current_input = function(...) "other.Rmd",
+    .package = "knitr"
+  )
+  expect_false(dsprrr:::eval_vignette())
+})
+
 # --- null coalescing operator tests ---
 
 test_that("null coalescing operator works correctly", {
