@@ -254,9 +254,9 @@ First development changelog. dsprrr is experimental; the API may change.
   a data column, and asks for `field` when that is ambiguous. This also fixes
   `optimize_grid()`'s default metric.
 
-* `refine()` and `rag_module()` programs now run through `run()`. Input
-  validation used to demand the `feedback` and `relevant_context` fields the
-  modules fill in themselves. When a refined module declares `feedback`, the
+* `refine()` and `rag_module()` programs now run through `run()`,
+  `run_dataset()` and `evaluate()`. Input validation used to demand the
+  `feedback` and `relevant_context` fields the modules fill in themselves. When a refined module declares `feedback`, the
   first attempt receives "No feedback yet.".
 
 * ragnar integration matches ragnar's API: retrieval passes `top_k`,
